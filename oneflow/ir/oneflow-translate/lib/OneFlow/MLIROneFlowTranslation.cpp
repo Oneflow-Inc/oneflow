@@ -784,7 +784,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
-  if (std::getenv("ONEFLOW_MLIR_CSE") != nullptr) {
+  // TODO: add a IsFirstIRPass func
+  if (std::getenv("ONEFLOW_MLIR_CSE") != nullptr && job_wrapper.IsLastIRPass() == false) {
     auto cse_state = std::make_shared<CSEState>();
     auto passes = createCSEPasses(cse_state);
     pm.addPass(std::move(passes.first));
