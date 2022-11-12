@@ -45,10 +45,12 @@ struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible
             .getValue()
             .str()
         != MAGIC_OP_NAME) {
-      state_->opNames[op] =
-          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr());
-      state_->scopeSymbolIDs[op] =
-          op->getAttrOfType<IntegerAttr>(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr());
+      if (state_) {
+        state_->opNames[op] =
+            op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr());
+        state_->scopeSymbolIDs[op] = op->getAttrOfType<IntegerAttr>(
+            OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr());
+      }
       op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                   rewriter.getStringAttr(MAGIC_OP_NAME));
       op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
@@ -72,9 +74,11 @@ struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> 
             .getValue()
             .str()
         == MAGIC_OP_NAME) {
-      op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), state_->opNames[op]);
-      op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                  state_->scopeSymbolIDs[op]);
+      if (state_) {
+        op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), state_->opNames[op]);
+        op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                    state_->scopeSymbolIDs[op]);
+      }
       return success();
     } else {
       return failure();
