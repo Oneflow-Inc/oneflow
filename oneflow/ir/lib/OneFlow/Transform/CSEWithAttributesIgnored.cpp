@@ -82,7 +82,7 @@ class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttr
   }
 };
 
-class CSEPutAttributes : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
+class CSEPutAttributes : public CSEPutAttributesBase<CSEPutAttributes> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
