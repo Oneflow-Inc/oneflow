@@ -121,6 +121,11 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
     attributes.erase("transpose_a");
     attributes.erase("transpose_b");
     attributes.erase("alpha");
+    attributes.set("operand_segment_sizes", rewriter.getI32VectorAttr({1, 1, 1, 0}));
+    attributes.set("operand_segment_sizes",
+                   rewriter.getI32VectorAttr({static_cast<int>(all_matmuls.size()),
+                                              static_cast<int>(all_matmuls.size()),
+                                              static_cast<int>(all_bias_adds.size())}));
     attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                    rewriter.getStringAttr("grouped_matmul_" + op.op_name()));
     auto grouped_matmul =
