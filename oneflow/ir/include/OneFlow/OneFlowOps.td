@@ -315,4 +315,31 @@ def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleO
   let dependentDialects = ["func::FuncDialect"];
 }
 
+def CSEWithAttributesIgnored : Pass<"cse-with-attributes-ignored", "ModuleOp"> {
+  let summary = "ignore oneflow attributes to have cse work";
+  let description = [{
+    cse and ignore oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEWithAttributesIgnored()";
+  let dependentDialects = [];
+}
+
+def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
+  let summary = "cse and ignore oneflow attributes";
+  let description = [{
+    put back oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEPutAttributes()";
+  let dependentDialects = [];
+}
+
+def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
+  let summary = "group matmul together";
+  let description = [{
+    group matmul ops together and use cudnn batched matmul
+  }];
+  let constructor = "mlir::oneflow::createGroupMatMul()";
+  let dependentDialects = [];
+}
+
 #endif // ONEFLOW_PASSES
