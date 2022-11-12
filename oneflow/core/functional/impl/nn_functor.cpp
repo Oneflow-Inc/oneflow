@@ -542,14 +542,14 @@ class FusedMLPFunctor {
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    k = x_shape->At(1);
+    k = x_shape->At(x_shape->NumAxes() - 1);
     for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
       const auto& bias_shape = biases[i]->shape();
 
       // TODO(): Support Fused batch/broadcast matmul.
-      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
-          << Error::RuntimeError() << "Weight's dim size should == 2";
+      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "Weight's dim size should >= 2";
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
           << Error::RuntimeError() << "Bias's dim size should == 1";
 
@@ -589,7 +589,7 @@ class FusedMLPFunctor {
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
-                              biases[layer_idx], 1));
+                              biases[layer_idx], x->shape()->NumAxes() - 1));
       if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
         /*
         When it is not last dense layer, or it is last dense layer and skip_final_activate=False,

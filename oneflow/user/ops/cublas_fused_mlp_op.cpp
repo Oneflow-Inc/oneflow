@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
 
-
 namespace oneflow {
 
 namespace {
@@ -47,9 +46,8 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   B: (n, k) need transpose
   C: (m, n)
   */
-  int64_t m = 0, n = 0, k = 0, cublas_aux_ld = 0;
-  m = x_desc.shape().At(0);
-  k = x_desc.shape().At(1);
+  int64_t n = 0, k = 0, cublas_aux_ld = 0;
+  k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
 
   for (int32_t idx = 0; idx < weight_size; idx++) {
     // skip first input weight.
@@ -66,12 +64,17 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    ctx->SetOutputShape("cublas_aux", idx, Shape({m, aux_size}));
-    ctx->SetOutputShape("hidden", idx, Shape({m, n}));
+    DimVector dim_vec = x_desc.shape().dim_vec();
+    dim_vec.back() = aux_size;
+    ctx->SetOutputShape("cublas_aux", idx, Shape(dim_vec));
+    dim_vec.back() = n;
+    ctx->SetOutputShape("hidden", idx, Shape(dim_vec));
     // Set for next layer.
     k = n;
   }
-  ctx->SetOutputShape("out", 0, Shape({m, n}));
+  DimVector out_dim_vec = x_desc.shape().dim_vec();
+  out_dim_vec.back() = n;
+  ctx->SetOutputShape("out", 0, Shape({out_dim_vec}));
   return Maybe<void>::Ok();
 }
 

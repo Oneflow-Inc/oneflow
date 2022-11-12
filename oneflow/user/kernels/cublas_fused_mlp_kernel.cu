@@ -76,7 +76,8 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
 
     // Currently only support 2D matmul.
     DimVector in_shape(2);
-    x->shape_view().ToDimVector(&in_shape);
+    in_shape[0] = x->shape_view().Count(0, x->shape_view().NumAxes() - 1);
+    in_shape[1] = x->shape_view().At(x->shape_view().NumAxes() - 1);
 
     DimVector weight_shape(2);
 
@@ -139,14 +140,14 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
       .SetCreateFn<CublasFusedMLPKernel<cpp_type>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
                        && (user_op::HobDataType("out", 0) == data_type))                    \
-      .SetInplaceProposalFn(                                                               \
+      .SetInplaceProposalFn(                                                                \
           [](const user_op::InferContext& ctx,                                              \
              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {        \
             if (ctx.has_input("_add_to_output", 0)) {                                       \
               OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true)); \
             }                                                                               \
             return Maybe<void>::Ok();                                                       \
-          });                                                                               \
+          });
 
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(float, DataType::kFloat);

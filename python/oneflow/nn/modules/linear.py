@@ -126,13 +126,7 @@ class Linear(Module):
 
     def forward(self, x):
         if self.use_fused_mlp:
-            x_shape = x.shape
-            if len(x_shape) > 2:
-                x = x.reshape(-1, x.shape[-1])
-            res = flow._C.fused_mlp(x, [self.weight], [self.bias], True)
-            if len(x_shape) > 2:
-                res = res.reshape(x_shape[0 : len(x_shape) - 1] + (res.shape[-1],))
-            return res
+            return flow._C.fused_mlp(x, [self.weight], [self.bias], True)
         res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.bias is not None:
             res += self.bias
