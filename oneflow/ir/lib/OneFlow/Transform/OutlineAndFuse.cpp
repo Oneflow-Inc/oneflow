@@ -134,6 +134,7 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
         matmul.value().out().replaceAllUsesWith(grouped_matmul.ys()[matmul.index()]);
       }
     } else {
+      CHECK(all_bias_adds.size() == all_matmuls.size());
       for (const auto& bias_add : llvm::enumerate(all_bias_adds)) {
         bias_add.value().out().replaceAllUsesWith(grouped_matmul.ys()[bias_add.index()]);
       }
