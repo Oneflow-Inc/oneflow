@@ -333,4 +333,13 @@ def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
   let dependentDialects = [];
 }
 
+def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
+  let summary = "group matmul together";
+  let description = [{
+    group matmul ops together and use cudnn batched matmul
+  }];
+  let constructor = "mlir::oneflow::createGroupMatMul()";
+  let dependentDialects = [];
+}
+
 #endif // ONEFLOW_PASSES

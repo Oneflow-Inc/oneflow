@@ -25,6 +25,7 @@ std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
 std::unique_ptr<mlir::Pass> createKernelLaunchFunctionPass();
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
 std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
+std::unique_ptr<mlir::Pass> createGroupMatMul();
 
 }  // namespace oneflow
 
