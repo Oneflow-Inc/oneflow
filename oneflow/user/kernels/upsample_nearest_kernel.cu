@@ -270,8 +270,8 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
         NdIndexOffsetHelper<int64_t, 4> in_helper(n, c, in_height, in_width);
         NdIndexOffsetHelper<int64_t, 4> out_helper(n, c, out_height, out_width);
         RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->stream(), out_elem_cnt, out_elem_cnt,
-                        x_tensor->dptr<T>(), in_helper, out_helper, xh, xw, 1.f / height_scale,
-                        1.f / width_scale, y_tensor->mut_dptr<T>());
+                        x_tensor->dptr<T>(), in_helper, out_helper, in_height, in_width,
+                        1.f / height_scale, 1.f / width_scale, y_tensor->mut_dptr<T>());
       }
     }
   }
