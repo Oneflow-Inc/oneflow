@@ -801,6 +801,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  // TODO: support backward or put it in a env flag
+  pm.addPass(oneflow::createGroupMatMul());
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
