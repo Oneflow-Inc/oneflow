@@ -127,7 +127,7 @@ Config options on a GraphModule
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 GraphModule is the graph representation of a nn.Module in a nn.Graph.
 
-When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a GraphModule inside it.
+When an nn.Module is added into an nn.Graph, it is wrapped into a ProxyModule. The ProxyModule has a GraphModule inside it.
 You can get and set the GraphModule to enable graph optimization on the nn.Module.
 
 .. currentmodule:: oneflow.nn.graph.graph_block.GraphModule
