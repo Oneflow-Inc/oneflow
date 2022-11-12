@@ -69,7 +69,8 @@ Maybe<void> RMSNormGrad::Apply(const RMSNormCaptureState* ctx, const TensorTuple
   CHECK_GE_OR_RETURN(saved_tensors.size(), 2);  // NOLINT(maybe-need-error-msg)
   CHECK_LE_OR_RETURN(saved_tensors.size(), 3);  // NOLINT(maybe-need-error-msg)
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  // (dy, inv_rms_diff)
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads[0];
   const auto& x = saved_tensors.at(ctx->x_index);
   const auto& inv_rms = saved_tensors.at(ctx->inv_rms_index);
