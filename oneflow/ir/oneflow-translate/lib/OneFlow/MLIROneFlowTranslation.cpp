@@ -805,7 +805,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (std::getenv("ONEFLOW_MLIR_GROUP_MATMUL") != nullptr) {
     pm.addPass(oneflow::createGroupMatMul());
   }
-  if (job_wrapper.IsLastIRPass()
+  if (!job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
     pm.addPass(oneflow::createConvertInferenceOpPass());
@@ -858,7 +858,9 @@ void RoundTripOneFlowJob(
   if (succeeded(imp.ProcessJob())) {
     DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.imported");
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)
+        && job_wrapper.IsLastIRPass()) {
+      // for FileCheck
       module->print(llvm::outs());
     }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
