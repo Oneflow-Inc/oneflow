@@ -15,28 +15,52 @@ limitations under the License.
 */
 #include <iostream>
 #include <string>
+#include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
+namespace mlir {
+
+namespace oneflow {
+
 namespace {
+
+static auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
+static auto MAGIC_SCOPE_SYMBOL_ID = 77777;
+
+struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
+  explicit EraseAttributes(mlir::MLIRContext* context)
+      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(UserOpCompatible op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+            .getValue()
+            .str()
+        != MAGIC_OP_NAME) {
+      op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                  rewriter.getStringAttr(MAGIC_OP_NAME));
+      op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                  rewriter.getI64IntegerAttr(MAGIC_SCOPE_SYMBOL_ID));
+      return success();
+    } else {
+      return failure();
+    }
+  }
+};
 
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateAutoNhwcPatterns(patterns);
+    patterns.add<EraseAttributes>(op->getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
 }  // namespace
-
-namespace mlir {
-
-namespace oneflow {
 
 std::unique_ptr<Pass> createCSEWithAttributesIgnored() {
   return std::make_unique<CSEWithAttributesIgnored>();

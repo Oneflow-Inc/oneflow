@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -cse-with-attributes-ignored | FileCheck %s
+// RUN: -cse-with-attributes-ignored -cse | FileCheck %s
 
 // CHECK-LABEL: func.func
 module  {
