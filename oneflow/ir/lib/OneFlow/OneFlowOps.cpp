@@ -222,8 +222,8 @@ struct ConvertAddOpWithArity : public OpRewritePattern<AddNOp> {
     const auto arity = op.in().size();
     if (arity == 2) {
       NamedAttrList attributes = op->getAttrs();
-      attributes.push_back(rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
-                                                 rewriter.getStringAttr("add_n")));
+      attributes.set(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                     rewriter.getStringAttr("add_n"));
       if (auto created_op = rewriter.replaceOpWithNewOp<Add2Op>(op, op->getResultTypes(),
                                                                 op.getOperands(), attributes)) {
         return success();
