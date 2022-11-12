@@ -19,6 +19,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
