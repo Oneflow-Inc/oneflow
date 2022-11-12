@@ -25,7 +25,8 @@ namespace oneflow {
 /* static */ Maybe<void> GroupedMatmulBiasOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const int64_t input_size = ctx->input_size("xs");
   CHECK_EQ_OR_RETURN(ctx->input_size("weights"), input_size);
-  CHECK_EQ_OR_RETURN(ctx->input_size("biases"), input_size);
+  const bool has_biases = ctx->has_input("biases", 0);
+  if (has_biases) { CHECK_EQ_OR_RETURN(ctx->input_size("biases"), input_size); }
   CHECK_EQ_OR_RETURN(ctx->output_size("ys"), input_size);
 
   const DataType data_type = ctx->InputTensorDesc("xs", 0).data_type();
@@ -38,9 +39,11 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
     const int64_t n = weight_desc.shape().At(0);
-    const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("biases", i);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
+    if (has_biases) {
+      const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("biases", i);
+      CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
+    }
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("ys", i);
     y_desc->set_data_type(data_type);
     DimVector out_dim_vec = x_desc.shape().dim_vec();
