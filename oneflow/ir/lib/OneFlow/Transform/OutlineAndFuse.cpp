@@ -93,12 +93,17 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
         if (another_matmul.transpose_a() == op.transpose_a()
             && another_matmul.transpose_b() == op.transpose_b()) {}
         if (bias_add) {
+          bool has_bias_add = false;
           for (auto u : another_matmul.out().getUsers()) {
             if (auto another_bias_add = dyn_cast<BiasAddOp>(u)) {
               all_bias_adds.push_back(another_bias_add);
+              has_bias_add = true;
               break;
             }
           }
+          if (has_bias_add) { all_matmuls.push_back(another_matmul); }
+        } else {
+          all_matmuls.push_back(another_matmul);
         }
       }
     }
