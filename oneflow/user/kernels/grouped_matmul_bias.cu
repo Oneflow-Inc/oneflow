@@ -72,14 +72,16 @@ struct Param {
   int elem_cnt;
 };
 
-template<typename T>
+template<typename T, bool has_biases>
 __global__ void InitPtrAndApplyBias(Param<T> p, void** ptr_arr) {
-  CUDA_1D_KERNEL_LOOP(i, p.elem_cnt) {
-    const int32_t p_idx = i / (p.problem.m * p.problem.n);
-    const int32_t y_idx = i % (p.problem.m * p.problem.n);
-    const int32_t m_idx = y_idx / p.problem.n;
-    const int32_t n_idx = y_idx % p.problem.n;
-    p.buffer[p_idx].y[y_idx] = p.buffer[p_idx].b[n_idx];
+  if (has_biases) {
+    CUDA_1D_KERNEL_LOOP(i, p.elem_cnt) {
+      const int32_t p_idx = i / (p.problem.m * p.problem.n);
+      const int32_t y_idx = i % (p.problem.m * p.problem.n);
+      const int32_t m_idx = y_idx / p.problem.n;
+      const int32_t n_idx = y_idx % p.problem.n;
+      p.buffer[p_idx].y[y_idx] = p.buffer[p_idx].b[n_idx];
+    }
   }
   CUDA_1D_KERNEL_LOOP(i, p.n) {
     ptr_arr[i] = const_cast<T*>(p.buffer[i].x);
@@ -89,13 +91,17 @@ __global__ void InitPtrAndApplyBias(Param<T> p, void** ptr_arr) {
 }
 
 template<typename T>
-void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, void* workspace,
-                ep::Stream* stream) {
+void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_biases,
+                void* workspace, ep::Stream* stream) {
   Param<T> params(problem, ptrs);
   void** ptr_arr = reinterpret_cast<void**>(workspace);
-  RUN_CUDA_KERNEL((InitPtrAndApplyBias<T>), stream, params.elem_cnt, params, ptr_arr);
+  if (has_biases) {
+    RUN_CUDA_KERNEL((InitPtrAndApplyBias<T, true>), stream, params.elem_cnt, params, ptr_arr);
+  } else {
+    RUN_CUDA_KERNEL((InitPtrAndApplyBias<T, false>), stream, params.elem_cnt, params, ptr_arr);
+  }
   float alpha = 1.0;
-  float beta = 1.0;
+  float beta = has_biases ? 1.0 : 0.0;
   cudaDataType_t data_type{};
   cublasComputeType_t compute_type;
   if (std::is_same<T, half>::value) {
@@ -126,10 +132,14 @@ class GroupedMatmulBiasKernel final : public user_op::OpKernel, public user_op::
                const user_op::OpKernelCache* cache) const override {
     HashMap<Problem, std::vector<Buffer<T>>> groups;
     const int32_t input_size = ctx->input_size("xs");
+    CHECK_EQ(ctx->input_size("weights"), input_size);
+    const bool has_biases = ctx->has_input("biases", 0);
+    if (has_biases) { CHECK_EQ(ctx->input_size("biases"), input_size); }
+    CHECK_EQ(ctx->output_size("ys"), input_size);
     for (int32_t i = 0; i < input_size; ++i) {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("xs", i);
       const user_op::Tensor* w = ctx->Tensor4ArgNameAndIndex("weights", i);
-      const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("biases", i);
+      const user_op::Tensor* b = has_biases ? ctx->Tensor4ArgNameAndIndex("biases", i) : nullptr;
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("ys", i);
       CHECK_GE(x->shape_view().NumAxes(), 2);
       const int64_t k = x->shape_view().At(x->shape_view().NumAxes() - 1);
@@ -137,19 +147,21 @@ class GroupedMatmulBiasKernel final : public user_op::OpKernel, public user_op::
       CHECK_EQ(w->shape_view().NumAxes(), 2);
       CHECK_EQ(w->shape_view().At(1), k);
       const int64_t n = w->shape_view().At(0);
-      CHECK_EQ(b->shape_view().NumAxes(), 1);
-      CHECK_EQ(b->shape_view().At(0), n);
+      if (has_biases) {
+        CHECK_EQ(b->shape_view().NumAxes(), 1);
+        CHECK_EQ(b->shape_view().At(0), n);
+      }
       CHECK_EQ(y->shape_view().NumAxes(), x->shape_view().NumAxes());
       CHECK_EQ(y->shape_view().At(y->shape_view().NumAxes() - 1), n);
       for (int32_t j = 0; j < y->shape_view().NumAxes() - 1; ++j) {
         CHECK_EQ(y->shape_view().At(j), x->shape_view().At(j));
       }
-      groups[Problem(m, n, k)].push_back(
-          Buffer<T>{x->dptr<T>(), w->dptr<T>(), b->dptr<T>(), y->mut_dptr<T>()});
+      groups[Problem(m, n, k)].push_back(Buffer<T>{
+          x->dptr<T>(), w->dptr<T>(), has_biases ? b->dptr<T>() : nullptr, y->mut_dptr<T>()});
     }
     void* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
     for (const auto& group : groups) {
-      ApplyGroup<T>(group.first, group.second, workspace, ctx->stream());
+      ApplyGroup<T>(group.first, group.second, has_biases, workspace, ctx->stream());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

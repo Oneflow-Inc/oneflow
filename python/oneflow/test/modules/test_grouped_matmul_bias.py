@@ -23,24 +23,33 @@ import oneflow as flow
 
 
 def _ref(xs, weights, biases):
-    return [
-        flow._C.matmul(x, w, transpose_a=False, transpose_b=True) + b
-        for x, w, b in zip(xs, weights, biases)
-    ]
+    if biases is None:
+        return [
+            flow._C.matmul(x, w, transpose_a=False, transpose_b=True)
+            for x, w in zip(xs, weights)
+        ]
+    else:
+        return [
+            flow._C.matmul(x, w, transpose_a=False, transpose_b=True) + b
+            for x, w, b in zip(xs, weights, biases)
+        ]
 
 
 def _grouped(xs, weights, biases):
-    return flow._C.grouped_matmul_bias(xs, weights, biases)
+    if biases is None:
+        return flow._C.grouped_matmul(xs, weights)
+    else:
+        return flow._C.grouped_matmul_bias(xs, weights, biases)
 
 
-def _test_grouped_matmul_bias(test_case, dtype, problems):
+def _test_grouped_matmul_bias(test_case, dtype, problems, bias):
 
     xs = [flow.randn((m, k), device="cuda", dtype=dtype) for (m, n, k) in problems]
     ws = [flow.randn((n, k), device="cuda", dtype=dtype) for (m, n, k) in problems]
     bs = [flow.randn((n), device="cuda", dtype=dtype) for (m, n, k) in problems]
 
-    ref_out = _ref(xs, ws, bs)
-    grouped_out = _grouped(xs, ws, bs)
+    ref_out = _ref(xs, ws, bs if bias else None)
+    grouped_out = _grouped(xs, ws, bs if bias else None)
     for (ref_y, grouped_y) in zip(ref_out, grouped_out):
         test_case.assertTrue(
             np.allclose(ref_y.numpy(), grouped_y.numpy(), atol=1e-2, rtol=1e-2)
@@ -51,13 +60,15 @@ def _test_grouped_matmul_bias(test_case, dtype, problems):
 class TestGroupedMatmulBias(flow.unittest.TestCase):
     def test_grouped_matmul_bias(test_case):
         problems = [(2, 1280, 1280)] * 12 + [(2, 1280, 640)] * 4 + [(2, 1280, 320)] * 5
-        _test_grouped_matmul_bias(test_case, flow.float16, problems)
+        _test_grouped_matmul_bias(test_case, flow.float16, problems, True)
+        _test_grouped_matmul_bias(test_case, flow.float16, problems, False)
         problems = (
             [(2 * 77, 768, 1280)] * 6
             + [(2 * 77, 768, 640)] * 5
             + [(2 * 77, 768, 320)] * 5
         )
-        _test_grouped_matmul_bias(test_case, flow.float16, problems)
+        _test_grouped_matmul_bias(test_case, flow.float16, problems, True)
+        _test_grouped_matmul_bias(test_case, flow.float16, problems, False)
 
 
 if __name__ == "__main__":

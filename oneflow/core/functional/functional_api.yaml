@@ -2399,6 +2399,10 @@
   signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
   bind_python: True
 
+- name: "grouped_matmul"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights) => GroupedMatmul"
+  bind_python: True
+
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True
