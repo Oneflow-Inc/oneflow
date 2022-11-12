@@ -87,9 +87,8 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
         break;
       }
     }
-    llvm::SmallVector<MatmulOp, 4> all_matmuls{op};
-    llvm::SmallVector<BiasAddOp, 4> all_bias_adds;
-    if (bias_add) { all_bias_adds.push_back(bias_add); }
+    llvm::SmallVector<MatmulOp, 4> all_matmuls{};
+    llvm::SmallVector<BiasAddOp, 4> all_bias_adds{};
     for (auto u : op.a().getUsers()) {
       if (auto another_matmul = dyn_cast<MatmulOp>(u)) {
         if (another_matmul.transpose_a() == op.transpose_a()
