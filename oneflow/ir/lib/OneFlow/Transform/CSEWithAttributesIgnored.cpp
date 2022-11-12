@@ -89,19 +89,24 @@ class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttr
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    patterns.add<EraseAttributes>(op->getContext());
+    patterns.add<EraseAttributes>(op->getContext(), state_);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
+
+ private:
+  std::shared_ptr<CSEState> state_;
 };
 
 class CSEPutAttributes : public CSEPutAttributesBase<CSEPutAttributes> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    std::shared_ptr<std::atomic<int64_t>> id = std::make_shared<std::atomic<int64_t>>(0);
-    patterns.add<PutAttributes>(op->getContext(), id);
+    patterns.add<PutAttributes>(op->getContext(), state_);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
+
+ private:
+  std::shared_ptr<CSEState> state_;
 };
 
 }  // namespace
