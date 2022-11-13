@@ -72,6 +72,11 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   }
 };
 
+bool isLastDim(BiasAddOp bias_add) {
+  return bias_add.axis() == -1
+         || bias_add.axis() == bias_add.out().getType().cast<ShapedType>().getRank() - 1;
+}
+
 struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
   explicit GroupMatMulPattern(mlir::MLIRContext* context)
       : OpRewritePattern<MatmulOp>(context, /*benefit=*/1) {}
@@ -88,6 +93,9 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
         break;
       }
     }
+    if (bias_add) {
+      if (!isLastDim(bias_add)) { return failure(); }
+    }
     llvm::SmallVector<MatmulOp, 4> all_matmuls{};
     llvm::SmallVector<BiasAddOp, 4> all_bias_adds{};
     for (auto u : op.a().getUsers()) {
@@ -97,6 +105,7 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
         bool has_another_bias_add = false;
         for (auto u : another_matmul.out().getUsers()) {
           if (auto another_bias_add = dyn_cast<BiasAddOp>(u)) {
+            if (!isLastDim(another_bias_add)) { continue; }
             all_bias_adds.push_back(another_bias_add);
             has_another_bias_add = true;
             break;
