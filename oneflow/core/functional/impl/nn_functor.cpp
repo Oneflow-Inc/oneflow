@@ -3071,22 +3071,26 @@ class FusedGluFunctor {
   FusedGluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_glu")
                          .Input("x")
-                         .Input("w_t")
+                         .Input("w")
                          .Input("b")
-                         .Input("v_t")
+                         .Input("v")
                          .Input("c")
                          .Output("y")
                          .Output("matmul_wx")
                          .Output("matmul_vx")
+                         .Attr("activation", "none")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& w_t,
+                           const std::shared_ptr<one::Tensor>& w,
                            const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& v_t,
-                           const std::shared_ptr<one::Tensor>& c) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w_t, b, v_t, c});
+                           const std::shared_ptr<one::Tensor>& v,
+                           const std::shared_ptr<one::Tensor>& c,
+                           const std::string& activation) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
+    attrs.SetAllAttrs(activation);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b, v, c}, attrs);
   }
 
  private:

@@ -9189,9 +9189,9 @@ def OneFlow_FusedGegluOp : OneFlow_BaseOp<"fused_geglu", [NoSideEffect, DeclareO
 def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    OneFlow_Tensor:$w_t,
+    OneFlow_Tensor:$w,
     OneFlow_Tensor:$b,
-    Optional<OneFlow_Tensor>:$v_t,
+    Optional<OneFlow_Tensor>:$v,
     Optional<OneFlow_Tensor>:$c
   );
   let attrs = (ins

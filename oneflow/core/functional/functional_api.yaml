@@ -665,7 +665,7 @@
   bind_python: True
 
 - name: "fused_glu"
-  signature: "Tensor (Tensor x, Tensor w_t, Tensor b, Tensor v_t, Tensor c) => FusedGlu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
 - name: "fused_geglu"
