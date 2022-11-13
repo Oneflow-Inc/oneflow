@@ -79,7 +79,7 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_dat
 
 Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
-  auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor({}));
+  auto current_grad = JUST(autograd_meta->current_grad_value());
   if (!current_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
     // Should not inplace accumulate grad. For example,
@@ -191,9 +191,8 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
         output_grads[i] = JUST(output_tensor_infos_[i].zeros());
       }
     } else {
-      const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
       JUST(oneflow::VectorAt(output_grads, i)) =
-          JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
+          JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad_value());
     }
   }
   JUST(backward_fn_->body(output_grads, &input_grads, create_graph));
@@ -260,7 +259,6 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
   for (const auto& out_tensor : outputs) {
     FunctionNode* node = out_tensor->mut_grad_fn_node().get();
     roots_.emplace_back(node);
-    dependencies_.insert(std::make_pair(node, 0));
   }
 }
 
@@ -268,7 +266,10 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
 Maybe<void> GraphTask::ComputeDependencies() {
   HashSet<FunctionNode*> seen;
   std::stack<FunctionNode*> stack;
-  for (FunctionNode* node : roots_) { stack.push(node); }
+  for (FunctionNode* node : roots_) {
+    stack.push(node);
+    grad_fn2exec_info_[node].need_execute = true;
+  }
 
   while (!stack.empty()) {
     FunctionNode* node = stack.top();
@@ -276,7 +277,9 @@ Maybe<void> GraphTask::ComputeDependencies() {
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
     for (const auto& next_grad_fn : node->next_functions()) {
       FunctionNode* next_node = next_grad_fn.get();
-      dependencies_[next_node] += 1;
+      ExecInfo& exec_info = grad_fn2exec_info_[next_node];
+      exec_info.dependencies += 1;
+      exec_info.need_execute = true;
       if (seen.find(next_node) == seen.end()) { stack.push(next_node); }
     }
   }
@@ -301,9 +304,17 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
     }
   };
 
-  for (const auto& input : inputs) {
-    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());
-    need_execute_.insert(input->mut_grad_fn_node().get());
+  // initialize all variable to capture grad for input tensors
+  captured_grads_ = std::make_shared<TensorTuple>(inputs.size());
+  for (int idx = 0; idx < inputs.size(); idx++) {
+    const auto& input = inputs[idx];
+    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());  //  NOLINT(maybe-need-error-msg)
+    ExecInfo& exec_info = grad_fn2exec_info_[input->mut_grad_fn_node().get()];
+    exec_info.need_execute = true;
+    if (!exec_info.capture_indices) {
+      exec_info.capture_indices = std::make_unique<std::vector<std::pair<size_t, size_t>>>();
+    }
+    exec_info.capture_indices->emplace_back(std::make_pair(input->get_grad_fn_output_index(), idx));
   }
 
   HashSet<FunctionNode*> seen;
@@ -318,18 +329,17 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
       continue;
     }
     if (FunctionNode* node = frame.GetNextFunction()) {
-      dependencies_[node] += 1;
+      grad_fn2exec_info_[node].dependencies += 1;
       if (seen.find(node) == seen.end()) {
         stack.push(NodeFrame(node));
         continue;  // recurse
       }
     } else {
-      bool need_execute =
+      grad_fn2exec_info_[frame.node_].need_execute |=
           std::any_of(frame.node_->next_functions().begin(), frame.node_->next_functions().end(),
                       [&](const std::shared_ptr<FunctionNode>& fn) {
-                        return need_execute_.find(fn.get()) != need_execute_.end();
+                        return grad_fn2exec_info_[fn.get()].need_execute;
                       });
-      if (need_execute) { need_execute_.insert(frame.node_); }
       seen.insert(frame.node_);
       stack.pop();
     }
@@ -340,18 +350,28 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
 Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
   std::queue<FunctionNode*> queue;
   for (FunctionNode* node : roots_) {
-    if (dependencies_[node] == 0) { queue.push(node); }
+    if (grad_fn2exec_info_[node].dependencies == 0) { queue.push(node); }
   }
 
   while (!queue.empty()) {
     FunctionNode* node = queue.front();
     queue.pop();
-    if (!need_execute_.empty() && need_execute_.find(node) == need_execute_.end()) {
+    auto& exec_info = grad_fn2exec_info_[node];
+
+    if (!exec_info.need_execute) {
       node->ReleaseOutTensorArgs();
       continue;
     }
     BackwardPassScopeGuard backward_guard(node->scope());
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
+    if (exec_info.capture_indices) {
+      CHECK_NOTNULL_OR_RETURN(captured_grads_.get()) << "captured grads in GraphTask is nullptr";
+      for (const auto& out_idx_and_capture_idx : *exec_info.capture_indices) {
+        JUST(VectorAt(*captured_grads_, out_idx_and_capture_idx.second)) =
+            JUST(JUST(VectorAt(node->output_meta_data_, out_idx_and_capture_idx.first))
+                     ->current_grad_value());
+      }
+    }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
     node->ReleaseOutTensorArgs();
@@ -359,8 +379,9 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
 
     for (const auto& next_grad_fn : node->next_functions()) {
       FunctionNode* next_node = next_grad_fn.get();
-      dependencies_[next_node] -= 1;
-      if (dependencies_[next_node] == 0) { queue.push(next_node); }
+      int32_t& dependencies = grad_fn2exec_info_[next_node].dependencies;
+      dependencies -= 1;
+      if (dependencies == 0) { queue.push(next_node); }
     }
   }
   return Maybe<void>::Ok();
@@ -382,29 +403,14 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
 Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
-  std::shared_ptr<TensorTuple> input_current_grad = std::make_shared<TensorTuple>(inputs.size());
-  GraphTask graph_task(outputs, retain_graph, create_graph);
-  std::vector<bool> ori_retain_grad(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-    JUST(inputs.at(i)->set_retain_grad(true));
-  }
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
   }
 
+  GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
   JUST(graph_task.Apply(/*save_grad_for_leaf=*/false));
-
-  // Gets input grads and resume retain_grad
-  for (int i = 0; i < inputs.size(); ++i) {
-    input_current_grad->at(i) = JUST(inputs.at(i)->acc_grad());
-    if (!ori_retain_grad.at(i)) {
-      JUST(inputs.at(i)->set_acc_grad(nullptr));
-      JUST(inputs.at(i)->set_retain_grad(false));
-    }
-  }
-  return input_current_grad;
+  return graph_task.GetCapturedGrads();
 }
 
 Maybe<FunctionNode> GraphAutogradEngine::AddNode(
@@ -422,8 +428,10 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
   OF_PROFILER_RANGE_PUSH("set_grad_fn_node");
   std::shared_ptr<FunctionNode> func_node =
       GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
-  for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
+  for (int i = 0; i < outputs->size(); ++i) {
+    const std::shared_ptr<Tensor>& out_tensor = JUST(VectorAt(*outputs, i));
     out_tensor->set_grad_fn_node(func_node);
+    out_tensor->set_grad_fn_output_index(i);
   }
   if (LazyMode::is_enabled()) { func_node->set_scope(JUST(GetCurrentScope())); }
   OF_PROFILER_RANGE_POP();
@@ -442,6 +450,7 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->status = []() { return false; };
   tensor->set_grad_fn_node(GraphFunctionNode::New(
       "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+  tensor->set_grad_fn_output_index(0);
   if (LazyMode::is_enabled()) {
     tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));
   }
