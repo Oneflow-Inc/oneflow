@@ -80,6 +80,7 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
     if (!isLinear) { return failure(); }
     if (op.alpha().convertToDouble() != 1.0) { return failure(); }
     if (op.device_tag() != "cuda") { return failure(); }
+    if (op._add_to_output()) { return failure(); }
     BiasAddOp bias_add;
     for (auto u : op.out().getUsers()) {
       if (auto b = dyn_cast<BiasAddOp>(u)) {
