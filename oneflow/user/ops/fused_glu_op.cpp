@@ -15,8 +15,8 @@ namespace oneflow {
 
     // check existance of optional args
     bool is_split_mode = false;
-    if (ctx->has_input("v", 0)) { CHECK_NOTNULL(ctx->InputTensorDesc("c", 0)); }
-    if (ctx->has_input("c", 0)) { CHECK_NOTNULL(ctx->InputTensorDesc("v", 0)); }
+    if (ctx->has_input("v", 0)) { CHECK_EQ_OR_RETURN(ctx->has_input("c", 0), true); }
+    if (ctx->has_input("c", 0)) { CHECK_EQ_OR_RETURN(ctx->has_input("v", 0), true); }
     if (ctx->has_input("v", 0) && ctx->has_input("c", 0)) { is_split_mode = true; }
 
     // check dimensions of x, w and b

@@ -3078,7 +3078,6 @@ class FusedGluFunctor {
                          .Output("y")
                          .Output("matmul_wx")
                          .Output("matmul_vx")
-                         .Attr("activation", "none")
                          .Build());
   }
 
@@ -4444,6 +4443,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedGluFunctor>("FusedGlu");
   m.add_functor<impl::FusedGegluFunctor>("FusedGeglu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");

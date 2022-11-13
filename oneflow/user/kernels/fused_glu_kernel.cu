@@ -2,8 +2,11 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 
 #if CUDA_VERSION >= 11000
@@ -15,11 +18,12 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, ep::primitive::UnaryOp activation>
+template<typename T, ep::primitive::UnaryOp act_type>
 __global__ void FusedGluForwardGpu(
-    const int m, const int n, const int k, 
-    const int stride,
-    const T* matmul_wx, const T* b, 
+    const int64_t m, const int64_t n, const int64_t k, 
+    const int64_t stride,
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T>& act,
+    const T* matmul_wx, const T* b,
     const T* matmul_vx, const T* c, T* y) {
   CUDA_1D_KERNEL_LOOP(i, m*n){
     // obtain the row and col index in output tensor "y"
@@ -28,10 +32,9 @@ __global__ void FusedGluForwardGpu(
     
     // calculate the hidden_state and gate
     T hidden_state = matmul_wx[stride*y_row+y_col] + b[y_col];
-    T gate = matmul_vx[stride*y_row_y_col] + c[y_col];
+    T gate = matmul_vx[stride*y_row+y_col] + c[y_col];
 
     // calculate activation
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, T, T> act;
     T act_gate = act(gate);
 
     // calculate element-wise product
@@ -45,29 +48,55 @@ __global__ void FusedGluForwardGpu(
 
 template<typename T>
 void DispatchFusedGluForwardGpu(
-    const int m, const int n, const int k,
-    const int stride,
+    ep::Stream* stream,
+    const int64_t m, const int64_t n, const int64_t k,
+    int64_t stride,
     const T* matmul_wx, const T* b, 
-    const T* matmul_vx, const T* c, T* y,
+    const T* matmul_vx, const T* c, 
+    T* y,
     const std::string& activation){
   if(activation == "none"){
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kIdentity>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kIdentity, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kIdentity>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else if(activation == "sigmoid") {
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSigmoid>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSigmoid, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSigmoid>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else if(activation == "relu") {
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kRelu>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kRelu, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kRelu>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else if(activation == "gelu") {
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kGelu>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kGelu, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kGelu>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else if(activation == "fast_gelu") {
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kFastGelu>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kFastGelu, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kFastGelu>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else if(activation == "silu") {
-    FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSilu>(
-      m, n, k, stride, matmul_wx, b, matmul_vx, c, y)
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSilu>),
+      /* CUDA stream */ stream,
+      /* number of threads */ m*n,
+      /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y
+    );
   } else {
     UNIMPLEMENTED();
   }
@@ -86,8 +115,8 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     const user_op::Tensor *input_tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor *input_tensor_w = ctx->Tensor4ArgNameAndIndex("w", 0);
     const user_op::Tensor *input_tensor_b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    const user_op::Tensor *out_tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::Tensor *out_tensor_matmul_wx = ctx->Tensor4ArgNameAndIndex("matmul_wx", 0);
+    user_op::Tensor *out_tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor *out_tensor_matmul_wx = ctx->Tensor4ArgNameAndIndex("matmul_wx", 0);
 
     // obtain optional tensors from context
     bool is_split_mode = false;
@@ -105,9 +134,10 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     // TODO: validate dimension and number of axes
   
     // infer m, n, k
-    const int64_t m = input_tensor_x->shape_view().Count(0, in_num_axes-1);
-    const int64_t n = out_tensor_y->shape_view().At(in_num_axes-1);
-    const int64_t k = input_tensor_x->shape_view().At(in_num_axes-1);
+    const int64_t input_x_num_axes = input_tensor_x->shape_view().NumAxes();
+    const int64_t m = input_tensor_x->shape_view().Count(0, input_x_num_axes-1);
+    const int64_t n = out_tensor_y->shape_view().At(input_x_num_axes-1);
+    const int64_t k = input_tensor_x->shape_view().At(input_x_num_axes-1);
 
     // calculate matmul_wx (and matmul_vx) through cuBLAS
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
@@ -127,13 +157,15 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     }
     
     // dispatch according to activation type
-    DispatchFusedGluForwardGpu<T>(m, n, k, 
+    DispatchFusedGluForwardGpu<T>(
+      ctx->stream(),
+      /*m, n, k=*/m, n, k, 
       /*stride=*/ is_split_mode ? n : 2*n,
-      /*matmul_wx=*/ out_tensor_matmul_wx->dptr(),
-      /*b=*/ input_tensor_b->dptr(),
-      /*matmul_vx=*/ is_split_mode ? out_tensor_matmul_vx->dptr() : out_tensor_matmul_vx->dptr()+n,
-      /*c=*/ is_split_mode ? input_tensor_c->dptr() : input_tensor_b->dptr()+n,
-      /*y=*/ out_tensor_y->dptr(),
+      /*matmul_wx=*/ out_tensor_matmul_wx->dptr<T>(),
+      /*b=*/ input_tensor_b->dptr<T>(),
+      /*matmul_vx=*/ is_split_mode ? out_tensor_matmul_vx->dptr<T>() : out_tensor_matmul_wx->dptr<T>()+n,
+      /*c=*/ is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>()+n,
+      /*y=*/ out_tensor_y->mut_dptr<T>(),
       /*activation=*/ ctx->Attr<std::string>("activation")
     );
   }
