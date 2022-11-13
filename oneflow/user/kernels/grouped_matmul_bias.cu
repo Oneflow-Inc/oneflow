@@ -98,7 +98,7 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   if (has_biases) {
     RUN_CUDA_KERNEL((InitPtrAndApplyBias<T, true>), stream, params.elem_cnt, params, ptr_arr);
   } else {
-    RUN_CUDA_KERNEL((InitPtrAndApplyBias<T, false>), stream, params.elem_cnt, params, ptr_arr);
+    RUN_CUDA_KERNEL((InitPtrAndApplyBias<T, false>), stream, params.n, params, ptr_arr);
   }
   float alpha = 1.0;
   float beta = has_biases ? 1.0 : 0.0;
