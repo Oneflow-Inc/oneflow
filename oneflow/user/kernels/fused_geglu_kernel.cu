@@ -24,10 +24,79 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#include "device/dual_gemm.h"
+#include "thread/left_silu_and_mul.h"
 
 namespace oneflow {
 
 namespace {
+
+template<typename T>
+void DualGemmGeglu(int32_t m, int32_t n, int32_t k, const T* x, const T* w, const T* b) {
+  constexpr int kStages = 3;
+  constexpr bool kSplitKSerial = false;
+  constexpr bool kUseBias = true;
+  using ElementOperandA = cutlass::half_t;
+  using ElementOperandB = cutlass::half_t;
+  using ElementOutput = cutlass::half_t;
+  using ElementAccumulator = float;
+  using ElementCompute = float;
+  using ThreadblockShape = cutlass::gemm::GemmShape<128, 64, 32>;
+  using WarpShape = cutlass::gemm::GemmShape<64, 32, 32>;
+  using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;
+
+  constexpr auto kScaleType =
+      kUseBias ? cutlass::epilogue::thread::ScaleType::NoBetaScaling
+               : (
+                   // No bias
+                   kSplitKSerial ? cutlass::epilogue::thread::ScaleType::Default
+                                 : cutlass::epilogue::thread::ScaleType::Nothing);
+  using EpilogueOutputOp0 =
+      cutlass::epilogue::thread::LinearCombination<ElementOutput,
+                                                   128 / cutlass::sizeof_bits<ElementOutput>::value,
+                                                   ElementAccumulator, ElementCompute, kScaleType>;
+  using EpilogueOutputOp1 =
+      cutlass::epilogue::thread::LinearCombination<ElementOutput,
+                                                   128 / cutlass::sizeof_bits<ElementOutput>::value,
+                                                   ElementAccumulator, ElementCompute, kScaleType>;
+  using EpilogueOutputOp2 =
+      cutlass::epilogue::thread::LeftSiLUAndMul<ElementOutput,
+                                                128 / cutlass::sizeof_bits<ElementOutput>::value,
+                                                ElementOutput, ElementCompute>;
+
+  const ElementCompute alpha0 = ElementCompute(1);
+  const ElementCompute beta0 = ElementCompute(kUseBias ? 1 : 0);
+  const ElementCompute alpha1 = ElementCompute(1);
+  const ElementCompute beta1 = ElementCompute(kUseBias ? 1 : 0);
+
+  // Optionally, we might not need intermediate GEMM outputs
+  constexpr bool kStoreD0 = false;
+  constexpr bool kStoreD1 = false;
+  using DualGemm = cutlass::gemm::device::DualGemm<
+      ElementOperandA, cutlass::layout::RowMajor, ElementOperandB, cutlass::layout::ColumnMajor,
+      ElementOutput, cutlass::layout::RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp,
+      cutlass::arch::Sm80, ThreadblockShape, WarpShape, InstructionShape, EpilogueOutputOp0,
+      EpilogueOutputOp1, EpilogueOutputOp2,
+      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<1>, kStages, kStoreD0, kStoreD1,
+      kSplitKSerial>;
+
+  int split_k_slices = Gemm0::kSplitKSerial ? 2 : 1;
+
+  cutlass::gemm::GemmCoord problem_size(m, n, k);
+  typename DualGemm::Arguments arguments{problem_size,
+                                         tensor_A0.device_ref(),
+                                         tensor_B0.device_ref(),
+                                         ref_B0,
+                                         DualGemm::kStoreD0 ? tensor_D0.device_ref() : nullptr_ref,
+                                         tensor_B1.device_ref(),
+                                         ref_B1,
+                                         DualGemm::kStoreD1 ? tensor_D1.device_ref() : nullptr_ref,
+                                         tensor_D2.device_ref(),
+                                         {alpha0, beta0},
+                                         {alpha1, beta1},
+                                         {},
+                                         split_k_slices};
+}
 
 template<typename T>
 __device__ T Gelu(T x) {
