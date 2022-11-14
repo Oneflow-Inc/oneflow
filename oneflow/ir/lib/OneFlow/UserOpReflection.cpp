@@ -129,13 +129,14 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
 
 Source GetOpSourceByName(Operation* op, const std::string& to_find) {
   if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
-    auto found = [&](std::vector<std::string> keys, bool is_res = false) -> int {
+    auto found = [&](std::vector<std::string> keys,
+                     bool find_in_results /*or in operands*/ = false) -> int {
       auto res = -1;
       auto offset = 0;
       for (const auto& key : llvm::enumerate(keys)) {
         if (key.value() == to_find) { return offset; }
-        offset += is_res ? user_op.getODSResultIndexAndLength(key.index()).second
-                         : user_op.getODSOperandIndexAndLength(key.index()).second;
+        offset += find_in_results ? user_op.getODSResultIndexAndLength(key.index()).second
+                                  : user_op.getODSOperandIndexAndLength(key.index()).second;
       }
       return res;
     };
