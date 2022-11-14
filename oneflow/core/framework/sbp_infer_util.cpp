@@ -93,8 +93,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   if (on_same_devices && producer_parallel_num == consumer_parallel_num) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     // S->P for eager. It should be 0 as well.
     // NOTE: Similar to B->P, we just make the other part to be 0. You can consider P as S(i) for an
     // arbitrary i.
@@ -128,8 +127,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
       }
     }
 
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     double overall_cost = logical_blob_size;
     // ? -> B
     if (consumer_sbp_parallel.has_broadcast_parallel()) {
@@ -312,9 +310,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
           reduced_out_hierarchy.elem_cnt()));
       // Add the penalty for P in the consumer
       if (out_sbp.has_partial_sum_parallel() && (in_sbp != out_sbp)) {
-        total_cost += Penalty4PartialInConsumer(
-            logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type()),
-            producer_parallel_desc.parallel_num(), consumer_parallel_desc.parallel_num());
+        total_cost += Penalty4PartialInConsumer(TotalByteSize4BlobDesc(logical_blob_desc),
+                                                producer_parallel_desc.parallel_num(),
+                                                consumer_parallel_desc.parallel_num());
       }
       // detect the cases that splits the same dimension before this splitting
       if (normal_case && in_sbp.has_split_parallel() && in_sbp == out_sbp) {
@@ -330,13 +328,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
       }
     }
     // Add the cost for the special case
-    if (!normal_case) {
-      total_cost +=
-          logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-    }
+    if (!normal_case) { total_cost += TotalByteSize4BlobDesc(logical_blob_desc); }
   } else {
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     {
       double in_cost = 1.0;
       for (int32_t i = 0; i < in_dim; ++i) {
@@ -632,6 +626,10 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
   }
 }
 
+int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc) {
+  return TotalByteSize4BlobDesc(logical_blob_desc);
+}
+
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
                                               const NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
@@ -698,8 +696,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
     return kUnsupportedBoxing;
   }
 
-  double logical_blob_size =
-      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+  double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
 
   if (in_dim == 2 && out_dim == 2) {
     // Not supporting different hierarchy
@@ -1057,7 +1054,7 @@ double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
   }
   // Subtract the intersection part
   return (producer_partial_ratio + consumer_broadcast_ratio - intersection_ratio)
-         * logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+         * TotalByteSize4BlobDesc(logical_blob_desc);
 }
 
 }  // namespace oneflow

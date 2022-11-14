@@ -127,6 +127,8 @@ double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
                                       const ParallelDesc& producer_parallel_desc,
                                       const ParallelDesc& consumer_parallel_desc);
 
+int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_SBP_INFER_UTIL_H_
