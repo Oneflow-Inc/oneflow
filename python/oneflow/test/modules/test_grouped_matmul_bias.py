@@ -18,6 +18,7 @@ from collections import OrderedDict
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 import math
+import os
 
 import oneflow as flow
 
@@ -57,6 +58,7 @@ def _test_grouped_matmul_bias(test_case, dtype, problems, bias):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGroupedMatmulBias(flow.unittest.TestCase):
     def test_grouped_matmul_bias(test_case):
         problems = [(2, 1280, 1280)] * 12 + [(2, 1280, 640)] * 4 + [(2, 1280, 320)] * 5
