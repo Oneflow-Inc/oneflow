@@ -607,7 +607,7 @@ class CublasFusedMatmulAddBiasFunctor {
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    k = x_shape->At(1);
+    k = x_shape->At(x->shape()->NumAxes()-1);
 
     const auto& weight_shape = weight->shape();
     const auto& bias_shape = bias->shape();
@@ -638,7 +638,7 @@ class CublasFusedMatmulAddBiasFunctor {
       input[1] = weight;
       input[2] = bias;
 
-      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("cublas_fused_matmul_bias")
+      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("cublas_fused_matmul_add_bias")
                                                   .Input("x")
                                                   .Input("weight")
                                                   .Input("bias")

@@ -74,7 +74,14 @@ Maybe<void> CublasFusedMatmulAddBias::Apply(const CublasFusedMatmulAddBiasCaptur
     in_grads->at(0) = JUST(functional::MatMul(out_grads.at(0), weight, false, false, 1.0));
   }
   if (ctx->weight_requires_grad) {
-    in_grads->at(1) = JUST(functional::MatMul(out_grads.at(0), x, true, false, 1.0));
+    const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
+    std::vector<int32_t> reduce_axes_vec;
+    reduce_axes_vec.reserve(num_axes);
+    for (int i = 0; i < num_axes - 2; i++) { reduce_axes_vec.push_back(i); }
+    if (num_axes > 2)
+      in_grads->at(1) = JUST(functional::ReduceSum(JUST(functional::MatMul(out_grads.at(0), x, true, false, 1.0)), reduce_axes_vec, false));
+    else
+      in_grads->at(1) = JUST(functional::MatMul(out_grads.at(0), x, true, false, 1.0));
   }
   if (ctx->bias_requires_grad) {
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
@@ -87,7 +94,7 @@ Maybe<void> CublasFusedMatmulAddBias::Apply(const CublasFusedMatmulAddBiasCaptur
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_matmul_add_bias", CublasFusedMatmulAddBias);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_matmul_add_bias", CublasFusedMatmulAddBias);
 
 }  // namespace one
 

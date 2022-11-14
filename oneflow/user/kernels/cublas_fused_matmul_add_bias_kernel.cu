@@ -56,7 +56,7 @@ class CublasFusedMatmulAddBiasKernel final : public user_op::OpKernel,
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
     // Currently only support 2D matmul.
-    DimVector in_shape(2);
+    DimVector in_shape(x->shape_view().NumAxes());
     x->shape_view().ToDimVector(&in_shape);
 
     DimVector weight_shape(2);
@@ -72,27 +72,33 @@ class CublasFusedMatmulAddBiasKernel final : public user_op::OpKernel,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
-    void* y_ptr = nullptr;
+    T* y_ptr = nullptr;
 
-    y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
     SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, false,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
-    OF_CUBLAS_CHECK(
-        cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
-                       weight->dptr(), matmul_cache->cublas_a_desc, x->dptr(),
-                       matmul_cache->cublas_b_desc, &sp_beta, y_ptr, matmul_cache->cublas_c_desc,
-                       y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-                       cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+    int num_batches = 1;
+    for (int i = 0; i < x->shape_view().NumAxes()-2; i++)
+      num_batches *= x->shape_view().At(i);
+
+    for (int i = 0; i < num_batches; i++) {
+      y_ptr = static_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr()) + cublas_m * cublas_n * i;
+      OF_CUBLAS_CHECK(
+          cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
+                        weight->dptr(), matmul_cache->cublas_a_desc, static_cast<const T*>(x->dptr()) + cublas_n * cublas_k * i,
+                        matmul_cache->cublas_b_desc, &sp_beta, y_ptr, matmul_cache->cublas_c_desc,
+                        y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type) \
-  REGISTER_USER_KERNEL("cublas_fused_matmul_bias")                        \
+  REGISTER_USER_KERNEL("cublas_fused_matmul_add_bias")                        \
       .SetCreateFn<CublasFusedMatmulAddBiasKernel<cpp_type>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
                        && (user_op::HobDataType("out", 0) == data_type));
