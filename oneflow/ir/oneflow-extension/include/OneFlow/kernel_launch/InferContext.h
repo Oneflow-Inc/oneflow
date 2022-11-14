@@ -34,8 +34,12 @@ class InferContext final : public user_op::InferContext {
 
   explicit InferContext(RegContext* reg_ctx);
 
-  const TensorDesc& InputTensorDesc(const std::string&, int32_t) const override { TODO(); }
-  const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const override { TODO(); }
+  const TensorDesc& InputTensorDesc(const std::string& arg_name, int32_t index) const override {
+    return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const TensorDesc& OutputTensorDesc(const std::string& arg_name, int32_t index) const override {
+    return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) override { TODO(); }
   const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override;

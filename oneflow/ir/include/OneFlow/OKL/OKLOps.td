@@ -24,6 +24,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/EnumAttr.td"
 
+// define type of tensor in okl to handle different situation.
 def OKL_ArgumentTensor : I32EnumAttrCase<"TT_Argument", 0>;
 def OKL_BufferTensor: I32EnumAttrCase<"TT_Buffer", 1>;
 def OKL_ReturnTensor: I32EnumAttrCase<"TT_Return", 2>;
