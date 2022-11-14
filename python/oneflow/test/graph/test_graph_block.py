@@ -25,6 +25,7 @@ import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphBlock(flow.unittest.TestCase):
@@ -215,7 +216,9 @@ class TestGraphBlock(flow.unittest.TestCase):
                 # NOTE: ModuleList doesn't have config.
                 # self.linears.to(GraphModule).activation_checkpointing = True
                 for i, _ in enumerate(self.linears):
-                    self.linears[i].to(nn.graph.GraphModule).activation_checkpointing = True
+                    self.linears[i].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleList can act as an iterable, or be indexed using ints
@@ -269,7 +272,9 @@ class TestGraphBlock(flow.unittest.TestCase):
                 # NOTE: ModuleDict doesn't have config.
                 # self.linears.to(GraphModule).activation_checkpointing = True
                 for k, _ in self.linears.items():
-                    self.linears[k].to(nn.graph.GraphModule).activation_checkpointing = True
+                    self.linears[k].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleDict can act as an iterable, or get using key
