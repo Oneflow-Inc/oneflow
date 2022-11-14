@@ -140,15 +140,15 @@ Source GetOpSourceByName(Operation* op, const std::string& to_find) {
       return -1;
     };
 
-    if (auto res = found(*user_op.inputKeys()); res != -1) { return {Source::INPUT, res}; }
-    if (auto res = found(*user_op.outputKeys(), true); res != -1) { return {Source::OUTPUT, res}; }
+    if (auto offset = found(*user_op.inputKeys()); offset != -1) { return {Source::INPUT, offset}; }
+    if (auto offset = found(*user_op.outputKeys(), true); offset != -1) { return {Source::OUTPUT, offset}; }
 
     if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
-      if (auto res = found(*alternative_name.inputKeys()); res != -1) {
-        return {Source::INPUT, res};
+      if (auto offset = found(*alternative_name.inputKeys()); offset != -1) {
+        return {Source::INPUT, offset};
       }
-      if (auto res = found(*alternative_name.outputKeys(), true); res != -1) {
-        return {Source::OUTPUT, res};
+      if (auto offset = found(*alternative_name.outputKeys(), true); offset != -1) {
+        return {Source::OUTPUT, offset};
       }
     }
 
