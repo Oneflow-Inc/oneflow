@@ -33,6 +33,7 @@ import oneflow.unittest
 
 from networks.resnet50 import resnet50
 
+
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     resnet = resnet50()
@@ -54,6 +55,7 @@ def _test_okl_resnet(test_case):
     test_case.assertTrue(
         np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-4)
     )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestOKLResNet(flow.unittest.TestCase):
