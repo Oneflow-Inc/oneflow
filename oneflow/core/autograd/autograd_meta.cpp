@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -71,6 +73,9 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
     acc_grad_ = JUST(static_zeros_tensor->AsLocalTensor());
   } else {
     acc_grad_ = grad;
+  }
+  if (acc_grad_ != nullptr) {
+    JUST(acc_grad_->eager_blob_object())->tensor_storage()->set_evictable(false);
   }
   return Maybe<void>::Ok();
 }

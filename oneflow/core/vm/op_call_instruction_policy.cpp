@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/vm/dtr_env.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/tensor_storage.h"
@@ -47,6 +48,7 @@ static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
+    VLOG(1) << "prepare " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       InferTempStorageSize(op_call_instruction_policy);
     }
@@ -54,18 +56,39 @@ struct OpCallInstructionUtil final {
   }
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
-                                    vm::Stream* vm_stream) {
+                                    vm::Stream* vm_stream, bool first) {
+    VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
+
+    std::vector<bool> storage_is_initialized;
+    storage_is_initialized.reserve(op_call_instruction_policy->outputs().size());
+    for (const auto& y : op_call_instruction_policy->outputs()) {
+      storage_is_initialized.push_back(y->tensor_storage()->is_initialized());
+    }
     for (const auto& x : op_call_instruction_policy->inputs()) {
       if (x->tensor_storage()->blob_dptr() == nullptr) {
-        JUST(Compute(x->tensor_storage()->compute_op(), vm_stream));
+        OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
+        JUST(Compute(&tmp_op, vm_stream, false));
       }
       x->tensor_storage()->Pin();
     }
-    for (const auto& y : op_call_instruction_policy->outputs()) {
+    std::unique_ptr<OpCallInstructionPolicy> compute_op =
+        std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
+    for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
+      const auto& y = op_call_instruction_policy->outputs().at(i);
+      if (storage_is_initialized[i] && first) {
+        VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
+                << y->tensor_storage()->compute_op_type_name() << std::endl;
+        compute_op = std::make_unique<OpCallInstructionPolicy>(
+            Singleton<dtr::Env>::Get()->update_tensor_with_storage(y->tensor_storage().get(),
+                                                                   op_call_instruction_policy));
+      }
+    }
+    for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
+      const auto& y = op_call_instruction_policy->outputs().at(i);
       y->tensor_storage()->Pin();
       y->tensor_storage()->Access();
-      y->tensor_storage()->set_compute_op(op_call_instruction_policy);
+      if (first) { y->tensor_storage()->set_compute_op(*compute_op); }
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
@@ -121,9 +144,9 @@ struct OpCallInstructionUtil final {
       if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
-        if (auto* dtr_allocator =
-                dynamic_cast<vm::DtrEpAllocator<ReentrantThreadSafeLock>*>(allocator)) {
-          dtr_allocator->Mark(blob_object.get(), static_cast<const char*>(blob_object->dptr()));
+        if (auto* dtr_allocator = dynamic_cast<vm::DtrEpAllocatorProxy*>(allocator)) {
+          dtr_allocator->allocator->Mark(blob_object.get(),
+                                         static_cast<const char*>(blob_object->dptr()));
         }
       }
     }
@@ -164,7 +187,8 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-    : vm_stream_(vm_stream),
+    : id(-1),
+      vm_stream_(vm_stream),
       call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), std::move(inputs),
                 std::move(outputs), global_tensor_infer_result, op_interp_ctx,
                 opkernel->mem_case()),
@@ -182,8 +206,21 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {
+  id = unique_id();
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
+
+OpCallInstructionPolicy::OpCallInstructionPolicy(const DtrOpCallInstructionPolicy& policy)
+    : id(unique_id()),
+      vm_stream_(policy.vm_stream_),
+      call_ctx_(policy.dtr_call_ctx_.ToCallContext()),
+      opkernel_(policy.opkernel_),
+      user_opkernel_(policy.user_opkernel_),
+      infer_tmp_size_fn_(policy.infer_tmp_size_fn_),
+      need_temp_storage_(policy.need_temp_storage_),
+      dev_vm_dep_object_consume_mode_(policy.dev_vm_dep_object_consume_mode_),
+      input_dependences_(policy.input_dependences_),
+      output_dependences_(policy.output_dependences_) {}
 
 template<typename DoEachT>
 void OpCallInstructionPolicy::ForEachConstDependence(const DoEachT& DoEach) const {
@@ -242,12 +279,17 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream()),
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true),
                  instruction->DebugName());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {
   return opkernel().op_type_name() + ":OpCall";
+}
+
+Maybe<void> Recompute(OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream) {
+  VLOG(1) << "recompute " << op_call_instruction_policy->opkernel().op_type_name() << " manually";
+  return OpCallInstructionUtil::Compute(op_call_instruction_policy, vm_stream, false);
 }
 
 }  // namespace vm

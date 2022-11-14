@@ -40,7 +40,7 @@ class TmpTensor final : public user_op::Tensor {
  public:
   explicit TmpTensor(const std::shared_ptr<MemoryCase>& mem_case)
       : mem_case_(mem_case), tmp_buffer_size_(0), tmp_buffer_ptr_(nullptr) {}
-  ~TmpTensor() {}
+  ~TmpTensor() = default;
 
   ShapeView shape_view() const override { return ShapeView(&tmp_buffer_size_, 1); }
   MutShapeView mut_shape_view() override { return MutShapeView(&tmp_buffer_size_, 1); }
@@ -67,8 +67,8 @@ class TmpTensor final : public user_op::Tensor {
 
 class CallContext {
  public:
-  CallContext(ComposedAttrMap&& composed_attrs, vm::EagerBlobObjectList&& inputs,
-              vm::EagerBlobObjectList&& outputs,
+  CallContext(ComposedAttrMap composed_attrs, vm::EagerBlobObjectList inputs,
+              vm::EagerBlobObjectList outputs,
               const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
               const one::OpExprInterpContext& op_interp_ctx,
               const std::shared_ptr<MemoryCase>& mem_case)
@@ -84,19 +84,37 @@ class CallContext {
   const ComposedAttrMap& composed_attrs() const { return composed_attrs_; }
   const vm::EagerBlobObjectList& inputs() const { return inputs_; }
   const vm::EagerBlobObjectList& outputs() const { return outputs_; }
+  vm::EagerBlobObjectList& mut_inputs() { return inputs_; }
+  vm::EagerBlobObjectList& mut_outputs() { return outputs_; }
   const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result() const {
     return global_tensor_infer_result_;
   }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   TmpTensor* mut_tmp_tensor() { return &tmp_tensor_; }
+  const TmpTensor& tmp_tensor() const { return tmp_tensor_; }
 
  private:
   const ComposedAttrMap composed_attrs_;
-  const vm::EagerBlobObjectList inputs_;
-  const vm::EagerBlobObjectList outputs_;
+  vm::EagerBlobObjectList inputs_;
+  vm::EagerBlobObjectList outputs_;
   const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;
+};
+
+class DtrCallContext {
+ public:
+  explicit DtrCallContext(const CallContext& call_ctx);
+  CallContext ToCallContext() const;
+  vm::EagerBlobObjectList& mut_inputs() { return inputs_; }
+  vm::WeakEagerBlobObjectList& mut_outputs() { return outputs_; }
+ private:
+  const ComposedAttrMap composed_attrs_;
+  vm::EagerBlobObjectList inputs_;
+  vm::WeakEagerBlobObjectList outputs_;
+  const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
+  const one::OpExprInterpContext op_interp_ctx_;
+  std::shared_ptr<MemoryCase> mem_case;
 };
 
 }  // namespace eager

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
 #include "nlohmann/json.hpp"
+#include "oneflow/core/vm/thread_safe_guard.h"
 
 namespace oneflow {
 
@@ -30,7 +31,6 @@ namespace vm {
 class EagerBlobObject;
 class TensorStorage;
 
-template<typename ThreadLock>
 class DtrEpAllocator final : public Allocator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DtrEpAllocator);
@@ -54,7 +54,7 @@ class DtrEpAllocator final : public Allocator {
  private:
   const size_t alignment_;
   const std::unique_ptr<Allocator> backend_;
-  ThreadLock thread_lock_;
+  ReentrantThreadSafeLock thread_lock_;
 
   std::string current_op_type_name_ = "undefined";
   size_t num_forced_eviction_ = -9999;
@@ -140,6 +140,20 @@ class DtrEpAllocator final : public Allocator {
   std::vector<std::pair<offset_t, offset_t>> group_boundaries_;
 
   size_t group_index(bool high) const;
+};
+
+class DtrEpAllocatorProxy final : public Allocator {
+ public:
+  explicit DtrEpAllocatorProxy(vm::DtrEpAllocator* allocator) : allocator(allocator) {}
+  void DeviceReset() override { allocator->DeviceReset(); }
+
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override {
+    return allocator->Allocate(mem_ptr, size);
+  }
+  void Deallocate(char* mem_ptr, std::size_t size) override {
+    allocator->Deallocate(mem_ptr, size);
+  }
+  vm::DtrEpAllocator* const allocator;
 };
 
 }  // namespace vm

@@ -10,15 +10,14 @@ namespace oneflow {
 namespace vm {
 
 class OpCallInstructionPolicy;
+class DtrOpCallInstructionPolicy;
 
 class TensorStorage {
  public:
   TensorStorage();
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage() {
-    for (const auto& hook : storage_delete_hooks_) { hook(); }
-  }
+  virtual ~TensorStorage();
 
   virtual bool is_allocated_in_vm() const = 0;
 
@@ -31,6 +30,7 @@ class TensorStorage {
   void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
+    is_initialized_ = true;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -54,8 +54,9 @@ class TensorStorage {
     storage_delete_hooks_.emplace_back(hook);
   }
 
-  void set_compute_op(OpCallInstructionPolicy* compute_op);
-  OpCallInstructionPolicy* compute_op() const { return compute_op_.get(); }
+  void set_compute_op(const OpCallInstructionPolicy& compute_op);
+  void clear_compute_op();
+  OpCallInstructionPolicy compute_op() const;
   void Evict(bool eager_eviction) { return Release(); }
   void Pin() { num_pinned_++; }
   void Unpin() { num_pinned_--; }
@@ -64,24 +65,28 @@ class TensorStorage {
   bool is_pinned() const { return num_pinned() > 0; }
   int32_t num_pinned() const { return num_pinned_; }
   bool is_evictable() const { return is_evictable_; }
+  void set_evictable(bool evictable) { is_evictable_ = evictable; }
   int64_t id() const { return id_; }
   Maybe<double> cost(size_t override_size) const;
   std::string compute_op_type_name() const;
+  bool is_initialized() const { return is_initialized_; }
+  bool set_initialized() { return is_initialized_ = true; }
 
  private:
+  bool is_initialized_ = false;
   int64_t id_;
   size_t num_pinned_;
   size_t blob_bytes_;
   bool is_evictable_;
   double last_access_time_;
   double compute_time_;
+  std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
 
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
-  std::shared_ptr<OpCallInstructionPolicy> compute_op_;
 };
 
 class InsideVmTensorStorage : public TensorStorage {

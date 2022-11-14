@@ -84,6 +84,7 @@ class EagerBlobObject final : public user_op::Tensor,
   const void* raw_dptr() const override;
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
+  int64_t storage_offset() const;
   void set_storage_offset(const int64_t offset);
 
   // Returns true if allocate successfully.
@@ -135,6 +136,7 @@ class EagerBlobObject final : public user_op::Tensor,
 };
 
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using WeakEagerBlobObjectList = small_vector<std::weak_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
 }  // namespace vm

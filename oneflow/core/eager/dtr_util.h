@@ -16,10 +16,16 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 
 namespace oneflow {
+
+namespace vm {
+class DtrEpAllocator;
+}
 
 namespace dtr {
 
@@ -29,6 +35,13 @@ bool is_enabled_and_debug();
 int debug_level();
 bool is_check_enabled();
 double append_memory_frag_info_and_get(size_t free_mem, size_t threshold);
+
+class AllocatorManager {
+ public:
+  vm::DtrEpAllocator* CreateOrGetAllocator(DeviceType device_type, size_t device_index);
+ private:
+  std::unordered_map<std::pair<DeviceType, size_t>, std::unique_ptr<vm::DtrEpAllocator>> allocators_;
+};
 
 }  // namespace dtr
 

@@ -68,7 +68,8 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
 
  protected:
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
-    CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
+    // CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
+    eager_blob_object->tensor_storage()->Evict(true);
   }
 
  private:

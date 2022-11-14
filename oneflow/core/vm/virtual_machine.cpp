@@ -83,11 +83,9 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   // an argument for VirtualMachineEngine's constructor.
   engine_ = intrusive::make_shared<vm::VirtualMachineEngine>();
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  if (!ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>()) {
-    std::function<void()> SchedulerInitializer;
-    GetSchedulerThreadInitializer(&SchedulerInitializer);
-    schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  }
+  std::function<void()> SchedulerInitializer;
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
+  schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
   transport_dependence_.Reset();
 }
 
@@ -130,7 +128,7 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   CHECK_OR_RETURN(!disable_vm_threads_) << "vm threads closed";
   ControlSync();
   pending_notifier_.Close();
-  if (!ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>()) { schedule_thread_.join(); }
+  schedule_thread_.join();
   disable_vm_threads_ = true;
   return Maybe<void>::Ok();
 }
@@ -162,7 +160,7 @@ Maybe<void> VirtualMachine::BlockingRunProbeFunc(
       bc->Decrease();
       return true;
     });
-    if (disable_vm_threads_) {
+    if (disable_vm_threads_ || ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>()) {
       ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
     } else {
       pending_notifier_.Notify();
@@ -232,7 +230,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
       JUST(instruction->Prepare());
       instruction->Compute();
     }
-  } else if (unlikely(disable_vm_threads_)) {
+  } else if (unlikely(disable_vm_threads_ || ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>())) {
     JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
@@ -259,7 +257,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
 }
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
-  if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
+  if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_ || ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>())) {
     ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
   } else {
     pending_notifier_.Notify();

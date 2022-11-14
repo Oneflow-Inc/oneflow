@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/eager/dtr_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,22 +42,12 @@ std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
                                                         std::move(ep_backend_allocator));
 }
 
-std::unique_ptr<DtrEpAllocator<ReentrantThreadSafeLock>> CreateDtrEpBackendDeviceAllocator(
-    Symbol<Device> device) {
-  DeviceType device_type = device->enum_type();
-  size_t device_index = device->device_id();
-  auto ep_device =
-      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-  auto ep_backend_allocator =
-      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-  return std::make_unique<DtrEpAllocator<ReentrantThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                          std::move(ep_backend_allocator));
-}
-
 }  // namespace
 
 EpStreamPolicy::EpStreamPolicy(Symbol<Device> device)
-    : EpStreamPolicyBase(device, CreateDtrEpBackendDeviceAllocator(device)) {}
+    : EpStreamPolicyBase(device, std::make_unique<vm::DtrEpAllocatorProxy>(
+                                     Singleton<dtr::AllocatorManager>::Get()->CreateOrGetAllocator(
+                                         device->enum_type(), device->device_id()))) {}
 
 void EpStreamPolicy::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {

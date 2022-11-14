@@ -31,8 +31,19 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("is_in_memory", [](const std::shared_ptr<one::Tensor>& tensor) -> Maybe<bool> {
     return JUST(tensor->eager_blob_object())->tensor_storage()->is_in_memory();
   });
-  // m.def("allocated_memory",
-  //       []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
+  m.def("allocated_memory", [](const std::string& device_str) -> Maybe<size_t> {
+    auto device = JUST(Device::ParseAndNew(device_str));
+    return Singleton<dtr::AllocatorManager>::Get()
+        ->CreateOrGetAllocator(device->enum_type(), device->device_id())
+        ->allocated_memory();
+  });
+  m.def("display", [](const std::string& device_str) -> Maybe<void> {
+    auto device = JUST(Device::ParseAndNew(device_str));
+    Singleton<dtr::AllocatorManager>::Get()
+        ->CreateOrGetAllocator(device->enum_type(), device->device_id())
+        ->DisplayAllPieces();
+    return Maybe<void>::Ok();
+  });
   // m.def("display_all_pieces",
   //       []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
   // m.def("clear_num_ops_and_set_first", []() -> void {
@@ -40,8 +51,8 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   //   Global<vm::DtrCudaAllocator>::Get()->first_time = true;
   // });
   // m.def("get_num_ops", []() -> int { return Global<dtr::TensorPool>::Get()->num_ops(); });
-  // m.def("pool_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
-  // m.def("pool_verbose_display",
+  // m.def("pool_display", []() -> Maybe<void> { return
+  // Global<dtr::TensorPool>::Get()->display(); }); m.def("pool_verbose_display",
   //       []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->verbose_display(); });
   // m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
   //   auto dtr_tensor =
@@ -58,9 +69,11 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   //   auto dtr_ebo =
   //       std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()));
   //   std::stringstream ss;
-  //   ss << "tensor: " << dtr_tensor.get() << ", compute op: " << dtr_ebo->compute_op_type_name()
+  //   ss << "tensor: " << dtr_tensor.get() << ", compute op: " <<
+  //   dtr_ebo->compute_op_type_name()
   //      << ", is_in_memory: " << dtr_ebo->is_in_memory()
-  //      << ", is_evictable: " << dtr_ebo->is_evictable() << ", pinned: " << dtr_ebo->num_pinned()
+  //      << ", is_evictable: " << dtr_ebo->is_evictable() << ", pinned: " <<
+  //      dtr_ebo->num_pinned()
   //      << ", id: " << dtr_ebo->id();
   //   return ss.str();
   // });

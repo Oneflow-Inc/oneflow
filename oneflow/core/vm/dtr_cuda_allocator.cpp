@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/vm/dtr_env.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
@@ -57,8 +58,7 @@ std::vector<size_t> GroupNumToIndexes(size_t group_num) {
 
 }  // namespace
 
-template<typename ThreadLock>
-DtrEpAllocator<ThreadLock>::DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
+DtrEpAllocator::DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
     : Allocator(),
       alignment_(alignment),
       backend_(std::move(backend)),
@@ -72,19 +72,15 @@ DtrEpAllocator<ThreadLock>::DtrEpAllocator(size_t alignment, std::unique_ptr<All
   free_pieces_overlapping_with_group_.resize(normal_group_num_ + 1);
 }
 
-template<typename ThreadLock>
-DtrEpAllocator<ThreadLock>::~DtrEpAllocator() {
+DtrEpAllocator::~DtrEpAllocator() {
   if (memory_ != nullptr) { backend_->Deallocate(static_cast<char*>(memory_), memory_size_); }
 }
 
-template<typename ThreadLock>
-typename DtrEpAllocator<ThreadLock>::offset_t DtrEpAllocator<ThreadLock>::get_offset(
-    const char* mem_ptr) const {
+DtrEpAllocator::offset_t DtrEpAllocator::get_offset(const char* mem_ptr) const {
   return mem_ptr - (char*)memory_;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
+void DtrEpAllocator::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo->tensor_storage().get();
   if (dtr::debug_level() >= 1) {
@@ -93,8 +89,7 @@ void DtrEpAllocator<ThreadLock>::Mark(EagerBlobObject* ebo, const char* mem_ptr)
   }
 }
 
-template<typename ThreadLock>
-Maybe<bool> DtrEpAllocator<ThreadLock>::InSmallMemoryArea(void* ptr) {
+Maybe<bool> DtrEpAllocator::InSmallMemoryArea(void* ptr) {
   CHECK_NOTNULL_OR_RETURN(small_piece_area_ptr_);
   CHECK_GE_OR_RETURN(ptr, memory_);
   CHECK_LT_OR_RETURN(ptr, (char*)memory_ + memory_size_);
@@ -102,8 +97,7 @@ Maybe<bool> DtrEpAllocator<ThreadLock>::InSmallMemoryArea(void* ptr) {
   return std::greater_equal<>{}(ptr, small_piece_area_ptr_);
 }
 
-template<typename ThreadLock>
-typename DtrEpAllocator<ThreadLock>::Piece* DtrEpAllocator<ThreadLock>::AllocatePiece() {
+DtrEpAllocator::Piece* DtrEpAllocator::AllocatePiece() {
   if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
@@ -114,8 +108,7 @@ typename DtrEpAllocator<ThreadLock>::Piece* DtrEpAllocator<ThreadLock>::Allocate
   }
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::DeallocatePiece(Piece* piece) {
+void DtrEpAllocator::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
   CHECK(piece->is_free);
@@ -125,14 +118,12 @@ void DtrEpAllocator<ThreadLock>::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::InsertPiece2PtrMap(Piece* piece) {
+void DtrEpAllocator::InsertPiece2PtrMap(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::ErasePieceFromPtrMap(Piece* piece) {
+void DtrEpAllocator::ErasePieceFromPtrMap(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
@@ -155,8 +146,8 @@ double get_cost(const vm::TensorStorage* storage, size_t size) {
   return cost;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::DisplayAllPieces() {
+void DtrEpAllocator::DisplayAllPieces() {
+  std::cout << "ops: " << Singleton<dtr::Env>::Get()->ops.size() << std::endl;
   for (const auto& pair : ptr2piece_) {
     Piece* piece = pair.second;
     std::stringstream ss;
@@ -173,8 +164,7 @@ void DtrEpAllocator<ThreadLock>::DisplayAllPieces() {
   }
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::Display() {
+void DtrEpAllocator::Display() {
   double total_free_piece_bytes = 0.;
   for (const auto& free_list : free_pieces_overlapping_with_group_) {
     for (auto it = free_list.begin(); it != free_list.end(); ++it) {
@@ -193,9 +183,9 @@ void DtrEpAllocator<ThreadLock>::Display() {
 }
 
 // 开启了 left-right 之后，才能开启 op guided
-template<typename ThreadLock>
-typename DtrEpAllocator<ThreadLock>::offset_t DtrEpAllocator<ThreadLock>::FindProperPositionInGroup(
-    Piece* piece, size_t group_idx, size_t request_size) const {
+
+DtrEpAllocator::offset_t DtrEpAllocator::FindProperPositionInGroup(Piece* piece, size_t group_idx,
+                                                                   size_t request_size) const {
   const offset_t grp_left_bound = group_boundaries_[group_idx].first;
   const offset_t grp_right_bound = group_boundaries_[group_idx].second;
   const offset_t piece_left_bound = get_offset(piece->ptr);
@@ -231,8 +221,7 @@ typename DtrEpAllocator<ThreadLock>::offset_t DtrEpAllocator<ThreadLock>::FindPr
   return SIZE_MAX;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::InsertToFreeList(Piece* piece) {
+void DtrEpAllocator::InsertToFreeList(Piece* piece) {
   const offset_t piece_left = get_offset(piece->ptr);
   const offset_t piece_right = piece_left + piece->size;
   LOG(INFO) << "piece_left: " << piece_left << ", right: " << piece_right << std::endl;
@@ -248,8 +237,7 @@ void DtrEpAllocator<ThreadLock>::InsertToFreeList(Piece* piece) {
   }
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::EraseFromFreeList(Piece* piece) {
+void DtrEpAllocator::EraseFromFreeList(Piece* piece) {
   LOG(INFO) << "erase " << get_offset(piece->ptr);
   // NOTE: very strange bug:
   // std::map::erase(Key) returns 2 instead of 0 or 1, which conflicts with documentation.
@@ -263,9 +251,8 @@ void DtrEpAllocator<ThreadLock>::EraseFromFreeList(Piece* piece) {
   }
 }
 
-template<typename ThreadLock>
-auto DtrEpAllocator<ThreadLock>::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece,
-                                                       size_t size) -> Piece* {
+auto DtrEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size)
+    -> Piece* {
   auto SplitPiece = [this](Piece* piece, offset_t offset_in_piece) -> Piece* {
     // offset_in_piece must be less (not equal) than piece->size so that
     // new_piece has size
@@ -318,11 +305,8 @@ auto DtrEpAllocator<ThreadLock>::AllocateMemoryInPiece(Piece* piece, offset_t of
   return piece2;
 }
 
-template<typename ThreadLock>
-size_t DtrEpAllocator<ThreadLock>::iterate_group_index(bool high) const {
-  if (normal_group_num_ == 1) {
-    return 0;
-  }
+size_t DtrEpAllocator::iterate_group_index(bool high) const {
+  if (normal_group_num_ == 1) { return 0; }
   auto is_high_group = [](size_t idx) -> bool { return (idx / 2) % 2 == (idx % 2); };
   if (high) {
     size_t index;  // NOLINT
@@ -341,8 +325,7 @@ size_t DtrEpAllocator<ThreadLock>::iterate_group_index(bool high) const {
   }
 }
 
-template<typename ThreadLock>
-size_t DtrEpAllocator<ThreadLock>::group_index(bool high) const {
+size_t DtrEpAllocator::group_index(bool high) const {
   if (high) {
     return group_indexes_[cur_group_index_id_high_cost_];
   } else {
@@ -350,8 +333,7 @@ size_t DtrEpAllocator<ThreadLock>::group_index(bool high) const {
   }
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::InitMemory() {
+void DtrEpAllocator::InitMemory() {
   memory_size_ = dtr::memory_threshold();
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
   const size_t small_piece_area_size =
@@ -392,9 +374,7 @@ void DtrEpAllocator<ThreadLock>::InitMemory() {
   InsertPiece2PtrMap(piece);
 }
 
-template<typename ThreadLock>
-Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::FindPiece(
-    size_t aligned_size, bool after_eviction) {
+Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) { InitMemory(); }
@@ -447,8 +427,7 @@ Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::F
   return nullptr;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
+void DtrEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   CHECK(lhs->is_free);
   CHECK(rhs->is_free);
   CHECK(lhs->next == rhs);
@@ -462,9 +441,8 @@ void DtrEpAllocator<ThreadLock>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs)
   DeallocatePiece(rhs);
 }
 
-template<typename ThreadLock>
-Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::EvictAndFindPieceLoop(
-    size_t required_size, bool consider_neighbor) {
+Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t required_size,
+                                                                    bool consider_neighbor) {
   if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
   auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t {
     size_t size = it->second->size;
@@ -509,9 +487,7 @@ Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::E
   }
 }
 
-template<typename ThreadLock>
-Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::EvictAndFindPieceOnce(
-    size_t required_size) {
+Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t required_size) {
   if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
@@ -617,13 +593,12 @@ Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::E
   return nullptr;
 }
 
-template<typename ThreadLock>
-Maybe<void> DtrEpAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
     return Maybe<void>::Ok();
   }
-  typename ThreadLock::RAIIGuard guard(thread_lock_);
+  ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
   size_t aligned_size = CudaMemAlignedBytes(size);
 
   Piece* piece = JUST(FindPiece(aligned_size, false));
@@ -678,10 +653,9 @@ Maybe<void> DtrEpAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t siz
   return Maybe<void>::Ok();
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
+void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
-  typename ThreadLock::RAIIGuard guard(thread_lock_);
+  ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
 
   auto it = ptr2piece_.find(mem_ptr);
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
@@ -720,24 +694,19 @@ void DtrEpAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   // }
 }
 
-template<typename ThreadLock>
-size_t DtrEpAllocator<ThreadLock>::allocated_memory() {
+size_t DtrEpAllocator::allocated_memory() {
   CHECK_GE(total_allocate_bytes_, total_deallocate_bytes_);
   return total_allocate_bytes_ - total_deallocate_bytes_;
 }
 
-template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::DeviceReset() {
-  typename ThreadLock::RAIIGuard guard(thread_lock_);
+void DtrEpAllocator::DeviceReset() {
+  ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
   backend_->DeviceReset();
 }
 
-template<typename ThreadLock>
-nlohmann::json DtrEpAllocator<ThreadLock>::DumpSearchFreeMemCost() {
+nlohmann::json DtrEpAllocator::DumpSearchFreeMemCost() {
   return {{"overhead", search_free_mem_cost_}};
 }
-
-template class DtrEpAllocator<ReentrantThreadSafeLock>;
 
 }  // namespace vm
 }  // namespace oneflow

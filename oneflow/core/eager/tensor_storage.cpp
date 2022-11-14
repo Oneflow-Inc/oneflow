@@ -5,14 +5,14 @@
 namespace oneflow {
 namespace vm {
 namespace {
-int64_t unique_id() {
+int64_t unique_id_2() {
   static size_t id = 0;
   return id++;
 }
 
-static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
-  const auto& inputs = operand->inputs();
-  const auto& outputs = operand->outputs();
+static double GetEstimatedComputeTime(const OpCallInstructionPolicy& operand) {
+  const auto& inputs = operand.inputs();
+  const auto& outputs = operand.outputs();
   size_t estimated_compute_time = 0;
   for (const auto& input : inputs) {
     estimated_compute_time += input->tensor_storage()->blob_bytes();
@@ -26,24 +26,52 @@ static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
 }  // namespace
 
 TensorStorage::TensorStorage()
-    : id_(unique_id()),
+    : id_(unique_id_2()),
       num_pinned_(0),
       blob_bytes_(0),
-      is_evictable_(true),
+      is_evictable_(false),
       last_access_time_(0),
       compute_time_(0),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
       producer_stream_(NullOpt),
-      last_used_stream_(NullOpt) {}
+      last_used_stream_(NullOpt) {
+  VLOG(1) << "create storage " << id_;
+}
 
-void TensorStorage::set_compute_op(OpCallInstructionPolicy* compute_op) {
+TensorStorage::~TensorStorage() {
+  for (const auto& hook : storage_delete_hooks_) { hook(); }
+  if (compute_op_) { Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get()); }
+  VLOG(1) << "delete storage " << id_;
+}
+
+OpCallInstructionPolicy TensorStorage::compute_op() const {
+  CHECK_NOTNULL(compute_op_);
+  return OpCallInstructionPolicy(*compute_op_);
+}
+
+void TensorStorage::clear_compute_op() {
+  compute_op_ = nullptr;
+  compute_time_ = -1;
+  is_evictable_ = false;
+}
+
+void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
+  if (compute_op_) {
+    // Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
+  }
   // copy a new OpCallInstructionPolicy
-  compute_op_ = std::make_shared<OpCallInstructionPolicy>(*compute_op);
+  compute_op_ = std::make_shared<DtrOpCallInstructionPolicy>(compute_op);
+  Singleton<dtr::Env>::Get()->ops.push_back(compute_op_.get());
   compute_time_ = GetEstimatedComputeTime(compute_op);
+  is_evictable_ = true;
 }
 
 std::string TensorStorage::compute_op_type_name() const {
-  return compute_op_->opkernel().op_type_name();
+  if (compute_op_) {
+    return compute_op_->opkernel().op_type_name();
+  } else {
+    return "None";
+  }
 }
 
 void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->time_now(); }

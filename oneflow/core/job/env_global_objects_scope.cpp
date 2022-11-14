@@ -49,6 +49,7 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
 #include "oneflow/core/kernel/profiler_kernel_observer.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/eager/dtr_util.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -180,6 +181,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Singleton<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
   Singleton<ep::DeviceManagerRegistry>::New();
+  Singleton<dtr::AllocatorManager>::New();
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA

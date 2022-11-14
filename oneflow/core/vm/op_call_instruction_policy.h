@@ -34,9 +34,48 @@ class OpKernel;
 
 namespace vm {
 
+inline int64_t unique_id() {
+  static size_t id = 0;
+  return id++;
+}
+
+class DtrOpCallInstructionPolicy;
+
 class OpCallInstructionPolicy final : public InstructionPolicy {
  public:
-  ~OpCallInstructionPolicy() override = default;
+  size_t id;
+  OpCallInstructionPolicy(const OpCallInstructionPolicy& other)
+      : id(unique_id()),
+        vm_stream_(other.vm_stream_),
+        call_ctx_(other.call_ctx_),
+        opkernel_(other.opkernel_),
+        user_opkernel_(other.user_opkernel_),
+        infer_tmp_size_fn_(other.infer_tmp_size_fn_),
+        need_temp_storage_(other.need_temp_storage_),
+        dev_vm_dep_object_consume_mode_(other.dev_vm_dep_object_consume_mode_),
+        input_dependences_(other.input_dependences_),
+        output_dependences_(other.output_dependences_) {
+  }
+  OpCallInstructionPolicy(OpCallInstructionPolicy&& other) noexcept
+      : id(unique_id()),
+        vm_stream_(other.vm_stream_),
+        call_ctx_(other.call_ctx_),
+        opkernel_(other.opkernel_),
+        user_opkernel_(other.user_opkernel_),
+        infer_tmp_size_fn_(other.infer_tmp_size_fn_),
+        need_temp_storage_(other.need_temp_storage_),
+        dev_vm_dep_object_consume_mode_(other.dev_vm_dep_object_consume_mode_),
+        input_dependences_(other.input_dependences_),
+        output_dependences_(other.output_dependences_) {
+    other.vm_stream_ = nullptr;
+    other.opkernel_ = nullptr;
+    other.user_opkernel_ = nullptr;
+    other.infer_tmp_size_fn_ = nullptr;
+
+  }
+  OpCallInstructionPolicy& operator=(const OpCallInstructionPolicy& other) = delete;
+  OpCallInstructionPolicy& operator=(OpCallInstructionPolicy&& other) = delete;
+  ~OpCallInstructionPolicy() override { }
 
   template<typename... Args>
   static Maybe<OpCallInstructionPolicy> New(Args&&... args) {
@@ -48,6 +87,8 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
   const EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
   const EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
+  EagerBlobObjectList& mut_inputs() { return call_ctx_.mut_inputs(); }
+  EagerBlobObjectList& mut_outputs() { return call_ctx_.mut_outputs(); }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
@@ -82,6 +123,7 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
     return call_ctx_.global_tensor_infer_result();
   }
 
+  const eager::CallContext& call_ctx() const { return call_ctx_; }
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
 
   Stream* vm_stream() const { return vm_stream_; }
@@ -90,6 +132,7 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
 
   std::string DebugName(const vm::Instruction& instruction) const override;
 
+  explicit OpCallInstructionPolicy(const DtrOpCallInstructionPolicy& policy);
  private:
   OpCallInstructionPolicy(
       Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
@@ -111,7 +154,37 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
+  friend class DtrOpCallInstructionPolicy;
 };
+
+class DtrOpCallInstructionPolicy {
+  Stream* vm_stream_;
+  eager::DtrCallContext dtr_call_ctx_;
+  std::shared_ptr<one::StatefulOpKernel> opkernel_;
+  const user_op::OpKernel* user_opkernel_;
+  const user_op::InferTmpSizeFn* infer_tmp_size_fn_;
+  bool need_temp_storage_;
+  const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
+  public:
+  explicit DtrOpCallInstructionPolicy(const OpCallInstructionPolicy& op)
+      : vm_stream_(op.vm_stream()),
+        dtr_call_ctx_(op.call_ctx()),
+        opkernel_(op.opkernel_),
+        user_opkernel_(op.user_opkernel_),
+        infer_tmp_size_fn_(op.infer_tmp_size_fn_),
+        need_temp_storage_(op.need_temp_storage()),
+        dev_vm_dep_object_consume_mode_(op.dev_vm_dep_object_consume_mode()),
+        input_dependences_(op.input_dependences()),
+        output_dependences_(op.output_dependences()) {}
+  friend class OpCallInstructionPolicy;
+  EagerBlobObjectList& mut_inputs() { return dtr_call_ctx_.mut_inputs(); }
+  WeakEagerBlobObjectList& mut_outputs() { return dtr_call_ctx_.mut_outputs(); }
+  const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
+};
+
+Maybe<void> Recompute(OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream);
 
 }  // namespace vm
 }  // namespace oneflow

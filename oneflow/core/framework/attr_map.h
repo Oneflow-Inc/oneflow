@@ -104,8 +104,6 @@ AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_conf);
 
 class ComposedAttrMap final {
  public:
-  ComposedAttrMap(const ComposedAttrMap&) = default;
-  ComposedAttrMap(ComposedAttrMap&&) = default;
   ComposedAttrMap(const AttrMap& base) : base_(base) {}
   ComposedAttrMap(const AttrMap& prior, const AttrMap& base) : prior_(prior), base_(base) {}
 

@@ -18,6 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
@@ -26,7 +29,7 @@ namespace oneflow {
 
 namespace dtr {
 
-bool is_enabled() { return EnvBool<OF_DTR>(); }
+bool is_enabled() { return true; }
 
 size_t memory_threshold() { return EnvInteger<ONEFLOW_DTR_BUDGET_MB>() * 1024 * 1024; }
 
@@ -39,7 +42,7 @@ int debug_level() {
 
 bool is_check_enabled() {
   if (!is_enabled()) { return false; }
-  return EnvBool<OF_DTR_CHECK>();
+  return EnvBool<ONEFLOW_DTR_CHECK>();
 }
 
 double append_memory_frag_info_and_get(size_t free_mem, size_t threshold) {
@@ -51,6 +54,24 @@ double append_memory_frag_info_and_get(size_t free_mem, size_t threshold) {
     num++;
   }
   return memory_frag_rate_sum / num;
+}
+
+vm::DtrEpAllocator* AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
+                                                           size_t device_index) {
+  auto key = std::make_pair(device_type, device_index);
+  auto it = allocators_.find(key);
+  if (it == allocators_.end()) {
+    auto ep_device =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+    auto ep_backend_allocator =
+        std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+    auto allocator = std::make_unique<vm::DtrEpAllocator>(ep::kMaxAlignmentRequirement,
+                                                          std::move(ep_backend_allocator));
+    allocators_.emplace(key, std::move(allocator));
+    return allocators_.at(key).get();
+  } else {
+    return it->second.get();
+  }
 }
 
 }  // namespace dtr
@@ -157,4 +178,3 @@ Maybe<void> CheckOutputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
 #endif
 
 }  // namespace oneflow
-
