@@ -173,15 +173,15 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_FUSED_GEGLU_KERNEL(dtype)                          \
+#define REGISTER_GPU_FUSED_GLU_KERNEL(dtype)                          \
   REGISTER_USER_KERNEL("fused_glu")                                     \
       .SetCreateFn<GpuFusedGluKernel<dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)  \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_FUSED_GEGLU_KERNEL(float)
-REGISTER_GPU_FUSED_GEGLU_KERNEL(double)
-REGISTER_GPU_FUSED_GEGLU_KERNEL(half)
-REGISTER_GPU_FUSED_GEGLU_KERNEL(nv_bfloat16)
+REGISTER_GPU_FUSED_GLU_KERNEL(float)
+REGISTER_GPU_FUSED_GLU_KERNEL(double)
+REGISTER_GPU_FUSED_GLU_KERNEL(half)
+REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
 
 } // namespace oneflow
