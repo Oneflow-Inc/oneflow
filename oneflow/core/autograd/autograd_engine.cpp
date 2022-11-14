@@ -121,6 +121,10 @@ Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
   return Maybe<void>::Ok();
 }
 
+std::string GetDebugGraphFileName(const std::string& mode, const std::string& suffix) {
+  return fmt::format("autograd_{}_rank{}_suffix_graph.dot", mode, GlobalProcessCtx::Rank(), suffix);
+}
+
 }  // namespace
 
 Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTuple& outputs,
@@ -448,9 +452,8 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependencies());
   if (IsInDebugMode()) {
-    JUST(graph_task.WriteGraphToDotFile("autograd_backward_rank"
-                                        + std::to_string(GlobalProcessCtx::Rank()) + "_"
-                                        + std::to_string(clock()) + "_graph.dot"));
+    JUST(
+        graph_task.WriteGraphToDotFile(GetDebugGraphFileName("backward", std::to_string(clock()))));
   }
   JUST(graph_task.Apply(/*save_grad_for_leaf=*/true));
   return Maybe<void>::Ok();
@@ -466,9 +469,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
   if (IsInDebugMode()) {
-    JUST(graph_task.WriteGraphToDotFile("autograd_grad_rank"
-                                        + std::to_string(GlobalProcessCtx::Rank()) + "_"
-                                        + std::to_string(clock()) + "_graph.dot"));
+    JUST(graph_task.WriteGraphToDotFile(GetDebugGraphFileName("grad", std::to_string(clock()))));
   }
   JUST(graph_task.Apply(/*save_grad_for_leaf=*/false));
   return graph_task.GetCapturedGrads();
