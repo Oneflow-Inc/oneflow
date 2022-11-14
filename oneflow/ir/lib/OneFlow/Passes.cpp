@@ -85,6 +85,7 @@ limitations under the License.
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
 #include <algorithm>
 #include <memory>
@@ -1042,12 +1043,25 @@ KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*
                                       mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
   OpBuilder::InsertionGuard guard(rewriter);
-  auto wrap_func = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
+
+  auto wrap_res = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
+  auto wrap_func = wrap_res.first;
+  auto wrap_ins = wrap_res.second;
+
+  auto func_name = wrap_func.getSymNameAttr();
+  std::vector<NamedAttribute> attrs;
+  for (auto attr : wrap_ops[0]->getAttrs()) {
+    auto attr_list = {"scope_symbol_id", "device_tag", "device_name"};
+    if (std::find(attr_list.begin(), attr_list.end(), attr.getName()) != attr_list.end()) {
+      attrs.push_back(attr);
+    }
+  }
+  attrs.emplace_back(rewriter.getStringAttr("op_name"), func_name);
+
   rewriter.setInsertionPointAfter(wrap_ops.back());
-  auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func.first,
-                                              wrap_ops[0]->getAttrs(), wrap_func.second);
-  auto func_name = wrap_func.first.getSymNameAttr();
-  func->setAttr("op_name", func_name);
+  auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func,
+                                              ArrayRef<NamedAttribute>(attrs), wrap_ins);
+
   if (failed(DumpAssembly(rewriter, func, func_name))) { exit(1); }
   int res_idx = 0;
   for (auto op : wrap_ops) {

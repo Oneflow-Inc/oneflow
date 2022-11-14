@@ -121,6 +121,11 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
 
 }  // namespace
 
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  return success(op_def.IsAttrName(attr_name));
+}
+
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) return failure();

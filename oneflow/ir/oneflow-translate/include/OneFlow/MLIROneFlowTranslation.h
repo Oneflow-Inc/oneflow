@@ -40,6 +40,8 @@ namespace oneflow {
 
 // TODO: wrap in a helper namespace
 
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name);
+
 LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
