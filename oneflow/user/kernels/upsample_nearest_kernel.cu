@@ -67,6 +67,30 @@ __global__ void UpsampleNearest2DForward(const int64_t elem_cnt, const T* in_dpt
 }
 
 template<typename T>
+struct alignas(2 * sizeof(T)) Pack2X {
+  T x;
+  T y;
+};
+
+template<typename T>
+__global__ void UpsampleNearest2D2XForward(const int32_t in_elem_cnt, const T* in_dptr,
+                                           const int32_t in_height, const int32_t in_width,
+                                           T* out_dptr) {
+  const int32_t in_hw_size = in_width * in_height;
+  CUDA_1D_KERNEL_LOOP(index, in_elem_cnt) {
+    const T in_value = in_dptr[index];
+    const int32_t nc_idx = index / in_hw_size;
+    const int32_t hw_off = index - nc_idx * in_hw_size;
+    const int32_t h = hw_off / in_width;
+    const int32_t w = hw_off - h * in_width;
+    Pack2X<T> out_value{in_value, in_value};
+    Pack2X<T>* out_pack_dptr = reinterpret_cast<Pack2X<T>*>(out_dptr);
+    out_pack_dptr[nc_idx * in_hw_size * 2 + h * 2 * in_width + w] = out_value;
+    out_pack_dptr[nc_idx * in_hw_size * 2 + (h * 2 + 1) * in_width + w] = out_value;
+  }
+}
+
+template<typename T>
 __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                           NdIndexOffsetHelper<int64_t, 4> dy_helper,
                                           NdIndexOffsetHelper<int64_t, 4> dx_helper,
@@ -221,7 +245,8 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
-    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    const int64_t out_elem_cnt = y_tensor->shape_view().elem_cnt();
+    const int64_t in_elem_cnt = x_tensor->shape_view().elem_cnt();
     const int64_t in_height = x_tensor->shape_view().At(2);
     const int64_t in_width = x_tensor->shape_view().At(3);
     const int64_t out_height = y_tensor->shape_view().At(2);
@@ -236,16 +261,18 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
-      NdIndexOffsetHelper<int64_t, 4> in_helper(
-          x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
-          x_tensor->shape_view().At(3));
-      NdIndexOffsetHelper<int64_t, 4> out_helper(
-          y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
-          y_tensor->shape_view().At(3));
-      RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                      x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
-                      x_tensor->shape_view().At(3), 1.f / height_scale, 1.f / width_scale,
-                      y_tensor->mut_dptr<T>());
+      const int64_t n = x_tensor->shape_view().At(0);
+      const int64_t c = x_tensor->shape_view().At(1);
+      if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 30) {
+        RUN_CUDA_KERNEL(UpsampleNearest2D2XForward<T>, ctx->stream(), in_elem_cnt, in_elem_cnt,
+                        x_tensor->dptr<T>(), in_height, in_width, y_tensor->mut_dptr<T>());
+      } else {
+        NdIndexOffsetHelper<int64_t, 4> in_helper(n, c, in_height, in_width);
+        NdIndexOffsetHelper<int64_t, 4> out_helper(n, c, out_height, out_width);
+        RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->stream(), out_elem_cnt, out_elem_cnt,
+                        x_tensor->dptr<T>(), in_helper, out_helper, in_height, in_width,
+                        1.f / height_scale, 1.f / width_scale, y_tensor->mut_dptr<T>());
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
