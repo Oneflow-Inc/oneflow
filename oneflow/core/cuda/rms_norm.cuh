@@ -88,7 +88,7 @@ __inline__ __device__ T WarpReduceSum(T val) {
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access, bool padding>
-__global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrows, const int64_t ncols,
+__global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
                                 const double eps, ComputeType* inv_rms) {
   static_assert(max_cols_per_thread % pack_size == 0, "");
   static_assert(min_cols_per_thread % pack_size == 0, "");
@@ -96,13 +96,13 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrows, con
   static_assert(kWarpSize % thread_group_width == 0, "");
   constexpr int max_num_packs = max_cols_per_thread / pack_size;
   constexpr int min_num_packs = min_cols_per_thread / pack_size;
-  assert(ncols <= max_cols_per_thread * thread_group_width);
+  assert(ncol <= max_cols_per_thread * thread_group_width);
   ComputeType buf[rows_per_access][max_cols_per_thread];
   const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int64_t num_global_thread_groups = gridDim.x * blockDim.y;
   const int64_t lane_id = threadIdx.x;
   const int64_t step = num_global_thread_groups * rows_per_access;
-  for (int64_t row = global_thread_group_id * rows_per_access; row < nrows; row += step) {
+  for (int64_t row = global_thread_group_id * rows_per_access; row < nrow; row += step) {
     ComputeType thread_root_sum[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
@@ -122,7 +122,7 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrows, con
       for (int pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         const int pack_offset = pack_id * pack_size;
-        if (!padding || col < ncols) {
+        if (!padding || col < ncol) {
           load.template load<pack_size>(row_buf + pack_offset, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
@@ -143,7 +143,7 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrows, con
           layer_norm::WarpAllReduce<layer_norm::SumOp, ComputeType, thread_group_width>(
               thread_root_sum[row_id]);
       ComputeType row_root_mean =
-          layer_norm::Div(warp_root_sum[row_id], static_cast<ComputeType>(ncols));
+          layer_norm::Div(warp_root_sum[row_id], static_cast<ComputeType>(ncol));
       ComputeType row_inv_rms = layer_norm::Rsqrt(row_root_mean + static_cast<ComputeType>(eps));
       if (lane_id == 0) { inv_rms[global_row_id] = row_inv_rms; }
 #pragma unroll
@@ -156,7 +156,7 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int64_t nrows, con
 #pragma unroll
       for (int i = min_num_packs; i < max_num_packs; ++i) {
         const int col = (i * thread_group_width + lane_id) * pack_size;
-        if (!padding || col < ncols) {
+        if (!padding || col < ncol) {
           store.template store<pack_size>(row_buf + i * pack_size, global_row_id, col);
         }
       }
@@ -168,7 +168,7 @@ template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access, bool padding>
 inline cudaError_t LaunchRmsNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
-                                         const int64_t nrows, const int64_t ncols, const double eps,
+                                         const int64_t nrow, const int64_t ncol, const double eps,
                                          ComputeType* inv_rms) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
@@ -176,7 +176,7 @@ inline cudaError_t LaunchRmsNormWarpImpl(cudaStream_t stream, LOAD load, STORE s
   constexpr int thread_groups_per_block = block_size / thread_group_width;
   dim3 block_dim(thread_group_width, thread_groups_per_block);
   const int64_t nblocks =
-      (nrows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
+      (nrow / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err = layer_norm::GetNumBlocks(
@@ -187,7 +187,7 @@ inline cudaError_t LaunchRmsNormWarpImpl(cudaStream_t stream, LOAD load, STORE s
   }
   RmsNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread, min_cols_per_thread,
                   thread_group_width, rows_per_access, padding>
-      <<<grid_dim_x, block_dim, 0, stream>>>(load, store, nrows, ncols, eps, inv_rms);
+      <<<grid_dim_x, block_dim, 0, stream>>>(load, store, nrow, ncol, eps, inv_rms);
   return cudaPeekAtLastError();
 }
 
@@ -195,36 +195,36 @@ template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
 inline cudaError_t DispatchRmsNormWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
-                                                  const int64_t nrows, const int64_t ncols,
+                                                  const int64_t nrow, const int64_t ncol,
                                                   const double eps, ComputeType* inv_rms) {
-  if (ncols == max_cols_per_thread * thread_group_width) {
+  if (ncol == max_cols_per_thread * thread_group_width) {
     // when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass
     // max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
     return LaunchRmsNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread,
                                  max_cols_per_thread, thread_group_width, rows_per_access, false>(
-        stream, load, store, nrows, ncols, eps, inv_rms);
+        stream, load, store, nrow, ncol, eps, inv_rms);
   } else {
     return LaunchRmsNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread,
                                  min_cols_per_thread, thread_group_width, rows_per_access, true>(
-        stream, load, store, nrows, ncols, eps, inv_rms);
+        stream, load, store, nrow, ncol, eps, inv_rms);
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
 typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormWarpImplCols(
-    cudaStream_t stream, LOAD load, STORE store, const int64_t nrows, const int64_t ncols,
+    cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
     const double eps, ComputeType* inv_rms) {
-  if (ncols <= 0) { return cudaErrorInvalidValue; }
+  if (ncol <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                    \
-  else if (ncols <= (thread_group_width)*pack_size) {                                          \
-    if (nrows % 2 == 0) {                                                                      \
+  else if (ncol <= (thread_group_width)*pack_size) {                                           \
+    if (nrow % 2 == 0) {                                                                       \
       return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size, 0, \
-                                            thread_group_width, 2>(stream, load, store, nrows, \
-                                                                   ncols, eps, inv_rms);       \
+                                            thread_group_width, 2>(stream, load, store, nrow,  \
+                                                                   ncol, eps, inv_rms);        \
     } else {                                                                                   \
       return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size, 0, \
-                                            thread_group_width, 1>(stream, load, store, nrows, \
-                                                                   ncols, eps, inv_rms);       \
+                                            thread_group_width, 1>(stream, load, store, nrow,  \
+                                                                   ncol, eps, inv_rms);        \
     }                                                                                          \
   }
   DEFINE_ONE_ELIF(4)
@@ -233,9 +233,9 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormWarpIm
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                        \
-  else if (ncols <= (max_col)*kWarpSize) {                                                       \
+  else if (ncol <= (max_col)*kWarpSize) {                                                        \
     return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, max_col, min_col, \
-                                          kWarpSize, 1>(stream, load, store, nrows, ncols, eps,  \
+                                          kWarpSize, 1>(stream, load, store, nrow, ncol, eps,    \
                                                         inv_rms);                                \
   }
   DEFINE_ONE_ELIF(2, 1)
@@ -255,19 +255,19 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormWarpIm
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
 typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchRmsNormWarpImplCols(
-    cudaStream_t stream, LOAD load, STORE store, const int64_t nrows, const int64_t ncols,
+    cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
     const double eps, ComputeType* inv_rms) {
-  if (ncols <= 0) { return cudaErrorInvalidValue; }
+  if (ncol <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                    \
-  else if (ncols <= (thread_group_width)*pack_size) {                                          \
-    if (nrows % 2 == 0) {                                                                      \
+  else if (ncol <= (thread_group_width)*pack_size) {                                           \
+    if (nrow % 2 == 0) {                                                                       \
       return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size, 0, \
-                                            thread_group_width, 2>(stream, load, store, nrows, \
-                                                                   ncols, eps, inv_rms);       \
+                                            thread_group_width, 2>(stream, load, store, nrow,  \
+                                                                   ncol, eps, inv_rms);        \
     } else {                                                                                   \
       return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size, 0, \
-                                            thread_group_width, 1>(stream, load, store, nrows, \
-                                                                   ncols, eps, inv_rms);       \
+                                            thread_group_width, 1>(stream, load, store, nrow,  \
+                                                                   ncol, eps, inv_rms);        \
     }                                                                                          \
   }
   DEFINE_ONE_ELIF(4)
@@ -276,9 +276,9 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchRmsNormWarpIm
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                        \
-  else if ((ncols <= (max_col)*kWarpSize) && (ncols > (min_col)*kWarpSize)) {                    \
+  else if ((ncol <= (max_col)*kWarpSize) && (ncol > (min_col)*kWarpSize)) {                      \
     return DispatchRmsNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, max_col, min_col, \
-                                          kWarpSize, 1>(stream, load, store, nrows, ncols, eps,  \
+                                          kWarpSize, 1>(stream, load, store, nrow, ncol, eps,    \
                                                         inv_rms);                                \
   }
   DEFINE_ONE_ELIF(4, 2)
@@ -297,25 +297,25 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchRmsNormWarpIm
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchRmsNormWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows,
-                         const int64_t ncols, const double eps, ComputeType* inv_rms) {
-    if (ncols % 2 == 0 && layer_norm::CanPackAs<LOAD>(load, 2)
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow,
+                         const int64_t ncol, const double eps, ComputeType* inv_rms) {
+    if (ncol % 2 == 0 && layer_norm::CanPackAs<LOAD>(load, 2)
         && layer_norm::CanPackAs<STORE>(store, 2)) {
-      return DispatchRmsNormWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, nrows,
-                                                                      ncols, eps, inv_rms);
+      return DispatchRmsNormWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, nrow,
+                                                                      ncol, eps, inv_rms);
     } else {
-      return DispatchRmsNormWarpImplCols<LOAD, STORE, ComputeType, 1>(stream, load, store, nrows,
-                                                                      ncols, eps, inv_rms);
+      return DispatchRmsNormWarpImplCols<LOAD, STORE, ComputeType, 1>(stream, load, store, nrow,
+                                                                      ncol, eps, inv_rms);
     }
   }
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
 inline cudaError_t DispatchRmsNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
-                                           const int64_t nrows, const int64_t ncols,
-                                           const double eps, ComputeType* inv_rms) {
-  return DispatchRmsNormWarpImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store, nrows,
-                                                                     ncols, eps, inv_rms);
+                                           const int64_t nrow, const int64_t ncol, const double eps,
+                                           ComputeType* inv_rms) {
+  return DispatchRmsNormWarpImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store, nrow,
+                                                                     ncol, eps, inv_rms);
 }
 
 // template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
@@ -577,10 +577,10 @@ inline cudaError_t DispatchRmsNormWarpImpl(cudaStream_t stream, LOAD load, STORE
 
 template<typename LOAD, typename STORE, typename ComputeType>
 inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows,
-                const int64_t ncols, const double eps, ComputeType* inv_rms) {
-  if (ncols <= 1024) {
-    return DispatchRmsNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, nrows, ncols, eps,
+DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
+                const double eps, ComputeType* inv_rms) {
+  if (ncol <= 1024) {
+    return DispatchRmsNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, nrow, ncol, eps,
                                                              inv_rms);
   } else {
     // bool dispatch_smem_impl_success;
@@ -600,8 +600,8 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
 
 template<typename LOAD, typename STORE, typename ComputeType>
 inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows,
-                const int64_t ncols, const double eps, ComputeType* inv_rms) {
+DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
+                const double eps, ComputeType* inv_rms) {
   // return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
   //     stream, load, store, rows, cols, epsilon, mean, inv_variance);
   return cudaErrorInvalidValue;
@@ -610,13 +610,13 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-__global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LOAD_X load_x,
+__global__ void RmsNormGradWarpImpl(const int32_t nrow, const int32_t ncol, LOAD_X load_x,
                                     LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
   static_assert(max_cols_per_thread % pack_size == 0, "");
   static_assert(min_cols_per_thread % pack_size == 0, "");
   constexpr int max_num_packs = max_cols_per_thread / pack_size;
   constexpr int min_num_packs = min_cols_per_thread / pack_size;
-  assert(ncols <= max_cols_per_thread * thread_group_width);
+  assert(ncol <= max_cols_per_thread * thread_group_width);
   static_assert(thread_group_width <= kWarpSize, "");
   static_assert(kWarpSize % thread_group_width == 0, "");
 
@@ -626,7 +626,7 @@ __global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LO
   const int32_t num_global_thread_group = gridDim.x * blockDim.y;
   const int32_t lane_id = threadIdx.x;
   const int32_t step = num_global_thread_group * rows_per_access;
-  for (int32_t row = global_thread_group_id * rows_per_access; row < nrows; row += step) {
+  for (int32_t row = global_thread_group_id * rows_per_access; row < nrow; row += step) {
     ComputeType sum_stats[rows_per_access];
     ComputeType inv_rms_buf[rows_per_access];
 #pragma unroll
@@ -653,7 +653,7 @@ __global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LO
       for (int32_t pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
         const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
         const int32_t pack_offset = pack_id * pack_size;
-        if (col < ncols) {
+        if (col < ncol) {
           load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
           load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
 #pragma unroll
@@ -684,7 +684,7 @@ __global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LO
           const int32_t col_id = pack_id * pack_size + i;
           row_dy_buf[col_id] = (row_dy_buf[col_id]
                                 - row_normalized_buf[col_id] * warp_sum_stats[row_id]
-                                      / static_cast<ComputeType>(ncols))
+                                      / static_cast<ComputeType>(ncol))
                                * inv_rms_buf[row_id];
         }
         store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
@@ -692,12 +692,12 @@ __global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LO
 #pragma unroll
       for (int32_t pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
         const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
-        if (col < ncols) {
+        if (col < ncol) {
           for (int32_t i = 0; i < pack_size; ++i) {
             const int32_t col_id = pack_id * pack_size + i;
             row_dy_buf[col_id] = (row_dy_buf[col_id]
                                   - row_normalized_buf[col_id] * warp_sum_stats[row_id]
-                                        / static_cast<ComputeType>(ncols))
+                                        / static_cast<ComputeType>(ncol))
                                  * inv_rms_buf[row_id];
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
@@ -710,8 +710,8 @@ __global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LO
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-inline cudaError_t LaunchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t nrows,
-                                             const int64_t ncols, LOAD_X load_x, LOAD_DY load_dy,
+inline cudaError_t LaunchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t nrow,
+                                             const int64_t ncol, LOAD_X load_x, LOAD_DY load_dy,
                                              STORE store, const ComputeType* inv_rms) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
@@ -719,7 +719,7 @@ inline cudaError_t LaunchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t 
   constexpr int thread_groups_per_block = block_size / thread_group_width;
   dim3 block_dim(thread_group_width, thread_groups_per_block);
   const int64_t num_blocks =
-      (nrows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
+      (nrow / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err = GetNumBlocks(
@@ -730,47 +730,47 @@ inline cudaError_t LaunchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t 
   }
   RmsNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, max_cols_per_thread,
                       min_cols_per_thread, thread_group_width, rows_per_access>
-      <<<grid_dim_x, block_dim, 0, stream>>>(nrows, ncols, load_x, load_dy, store, inv_rms);
+      <<<grid_dim_x, block_dim, 0, stream>>>(nrow, ncol, load_x, load_dy, store, inv_rms);
   return cudaPeekAtLastError();
 }
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-inline cudaError_t DispatchRmsNormGradWarpImplPadding(cudaStream_t stream, const int64_t nrows,
-                                                      const int64_t ncols, LOAD_X load_x,
+inline cudaError_t DispatchRmsNormGradWarpImplPadding(cudaStream_t stream, const int64_t nrow,
+                                                      const int64_t ncol, LOAD_X load_x,
                                                       LOAD_DY load_dy, STORE store,
                                                       const ComputeType* inv_rms) {
-  if (ncols == max_cols_per_thread * thread_group_width) {
+  if (ncol == max_cols_per_thread * thread_group_width) {
     // when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass
     // max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
     return LaunchRmsNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size,
                                      max_cols_per_thread, max_cols_per_thread, thread_group_width,
-                                     rows_per_access>(stream, nrows, ncols, load_x, load_dy, store,
+                                     rows_per_access>(stream, nrow, ncol, load_x, load_dy, store,
                                                       inv_rms);
   } else {
     return LaunchRmsNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size,
                                      max_cols_per_thread, min_cols_per_thread, thread_group_width,
-                                     rows_per_access>(stream, nrows, ncols, load_x, load_dy, store,
+                                     rows_per_access>(stream, nrow, ncol, load_x, load_dy, store,
                                                       inv_rms);
   }
 }
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
 typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormGradWarpImplCols(
-    cudaStream_t stream, const int64_t nrows, const int64_t ncols, LOAD_X load_x, LOAD_DY load_dy,
+    cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x, LOAD_DY load_dy,
     STORE store, const ComputeType* inv_rms) {
-  if (ncols <= 0) { return cudaErrorInvalidValue; }
+  if (ncol <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                     \
-  else if (ncols <= (thread_group_width)*pack_size) {                                           \
-    if (nrows % 2 == 0) {                                                                       \
+  else if (ncol <= (thread_group_width)*pack_size) {                                            \
+    if (nrow % 2 == 0) {                                                                        \
       return DispatchRmsNormGradWarpImplPadding<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, \
                                                 pack_size, 0, thread_group_width, 2>(           \
-          stream, nrows, ncols, load_x, load_dy, store, inv_rms);                               \
+          stream, nrow, ncol, load_x, load_dy, store, inv_rms);                                 \
     } else {                                                                                    \
       return DispatchRmsNormGradWarpImplPadding<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, \
                                                 pack_size, 0, thread_group_width, 1>(           \
-          stream, nrows, ncols, load_x, load_dy, store, inv_rms);                               \
+          stream, nrow, ncol, load_x, load_dy, store, inv_rms);                                 \
     }                                                                                           \
   }
   DEFINE_ONE_ELIF(4)
@@ -779,10 +779,10 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormGradWa
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                     \
-  else if (ncols <= (max_col)*kWarpSize) {                                                    \
+  else if (ncol <= (max_col)*kWarpSize) {                                                     \
     return DispatchRmsNormGradWarpImplPadding<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, \
                                               max_col, min_col, kWarpSize, 1>(                \
-        stream, nrows, ncols, load_x, load_dy, store, inv_rms);                               \
+        stream, nrow, ncol, load_x, load_dy, store, inv_rms);                                 \
   }
   DEFINE_ONE_ELIF(2, 1)
   DEFINE_ONE_ELIF(4, 2)
@@ -801,21 +801,21 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchRmsNormGradWa
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
 struct DispatchRmsNormGradWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, const int64_t nrows, const int64_t ncols,
-                         LOAD_X load_x, LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
+  cudaError_t operator()(cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x,
+                         LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
     return DispatchRmsNormGradWarpImplCols<LOAD_X, LOAD_DY, STORE, ComputeType, 1>(
-        stream, nrows, ncols, load_x, load_dy, store, inv_rms);
+        stream, nrow, ncol, load_x, load_dy, store, inv_rms);
   }
 };
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t nrows,
-                                               const int64_t ncols, LOAD_X load_x, LOAD_DY load_dy,
+inline cudaError_t DispatchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t nrow,
+                                               const int64_t ncol, LOAD_X load_x, LOAD_DY load_dy,
                                                STORE store, const ComputeType* inv_rms
 
 ) {
   return DispatchRmsNormGradWarpImplPackSize<LOAD_X, LOAD_DY, STORE, ComputeType>()(
-      stream, nrows, ncols, load_x, load_dy, store, inv_rms);
+      stream, nrow, ncol, load_x, load_dy, store, inv_rms);
 }
 
 // template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
@@ -1193,11 +1193,11 @@ inline cudaError_t DispatchRmsNormGradWarpImpl(cudaStream_t stream, const int64_
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
 inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrows, const int64_t ncols, LOAD_X load_x,
+DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x,
                     LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
-  if (ncols <= 1024) {
+  if (ncol <= 1024) {
     return DispatchRmsNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType>(
-        stream, nrows, ncols, load_x, load_dy, store, inv_rms);
+        stream, nrow, ncol, load_x, load_dy, store, inv_rms);
   } else {
     // bool dispatch_smem_impl_success;
     // {
@@ -1220,7 +1220,7 @@ DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrows, const int64_t ncol
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
 inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrows, const int64_t ncols, LOAD_X load_x,
+DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x,
                     LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
   // return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE,
   // ComputeType>(

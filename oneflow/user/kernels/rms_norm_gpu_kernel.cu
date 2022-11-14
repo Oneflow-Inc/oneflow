@@ -93,25 +93,24 @@ struct AffineLoad {
 };
 
 template<typename T, bool affine>
-void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
-                       const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
-                       user_op::Tensor* inv_rms) {
+void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
+                       const T* x_dptr, const T* w_dptr, T* y_dptr, user_op::Tensor* inv_rms) {
   using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
-  layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncols);
-  AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncols);
+  layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncol);
+  AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncol);
   DispatchRmsNorm<decltype(load), decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrows, ncols, eps,
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps,
       inv_rms->mut_dptr<ComputeType>());
 }
 
 template<typename T>
-void DispatchRmsNormForwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
+void DispatchRmsNormForwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
                                const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
                                user_op::Tensor* inv_rms) {
   if (w_dptr) {
-    RmsNormForwardGpu<T, true>(stream, nrows, ncols, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    RmsNormForwardGpu<T, true>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
   } else {
-    RmsNormForwardGpu<T, false>(stream, nrows, ncols, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    RmsNormForwardGpu<T, false>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
   }
 }
 
@@ -121,7 +120,7 @@ constexpr int block_dim_x = 32;
 constexpr int block_dim_y = 32 / num_per_block;
 
 template<typename T, typename ComputeType>
-__global__ void RmsNormParamGrad(int nrows, int ncols, const T* __restrict__ dy,
+__global__ void RmsNormParamGrad(int nrow, int ncol, const T* __restrict__ dy,
                                  const T* __restrict__ x, const ComputeType* __restrict__ inv_rms,
                                  T* __restrict__ b_weight_grad) {
   __shared__ ComputeType dweight[32][33];
@@ -129,13 +128,13 @@ __global__ void RmsNormParamGrad(int nrows, int ncols, const T* __restrict__ dy,
 #pragma unroll
   for (int index = 0; index < num_per_block; ++index) { dweight_sum[index] = 0; }
   const int col = blockIdx.x * blockDim.x + threadIdx.x;
-  if (col < ncols) {
-    for (int i = blockIdx.y * tile_size + threadIdx.y; i < nrows; i += tile_size * gridDim.y) {
+  if (col < ncol) {
+    for (int i = blockIdx.y * tile_size + threadIdx.y; i < nrow; i += tile_size * gridDim.y) {
 #pragma unroll
       for (int index = 0; index < num_per_block; ++index) {
         int row = i + index * blockDim.y;
-        if (row < nrows) {
-          int offset = row * ncols + col;
+        if (row < nrow) {
+          int offset = row * ncol + col;
           const ComputeType dy_val = static_cast<ComputeType>(dy[offset]);
           const ComputeType x_val = static_cast<ComputeType>(x[offset]);
           const ComputeType inv_rms_val = inv_rms[row];
@@ -152,11 +151,11 @@ __global__ void RmsNormParamGrad(int nrows, int ncols, const T* __restrict__ dy,
 #pragma unroll
   for (int index = 0; index < num_per_block; ++index) {
     const int col = blockIdx.x * blockDim.x + threadIdx.y + index * blockDim.y;
-    if (col < ncols) {
+    if (col < ncol) {
       ComputeType dweight_val = dweight[threadIdx.x][threadIdx.y + index * blockDim.y];
       ComputeType global_dweight = WarpReduceSum<ComputeType>(dweight_val);
       if (threadIdx.x == 0) {
-        const int offset = blockIdx.y * ncols + col;
+        const int offset = blockIdx.y * ncol + col;
         b_weight_grad[offset] = global_dweight;
       }
     }
@@ -183,28 +182,27 @@ int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
 }
 
 template<typename T, bool affine>
-void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
+void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
                         const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
                         const T* weight_dptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  layer_norm::DirectLoad<T, ComputeType> load_x(x_dptr, ncols);
-  AffineLoad<T, ComputeType, affine> load_dy(dy_dptr, weight_dptr, ncols);
-  layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncols);
+  layer_norm::DirectLoad<T, ComputeType> load_x(x_dptr, ncol);
+  AffineLoad<T, ComputeType, affine> load_dy(dy_dptr, weight_dptr, ncol);
+  layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncol);
   OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(load_x), decltype(load_dy), decltype(store),
                                                ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, load_x, load_dy, store,
+      stream->As<ep::CudaStream>()->cuda_stream(), nrow, ncol, load_x, load_dy, store,
       inv_rms->dptr<ComputeType>())));
 }
 
 template<typename T>
-void DispatchRmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
+void DispatchRmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
                                 const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
                                 const T* weight_dptr, T* dx_dptr) {
   if (weight_dptr) {
-    RmsNormBackwardGpu<T, true>(stream, nrows, ncols, dy_dptr, x_dptr, inv_rms, weight_dptr,
-                                dx_dptr);
+    RmsNormBackwardGpu<T, true>(stream, nrow, ncol, dy_dptr, x_dptr, inv_rms, weight_dptr, dx_dptr);
   } else {
-    RmsNormBackwardGpu<T, false>(stream, nrows, ncols, dy_dptr, x_dptr, inv_rms, weight_dptr,
+    RmsNormBackwardGpu<T, false>(stream, nrow, ncol, dy_dptr, x_dptr, inv_rms, weight_dptr,
                                  dx_dptr);
   }
 }
@@ -226,17 +224,17 @@ class RmsNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGra
     user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
     const double eps = ctx->Attr<float>("epsilon");
     const Shape& normalized_shape = ctx->Attr<Shape>("normalized_shape");
-    const int64_t ncols = normalized_shape.elem_cnt();
-    const int64_t nrows = inv_rms->shape_view().elem_cnt();
-    CHECK_EQ(x->shape_view().elem_cnt(), ncols * nrows);
+    const int64_t ncol = normalized_shape.elem_cnt();
+    const int64_t nrow = inv_rms->shape_view().elem_cnt();
+    CHECK_EQ(x->shape_view().elem_cnt(), ncol * nrow);
 
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       const auto* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-      CHECK_EQ(weight->shape_view().elem_cnt(), ncols);
+      CHECK_EQ(weight->shape_view().elem_cnt(), ncol);
       weight_dptr = weight->dptr<T>();
     }
-    rms_norm::DispatchRmsNormForwardGpu<T>(ctx->stream(), nrows, ncols, eps, x->dptr<T>(),
+    rms_norm::DispatchRmsNormForwardGpu<T>(ctx->stream(), nrow, ncol, eps, x->dptr<T>(),
                                            weight_dptr, y->mut_dptr<T>(), inv_rms);
   };
 };
@@ -268,16 +266,16 @@ class RmsNormGradGpuKernel final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t nrows = inv_rms->shape_view().elem_cnt();
-    const int64_t ncols = x->shape_view().elem_cnt() / nrows;
+    const int64_t nrow = inv_rms->shape_view().elem_cnt();
+    const int64_t ncol = x->shape_view().elem_cnt() / nrow;
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-      CHECK_EQ(ncols, weight->shape_view().elem_cnt());
+      CHECK_EQ(ncol, weight->shape_view().elem_cnt());
       weight_dptr = weight->dptr<T>();
     }
-    rms_norm::DispatchRmsNormBackwardGpu<T>(ctx->stream(), nrows, ncols, dy->dptr<T>(),
-                                            x->dptr<T>(), inv_rms, weight_dptr, dx->mut_dptr<T>());
+    rms_norm::DispatchRmsNormBackwardGpu<T>(ctx->stream(), nrow, ncol, dy->dptr<T>(), x->dptr<T>(),
+                                            inv_rms, weight_dptr, dx->mut_dptr<T>());
   };
 };
 
@@ -310,11 +308,11 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* weight_grad = ctx->Tensor4ArgNameAndIndex("weight_grad", 0);
 
-    const int64_t nrows = inv_rms->shape_view().elem_cnt();
-    const int64_t ncols = weight_grad->shape_view().elem_cnt();
+    const int64_t nrow = inv_rms->shape_view().elem_cnt();
+    const int64_t ncol = weight_grad->shape_view().elem_cnt();
 
-    const int grid_dim_x = (ncols + rms_norm::tile_size - 1) / rms_norm::tile_size;
-    const int grid_dim_y = rms_norm::GetGirdDimY<T>(nrows, ncols);
+    const int grid_dim_x = (ncol + rms_norm::tile_size - 1) / rms_norm::tile_size;
+    const int grid_dim_y = rms_norm::GetGirdDimY<T>(nrow, ncol);
     T* b_weight_grad_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
 
     using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
@@ -322,16 +320,16 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     dim3 block_dim(32, 32 / rms_norm::num_per_block);
     rms_norm::RmsNormParamGrad<T, ComputeType>
         <<<grid_dim, block_dim, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            nrows, ncols, dy->dptr<T>(), x->dptr<T>(), inv_rms->dptr<ComputeType>(),
+            nrow, ncol, dy->dptr<T>(), x->dptr<T>(), inv_rms->dptr<ComputeType>(),
             b_weight_grad_dptr);
-    const int32_t m = ncols;
+    const int32_t m = ncol;
     const int32_t n = 1;
     const int32_t k = grid_dim_y;
     const DataType data_type = dy->data_type();
     auto fill = ep::primitive::NewPrimitive<ep::primitive::FillFactory>(
         ctx->stream()->device_type(), data_type);
     CHECK(fill);
-    const size_t b_weight_grad_size = grid_dim_y * ncols * sizeof(T);
+    const size_t b_weight_grad_size = grid_dim_y * ncol * sizeof(T);
     T* ones_vec_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + b_weight_grad_size);
     fill->Launch(ctx->stream(), ones_vec_dptr, 1.0, grid_dim_y);
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
@@ -351,10 +349,10 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const auto& shape = ctx->InputTensorDesc("dy", 0).shape();                      \
         const auto& b_shape = ctx->InputTensorDesc("inv_rms", 0).shape();               \
-        const int64_t nrows = b_shape.elem_cnt();                                       \
-        const int64_t ncols = shape.elem_cnt() / nrows;                                 \
-        const int grid_dim_y = rms_norm::GetGirdDimY<dtype>(nrows, ncols);              \
-        size_t tmp_buffer_size = (grid_dim_y * ncols + grid_dim_y) * sizeof(dtype);     \
+        const int64_t nrow = b_shape.elem_cnt();                                        \
+        const int64_t ncol = shape.elem_cnt() / nrow;                                   \
+        const int grid_dim_y = rms_norm::GetGirdDimY<dtype>(nrow, ncol);                \
+        size_t tmp_buffer_size = (grid_dim_y * ncol + grid_dim_y) * sizeof(dtype);      \
         return tmp_buffer_size;                                                         \
       });
 
