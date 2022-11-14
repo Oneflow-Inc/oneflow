@@ -24,9 +24,9 @@ namespace oneflow {
 namespace one {
 
 struct FusedMatmulBiasCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad;
-  bool weight_requires_grad;
-  bool bias_requires_grad;
+  bool x_requires_grad = false;
+  bool weight_requires_grad = false;
+  bool bias_requires_grad = false;
 };
 
 class FusedMatmulBias : public OpExprGradFunction<FusedMatmulBiasCaptureState> {
