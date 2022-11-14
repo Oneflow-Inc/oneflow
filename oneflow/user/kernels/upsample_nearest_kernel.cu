@@ -121,7 +121,7 @@ __global__ void UpsampleNearest2D2XBackward(const int64_t elem_cnt, const T* dy_
     const int32_t dy_hw_off = index - nc_idx * dy_hw_size;
     const int32_t dy_h = dy_hw_off / dy_width;
     const int32_t dy_w = dy_hw_off - dy_h * dy_width;
-    cuda::atomic::Add(dx_dptr + nc_idx * dx_hw_size + (dy_h >> 1) * dx_width + (dy_w >> 1), dy_value);
+    cuda::atomic::Add(dx_dptr + nc_idx * dx_hw_size + dy_h / 2 * dx_width + dy_w / 2, dy_value);
   }
 }
 
