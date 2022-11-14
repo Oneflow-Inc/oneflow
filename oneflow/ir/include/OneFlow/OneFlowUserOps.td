@@ -6255,8 +6255,8 @@ def OneFlow_GroupNormParamGradOp : OneFlow_BaseOp<"group_norm_param_grad", [NoSi
 #endif // GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
 // Group: OPTIMIZER
-// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update
-// Total: 14
+// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update, multi_tensor_sgd_update, multi_tensor_momentum_update, multi_tensor_adam_update, multi_tensor_sgd_update_with_cast, multi_tensor_momentum_update_with_cast, multi_tensor_adam_update_with_cast
+// Total: 19
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
