@@ -127,6 +127,11 @@ class SbpNode final {
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool use_sbp_collector);
 
+  // Constant getter
+  int32_t GetMinLayer() const { return min_layer_; }
+  int32_t GetTributaryLayer() const { return tributary_layer_; }
+  OpNode* GetOperatorNode() const { return op_node_; }
+
  private:
   friend class SbpEdge;
   friend class SbpGraph;
