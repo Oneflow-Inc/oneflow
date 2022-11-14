@@ -294,6 +294,7 @@ def generate_named_tuple(signature, params, return_names, func_name, block_name,
     )
     return "\n".join(code)
 
+
 def generate_return_types_named_tuple(return_names, func_name, block_name):
     param_names = ", ".join(
         [
@@ -301,8 +302,7 @@ def generate_return_types_named_tuple(return_names, func_name, block_name):
             for x in return_names
         ]
     )
-    code = \
-    f"""PyTypeObject* get_{func_name}_namedtuple() {{
+    code = f"""PyTypeObject* get_{func_name}_namedtuple() {{
   static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }};
   static PyTypeObject {func_name}NamedTuple;
   static bool is_initialized = false;
@@ -316,6 +316,7 @@ def generate_return_types_named_tuple(return_names, func_name, block_name):
 }}
 """
     return code
+
 
 class Argument:
     def __init__(self, fmt, keyword_only=False):
@@ -411,7 +412,7 @@ class Return:
             param_names = _normalize(fmt[sp:])
             sp = param_names.rfind(">")
             assert sp != -1, "Missing '>' for argument def: " + fmt
-            param_names = param_names[1 : sp]
+            param_names = param_names[1:sp]
             _return_names = [_normalize(x) for x in param_names.split(",")]
         else:
             _type = _normalize(fmt)
@@ -657,16 +658,14 @@ class Generator:
                             signature._name, ", ".join(params)
                         )
                     else:
-                        schema_fmt += "    return wrap_tensortuple(functional::{0}({1}).GetOrThrow(), \"{2}\");\n".format(
+                        schema_fmt += '    return wrap_tensortuple(functional::{0}({1}).GetOrThrow(), "{2}");\n'.format(
                             signature._name, ", ".join(params), signature._name,
                         )
                         return_type_fmt += generate_return_types_named_tuple(
-                            signature._ret._return_names,
-                            signature._name,
-                            block._name,
+                            signature._ret._return_names, signature._name, block._name,
                         )
                         map_pairs.append(
-                            f"    {{\"{signature._name}\", get_{signature._name}_namedtuple()}},"
+                            f'    {{"{signature._name}", get_{signature._name}_namedtuple()}},'
                         )
                     schema_fmt += "  }\n"
                     i += 1
@@ -678,6 +677,8 @@ class Generator:
             target_pybind_header_file, pybind_header_fmt.format(header_fmt)
         )
         render_file_if_different(
-            target_pybind_source_file, pybind_source_fmt.format(schema_fmt, module_fmt, return_type_fmt, "\n".join(map_pairs))
+            target_pybind_source_file,
+            pybind_source_fmt.format(
+                schema_fmt, module_fmt, return_type_fmt, "\n".join(map_pairs)
+            ),
         )
-    
