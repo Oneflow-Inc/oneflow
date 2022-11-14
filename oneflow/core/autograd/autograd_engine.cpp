@@ -414,6 +414,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
       continue;
     }
     BackwardPassScopeGuard backward_guard(node->scope());
+    if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
     if (exec_info.capture_indices) {
       CHECK_NOTNULL_OR_RETURN(captured_grads_.get()) << "captured grads in GraphTask is nullptr";
       for (const auto& out_idx_and_capture_idx : *exec_info.capture_indices) {
@@ -422,7 +423,6 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
                      ->current_grad_value());
       }
     }
-    if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
     node->ReleaseOutTensorArgs();
