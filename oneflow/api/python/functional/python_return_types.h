@@ -20,8 +20,8 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
 
-#include <pybind11/pybind11.h>
 #include <Python.h>
+#include <string>
 #include <sstream>
 #include <structmember.h>
 

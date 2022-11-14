@@ -128,9 +128,38 @@ pybind_source_fmt = (
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
 
+namespace {{
+using oneflow::one::functional::returned_structseq_repr;
+{2}
+
+std::unordered_map<std::string, PyTypeObject*>& get_namedtuple_types_map() {{
+  static std::unordered_map<std::string, PyTypeObject*> namedtuple_types_map = {{
+{3}
+  }};
+  return namedtuple_types_map;
+}}
+
+PyTypeObject* get_namedtuple(const std::string& name) {{
+  static auto& namedtuple_types_map = get_namedtuple_types_map();
+  return namedtuple_types_map[name];
+}}
+
+}} // namespace
+
+
 namespace oneflow {{
 namespace one {{
 namespace functional {{
+
+PyObject* wrap_tensortuple(const TensorTuple& tensortuple,
+                           const std::string& name) {{
+  PyObjectPtr r(PyStructSequence_New(get_namedtuple(name)));
+  if (!r) {{ throw py::error_already_set(); }}
+  for (int i = 0; i < tensortuple.size(); i++) {{
+    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple.at(i)));
+  }}
+  return r.release();
+}}
 {0}
 }}  // namespace functional
 }}  // namespace one
@@ -150,6 +179,64 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {{
 }}
 
 }}  // namespace oneflow
+"""
+)
+
+python_return_types_header_fmt = (
+    license
+    + f"""
+#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
+#define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
+
+#include <Python.h>
+#include <string>
+
+namespace oneflow {{
+namespace one {{
+namespace functional {{
+
+PyTypeObject* get_namedtuple(const std::string& name);
+
+}} // functional
+}} // one
+}} // oneflow
+
+#endif
+"""
+)
+
+python_return_types_source_fmt = (
+    license
+    + """
+#include <Python.h>
+#include <string>
+#include <unordered_map>
+#include "oneflow/api/python/functional/python_return_types.h"
+
+namespace {{
+  using oneflow::one::functional::returned_structseq_repr;
+{0}
+}}
+namespace oneflow {{
+namespace one{{
+namespace functional {{
+
+std::unordered_map<std::string, PyTypeObject*>& get_namedtuple_types_map() {{
+  static std::unordered_map<std::string, PyTypeObject*> namedtuple_types_map = {{
+{1}
+  }};
+  return namedtuple_types_map;
+}}
+
+PyTypeObject* get_namedtuple(const std::string& name) {{
+  static auto& namedtuple_types_map = get_namedtuple_types_map();
+  return namedtuple_types_map[name];
+}}
+
+}} // functional
+}} // one
+}} // oneflow
+
 """
 )
 
