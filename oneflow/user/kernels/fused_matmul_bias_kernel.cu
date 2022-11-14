@@ -16,18 +16,17 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11060
+#if CUDA_VERSION >= 10200
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-class CublasFusedMatmulAddBiasKernel final : public user_op::OpKernel,
-                                             public user_op::CudaGraphSupport {
+class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  CublasFusedMatmulAddBiasKernel() = default;
-  ~CublasFusedMatmulAddBiasKernel() override = default;
+  FusedMatmulBiasKernel() = default;
+  ~FusedMatmulBiasKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
@@ -71,8 +70,9 @@ class CublasFusedMatmulAddBiasKernel final : public user_op::OpKernel,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
+    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) cublas_n *= in_shape.at(i);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
-    T* y_ptr = nullptr;
+    void* y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
 
     SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, false,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -80,26 +80,22 @@ class CublasFusedMatmulAddBiasKernel final : public user_op::OpKernel,
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
     int num_batches = 1;
-    for (int i = 0; i < x->shape_view().NumAxes()-2; i++)
-      num_batches *= x->shape_view().At(i);
+    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) num_batches *= x->shape_view().At(i);
 
-    for (int i = 0; i < num_batches; i++) {
-      y_ptr = static_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr()) + cublas_m * cublas_n * i;
-      OF_CUBLAS_CHECK(
-          cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
-                        weight->dptr(), matmul_cache->cublas_a_desc, static_cast<const T*>(x->dptr()) + cublas_n * cublas_k * i,
-                        matmul_cache->cublas_b_desc, &sp_beta, y_ptr, matmul_cache->cublas_c_desc,
-                        y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-    }
+    OF_CUBLAS_CHECK(
+        cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
+                       weight->dptr(), matmul_cache->cublas_a_desc, x->dptr(),
+                       matmul_cache->cublas_b_desc, &sp_beta, y_ptr, matmul_cache->cublas_c_desc,
+                       y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+                       cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type) \
-  REGISTER_USER_KERNEL("cublas_fused_matmul_add_bias")                        \
-      .SetCreateFn<CublasFusedMatmulAddBiasKernel<cpp_type>>()            \
+  REGISTER_USER_KERNEL("fused_matmul_bias")                               \
+      .SetCreateFn<FusedMatmulBiasKernel<cpp_type>>()                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
                        && (user_op::HobDataType("out", 0) == data_type));
 
@@ -112,4 +108,4 @@ REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11060
+#endif  // CUDA_VERSION >= 10200

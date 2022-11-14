@@ -27,7 +27,7 @@ namespace {
 Maybe<void> InferTensorDesc4FusedMatmulBias(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   /*
-  x: (m, k)
+  x: (m_i, ... m_1, k)
   weight: (n, k) need transpose
   bias: (n)
   */
@@ -44,7 +44,7 @@ Maybe<void> InferTensorDesc4FusedMatmulBias(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
 
   Shape out_shape = x_desc.shape();
-  out_shape[x_desc.shape().NumAxes()-1] = n;
+  out_shape[x_desc.shape().NumAxes() - 1] = n;
   ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
@@ -68,17 +68,15 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> CublasFusedMatmulAddBiasOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBias(ctx);
 }
 
-/*static*/ Maybe<void> CublasFusedMatmulAddBiasOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedMatmulBiasOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> CublasFusedMatmulAddBiasOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasOp::GetSbp(user_op::SbpContext* ctx) {
   // Currently Only support S0 B B B B ... S0
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
   builder.Broadcast(user_op::OpArg("weight", 0));
@@ -88,7 +86,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> CublasFusedMatmulAddBiasOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4MatmulBias(ctx);
 }
 
