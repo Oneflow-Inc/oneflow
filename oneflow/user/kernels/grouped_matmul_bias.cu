@@ -103,13 +103,13 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   float alpha = 1.0;
   float beta = has_biases ? 1.0 : 0.0;
   cudaDataType_t data_type{};
-  cublasComputeType_t compute_type;
+  cudaDataType_t compute_type;
   if (std::is_same<T, half>::value) {
     data_type = CUDA_R_16F;
-    compute_type = CUBLAS_COMPUTE_32F;
+    compute_type = CUDA_R_32F;
   } else if (std::is_same<T, float>::value) {
     data_type = CUDA_R_32F;
-    compute_type = CUBLAS_COMPUTE_32F;
+    compute_type = CUDA_R_32F;
   } else {
     UNIMPLEMENTED();
   }
