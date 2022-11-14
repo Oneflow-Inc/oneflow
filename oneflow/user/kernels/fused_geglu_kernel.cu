@@ -49,24 +49,24 @@ __device__ nv_bfloat16 Gelu(nv_bfloat16 x) {
   return static_cast<nv_bfloat16>(Gelu<float>(static_cast<float>(x)));
 }
 
-// 支持区分的 WV 
+// 支持区分的 WV
 template<typename T>
-__global__ void FusedGegluForwardGpu(const int elem_cnt_out, const int m, const int n, const int k, 
+__global__ void FusedGegluForwardGpu(const int elem_cnt_out, const int m, const int n, const int k,
                                      const T* matmul, const T* b, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt_out){
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt_out) {
     // obtain relative index of row and col in the output tensor
-    const int64_t grid = i/(m*n);
-    const int64_t out_row = (i-grid*m*n) / n;
-    const int64_t out_col = (i-grid*m*n) % n;
+    const int64_t grid = i / (m * n);
+    const int64_t out_row = (i - grid * m * n) / n;
+    const int64_t out_col = (i - grid * m * n) % n;
 
     // obtain relative col index in both matmul tensor and bias tensor
     const int64_t x1_col = out_col;
     const int64_t x2_col = out_col + n;
 
     // obtain element before gelu and element-wise product
-    const int64_t matmul_start_index = grid*m*2*n;
-    T hidden_state = matmul[matmul_start_index + out_row*2*n + x1_col] + b[x1_col];
-    T gate = matmul[matmul_start_index + out_row*2*n + x2_col] + b[x2_col];
+    const int64_t matmul_start_index = grid * m * 2 * n;
+    T hidden_state = matmul[matmul_start_index + out_row * 2 * n + x1_col] + b[x1_col];
+    T gate = matmul[matmul_start_index + out_row * 2 * n + x2_col] + b[x2_col];
 
     // calculate gelu
     T gelu_gate = Gelu<T>(gate);
@@ -102,7 +102,7 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
     const int32_t elem_cnt_out = out->shape_view().elem_cnt();
     CHECK_GE(elem_cnt_in, 0);
     if (elem_cnt_in == 0) { return; }
-  
+
     // check datatype
     const DataType data_type = in->data_type();
     CHECK_EQ(w->data_type(), data_type);
@@ -119,10 +119,10 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
     CHECK_EQ(b->shape_view().NumAxes(), 1);
 
     // infer m, n, k
-    const int64_t m = in->shape_view().Count(0, in_num_axes-1);
-    const int64_t n = out->shape_view().At(in_num_axes-1);
-    const int64_t k = in->shape_view().At(in_num_axes-1);
-    
+    const int64_t m = in->shape_view().Count(0, in_num_axes - 1);
+    const int64_t n = out->shape_view().At(in_num_axes - 1);
+    const int64_t k = in->shape_view().At(in_num_axes - 1);
+
     // calculate X*W through cuBLAS
     // ref -> reduce_kernel.cpp -> matmul
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
@@ -131,19 +131,18 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
     CHECK(matmul);
     /* Launch(Stream* stream, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
                   const void* b, Scalar beta, void* c) = 0; */
-    matmul->Launch(ctx->stream(), m, n*2, k, 1.0, in->dptr(), w->dptr(),
-                   0.0, matmul_out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n * 2, k, 1.0, in->dptr(), w->dptr(), 0.0,
+                   matmul_out->mut_dptr());
 
     // invoke fused geglu kernel
-    RUN_CUDA_KERNEL((FusedGegluForwardGpu<T>), ctx->stream(),
-                    elem_cnt_out,           /* number of threads */
-                    elem_cnt_out,           /* number of threads */
-                    m,                      /* number of samples */
-                    n,                      /* out_size */
-                    k,                      /* in_size */
-                    matmul_out->dptr<T>(),  /* matmul result */
-                    b->dptr<T>(),           /* bias */
-                    out->mut_dptr<T>()      /* output tensor */
+    RUN_CUDA_KERNEL((FusedGegluForwardGpu<T>), ctx->stream(), elem_cnt_out, /* number of threads */
+                    elem_cnt_out,                                           /* number of threads */
+                    m,                                                      /* number of samples */
+                    n,                                                      /* out_size */
+                    k,                                                      /* in_size */
+                    matmul_out->dptr<T>(),                                  /* matmul result */
+                    b->dptr<T>(),                                           /* bias */
+                    out->mut_dptr<T>()                                      /* output tensor */
     );
   }
 

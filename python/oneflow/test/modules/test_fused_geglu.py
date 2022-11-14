@@ -23,6 +23,7 @@ import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
+
 # from oneflow.test_utils.automated_test_util import *
 
 
@@ -40,10 +41,11 @@ class Geglu(nn.Module):
         temp_add_bias = flow._C.add(input=temp_matmul, other=b)
 
         # chunk
-        hidden_state, gate = temp_add_bias.chunk(2, dim=-1).contiguous() # sync
+        hidden_state, gate = temp_add_bias.chunk(2, dim=-1).contiguous()  # sync
 
         # gelu and element-wise product
         return hidden_state * flow.gelu(gate)
+
 
 def _test_fused_geglu_profile(test_case, params: dict):
     # config test data
@@ -63,6 +65,7 @@ def _test_fused_geglu_profile(test_case, params: dict):
         flow_input_tensor, flow_weight_t_tensor, flow_bias_tensor
     )
 
+
 def _test_fused_geglu(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -70,7 +73,7 @@ def _test_fused_geglu(test_case, params: dict):
     k = params["k"]
     input = np.random.randn(m, k)
     weight = np.random.randn(k, n * 2)
-    weight_t = np.transpose(weight).contiguous() #sync
+    weight_t = np.transpose(weight).contiguous()  # sync
     bias = np.random.randn(n * 2)
 
     # test: fused op
@@ -106,7 +109,7 @@ class TestFusedGeglu(flow.unittest.TestCase):
         arg_dict["params"] = [
             {"m": 256, "k": 1280, "n": 5120},
             {"m": 1024, "k": 640, "n": 2560},
-            {"m": 4096, "k": 320, "n": 1280}
+            {"m": 4096, "k": 320, "n": 1280},
         ]
 
         for arg in GenArgList(arg_dict):

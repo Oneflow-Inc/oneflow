@@ -30,14 +30,14 @@ namespace oneflow {
   const Shape& bias_shape = ctx->InputShape("bias", 0);
 
   // check dimensions
-  CHECK_GE_OR_RETURN(input_shape.NumAxes(), 2);     // support dimension larger than 2
+  CHECK_GE_OR_RETURN(input_shape.NumAxes(), 2);  // support dimension larger than 2
   CHECK_EQ_OR_RETURN(weight_t_shape.NumAxes(), 2);
   CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1);
 
   // check input shape
   size_t num_axes = input_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(weight_t_shape.At(1), input_shape.At(num_axes-2))
-      << "get " << weight_t_shape.At(1) << " and " << input_shape.At(num_axes-2);
+  CHECK_EQ_OR_RETURN(weight_t_shape.At(1), input_shape.At(num_axes - 2))
+      << "get " << weight_t_shape.At(1) << " and " << input_shape.At(num_axes - 2);
   CHECK_EQ_OR_RETURN(bias_shape.At(0), weight_t_shape.At(0))
       << "get " << bias_shape.At(0) << " and " << weight_t_shape.At(0);
   CHECK_EQ_OR_RETURN(weight_t_shape.At(0) % 2, 0);
@@ -47,15 +47,15 @@ namespace oneflow {
 
   // set output shape
   Shape output_shape = ctx->InputShape("in", 0);
-  output_shape.Set(num_axes-2, input_shape.At(num_axes-2));
-  output_shape.Set(num_axes-1, weight_t_shape.At(0)/2);
+  output_shape.Set(num_axes - 2, input_shape.At(num_axes - 2));
+  output_shape.Set(num_axes - 1, weight_t_shape.At(0) / 2);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_shape(output_shape);
 
   // set malmul ouput shape
   Shape matmul_shape = ctx->InputShape("in", 0);
-  matmul_shape.Set(num_axes-2, input_shape.At(num_axes-2));
-  matmul_shape.Set(num_axes-1, weight_t_shape.At(0));
+  matmul_shape.Set(num_axes - 2, input_shape.At(num_axes - 2));
+  matmul_shape.Set(num_axes - 1, weight_t_shape.At(0));
   user_op::TensorDesc* matmul_out = ctx->MutOutputTensorDesc("matmul_out", 0);
   matmul_out->set_shape(matmul_shape);
 

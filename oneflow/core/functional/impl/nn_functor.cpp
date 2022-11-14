@@ -3073,27 +3073,38 @@ class FusedGluFunctor {
                          .Input("x")
                          .Input("w")
                          .Input("b")
-                         .Input("v")
-                         .Input("c")
                          .Output("y")
                          .Output("matmul_wx")
-                         .Output("matmul_vx")
                          .Build());
+
+    split_op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                               .Input("x")
+                               .Input("w")
+                               .Input("b")
+                               .Input("v")
+                               .Input("c")
+                               .Output("y")
+                               .Output("matmul_wx")
+                               .Output("matmul_vx")
+                               .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& w,
-                           const std::shared_ptr<one::Tensor>& b,
-                           const Optional<one::Tensor>& v,
-                           const Optional<one::Tensor>& c,
-                           const std::string& activation) const {
+                           const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
+                           const Optional<one::Tensor>& c, const std::string& activation) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
     attrs.SetAllAttrs(activation);
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b, v, c}, attrs);
+    if (v && c) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> split_op_;
 };
 
 class FusedGegluFunctor {
