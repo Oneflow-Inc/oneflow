@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -926,6 +927,56 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
   MaxPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
   }
+};
+
+template<int N>
+class MaxUnpoolNDFunctor {
+ public:
+  MaxUnpoolNDFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(fmt::format("max_unpool_{}d", N))
+                           .Input("x")
+                           .Input("indices")
+                           .Output("y")
+                           .Build())){};
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::vector<int32_t>& kernel_size,
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding,
+                           const Optional<Shape>& output_size) const {
+    const auto fmt_error_msg = [](const std::string& name, int32_t num, bool check_element) {
+      if (check_element) {
+        return fmt::format("each element in `{}` must be greater than 0, got {}", name, num);
+      }
+      return fmt::format("`{}` must be an integer or a list of {} integers", name, N);
+    };
+
+    CHECK_EQ_OR_RETURN(kernel_size.size(), N) << fmt_error_msg("kernel_size", N, false);
+    for (int32_t pool_dim : kernel_size) {
+      CHECK_GT_OR_RETURN(pool_dim, 0) << fmt_error_msg("kernel_size", pool_dim, true);
+    }
+
+    if (stride) {
+      CHECK_EQ_OR_RETURN(JUST(stride)->size(), N) << fmt_error_msg("stride", N, false);
+      for (int32_t stride_dim : *JUST(stride)) {
+        CHECK_GT_OR_RETURN(stride_dim, 0) << fmt_error_msg("stride", stride_dim, true);
+      }
+    }
+    for (int32_t i = 0; i < padding.size(); i++) {
+      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])
+          << "pad should be smaller than half of kernel size";
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride",
+                                                 "has_output_size", "output_size");
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size,
+                      output_size.has_value(),
+                      output_size.has_value() ? *JUST(output_size) : Shape());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class AdaptivePoolNDFunctor {
@@ -2047,6 +2098,7 @@ class NormalizationFunctor {
                                                 .Output("inv_variance")
                                                 .Attr("training", true)
                                                 .Build());
+    cast_op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
@@ -2076,26 +2128,67 @@ class NormalizationFunctor {
       beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }
 
+    if (gamma_val->dtype()->data_type() == DataType::kFloat16
+        || gamma_val->dtype()->data_type() == DataType::kBFloat16) {
+      gamma_val = JUST(functional::Cast(gamma_val, DType::Float(), /*pin_memory=*/false));
+      beta_val = JUST(functional::Cast(beta_val, DType::Float(), /*pin_memory=*/false));
+    }
+
+    std::shared_ptr<one::Tensor> moving_mean_val;
+    std::shared_ptr<one::Tensor> moving_variance_val;
+    if (moving_mean) {
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        moving_mean_val =
+            JUST(functional::Cast(JUST(moving_mean), DType::Float(), /*pin_memory=*/false));
+        moving_variance_val =
+            JUST(functional::Cast(JUST(moving_variance), DType::Float(), /*pin_memory=*/false));
+      } else {
+        moving_mean_val = JUST(moving_mean);
+        moving_variance_val = JUST(moving_variance);
+      }
+    }
+
+    std::shared_ptr<one::Tensor> res;
+
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
-          attrs);
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_eval_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val}, attrs));
+    } else if (moving_mean) {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_training_stats_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val},
+          attrs));
+    } else {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
+                                                     {x, gamma_val, beta_val}, attrs));
     }
+
     if (moving_mean) {
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_,
-          {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        // For inplace update moving_mean and moving_variance
+        JUST(CheckInplaceValid(JUST(moving_mean)));
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = JUST(moving_mean);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
+        attrs.SetAllAttrs(JUST(moving_mean)->dtype()->data_type(), false);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_mean_val}, outputs.get(), attrs));
+        JUST(CheckInplaceValid(JUST(moving_variance)));
+        outputs->at(0) = JUST(moving_variance);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_variance_val}, outputs.get(), attrs));
+      }
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
-                                               {x, gamma_val, beta_val}, attrs);
+
+    return res;
   }
 
  private:
   std::shared_ptr<OpExpr> norm_eval_op_;
   std::shared_ptr<OpExpr> norm_training_stats_op_;
   std::shared_ptr<OpExpr> norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> cast_op_;
 };
 
 class NormalizationAddReluFunctor {
@@ -3177,6 +3270,56 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;
+};
+
+// Equivalent to
+// masked = (x + bias) * mask * scale_value
+// unmask = (1 - mask).bool()
+// masked.masked_fill_(unmask, mask_fill_value)
+// softmax_y = softmax(masked, dim=-1)
+// y = dropout(softmax_y, p)
+class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
+ public:
+  FusedBiasAddScaleMaskSoftmaxDropoutFunctor() {
+    random_mask_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_scale_mask_softmax_dropout")
+                               .Input("x")
+                               .Input("bias")
+                               .Input("mask")
+                               .Input("dropout_mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& bias,
+                                const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                                const float& scale, const float& p, const bool& training,
+                                const Optional<one::Generator>& generator) const {
+    float rate = p;
+    if (!training) rate = 0.0;
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float dropout_scale = 0.0;
+    if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
+    auto& fused_scale_mask_softmax_dropout_attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale_value", "mask_fill_value", "dropout_scale_value");
+    fused_scale_mask_softmax_dropout_attrs.SetAllAttrs(scale, fill_value, dropout_scale);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, bias, mask, dropout_mask},
+                                               fused_scale_mask_softmax_dropout_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_op_;
+  std::shared_ptr<OpExpr> fused_op_;
 };
 
 class CtcGreedyDecoderFunctor {
@@ -4351,6 +4494,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<1>>("MaxUnpool1D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<2>>("MaxUnpool2D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<3>>("MaxUnpool3D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -4408,6 +4554,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
+  m.add_functor<impl::FusedBiasAddScaleMaskSoftmaxDropoutFunctor>(
+      "FusedBiasAddScaleMaskSoftmaxDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
