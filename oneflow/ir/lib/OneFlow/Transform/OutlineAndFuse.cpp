@@ -72,41 +72,31 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   }
 };
 
-bool isLastDim(BiasAddOp bias_add) {
-  return bias_add.axis() == -1
-         || bias_add.axis() == bias_add.out().getType().cast<ShapedType>().getRank() - 1;
-}
-
-template<typename OpType>
-struct GroupMatMulPattern : public mlir::OpRewritePattern<OpType> {
+struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompatible> {
   explicit GroupMatMulPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<OpType>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(OpType op, mlir::PatternRewriter& rewriter) const override {
-    const bool isLinear = op.transpose_a() == false && op.transpose_b() == true;
-    if (!isLinear) { return failure(); }
-    if (op.alpha().convertToDouble() != 1.0) { return failure(); }
-    if (op.device_tag() != "cuda") { return failure(); }
-    if (op._add_to_output()) { return failure(); }
-    BiasAddOp bias_add;
+      : OpInterfaceRewritePattern<MatMulCompatible>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(MatMulCompatible op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (!op.isLinear()) { return failure(); }
+    BiasAddCompatible bias_add;
     for (auto u : op.out().getUsers()) {
-      if (auto b = dyn_cast<BiasAddOp>(u)) {
+      if (auto b = dyn_cast<BiasAddCompatible>(u)) {
         bias_add = b;
         break;
       }
     }
     if (bias_add) {
-      if (!isLastDim(bias_add)) { return failure(); }
+      if (!bias_add.isLastDim()) { return failure(); }
     }
-    llvm::SmallVector<OpType, 4> all_matmuls{};
-    llvm::SmallVector<BiasAddOp, 4> all_bias_adds{};
+    llvm::SmallVector<MatMulCompatible, 4> all_matmuls{};
+    llvm::SmallVector<BiasAddCompatible, 4> all_bias_adds{};
     for (auto u : op.a().getUsers()) {
-      if (auto another_matmul = dyn_cast<OpType>(u)) {
-        if (another_matmul.transpose_a() == op.transpose_a()
-            && another_matmul.transpose_b() == op.transpose_b()) {}
+      if (auto another_matmul = dyn_cast<MatMulCompatible>(u)) {
+        if (!another_matmul.isLinear()) { continue; }
         bool has_another_bias_add = false;
         for (auto u : another_matmul.out().getUsers()) {
-          if (auto another_bias_add = dyn_cast<BiasAddOp>(u)) {
-            if (!isLastDim(another_bias_add)) { continue; }
+          if (auto another_bias_add = dyn_cast<BiasAddCompatible>(u)) {
+            if (!another_bias_add.isLastDim()) { continue; }
             all_bias_adds.push_back(another_bias_add);
             has_another_bias_add = true;
             break;
@@ -123,17 +113,24 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<OpType> {
     for (auto bias_adds : all_bias_adds) { operands.push_back(bias_adds.b()); }
     llvm::SmallVector<Type, 4> results{};
     for (auto matmul : all_matmuls) { results.push_back(matmul.out().getType()); }
-    NamedAttrList attributes(op->getAttrDictionary());
-    attributes.erase("transpose_a");
-    attributes.erase("transpose_b");
-    attributes.erase("alpha");
-    attributes.set("operand_segment_sizes", rewriter.getI32VectorAttr({1, 1, 1, 0}));
+    NamedAttrList attributes{};
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                   OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                   OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+    if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+      attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+    }
+    if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+      attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+    }
     attributes.set("operand_segment_sizes",
                    rewriter.getI32VectorAttr({static_cast<int>(all_matmuls.size()),
                                               static_cast<int>(all_matmuls.size()),
                                               static_cast<int>(all_bias_adds.size())}));
     attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                   rewriter.getStringAttr("grouped_matmul_" + op.op_name()));
+                   rewriter.getStringAttr(
+                       "grouped_matmul_" + OpTrait::IsOpConfCompatible<void>::getOpName(op).str()));
     auto grouped_matmul =
         rewriter.create<GroupedMatmulBiasOp>(op->getLoc(), results, operands, attributes);
     if (all_bias_adds.empty()) {
@@ -154,8 +151,7 @@ class GroupMatMulPass : public GroupMatMulBase<GroupMatMulPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    patterns.add<GroupMatMulPattern<MatmulOp>>(op->getContext());
-    patterns.add<GroupMatMulPattern<BroadcastMatmulOp>>(op->getContext());
+    patterns.add<GroupMatMulPattern>(op->getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };

@@ -121,7 +121,7 @@ class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : On
 
 #ifdef GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>, DeclareOpInterfaceMethods<BiasAddCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b
@@ -662,7 +662,7 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceM
 #endif // GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
 // Group: BROADCAST
-// broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_sub, broadcast_isclose_eq_nan, broadcast_isclose_neq_nan 
+// broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_sub, broadcast_isclose_eq_nan, broadcast_isclose_neq_nan
 // Total: 22
 
 #ifdef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
@@ -4618,7 +4618,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
   let has_compute_complexity_fn = 1;
 }
 
-def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<MatMulCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
@@ -4721,7 +4721,7 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<MatMulCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
