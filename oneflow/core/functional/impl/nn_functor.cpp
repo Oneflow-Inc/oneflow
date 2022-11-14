@@ -3107,28 +3107,6 @@ class FusedGluFunctor {
   std::shared_ptr<OpExpr> split_op_;
 };
 
-class FusedGegluFunctor {
- public:
-  FusedGegluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_geglu")
-                         .Input("in")
-                         .Input("weight")
-                         .Input("bias")
-                         .Output("out")
-                         .Output("matmul_out")
-                         .Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::shared_ptr<one::Tensor>& w,
-                           const std::shared_ptr<one::Tensor>& b) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, w, b});
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class FusedScaleTrilFunctor {
  public:
   FusedScaleTrilFunctor() {
@@ -4455,7 +4433,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedGluFunctor>("FusedGlu");
-  m.add_functor<impl::FusedGegluFunctor>("FusedGeglu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");

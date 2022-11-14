@@ -668,10 +668,6 @@
   signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
-- name: "fused_geglu"
-  signature: "Tensor (Tensor x, Tensor w, Tensor b) => FusedGeglu"
-  bind_python: True
-
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
