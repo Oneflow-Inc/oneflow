@@ -3084,8 +3084,8 @@ class FusedGluFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& w,
                            const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& v,
-                           const std::shared_ptr<one::Tensor>& c,
+                           const Optional<one::Tensor>& v,
+                           const Optional<one::Tensor>& c,
                            const std::string& activation) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
     attrs.SetAllAttrs(activation);

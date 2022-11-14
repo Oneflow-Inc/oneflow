@@ -123,7 +123,7 @@ class TestFusedGlu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_fused_glu,
+            # _test_fused_glu,
             _test_fused_glu_split,
         ]
         arg_dict["params"] = [
