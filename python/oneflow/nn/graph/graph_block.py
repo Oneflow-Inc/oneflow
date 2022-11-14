@@ -369,3 +369,26 @@ class GraphTensor(GraphBlock):
         super().__init__(
             prefix, name, belonged_graph, belonged_proxy, tensor_graph_type
         )
+        self._stage_id = None
+        self._stage_placement = None
+
+    def set_stage(self, stage_id: int = None, placement=None):
+        self._stage_id = stage_id
+        self._stage_placement = placement
+
+    @property
+    def stage_id(self):
+        return self._stage_id
+
+    @stage_id.setter
+    def stage_id(self, value: int = None):
+        print(
+            "Warning: `stage_id = i` is deprecated, please use \n",
+            " set_stage(i, placement) for easy and efficient Pipeline parallel experience.",
+        )
+
+        self._stage_id = value
+
+    @property
+    def stage_placement(self):
+        return self._stage_placement

@@ -170,9 +170,9 @@ def make_new_blockgraph_scope(prev_scope, graph_block):
     assert prev_scope is not None
     assert graph_block is not None
     attr_dict = dict()
+    if graph_block.stage_id is not None:
+        attr_dict["pipeline_stage_id_hint"] = graph_block.stage_id
     if graph_block.type == GraphBlockType.MODULE:
-        if graph_block.stage_id is not None:
-            attr_dict["pipeline_stage_id_hint"] = graph_block.stage_id
         if graph_block.activation_checkpointing is not None:
             attr_dict["checkpointing"] = graph_block.activation_checkpointing
 
