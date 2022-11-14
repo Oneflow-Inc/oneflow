@@ -153,7 +153,7 @@ namespace oneflow {{
 namespace one {{
 namespace functional {{
 
-PyObject* wrap_tensortuple(const TensorTuple& tensortuple,
+PyObject* WrapTensorTuple(const TensorTuple& tensortuple,
                            const std::string& name) {{
   PyObjectPtr r(PyStructSequence_New(get_namedtuple(name)));
   if (!r) {{ throw py::error_already_set(); }}

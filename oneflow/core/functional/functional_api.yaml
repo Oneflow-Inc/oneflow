@@ -290,7 +290,7 @@
   signature:
     [
       "Tensor (Tensor input) => Min",
-      "TensorTuple<values, indices> (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
       "Tensor (Tensor input, Tensor other) => Min",
     ]
   bind_python: True
@@ -299,7 +299,7 @@
   signature:
     [
       "Tensor (Tensor input) => Median",
-      "TensorTuple<values, indices> (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+      "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
     ]
   bind_python: True
 
