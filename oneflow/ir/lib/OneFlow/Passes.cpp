@@ -41,6 +41,7 @@ limitations under the License.
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Parser/Parser.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -1055,7 +1056,6 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   // patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
   patterns.add<GeneratedPDLLPattern0>(patterns.getContext());
-
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
