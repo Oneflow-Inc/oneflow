@@ -354,8 +354,8 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kActivationTimeAscend: return sign * activation_time;
+    default: return 0;
   }
-  return 0;
 }
 
 // Find the trunk of the task graph, then reduce the wait time for tributaries
