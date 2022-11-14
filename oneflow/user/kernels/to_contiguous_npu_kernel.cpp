@@ -62,11 +62,18 @@ class ToContiguousNpuKernel final : public user_op::OpKernel {
                             storage_offset_v.size()*sizeof(int), storage_offset_v.data());  
     
     std::vector<int64_t> RealShape(shape_vector.begin(), shape_vector.end());
-    for(int i=1;i<shape_vector.size();++i)
-    {
-      RealShape[i] = std::max(RealShape[i], static_cast<int64_t>(in_stride[i-1]));
+    if( in_stride.size()==2){
+      RealShape[0] = 128;
+      RealShape[1] = 1024;
+      RealShape.push_back(static_cast<int64_t>(1024));
+    }
+    else{
+      for(int i=1;i<shape_vector.size();++i){
+        RealShape[i] = std::min(std::max({RealShape[i], static_cast<int64_t>(in_stride[i-1])}), static_cast<int64_t>(2048));
+      }
     }
     // std::cout<<"ToContiguous "<<ShapeToString(RealShape)<<std::endl;
+    // std::cout<<"ToContiguous stride"<<ShapeToString(in_stride)<<std::endl;
     NpuCommand npu_command;
     npu_command.OpName("AsStrided")
                .InputWithShape(in, RealShape)
