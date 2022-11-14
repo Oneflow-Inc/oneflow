@@ -14,30 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <glog/logging.h>
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-/*static*/ auto FusedMSAAttentionOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSASoftmaxOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType query_type = ctx->InputDType("qmk", 0);
   DataType mask_bias_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_bias_type, query_type);
 
   const std::string mode = ctx->Attr<std::string>("mode");
   if (ctx->has_input("bias", 0)) {
-    CHECK_OR_RETURN(mode == "row" || mode == "triangle_start" || mode == "triangle_end");
+    CHECK_OR_RETURN(mode == "row" || mode == "triangular_start" || mode == "triangular_end");
     DataType bias_type = ctx->InputDType("bias", 0);
     CHECK_EQ_OR_RETURN(bias_type, query_type);
   } else {
     CHECK_OR_RETURN(mode == "global_col" || mode == "col" || mode == "template");
   }
-
   ctx->SetOutputDType("out", 0, query_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSAAttentionOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const float scale = ctx->Attr<float>("scale");
   CHECK_LE_OR_RETURN(scale, 1.);
@@ -45,49 +45,57 @@ namespace oneflow {
   const Shape& qmk_shape = ctx->InputShape("qmk", 0);
   const std::string mode = ctx->Attr<std::string>("mode");
   if (mode == "global_col") {
-    CHECK_EQ_OR_RETURN(qmk_shape.NumAxes(), 3);
-    int64_t S1 = qmk_shape.At(0), N = qmk_shape.At(2);
+    int64_t naxes = qmk_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 3 || (naxes == 4 && qmk_shape.At(0) == 1));
+    int64_t start = naxes == 3 ? 0 : 1;
+    int64_t S1 = qmk_shape.At(0 + start), N = qmk_shape.At(2 + start);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(0), S1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(2), N);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), S1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), N);
   } else if (mode == "col") {
-    CHECK_EQ_OR_RETURN(qmk_shape.NumAxes(), 4);
-    int64_t N = qmk_shape.At(0), S = qmk_shape.At(3);
+    int64_t naxes = qmk_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
+    int64_t start = naxes == 4 ? 0 : 1;
+    int64_t N = qmk_shape.At(start + 0), S = qmk_shape.At(start + 3);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(0), N);
-    CHECK_EQ_OR_RETURN(mask_shape.At(1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(2), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(3), S);
-  } else if (mode == "row" || mode == "triangle_start" || mode == "triangle_end") {
-    CHECK_EQ_OR_RETURN(qmk_shape.NumAxes(), 4);
-    const int64_t batch_size = qmk_shape.At(0);
-    const int64_t num_heads = qmk_shape.At(1);
-    const int64_t query_lens = qmk_shape.At(2);
-    const int64_t key_lens = qmk_shape.At(3);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), N);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 3), S);
+  } else if (mode == "row" || mode == "triangular_start" || mode == "triangular_end") {
+    int64_t naxes = qmk_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
+    int64_t start = naxes == 4 ? 0 : 1;
+    const int64_t batch_size = qmk_shape.At(start + 0);
+    const int64_t num_heads = qmk_shape.At(start + 1);
+    const int64_t query_lens = qmk_shape.At(start + 2);
+    const int64_t key_lens = qmk_shape.At(start + 3);
     CHECK_GT_OR_RETURN(query_lens, 0);
     CHECK_EQ_OR_RETURN(query_lens, key_lens);
 
     const Shape& mask_bias_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(0), batch_size);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(1), 1);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(2), 1);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(3), query_lens);
+    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 0), batch_size);
+    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 1), 1);
+    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 2), 1);
+    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 3), query_lens);
 
     CHECK_OR_RETURN(ctx->has_input("bias", 0));
     const Shape& pair_bias_shape = ctx->InputShape("bias", 0);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(0), 1);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(1), num_heads);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(2), query_lens);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(3), key_lens);
+    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 0), 1);
+    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 1), num_heads);
+    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 2), query_lens);
+    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 3), key_lens);
   } else if (mode == "template") {
-    CHECK_EQ_OR_RETURN(qmk_shape.NumAxes(), 4);
-    int64_t Nt = qmk_shape.At(3);
+    int64_t naxes = qmk_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
+    int64_t start = naxes == 4 ? 0 : 1;
+    int64_t Nt = qmk_shape.At(start + 3);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(0), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(2), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(3), Nt);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), 1);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 3), Nt);
   } else {
     LOG(ERROR) << "mode \"" << mode << "\" unimplemented.";
   }
@@ -95,22 +103,29 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSAAttentionOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSAAttentionOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("qmk", 0), 0)
-      .Split(user_op::OpArg("mask", 0), 0)
-      .Broadcast(user_op::OpArg("bias", 0))
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
+/*static*/ auto FusedMSASoftmaxOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  if (ctx->Attr<bool>("inplace") == false)
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("qmk", 0), 0)
+        .Split(user_op::OpArg("mask", 0), 0)
+        .Broadcast(user_op::OpArg("bias", 0))
+        .Split(user_op::OpArg("out", 0), 0)
+        .Build();
+  else
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("qmk", 0), 0)
+        .Split(user_op::OpArg("mask", 0), 0)
+        .Broadcast(user_op::OpArg("bias", 0))
+        .Build();
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSAAttentionGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSASoftmaxGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType y_type = ctx->InputDType("y", 0);
   DataType dy_type = ctx->InputDType("dy", 0);
   CHECK_EQ_OR_RETURN(y_type, dy_type);
@@ -119,7 +134,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSAAttentionGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
@@ -128,12 +143,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSAAttentionGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSAAttentionGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSASoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
       .Split(user_op::OpArg("y", 0), 0)
       .Split(user_op::OpArg("dy", 0), 0)
@@ -146,8 +161,7 @@ namespace oneflow {
   DataType g_type = ctx->InputDType("g", 0);
   DataType x_type = ctx->InputDType("x", 0);
   CHECK_EQ_OR_RETURN(g_type, x_type);
-  const bool inplace = ctx->Attr<bool>("inplace");
-  if (inplace == false) { ctx->SetOutputDType("out", 0, g_type); }
+  ctx->SetOutputDType("out", 0, g_type);
   return Maybe<void>::Ok();
 }
 
@@ -156,8 +170,7 @@ namespace oneflow {
   const Shape& g_shape = ctx->InputShape("g", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   CHECK_EQ_OR_RETURN(g_shape, x_shape);
-  const bool inplace = ctx->Attr<bool>("inplace");
-  if (inplace == false) { ctx->SetOutputShape("out", 0, g_shape); }
+  ctx->SetOutputShape("out", 0, g_shape);
   return Maybe<void>::Ok();
 }
 
@@ -226,8 +239,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(mask_type, x_type);
   DataType res_type = ctx->InputDType("residual", 0);
   CHECK_EQ_OR_RETURN(res_type, x_type);
-  const bool inplace = ctx->Attr<bool>("inplace");
-  if (inplace == false) { ctx->SetOutputDType("out", 0, x_type); }
+  ctx->SetOutputDType("out", 0, x_type);
   return Maybe<void>::Ok();
 }
 
@@ -238,8 +250,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(mask_shape, x_shape);
   const Shape& res_shape = ctx->InputShape("residual", 0);
   CHECK_EQ_OR_RETURN(res_shape, x_shape);
-  const bool inplace = ctx->Attr<bool>("inplace");
-  if (inplace == false) { ctx->SetOutputShape("out", 0, x_shape); }
+  ctx->SetOutputShape("out", 0, x_shape);
   return Maybe<void>::Ok();
 }
 

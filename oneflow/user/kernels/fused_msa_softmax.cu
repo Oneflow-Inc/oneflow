@@ -16,10 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/cuda/softmax.cuh"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/framework/user_op_tensor.h"
@@ -83,10 +79,10 @@ struct MSALoad {
 };
 
 template<typename T, typename ComputeType>
-void LaunchMSAWithBiasBroadcastForwardKernel(cudaStream_t stream, T* out, const T* qmk,
-                                             const T* mask, const T* bias, T scale,
-                                             const int64_t stride, const int64_t row_size,
-                                             const int64_t rows, const int64_t cols) {
+void LaunchMSAWithBiasSoftmaxForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
+                                           const T* bias, T scale, const int64_t stride,
+                                           const int64_t row_size, const int64_t rows,
+                                           const int64_t cols) {
   cuda::softmax::DirectStore<ComputeType, T> store(out, row_size);
   MSALoadWithBias<T, ComputeType> load(qmk, mask, bias, scale, stride, row_size);
   OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
@@ -94,9 +90,9 @@ void LaunchMSAWithBiasBroadcastForwardKernel(cudaStream_t stream, T* out, const 
 };
 
 template<typename T, typename ComputeType>
-void LaunchMSABroadcastForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
-                                     T scale, const int64_t stride, const int64_t row_size,
-                                     const int64_t rows, const int64_t cols) {
+void LaunchMSASoftmaxForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
+                                   T scale, const int64_t stride, const int64_t row_size,
+                                   const int64_t rows, const int64_t cols) {
   cuda::softmax::DirectStore<ComputeType, T> store(out, row_size);
   MSALoad<T, ComputeType> load(qmk, mask, scale, stride, row_size);
   OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
@@ -121,9 +117,9 @@ struct MSAGradStore {
 };
 
 template<typename T, typename ComputeType>
-void LaunchMSABroadcastBackwardKernel(cudaStream_t stream, T* dx, const T* y, const T* dy, T scale,
-                                      const int64_t row_size, const int64_t rows,
-                                      const int64_t cols) {
+void LaunchMSASoftmaxBackwardKernel(cudaStream_t stream, T* dx, const T* y, const T* dy, T scale,
+                                    const int64_t row_size, const int64_t rows,
+                                    const int64_t cols) {
   MSAGradStore<ComputeType, T> store(dx, scale, row_size);
   cuda::softmax::DirectLoad<T, ComputeType> load_y(y, row_size);
   cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy, row_size);
@@ -136,10 +132,10 @@ void LaunchMSABroadcastBackwardKernel(cudaStream_t stream, T* dx, const T* y, co
 }  // namespace alphafold
 
 template<typename T>
-class FusedMSAAttentionKernel final : public user_op::OpKernel {
+class FusedMSASoftmaxKernel final : public user_op::OpKernel {
  public:
-  FusedMSAAttentionKernel() = default;
-  ~FusedMSAAttentionKernel() override = default;
+  FusedMSASoftmaxKernel() = default;
+  ~FusedMSASoftmaxKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -148,19 +144,21 @@ class FusedMSAAttentionKernel final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const T scale = ctx->Attr<T>("scale");
     const std::string mode = ctx->Attr<std::string>("mode");
+    const bool inplace = ctx->Attr<bool>("inplace");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
     auto qmk_shape = qmk->shape_view();
 
     int64_t B = qmk_shape.At(0), h = qmk_shape.At(1), S = qmk_shape.At(2);
     if (ctx->has_input("bias", 0)) {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-      alphafold::attn::LaunchMSAWithBiasBroadcastForwardKernel<T, T>(
+      alphafold::attn::LaunchMSAWithBiasSoftmaxForwardKernel<T, T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
           mask->dptr<T>(), bias->dptr<T>(), scale, h * S, S, B * h * S, S);
     } else {
       int64_t stride = mode == "col" ? h * S : h;
       int64_t rows = mode == "col" ? B * h * S : h * B;
-      alphafold::attn::LaunchMSABroadcastForwardKernel<T, T>(
+      alphafold::attn::LaunchMSASoftmaxForwardKernel<T, T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
           mask->dptr<T>(), scale, stride, S, rows, S);
     }
@@ -169,20 +167,20 @@ class FusedMSAAttentionKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MSA_ATTENTION_KERNEL_GPU(dtype)                 \
-  REGISTER_USER_KERNEL("fused_msa_attention")                          \
-      .SetCreateFn<FusedMSAAttentionKernel<dtype>>()                   \
+#define REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(dtype)                   \
+  REGISTER_USER_KERNEL("fused_msa_softmax")                            \
+      .SetCreateFn<FusedMSASoftmaxKernel<dtype>>()                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MSA_ATTENTION_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_ATTENTION_KERNEL_GPU(double)
+REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(double)
 
 template<typename T>
-class FusedMSAAttentionGradKernel final : public user_op::OpKernel {
+class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
  public:
-  FusedMSAAttentionGradKernel() = default;
-  ~FusedMSAAttentionGradKernel() override = default;
+  FusedMSASoftmaxGradKernel() = default;
+  ~FusedMSASoftmaxGradKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -194,7 +192,7 @@ class FusedMSAAttentionGradKernel final : public user_op::OpKernel {
     auto y_shape = y->shape_view();
 
     const int64_t B = y_shape.At(0), h = y_shape.At(1), S = y_shape.At(2);
-    alphafold::attn::LaunchMSABroadcastBackwardKernel<T, T>(
+    alphafold::attn::LaunchMSASoftmaxBackwardKernel<T, T>(
         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), dx->mut_dptr<T>(), y->dptr<T>(),
         dy->dptr<T>(), scale, S, B * h * S, S);
   }
@@ -202,14 +200,14 @@ class FusedMSAAttentionGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MSA_ATTENTION_GRAD_KERNEL_GPU(dtype)            \
-  REGISTER_USER_KERNEL("fused_msa_attention_grad")                     \
-      .SetCreateFn<FusedMSAAttentionGradKernel<dtype>>()               \
+#define REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(dtype)              \
+  REGISTER_USER_KERNEL("fused_msa_softmax_grad")                       \
+      .SetCreateFn<FusedMSASoftmaxGradKernel<dtype>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MSA_ATTENTION_GRAD_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_ATTENTION_GRAD_KERNEL_GPU(double)
+REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(double)
 
 namespace alphafold {
 namespace gate {

@@ -4368,26 +4368,39 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMSAAttentionFunctor {
+class FusedMSASoftmaxFunctor {
  public:
-  FusedMSAAttentionFunctor() {
-    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_msa_attention")
+  FusedMSASoftmaxFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_msa_softmax")
                                    .Input("qmk")
                                    .Input("mask")
                                    .Input("bias")
                                    .Output("out")
                                    .Build());
     op_without_bias_ = CHECK_JUST(
-        one::OpBuilder("fused_msa_attention").Input("qmk").Input("mask").Output("out").Build());
+        one::OpBuilder("fused_msa_softmax").Input("qmk").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& qmk,
                            const std::shared_ptr<one::Tensor>& mask,
                            const Optional<one::Tensor>& bias, const float& scale,
-                           const std::string& mode) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode");
-    attrs.SetAllAttrs(scale, mode);
+                           const std::string& mode, const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode", "inplace");
+    attrs.SetAllAttrs(scale, mode, inplace);
     if (bias) {
+      if (inplace) {
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = qmk;
+        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {qmk, mask, JUST(bias)}, outputs.get(), attrs));
+        return outputs->at(0);
+      }
       return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {qmk, mask, JUST(bias)}, attrs);
+      ;
+    }
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = qmk;
+      JUST(OpInterpUtil::Dispatch(*op_with_bias_, {qmk, mask}, outputs.get(), attrs));
+      return outputs->at(0);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {qmk, mask}, attrs);
   }
@@ -4397,17 +4410,23 @@ class FusedMSAAttentionFunctor {
   std::shared_ptr<OpExpr> op_with_bias_;
 };
 
-class FusedMSAAttentionGradFunctor {
+class FusedMSASoftmaxGradFunctor {
  public:
-  FusedMSAAttentionGradFunctor() {
+  FusedMSASoftmaxGradFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("fused_msa_attention_grad").Input("y").Input("dy").Output("dx").Build());
+        one::OpBuilder("fused_msa_softmax_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const float& scale,
-                           const std::string& mode) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode");
-    attrs.SetAllAttrs(scale, mode);
+                           const std::string& mode, const bool& inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode", "inplace");
+    attrs.SetAllAttrs(scale, mode, inplace);
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = y;
+      JUST(OpInterpUtil::Dispatch(*op_, {y, dy}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
   }
 
@@ -4628,8 +4647,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
-  m.add_functor<impl::FusedMSAAttentionFunctor>("FusedMSAAttention");
-  m.add_functor<impl::FusedMSAAttentionGradFunctor>("FusedMSAAttentionGrad");
+  m.add_functor<impl::FusedMSASoftmaxFunctor>("FusedMSASoftmax");
+  m.add_functor<impl::FusedMSASoftmaxGradFunctor>("FusedMSASoftmaxGrad");
   m.add_functor<impl::FusedMSASigmoidMulFunctor>("FusedMSASigmoidMul");
   m.add_functor<impl::FusedMSASigmoidMulGradFunctor>("FusedMSASigmoidMulGrad");
   m.add_functor<impl::FusedMSADropoutAddFunctor>("FusedMSADropoutAdd");

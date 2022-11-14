@@ -2827,7 +2827,7 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSAAttentionOp : OneFlow_BaseOp<"fused_msa_attention", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSASoftmaxOp : OneFlow_BaseOp<"fused_msa_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$qmk,
     OneFlow_Tensor:$mask,
@@ -2837,8 +2837,9 @@ def OneFlow_FusedMSAAttentionOp : OneFlow_BaseOp<"fused_msa_attention", [NoSideE
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.35355">:$scale,
-    DefaultValuedAttr<StrAttr, "\"row\"">:$mode
+    DefaultValuedAttr<F32Attr, "0.125">:$scale,
+    DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2846,7 +2847,7 @@ def OneFlow_FusedMSAAttentionOp : OneFlow_BaseOp<"fused_msa_attention", [NoSideE
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSAAttentionGradOp : OneFlow_BaseOp<"fused_msa_attention_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSASoftmaxGradOp : OneFlow_BaseOp<"fused_msa_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$dy
@@ -2856,7 +2857,8 @@ def OneFlow_FusedMSAAttentionGradOp : OneFlow_BaseOp<"fused_msa_attention_grad",
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.35355">:$scale,
-    DefaultValuedAttr<StrAttr, "\"row\"">:$mode
+    DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
