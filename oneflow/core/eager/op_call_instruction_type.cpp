@@ -16,7 +16,11 @@ limitations under the License.
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#else
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"

@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+
 
 namespace oneflow {
 

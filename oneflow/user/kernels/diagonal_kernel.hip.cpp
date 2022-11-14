@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 
 namespace oneflow {
 namespace {

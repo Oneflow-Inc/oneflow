@@ -26,7 +26,11 @@ limitations under the License.
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#else
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {

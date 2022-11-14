@@ -23,7 +23,11 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/device/device_context.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#else
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
 #include "oneflow/core/vm/vm_util.h"
 
 #ifdef WITH_CUDA
