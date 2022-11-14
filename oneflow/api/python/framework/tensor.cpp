@@ -213,11 +213,7 @@ static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, P
 static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
-  if (!t->requires_grad()) {
-    return PyErr_Format(PyExc_RuntimeError,
-                        "can't retain_grad on Tensor that has requires_grad=False");
-  }
-  if (!t->is_leaf()) { ASSERT(t->set_retain_grad(true)); }
+  CHECK_JUST(t->set_retain_grad(true));
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
