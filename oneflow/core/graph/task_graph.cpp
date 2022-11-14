@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -897,12 +898,12 @@ void TaskGraph::DecideExecutionOrder() {
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
       GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory
-      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4ModelParallelism
-          && GlobalProcessCtx::WorldSize() > 1)) {
-    StraightenNodes(this, &ordered_task_nodes_);
-  } else {
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisable
+      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
+          && GlobalProcessCtx::WorldSize() == 1)) {
     SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes(this, &ordered_task_nodes_);
   }
 }
 
