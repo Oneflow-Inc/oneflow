@@ -129,6 +129,8 @@ pybind_source_fmt = (
 #include "oneflow/core/functional/functional.h"
 
 namespace {{
+// This return type template code is referenced from:
+// https://github.com/pytorch/pytorch/blob/master/tools/autograd/gen_python_functions.py
 using oneflow::one::functional::returned_structseq_repr;
 {2}
 
