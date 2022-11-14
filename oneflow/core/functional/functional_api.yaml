@@ -1448,6 +1448,36 @@
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => MaxPoolNdGrad"
   bind_python: False
 
+- name: "max_unpool1d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[1] kernel_size, Int32List[1] stride=None,
+    Int32List[1] padding=0, Shape output_size=None) => MaxUnpool1D'
+  bind_python: True
+  
+- name: "max_unpool2d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[2] kernel_size, Int32List[2] stride=None,
+    Int32List[2] padding=0, Shape output_size=None) => MaxUnpool2D'
+  bind_python: True
+
+- name: "max_unpool3d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[3] kernel_size, Int32List[3] stride=None,
+    Int32List[3] padding=0, Shape output_size=None) => MaxUnpool3D'
+  bind_python: True
+
+- name: "max_unpool1d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool1dGrad"
+  bind_python: False
+
+- name: "max_unpool2d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool2dGrad"
+  bind_python: False
+
+- name: "max_unpool3d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool3dGrad"
+  bind_python: False
+
 - name: "prelu"
   signature: "Tensor (Tensor x, Tensor alpha) => PRelu"
   bind_python: True
@@ -2904,3 +2934,11 @@
 - name: "uniform_"
   signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
   bind_python: True
+
+- name: "fused_fast_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier) => FusedFastGeluMul"
+  bind_python: True
+
+- name: "fused_fast_gelu_mul_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
+  bind_python: False

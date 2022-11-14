@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -926,6 +927,56 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
   MaxPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
   }
+};
+
+template<int N>
+class MaxUnpoolNDFunctor {
+ public:
+  MaxUnpoolNDFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(fmt::format("max_unpool_{}d", N))
+                           .Input("x")
+                           .Input("indices")
+                           .Output("y")
+                           .Build())){};
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::vector<int32_t>& kernel_size,
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding,
+                           const Optional<Shape>& output_size) const {
+    const auto fmt_error_msg = [](const std::string& name, int32_t num, bool check_element) {
+      if (check_element) {
+        return fmt::format("each element in `{}` must be greater than 0, got {}", name, num);
+      }
+      return fmt::format("`{}` must be an integer or a list of {} integers", name, N);
+    };
+
+    CHECK_EQ_OR_RETURN(kernel_size.size(), N) << fmt_error_msg("kernel_size", N, false);
+    for (int32_t pool_dim : kernel_size) {
+      CHECK_GT_OR_RETURN(pool_dim, 0) << fmt_error_msg("kernel_size", pool_dim, true);
+    }
+
+    if (stride) {
+      CHECK_EQ_OR_RETURN(JUST(stride)->size(), N) << fmt_error_msg("stride", N, false);
+      for (int32_t stride_dim : *JUST(stride)) {
+        CHECK_GT_OR_RETURN(stride_dim, 0) << fmt_error_msg("stride", stride_dim, true);
+      }
+    }
+    for (int32_t i = 0; i < padding.size(); i++) {
+      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])
+          << "pad should be smaller than half of kernel size";
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride",
+                                                 "has_output_size", "output_size");
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size,
+                      output_size.has_value(),
+                      output_size.has_value() ? *JUST(output_size) : Shape());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class AdaptivePoolNDFunctor {
@@ -4415,6 +4466,45 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedFastGeluMulFunctor {
+ public:
+  FusedFastGeluMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedFastGeluMulGradFunctor {
+ public:
+  FusedFastGeluMulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul_grad")
+                         .Input("out_diff")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("in_diff")
+                         .Output("multiplier_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4443,6 +4533,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<1>>("MaxUnpool1D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<2>>("MaxUnpool2D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<3>>("MaxUnpool3D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -4534,6 +4627,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
+  m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
 }
 
 }  // namespace functional
