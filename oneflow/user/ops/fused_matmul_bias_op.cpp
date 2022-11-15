@@ -31,15 +31,17 @@ Maybe<void> InferTensorDesc4FusedMatmulBias(user_op::InferContext* ctx) {
   weight: (n, k) need transpose
   bias: (n)
   */
-  int64_t n = 0, k = 0;
-  k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
+
+  CHECK_GE_OR_RETURN(x_desc.shape().NumAxes(), 2);
+  const int64_t k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
 
   const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("bias", 0);
   CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
 
-  n = weight_desc.shape().At(0);
+  const int64_t n = weight_desc.shape().At(0);
+
   CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
   CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
 

@@ -79,11 +79,9 @@ class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
         args_dict["test_fun"] = [_test_fused_matmul_add_bias]
         args_dict["batchsize"] = [
             (1,),
-            (2,),
             (4,),
             (8,),
             (2, 4),
-            (4, 8),
             (2, 4, 8),
             (2, 4, 4, 4, 8),
         ]
