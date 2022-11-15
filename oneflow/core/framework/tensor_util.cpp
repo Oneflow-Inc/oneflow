@@ -73,6 +73,7 @@ Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
+  CHECK_OR_RETURN(scalar_tensor->is_eager()) << "Only eager scalar tensor support GetItem";
   std::shared_ptr<LocalTensor> local_tensor;
   {
     auto tensor = scalar_tensor;
@@ -110,10 +111,10 @@ Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
   return scalar;
 }
 
-#define SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC(cpp_type, of_type) \
+#define SPECIALIZE_SCALAR_TENSOR_TO_SCALAR_FUNC(cpp_type, of_type) \
   template Maybe<cpp_type> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
 
-OF_PP_FOR_EACH_TUPLE(SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC, POD_DATA_TYPE_SEQ);
-#undef SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_SCALAR_TENSOR_TO_SCALAR_FUNC, POD_DATA_TYPE_SEQ);
+#undef SPECIALIZE_SCALAR_TENSOR_TO_SCALAR_FUNC
 }  // namespace one
 }  // namespace oneflow
