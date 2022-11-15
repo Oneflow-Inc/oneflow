@@ -22,6 +22,8 @@ from importlib.util import find_spec, module_from_spec
 import sys
 from contextlib import contextmanager
 
+_first_init = True
+
 error_msg = """ is not implemented, please submit an issue at  
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
@@ -101,8 +103,46 @@ class OneflowImporter(MetaPathFinder, Loader):
         sys.modules[fullname] = module
         globals()[fullname] = module
 
+    def _enable(self, globals):
+        global _first_init
+        if _first_init:
+            _first_init = False
+            self.enable = False  # deal with previously imported torch
+            sys.meta_path.insert(0, self)
+            self._enable(globals)
+            return
+        if self.enable:  # already enabled
+            return
+        for k, v in sys.modules.copy().items():
+            if k.startswith("torch"):
+                self.disable_mod_cache.update({k: v})
+                del sys.modules[k]
+                try:
+                    del globals[k]
+                except KeyError:
+                    pass
+        for k, v in self.enable_mod_cache.items():
+            sys.modules.update({k: v})
+            globals.update({k: v})
+        self.enable = True
 
-_first_init = True
+    def _disable(self, globals):
+        if not self.enable:  # already disabled
+            return
+        for k, v in sys.modules.copy().items():
+            if k.startswith("torch"):
+                self.enable_mod_cache.update({k: v})
+                del sys.modules[k]
+                try:
+                    del globals[k]
+                except KeyError:
+                    pass
+        for k, v in self.disable_mod_cache.items():
+            sys.modules.update({k: v})
+            globals.update({k: v})
+        self.enable = False
+
+
 _importer = OneflowImporter()
 
 
@@ -111,73 +151,32 @@ def mock(globals=None):
         globals = currentframe().f_back.f_globals
     _importer.enable = False  # deal with previously imported torch
     sys.meta_path.insert(0, _importer)
-    _enable(globals)
+    _importer._enable(globals)
 
 
-def _enable(globals=None):
-    if globals is None:
-        globals = currentframe().f_back.f_globals
-    global _first_init
-    if _first_init:
-        _first_init = False
-        _importer.enable = False  # deal with previously imported torch
-        sys.meta_path.insert(0, _importer)
-        _enable(globals)
-        return
-    if _importer.enable:  # already enabled
-        return
-    for k, v in sys.modules.copy().items():
-        if k.startswith("torch"):
-            _importer.disable_mod_cache.update({k: v})
-            del sys.modules[k]
-            try:
-                del globals[k]
-            except KeyError:
-                pass
-    for k, v in _importer.enable_mod_cache.items():
-        sys.modules.update({k: v})
-        globals.update({k: v})
-    _importer.enable = True
+class enable:
+    def __init__(self, globals=None):
+        if globals is None:
+            globals = currentframe().f_back.f_globals
+        self.globals = globals
+        _importer._enable(globals)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        _importer._disable(self.globals)
 
 
-def _disable(globals=None):
-    if globals is None:
-        globals = currentframe().f_back.f_globals
-    if not _importer.enable:  # already disabled
-        return
-    for k, v in sys.modules.copy().items():
-        if k.startswith("torch"):
-            _importer.enable_mod_cache.update({k: v})
-            del sys.modules[k]
-            try:
-                del globals[k]
-            except KeyError:
-                pass
-    for k, v in _importer.disable_mod_cache.items():
-        sys.modules.update({k: v})
-        globals.update({k: v})
-    _importer.enable = False
+class disable:
+    def __init__(self, globals=None):
+        if globals is None:
+            globals = currentframe().f_back.f_globals
+        self.globals = globals
+        _importer._disable(globals)
 
+    def __enter__(self):
+        pass
 
-@contextmanager
-def enable(globals=None):
-    if globals is None:
-        # go back two frames
-        globals = currentframe().f_back.f_back.f_globals
-    try:
-        _enable(globals)
-        yield None
-    finally:
-        _disable(globals)
-
-
-@contextmanager
-def disable(globals=None):
-    if globals is None:
-        globals = currentframe().f_back.f_back.f_globals
-    try:
-        _disable(globals)
-        yield None
-    finally:
-        _enable(globals)
-
+    def __exit__(self, exception_type, exception_value, traceback):
+        _importer._enable(self.globals)

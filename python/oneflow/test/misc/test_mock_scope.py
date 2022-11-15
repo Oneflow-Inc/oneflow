@@ -2,7 +2,6 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 import oneflow.mock_torch as mock
-from oneflow.mock_torch import _enable, _disable
 
 import torch
 import torch.nn
@@ -13,7 +12,7 @@ Mock saves a module dict (like sys.modules) for real torch modules and oneflow m
 when using enable/disable,
 torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock`
 """
-_enable()
+mock.enable()
 import torch
 import torch.nn
 import torch.version
@@ -31,26 +30,26 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
     def test_simple(test_case):
-        _enable()
+        mock.enable()
         test_case.assertTrue(torch.__package__ == "oneflow")
         test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
         test_case.assertTrue(torch.version.__version__ == flow.__version__)
 
-        _disable()
+        mock.disable()
 
         test_case.assertTrue(torch.__package__ == "torch")
         test_case.assertTrue(torch.nn.__package__ == "torch.nn")
         test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
     def test_import_from(test_case):
-        _enable()
+        mock.enable()
         from torch import nn
         from torch.version import __version__
 
         test_case.assertTrue(nn.__package__ == "oneflow.nn")
         test_case.assertTrue(__version__ == flow.__version__)
 
-        _disable()
+        mock.disable()
         from torch import nn
         from torch.version import __version__
 
@@ -58,13 +57,13 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue(__version__ == torch.__version__)
 
     def test_error(test_case):
-        _enable()
+        mock.enable()
         with test_case.assertRaises(Exception) as context:
             from torch import noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)
         )
-        _disable()
+        mock.disable()
         with test_case.assertRaises(Exception) as context:
             from torch import noexist
         test_case.assertTrue(
