@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/SBP/SBPAttributes.h"
+#include "OneFlow/Transform/TransposeHelpers.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -439,7 +440,13 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() { return {this->in(), this->weight()}; }
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
+  if (this->_add_to_output()) {
+    return {this->in(), this->weight(), this->_add_to_output()};
+  } else {
+    return {this->in(), this->weight()};
+  }
+}
 
 llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
 
@@ -450,11 +457,11 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   operands.push_back(value[0]);
   operands.push_back(value[1]);
   if (conv_op.bias()) operands.push_back(conv_op.bias());
-  if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+  if (this->_add_to_output()) { operands.push_back(value[2]); }
   NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
-                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
+                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), getNHWCResultTypes(conv_op), operands,
                                             attributes)
                  ->getResults();
   llvm::SmallVector<Value, 4> results;
@@ -477,11 +484,30 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   NamedAttrList attributes = bias_add_op->getAttrs();
   attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
   auto res = rewriter
-                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), bias_add_op->getResultTypes(),
+                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), getNHWCResultTypes(bias_add_op),
                                              operands, attributes)
                  ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
+  return results;
+}
+
+bool BroadcastAddOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> BroadcastAddOp::OperandsToTranspose() { return {this->x(), this->y()}; }
+
+llvm::DenseSet<Value> BroadcastAddOp::ResultsToTranspose() { return {this->z()}; }
+
+llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
+                                                       PatternRewriter& rewriter) {
+  auto broadcast_op = *this;
+  NamedAttrList attributes = broadcast_op->getAttrs();
+  auto res = rewriter
+                 .create<oneflow::BroadcastAddOp>(
+                     broadcast_op.getLoc(), getNHWCResultTypes(broadcast_op), values, attributes)
+                 .z();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res);
   return results;
 }
 
@@ -506,7 +532,7 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   auto res =
       rewriter
           .create<oneflow::NormalizationOp>(
-              normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes)
+              normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes)
           ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
@@ -528,7 +554,7 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res =
       rewriter
-          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), getNHWCResultTypes(max_pool_2d_op),
                                         operands, attributes)
           ->getResults();
   llvm::SmallVector<Value, 4> results;
@@ -548,9 +574,63 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto relu_op = *this;
   SmallVector<Value, 4> operands{value[0]};
   auto res = rewriter
-                 .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), getNHWCResultTypes(relu_op), operands,
                                           relu_op->getAttrs())
                  ->getResults();
+  return {res[0]};
+}
+
+bool ScalarDivOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> ScalarDivOp::OperandsToTranspose() { return {this->in()}; }
+
+llvm::DenseSet<Value> ScalarDivOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> ScalarDivOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res =
+      rewriter
+          .create<oneflow::ScalarDivOp>(elementwise_op.getLoc(), getNHWCResultTypes(elementwise_op),
+                                        operands, elementwise_op->getAttrs())
+          ->getResults();
+  return {res[0]};
+}
+
+bool SiluOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> SiluOp::OperandsToTranspose() { return {this->in()}; }
+
+llvm::DenseSet<Value> SiluOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> SiluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res =
+      rewriter
+          .create<oneflow::SiluOp>(elementwise_op.getLoc(), getNHWCResultTypes(elementwise_op),
+                                   operands, elementwise_op->getAttrs())
+          ->getResults();
+  return {res[0]};
+}
+
+bool CastOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> CastOp::OperandsToTranspose() { return {this->in()}; }
+
+llvm::DenseSet<Value> CastOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> CastOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res =
+      rewriter
+          .create<oneflow::CastOp>(elementwise_op.getLoc(), getNHWCResultTypes(elementwise_op),
+                                   operands, elementwise_op->getAttrs())
+          ->getResults();
   return {res[0]};
 }
 
@@ -565,10 +645,63 @@ llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto add2_op = *this;
   SmallVector<Value, 4> operands{value[0], value[1]};
   auto res = rewriter
-                 .create<oneflow::Add2Op>(add2_op.getLoc(), add2_op->getResultTypes(), operands,
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), getNHWCResultTypes(add2_op), operands,
                                           add2_op->getAttrs())
                  ->getResults();
   return {res[0]};
+}
+
+bool ConcatOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+
+llvm::DenseSet<Value> ConcatOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> operands;
+  for (auto operand : this->in()) { operands.insert(operand); }
+  return operands;
+}
+
+llvm::DenseSet<Value> ConcatOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
+                                                 PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  NamedAttrList attributes = elementwise_op->getAttrs();
+  attributes.set(elementwise_op.axisAttrName(),
+                 IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                                  APInt(64, 3, /*isSigned=*/true)));
+  auto out = rewriter
+                 .create<oneflow::ConcatOp>(elementwise_op.getLoc(),
+                                            getNHWCResultTypes(elementwise_op), values, attributes)
+                 .out();
+  return {out};
+}
+
+bool GroupNormOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto group_norm_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (this->affine()) {
+    operands.push_back(this->beta());
+    operands.push_back(this->gamma());
+  }
+  NamedAttrList attributes = group_norm_op->getAttrs();
+  attributes.set(group_norm_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::GroupNormOp>(group_norm_op.getLoc(), getNHWCResultTypes(group_norm_op),
+                                        operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  results.push_back(res[2]);
+  return results;
 }
 
 }  // namespace oneflow
