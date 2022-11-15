@@ -106,8 +106,8 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
 }
 
 template<typename T>
-__global__ void UpsampleNearest2D2XBackward(const int64_t in_elem_cnt, const T* dy_dptr,
-                                          const int64_t dx_height, const int64_t dx_width,
+__global__ void UpsampleNearest2D2XBackward(const int32_t in_elem_cnt, const T* dy_dptr,
+                                          const int32_t dx_height, const int32_t dx_width,
                                           T* dx_dptr) {
   const int32_t dx_hw_size = dx_height * dx_width;
   CUDA_1D_KERNEL_LOOP(index, in_elem_cnt){
@@ -285,7 +285,7 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
     } else {
       const int64_t n = x_tensor->shape_view().At(0);
       const int64_t c = x_tensor->shape_view().At(1);
-      if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 30) {
+      if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 29) {
         RUN_CUDA_KERNEL(UpsampleNearest2D2XForward<T>, ctx->stream(), in_elem_cnt, in_elem_cnt,
                         x_tensor->dptr<T>(), in_height, in_width, y_tensor->mut_dptr<T>());
       } else {
@@ -332,7 +332,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
     } else {
       Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                               dx_tensor->shape_view().elem_cnt() * sizeof(T));
-      if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 30) {
+      if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 29) {
         RUN_CUDA_KERNEL(UpsampleNearest2D2XBackward<T>, ctx->stream(), in_elem_cnt, in_elem_cnt,
                       dy_tensor->dptr<T>(), dx_tensor->shape_view().At(2),
                       dx_tensor->shape_view().At(3),
