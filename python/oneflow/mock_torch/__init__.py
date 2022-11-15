@@ -146,16 +146,9 @@ class OneflowImporter(MetaPathFinder, Loader):
 _importer = OneflowImporter()
 
 
-def mock(globals=None):
-    if globals is None:
-        globals = currentframe().f_back.f_globals
-    _importer.enable = False  # deal with previously imported torch
-    sys.meta_path.insert(0, _importer)
-    _importer._enable(globals)
-
-
 class enable:
     def __init__(self, globals=None):
+        self.enable = _importer.enable
         if globals is None:
             globals = currentframe().f_back.f_globals
         self.globals = globals
@@ -165,11 +158,15 @@ class enable:
         pass
 
     def __exit__(self, exception_type, exception_value, traceback):
-        _importer._disable(self.globals)
+        if self.enable:
+            _importer._enable(self.globals)
+        else:
+            _importer._disable(self.globals)
 
 
 class disable:
     def __init__(self, globals=None):
+        self.enable = _importer.enable
         if globals is None:
             globals = currentframe().f_back.f_globals
         self.globals = globals
@@ -179,4 +176,7 @@ class disable:
         pass
 
     def __exit__(self, exception_type, exception_value, traceback):
-        _importer._enable(self.globals)
+        if self.enable:
+            _importer._enable(self.globals)
+        else:
+            _importer._disable(self.globals)

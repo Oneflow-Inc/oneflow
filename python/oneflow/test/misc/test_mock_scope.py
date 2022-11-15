@@ -10,7 +10,7 @@ import torch.version
 """
 Mock saves a module dict (like sys.modules) for real torch modules and oneflow modules respectively
 when using enable/disable,
-torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock`
+torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock` on switch
 """
 mock.enable()
 import torch
@@ -69,6 +69,18 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue(
             "cannot import name 'noexist' from 'torch'" in str(context.exception)
         )
+
+    def test_nested_with(test_case):
+        with mock.enable():
+            test_case.assertTrue(torch.__package__ == "oneflow")
+            with mock.disable():
+                test_case.assertTrue(torch.__package__ == "torch")
+            test_case.assertTrue(torch.__package__ == "oneflow")
+        with mock.disable():
+            test_case.assertTrue(torch.__package__ == "torch")
+            with mock.enable():
+                test_case.assertTrue(torch.__package__ == "oneflow")
+            test_case.assertTrue(torch.__package__ == "torch")
 
 
 if __name__ == "__main__":
