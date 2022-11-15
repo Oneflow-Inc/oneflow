@@ -2942,3 +2942,12 @@
 - name: "uniform_"
   signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
   bind_python: True
+
+- name: "fused_fast_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier) => FusedFastGeluMul"
+  bind_python: True
+
+- name: "fused_fast_gelu_mul_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
+  bind_python: False
+

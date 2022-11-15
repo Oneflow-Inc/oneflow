@@ -4466,6 +4466,45 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedFastGeluMulFunctor {
+ public:
+  FusedFastGeluMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedFastGeluMulGradFunctor {
+ public:
+  FusedFastGeluMulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul_grad")
+                         .Input("out_diff")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("in_diff")
+                         .Output("multiplier_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GroupedMatmulBiasFunctor {
  public:
   GroupedMatmulBiasFunctor() {
@@ -4680,6 +4719,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
+  m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
 }
