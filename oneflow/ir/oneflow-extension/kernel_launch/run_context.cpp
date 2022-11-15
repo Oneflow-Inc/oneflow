@@ -30,8 +30,8 @@ namespace okl {
 RunContext::RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeContext* comp)
     : reg_ctx_(std::move(reg)), comp_ctx_(comp) {
   InitContext init_ctx(this);
-  // kernel_state_ = reg_ctx_->kernel_->CreateOpKernelState(&init_ctx);
-  // kernel_cache_ = reg_ctx_->kernel_->InitOpKernelCache(&init_ctx);
+  kernel_state_ = reg_ctx_->kernel_->CreateOpKernelState(&init_ctx);
+  kernel_cache_ = reg_ctx_->kernel_->InitOpKernelCache(&init_ctx);
 }
 
 const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
