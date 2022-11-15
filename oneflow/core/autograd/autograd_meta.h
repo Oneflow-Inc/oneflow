@@ -46,6 +46,8 @@ class AutogradMeta final {
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
   const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
+  // get current grad processed by hooks
+  Maybe<Tensor> current_grad_value() const;
   bool is_grad_acc_inplace() const { return is_grad_acc_inplace_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }

@@ -182,6 +182,25 @@ class TestAutograd(flow.unittest.TestCase):
         return y
 
     @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_run_backward_and_grad_for_same_tensor(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=True)
+        y = x ** 2
+        y.sum().backward()
+        test_case.assertTrue(
+            np.allclose(x.grad.oneflow.numpy(), x.grad.pytorch.numpy())
+        )
+
+        y = x ** 2
+        x_grad = torch.autograd.grad(y.sum(), x)[0]
+        test_case.assertTrue(
+            np.allclose(x_grad.oneflow.numpy(), x_grad.pytorch.numpy())
+        )
+        test_case.assertTrue(
+            np.allclose(x.grad.oneflow.numpy(), x_grad.oneflow.numpy())
+        )
+
+    @autotest(n=1, auto_backward=False, check_graph=False)
     def test_no_grad_domain_call_backward(test_case):
         random_shape = [random(1, 10).to(int).value() for _ in range(4)]
         with flow.no_grad():
