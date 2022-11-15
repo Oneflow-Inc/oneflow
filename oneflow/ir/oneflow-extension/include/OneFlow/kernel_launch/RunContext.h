@@ -41,9 +41,9 @@ class RunContext final : public user_op::KernelComputeContext {
 
   const user_op::UserOpConfWrapper& user_op_conf() const override;
 
-
-  user_op::OpKernelState* FetchState(){ return reg_ctx_->kernel_state_.get(); }
-  user_op::OpKernelCache* FetchCache(){ return reg_ctx_->kernel_cache_.get(); }
+  RegContext* GetRegContext() { return reg_ctx_.get(); }
+  user_op::OpKernelState* FetchState() { return kernel_state_.get(); }
+  user_op::OpKernelCache* FetchCache() { return kernel_cache_.get(); }
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
@@ -51,6 +51,9 @@ class RunContext final : public user_op::KernelComputeContext {
   std::shared_ptr<RegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
+
+  std::shared_ptr<user_op::OpKernelState> kernel_state_;
+  std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
 };
 }  // namespace okl
 }  // namespace oneflow

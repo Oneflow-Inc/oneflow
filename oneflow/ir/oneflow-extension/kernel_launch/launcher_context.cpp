@@ -51,7 +51,7 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
           index = kernel_vec_.size();
 
           auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          kernel_vec_.push_back(reg_ctx->GenKernel());
+          kernel_vec_.push_back(reg_ctx->GetKernel());
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
         .Case([&](mlir::okl::BuildRegContextOp elem) {

@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/JITEngine.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferMisc/InferContext.h"
 
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"

@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OKL/OKLOps.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferMisc/InitContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -27,7 +28,11 @@ namespace oneflow {
 namespace okl {
 
 RunContext::RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeContext* comp)
-    : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
+    : reg_ctx_(std::move(reg)), comp_ctx_(comp) {
+  InitContext init_ctx(this);
+  // kernel_state_ = reg_ctx_->kernel_->CreateOpKernelState(&init_ctx);
+  // kernel_cache_ = reg_ctx_->kernel_->InitOpKernelCache(&init_ctx);
+}
 
 const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) const {

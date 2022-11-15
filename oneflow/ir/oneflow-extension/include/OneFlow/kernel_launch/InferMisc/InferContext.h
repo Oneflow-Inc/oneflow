@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERCONTEXT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERCONTEXT_H_
+
+#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
+#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
@@ -97,4 +98,5 @@ class InferContext final : public user_op::InferContext {
 
 }  // namespace okl
 }  // namespace oneflow
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERCONTEXT_H_
+
+#endif // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_

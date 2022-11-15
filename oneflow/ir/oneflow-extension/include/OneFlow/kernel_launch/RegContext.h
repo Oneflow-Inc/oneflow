@@ -45,17 +45,13 @@ class RegContext final : public user_op::KernelRegContext {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
 
-  ::mlir::Operation* GetOp() const;
-
-  const user_op::OpKernel* GenKernel();
+  ::mlir::Operation* GetOp() const {return op_;};
+  const user_op::OpKernel* GetKernel() const {return kernel_;};
 
   size_t GetTmpBufferSize();
 
  private:
   friend class RunContext;
-
-  void InferCache();
-  void InferState();
 
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
@@ -64,8 +60,8 @@ class RegContext final : public user_op::KernelRegContext {
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
 
-  std::shared_ptr<user_op::OpKernelState> kernel_state_;
-  std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
+  const user_op::OpKernelRegistryResult* reg_res_ = nullptr;
+  const user_op::OpKernel* kernel_ = nullptr;
 };
 
 }  // namespace okl

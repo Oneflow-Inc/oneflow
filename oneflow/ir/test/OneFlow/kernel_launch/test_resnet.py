@@ -37,8 +37,8 @@ from networks.resnet50 import resnet50
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     resnet = resnet50()
-    x = x.cuda()
-    resnet.to("cuda")
+    # x = x.cuda()
+    # resnet.to("cuda")
 
     eager_res = resnet(x)
 
