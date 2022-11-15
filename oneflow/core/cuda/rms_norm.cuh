@@ -433,52 +433,44 @@ __global__ void RmsNormBlockSMemImpl(LOAD load, STORE store, const int nrow, con
 //       stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
 // }
 
-// template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-// __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
-//                                            const int64_t cols, const double epsilon,
-//                                            ComputeType* mean, ComputeType* inv_variance) {
-//   const int tid = threadIdx.x;
-//   assert(cols % pack_size == 0);
-//   const int num_packs = static_cast<int>(cols) / pack_size;
-//   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-//     ComputeType thread_mean = 0;
-//     ComputeType thread_m2 = 0;
-//     ComputeType thread_count = 0;
-//     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-//       ComputeType pack[pack_size];
-//       load.template load<pack_size>(pack, row, pack_id * pack_size);
-// #pragma unroll
-//       for (int i = 0; i < pack_size; ++i) {
-//         WelfordCombine(pack[i], &thread_mean, &thread_m2, &thread_count);
-//       }
-//     }
-//     ComputeType row_mean = 0;
-//     ComputeType row_m2 = 0;
-//     ComputeType row_count = 0;
-//     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean,
-//     &row_m2,
-//                                        &row_count);
-//     ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
-//     ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-//     if (threadIdx.x == 0) {
-//       mean[row] = row_mean;
-//       inv_variance[row] = row_inv_var;
-//     }
-//     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-//       ComputeType pack[pack_size];
-//       const int pack_offset = pack_id * pack_size;
-//       load.template load<pack_size>(pack, row, pack_offset);
-// #pragma unroll
-//       for (int i = 0; i < pack_size; ++i) { pack[i] = (pack[i] - row_mean) * row_inv_var; }
-//       store.template store<pack_size>(pack, row, pack_offset);
-//     }
-//   }
-// }
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
+__global__ void RmsNormBlockUncachedImpl(LOAD load, STORE store, const int nrow, const int ncol,
+                                         const double eps, ComputeType* inv_rms) {
+  assert(ncol % pack_size == 0);
+  const int num_packs = ncol / pack_size;
+  for (int row = blockIdx.x; row < nrow; row += gridDim.x) {
+    ComputeType thread_root_sum = 0;
+    for (int pack_i = threadIdx.x; pack_i < num_packs; pack_i += block_size) {
+      ComputeType pack[pack_size];
+      const int col = pack_i * pack_size;
+      load.template load<pack_size>(pack, row, col);
+#pragma unroll
+      for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
+        RootSum(pack[pack_j], &thread_root_sum);
+      }
+    }
+    ComputeType row_root_sum =
+        layer_norm::BlockAllReduce<layer_norm::SumOp, ComputeType, block_size>(thread_root_sum);
+    ComputeType row_root_mean = layer_norm::Div(row_root_sum, static_cast<ComputeType>(ncol));
+    ComputeType row_inv_rms = layer_norm::Rsqrt(row_root_mean + static_cast<ComputeType>(eps));
+    if (threadIdx.x == 0) { inv_rms[row] = row_inv_rms; }
+    for (int pack_i = threadIdx.x; pack_i < num_packs; pack_i += block_size) {
+      ComputeType pack[pack_size];
+      const int col = pack_i * pack_size;
+      load.template load<pack_size>(pack, row, col);
+#pragma unroll
+      for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
+        pack[pack_j] = pack[pack_j] * row_inv_rms;
+      }
+      store.template store<pack_size>(pack, row, col);
+    }
+  }
+}
 
 // template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
 // inline cudaError_t LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE
 // store,
-//                                                     const int64_t rows, const int64_t cols,
+//                                                     const int64_t nrow, const int64_t ncol,
 //                                                     const double epsilon, ComputeType* mean,
 //                                                     ComputeType* inv_variance) {
 //   constexpr int block_size = 1024;
@@ -488,29 +480,29 @@ __global__ void RmsNormBlockSMemImpl(LOAD load, STORE store, const int nrow, con
 //     cudaError_t err =
 //         GetNumBlocks(LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size,
 //         block_size>,
-//                      block_size, 0, rows, waves, &grid_dim_x);
+//                      block_size, 0, nrow, waves, &grid_dim_x);
 //     if (err != cudaSuccess) { return err; }
 //   }
 //   LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
-//       <<<grid_dim_x, block_size, 0, stream>>>(load, store, rows, cols, epsilon, mean,
+//       <<<grid_dim_x, block_size, 0, stream>>>(load, store, nrow, ncol, epsilon, mean,
 //       inv_variance);
 //   return cudaPeekAtLastError();
 // }
 
 // template<typename LOAD, typename STORE, typename ComputeType>
 // struct DispatchLayerNormBlockUncachedImplPackSize {
-//   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-//                          const int64_t cols, const double epsilon, ComputeType* mean,
+//   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow,
+//                          const int64_t ncol, const double epsilon, ComputeType* mean,
 //                          ComputeType* inv_variance) {
-//     if (cols % 4 == 0 && CanPackAs<LOAD>(load, 4) && CanPackAs<STORE>(store, 4)) {
+//     if (ncol % 4 == 0 && CanPackAs<LOAD>(load, 4) && CanPackAs<STORE>(store, 4)) {
 //       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(
-//           stream, load, store, rows, cols, epsilon, mean, inv_variance);
-//     } else if (cols % 2 == 0 && CanPackAs<LOAD>(load, 2) && CanPackAs<STORE>(store, 2)) {
+//           stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
+//     } else if (ncol % 2 == 0 && CanPackAs<LOAD>(load, 2) && CanPackAs<STORE>(store, 2)) {
 //       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(
-//           stream, load, store, rows, cols, epsilon, mean, inv_variance);
+//           stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
 //     } else {
 //       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 1>(
-//           stream, load, store, rows, cols, epsilon, mean, inv_variance);
+//           stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
 //     }
 //   }
 // };
@@ -518,11 +510,11 @@ __global__ void RmsNormBlockSMemImpl(LOAD load, STORE store, const int nrow, con
 // template<typename LOAD, typename STORE, typename ComputeType>
 // inline cudaError_t DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE
 // store,
-//                                                       const int64_t rows, const int64_t cols,
+//                                                       const int64_t nrow, const int64_t ncol,
 //                                                       const double epsilon, ComputeType* mean,
 //                                                       ComputeType* inv_variance) {
 //   return DispatchLayerNormBlockUncachedImplPackSize<LOAD, STORE, ComputeType>()(
-//       stream, load, store, rows, cols, epsilon, mean, inv_variance);
+//       stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
 // }
 
 template<typename LOAD, typename STORE, typename ComputeType>
@@ -536,13 +528,13 @@ LaunchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, c
     // bool dispatch_smem_impl_success;
     // {
     //   cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
-    //       stream, load, store, rows, cols, epsilon, mean, inv_variance,
+    //       stream, load, store, nrow, ncol, epsilon, mean, inv_variance,
     //       &dispatch_smem_impl_success);
     //   if (err != cudaSuccess) { return err; }
     // }
     // if (!dispatch_smem_impl_success) {
     //   return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
-    //       stream, load, store, rows, cols, epsilon, mean, inv_variance);
+    //       stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
     // }
     return cudaErrorInvalidValue;
   }
@@ -553,7 +545,7 @@ inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaErr
 LaunchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrow, const int64_t ncol,
               const double eps, ComputeType* inv_rms) {
   // return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
-  //     stream, load, store, rows, cols, epsilon, mean, inv_variance);
+  //     stream, load, store, nrow, ncol, epsilon, mean, inv_variance);
   return cudaErrorInvalidValue;
 }
 
