@@ -2878,6 +2878,17 @@ class CdistFunctor {
   CdistFunctor() {
     op_ = CHECK_JUST(OpBuilder("cdist").Input("x1").Input("x2").Output("out").Build());
   }
+  Maybe<Tensor> euclidean_dist(const std::shared_ptr<Tensor>& x1, const std::shared_ptr<Tensor>& x2) const {
+    const auto& x1_norm = JUST(ReduceSum(JUST(ScalarPow(x1, 2, false)), {-1}, true));
+    const auto& x2_norm = JUST(ReduceSum(JUST(ScalarPow(x2, 2, false)), {-1}, true));
+    const auto& x1_ones = JUST(OnesLike(x1_norm));
+    const auto& x2_ones = JUST(OnesLike(x2_norm));
+    const auto& x1_cat = JUST(Concat({JUST(ScalarMul(x1, -2, false)), x1_norm, x1_ones}, -1));
+    const auto& x2_cat = JUST(Concat({x2, x2_ones, x2_norm}, -1));
+    const auto& result = JUST(MatMul(x1_cat, JUST(Transpose2dim(x2_cat, -1, -2)), false, false, 1.0));
+    return Sqrt(JUST(ClampMin(result, 0)));
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x1, const std::shared_ptr<Tensor>& x2,
                            const double& p, const std::string& compute_mode) const {
     const int64_t x1_ndim = x1->ndim();
@@ -2935,6 +2946,10 @@ class CdistFunctor {
 
     const auto x1_expand = JUST(Expand(x1, x1_expand_shape));
     const auto x2_expand = JUST(Expand(x2, x2_expand_shape));
+
+    if (p == 2 && (mode == 1 || (mode == 0 && (r1 > 25 || r2 > 25)))) {
+      return euclidean_dist(x1_expand, x2_expand);
+    }
 
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true)
