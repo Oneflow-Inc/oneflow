@@ -121,21 +121,18 @@ static std::vector<StraightenOrder> decide_parameters;
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
-  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter0", 4)));
-  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter1", 1)));
-  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter2", 3)));
-  // if (sat == StraightenAlgorithmTag::kCompressMemory) {
-  //   decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-  //   decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
-  // } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
-  //   decide_parameters.push_back(StraightenOrder::kLayerDescend);
-  //   decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
-  // } else {
-  //   // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
-  //   decide_parameters.push_back(StraightenOrder::kActivationTimeDescend);
-  //   decide_parameters.push_back(StraightenOrder::kLayerDescend);
-  //   decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-  // }
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
+    decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
+    decide_parameters.push_back(StraightenOrder::kLayerDescend);
+    decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
+  } else {
+    // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
+    decide_parameters.push_back(StraightenOrder::kActivationTimeDescend);
+    decide_parameters.push_back(StraightenOrder::kLayerDescend);
+    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
+  }
 }
 
 // move the head from source to target
@@ -221,7 +218,8 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
     if (op_conf.has_variable_conf()) {
       // Variable operators would not be run. They just create tensors.
       // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-      return TaskClassifier::kRunASAP;
+      return TaskClassifier(ParseIntegerFromEnv("VarClassifier", 2));
+      // return TaskClassifier::kRunASAP;
     } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu
                && LongerActivationTimeInCpu(op_conf)) {
       return TaskClassifier::kWaitingOverlapNode;
@@ -493,6 +491,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   std::cout << "Straightening order: " << std::endl;
   for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << ", "; }
   std::cout << std::endl;
+  std::cout << "VarClassifier: " << ParseIntegerFromEnv("VarClassifier", 2) << std::endl;
 
   // Order in the waiting sets
   struct comp {
@@ -630,7 +629,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
                              / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
                      remain_task_nums[TaskClassifier::kWaitingMainComputation]
                          / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
-        // int32_t max_over_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 5);
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
