@@ -144,23 +144,36 @@ class FusedMSASoftmaxKernel final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const T scale = ctx->Attr<T>("scale");
     const std::string mode = ctx->Attr<std::string>("mode");
-    const bool inplace = ctx->Attr<bool>("inplace");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     auto qmk_shape = qmk->shape_view();
+    auto axes = qmk_shape.NumAxes();
+    int64_t B = qmk_shape.At(0), h = qmk_shape.At(1), S1 = qmk_shape.At(2),
+            S2 = qmk_shape.At(axes - 1);
+    if (mode == "template") {
+      B = qmk_shape.At(0) * qmk_shape.At(1);
+      h = qmk_shape.At(2);
+      S1 = qmk_shape.At(3);
+      S2 = qmk_shape.At(4);
+    } else if (axes == 5) {
+      CHECK_EQ(qmk_shape.At(0), 1);
+      B = qmk_shape.At(1);
+      h = qmk_shape.At(2);
+      S1 = qmk_shape.At(3);
+      S2 = qmk_shape.At(4);
+    }
 
-    int64_t B = qmk_shape.At(0), h = qmk_shape.At(1), S = qmk_shape.At(2);
     if (ctx->has_input("bias", 0)) {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       alphafold::attn::LaunchMSAWithBiasSoftmaxForwardKernel<T, T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
-          mask->dptr<T>(), bias->dptr<T>(), scale, h * S, S, B * h * S, S);
+          mask->dptr<T>(), bias->dptr<T>(), scale, h * S1, S2, B * h * S1, S2);
     } else {
-      int64_t stride = mode == "col" ? h * S : h;
-      int64_t rows = mode == "col" ? B * h * S : h * B;
+      int64_t stride = mode == "template" ? B * h * S1 : (mode == "col" ? h * S1 : h);
+      int64_t rows = mode == "global_col" ? h * B : B * h * S1;
       alphafold::attn::LaunchMSASoftmaxForwardKernel<T, T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
-          mask->dptr<T>(), scale, stride, S, rows, S);
+          mask->dptr<T>(), scale, stride, S2, rows, S2);
     }
   }
 
@@ -189,12 +202,16 @@ class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const T scale = ctx->Attr<T>("scale");
+    const std::string mode = ctx->Attr<std::string>("mode");
     auto y_shape = y->shape_view();
 
-    const int64_t B = y_shape.At(0), h = y_shape.At(1), S = y_shape.At(2);
+    const int64_t axes = y_shape.NumAxes();
+    int64_t rows = y_shape.At(0) * y_shape.At(1), S = y_shape.At(axes - 1);
+    rows = mode == "global_col" ? rows : rows * y_shape.At(2);
+
     alphafold::attn::LaunchMSASoftmaxBackwardKernel<T, T>(
         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), dx->mut_dptr<T>(), y->dptr<T>(),
-        dy->dptr<T>(), scale, S, B * h * S, S);
+        dy->dptr<T>(), scale, S, rows, S);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -214,10 +231,6 @@ namespace gate {
 template<typename T>
 struct SigmoidMulFunctor {
   OF_DEVICE_FUNC T operator()(T g, T x) const { return x / (1 + exp(-g)); }
-};
-template<typename T>
-struct Pack2 {
-  T elem[2];
 };
 template<typename T>
 struct SigmoidMulGradXFunctor {

@@ -59,7 +59,7 @@ Maybe<void> FusedMSASoftmax::Capture(FusedMSASoftmaxCaptureState* ctx, const Ten
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   const std::string& mode = JUST(composed_attrs.GetAttr<std::string>("mode"));
   const bool& inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
-  if (mode == "row" || mode == "triangle_start" || mode == "triangle_end") {
+  if (mode == "row" || mode == "triangular_start" || mode == "triangular_end") {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);
     ctx->bias_requires_grad = inputs.at(2)->requires_grad();
   } else {

@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
-#include <cstdint>
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -88,14 +87,13 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 3), key_lens);
   } else if (mode == "template") {
     int64_t naxes = qmk_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
-    int64_t start = naxes == 4 ? 0 : 1;
-    int64_t Nt = qmk_shape.At(start + 3);
+    CHECK_OR_RETURN(naxes == 5 || (naxes == 6 && qmk_shape.At(0) == 1));  // *, S, S, h, 1, n_templ
+    int64_t start = naxes == 5 ? 0 : 1;
+    CHECK_OR_RETURN(qmk_shape.at(start + 0) == qmk_shape.at(start + 1));
+    int64_t Nt = qmk_shape.At(start + 4);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 3), Nt);
+    CHECK_EQ_OR_RETURN(mask_shape.elem_cnt(), Nt);
+    CHECK_EQ_OR_RETURN(mask_shape.At(start + 4), Nt);
   } else {
     LOG(ERROR) << "mode \"" << mode << "\" unimplemented.";
   }

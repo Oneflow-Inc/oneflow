@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cmath>
-#include <cstdint>
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -4399,7 +4397,7 @@ class FusedMSASoftmaxFunctor {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = qmk;
-      JUST(OpInterpUtil::Dispatch(*op_with_bias_, {qmk, mask}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {qmk, mask}, outputs.get(), attrs));
       return outputs->at(0);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {qmk, mask}, attrs);
