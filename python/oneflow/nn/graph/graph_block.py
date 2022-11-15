@@ -303,7 +303,9 @@ class GraphModule(GraphBlock):
                     self.name_prefix + self.name
                 ]
                 if self._belonged_graph._ggraph_ir is None:
-                    self._belonged_graph._ggraph_ir = GraphIR(self._belonged_graph._compiled_graph_proto)
+                    self._belonged_graph._ggraph_ir = GraphIR(
+                        self._belonged_graph._compiled_graph_proto
+                    )
                 return operators_repr(
                     module_conf.ops,
                     self._belonged_graph._ggraph_ir,
