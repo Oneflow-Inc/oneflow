@@ -13,7 +13,7 @@ Mock saves a module dict (like sys.modules) for real torch modules and oneflow m
 when using enable/disable,
 torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock`
 """
-
+_enable()
 import torch
 import torch.nn
 import torch.version
