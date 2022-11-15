@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
 #define ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
 
+#include <utility>
+
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
@@ -122,6 +124,10 @@ class EagerBlobObject final : public user_op::Tensor,
     return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
   }
 
+  void set_input_of_view_op(std::shared_ptr<EagerBlobObject> input) {
+    input_of_view_op_ = std::move(input);
+  }
+
  private:
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
@@ -133,6 +139,7 @@ class EagerBlobObject final : public user_op::Tensor,
 
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
+  std::shared_ptr<EagerBlobObject> input_of_view_op_;
 };
 
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;

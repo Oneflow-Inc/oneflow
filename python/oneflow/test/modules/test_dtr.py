@@ -164,19 +164,33 @@ class TestDTR(flow.unittest.TestCase):
 
         self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape) * 3))
 
-    @unittest.skip("this test fails")
     @assert_no_small_piece_optimization
-    def test_dtr_init_constant_and_scalar(self):
-        x1 = flow.eye(1024, 1024) # 4MB
+    def test_dtr_lifecycle_of_view_tensor(self):
+        x1 = flow.eye(2, 3)
         self.assertTrue(is_in_memory(x1))
-        self.assertEqual(allocated_memory('cpu'), 4 * 1024 * 1024)
 
-        flow.nn.init.constant_(x1, 3.)  # type: ignore[arg-type]
-        self.assertEqual(allocated_memory('cpu'), 4 * 1024 * 1024)
+        x2 = flow.ones(3)
+        x3 = flow.expand(x2, (2, 3))
+        x1[:] = x3
+        del x3
+        del x2
 
         evict(x1)
 
-        self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape) * 3))
+        self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape)))
+
+    @assert_no_small_piece_optimization
+    def test_dtr_init_constant_and_scalar(self):
+        x1 = flow.ones(1024, 1024)
+        x2 = x1 + 1
+        flow.nn.init.constant_(x1, 5.)  # type: ignore[arg-type]
+
+        evict(x1)
+        self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape) * 5))
+
+        evict(x1)
+        evict(x2)
+        self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * 2))
 
 
 if __name__ == "__main__":

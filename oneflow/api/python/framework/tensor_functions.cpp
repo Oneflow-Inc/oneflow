@@ -824,8 +824,10 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   } else {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
+      VLOG(1) << "a";
       value_tensor = ASSERT_PTR(
           functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+      VLOG(1) << "b";
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())

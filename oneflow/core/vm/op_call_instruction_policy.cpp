@@ -58,6 +58,7 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first) {
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    VLOG(1) << "input num " << op_call_instruction_policy->inputs().size() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
 
     std::vector<bool> storage_is_initialized;
@@ -65,8 +66,10 @@ struct OpCallInstructionUtil final {
     for (const auto& y : op_call_instruction_policy->outputs()) {
       storage_is_initialized.push_back(y->tensor_storage()->is_initialized());
     }
-    for (const auto& x : op_call_instruction_policy->inputs()) {
+    for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
+      const auto& x = op_call_instruction_policy->inputs().at(i);
       if (x->tensor_storage()->blob_dptr() == nullptr) {
+        VLOG(1) << "recompute No." << i << " input";
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false));
       }
@@ -107,6 +110,7 @@ struct OpCallInstructionUtil final {
     for (const auto& x : op_call_instruction_policy->inputs()) { x->tensor_storage()->Unpin(); }
     for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
     Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));
+    VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     return Maybe<void>::Ok();
   }
 
