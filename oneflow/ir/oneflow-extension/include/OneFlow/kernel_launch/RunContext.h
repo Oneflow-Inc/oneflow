@@ -41,6 +41,10 @@ class RunContext final : public user_op::KernelComputeContext {
 
   const user_op::UserOpConfWrapper& user_op_conf() const override;
 
+
+  user_op::OpKernelState* FetchState(){ return reg_ctx_->kernel_state_.get(); }
+  user_op::OpKernelCache* FetchCache(){ return reg_ctx_->kernel_cache_.get(); }
+
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;

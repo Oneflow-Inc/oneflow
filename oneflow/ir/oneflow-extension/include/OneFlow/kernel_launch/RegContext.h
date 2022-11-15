@@ -52,12 +52,20 @@ class RegContext final : public user_op::KernelRegContext {
   size_t GetTmpBufferSize();
 
  private:
+  friend class RunContext;
+
+  void InferCache();
+  void InferState();
+
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
+
+  std::shared_ptr<user_op::OpKernelState> kernel_state_;
+  std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
 };
 
 }  // namespace okl

@@ -67,6 +67,7 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
     inputs_.push_back(operand_id.value());
   }
+
   for (const auto& result_id : ::llvm::enumerate(
            ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op))) {
     user_op::NaiveTensorDesc tensor_desc{};
@@ -87,6 +88,7 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
     outputs_.push_back(result_id.value());
   }
+
   auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(op);
   if (dev_tag == "cpu") {
     device_type_ = DeviceType::kCPU;
@@ -95,6 +97,17 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
   } else {
     LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
   }
+
+  InferCache();
+  InferState();
+}
+
+void RegContext::InferCache(){
+
+}
+
+void RegContext::InferState(){
+
 }
 
 DeviceType RegContext::device_type() const { return device_type_; }

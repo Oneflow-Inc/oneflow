@@ -36,7 +36,8 @@ void launch(void* run_ctx, void* kernel) {
   const oneflow::user_op::OpKernel* engine =
       ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel);
 
-  engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)run_ctx);
+  auto compute_ctx_ = (typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)run_ctx;
+  engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
 }
 }  // extern "C"
 
