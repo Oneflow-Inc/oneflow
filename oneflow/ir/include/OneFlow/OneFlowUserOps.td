@@ -4937,7 +4937,8 @@ def OneFlow_FusedMatmulBiasOp : OneFlow_BaseOp<"fused_matmul_bias", [NoSideEffec
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$bias
+    OneFlow_Tensor:$bias,
+    Optional<OneFlow_Tensor>:$add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
