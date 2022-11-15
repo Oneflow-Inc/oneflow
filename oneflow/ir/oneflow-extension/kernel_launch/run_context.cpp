@@ -46,6 +46,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   // LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
   //            << " offset: " << source.offset;
   if (source.type == Source::OUTPUT) {
+    if (op->getNumResults() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getResult(index + source.offset);
     for (auto use : val.getUsers()) {
       if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
@@ -55,6 +56,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
   } else if (source.type == Source::INPUT) {
+    if (op->getNumOperands() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)

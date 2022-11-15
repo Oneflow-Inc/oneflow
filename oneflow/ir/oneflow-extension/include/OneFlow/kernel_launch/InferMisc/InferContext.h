@@ -61,16 +61,38 @@ class InferContext final : public user_op::InferContext {
   void SetOutputDType(const std::string&, int32_t, DataType) override { TODO(); }
   DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const override { TODO(); }
   void SetDtype4ArgNameAndIndex(const std::string&, int32_t, DataType) override { TODO(); }
-  const std::vector<std::pair<std::string, int32_t>>& inputs() const override { TODO(); }
-  const std::vector<std::pair<std::string, int32_t>>& outputs() const override { TODO(); }
-  const std::string& input(const std::string& arg_name, int32_t index) const override { TODO(); }
-  const std::string& output(const std::string& arg_name, int32_t index) const override { TODO(); }
-  bool has_input(const std::string& arg_name, int32_t index) const override { TODO(); }
-  bool has_output(const std::string& arg_name, int32_t index) const override { TODO(); }
-  int32_t input_size(const std::string& arg_name) const override { TODO(); }
-  int32_t output_size(const std::string& arg_name) const override { TODO(); }
-  const std::string& op_name() const override { TODO(); }
-  const std::string& op_type_name() const override { TODO(); }
+
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override { 
+    return reg_ctx_->inputs();
+   }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    return reg_ctx_->outputs();
+   }
+
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return reg_ctx_->user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return reg_ctx_->user_op_conf().output(arg_name, index);
+  }
+
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return reg_ctx_->user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return reg_ctx_->user_op_conf().has_input(arg_name, index);
+  }
+
+  int32_t input_size(const std::string& arg_name) const override {
+    return reg_ctx_->user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return reg_ctx_->user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return reg_ctx_->user_op_conf().op_name(); }
+  const std::string& op_type_name() const override {
+    return reg_ctx_->user_op_conf().op_type_name();
+  }
   const std::string& op_loc() const override { TODO(); }
 
   const ParallelContext& parallel_ctx() const override { TODO(); }
@@ -99,4 +121,4 @@ class InferContext final : public user_op::InferContext {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
