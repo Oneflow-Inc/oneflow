@@ -811,8 +811,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
                                            ASSERT(MakeBroadcastSbpParallel()));
       if (functional::PyScalarCheck(value)) {
-        // NOTE: initialize value_tensor in eager mode
-        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled=*/false);
         Scalar value_scalar = functional::PyUnpackScalar(value);
         value_tensor = ASSERT_PTR(
             functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));

@@ -540,8 +540,6 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                          TensorTuple& tensor_indices) {
-  // NOTE: process indices in eager mode
-  LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   if (x->is_local()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
@@ -565,6 +563,8 @@ Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index = tensor_indices[i];
       if (tensor_index == nullptr) { continue; }
       if (tensor_index->is_local()) {
+        // NOTE: LocalToGlobal should be called in eager mode
+        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
         tensor_indices[i] = JUST(ToGlobal(tensor_index, placement,
                                           std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
                                           grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));

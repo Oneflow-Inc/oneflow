@@ -2247,7 +2247,6 @@ class TensorSetItemFunctor {
     if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
-        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ value_tensor->is_lazy());
         // NOTE:
         // 1. The value shape must can be broadcasted to the target shape.
         // 2. The slice shape must have equal element count with the target shape.
