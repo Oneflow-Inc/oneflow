@@ -210,8 +210,6 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("scale_factor");
@@ -226,6 +224,8 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
+      Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
       NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0),
                                                 dy_tensor->shape_view().At(1),
                                                 dy_tensor->shape_view().At(2));
@@ -311,8 +311,6 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
@@ -332,6 +330,8 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
+      Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
       if (out_height == 2 * in_height && out_width == 2 * in_width && in_elem_cnt <= 1 << 30) {
         RUN_CUDA_KERNEL(UpsampleNearest2D2XBackward<T>, ctx->stream(), in_elem_cnt, in_elem_cnt,
                       dy_tensor->dptr<T>(), dx_tensor->shape_view().At(2),
