@@ -216,6 +216,11 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
   });
 }
 
+bool IsValidScalarTensorIndex(const std::shared_ptr<one::Tensor>& tensor) {
+  if (!(tensor->dtype()->is_integer() || tensor->dtype() == DType::Bool())) { return false; }
+  return tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1;
+}
+
 // Permute back for global tensor which transpose dims to front
 Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
                                          const std::vector<int>& permute) {
@@ -311,27 +316,49 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-     if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
+      if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
         if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kUInt8) {
           int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
           if (integer < 0) { integer += shape.At(dim); }
           if (integer < 0 || integer >= shape.At(dim)) {
             return Error::IndexError()
-                   << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
-                   << " does not match the shape of the indexed tensor " << shape.ToString()
-                   << " at index " << dim + j;
+                   << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
+                   << " with size " << shape.At(dim);
+          }
+          slice_indices->emplace_back(integer, integer + 1, 1);
+          dim++;
+        } else {
+          bool boolean_index = JUST(GetItemInScalarTensor<bool>(tensor));
+          if (!has_expand_boolean_dim) {
+            expand_dims->emplace_back(dim);
+            slice_indices->emplace_back(0, boolean_index, 1);
+            target_dims->emplace_back(boolean_index);
+            has_expand_boolean_dim = true;
           }
         }
-        indices = JUST(ExpandMaskIndex(tensor));
       } else {
-        indices->emplace_back(tensor);
-      }
-      for (int j = 0; j < indices->size(); ++j) {
-        slice_indices->emplace_back(0, shape.At(dim), 1);
-        tensor_indices->resize(target_dims->size());
-        tensor_indices->emplace_back(indices->at(j));
-        target_dims->emplace_back(shape.At(dim));
-        dim++;
+        auto indices = std::make_shared<TensorTuple>();
+        if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+            || tensor->dtype() == DType::Bool()) {
+          for (int j = 0; j < tensor->ndim(); ++j) {
+            if (tensor->shape()->At(j) != shape.At(dim + j)) {
+              return Error::IndexError()
+                     << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
+                     << " does not match the shape of the indexed tensor " << shape.ToString()
+                     << " at index " << dim + j;
+            }
+          }
+          indices = JUST(ExpandMaskIndex(tensor));
+        } else {
+          indices->emplace_back(tensor);
+        }
+        for (int j = 0; j < indices->size(); ++j) {
+          slice_indices->emplace_back(0, shape.At(dim), 1);
+          tensor_indices->resize(target_dims->size());
+          tensor_indices->emplace_back(indices->at(j));
+          target_dims->emplace_back(shape.At(dim));
+          dim++;
+        }
       }
     }
   }
@@ -472,6 +499,7 @@ Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     }
   }
   std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
+
   // reverse adjust value if index subspace is continuous but transposed since the start
   // dimension cannot be specified for `scatter_nd`
   if (is_continuous_subspace) {
