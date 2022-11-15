@@ -698,25 +698,6 @@ def _test_step_assignment(test_case, placement):
     test_case.assertEqual(v[1:].sum(), 0)
 
 
-def _test_bool_indices(test_case, placement):
-    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
-    sbp = random_sbp(placement, max_dim=3).value()
-    v = global_broadcast_consec((8, 8, 8)).to_global(placement, sbp)
-    boolIndices = _cpu_global_tensor(
-        flow.tensor(
-            [True, False, True, True, False, False, False, True], dtype=flow.bool
-        )
-    ).to_global(placement, broadcast_for_placement)
-    test_case.assertEqual(
-        get_graph_output(v, func=lambda x: x[boolIndices]).shape, (4, 8, 8)
-    )
-    _assert_tensor_equal(
-        test_case,
-        get_graph_output(v, func=lambda x: x[boolIndices]),
-        flow.stack([v[0], v[2], v[3], v[7]]),
-    )
-
-
 def _test_multiple_bool_indices(test_case, placement):
     broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
     sbp = random_sbp(placement, max_dim=2).value()
@@ -913,6 +894,22 @@ def _test_ellipsis_tensor(test_case, placement):
     test_case.assertEqual(get_graph_output(x_scalar, func=lambda x: x[...]), 9.9)
 
 
+def _test_bool_indices(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=1, except_partial_sum=True).value()
+    v = global_broadcast_consec((8,)).to_global(placement, sbp)
+    boolIndices = _cpu_global_tensor(
+        flow.tensor(
+            [True, False, True, True, False, False, False, True], dtype=flow.bool
+        )
+    ).to_global(placement, sbp)
+    _assert_tensor_equal(
+        test_case,
+        get_graph_output(v, func=lambda x: setitem_and_return(x, boolIndices, 6.6)),
+        flow.tensor([6.6, 2.0, 6.6, 6.6, 5.0, 6.0, 7.0, 6.6]),
+    )
+
+
 class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
     @unittest.skip(
@@ -942,12 +939,10 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                     _test_setitem_scalars(test_case, placement)
 
     @globaltest
-    @unittest.skip("TODO(wyg): support eager bool indices tensor in lazy mode")
     def test_bool_indices(test_case):
         for placement in all_placement():
             for _ in range(5):
                 _test_bool_indices(test_case, placement)
-                _test_multiple_bool_indices(test_case, placement)
 
 
 if __name__ == "__main__":
