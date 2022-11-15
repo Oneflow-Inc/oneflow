@@ -93,24 +93,24 @@ struct AffineLoad {
 };
 
 template<typename T, bool affine>
-void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
-                       const T* x_dptr, const T* w_dptr, T* y_dptr, user_op::Tensor* inv_rms) {
+void RmsNormForwardAffine(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
+                          const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
+                          user_op::Tensor* inv_rms) {
   using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
   layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncol);
   AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncol);
-  DispatchRmsNorm<decltype(load), decltype(store), ComputeType>(
+  LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
       stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps,
       inv_rms->mut_dptr<ComputeType>());
 }
 
 template<typename T>
-void DispatchRmsNormForwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
-                               const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
-                               user_op::Tensor* inv_rms) {
+void RmsNormForward(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
+                    const T* x_dptr, const T* w_dptr, T* y_dptr, user_op::Tensor* inv_rms) {
   if (w_dptr) {
-    RmsNormForwardGpu<T, true>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    RmsNormForwardAffine<T, true>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
   } else {
-    RmsNormForwardGpu<T, false>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    RmsNormForwardAffine<T, false>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
   }
 }
 
@@ -143,10 +143,10 @@ void DispatchRmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const in
 }  // namespace rms_norm
 
 template<typename T>
-class RmsNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class RmsNormKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  RmsNormGpuKernel() = default;
-  ~RmsNormGpuKernel() = default;
+  RmsNormKernel() = default;
+  ~RmsNormKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -167,14 +167,14 @@ class RmsNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGra
       CHECK_EQ(weight->shape_view().elem_cnt(), ncol);
       weight_dptr = weight->dptr<T>();
     }
-    rms_norm::DispatchRmsNormForwardGpu<T>(ctx->stream(), nrow, ncol, eps, x->dptr<T>(),
-                                           weight_dptr, y->mut_dptr<T>(), inv_rms);
+    rms_norm::RmsNormForward<T>(ctx->stream(), nrow, ncol, eps, x->dptr<T>(), weight_dptr,
+                                y->mut_dptr<T>(), inv_rms);
   };
 };
 
 #define REGISTER_RMS_NORM_CUDA_KERNEL(dtype)                           \
   REGISTER_USER_KERNEL("rms_norm")                                     \
-      .SetCreateFn<RmsNormGpuKernel<dtype>>()                          \
+      .SetCreateFn<RmsNormKernel<dtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
@@ -248,6 +248,8 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     user_op::Tensor* weight_grad = ctx->Tensor4ArgNameAndIndex("weight_grad", 0);
     const int64_t nrow = inv_rms->shape_view().elem_cnt();
     const int64_t ncol = weight_grad->shape_view().elem_cnt();
+    CHECK_LT(nrow * ncol, std::numeric_limits<int32_t>::max())
+        << "Too large tensor to support. The size of tensor exceeds int32 max limit.";
 
     // step 1: dx = dy * y and reduce partial rows
     const int block_dim_x = rms_norm::kWarpSize;
