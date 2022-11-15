@@ -19,11 +19,20 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> SpmmCsrOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  int64_t a_row = ctx->Attr<int64_t>("a_num_rows");
+  bool transpose_a = ctx->Attr<bool>("transpose_a");
+  bool transpose_b = ctx->Attr<bool>("transpose_b");
+  CHECK_EQ_OR_RETURN(transpose_b, true)
+      << ctx->op_name() << ": transpose for mat b is not implemented yet";
+      
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  int64_t b_col = b.shape().At(1);
-
-  ctx->SetOutputShape("out", 0,  Shape({a_row, b_col}));
+  int64_t c_row = 0;
+  if(!transpose_a) {
+    c_row = ctx->Attr<int64_t>("a_num_rows"); // C = A B 
+  } else {
+    c_row = ctx->Attr<int64_t>("a_num_cols"); // C = A^T B
+  }
+  int64_t c_col = b.shape().At(1);
+  ctx->SetOutputShape("out", 0,  Shape({c_row, c_col}));
 
   return Maybe<void>::Ok();
 }

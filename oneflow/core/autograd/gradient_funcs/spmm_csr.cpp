@@ -85,7 +85,7 @@ Maybe<void> SpmmCsr::Apply(const SpmmCsrCaptureState* ctx, const TensorTuple& ou
 
     JUST(VectorAt(*in_grads, 3)) =
         JUST(functional::SpmmCsr(a_csr_row, a_csr_col, a_csr_val, ctx->a_num_rows, ctx->a_num_cols,
-                                 JUST(VectorAt(out_grads, 0))));
+                                 JUST(VectorAt(out_grads, 0)), true, false));
   }
 
   return Maybe<void>::Ok();

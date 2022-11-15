@@ -20,7 +20,7 @@
 #   "Sbp", "SbpList"
 # }
 - name: "spmm_csr"
-  signature: "Tensor (Tensor a_csr_row, Tensor a_csr_col, Tensor a_csr_val, Int64 a_num_rows, Int64 a_num_cols, Tensor b) => SpmmCsr"
+  signature: "Tensor (Tensor a_csr_row, Tensor a_csr_col, Tensor a_csr_val, Int64 a_num_rows, Int64 a_num_cols, Tensor b, Bool transpose_a=False, Bool transpose_b=False) => SpmmCsr"
   bind_python: True
 
 - name: "spmm_coo"

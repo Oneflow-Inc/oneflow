@@ -36,7 +36,9 @@ def OneFlow_SpmmCsrOp : OneFlow_BaseOp<"spmm_csr", [NoSideEffect, DeclareOpInter
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$a_num_rows,
-    DefaultValuedAttr<SI64Attr, "0">:$a_num_cols
+    DefaultValuedAttr<SI64Attr, "0">:$a_num_cols,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

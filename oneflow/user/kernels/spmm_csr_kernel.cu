@@ -31,6 +31,8 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     const user_op::Tensor* a_csr_col = ctx->Tensor4ArgNameAndIndex("a_csr_col", 0);
     const user_op::Tensor* a_csr_val = ctx->Tensor4ArgNameAndIndex("a_csr_val", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    bool transpose_a = ctx->Attr<bool>("transpose_a");
+    bool transpose_b = ctx->Attr<bool>("transpose_b");
 
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -48,11 +50,12 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     int ldb = B_num_cols;
     int ldc = B_num_cols;
     int B_size = B_num_rows * B_num_cols;
-    int C_size = A_num_rows * B_num_cols;
+    int C_size = transpose_a? A_num_cols * B_num_cols: A_num_rows * B_num_cols;
     float* dC = out_tensor->mut_dptr<float>();
 
     float alpha = 1.0f;
     float beta = 0.0f;
+
 
     //--------------------------------------------------------------------------
     // CUSPARSE APIs
@@ -77,16 +80,18 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     // allocate an external buffer if needed
     OF_CUSPARSE_CHECK(cusparseSpMM_bufferSize(
       cuda_stream->cusparse_handle(),
-      CUSPARSE_OPERATION_NON_TRANSPOSE,
+      transpose_a ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE,
       CUSPARSE_OPERATION_NON_TRANSPOSE,
       &alpha, matA, matB, &beta, matC, CUDA_R_32F,
       CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize));
 
     OF_CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-    OF_CUSPARSE_CHECK(cusparseSpMM(cuda_stream->cusparse_handle(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                   CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta,
-                                   matC, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, dBuffer));
+    OF_CUSPARSE_CHECK(cusparseSpMM(cuda_stream->cusparse_handle(),
+    transpose_a ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE,
+      CUSPARSE_OPERATION_NON_TRANSPOSE, 
+      &alpha, matA, matB, &beta, matC,
+      CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, dBuffer));
 
     // destroy matrix/vector descriptors
     OF_CUSPARSE_CHECK(cusparseDestroySpMat(matA));
