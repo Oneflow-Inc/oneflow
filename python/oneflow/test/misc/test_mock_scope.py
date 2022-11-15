@@ -1,7 +1,8 @@
 import unittest
 import oneflow as flow
 import oneflow.unittest
-from oneflow.mock_torch import _enable, enable, _disable, disable, mock
+import oneflow.mock_torch as mock
+from oneflow.mock_torch import _enable, _disable
 
 import torch
 import torch.nn
@@ -20,11 +21,11 @@ import torch.version
 
 class TestMock(flow.unittest.TestCase):
     def test_with(test_case):
-        with enable():
+        with mock.enable():
             test_case.assertTrue(torch.__package__ == "oneflow")
             test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
             test_case.assertTrue(torch.version.__version__ == flow.__version__)
-        with disable():
+        with mock.disable():
             test_case.assertTrue(torch.__package__ == "torch")
             test_case.assertTrue(torch.nn.__package__ == "torch.nn")
             test_case.assertTrue(torch.version.__version__ == torch.__version__)
