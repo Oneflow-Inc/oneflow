@@ -182,13 +182,14 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     )
     return input_sig_str, output_sig_str
 
+
 class GraphIR(object):
     def __init__(self, g_proto: job_pb.Job):
         assert g_proto is not None and isinstance(g_proto, job_pb.Job)
         self._graph_proto = g_proto
         self._op2conf = None
         self._op2placement = None
-    
+
     def get_op_conf(self, op_name: str) -> Optional[op_conf_util.OperatorConf]:
         if self._op2conf is None:
             self._op2conf = dict()
@@ -197,7 +198,7 @@ class GraphIR(object):
         if op_name not in self._op2conf:
             return None
         return self._op2conf[op_name]
-    
+
     def get_op_placement(self, op_name: str) -> Optional[oneflow.placement]:
         if self._op2placement is None:
             self._op2placement = dict()
@@ -205,11 +206,12 @@ class GraphIR(object):
                 parallel_conf = group.parallel_conf
                 for op_name in group.op_set.op_name:
                     self._op2placement[op_name] = oneflow.placement(
-                            proto_str=text_format.MessageToString(parallel_conf)
-                        )
+                        proto_str=text_format.MessageToString(parallel_conf)
+                    )
         if op_name not in self._op2placement:
             return None
         return self._op2placement[op_name]
+
 
 def operators_repr(
     ops: protobuf.pyext._message.RepeatedCompositeContainer,

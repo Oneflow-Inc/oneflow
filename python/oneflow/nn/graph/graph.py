@@ -573,9 +573,7 @@ class Graph(object):
             if self._ggraph_ir is None:
                 self._ggraph_ir = GraphIR(self._compiled_graph_proto)
             return operators_repr(
-                module_conf.ops,
-                self._ggraph_ir,
-                self._debug_op_repr_with_py_stack,
+                module_conf.ops, self._ggraph_ir, self._debug_op_repr_with_py_stack,
             )
 
         return []
