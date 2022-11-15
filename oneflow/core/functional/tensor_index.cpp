@@ -311,11 +311,11 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      auto indices = std::make_shared<TensorTuple>();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
-          || tensor->dtype() == DType::Bool()) {
-        for (int j = 0; j < tensor->ndim(); ++j) {
-          if (tensor->shape()->At(j) != shape.At(dim + j)) {
+     if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
+        if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kUInt8) {
+          int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
+          if (integer < 0) { integer += shape.At(dim); }
+          if (integer < 0 || integer >= shape.At(dim)) {
             return Error::IndexError()
                    << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
                    << " does not match the shape of the indexed tensor " << shape.ToString()

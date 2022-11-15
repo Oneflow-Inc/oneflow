@@ -4619,7 +4619,6 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
