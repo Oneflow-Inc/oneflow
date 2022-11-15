@@ -136,20 +136,19 @@ class SGD(Optimizer):
                     )
                     self.fused = False
 
-        if not self.fused:
-            self._momentum_sgd = (
-                flow.stateful_op("momentum_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("momentum")
-                .Build()
-            )
-            self._sgd = (
-                flow.stateful_op("sgd_update")
-                .Input("model")
-                .Input("model_diff")
-                .Build()
-            )
+        self._momentum_sgd = (
+            flow.stateful_op("momentum_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("momentum")
+            .Build()
+        )
+        self._sgd = (
+            flow.stateful_op("sgd_update")
+            .Input("model")
+            .Input("model_diff")
+            .Build()
+        )
 
     def _single_tensor_update(self, param_group):
         lr = param_group["lr"]
