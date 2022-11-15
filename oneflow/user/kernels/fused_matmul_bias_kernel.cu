@@ -69,8 +69,11 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                          /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+    
+    int num_batches = 1;
+    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) num_batches *= x->shape_view().At(i);
+    cublas_n *= num_batches;
 
-    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) cublas_n *= in_shape.at(i);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
     void* y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
 
@@ -78,9 +81,6 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
-
-    int num_batches = 1;
-    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) num_batches *= x->shape_view().At(i);
 
     OF_CUBLAS_CHECK(
         cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
