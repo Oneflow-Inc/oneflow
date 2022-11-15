@@ -15,14 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
-// CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
+
 #if CUDA_VERSION >= 10200
 
 namespace oneflow {
 
 namespace {
 
-template<typename T>
 class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   FusedMatmulBiasKernel() = default;
@@ -93,16 +92,18 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type) \
+#define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type) \
   REGISTER_USER_KERNEL("fused_matmul_bias")                               \
-      .SetCreateFn<FusedMatmulBiasKernel<cpp_type>>()                     \
+      .SetCreateFn<FusedMatmulBiasKernel>()                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
                        && (user_op::HobDataType("out", 0) == data_type));
 
-REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(double, DataType::kDouble);
-REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(float, DataType::kFloat);
-REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(half, DataType::kFloat16);
-REGISTER_CUBLAS_FUSED_MATMUL_BIAS_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(double, DataType::kDouble);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(float, DataType::kFloat);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(half, DataType::kFloat16);
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+#endif // CUDA_VERSION >= 11000
 
 }  // namespace
 

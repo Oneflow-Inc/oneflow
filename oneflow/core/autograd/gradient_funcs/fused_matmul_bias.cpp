@@ -17,8 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/common/container_util.h"
 
-#if CUDA_VERSION >= 10200
-
 namespace oneflow {
 
 namespace one {
@@ -57,7 +55,6 @@ Maybe<void> FusedMatmulBias::Capture(FusedMatmulBiasCaptureState* ctx, const Ten
 
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));
-  ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 2)));
 
   return Maybe<void>::Ok();
 }
@@ -77,7 +74,7 @@ Maybe<void> FusedMatmulBias::Apply(const FusedMatmulBiasCaptureState* ctx,
   if (ctx->bias_requires_grad) {
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     std::vector<int32_t> reduce_axes_vec;
-    reduce_axes_vec.reserve(num_axes);
+    reduce_axes_vec.reserve(num_axes - 1);
     for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
     in_grads->at(2) = JUST(functional::ReduceSum(JUST(VectorAt(out_grads, 0)), reduce_axes_vec, false));
   }
@@ -90,5 +87,3 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("fused_matmul_bias", FusedMatmulBias);
 }  // namespace one
 
 }  // namespace oneflow
-
-#endif  // CUDA_VERSION >=10200
