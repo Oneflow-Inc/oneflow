@@ -184,64 +184,6 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {{
 """
 )
 
-python_return_types_header_fmt = (
-    license
-    + f"""
-#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
-#define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
-
-#include <Python.h>
-#include <string>
-
-namespace oneflow {{
-namespace one {{
-namespace functional {{
-
-PyTypeObject* get_namedtuple(const std::string& name);
-
-}} // functional
-}} // one
-}} // oneflow
-
-#endif
-"""
-)
-
-python_return_types_source_fmt = (
-    license
-    + """
-#include <Python.h>
-#include <string>
-#include <unordered_map>
-#include "oneflow/api/python/functional/python_return_types.h"
-
-namespace {{
-  using oneflow::one::functional::returned_structseq_repr;
-{0}
-}}
-namespace oneflow {{
-namespace one{{
-namespace functional {{
-
-std::unordered_map<std::string, PyTypeObject*>& get_namedtuple_types_map() {{
-  static std::unordered_map<std::string, PyTypeObject*> namedtuple_types_map = {{
-{1}
-  }};
-  return namedtuple_types_map;
-}}
-
-PyTypeObject* get_namedtuple(const std::string& name) {{
-  static auto& namedtuple_types_map = get_namedtuple_types_map();
-  return namedtuple_types_map[name];
-}}
-
-}} // functional
-}} // one
-}} // oneflow
-
-"""
-)
-
 yaml_file_path = os.path.join(
     args.project_source_dir, "oneflow/core/functional/functional_api.yaml"
 )
