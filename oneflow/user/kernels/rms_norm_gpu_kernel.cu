@@ -114,73 +114,6 @@ void DispatchRmsNormForwardGpu(ep::Stream* stream, const int64_t nrow, const int
   }
 }
 
-constexpr int tile_size = 32;
-constexpr int num_per_block = 4;
-constexpr int block_dim_x = 32;
-constexpr int block_dim_y = 32 / num_per_block;
-
-template<typename T, typename ComputeType>
-__global__ void RmsNormParamGrad(int nrow, int ncol, const T* __restrict__ dy,
-                                 const T* __restrict__ x, const ComputeType* __restrict__ inv_rms,
-                                 T* __restrict__ b_weight_grad) {
-  __shared__ ComputeType dweight[32][33];
-  ComputeType dweight_sum[num_per_block];
-#pragma unroll
-  for (int index = 0; index < num_per_block; ++index) { dweight_sum[index] = 0; }
-  const int col = blockIdx.x * blockDim.x + threadIdx.x;
-  if (col < ncol) {
-    for (int i = blockIdx.y * tile_size + threadIdx.y; i < nrow; i += tile_size * gridDim.y) {
-#pragma unroll
-      for (int index = 0; index < num_per_block; ++index) {
-        int row = i + index * blockDim.y;
-        if (row < nrow) {
-          int offset = row * ncol + col;
-          const ComputeType dy_val = static_cast<ComputeType>(dy[offset]);
-          const ComputeType x_val = static_cast<ComputeType>(x[offset]);
-          const ComputeType inv_rms_val = inv_rms[row];
-          dweight_sum[index] += dy_val * x_val * inv_rms_val;
-        }
-      }
-    }
-  }
-#pragma unroll
-  for (int index = 0; index < num_per_block; ++index) {
-    dweight[index * blockDim.y + threadIdx.y][threadIdx.x] = dweight_sum[index];
-  }
-  __syncthreads();
-#pragma unroll
-  for (int index = 0; index < num_per_block; ++index) {
-    const int col = blockIdx.x * blockDim.x + threadIdx.y + index * blockDim.y;
-    if (col < ncol) {
-      ComputeType dweight_val = dweight[threadIdx.x][threadIdx.y + index * blockDim.y];
-      ComputeType global_dweight = WarpReduceSum<ComputeType>(dweight_val);
-      if (threadIdx.x == 0) {
-        const int offset = blockIdx.y * ncol + col;
-        b_weight_grad[offset] = global_dweight;
-      }
-    }
-  }
-}
-
-template<typename T>
-int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
-  using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
-  const int grid_dim_x = (norm_size + tile_size - 1) / tile_size;
-  const int max_grid_dim_y = (num_instances + tile_size - 1) / tile_size;
-  const int block_size = block_dim_x * block_dim_y;
-  int max_active_blocks = 0;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, RmsNormParamGrad<T, ComputeType>, block_size, 0));
-  int waves = 1;
-  int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
-  int sm_count;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev));
-  int num_blocks = max_active_blocks * sm_count * waves;
-  int grid_dim_y = std::min(max_grid_dim_y, static_cast<int>(num_blocks / grid_dim_x));
-  return std::max(grid_dim_y, 1);
-}
-
 template<typename T, bool affine>
 void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
                         const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
@@ -292,6 +225,12 @@ REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
 REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
 #endif
 
+namespace {
+
+constexpr int kNProcPerThread = 4;
+
+}  // namespace
+
 template<typename T>
 class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -307,21 +246,29 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     const user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* weight_grad = ctx->Tensor4ArgNameAndIndex("weight_grad", 0);
-
     const int64_t nrow = inv_rms->shape_view().elem_cnt();
     const int64_t ncol = weight_grad->shape_view().elem_cnt();
 
-    const int grid_dim_x = (ncol + rms_norm::tile_size - 1) / rms_norm::tile_size;
-    const int grid_dim_y = rms_norm::GetGirdDimY<T>(nrow, ncol);
-    T* b_weight_grad_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
-
+    // step 1: dx = dy * y and reduce partial rows
+    const int block_dim_x = rms_norm::kWarpSize;
+    const int block_dim_y = rms_norm::kWarpSize / kNProcPerThread;
+    int grid_dim_x;
+    int grid_dim_y;
+    OF_CUDA_CHECK((rms_norm::GetGrid2Dim<kNProcPerThread, T>(nrow, ncol, block_dim_x, block_dim_y,
+                                                             &grid_dim_x, &grid_dim_y)));
+    // tmp weight shape [grid_dim_y, ncol] (reduce nrow -> grid_dim_y)
+    size_t tmp_weight_grad_size = grid_dim_y * ncol;
+    T* tmp_weight_grad_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
-    dim3 grid_dim(grid_dim_x, grid_dim_y);
-    dim3 block_dim(32, 32 / rms_norm::num_per_block);
-    rms_norm::RmsNormParamGrad<T, ComputeType>
-        <<<grid_dim, block_dim, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    dim3 grid_dims(grid_dim_x, grid_dim_y);
+    dim3 block_dims(block_dim_x, block_dim_y);
+    rms_norm::RmsNormParamGrad<kNProcPerThread, T, ComputeType>
+        <<<grid_dims, block_dims, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             nrow, ncol, dy->dptr<T>(), x->dptr<T>(), inv_rms->dptr<ComputeType>(),
-            b_weight_grad_dptr);
+            tmp_weight_grad_dptr);
+
+    // step 2: reduce rows throught gemm to calculate weight grad
+    // fill ones matrix with shape (grid_dim_y, 1)
     const int32_t m = ncol;
     const int32_t n = 1;
     const int32_t k = grid_dim_y;
@@ -329,15 +276,16 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     auto fill = ep::primitive::NewPrimitive<ep::primitive::FillFactory>(
         ctx->stream()->device_type(), data_type);
     CHECK(fill);
-    const size_t b_weight_grad_size = grid_dim_y * ncol * sizeof(T);
-    T* ones_vec_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + b_weight_grad_size);
-    fill->Launch(ctx->stream(), ones_vec_dptr, 1.0, grid_dim_y);
+    T* tmp_ones_dptr = tmp_buffer->mut_dptr<T>() + tmp_weight_grad_size;
+    fill->Launch(ctx->stream(), tmp_ones_dptr, 1.0, k);
+    // tmp weight grad (grid_dim_y, ncol) (T) * tmp ones (grid_dim_y, 1) (N) -> weight grad (ncol,
+    // 1)
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
         ctx->stream()->device_type(), data_type, ep::primitive::BlasTransposeType::T,
         ep::primitive::BlasTransposeType::N);
     CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, 1.0, b_weight_grad_dptr, ones_vec_dptr, 0.0,
-                   weight_grad->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, /*alpha*/ 1.0, tmp_weight_grad_dptr, tmp_ones_dptr,
+                   /*beta*/ 0.0, weight_grad->mut_dptr());
   };
 };
 
@@ -351,9 +299,13 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
         const auto& b_shape = ctx->InputTensorDesc("inv_rms", 0).shape();               \
         const int64_t nrow = b_shape.elem_cnt();                                        \
         const int64_t ncol = shape.elem_cnt() / nrow;                                   \
-        const int grid_dim_y = rms_norm::GetGirdDimY<dtype>(nrow, ncol);                \
-        size_t tmp_buffer_size = (grid_dim_y * ncol + grid_dim_y) * sizeof(dtype);      \
-        return tmp_buffer_size;                                                         \
+        const int block_dim_x = rms_norm::kWarpSize;                                    \
+        const int block_dim_y = rms_norm::kWarpSize / kNProcPerThread;                  \
+        int grid_dim_x;                                                                 \
+        int grid_dim_y;                                                                 \
+        OF_CUDA_CHECK((rms_norm::GetGrid2Dim<kNProcPerThread, dtype>(                   \
+            nrow, ncol, block_dim_x, block_dim_y, &grid_dim_x, &grid_dim_y)));          \
+        return (grid_dim_y * ncol + grid_dim_y) * sizeof(dtype);                        \
       });
 
 REGISTER_RMS_NORM_PARAM_GRAD_GPU_KERNEL(float)

@@ -1228,6 +1228,74 @@ DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrow, const int64_t ncol,
   return cudaErrorInvalidValue;
 }
 
+template<int nproc_per_thread, typename T, typename ComputeType>
+__global__ void RmsNormParamGrad(int nrow, int ncol, const T* __restrict__ dy,
+                                 const T* __restrict__ x, const ComputeType* __restrict__ inv_rms,
+                                 T* __restrict__ b_weight_grad) {
+  __shared__ ComputeType dweight[kWarpSize][kWarpSize + 1];
+  ComputeType dweight_sum[nproc_per_thread];
+#pragma unroll
+  for (int i = 0; i < nproc_per_thread; ++i) { dweight_sum[i] = 0; }
+  const int col = blockIdx.x * blockDim.x + threadIdx.x;
+  if (col < ncol) {
+    // a wave for one traverse (when nrow > warp_size * grad_dim_y)
+    for (int j = blockIdx.y * kWarpSize + threadIdx.y; j < nrow; j += kWarpSize * gridDim.y) {
+#pragma unroll
+      for (int i = 0; i < nproc_per_thread; ++i) {
+        int row = j + i * blockDim.y;
+        if (row < nrow) {
+          int offset = row * ncol + col;
+          const ComputeType dy_val = static_cast<ComputeType>(dy[offset]);
+          const ComputeType x_val = static_cast<ComputeType>(x[offset]);
+          const ComputeType inv_rms_val = inv_rms[row];
+          // collect dx from waves
+          dweight_sum[i] += dy_val * x_val * inv_rms_val;
+        }
+      }
+    }
+  }
+  // broadcast sum to the nproc_per_thread number rows
+  // each warp process the nproc_per_thread number rows of smem
+#pragma unroll
+  for (int i = 0; i < nproc_per_thread; ++i) {
+    dweight[i * blockDim.y + threadIdx.y][threadIdx.x] = dweight_sum[i];
+  }
+  __syncthreads();
+  // transpose access for leveraging warp to reduce rows in a block
+#pragma unroll
+  for (int i = 0; i < nproc_per_thread; ++i) {
+    // the first col of block threads is for storing the reduced sum of rows,
+    // and each first col thread is writing the nproc_per_thread number cols of output
+    const int row_in_block = threadIdx.y + i * blockDim.y;
+    const int col = blockIdx.x * blockDim.x + row_in_block;
+    if (col < ncol) {
+      // each warp process a col in which reduce sum all rows
+      ComputeType dweight_val = dweight[threadIdx.x][row_in_block];
+      ComputeType global_dweight = WarpReduceSum<ComputeType>(dweight_val);
+      if (threadIdx.x == 0) {
+        const int offset = blockIdx.y * ncol + col;
+        b_weight_grad[offset] = global_dweight;
+      }
+    }
+  }
+}
+
+template<int nproc_per_thread, typename T>
+cudaError_t GetGrid2Dim(const int64_t nrow, const int64_t ncol, int block_dim_x, int block_dim_y,
+                        int* grid_dim_x, int* grid_dim_y) {
+  const int tile_size = block_dim_x;
+  if (nproc_per_thread * block_dim_y != tile_size) { return cudaErrorInvalidValue; }
+  *grid_dim_x = (ncol + tile_size - 1) / tile_size;
+  const int max_grid_dim_y = (nrow + tile_size - 1) / tile_size;
+
+  using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
+  cudaError_t err = layer_norm::GetNumBlocks(RmsNormParamGrad<nproc_per_thread, T, ComputeType>,
+                                             block_dim_x * block_dim_y, /*dynamic_smem_size*/ 0,
+                                             max_grid_dim_y, /*waves*/ 1, grid_dim_y);
+  if (err != cudaSuccess) { return err; }
+  return cudaSuccess;
+}
+
 }  // namespace rms_norm
 }  // namespace cuda
 }  // namespace oneflow
