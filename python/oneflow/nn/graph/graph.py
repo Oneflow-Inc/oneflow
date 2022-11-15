@@ -153,7 +153,7 @@ class Graph(object):
         self._job_id = None
         self._args_repr = []
         self._outs_repr = []
-        self._ggraph_ir = None
+        self._oneflow_internal_graph_ir__ = None
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
@@ -570,10 +570,10 @@ class Graph(object):
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
-            if self._ggraph_ir is None:
-                self._ggraph_ir = GraphIR(self._compiled_graph_proto)
+            if self._oneflow_internal_graph_ir__ is None:
+                self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
             return operators_repr(
-                module_conf.ops, self._ggraph_ir, self._debug_op_repr_with_py_stack,
+                module_conf.ops, self._oneflow_internal_graph_ir__, self._debug_op_repr_with_py_stack,
             )
 
         return []
