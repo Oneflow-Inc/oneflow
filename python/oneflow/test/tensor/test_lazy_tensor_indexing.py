@@ -851,7 +851,7 @@ def _test_setitem_scalars(test_case, placement):
     )
     _assert_tensor_equal(test_case, a_set_with_number, a_set_with_scalar)
 
-    a[1, zero] = 7.7
+    #  a[1, zero] = 7.7
     value = get_graph_output(
         a, func=lambda x: setitem_and_return(x, [1, zero], 7.7)
     ).numpy()
@@ -862,19 +862,17 @@ def _test_setitem_scalars(test_case, placement):
     x = _cpu_global_tensor(flow.tensor(np_x)).to_global(
         placement, random_sbp(placement, max_dim=2).value()
     )
-    x[0, 6] = 1.0
-    test_case.assertEqual(x.numpy().all(), np_x.all())
+    #  x[0, 6] = 1.0
+    res = get_graph_output(x, func=lambda x: setitem_and_return(x, [0, 6], 1.0))
+    test_case.assertEqual(res.numpy().all(), np_x.all())
 
     # scalar indexed with scalars
     r = _cpu_global_tensor(flow.tensor(1.0)).to_global(
         placement, random_sbp(placement, max_dim=0).value()
     )
-    with test_case.assertRaises(IndexError):
-        r[:] = 8.8
-    with test_case.assertRaises(IndexError):
-        r[zero] = 8.8
-    r[...] = 9.9
-    test_case.assertEqual(r, 9.9)
+    #  r[...] = 9.9
+    res = get_graph_output(r, func=lambda x: setitem_and_return(x, [...], 9.9))
+    test_case.assertEqual(res, 9.9)
 
     # scalar indexed with oneflow.Size([1])
     np_x = np.zeros((8, 8))
@@ -882,10 +880,14 @@ def _test_setitem_scalars(test_case, placement):
     x = _cpu_global_tensor(flow.tensor(np_x)).to_global(
         placement, random_sbp(placement, max_dim=2).value()
     )
-    x[0, 0] = _cpu_global_tensor(flow.ones(1).to(flow.float64)).to_global(
+    value_tensor = _cpu_global_tensor(flow.ones(1).to(flow.float64)).to_global(
         placement, broadcast_for_placement
     )
-    test_case.assertEqual(x.numpy().all(), np_x.all())
+    # x[0, 0] = value
+    res = get_graph_output(
+        x, func=lambda x: setitem_and_return(x, [0, 0], value_tensor)
+    )
+    test_case.assertEqual(res.numpy().all(), np_x.all())
 
 
 def _test_ellipsis_tensor(test_case, placement):
@@ -935,13 +937,9 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                 _test_empty_ndim_index(test_case, placement)
                 _test_empty_slice(test_case, placement)
                 _test_ellipsis_tensor(test_case, placement)
-
-    @globaltest
-    @unittest.skip("BUG: cpu lazy setitem not support B+S->B")
-    def test_setitem_scalars(test_case):
-        for placement in all_placement():
-            for _ in range(5):
-                _test_setitem_scalars(test_case, placement)
+                # TODO: cpu variable don't support common net
+                if not placement.type == "cpu":
+                    _test_setitem_scalars(test_case, placement)
 
     @globaltest
     @unittest.skip("TODO(wyg): support eager bool indices tensor in lazy mode")
