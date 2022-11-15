@@ -111,15 +111,19 @@ __global__ void UpsampleNearest2D2XBackward(const int64_t in_elem_cnt, const T* 
                                           T* dx_dptr) {
   const int32_t dx_hw_size = dx_height * dx_width;
   CUDA_1D_KERNEL_LOOP(index, in_elem_cnt){
+    T dx_value = 0.0;
     const int32_t nc_idx = index / dx_hw_size;
     const int32_t dx_hw_off = index - nc_idx * dx_hw_size;
     const int32_t dx_h = dx_hw_off / dx_width;
     const int32_t dx_w = dx_hw_off - dx_h * dx_width;
     const Pack2X<T>* dy_pack_dptr = reinterpret_cast<const Pack2X<T>*>(dy_dptr);
-    dx_dptr[index] += dy_pack_dptr[nc_idx * dx_hw_size * 2 + dx_h * 2 * dx_width + dx_w].x;
-    dx_dptr[index] += dy_pack_dptr[nc_idx * dx_hw_size * 2 + dx_h * 2 * dx_width + dx_w].y;
-    dx_dptr[index] += dy_pack_dptr[nc_idx * dx_hw_size * 2 + (dx_h * 2 + 1) * dx_width + dx_w].x;
-    dx_dptr[index] += dy_pack_dptr[nc_idx * dx_hw_size * 2 + (dx_h * 2 + 1) * dx_width + dx_w].y;
+    const Pack2X<T> dy_pack_value1 = dy_pack_dptr[nc_idx * dx_hw_size * 2 + dx_h * 2 * dx_width + dx_w];
+    const Pack2X<T> dy_pack_value2 = dy_pack_dptr[nc_idx * dx_hw_size * 2 + (dx_h * 2 + 1) * dx_width + dx_w];
+    dx_value += dy_pack_value1.x;
+    dx_value += dy_pack_value1.y;
+    dx_value += dy_pack_value2.x;
+    dx_value += dy_pack_value2.y;
+    dx_dptr[index] = dx_value;
   }
 }
 
