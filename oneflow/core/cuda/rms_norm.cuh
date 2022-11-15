@@ -722,7 +722,7 @@ inline cudaError_t LaunchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t 
       (nrow / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(
+    cudaError_t err = layer_norm::GetNumBlocks(
         RmsNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, max_cols_per_thread,
                             min_cols_per_thread, thread_group_width, rows_per_access>,
         block_size, 0, num_blocks, waves, &grid_dim_x);
