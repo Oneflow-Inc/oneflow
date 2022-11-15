@@ -48,7 +48,7 @@ Maybe<void> FusedMatmulBias::Init(const OpExpr& op) {
 
 Maybe<void> FusedMatmulBias::Capture(FusedMatmulBiasCaptureState* ctx, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3) << "x, weight, and bias should all be included";
+  CHECK_GE_OR_RETURN(inputs.size(), 3) << "x, weight, and bias, [add_to_output] should all be included";
   ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
   ctx->weight_requires_grad = JUST(VectorAt(inputs, 1))->requires_grad();
   ctx->bias_requires_grad = JUST(VectorAt(inputs, 2))->requires_grad();
