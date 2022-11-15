@@ -941,7 +941,7 @@ class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
     def test_bool_indices(test_case):
         for placement in all_placement():
-            for _ in range(5):
+            for _ in range(2):
                 _test_bool_indices(test_case, placement)
 
 
