@@ -42,8 +42,12 @@ def rebuild_empty_tensor(shape, dtype, requires_grad):
 
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     def delete_shm():
-        shm.close()
         try:
+            # For unknown reasons delete_shm called in dataloader may fail
+            # with "StopIteration".
+            # An example is when dataloader is wrapped in a generator like
+            # `log_every`.
+            shm.close()
             shm.unlink()
         except:
             pass
