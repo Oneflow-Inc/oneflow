@@ -102,6 +102,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         globals()[fullname] = module
 
 
+_first_init = True
 _importer = OneflowImporter()
 
 
@@ -110,12 +111,19 @@ def mock(globals=None):
         globals = currentframe().f_back.f_globals
     _importer.enable = False  # deal with previously imported torch
     sys.meta_path.insert(0, _importer)
-    enable(globals)
+    _enable(globals)
 
 
-def enable(globals=None):
+def _enable(globals=None):
     if globals is None:
         globals = currentframe().f_back.f_globals
+    global _first_init
+    if _first_init:
+        _first_init = False
+        _importer.enable = False  # deal with previously imported torch
+        sys.meta_path.insert(0, _importer)
+        _enable(globals)
+        return
     if _importer.enable:  # already enabled
         return
     for k, v in sys.modules.copy().items():
@@ -132,7 +140,7 @@ def enable(globals=None):
     _importer.enable = True
 
 
-def disable(globals=None):
+def _disable(globals=None):
     if globals is None:
         globals = currentframe().f_back.f_globals
     if not _importer.enable:  # already disabled
@@ -152,24 +160,24 @@ def disable(globals=None):
 
 
 @contextmanager
-def enable_with(globals=None):
+def enable(globals=None):
     if globals is None:
         # go back two frames
         globals = currentframe().f_back.f_back.f_globals
     try:
-        enable(globals)
+        _enable(globals)
         yield None
     finally:
-        disable(globals)
+        _disable(globals)
 
 
 @contextmanager
-def disable_with(globals=None):
+def disable(globals=None):
     if globals is None:
         globals = currentframe().f_back.f_back.f_globals
     try:
-        disable(globals)
+        _disable(globals)
         yield None
     finally:
-        enable(globals)
+        _enable(globals)
 
