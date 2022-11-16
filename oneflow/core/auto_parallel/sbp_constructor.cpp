@@ -23,34 +23,10 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/auto_parallel/sbp_collector.h"
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 
 namespace oneflow {
 
 namespace auto_parallel {
-
-bool IsProducedRegisterReusable(const Operator& op) {
-  // The repeat, acc, pack and unpack operators have non-reusable registers
-  // and a -1 register num at this moment.
-  if (op.op_conf().has_user_conf()) {
-    const auto& op_type_name = op.op_conf().user_conf().op_type_name();
-    // We record the frequency in swin-transformer on the right hand side
-    // and adjust the position accordingly.
-    if (op_type_name == "repeat"     // 213
-        || op_type_name == "acc"     // 173
-        || op_type_name == "unpack"  // 2
-        || op_type_name == "pack"    // 1
-    ) {
-      return false;
-    }
-  }
-  // NOTE: Please refer to oneflow/core/graph_impl/normal_forward_compute_task_node.cpp
-  // NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum
-  // for detail.
-  // We can not use <= 0 here since RegstNum4Op returns a number with type size_t.
-  // -1 is actually 18446744073709551615 here.
-  return RegstNum4Op(op) == -1;
-}
 
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
