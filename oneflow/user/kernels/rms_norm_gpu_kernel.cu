@@ -154,14 +154,15 @@ class RmsNormKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const Shape& normalized_shape = ctx->Attr<Shape>("normalized_shape");
     const int64_t ncol = normalized_shape.elem_cnt();
     const int64_t nrow = inv_rms->shape_view().elem_cnt();
-    CHECK_EQ(x->shape_view().elem_cnt(), ncol * nrow);
-
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       const auto* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
       CHECK_EQ(weight->shape_view().elem_cnt(), ncol);
       weight_dptr = weight->dptr<T>();
     }
+    CHECK_EQ(x->shape_view().elem_cnt(), ncol * nrow);
+    CHECK_LT(nrow * ncol, std::numeric_limits<int32_t>::max())
+        << "The size of tensor exceeds int32 max limit. The kernel don't support large tensor.";
     using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
     rms_norm::RmsNormForward<T>(ctx->stream(), nrow, ncol, eps, x->dptr<T>(), weight_dptr,
                                 y->mut_dptr<T>(), inv_rms->mut_dptr<ComputeType>());
@@ -203,6 +204,8 @@ class RmsNormGradKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(ncol, weight->shape_view().elem_cnt());
       weight_dptr = weight->dptr<T>();
     }
+    CHECK_LT(nrow * ncol, std::numeric_limits<int32_t>::max())
+        << "The size of tensor exceeds int32 max limit. The kernel don't support large tensor.";
     using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
     rms_norm::RmsNormBackward<T>(ctx->stream(), nrow, ncol, dy->dptr<T>(), x->dptr<T>(),
                                  weight_dptr, inv_rms->dptr<ComputeType>(), dx->mut_dptr<T>());
@@ -216,11 +219,11 @@ class RmsNormGradKernel final : public user_op::OpKernel, public user_op::CudaGr
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(float)
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
-// #if CUDA_VERSION >= 11000
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
-// #endif
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 namespace {
 
@@ -229,10 +232,10 @@ constexpr int kNProcPerThread = 4;
 }  // namespace
 
 template<typename T>
-class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class RmsNormParamGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  RmsNormParamGradGpuKernel() = default;
-  ~RmsNormParamGradGpuKernel() = default;
+  RmsNormParamGradKernel() = default;
+  ~RmsNormParamGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -246,7 +249,7 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     const int64_t nrow = inv_rms->shape_view().elem_cnt();
     const int64_t ncol = weight_grad->shape_view().elem_cnt();
     CHECK_LT(nrow * ncol, std::numeric_limits<int32_t>::max())
-        << "Too large tensor to support. The size of tensor exceeds int32 max limit.";
+        << "The size of tensor exceeds int32 max limit. The kernel don't support large tensor.";
 
     // step 1: dx = dy * y and reduce partial rows in a block
     const int block_dim_x = rms_norm::kWarpSize;
@@ -277,8 +280,8 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     CHECK(fill);
     T* tmp_ones_dptr = tmp_buffer->mut_dptr<T>() + tmp_weight_grad_size;
     fill->Launch(ctx->stream(), tmp_ones_dptr, 1.0, k);
-    // tmp weight grad (grid_dim_y, ncol) (T) * tmp ones (grid_dim_y, 1) (N) -> weight grad (ncol,
-    // 1)
+    // tmp weight grad (grid_dim_y, ncol) (T) * tmp ones (grid_dim_y, 1) (N)
+    // -> weight grad (ncol, 1)
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
         ctx->stream()->device_type(), data_type, ep::primitive::BlasTransposeType::T,
         ep::primitive::BlasTransposeType::N);
@@ -290,7 +293,7 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
 
 #define REGISTER_RMS_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                  \
   REGISTER_USER_KERNEL("rms_norm_param_grad")                                           \
-      .SetCreateFn<RmsNormParamGradGpuKernel<dtype>>()                                  \
+      .SetCreateFn<RmsNormParamGradKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \

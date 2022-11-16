@@ -333,7 +333,7 @@ cudaError_t TryDispatchLaunchRmsNormBlockSMemImplBlockSize(cudaStream_t stream, 
   int max_active_blocks = 0;
   int max_active_blocks_conf_idx = -1;
 
-#define MAX_ACTIVE_BLOCKS_CONF(idx)                                                       \
+#define SELECT_BLOCK_SIZE_CONF(idx)                                                       \
   {                                                                                       \
     int num_blocks;                                                                       \
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(                      \
@@ -347,11 +347,11 @@ cudaError_t TryDispatchLaunchRmsNormBlockSMemImplBlockSize(cudaStream_t stream, 
     }                                                                                     \
   }
 
-  MAX_ACTIVE_BLOCKS_CONF(4)
-  MAX_ACTIVE_BLOCKS_CONF(3)
-  MAX_ACTIVE_BLOCKS_CONF(2)
-  MAX_ACTIVE_BLOCKS_CONF(1)
-#undef MAX_ACTIVE_BLOCKS_CONF
+  SELECT_BLOCK_SIZE_CONF(4)
+  SELECT_BLOCK_SIZE_CONF(3)
+  SELECT_BLOCK_SIZE_CONF(2)
+  SELECT_BLOCK_SIZE_CONF(1)
+#undef SELECT_BLOCK_SIZE_CONF
 
   if (max_active_blocks <= 0) {
     *success = false;
@@ -768,7 +768,7 @@ cudaError_t TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize(
   int max_active_blocks = 0;
   int max_active_blocks_conf_idx = -1;
 
-#define MAX_ACTIVE_BLOCKS_CONF(idx)                                              \
+#define SELECT_BLOCK_SIZE_CONF(idx)                                              \
   {                                                                              \
     int num_blocks = 0;                                                          \
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(             \
@@ -783,10 +783,11 @@ cudaError_t TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize(
     }                                                                            \
   }
 
-  MAX_ACTIVE_BLOCKS_CONF(4)
-  MAX_ACTIVE_BLOCKS_CONF(3)
-  MAX_ACTIVE_BLOCKS_CONF(2)
-  MAX_ACTIVE_BLOCKS_CONF(1)
+  SELECT_BLOCK_SIZE_CONF(4)
+  SELECT_BLOCK_SIZE_CONF(3)
+  SELECT_BLOCK_SIZE_CONF(2)
+  SELECT_BLOCK_SIZE_CONF(1)
+#undef SELECT_BLOCK_SIZE_CONF
 
   if (max_active_blocks <= 0) {
     *success = false;
