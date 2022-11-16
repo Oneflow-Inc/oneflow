@@ -248,7 +248,7 @@ class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op
     CHECK_LT(nrow * ncol, std::numeric_limits<int32_t>::max())
         << "Too large tensor to support. The size of tensor exceeds int32 max limit.";
 
-    // step 1: dx = dy * y and reduce partial rows
+    // step 1: dx = dy * y and reduce partial rows in a block
     const int block_dim_x = rms_norm::kWarpSize;
     const int block_dim_y = rms_norm::kWarpSize / kNProcPerThread;
     int grid_dim_x;

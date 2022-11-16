@@ -500,7 +500,7 @@ typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>:
     if (!dispatch_smem_impl_success) {
       return DispatchLaunchRmsNormBlockUncachedImpl(stream, load, store, nrow, ncol, eps, inv_rms);
     }
-    return cudaErrorInvalidValue;
+    return cudaSuccess;
   }
 }
 
@@ -555,8 +555,8 @@ __global__ void RmsNormGradWarpImpl(const int nrow, const int ncol, LOAD_X load_
       }
 #pragma unroll
       for (int pack_i = min_packs; pack_i < max_packs; ++pack_i) {
-        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         const int pack_offset = pack_i * pack_size;
+        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         if (global_col < ncol) {
           load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row, global_col);
           load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row, global_col);
@@ -583,8 +583,8 @@ __global__ void RmsNormGradWarpImpl(const int nrow, const int ncol, LOAD_X load_
       ComputeType* row_dy_buf = dy_buf[row_j];
 #pragma unroll
       for (int pack_i = 0; pack_i < min_packs; ++pack_i) {
-        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         const int pack_offset = pack_i * pack_size;
+        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
           const int col = pack_offset + pack_j;
           ComputeType norm_val = layer_norm::Div(row_normalized_buf[col] * warp_sum_stats[row_j],
@@ -595,13 +595,13 @@ __global__ void RmsNormGradWarpImpl(const int nrow, const int ncol, LOAD_X load_
       }
 #pragma unroll
       for (int pack_i = min_packs; pack_i < max_packs; ++pack_i) {
-        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         const int pack_offset = pack_i * pack_size;
+        const int global_col = (pack_i * thread_group_width + threadIdx.x) * pack_size;
         if (global_col < ncol) {
           for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
             const int col = pack_offset + pack_j;
-            ComputeType norm_val = layer_norm::Div(row_normalized_buf[col] * warp_sum_stats[row_j],
-                                                   static_cast<ComputeType>(ncol));
+            const ComputeType norm_val = layer_norm::Div(
+                row_normalized_buf[col] * warp_sum_stats[row_j], static_cast<ComputeType>(ncol));
             row_dy_buf[col] = (row_dy_buf[col] - norm_val) * inv_rms_buf[row_j];
           }
           store.template store<pack_size>(row_dy_buf + pack_offset, global_row, global_col);
@@ -690,6 +690,142 @@ cudaError_t DispatchLaunchRmsNormGradWarpImplPackSize(cudaStream_t stream, const
       stream, nrow, ncol, load_x, load_dy, store, inv_rms);
 }
 
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         int block_size>
+__global__ void RmsNormGradBlockSMemImpl(const int nrow, const int ncol, LOAD_X load_x,
+                                         LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
+  extern __shared__ __align__(sizeof(double)) unsigned char dyn_smem[];
+  // dynamic shared memory for caching x and dy
+  auto* normalized_buf = reinterpret_cast<ComputeType*>(dyn_smem);
+  auto* dy_buf = normalized_buf + ncol;
+  assert(ncol % pack_size == 0);
+  const int num_packs = ncol / pack_size;
+  for (int row = blockIdx.x; row < nrow; row += gridDim.x) {
+    ComputeType sum_stats = 0;
+    const ComputeType inv_rms_val = inv_rms[row];
+    for (int pack_i = threadIdx.x; pack_i < num_packs; pack_i += blockDim.x) {
+      ComputeType x_pack[pack_size];
+      ComputeType dy_pack[pack_size];
+      const int pack_offset = pack_i * pack_size;
+      load_x.template load<pack_size>(x_pack, row, pack_offset);
+      load_dy.template load<pack_size>(dy_pack, row, pack_offset);
+#pragma unroll
+      for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
+        const int col = pack_offset + pack_j;
+        normalized_buf[col] = x_pack[pack_j] * inv_rms_val;
+        dy_buf[col] = dy_pack[pack_j];
+        sum_stats += dy_buf[col] * normalized_buf[col];
+      }
+    }
+    const ComputeType row_sum_stats =
+        layer_norm::BlockAllReduce<layer_norm::SumOp, ComputeType, block_size>(sum_stats);
+    for (int pack_i = threadIdx.x; pack_i < num_packs; pack_i += blockDim.x) {
+      ComputeType pack[pack_size];
+      const int pack_offset = pack_i * pack_size;
+#pragma unroll
+      for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
+        const int col = pack_offset + pack_j;
+        ComputeType norm_val = layer_norm::Div(normalized_buf[col], static_cast<ComputeType>(ncol));
+        pack[pack_j] = (dy_buf[col] - norm_val * row_sum_stats) * inv_rms_val;
+      }
+      store.template store<pack_size>(pack, row, pack_offset);
+    }
+  }
+}
+
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         int block_size>
+cudaError_t LaunchRmsNormGradBlockSMemImpl(cudaStream_t stream, const int64_t nrow,
+                                           const int64_t ncol, const size_t smem_size,
+                                           LOAD_X load_x, LOAD_DY load_dy, STORE store,
+                                           const ComputeType* inv_rms) {
+  constexpr int waves = 32;
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(
+        RmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>,
+        block_size, smem_size, nrow, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
+  RmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>
+      <<<grid_dim_x, block_size, smem_size, stream>>>(
+          static_cast<int>(nrow), static_cast<int>(ncol), load_x, load_dy, store, inv_rms);
+  return cudaPeekAtLastError();
+}
+
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
+cudaError_t TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize(
+    cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x, LOAD_DY load_dy,
+    STORE store, const ComputeType* inv_rms, bool* success) {
+  constexpr int block_size_conf_1 = 128;
+  constexpr int block_size_conf_2 = 256;
+  constexpr int block_size_conf_3 = 512;
+  constexpr int block_size_conf_4 = 1024;
+  const size_t smem_size = ncol * sizeof(ComputeType) * 2;  // ncol * 2 for caching x and dy both
+  int max_active_blocks = 0;
+  int max_active_blocks_conf_idx = -1;
+
+#define MAX_ACTIVE_BLOCKS_CONF(idx)                                              \
+  {                                                                              \
+    int num_blocks = 0;                                                          \
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(             \
+        &num_blocks,                                                             \
+        RmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, \
+                                 block_size_conf_##idx>,                         \
+        block_size_conf_##idx, smem_size);                                       \
+    if (err != cudaSuccess) { return err; }                                      \
+    if (num_blocks > max_active_blocks) {                                        \
+      max_active_blocks = num_blocks;                                            \
+      max_active_blocks_conf_idx = idx;                                          \
+    }                                                                            \
+  }
+
+  MAX_ACTIVE_BLOCKS_CONF(4)
+  MAX_ACTIVE_BLOCKS_CONF(3)
+  MAX_ACTIVE_BLOCKS_CONF(2)
+  MAX_ACTIVE_BLOCKS_CONF(1)
+
+  if (max_active_blocks <= 0) {
+    *success = false;
+    return cudaSuccess;
+  }
+
+  switch (max_active_blocks_conf_idx) {
+#define DEFINE_ONE_CASE(idx)                                                                       \
+  case idx: {                                                                                      \
+    *success = true;                                                                               \
+    return LaunchRmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size,          \
+                                          block_size_conf_##idx>(stream, nrow, ncol, smem_size,    \
+                                                                 load_x, load_dy, store, inv_rms); \
+  }
+
+    DEFINE_ONE_CASE(1)
+    DEFINE_ONE_CASE(2)
+    DEFINE_ONE_CASE(3)
+    DEFINE_ONE_CASE(4)
+#undef DEFINE_ONE_CASE
+    default: {
+      return cudaErrorInvalidValue;
+    }
+  }
+}
+
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
+cudaError_t TryDispatchLaunchRmsNormGradBlockSMemImplPackSize(
+    cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x, LOAD_DY load_dy,
+    STORE store, const ComputeType* inv_rms, bool* success) {
+  if (ncol % 2 == 0 && layer_norm::CanPackAs<LOAD_X>(load_x, 2)
+      && layer_norm::CanPackAs<LOAD_DY>(load_dy, 2) && layer_norm::CanPackAs<STORE>(store, 2)) {
+    return TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize<LOAD_X, LOAD_DY, STORE, ComputeType,
+                                                              2>(stream, nrow, ncol, load_x,
+                                                                 load_dy, store, inv_rms, success);
+  } else {
+    return TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize<LOAD_X, LOAD_DY, STORE, ComputeType,
+                                                              1>(stream, nrow, ncol, load_x,
+                                                                 load_dy, store, inv_rms, success);
+  }
+}
+
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
 typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
 LaunchRmsNormGrad(cudaStream_t stream, const int64_t nrow, const int64_t ncol, LOAD_X load_x,
@@ -698,7 +834,18 @@ LaunchRmsNormGrad(cudaStream_t stream, const int64_t nrow, const int64_t ncol, L
     return DispatchLaunchRmsNormGradWarpImplPackSize(stream, nrow, ncol, load_x, load_dy, store,
                                                      inv_rms);
   } else {
-    return cudaErrorInvalidValue;
+    bool dispatch_smem_impl_success = false;
+    {
+      cudaError_t err = TryDispatchLaunchRmsNormGradBlockSMemImplPackSize(
+          stream, nrow, ncol, load_x, load_dy, store, inv_rms, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (!dispatch_smem_impl_success) {
+      // return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
+      //     stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+      return cudaErrorInvalidValue;
+    }
+    return cudaSuccess;
   }
 }
 
