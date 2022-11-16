@@ -447,9 +447,9 @@ cudaError_t LaunchRmsNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err =
-        GetNumBlocks(RmsNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>,
-                     block_size, 0, nrow, waves, &grid_dim_x);
+    cudaError_t err = layer_norm::GetNumBlocks(
+        RmsNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>, block_size, 0,
+        nrow, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   RmsNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
@@ -745,7 +745,7 @@ cudaError_t LaunchRmsNormGradBlockSMemImpl(cudaStream_t stream, const int64_t nr
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(
+    cudaError_t err = layer_norm::GetNumBlocks(
         RmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>,
         block_size, smem_size, nrow, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
@@ -878,7 +878,7 @@ cudaError_t LaunchRmsNormGradBlockUncachedImpl(cudaStream_t stream, const int64_
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(
+    cudaError_t err = layer_norm::GetNumBlocks(
         RmsNormGradBlockUncachedImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>,
         block_size, 0, nrow, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
