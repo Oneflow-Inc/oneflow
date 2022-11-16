@@ -89,51 +89,49 @@ struct AffineLoad {
   int32_t row_size;
 };
 
-template<typename T, bool affine>
-void RmsNormForwardAffine(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
-                          const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
-                          user_op::Tensor* inv_rms) {
-  using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
+template<typename T, typename ComputeType, bool affine>
+void DispatchRmsNormForwardAffine(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
+                                  const double eps, const T* x_dptr, const T* w_dptr, T* y_dptr,
+                                  ComputeType* inv_rms) {
   layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncol);
   AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncol);
   LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps,
-      inv_rms->mut_dptr<ComputeType>());
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps, inv_rms);
 }
 
-template<typename T>
+template<typename T, typename ComputeType>
 void RmsNormForward(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
-                    const T* x_dptr, const T* w_dptr, T* y_dptr, user_op::Tensor* inv_rms) {
+                    const T* x_dptr, const T* w_dptr, T* y_dptr, ComputeType* inv_rms) {
   if (w_dptr) {
-    RmsNormForwardAffine<T, true>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    DispatchRmsNormForwardAffine<T, ComputeType, true>(stream, nrow, ncol, eps, x_dptr, w_dptr,
+                                                       y_dptr, inv_rms);
   } else {
-    RmsNormForwardAffine<T, false>(stream, nrow, ncol, eps, x_dptr, w_dptr, y_dptr, inv_rms);
+    DispatchRmsNormForwardAffine<T, ComputeType, false>(stream, nrow, ncol, eps, x_dptr, w_dptr,
+                                                        y_dptr, inv_rms);
   }
 }
 
-template<typename T, bool affine>
-void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
-                        const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
-                        const T* weight_dptr, T* dx_ptr) {
-  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+template<typename T, typename ComputeType, bool affine>
+void DispatchRmsNormBackwardAffine(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
+                                   const T* dy_dptr, const T* x_dptr, const T* weight_dptr,
+                                   const ComputeType* inv_rms, T* dx_ptr) {
   layer_norm::DirectLoad<T, ComputeType> load_x(x_dptr, ncol);
   AffineLoad<T, ComputeType, affine> load_dy(dy_dptr, weight_dptr, ncol);
   layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncol);
-  OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(load_x), decltype(load_dy), decltype(store),
-                                               ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), nrow, ncol, load_x, load_dy, store,
-      inv_rms->dptr<ComputeType>())));
+  OF_CUDA_CHECK((rms_norm::LaunchRmsNormGrad(stream->As<ep::CudaStream>()->cuda_stream(), nrow,
+                                             ncol, load_x, load_dy, store, inv_rms)));
 }
 
-template<typename T>
-void DispatchRmsNormBackwardGpu(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
-                                const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
-                                const T* weight_dptr, T* dx_dptr) {
+template<typename T, typename ComputeType>
+void RmsNormBackward(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const T* dy_dptr,
+                     const T* x_dptr, const T* weight_dptr, const ComputeType* inv_rms,
+                     T* dx_dptr) {
   if (weight_dptr) {
-    RmsNormBackwardGpu<T, true>(stream, nrow, ncol, dy_dptr, x_dptr, inv_rms, weight_dptr, dx_dptr);
+    DispatchRmsNormBackwardAffine<T, ComputeType, true>(stream, nrow, ncol, dy_dptr, x_dptr,
+                                                        weight_dptr, inv_rms, dx_dptr);
   } else {
-    RmsNormBackwardGpu<T, false>(stream, nrow, ncol, dy_dptr, x_dptr, inv_rms, weight_dptr,
-                                 dx_dptr);
+    DispatchRmsNormBackwardAffine<T, ComputeType, false>(stream, nrow, ncol, dy_dptr, x_dptr,
+                                                         weight_dptr, inv_rms, dx_dptr);
   }
 }
 
@@ -164,8 +162,9 @@ class RmsNormKernel final : public user_op::OpKernel, public user_op::CudaGraphS
       CHECK_EQ(weight->shape_view().elem_cnt(), ncol);
       weight_dptr = weight->dptr<T>();
     }
+    using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
     rms_norm::RmsNormForward<T>(ctx->stream(), nrow, ncol, eps, x->dptr<T>(), weight_dptr,
-                                y->mut_dptr<T>(), inv_rms);
+                                y->mut_dptr<T>(), inv_rms->mut_dptr<ComputeType>());
   };
 };
 
@@ -204,8 +203,9 @@ class RmsNormGradKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(ncol, weight->shape_view().elem_cnt());
       weight_dptr = weight->dptr<T>();
     }
-    rms_norm::DispatchRmsNormBackwardGpu<T>(ctx->stream(), nrow, ncol, dy->dptr<T>(), x->dptr<T>(),
-                                            inv_rms, weight_dptr, dx->mut_dptr<T>());
+    using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
+    rms_norm::RmsNormBackward<T>(ctx->stream(), nrow, ncol, dy->dptr<T>(), x->dptr<T>(),
+                                 weight_dptr, inv_rms->dptr<ComputeType>(), dx->mut_dptr<T>());
   };
 };
 
