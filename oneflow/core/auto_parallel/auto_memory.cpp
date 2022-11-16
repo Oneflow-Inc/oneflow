@@ -30,14 +30,15 @@ class TopoStruct {
  public:
   SbpNode* sbp_node = nullptr;
   OpNode* op_node = nullptr;
+  // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
   int32_t activation_time = -1;
   bool is_reusable = false;
 
+  explicit TopoStruct(SbpNode* sbp_node_);
+
   // Decide whether all the produced registers are reusable
   void ComputeIsReusable();
-  // Memory increment = (memory of out registers) - (memory of in registers)
-  void InitMemoryIncrement();
   // Activation time = time of cpu - time of gpu
   void ComputeActivationTime();
 
@@ -80,6 +81,12 @@ bool IsProducedRegisterReusable(const Operator& op) {
   return RegstNum4Op(op) == -1;
 }
 
+TopoStruct::TopoStruct(SbpNode* sbp_node_)
+    : sbp_node(sbp_node_), op_node(sbp_node_->GetOperatorNode()) {
+  ComputeIsReusable();
+  ComputeActivationTime();
+}
+
 // deciding parameter
 // kTributaryLayerAscend = 0,     // small tributary layers go first
 // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
@@ -107,25 +114,9 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   }
 }
 
-// Memory increment = (memory of out registers) - (memory of in registers)
-// It only contains the first term
-void TopoStruct::InitMemoryIncrement() {
-  if (memory_increment < 0) {
-    memory_increment = 0;
-    const auto& curr_operator = op_node->op();
-    if (is_reusable) {
-      for (const auto& obn : curr_operator.output_bns()) {
-        const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
-        const BlobDesc& logical_blob_desc = op_node->LogicalBlobDesc4Lbi(lbi);
-        memory_increment += TotalByteSize4BlobDesc(logical_blob_desc);
-      }
-    }
-  }
-}
-
 // Activation time = time of cpu - time of gpu
 void TopoStruct::ComputeActivationTime() {
-  if (op_node != nullptr && LongerActivationTimeInCpu(op_node->op().op_conf())) {
+  if (LongerActivationTimeInCpu(op_node->op().op_conf())) {
     activation_time = 1;
   } else {
     activation_time = 0;
@@ -134,27 +125,64 @@ void TopoStruct::ComputeActivationTime() {
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
-void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs) {
-  // Construct the map from a lbi to its consumers
-  HashMap<LogicalBlobId, std::vector<TopoStruct*>> lbi2consumer_topo_structs;
+// Compute the memory increment for all the topological structures
+void ComputeAllMemoryIncrement(
+    std::vector<TopoStruct>& topo_structs, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+    const std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
+    const std::vector<int64_t>& id2blob_size) {
+  // Compute the memory increment for produced blobs
   for (auto& topo_struct : topo_structs) {
-    const auto& consumer = topo_struct->op_node->op();
-    for (const auto& ibn : consumer.input_bns()) {
-      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
-      lbi2consumer_topo_structs[lbi].push_back(topo_struct);
+    topo_struct.memory_increment = 0;
+    const auto& curr_operator = topo_struct.op_node->op();
+    if (topo_struct.is_reusable) {
+      for (const auto& obn : curr_operator.output_bns()) {
+        const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+        topo_struct.memory_increment += id2blob_size[lbi2id.at(lbi)];
+      }
     }
   }
-  // Compute the memory increment for produced blobs
-  for (auto& topo_struct : topo_structs) { topo_struct->InitMemoryIncrement(); }
   // Subtract the consumed memory
-  for (auto& pair : lbi2consumer_topo_structs) {
-    int64_t memory_decrease =
-        TotalByteSize4BlobDesc(pair.second[0]->op_node->LogicalBlobDesc4Lbi(pair.first))
-        / pair.second.size();
-    for (auto& consumer_topo_struct : pair.second) {
+  for (int32_t index = 0; index < id2consumer_topo_structs.size(); index++) {
+    int64_t memory_decrease = id2blob_size[index] / id2consumer_topo_structs[index].size();
+    for (auto& consumer_topo_struct : id2consumer_topo_structs[index]) {
       consumer_topo_struct->memory_increment -= memory_decrease;
     }
   }
+}
+
+void InitMemory(SbpGraph* sbp_graph) {
+  // Generate topological data structure for each sbp node
+  HashMap<SbpNode*, TopoStruct*> sbp_node2topo_struct;
+  std::vector<TopoStruct> topo_structs;
+  // Traverse all the nodes in the sbp graph
+  for (const auto& sbp_node : sbp_graph->GetNodeList()) {
+    CHECK(sbp_node->GetOperatorNode() != nullptr)
+        << "No proxy node allow at this status. InitMemory() should be run before sbp collector!";
+    topo_structs.emplace_back(sbp_node);
+    sbp_node2topo_struct[sbp_node] = &topo_structs.back();
+  }
+
+  // Construct the map from a lbi to its id, consumers, blob size
+  HashMap<LogicalBlobId, int32_t> lbi2id;
+  std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
+  std::vector<int64_t> id2blob_size;
+  for (auto& topo_struct : topo_structs) {
+    const auto& consumer = topo_struct.op_node->op();
+    for (const auto& ibn : consumer.input_bns()) {
+      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
+      auto it = lbi2id.find(lbi);
+      if (it == lbi2id.end()) {
+        lbi2id[lbi] = id2blob_size.size();
+        const BlobDesc& logical_blob_desc = topo_struct.op_node->LogicalBlobDesc4Lbi(lbi);
+        id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+        id2consumer_topo_structs.push_back({&topo_struct});
+      } else {
+        id2consumer_topo_structs[it->second].push_back(&topo_struct);
+      }
+    }
+  }
+  // Compute the memory increment for all the topological structures
+  ComputeAllMemoryIncrement(topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
 }
 
 }  // anonymous namespace

@@ -91,6 +91,9 @@ class SbpGraph final {
   // Set wait time
   void SetWaitTime(double wait_time);
 
+  // Constant getter
+  std::vector<SbpNode*>& GetNodeList() { return node_list_; }
+
  private:
   friend class SbpCollector;
   friend class SbpConstructor;
