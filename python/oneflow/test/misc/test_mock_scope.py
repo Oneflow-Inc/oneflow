@@ -25,26 +25,26 @@ class TestMock(flow.unittest.TestCase):
     def test_with(test_case):
         _import_both()
         with mock.enable():
-            test_case.assertTrue(torch.__package__ == "oneflow")
-            test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
-            test_case.assertTrue(torch.version.__version__ == flow.__version__)
+            test_case.assertEqual(torch.__package__, "oneflow")
+            test_case.assertEqual(torch.nn.__package__, "oneflow.nn")
+            test_case.assertEqual(torch.version.__version__, flow.__version__)
         with mock.disable():
-            test_case.assertTrue(torch.__package__ == "torch")
-            test_case.assertTrue(torch.nn.__package__ == "torch.nn")
-            test_case.assertTrue(torch.version.__version__ == torch.__version__)
+            test_case.assertEqual(torch.__package__, "torch")
+            test_case.assertEqual(torch.nn.__package__, "torch.nn")
+            test_case.assertEqual(torch.version.__version__, torch.__version__)
 
     def test_simple(test_case):
         _import_both()
         mock.enable()
-        test_case.assertTrue(torch.__package__ == "oneflow")
-        test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
-        test_case.assertTrue(torch.version.__version__ == flow.__version__)
+        test_case.assertEqual(torch.__package__, "oneflow")
+        test_case.assertEqual(torch.nn.__package__, "oneflow.nn")
+        test_case.assertEqual(torch.version.__version__, flow.__version__)
 
         mock.disable()
 
-        test_case.assertTrue(torch.__package__ == "torch")
-        test_case.assertTrue(torch.nn.__package__ == "torch.nn")
-        test_case.assertTrue(torch.version.__version__ == torch.__version__)
+        test_case.assertEqual(torch.__package__, "torch")
+        test_case.assertEqual(torch.nn.__package__, "torch.nn")
+        test_case.assertEqual(torch.version.__version__, torch.__version__)
 
     def test_import_from(test_case):
         _import_both()
@@ -52,15 +52,15 @@ class TestMock(flow.unittest.TestCase):
         from torch import nn
         from torch.version import __version__
 
-        test_case.assertTrue(nn.__package__ == "oneflow.nn")
-        test_case.assertTrue(__version__ == flow.__version__)
+        test_case.assertEqual(nn.__package__, "oneflow.nn")
+        test_case.assertEqual(__version__, flow.__version__)
 
         mock.disable()
         from torch import nn
         from torch.version import __version__
 
-        test_case.assertTrue(nn.__package__ == "torch.nn")
-        test_case.assertTrue(__version__ == torch.__version__)
+        test_case.assertEqual(nn.__package__, "torch.nn")
+        test_case.assertEqual(__version__, torch.__version__)
 
     def test_error(test_case):
         mock.enable()
@@ -79,15 +79,21 @@ class TestMock(flow.unittest.TestCase):
     def test_nested_with(test_case):
         _import_both()
         with mock.enable():
-            test_case.assertTrue(torch.__package__ == "oneflow")
+            test_case.assertEqual(torch.__package__, "oneflow")
             with mock.disable():
-                test_case.assertTrue(torch.__package__ == "torch")
-            test_case.assertTrue(torch.__package__ == "oneflow")
+                test_case.assertEqual(torch.__package__, "torch")
+            test_case.assertEqual(torch.__package__, "oneflow")
         with mock.disable():
-            test_case.assertTrue(torch.__package__ == "torch")
+            test_case.assertEqual(torch.__package__, "torch")
             with mock.enable():
-                test_case.assertTrue(torch.__package__ == "oneflow")
-            test_case.assertTrue(torch.__package__ == "torch")
+                test_case.assertEqual(torch.__package__, "oneflow")
+            test_case.assertEqual(torch.__package__, "torch")
+
+    def test_3rd_party(test_case):
+        with mock.enable():
+            from test_mock_simple import f
+
+            test_case.assertEqual(f(), "oneflow")
 
 
 if __name__ == "__main__":
