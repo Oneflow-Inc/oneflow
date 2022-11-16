@@ -32,7 +32,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void DualGemmGeglu(int32_t m, int32_t n, int32_t k, const T* x, const T* w, const T* b) {
+void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, const T* x, const T* w,
+                   const T* b, T* y) {
   constexpr int kStages = 3;
   constexpr bool kSplitKSerial = false;
   constexpr bool kUseBias = true;
@@ -80,22 +81,32 @@ void DualGemmGeglu(int32_t m, int32_t n, int32_t k, const T* x, const T* w, cons
       cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<1>, kStages, kStoreD0, kStoreD1,
       kSplitKSerial>;
 
-  int split_k_slices = Gemm0::kSplitKSerial ? 2 : 1;
+  int split_k_slices = DualGemm::kSplitKSerial ? 2 : 1;
+  typename cutlass::TensorRef<typename DualGemm::ElementC, typename DualGemm::LayoutC>
+      nullptr_ref{};
+
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_a0(
+      reinterpret_cast<const cutlass::half_t*>(x), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::ColumnMajor> tensor_b0(
+      reinterpret_cast<const cutlass::half_t*>(w), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::ColumnMajor> tensor_b1(
+      reinterpret_cast<const cutlass::half_t*>(w + n * k), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_bias0(
+      reinterpret_cast<const cutlass::half_t*>(b), {0});
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_bias1(
+      reinterpret_cast<const cutlass::half_t*>(b + n), {0});
+  typename cutlass::TensorRef<ElementOperandA, cutlass::layout::RowMajor> tensor_out(
+      reinterpret_cast<cutlass::half_t*>(y), n);
 
   cutlass::gemm::GemmCoord problem_size(m, n, k);
-  typename DualGemm::Arguments arguments{problem_size,
-                                         tensor_A0.device_ref(),
-                                         tensor_B0.device_ref(),
-                                         ref_B0,
-                                         DualGemm::kStoreD0 ? tensor_D0.device_ref() : nullptr_ref,
-                                         tensor_B1.device_ref(),
-                                         ref_B1,
-                                         DualGemm::kStoreD1 ? tensor_D1.device_ref() : nullptr_ref,
-                                         tensor_D2.device_ref(),
-                                         {alpha0, beta0},
-                                         {alpha1, beta1},
-                                         {},
-                                         split_k_slices};
+  typename DualGemm::Arguments arguments{
+      problem_size,    tensor_a0,    tensor_b0,     tensor_bias0, nullptr_ref,
+      tensor_b1,       tensor_bias1, nullptr_ref,   tensor_out,   {alpha0, beta0},
+      {alpha1, beta1}, {},           split_k_slices};
+
+  DualGemm dual_gemm_op;
+  dual_gemm_op.initialize(arguments, stream->cublas_workspace(), stream->cuda_stream());
+  dual_gemm_op();
 }
 
 template<typename T>
@@ -222,6 +233,13 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
     const int64_t in_size = in->shape_view().At(1);
     const int64_t out_size = out->shape_view().At(1);
     const int64_t num_samples = in->shape_view().At(0);
+
+    if (ParseBooleanFromEnv("ONEFLOW_KERNEL_EANBLE_DUAL_GEMM_GLU", false)) {
+      DualGemmGeglu<half>(ctx->stream()->As<ep::CudaStream>(), num_samples, out_size, in_size,
+                          in->dptr<half>(), w->dptr<half>(), b->dptr<half>(),
+                          out->mut_dptr<half>());
+      return;
+    }
 
     // calculate X*W through cuBLAS
     // ref -> reduce_kernel.cpp -> matmul
