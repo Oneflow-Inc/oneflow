@@ -41,8 +41,8 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
 
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const user_op::Tensor* add_to_output = (ctx->has_input("add_to_output", 0)) ? 
-      ctx->Tensor4ArgNameAndIndex("add_to_output", 0) : nullptr;
+    const user_op::Tensor* _add_to_output = (ctx->has_input("_add_to_output", 0)) ? 
+      ctx->Tensor4ArgNameAndIndex("_add_to_output", 0) : nullptr;
 
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -51,7 +51,7 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
     const double alpha = 1.0;
-    const double beta = (ctx->has_input("add_to_output", 0)) ? 1.0 : 0.0;
+    const double beta = (ctx->has_input("_add_to_output", 0)) ? 1.0 : 0.0;
 
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
@@ -87,7 +87,7 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
     OF_CUBLAS_CHECK(
         cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
                        weight->dptr(), matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, 
-                       &sp_beta, (add_to_output == nullptr) ? y_ptr : add_to_output->dptr(),
+                       &sp_beta, (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(),
                        matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
                        cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
                        cuda_stream->cuda_stream()));
