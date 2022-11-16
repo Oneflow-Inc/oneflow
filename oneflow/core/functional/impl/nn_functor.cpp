@@ -614,7 +614,7 @@ class FusedMatmulBiasFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& bias,
-                           const Optional<one::Tensor>& add_to_output) const {
+                           const Optional<one::Tensor>& _add_to_output) const {
     int64_t n = 0, k = 0;
     /*
     x: (m_i, ... m_0, k)
@@ -647,16 +647,16 @@ class FusedMatmulBiasFunctor {
     }
 
     if ((device_type == DeviceType::kCUDA) && (3 <= kMaxInputCount)) {
-      if (add_to_output) {
+      if (_add_to_output) {
         std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
                                                     .Input("x")
                                                     .Input("weight")
                                                     .Input("bias")
-                                                    .Input("add_to_output")
+                                                    .Input("_add_to_output")
                                                     .Output("out")
                                                     .Build());
 
-        return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight, bias, JUST(add_to_output)});
+        return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight, bias, JUST(_add_to_output)});
       } else {
         std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
                                                     .Input("x")
@@ -679,9 +679,9 @@ class FusedMatmulBiasFunctor {
     }
 #endif  // CUDA_VERSION >= 10200
 
-    if (add_to_output) {
+    if (_add_to_output) {
       return JUST(functional::Add({JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                    x->shape()->NumAxes() - 1)), JUST(add_to_output)}, false));
+                                    x->shape()->NumAxes() - 1)), JUST(_add_to_output)}, false));
     } else {
       return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
                                     x->shape()->NumAxes() - 1));
