@@ -4,9 +4,8 @@ import oneflow.unittest
 import oneflow.mock_torch as mock
 
 """
-Mock saves a module dict (like sys.modules) for real torch modules and oneflow modules respectively
-when using enable/disable,
-torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock` on switch
+enable & disable mode hold a dict[str, ModuleType] like sys.modules, the keys start with 'torch'.
+The two modes don't interfere with each other, sys.modules and global scope are replaced on switch.
 """
 
 
