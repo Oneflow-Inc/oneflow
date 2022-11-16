@@ -194,6 +194,11 @@ bool IsTransferNode(TaskType task_type) {
 // Some operators have longer time in cpu and less time in gpu.
 // Running those operators without overlap would cause large gap during each iteration.
 bool LongerActivationTimeInCpu(const OperatorConf& op_conf) {
+  if (op_conf.has_variable_conf()) {
+    // Variable operators would not be run. They just create tensors.
+    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
+    return true;
+  }
   if (op_conf.has_user_conf()) {
     const auto& op_type_name = op_conf.user_conf().op_type_name();
     // They are sorted according to frequency of occurrences in stable diffusion
@@ -215,12 +220,7 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   TaskType task_type = node->GetTaskType();
   if (task_type == TaskType::kNormalForward) {
     const auto& op_conf = dynamic_cast<const CompTaskNode*>(node)->op()->op_conf();
-    if (op_conf.has_variable_conf()) {
-      // Variable operators would not be run. They just create tensors.
-      // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-      return TaskClassifier::kRunASAP;
-    } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu
-               && LongerActivationTimeInCpu(op_conf)) {
+    if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu && LongerActivationTimeInCpu(op_conf)) {
       return TaskClassifier::kWaitingOverlapNode;
     } else {
       return TaskClassifier::kWaitingMainComputation;
