@@ -666,11 +666,14 @@ class FusedMatmulBiasFunctor {
 #endif  // CUDA_VERSION >= 10200
 
     if (_add_to_output) {
-      return JUST(functional::Add({JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                    x->shape()->NumAxes() - 1)), JUST(_add_to_output)}, false));
+      return JUST(functional::Add(
+          {JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
+                                    x->shape()->NumAxes() - 1)),
+           JUST(_add_to_output)},
+          false));
     } else {
       return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                    x->shape()->NumAxes() - 1));
+                                      x->shape()->NumAxes() - 1));
     }
   }
 };

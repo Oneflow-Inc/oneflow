@@ -73,8 +73,8 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), out_desc->data_type())
-        << "InferDataType Failed. _add_to_output Expected " << DataType_Name(out_desc->data_type()) << ", but got "
-        << DataType_Name(ctx->InputDType("_add_to_output", 0));
+        << "InferDataType Failed. _add_to_output Expected " << DataType_Name(out_desc->data_type())
+        << ", but got " << DataType_Name(ctx->InputDType("_add_to_output", 0));
   }
 
   return Maybe<void>::Ok();

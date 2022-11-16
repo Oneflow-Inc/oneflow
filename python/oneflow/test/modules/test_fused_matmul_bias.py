@@ -23,8 +23,11 @@ import numpy as np
 
 
 def _matmul_bias(x, weight, bias, add_to_output):
-    return flow._C.add(flow._C.bias_add(
-        flow._C.matmul(x, weight, transpose_b=True), bias, axis=len(x.shape) - 1), add_to_output
+    return flow._C.add(
+        flow._C.bias_add(
+            flow._C.matmul(x, weight, transpose_b=True), bias, axis=len(x.shape) - 1
+        ),
+        add_to_output,
     )
 
 
@@ -33,7 +36,9 @@ def _test_fused_matmul_add_bias(
 ):
     add_to_output = np.zeros((*batchsize, out_feature))
     if _add_to_output:
-        add_to_output = np.random.uniform(low=-1, high=1, size=(*batchsize, out_feature))
+        add_to_output = np.random.uniform(
+            low=-1, high=1, size=(*batchsize, out_feature)
+        )
     x = np.random.uniform(low=-1, high=1, size=(*batchsize, in_feature))
     weight = np.random.uniform(low=-1, high=1, size=(out_feature, in_feature))
     bias = np.random.uniform(low=-1, high=1, size=(out_feature))
@@ -48,10 +53,14 @@ def _test_fused_matmul_add_bias(
     fused_bias = flow.tensor(bias, dtype=dtype, device=device, requires_grad=True)
     fused_add_to_output = None
     if _add_to_output:
-        fused_add_to_output = flow.tensor(add_to_output, dtype=dtype, device=device, requires_grad=False)
+        fused_add_to_output = flow.tensor(
+            add_to_output, dtype=dtype, device=device, requires_grad=False
+        )
 
     navie_y = _matmul_bias(naive_x, naive_weight, naive_bias, naive_add_to_output)
-    fused_y = flow._C.fused_matmul_bias(fused_x, fused_weight, fused_bias, fused_add_to_output)
+    fused_y = flow._C.fused_matmul_bias(
+        fused_x, fused_weight, fused_bias, fused_add_to_output
+    )
 
     y = navie_y.sum() + fused_y.sum()
     y.backward()
