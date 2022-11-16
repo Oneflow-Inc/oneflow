@@ -142,7 +142,7 @@ class KernelEvent final : public IEvent {
 
   void RecordShape(const ShapeView& shape);
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
   void AddChildEvent(const std::shared_ptr<IEvent>& e) { children_.emplace(e); }
   bool AddChildEventIfSo(const std::shared_ptr<IEvent>& e) {
@@ -162,10 +162,16 @@ class KernelEvent final : public IEvent {
   KernelEvent(const std::string& kernel_name,
               const std::function<std::vector<ShapeView>(void)>& shape_getter)
       : IEvent(kernel_name, EventTimeUnit::kNS) {
-    if (shape_getter) { input_shapes_ = shape_getter(); }
+    if (shape_getter) { input_shapes_ = shape_getter(); 
+
+      for (const auto& _shape: input_shapes_)
+      {
+        std::cout << _shape.DebugStr() << std::endl;
+      }
+    }
   }
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   int64_t memory_size_ = -1;
   std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA

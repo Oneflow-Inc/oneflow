@@ -867,7 +867,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
   if (Singleton<profiler::ProfileManager>::Get()) {
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
         const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
@@ -878,7 +878,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
 #endif
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
         [compute_ctx, CalMemorySize]() -> int64_t {
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
@@ -886,8 +886,10 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
         [compute_ctx]() -> std::vector<ShapeView> {
           std::vector<ShapeView> shapes;
           for (const auto& pair : compute_ctx->inputs()) {
+            const auto _shape = compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape();
+            // std::cout << _shape.DebugStr() << std::endl;
             shapes.emplace_back(
-                compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+                _shape);
           }
           return shapes;
         }));

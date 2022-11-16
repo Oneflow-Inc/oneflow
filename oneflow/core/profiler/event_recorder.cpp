@@ -32,13 +32,13 @@ std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const st
 
 Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     const std::string& name,
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     const std::function<int64_t()>& memory_size_getter,
 #endif
     const ShapeGetterFuncType& shape_getter) {
   auto pmgr = Singleton<ProfileManager>::Get();
   if (pmgr) {
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     if (pmgr->use_cpu_ || pmgr->use_cuda_) {
       auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
       if (pmgr->use_cuda_) {

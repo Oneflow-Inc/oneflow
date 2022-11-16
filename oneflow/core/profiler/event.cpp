@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// #include "fmt/core.h"
-// #include "fmt/format.h"
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "oneflow/core/profiler/event.h"
 #include "oneflow/core/profiler/util.h"
 
@@ -58,14 +58,13 @@ std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, Custom
   return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
 }
 
-// std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
-std::string KernelEvent::Key() { return "yuguo"; }
+std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
 
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
   j["input_shapes"] = GetFormatedInputShapes();
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
 #endif  // WITH_CUDA
@@ -87,8 +86,7 @@ std::string KernelEvent::GetFormatedInputShapes(size_t max_num_to_format) {
     shapes_formated[i] = current_shape == "()" ? "scalar" : current_shape;
   }
   if (input_shapes_.size() > max_num_to_format) { shapes_formated.emplace_back("..."); }
-  // return fmt::format("[{}]", fmt::join(shapes_formated, ", "));
-  return "yuguo";
+  return fmt::format("[{}]", fmt::join(shapes_formated, ", "));
 }
 
 }  // namespace profiler
