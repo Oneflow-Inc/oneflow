@@ -48,7 +48,8 @@ Maybe<void> FusedMatmulBias::Init(const OpExpr& op) {
 
 Maybe<void> FusedMatmulBias::Capture(FusedMatmulBiasCaptureState* ctx, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_GE_OR_RETURN(inputs.size(), 3) << "x, weight, and bias, [add_to_output] should all be included";
+  CHECK_GE_OR_RETURN(inputs.size(), 3)
+      << "x, weight, and bias, [add_to_output] should all be included";
   ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
   ctx->weight_requires_grad = JUST(VectorAt(inputs, 1))->requires_grad();
   ctx->bias_requires_grad = JUST(VectorAt(inputs, 2))->requires_grad();
@@ -66,7 +67,8 @@ Maybe<void> FusedMatmulBias::Apply(const FusedMatmulBiasCaptureState* ctx,
   const auto& weight = ctx->SavedTensors().at(1);
 
   if (ctx->x_requires_grad) {
-    in_grads->at(0) = JUST(functional::MatMul(JUST(VectorAt(out_grads, 0)), weight, false, false, 1.0));
+    in_grads->at(0) =
+        JUST(functional::MatMul(JUST(VectorAt(out_grads, 0)), weight, false, false, 1.0));
   }
   if (ctx->weight_requires_grad) {
     in_grads->at(1) = JUST(functional::BroadcastMatmulGradB(JUST(VectorAt(out_grads, 0)), x, 1.0));
@@ -76,7 +78,8 @@ Maybe<void> FusedMatmulBias::Apply(const FusedMatmulBiasCaptureState* ctx,
     std::vector<int32_t> reduce_axes_vec;
     reduce_axes_vec.reserve(num_axes - 1);
     for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
-    in_grads->at(2) = JUST(functional::ReduceSum(JUST(VectorAt(out_grads, 0)), reduce_axes_vec, false));
+    in_grads->at(2) =
+        JUST(functional::ReduceSum(JUST(VectorAt(out_grads, 0)), reduce_axes_vec, false));
   }
 
   return Maybe<void>::Ok();

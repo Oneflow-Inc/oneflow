@@ -41,8 +41,9 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
 
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const user_op::Tensor* _add_to_output = (ctx->has_input("_add_to_output", 0)) ? 
-      ctx->Tensor4ArgNameAndIndex("_add_to_output", 0) : nullptr;
+    const user_op::Tensor* _add_to_output = (ctx->has_input("_add_to_output", 0))
+                                                ? ctx->Tensor4ArgNameAndIndex("_add_to_output", 0)
+                                                : nullptr;
 
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -71,7 +72,7 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                          /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-    
+
     int num_batches = 1;
     for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) num_batches *= x->shape_view().At(i);
     cublas_n *= num_batches;
@@ -84,22 +85,21 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
-    OF_CUBLAS_CHECK(
-        cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha,
-                       weight->dptr(), matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, 
-                       &sp_beta, (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(),
-                       matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
-                       cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-                       cuda_stream->cuda_stream()));
+    OF_CUBLAS_CHECK(cublasLtMatmul(
+        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
+        matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
+        (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(), matmul_cache->cublas_c_desc,
+        y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type) \
-  REGISTER_USER_KERNEL("fused_matmul_bias")                               \
-      .SetCreateFn<FusedMatmulBiasKernel>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
+#define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type)     \
+  REGISTER_USER_KERNEL("fused_matmul_bias")                            \
+      .SetCreateFn<FusedMatmulBiasKernel>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == data_type));
 
 REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(double, DataType::kDouble);
@@ -107,7 +107,7 @@ REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(half, DataType::kFloat16);
 #if CUDA_VERSION >= 11000
 REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
-#endif // CUDA_VERSION >= 11000
+#endif  // CUDA_VERSION >= 11000
 
 }  // namespace
 
