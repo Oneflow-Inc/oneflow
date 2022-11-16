@@ -72,11 +72,12 @@ Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor) {
   return Singleton<symbol::Storage<Scope>>::Get()->MaybeGetPtr(op->op_conf().scope_symbol_id());
 }
 
+
 Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, void* scalar_ptr,
                                   size_t size) {
   CHECK_EQ_OR_RETURN(GetSizeOfDataType(scalar_tensor->dtype()->data_type()), size)
       << "invalid size";
-  CHECK_OR_RETURN(scalar_tensor->is_eager()) << "Tensor.item only supported on eager tensor.";
+  CHECK_OR_RETURN(scalar_tensor->is_eager()) << "Only eager scalar tensor support GetItem.";
   CHECK_EQ_OR_RETURN(scalar_tensor->nelement(), 1)
       << "can only convert a tensor of size 1 to a Python scalar";
   std::shared_ptr<LocalTensor> local_tensor;
@@ -102,6 +103,7 @@ Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, 
   JUST(SyncReadSmallMem(reinterpret_cast<char*>(scalar_ptr), size, local_tensor));
   return Maybe<void>::Ok();
 }
+
 
 }  // namespace one
 }  // namespace oneflow
