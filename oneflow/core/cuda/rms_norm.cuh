@@ -915,10 +915,10 @@ cudaError_t DispatchLaunchRmsNormGradBlockUncachedImplBlockSize(cudaStream_t str
     }                                                                                           \
   }
 
-  SELECT_BLOCK_SIZE_CONF(4)
-  SELECT_BLOCK_SIZE_CONF(3)
-  SELECT_BLOCK_SIZE_CONF(2)
-  SELECT_BLOCK_SIZE_CONF(1)
+  SELECT_BLOCK_SIZE_CONF(block_size_conf_4)
+  SELECT_BLOCK_SIZE_CONF(block_size_conf_3)
+  SELECT_BLOCK_SIZE_CONF(block_size_conf_2)
+  SELECT_BLOCK_SIZE_CONF(block_size_conf_1)
 #undef SELECT_BLOCK_SIZE_CONF
 
   return cudaErrorInvalidValue;
