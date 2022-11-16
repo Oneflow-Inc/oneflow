@@ -27,7 +27,7 @@ from oneflow.test_utils.test_util import GenArgList
 # from oneflow.test_utils.automated_test_util import *
 
 
-class Gelu(nn.Module):
+class Glu(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -110,7 +110,7 @@ def _test_fused_glu_split(test_case, params: dict):
     )
 
     # test: naive result
-    flow_module = Gelu()
+    flow_module = Glu()
     origin_output_tensor_y = flow_module.forward(
         x=input_tensor_x,
         w=input_tensor_w,
@@ -160,7 +160,7 @@ def _test_fused_glu(test_case, params: dict):
     )
 
     # test: naive result
-    flow_module = Gelu()
+    flow_module = Glu()
     origin_output_tensor_y = flow_module.forward(
         x=input_tensor_x,
         w=input_tensor_w,

@@ -36,7 +36,7 @@ namespace {
 template<typename T, ep::primitive::UnaryOp act_type>
 __global__ void FusedGluForwardGpu(
     const int64_t m, const int64_t n, const int64_t k, const int64_t stride,
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T>& act, const T* matmul_wx,
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act, const T* matmul_wx,
     const T* b, const T* matmul_vx, const T* c, T* y) {
   CUDA_1D_KERNEL_LOOP(i, m * n) {
     // obtain the row and col index in output tensor "y"
@@ -44,8 +44,8 @@ __global__ void FusedGluForwardGpu(
     const int64_t y_col = i - y_row * n;
 
     // calculate the hidden_state and gate
-    T hidden_state = matmul_wx[stride * y_row + y_col] + b[y_col];
-    T gate = matmul_vx[stride * y_row + y_col] + c[y_col];
+    T hidden_state = matmul_wx[y_row * stride + y_col] + b[y_col];
+    T gate = matmul_vx[y_row * stride + y_col] + c[y_col];
 
     // calculate activation
     T act_gate = act(gate);
@@ -57,50 +57,40 @@ __global__ void FusedGluForwardGpu(
 
 }  // namespace
 
+template<typename T, ep::primitive::UnaryOp act_type>
+void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n,
+                                const int64_t k, int64_t stride, const T* matmul_wx, const T* b,
+                                const T* matmul_vx, const T* c, T* y) {
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
+  RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type>),
+                  /* CUDA stream */ stream,
+                  /* number of threads */ m * n,
+                  /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+}
+
 template<typename T>
 void DispatchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n,
                                 const int64_t k, int64_t stride, const T* matmul_wx, const T* b,
                                 const T* matmul_vx, const T* c, T* y,
                                 const std::string& activation) {
-  if (activation == "none") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kIdentity, T, T> act(0,
-                                                                                                0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kIdentity>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+  if(activation == "none"){
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kIdentity>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (activation == "sigmoid") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSigmoid, T, T> act(0,
-                                                                                               0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSigmoid>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kSigmoid>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (activation == "relu") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kRelu, T, T> act(0, 0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kRelu>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kRelu>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (activation == "gelu") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kGelu, T, T> act(0, 0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kGelu>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kGelu>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (activation == "fast_gelu") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kFastGelu, T, T> act(0,
-                                                                                                0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kFastGelu>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kFastGelu>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (activation == "silu") {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, ep::primitive::UnaryOp::kSilu>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kSilu>(
+      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
   } else {
     UNIMPLEMENTED();
   }
@@ -145,7 +135,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     const int64_t n = out_tensor_y->shape_view().At(input_x_num_axes - 1);
     const int64_t k = input_tensor_x->shape_view().At(input_x_num_axes - 1);
 
-    // calculate matmul_wx (and matmul_vx) through cuBLAS
+    // calculate matmul_wx (and matmul_vx) through primitive
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
         DeviceType::kCUDA, input_tensor_x->data_type(), ep::primitive::BlasTransposeType::N,
         ep::primitive::BlasTransposeType::T);
@@ -186,7 +176,6 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_FUSED_GLU_KERNEL(float)
-REGISTER_GPU_FUSED_GLU_KERNEL(double)
 REGISTER_GPU_FUSED_GLU_KERNEL(half)
 REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
 

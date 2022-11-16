@@ -3097,8 +3097,11 @@ class FusedGluFunctor {
     attrs.SetAllAttrs(activation);
     if (v && c) {
       return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
-    } else {
+    } else if (!v && !c) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+    } else {
+      return Error::RuntimeError()
+             << "expected consistant existance of tensor v and c";
     }
   }
 
