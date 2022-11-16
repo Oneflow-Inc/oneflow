@@ -19,10 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
-#include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/cuda/rms_norm.cuh"
-#include <cub/cub.cuh>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -186,10 +183,10 @@ REGISTER_RMS_NORM_CUDA_KERNEL(nv_bfloat16)
 #endif
 
 template<typename T>
-class RmsNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class RmsNormGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  RmsNormGradGpuKernel() = default;
-  ~RmsNormGradGpuKernel() = default;
+  RmsNormGradKernel() = default;
+  ~RmsNormGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -214,16 +211,16 @@ class RmsNormGradGpuKernel final : public user_op::OpKernel, public user_op::Cud
 
 #define REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(dtype)                      \
   REGISTER_USER_KERNEL("rms_norm_grad")                                \
-      .SetCreateFn<RmsNormGradGpuKernel<dtype>>()                      \
+      .SetCreateFn<RmsNormGradKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(float)
-REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
-REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
-#if CUDA_VERSION >= 11000
-REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
-#endif
+// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
+// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
+// #if CUDA_VERSION >= 11000
+// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+// #endif
 
 namespace {
 
