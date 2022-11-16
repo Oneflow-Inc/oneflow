@@ -72,7 +72,6 @@ Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor) {
   return Singleton<symbol::Storage<Scope>>::Get()->MaybeGetPtr(op->op_conf().scope_symbol_id());
 }
 
-
 Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, void* scalar_ptr,
                                   size_t size) {
   CHECK_EQ_OR_RETURN(GetSizeOfDataType(scalar_tensor->dtype()->data_type()), size)
@@ -103,7 +102,6 @@ Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, 
   JUST(SyncReadSmallMem(reinterpret_cast<char*>(scalar_ptr), size, local_tensor));
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace one
 }  // namespace oneflow
