@@ -613,7 +613,6 @@ class FusedMatmulBiasFunctor {
     const auto& weight_shape = weight->shape();
     const auto& bias_shape = bias->shape();
 
-    // TODO(): Support Fused batch/broadcast matmul.
     CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
         << Error::RuntimeError() << "Weight's dim size should == 2";
     CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
@@ -666,8 +665,13 @@ class FusedMatmulBiasFunctor {
     }
 #endif  // CUDA_VERSION >= 10200
 
-    return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
+    if (add_to_output) {
+      return JUST(functional::Add({JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
+                                    x->shape()->NumAxes() - 1)), JUST(add_to_output)}, false));
+    } else {
+      return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
                                     x->shape()->NumAxes() - 1));
+    }
   }
 };
 

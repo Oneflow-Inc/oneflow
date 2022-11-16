@@ -48,6 +48,12 @@ Maybe<void> InferTensorDesc4FusedMatmulBias(user_op::InferContext* ctx) {
   Shape out_shape = x_desc.shape();
   out_shape[x_desc.shape().NumAxes() - 1] = n;
   ctx->SetOutputShape("out", 0, out_shape);
+
+  if (ctx->has_input("add_to_output", 0)) {
+    const user_op::TensorDesc& add_to_output_desc = ctx->InputTensorDesc("add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output_desc.shape(), out_shape);
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -64,6 +70,12 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   out_desc->set_data_type(first_in_desc.data_type());
+
+  if (ctx->has_input("add_to_output", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("add_to_output", 0), out_desc->data_type())
+        << "InferDataType Failed. add_to_output Expected " << DataType_Name(out_desc->data_type()) << ", but got "
+        << DataType_Name(ctx->InputDType("add_to_output", 0));
+  }
 
   return Maybe<void>::Ok();
 }
