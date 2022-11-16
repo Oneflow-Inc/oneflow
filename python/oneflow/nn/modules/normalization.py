@@ -418,8 +418,6 @@ class RMSNorm(Module):
 
     .. code-block:: python
 
-        TO CHANGE:
-
         >>> import numpy as np
         >>> import oneflow as flow
         
@@ -437,22 +435,22 @@ class RMSNorm(Module):
         ...     dtype=np.float32,
         ... )
 
-        >>> x = flow.Tensor(input_arr)
-        >>> m = flow.nn.LayerNorm(2)
+        >>> x = flow.Tensor(input_arr, device="cuda")
+        >>> m = flow.nn.RMSNorm(2).to(device="cuda")
         >>> y = m(x).numpy()
         >>> y
-        array([[[[ 0.99997395, -0.99997395],
-                 [-0.999947  ,  0.999947  ]],
+        array([[[[-0.21632987, -1.3975569 ],
+                 [-1.127044  ,  0.8541454 ]],
         <BLANKLINE>
-                [[-0.99995965,  0.9999595 ],
-                 [ 0.99998784, -0.99998784]]],
+                [[-1.2975204 , -0.5625112 ],
+                 [ 1.3711083 ,  0.34648165]]],
         <BLANKLINE>
         <BLANKLINE>
-               [[[-0.9998348 ,  0.99983466],
-                 [ 0.9999914 , -0.9999914 ]],
+               [[[-1.2388322 , -0.6820876 ],
+                 [ 0.16959298, -1.4040003 ]],
         <BLANKLINE>
-                [[ 0.9999785 , -0.9999785 ],
-                 [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
+                [[ 1.4068495 ,  0.14401469],
+                 [ 0.6735778 , -1.2434478 ]]]], dtype=float32)
 
     """
 
