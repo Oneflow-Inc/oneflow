@@ -52,4 +52,13 @@ module  {
     // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.matmul"(%arg0, %arg1)
     // CHECK: return %[[OUT0]]#1, %[[OUT0]]#0, %[[OUT1]]
   }
+  func.func @f_broadcast_matmul(%x: tensor<2x4096x320xf16>, %w1: tensor<320x320xf16>, %w2: tensor<320x320xf16>, %w3: tensor<320x320xf16>) -> (tensor<2x4096x320xf16>, tensor<2x4096x320xf16>, tensor<2x4096x320xf16>) {
+    %matmul1 = "oneflow.broadcast_matmul"(%x, %w1) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.up_blocks.3.attentions.1.transformer_blocks.0.attn1.to_q-broadcast_matmul-16315", scope_symbol_id = 5497 : i64, transpose_a = false, transpose_b = true} : (tensor<2x4096x320xf16>, tensor<320x320xf16>) -> tensor<2x4096x320xf16>
+    %matmul2 = "oneflow.broadcast_matmul"(%x, %w2) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.up_blocks.3.attentions.1.transformer_blocks.0.attn1.to_k-broadcast_matmul-16316", scope_symbol_id = 5505 : i64, transpose_a = false, transpose_b = true} : (tensor<2x4096x320xf16>, tensor<320x320xf16>) -> tensor<2x4096x320xf16>
+    %matmul3 = "oneflow.broadcast_matmul"(%x, %w3) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.up_blocks.3.attentions.1.transformer_blocks.0.attn1.to_v-broadcast_matmul-16317", scope_symbol_id = 5513 : i64, transpose_a = false, transpose_b = true} : (tensor<2x4096x320xf16>, tensor<320x320xf16>) -> tensor<2x4096x320xf16>
+    return %matmul1, %matmul2, %matmul3 : tensor<2x4096x320xf16>, tensor<2x4096x320xf16>, tensor<2x4096x320xf16>
+    // CHECK: @f_broadcast_matmul(%[[X:[a-zA-Z0-9_]+]]: tensor<2x4096x320xf16>, %[[WEIGHT1:[a-zA-Z0-9_]+]]: tensor<320x320xf16>, %[[WEIGHT2:[a-zA-Z0-9_]+]]: tensor<320x320xf16>, %[[WEIGHT3:[a-zA-Z0-9_]+]]: tensor<320x320xf16>)
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:3 = "oneflow.grouped_matmul_bias"(%[[X]], %[[X]], %[[X]], %[[WEIGHT3]], %[[WEIGHT2]], %[[WEIGHT1]])
+    // CHECK: return %[[OUT0]]#2, %[[OUT0]]#1, %[[OUT0]]#0
+  }
 }
