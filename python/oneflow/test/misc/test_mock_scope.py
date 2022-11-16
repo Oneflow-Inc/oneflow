@@ -3,23 +3,27 @@ import oneflow as flow
 import oneflow.unittest
 import oneflow.mock_torch as mock
 
-import torch
-import torch.nn
-import torch.version
-
 """
 Mock saves a module dict (like sys.modules) for real torch modules and oneflow modules respectively
 when using enable/disable,
 torch-related k-v pairs in sys.modules and global scope are replaced with the cache in `mock` on switch
 """
-mock.enable()
-import torch
-import torch.nn
-import torch.version
+
+
+def _import_both():
+    with mock.enable():
+        import torch
+        import torch.nn
+        import torch.version
+    with mock.disable():
+        import torch
+        import torch.nn
+        import torch.version
 
 
 class TestMock(flow.unittest.TestCase):
     def test_with(test_case):
+        _import_both()
         with mock.enable():
             test_case.assertTrue(torch.__package__ == "oneflow")
             test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
@@ -30,6 +34,7 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
     def test_simple(test_case):
+        _import_both()
         mock.enable()
         test_case.assertTrue(torch.__package__ == "oneflow")
         test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
@@ -42,6 +47,7 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
     def test_import_from(test_case):
+        _import_both()
         mock.enable()
         from torch import nn
         from torch.version import __version__
@@ -71,6 +77,7 @@ class TestMock(flow.unittest.TestCase):
         )
 
     def test_nested_with(test_case):
+        _import_both()
         with mock.enable():
             test_case.assertTrue(torch.__package__ == "oneflow")
             with mock.disable():
