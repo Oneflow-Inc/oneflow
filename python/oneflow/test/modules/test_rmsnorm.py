@@ -22,17 +22,19 @@ import oneflow as flow
 import oneflow.unittest
 import torch
 
-# from oneflow.test_utils.test_util import GenArgList
 
-
-def _get_norm_dims(x, weight):
-    lpad = len(x.shape) - len(weight.shape)
+def _get_norm_dims(shape, normalized_shape):
+    lpad = len(shape) - len(normalized_shape)
     assert lpad >= 0
-    return tuple(range(lpad, len(x.shape)))
+    return tuple(range(lpad, len(shape)))
 
 
-def _torch_rmsnorm(x, weight, eps=1e-6):
-    norm_dims = _get_norm_dims(x, weight)
+def _torch_rmsnorm(x, weight, normalized_shape=None, eps=1e-6):
+    if weight is not None:
+        normalized_shape = weight.shape
+    else:
+        assert normalized_shape is not None
+    norm_dims = _get_norm_dims(x.shape, normalized_shape)
     root_mean = torch.mean(x * x, dim=norm_dims, keepdim=True)
     rms = torch.rsqrt(root_mean + eps)
     normed = x * rms
@@ -43,7 +45,7 @@ def _test_rmsnorm(
     test_case,
     shape,
     normalized_shape,
-    affine=False,
+    affine=True,
     eps=1e-6,
     dtype=flow.float32,
     device="cuda",
@@ -60,8 +62,9 @@ def _test_rmsnorm(
         torch.tensor(np_weight).to(device=device, dtype=torch_dtype) if affine else None
     )
     torch_x.requires_grad_(True)
-    torch_weight.requires_grad_(True)
-    torch_y = _torch_rmsnorm(torch_x, torch_weight, eps)
+    if affine:
+        torch_weight.requires_grad_(True)
+    torch_y = _torch_rmsnorm(torch_x, torch_weight, normalized_shape, eps)
 
     np_rand_init_grad = np.random.randn(*tuple(torch_y.shape)).astype(np.float32)
     torch_rand_init_grad = torch.tensor(np_rand_init_grad).to(
@@ -71,19 +74,22 @@ def _test_rmsnorm(
 
     torch_y = torch_y.detach().cpu()
     torch_x_grad = torch_x.grad.detach().cpu()
-    torch_weight_grad = torch_weight.grad.detach().cpu()
+    if affine:
+        torch_weight_grad = torch_weight.grad.detach().cpu()
 
     x = flow.tensor(np_x).to(device=device, dtype=dtype)
     weight = flow.tensor(np_weight).to(device=device, dtype=dtype) if affine else None
     rand_init_grad = flow.tensor(np_rand_init_grad).to(device=device, dtype=dtype)
     x.requires_grad_(True)
-    weight.requires_grad_(True)
+    if affine:
+        weight.requires_grad_(True)
     y = flow._C.rms_norm(x, weight, normalized_shape, eps)
     (y * rand_init_grad).sum().backward()
 
     y = y.detach().cpu()
     x_grad = x.grad.detach().cpu()
-    weight_grad = weight.grad.detach().cpu()
+    if affine:
+        weight_grad = weight.grad.detach().cpu()
 
     def compare(a, b, a_name, b_name, atol=1e-5, rtol=1e-8):
         test_case.assertTrue(
@@ -144,25 +150,40 @@ class TestRMSNorm(flow.unittest.TestCase):
             device="cuda",
         )
 
-    # @autotest(rtol=1e-03, atol=1e-03, check_graph=True)
-    # def test_group_norm_with_random_data(test_case):
-    #     channels = random(5, 20)
-    #     m = torch.nn.GroupNorm(
-    #         num_groups=random(1, 5),
-    #         num_channels=channels,
-    #         eps=random(0, 1) | nothing(),
-    #         affine=random(),
-    #     )
-    #     m.train(random())
-    #     device = random_device()
-    #     m.to(device)
-    #     x = random_tensor(ndim=4, dim1=channels).to(device)
-    #     y = m(x)
-    #     return y
+    def test_no_affine(test_case):
+        _test_rmsnorm(
+            test_case, shape=[4, 16], normalized_shape=[16], affine=False,
+        )
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # def test_groupnorm_nhwc(test_case):
-    #     _test_groupnorm_nhwc(test_case, (16, 64, 128, 128), 32)
+    def test_warp_impl(test_case):
+        _test_rmsnorm(
+            test_case, shape=[32, 1024], normalized_shape=[1024], dtype=flow.float16,
+        )
+        _test_rmsnorm(test_case, shape=[16, 512], normalized_shape=[512])
+        _test_rmsnorm(test_case, shape=[15, 512], normalized_shape=[512])
+        _test_rmsnorm(test_case, shape=[16, 511], normalized_shape=[511])
+        _test_rmsnorm(test_case, shape=[13, 499], normalized_shape=[499])
+
+    def test_block_smem_impl(test_case):
+        _test_rmsnorm(
+            test_case, shape=[16, 2048], normalized_shape=[2048], dtype=flow.float16,
+        )
+        _test_rmsnorm(test_case, shape=[8, 1536], normalized_shape=[1536])
+        _test_rmsnorm(test_case, shape=[8, 2048], normalized_shape=[2048])
+        _test_rmsnorm(test_case, shape=[7, 1536], normalized_shape=[1536])
+        _test_rmsnorm(test_case, shape=[8, 1533], normalized_shape=[1533])
+        _test_rmsnorm(test_case, shape=[7, 1533], normalized_shape=[1533])
+
+    def test_block_uncached_impl(test_case):
+        _test_rmsnorm(
+            test_case,
+            shape=[16, 1024 * 1024],
+            normalized_shape=[1024 * 1024],
+            dtype=flow.float16,
+        )
+        _test_rmsnorm(
+            test_case, shape=[8, 1024], normalized_shape=[1024], dtype=flow.double
+        )
 
 
 if __name__ == "__main__":
