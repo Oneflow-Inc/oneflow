@@ -98,7 +98,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
   const int64_t x_num_axes = x_shape.NumAxes();
   const int64_t w_num_axes = w_shape.NumAxes();
-  const int64_t b_num_axes = b_shape.NumAxes(); // should be 1
+  const int64_t b_num_axes = b_shape.NumAxes();  // should be 1
 
   const int32_t m_x_axis = x_num_axes - 1;
   const int32_t k_x_axis = x_num_axes - 2;
@@ -160,7 +160,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   // S(m axis) x B -> S(m axis)
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), m_x_axis)
-      .Broadcast(user_op::OpArg("bweight", 0))
+      .Broadcast(user_op::OpArg("weight", 0))
       .Broadcast(user_op::OpArg("bias", 0))
       .Split(out_and_add_to_output_args, max_num_axes - 2)
       .Build();
@@ -169,18 +169,34 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("x", 0))
       .Split(user_op::OpArg("weight", 0), n_w_axis)
-      .Split(user_op::OpArg("bias", 0), n_b_axis);
+      .Split(user_op::OpArg("bias", 0), n_b_axis)
       .Split(out_and_add_to_output_args, max_num_axes - 1)
       .Build();
 
   // S(a_k_axis) x S(b_k_axis) -> P
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), k_x_axis)
-      .Split(user_op::OpArg("weight", 0), k_x_axis)
-      .Broadcast(user_op::OpArg("bias", 0))
+      .Split(user_op::OpArg("weight", 0), k_w_axis)
+      .PartialSum(user_op::OpArg("bias", 0))
       .PartialSum(out_and_add_to_output_args)
       .Build();
-  
+
+  // P x B -> P
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("weight", 0))
+      .PartialSum(user_op::OpArg("bias", 0))
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+
+  // B x P -> P
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("weight", 0))
+      .PartialSum(user_op::OpArg("bias", 0))
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+
   return Maybe<void>::Ok();
 }
 
