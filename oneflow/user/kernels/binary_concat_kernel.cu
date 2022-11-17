@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -108,6 +109,18 @@ class ConcatKernel final : public user_op::OpKernel {
     const user_op::Tensor* in1_tensor = ctx->Tensor4ArgNameAndIndex("in", 1);
     CHECK_EQ(in0_tensor->data_type(), data_type);
     CHECK_EQ(in1_tensor->data_type(), data_type);
+    if (in0_tensor->shape_view().elem_cnt() == 0) {
+      CHECK_EQ(in1_tensor->shape_view(), out_tensor->shape_view());
+      Memcpy<DeviceType::kCUDA>(ctx->stream(), out_tensor->mut_dptr(), in1_tensor->dptr(),
+                                out_tensor->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
+      return;
+    }
+    if (in1_tensor->shape_view().elem_cnt() == 0) {
+      CHECK_EQ(in0_tensor->shape_view(), out_tensor->shape_view());
+      Memcpy<DeviceType::kCUDA>(ctx->stream(), out_tensor->mut_dptr(), in0_tensor->dptr(),
+                                out_tensor->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
+      return;
+    }
     CHECK_EQ(in0_tensor->shape_view().NumAxes(), num_axes);
     CHECK_EQ(in1_tensor->shape_view().NumAxes(), num_axes);
     for (int64_t i = 0; i < num_axes; ++i) {
