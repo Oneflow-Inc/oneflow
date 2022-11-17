@@ -1,49 +1,64 @@
-from resnet50 import resnet50
-import oneflow as torch
-import json
+from PIL import Image
 import numpy as np
+import json
+import os
+
+from imagenet1000_clsidx_to_labels import clsidx_2_labels
+from vision_resnet import resnet50
+import oneflow as flow
+
 np.random.seed(1)
-model = resnet50(num_classes=10)
-cross_entropy = torch.nn.CrossEntropyLoss(reduction="mean")
-def gen_weight():
-    ms = model.state_dict()
-    for k in ms:
-        ms[k] = ms[k].numpy().tolist()
-    f = open("torch_resnet50.json", "wb")
-    f.write(json.dumps(ms).encode())
-    f.close()
-params=model.state_dict() 
-# for k,v in params.items():
-#     print(k) 
-# print("----------------------------")
-def load_weight():
-    with open('/data/torch_test/torch_resnet50.json','r') as f:
-        lines = f.readlines()
-        ckpt = json.loads(lines[0])
-    changed_key = []
-    for key in ckpt.keys():
-        if key.find('num_batches_tracked')!=-1:
-            changed_key.append(key)
-    for key in changed_key:
-        ckpt.pop(key)
+model = resnet50(pretrained=False)
+cross_entropy = flow.nn.CrossEntropyLoss(reduction="mean")
 
-    for key in ckpt.keys():
-        w = ckpt[key]
-        w = np.array(w,dtype=np.float32)
-        ckpt[key] = torch.from_numpy(w)
-    model.load_state_dict(ckpt,strict=True)
+
 inp = np.random.randn(4,3,224,224)
-load_weight()
-inputs = torch.tensor(inp,dtype=torch.float32,requires_grad=True)
-inputs_n = inputs.to("npu")
-model = model.to("npu")
-optimizer = torch.optim.TORCH_SGD(model.parameters(), lr = 0.01, momentum=0.9)
-labels = torch.ones(4,dtype=torch.int32).to('npu')
-out = model(inputs_n)
-loss = cross_entropy(out, labels)
-loss.backward()
-optimizer.step()
 
+state_dict = flow.hub.load_state_dict_from_url('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet50.zip')
+model.load_state_dict(state_dict)
+model = model.to("npu")
+model.eval()
+
+inputs = flow.tensor(inp,dtype=flow.float32,requires_grad=False)
+inputs_n = inputs.to("npu")
+
+
+# optimizer = flow.optim.TORCH_SGD(model.parameters(), lr = 0.01, momentum=0.9)
+# labels = flow.ones(4,dtype=flow.int32).to('npu')
+out = model(inputs_n)
+# loss = cross_entropy(out, labels)
+# loss.backward()
+# optimizer.step()
+print("out.shape >>>>>>>>>> ", out)
+# flow.npu.synchronize()
+
+
+def load_image(image_path="fish.jpg"):
+    rgb_mean = [123.68, 116.779, 103.939]
+    rgb_std = [58.393, 57.12, 57.375]
+    im = Image.open(image_path)
+    im = im.resize((224, 224))
+    im = im.convert("RGB")
+    im = np.array(im).astype("float32")
+    im = (im - rgb_mean) / rgb_std
+    im = np.transpose(im, (2, 0, 1))
+    im = np.expand_dims(im, axis=0)
+    return np.ascontiguousarray(im, "float32")
+
+
+# image_path = "fish.jpg"
+image_path = "tiger.jpg"
+image = load_image(image_path)
+image = flow.tensor(image, dtype=flow.float32).to("npu")
+pred = model(image).softmax().numpy()
+prob = np.max(pred)
+clsidx = np.argmax(pred)
+image_cls = clsidx_2_labels[clsidx]
+print(
+        "predict image ({}) prob: {:.5f}, class name: {}".format(
+            os.path.basename(image_path), prob, image_cls
+        )
+    )
 
 
 
