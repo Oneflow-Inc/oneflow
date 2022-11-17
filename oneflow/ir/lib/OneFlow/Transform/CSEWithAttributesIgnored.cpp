@@ -87,7 +87,7 @@ struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> 
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
  public:
   explicit CSEWithAttributesIgnored() {}
-  explicit CSEWithAttributesIgnored(std::shared_ptr<CSEState> state) { state_ = state; }
+  explicit CSEWithAttributesIgnored(std::shared_ptr<CSEState> state):state_(state) { }
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
