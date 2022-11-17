@@ -625,7 +625,7 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
 }
 
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
-                                      bool mapping_size) {
+                                      bool is_mapping_size) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
@@ -752,7 +752,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
 
-    if (mapping_size) {
+    if (is_mapping_size) {
       for (const auto it : llvm::zip(keys, sizes)) {
         auto key = std::get<0>(it).c_str();
         auto size = std::get<1>(it);
@@ -772,7 +772,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
-    if (mapping_size) {
+    if (is_mapping_size) {
       for (const auto it : llvm::zip(keys, sizes)) {
         auto key = std::get<0>(it).c_str();
         auto size = std::get<1>(it);

@@ -36,9 +36,9 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op, bool mapping_size = false) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op, bool is_mapping_size = false) {
   OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, mapping_size))) {
+  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
     op->emitError("fail to convert user op attributes");
     exit(1);
   }
