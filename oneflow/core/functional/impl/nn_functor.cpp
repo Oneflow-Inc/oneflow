@@ -4323,17 +4323,25 @@ class SpmmCsrFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a_csr_row,
                            const std::shared_ptr<one::Tensor>& a_csr_col,
                            const std::shared_ptr<one::Tensor>& a_csr_val, const int64_t& a_num_rows,
-                           const int64_t& a_num_cols, const std::shared_ptr<one::Tensor>& b) const {
+                           const int64_t& a_num_cols, const std::shared_ptr<one::Tensor>& b,
+                           const bool& transpose_a,
+                           const bool& transpose_b) const {
     const auto& b_shape = b->shape();
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
-    CHECK_EQ_OR_RETURN(a_num_cols, b_shape->at(0))
-        << Error::RuntimeError() << "size mismatch, got [" << a_num_rows << ", " << a_num_cols
-        << "] x [" << std::to_string(b_shape->at(0)) << ", " << std::to_string(b_shape->at(1)) << "]";
+    CHECK_EQ_OR_RETURN(transpose_b, false)
+        << Error::RuntimeError() << "transpose for mat2 is not implemented yet!";
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("a_num_rows", "a_num_cols");
-    attrs.SetAllAttrs(a_num_rows, a_num_cols);
+    const int64_t spmm_dim_a = transpose_a ? a_num_rows : a_num_cols;
+    const int64_t spmm_dim_b = b_shape->at(0);
+
+    CHECK_EQ_OR_RETURN(spmm_dim_a, spmm_dim_b)
+        << Error::RuntimeError() << "spmm dim not match, got " << spmm_dim_a << " of mat1 and "
+        << spmm_dim_b << " of mat2, please check input!";
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("a_num_rows", "a_num_cols", "transpose_a", "transpose_b");
+  
+    attrs.SetAllAttrs(a_num_rows, a_num_cols, transpose_a, transpose_b);
     return OpInterpUtil::Dispatch<Tensor>(*spmm_csr_op_, {a_csr_row, a_csr_col, a_csr_val, b},
                                           attrs);
   }

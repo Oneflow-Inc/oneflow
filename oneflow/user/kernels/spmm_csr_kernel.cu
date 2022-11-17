@@ -47,16 +47,16 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     const auto B_num_rows = b->shape_view().At(0);
     const auto B_num_cols = b->shape_view().At(1);
 
-    int ldb = B_num_cols;
-    int ldc = B_num_cols;
-    int B_size = B_num_rows * B_num_cols;
-    int C_size = transpose_a? A_num_cols * B_num_cols: A_num_rows * B_num_cols;
+    const int ldb = B_num_cols;
+    const int ldc = B_num_cols;
+    const int B_size = B_num_rows * B_num_cols;
     float* dC = out_tensor->mut_dptr<float>();
 
     float alpha = 1.0f;
     float beta = 0.0f;
 
-
+    const auto C_num_rows = transpose_a? A_num_cols: A_num_rows;
+    cusparseOperation_t opA = transpose_a? CUSPARSE_OPERATION_TRANSPOSE: CUSPARSE_OPERATION_NON_TRANSPOSE;
     //--------------------------------------------------------------------------
     // CUSPARSE APIs
     cusparseSpMatDescr_t matA;
@@ -75,12 +75,12 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     OF_CUSPARSE_CHECK(cusparseCreateDnMat(&matB, B_num_rows, B_num_cols, ldb,
                                           const_cast<float*>(dB), CUDA_R_32F, CUSPARSE_ORDER_ROW));
     // Create dense matrix C
-    OF_CUSPARSE_CHECK(cusparseCreateDnMat(&matC, A_num_rows, B_num_cols, ldc, dC, CUDA_R_32F,
+    OF_CUSPARSE_CHECK(cusparseCreateDnMat(&matC, C_num_rows, B_num_cols, ldc, dC, CUDA_R_32F,
                                           CUSPARSE_ORDER_ROW));
     // allocate an external buffer if needed
     OF_CUSPARSE_CHECK(cusparseSpMM_bufferSize(
       cuda_stream->cusparse_handle(),
-      transpose_a ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE,
+      opA,
       CUSPARSE_OPERATION_NON_TRANSPOSE,
       &alpha, matA, matB, &beta, matC, CUDA_R_32F,
       CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize));
@@ -88,7 +88,7 @@ class CudaSpmmCsrKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
     OF_CUSPARSE_CHECK(cusparseSpMM(cuda_stream->cusparse_handle(),
-    transpose_a ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE,
+      opA,
       CUSPARSE_OPERATION_NON_TRANSPOSE, 
       &alpha, matA, matB, &beta, matC,
       CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, dBuffer));

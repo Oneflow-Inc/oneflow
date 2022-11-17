@@ -21,16 +21,12 @@ namespace oneflow {
 /* static */ Maybe<void> SpmmCsrOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   bool transpose_a = ctx->Attr<bool>("transpose_a");
   bool transpose_b = ctx->Attr<bool>("transpose_b");
-  CHECK_EQ_OR_RETURN(transpose_b, true)
-      << ctx->op_name() << ": transpose for mat b is not implemented yet";
-      
+  CHECK_EQ_OR_RETURN(transpose_b, false)
+      << ctx->op_name() << ": transpose for mat 2 is not implemented yet";
+
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  int64_t c_row = 0;
-  if(!transpose_a) {
-    c_row = ctx->Attr<int64_t>("a_num_rows"); // C = A B 
-  } else {
-    c_row = ctx->Attr<int64_t>("a_num_cols"); // C = A^T B
-  }
+
+  int64_t c_row = transpose_a? ctx->Attr<int64_t>("a_num_cols"): ctx->Attr<int64_t>("a_num_rows");
   int64_t c_col = b.shape().At(1);
   ctx->SetOutputShape("out", 0,  Shape({c_row, c_col}));
 
