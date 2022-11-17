@@ -39,6 +39,11 @@ OpKernelRegistry& OpKernelRegistry::SetInplaceProposalFn(InplaceProposalFn fn) {
   return *this;
 }
 
+OpKernelRegistry& OpKernelRegistry::SetPriority(int32_t priority) {
+  result_.priority = priority;
+  return *this;
+}
+
 Maybe<OpKernelRegistry&> OpKernelRegistry::Finish() {
   CHECK_OR_RETURN(result_.create_fn != nullptr)
       << "No Create function for " << result_.op_type_name;
