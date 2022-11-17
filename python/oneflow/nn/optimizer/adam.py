@@ -53,8 +53,9 @@ class Adam(Optimizer):
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
-        do_bias_correction (bool, optional): Whether do bias correction (default: True)
-        fused (bool, optional): whether use fused implementation (default: False)
+        do_bias_correction (bool, optional): whether to do bias correction (default: True)
+        fused (bool, optional): whether to divide all the parameters into several groups, then
+            update each group of parameters with the fused kernel. (default: False)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -142,7 +143,7 @@ class Adam(Optimizer):
         super().__init__(params, options)
 
         if self.fused and amsgrad:
-            warnings.warn("Do not support amsgrad=True for fused Adam, trying default.")
+            warnings.warn("Fused Adam is not supported when amsgrad=True.")
             self.fused = False
 
         for param_group in self.param_groups:
@@ -151,9 +152,7 @@ class Adam(Optimizer):
                 self._state[param] = dict()
 
                 if self.fused and not param.is_cuda:
-                    warnings.warn(
-                        "Only cuda param can be used for fused Adam, trying default. "
-                    )
+                    warnings.warn("Fused Adam only support cuda parameters.")
                     self.fused = False
 
         self._op_with_amsgrad = (

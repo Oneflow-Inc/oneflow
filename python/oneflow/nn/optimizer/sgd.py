@@ -131,9 +131,7 @@ class SGD(Optimizer):
                 self._state[param] = dict()
 
                 if self.fused and not param.is_cuda:
-                    warnings.warn(
-                        "Only cuda param can be used for fused SGD, trying default. "
-                    )
+                    warnings.warn("Fused SGD only support cuda parameters.")
                     self.fused = False
 
         self._momentum_sgd = (
