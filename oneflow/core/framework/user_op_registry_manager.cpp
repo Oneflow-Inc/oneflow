@@ -20,8 +20,11 @@ limitations under the License.
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL, false);
 
 namespace user_op {
 
@@ -91,8 +94,7 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
 
   const OpKernelRegistryResult* ret = nullptr;
   int32_t cur_priority = kKernelPriorityFallback;
-  static bool enable_priority_experimental =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL", false);
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
   for (const auto& reg_val : it->second) {
     if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
       continue;
@@ -101,6 +103,12 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
       if (ret == nullptr || reg_val.priority > cur_priority) {
         ret = &reg_val;
         cur_priority = reg_val.priority;
+      } else if (ret != nullptr && reg_val.priority == cur_priority) {
+        LOG(WARNING)
+            << "There are more than one kernels with same priority matching Current OperatorConf. "
+            << GetErrorMsgOfSearchedOp(ctx);
+      } else {
+        // do nothing
       }
     }
   }
@@ -122,8 +130,7 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
                                                     const KernelRegContext& ctx) {
   auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) { return false; }
-  static bool enable_priority_experimental =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL", false);
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
   for (const auto& reg_val : it->second) {
     if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
       continue;
