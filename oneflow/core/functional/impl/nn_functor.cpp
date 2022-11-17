@@ -4076,7 +4076,6 @@ class RocAucScoreFunctor {
 class MultiTensorSgdUpdateFunctor {
  public:
   MultiTensorSgdUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
@@ -4109,7 +4108,6 @@ class MultiTensorSgdUpdateFunctor {
 class MultiTensorMomentumUpdateFunctor {
  public:
   MultiTensorMomentumUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_momentum_update")
@@ -4149,7 +4147,6 @@ class MultiTensorMomentumUpdateFunctor {
 class MultiTensorAdamUpdateFunctor {
  public:
   MultiTensorAdamUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
