@@ -2850,23 +2850,45 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let has_data_type_infer_fn = 1;
 }
 
-<<<<<<< HEAD
+def OneFlow_FusedFastGeluMulOp : OneFlow_BaseOp<"fused_fast_gelu_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$multiplier
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$out_diff,
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$multiplier
+  );
+  let output = (outs
+    OneFlow_Tensor:$in_diff,
+    OneFlow_Tensor:$multiplier_diff
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FusedMSASoftmaxOp : OneFlow_BaseOp<"fused_msa_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$qmk,
     OneFlow_Tensor:$mask,
     Optional<OneFlow_Tensor>:$bias
-=======
-def OneFlow_FusedFastGeluMulOp : OneFlow_BaseOp<"fused_fast_gelu_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$multiplier
->>>>>>> master
   );
   let output = (outs
     OneFlow_Tensor:$out
   );
-<<<<<<< HEAD
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.125">:$scale,
     DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
@@ -2891,15 +2913,12 @@ def OneFlow_FusedMSASoftmaxGradOp : OneFlow_BaseOp<"fused_msa_softmax_grad", [No
     DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
     DefaultValuedAttr<BoolAttr, "false">:$inplace
   );
-=======
->>>>>>> master
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
 
-<<<<<<< HEAD
 def OneFlow_FusedMSASigmoidMulOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$g,
@@ -2910,17 +2929,6 @@ def OneFlow_FusedMSASigmoidMulOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul", [NoSi
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$inplace
-=======
-def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$out_diff,
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$multiplier
-  );
-  let output = (outs
-    OneFlow_Tensor:$in_diff,
-    OneFlow_Tensor:$multiplier_diff
->>>>>>> master
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2928,7 +2936,6 @@ def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", 
   let has_data_type_infer_fn = 1;
 }
 
-<<<<<<< HEAD
 def OneFlow_FusedMSASigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout,
@@ -2982,8 +2989,6 @@ def OneFlow_FusedMSADropoutAddGradOp : OneFlow_BaseOp<"fused_msa_dropout_add_gra
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-=======
->>>>>>> master
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 // Group: IDEMPOTENT
