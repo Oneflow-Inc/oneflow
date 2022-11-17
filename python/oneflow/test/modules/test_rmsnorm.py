@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import numpy as np
 import unittest
 from collections import OrderedDict
@@ -138,6 +139,7 @@ def _test_rmsnorm(
             )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestRMSNorm(flow.unittest.TestCase):
     def test_real_example(test_case):
