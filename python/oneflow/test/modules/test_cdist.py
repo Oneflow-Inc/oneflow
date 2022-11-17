@@ -26,6 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestCDist(flow.unittest.TestCase):
     @autotest(n=2, check_graph=True)
     def test_zero_cdist(test_case):
+        device = random_device()
         dim0 = random()
         dim2 = random()
         mode = random_utils.choice(
@@ -35,12 +36,13 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
+        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
+        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         return torch.cdist(x1, x2, p=0, compute_mode=mode)
 
     @autotest(n=2, check_graph=True)
     def test_one_cdist(test_case):
+        device = random_device()
         dim0 = random()
         dim2 = random()
         mode = random_utils.choice(
@@ -50,12 +52,13 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
+        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
+        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         return torch.cdist(x1, x2, p=1, compute_mode=mode)
 
     @autotest(n=2, check_graph=True)
     def test_two_cdist(test_case):
+        device = random_device()
         dim0 = random()
         dim2 = random()
         mode = random_utils.choice(
@@ -65,12 +68,13 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
+        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
+        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         return torch.cdist(x1, x2, p=2, compute_mode=mode)
 
     @autotest(n=2, check_graph=True)
     def test_infi_cdist(test_case):
+        device = random_device()
         dim0 = random()
         dim2 = random()
         mode = random_utils.choice(
@@ -80,12 +84,13 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
+        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
+        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         return torch.cdist(x1, x2, p=float("inf"), compute_mode=mode)
 
     @autotest(n=5, check_graph=True)
     def test_random_p_cdist(test_case):
+        device = random_device()
         dim0 = random()
         dim2 = random()
         mode = random_utils.choice(
@@ -95,8 +100,8 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
+        x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
+        x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         p = random(0, 4).to(float)
         return torch.cdist(x1, x2, p=p, compute_mode=mode)
 
