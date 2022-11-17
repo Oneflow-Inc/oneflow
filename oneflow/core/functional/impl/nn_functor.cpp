@@ -845,7 +845,25 @@ class RMSNormFunctor {
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized_shape", "epsilon");
     attrs.SetAllAttrs(normalized_shape, epsilon);
-    if (weight) { return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {x, JUST(weight)}, attrs); }
+    if (weight) {
+      if (x->dtype()->data_type() != JUST(weight)->dtype()->data_type()) {
+        std::shared_ptr<Tensor> rise_x = x;
+        std::shared_ptr<Tensor> rise_weight = JUST(weight);
+        DataType rise_type = DataType::kFloat;
+        if (rise_x->dtype()->data_type() == DataType::kDouble
+            || rise_weight->dtype()->data_type() == DataType::kDouble) {
+          rise_type = DataType::kDouble;
+        }
+        if (rise_x->dtype()->data_type() != rise_type) {
+          rise_x = JUST(functional::Cast(rise_x, DType{rise_type}, /*pin_memory=*/false));
+        }
+        if (rise_weight->dtype()->data_type() != rise_type) {
+          rise_weight = JUST(functional::Cast(rise_weight, DType{rise_type}, /*pin_memory=*/false));
+        }
+        return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {rise_x, rise_weight}, attrs);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {x, JUST(weight)}, attrs);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
