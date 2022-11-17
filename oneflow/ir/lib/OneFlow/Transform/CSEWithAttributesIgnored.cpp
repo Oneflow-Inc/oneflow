@@ -28,8 +28,8 @@ namespace oneflow {
 
 namespace {
 
-static auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
-static auto MAGIC_SCOPE_SYMBOL_ID = 77777;
+static const auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
+static const auto MAGIC_SCOPE_SYMBOL_ID = 77777;
 
 struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
   explicit EraseAttributes(mlir::MLIRContext* context, std::shared_ptr<CSEState> state)
