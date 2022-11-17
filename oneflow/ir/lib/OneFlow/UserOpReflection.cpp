@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "OneFlow/UserOpReflection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 
 namespace mlir {
 
@@ -128,7 +129,7 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
 }
 
 Source GetOpSourceByName(Operation* op, const std::string& to_find) {
-  if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
+  if (auto user_op = llvm::dyn_cast_or_null<UserOpCompatible>(op)) {
     auto found = [&](std::vector<std::string> keys,
                      bool find_in_results /*or in operands*/ = false) -> int {
       auto offset = 0;
@@ -140,12 +141,7 @@ Source GetOpSourceByName(Operation* op, const std::string& to_find) {
       return -1;
     };
 
-    if (auto offset = found(*user_op.inputKeys()); offset != -1) { return {Source::INPUT, offset}; }
-    if (auto offset = found(*user_op.outputKeys(), true); offset != -1) {
-      return {Source::OUTPUT, offset};
-    }
-
-    if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    if (auto alternative_name = dyn_cast_or_null<HasAlternativeOpTypeName>(op)) {
       if (auto offset = found(*alternative_name.inputKeys()); offset != -1) {
         return {Source::INPUT, offset};
       }
@@ -155,10 +151,15 @@ Source GetOpSourceByName(Operation* op, const std::string& to_find) {
     }
 
     if (to_find == "tmp_buffer") { return {Source::BUFFER, 0}; }
+
+    if (auto offset = found(*user_op.inputKeys()); offset != -1) { return {Source::INPUT, offset}; }
+    if (auto offset = found(*user_op.outputKeys(), true); offset != -1) {
+      return {Source::OUTPUT, offset};
+    }
+
     op->emitError(to_find + " not found in this op");
     return {Source::INVALID, -1};
   } else {
-    op->dump();
     op->emitError("Not support op which is not user  op");
     return {Source::INVALID, -1};
   }

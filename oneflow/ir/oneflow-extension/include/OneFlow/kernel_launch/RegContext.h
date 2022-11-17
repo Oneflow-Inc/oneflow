@@ -45,8 +45,8 @@ class RegContext final : public user_op::KernelRegContext {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
 
-  ::mlir::Operation* GetOp() const {return op_;};
-  const user_op::OpKernel* GetKernel() const {return kernel_;};
+  ::mlir::Operation* GetOp() const { return op_; };
+  const user_op::OpKernel* GetKernel() const { return kernel_; };
 
   size_t GetTmpBufferSize();
 

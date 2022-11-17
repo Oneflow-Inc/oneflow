@@ -624,7 +624,8 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
   return ConvertDT(dt_attr.getValue(), data_type);
 }
 
-LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
+LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
+                                      bool mapping_size) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
@@ -750,6 +751,17 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+
+    if (mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_input();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   {
     std::vector<std::string> keys{};
@@ -760,6 +772,16 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+    if (mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_output();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   return success();
 }

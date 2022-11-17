@@ -36,9 +36,9 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op, bool mapping_size = false) {
   OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf))) {
+  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, mapping_size))) {
     op->emitError("fail to convert user op attributes");
     exit(1);
   }
@@ -97,11 +97,16 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
   } else {
     LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
   }
+  auto op_name = GetOp()->getName().stripDialect().str();
+  if (auto op_type_name = GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
+    op_name = op_type_name.str();
+  }
 
-  reg_res_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      GetOp()->getName().stripDialect().str(), *this));
+  reg_res_ =
+      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_name, *this));
   kernel_ = reg_res_->create_fn();
 
+  conf_wrapper_ = GetConfWrapper(op_, true);
 }
 
 DeviceType RegContext::device_type() const { return device_type_; }
