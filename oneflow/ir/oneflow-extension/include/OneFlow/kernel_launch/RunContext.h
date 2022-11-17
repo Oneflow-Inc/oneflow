@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/TmpBufferManager.h"
 #include "OneFlow/OKL/OKLOps.h"
 
 namespace oneflow {
@@ -54,6 +55,7 @@ class RunContext final : public user_op::KernelComputeContext {
 
   std::shared_ptr<user_op::OpKernelState> kernel_state_;
   std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
+  std::shared_ptr<okl::TmpBufferManager> tmp_buffer_manager_;
 };
 }  // namespace okl
 }  // namespace oneflow

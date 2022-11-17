@@ -62,12 +62,12 @@ class InferContext final : public user_op::InferContext {
   DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const override { TODO(); }
   void SetDtype4ArgNameAndIndex(const std::string&, int32_t, DataType) override { TODO(); }
 
-  const std::vector<std::pair<std::string, int32_t>>& inputs() const override { 
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return reg_ctx_->inputs();
-   }
+  }
   const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
     return reg_ctx_->outputs();
-   }
+  }
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     return reg_ctx_->user_op_conf().input(arg_name, index);

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferMisc/InitContext.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferMisc/InferContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -32,6 +33,9 @@ RunContext::RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeCo
   InitContext init_ctx(this);
   kernel_state_ = reg_ctx_->kernel_->CreateOpKernelState(&init_ctx);
   kernel_cache_ = reg_ctx_->kernel_->InitOpKernelCache(&init_ctx);
+
+  tmp_buffer_manager_ =
+      TmpBufferManager::InitTmpBufferManager(comp_ctx_->Tensor4ArgNameAndIndex("tmp_buffer", 0));
 }
 
 const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -73,7 +77,8 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           return nullptr;
         });
   } else if (source.type == Source::BUFFER) {
-    return comp_ctx_->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
+    return tmp_buffer_manager_->FetchTmpBuffer(op_name);
   }
   exit(1);
 }
