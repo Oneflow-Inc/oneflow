@@ -48,9 +48,8 @@ class TmpBufferMapper final : public oneflow::user_op::Tensor {
 using namespace user_op;
 class TmpBufferManager {
  public:
-  static std::unordered_map<std::string, size_t> off_set_list;
+  static std::unordered_map<std::string, size_t> offset_list_;
   static std::shared_ptr<TmpBufferManager> InitTmpBufferManager(user_op::Tensor* tensor);
-
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
   explicit TmpBufferManager(user_op::Tensor* tensor);

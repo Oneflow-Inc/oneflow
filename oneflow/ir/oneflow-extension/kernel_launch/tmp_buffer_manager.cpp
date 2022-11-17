@@ -23,7 +23,7 @@ namespace oneflow {
 namespace okl {
 
 using namespace user_op;
-std::unordered_map<std::string, size_t> TmpBufferManager::off_set_list;
+std::unordered_map<std::string, size_t> TmpBufferManager::offset_list_;
 std::shared_ptr<TmpBufferManager> TmpBufferManager::InitTmpBufferManager(user_op::Tensor* tensor) {
   return std::make_shared<TmpBufferManager>(tensor);
 }
@@ -54,7 +54,7 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
       if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
 
       auto op_name = reg_op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-      off_set_list[op_name] = max_size;
+      offset_list_[op_name] = max_size;
       auto size = RegContext(reg_op).GetTmpBufferSize();
       max_size += size;
     }
@@ -63,7 +63,7 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
 }
 
 TmpBufferManager::TmpBufferManager(user_op::Tensor* tensor) {
-  for (const auto& it : off_set_list) {
+  for (const auto& it : offset_list_) {
     manager_.emplace(it.first, TmpBufferMapper(tensor, it.second));
   }
 }
