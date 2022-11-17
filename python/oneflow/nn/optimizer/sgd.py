@@ -122,18 +122,17 @@ class SGD(Optimizer):
         options["weight_decay"] = weight_decay
         options["nesterov"] = nesterov
         options["maximize"] = maximize
+        options["fused"] = fused
         super().__init__(params, options)
-
-        self.fused = fused
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-                if self.fused and not param.is_cuda:
+                if param_group["fused"] and not param.is_cuda:
                     warnings.warn("Fused SGD only support cuda parameters.")
-                    self.fused = False
+                    param_group["fused"] = False
 
         self._momentum_sgd = (
             flow.stateful_op("momentum_update")
@@ -230,11 +229,10 @@ class SGD(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            if self.fused:
-                for param_group in self.param_groups:
+            for param_group in self.param_groups:
+                if param_group["fused"]:
                     self._fused_update(param_group)
-            else:
-                for param_group in self.param_groups:
+                else:
                     self._single_tensor_update(param_group)
 
         self._state["step"] = self._state["step"] + 1
