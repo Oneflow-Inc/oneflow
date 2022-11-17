@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace alphafold {
 namespace attn {
-template<typename SRC, typename DST = SRC>
+template<typename SRC, typename DST>
 struct MSALoadWithBias {
   MSALoadWithBias(const SRC* q, const SRC* m, const SRC* p, const SRC scale, int64_t stride,
                   int64_t row_size)
@@ -53,7 +53,7 @@ struct MSALoadWithBias {
   int64_t row_size;
 };
 
-template<typename SRC, typename DST = SRC>
+template<typename SRC, typename DST>
 struct MSALoad {
   MSALoad(const SRC* q, const SRC* m, const SRC scale, int64_t stride, int64_t row_size)
       : q(q), m(m), scale(scale), stride(stride), row_size(row_size) {}
@@ -78,7 +78,7 @@ struct MSALoad {
   int64_t row_size;
 };
 
-template<typename T, typename ComputeType>
+template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
 void LaunchMSAWithBiasSoftmaxForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
                                            const T* bias, T scale, const int64_t stride,
                                            const int64_t row_size, const int64_t rows,
@@ -89,7 +89,7 @@ void LaunchMSAWithBiasSoftmaxForwardKernel(cudaStream_t stream, T* out, const T*
       stream, load, store, rows, cols)));
 };
 
-template<typename T, typename ComputeType>
+template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
 void LaunchMSASoftmaxForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
                                    T scale, const int64_t stride, const int64_t row_size,
                                    const int64_t rows, const int64_t cols) {
@@ -99,24 +99,26 @@ void LaunchMSASoftmaxForwardKernel(cudaStream_t stream, T* out, const T* qmk, co
       stream, load, store, rows, cols)));
 };
 
-template<typename SRC, typename DST = SRC>
+template<typename SRC, typename DST>
 struct MSAGradStore {
   MSAGradStore(DST* dx, const SRC scale, int64_t row_size)
       : dx(dx), scale(scale), row_size(row_size) {}
   template<int N>
   __device__ void store(const SRC* dout, int64_t row, int64_t col) const {
-    cuda::softmax::Pack<SRC, N> qmk;
+    cuda::softmax::Pack<DST, N> qmk;
     const int64_t offset = (row * row_size + col) / N;
 #pragma unroll
-    for (int i = 0; i < N; ++i) { qmk.elem[i] = static_cast<DST>(dout[i] * scale); }
+    for (int i = 0; i < N; ++i) {
+      qmk.elem[i] = static_cast<DST>(dout[i]) * static_cast<DST>(scale);
+    }
     *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dx) + offset) = qmk.storage;
   }
-  SRC* dx;
+  DST* dx;
   const SRC scale;
   int64_t row_size;
 };
 
-template<typename T, typename ComputeType>
+template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
 void LaunchMSASoftmaxBackwardKernel(cudaStream_t stream, T* dx, const T* y, const T* dy, T scale,
                                     const int64_t row_size, const int64_t rows,
                                     const int64_t cols) {
@@ -142,7 +144,7 @@ class FusedMSASoftmaxKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* qmk = ctx->Tensor4ArgNameAndIndex("qmk", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
-    const T scale = ctx->Attr<T>("scale");
+    const T scale = ctx->Attr<float>("scale");
     const std::string mode = ctx->Attr<std::string>("mode");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -165,13 +167,13 @@ class FusedMSASoftmaxKernel final : public user_op::OpKernel {
 
     if (ctx->has_input("bias", 0)) {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-      alphafold::attn::LaunchMSAWithBiasSoftmaxForwardKernel<T, T>(
+      alphafold::attn::LaunchMSAWithBiasSoftmaxForwardKernel<T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
           mask->dptr<T>(), bias->dptr<T>(), scale, h * S1, S2, B * h * S1, S2);
     } else {
       int64_t stride = mode == "template" ? B * h * S1 : (mode == "col" ? h * S1 : h);
       int64_t rows = mode == "global_col" ? h * B : B * h * S1;
-      alphafold::attn::LaunchMSASoftmaxForwardKernel<T, T>(
+      alphafold::attn::LaunchMSASoftmaxForwardKernel<T>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), qmk->dptr<T>(),
           mask->dptr<T>(), scale, stride, S2, rows, S2);
     }
@@ -186,8 +188,11 @@ class FusedMSASoftmaxKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(nv_bfloat16)
+#endif
 REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_SOFTMAX_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
@@ -201,7 +206,7 @@ class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const T scale = ctx->Attr<T>("scale");
+    const T scale = ctx->Attr<float>("scale");
     const std::string mode = ctx->Attr<std::string>("mode");
     auto y_shape = y->shape_view();
 
@@ -209,7 +214,7 @@ class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
     int64_t rows = y_shape.At(0) * y_shape.At(1), S = y_shape.At(axes - 1);
     rows = mode == "global_col" ? rows : rows * y_shape.At(2);
 
-    alphafold::attn::LaunchMSASoftmaxBackwardKernel<T, T>(
+    alphafold::attn::LaunchMSASoftmaxBackwardKernel<T>(
         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), dx->mut_dptr<T>(), y->dptr<T>(),
         dy->dptr<T>(), scale, S, rows, S);
   }
@@ -223,8 +228,11 @@ class FusedMSASoftmaxGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(nv_bfloat16)
+#endif
 REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(double)
 
 namespace alphafold {
 namespace gate {
@@ -296,7 +304,6 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("g", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
@@ -334,7 +341,6 @@ class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dout", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSADropoutAddKernel final : public user_op::OpKernel {
@@ -375,7 +381,6 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSADropoutAddGradKernel final : public user_op::OpKernel {
@@ -407,5 +412,4 @@ class FusedMSADropoutAddGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dout", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_DROPOUT_ADD_GRAD_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_DROPOUT_ADD_GRAD_KERNEL_GPU(double)
 }  // namespace oneflow
