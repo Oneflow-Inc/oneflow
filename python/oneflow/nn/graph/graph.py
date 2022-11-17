@@ -18,10 +18,10 @@ import os
 import sys
 import time
 import inspect
+import weakref
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List, Callable
-import weakref
 from google.protobuf import text_format
 
 import oneflow
@@ -35,7 +35,13 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, BlockType, get_block_cls
+from oneflow.nn.graph.proxy import (
+    Proxy,
+    GraphBlockType,
+    get_proxy_cls,
+    GraphModule,
+    GraphTensor,
+)
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -104,7 +110,7 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
-            >>> class SubclassGraph(flow.nn.Graph):
+            >>> class CustomGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__() # MUST be called
             ...         # Then define the graph attributes
@@ -346,10 +352,10 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
+            assert block.to(GraphModule).type == GraphBlockType.MODULE
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
-            module = block.origin
+            module = block.to(Module)
             if module is not None:
                 module.state_dict(
                     sub_destination, "", keep_vars=False,
@@ -399,7 +405,7 @@ class Graph(object):
         for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
-                self._blocks[name].origin.load_state_dict(item, strict)
+                self._blocks[name].to(Module).load_state_dict(item, strict)
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(item, Tensor)
@@ -492,8 +498,8 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
-                assert block.type == BlockType.MODULE
-                block.debug(
+                assert block.to(GraphModule).type == GraphBlockType.MODULE
+                block.to(GraphModule).debug(
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
@@ -647,7 +653,7 @@ class Graph(object):
 
     def __ensure_state_tensors_contiguous(self):
         for state_block in self._state():
-            state_tensor = state_block.origin
+            state_tensor = state_block.to(Tensor)
             if not state_tensor.is_contiguous():
                 state_tensor.contiguous_()
 
@@ -657,18 +663,21 @@ class Graph(object):
         state_op_names = []
 
         for state_block in self._state():
-            state_tensor = state_block.origin
+            state_tensor = state_block.to(Tensor)
             # If any state tensor is global tensor, graph is in global view.
             if state_tensor.is_global:
                 self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
-            op_name = state_block.name_prefix + state_block.name
+            op_name = (
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
+            )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
 
-            if state_block.type == BlockType.PARAMETER:
+            if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
@@ -690,14 +699,17 @@ class Graph(object):
     def _create_states_builder(self):
         state2lazy_builder = dict()
         for state_block in self._state():
-            state_tensor = state_block.origin
-            op_name = state_block.name_prefix + state_block.name
+            state_tensor = state_block.to(Tensor)
+            op_name = (
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
+            )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
             else:
-                if state_block.type == BlockType.PARAMETER:
+                if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
@@ -718,30 +730,30 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
-                state_block.type == BlockType.PARAMETER
-                and state_block.origin.grad is not None
-                and state_block.origin.grad.is_lazy
+                state_block.to(GraphTensor).type == GraphBlockType.PARAMETER
+                and state_block.to(Tensor).grad is not None
+                and state_block.to(Tensor).grad.is_lazy
             ):
-                variable.append(state_block.origin)
-                gradients.append(state_block.origin.grad)
+                variable.append(state_block.to(Tensor))
+                gradients.append(state_block.to(Tensor).grad)
         oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
 
     @staticmethod
-    def to_graph(func):
-        """Make a function to do static graph run with nn.Graph.
+    def trace(func):
+        """Trace a function to do static graph and run with nn.Graph.
 
-        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+        After decorating a function with ``trace``, the function is turned into a naive `nn.Graph`.
 
         Note:
             This is just a quick way to run a simple function with nn.Graph.
-            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``trace``.
 
         For example:
 
         .. code-block:: python
 
             >>> import oneflow as flow
-            >>> @flow.nn.Graph.to_graph
+            >>> @flow.nn.Graph.trace
             ... def test_func(x):
             ...     return x * 2
             >>> input = flow.tensor((1, 2), dtype=flow.float32)
@@ -750,14 +762,14 @@ class Graph(object):
             tensor([2., 4.], dtype=oneflow.float32)
 
         ..
-            Feature Stage of Feature [to_graph].
+            Feature Stage of Feature [trace].
             - Maintainer List [@strint]
             - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
 
         """
         assert inspect.isfunction(
             func
-        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        ), f"nn.Graph.trace only support function currently, so {func} must be a function."
         graph_cls_name = func.__name__ + "_graph"
 
         def init(self):
@@ -938,7 +950,7 @@ class Graph(object):
             )
             modules_has_training = False
             for item in self._blocks.values():
-                if item._origin.training:
+                if item.to(Module).training:
                     modules_has_training = True
                     break
             if (
@@ -1316,7 +1328,7 @@ class Graph(object):
 
         return self.__map_io(io_type, func, *args, **kwargs)
 
-    def _add_block(self, name: str, module: Module = None) -> None:
+    def _add_module(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
         be called in nn.Graph.build.
 
@@ -1324,8 +1336,8 @@ class Graph(object):
             name (str): name of the child block. The child block can be accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
 
-        Just assign nn.Module in nn.Graph, _add_block will be called to add the
-        module as a Block:
+        Just assign nn.Module in nn.Graph, _add_module will be called to add the
+        module as a ProxyModule:
 
         For example:
 
@@ -1344,9 +1356,10 @@ class Graph(object):
 
         The block can be accessed as an attribute using the given name.
             >>> g = LinearGraph()
-            >>> print(repr(g.linear))
+            >>> print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
+              (GraphModule:linear()): ()
             )
         """
         if "_name" not in self.__dict__:
@@ -1366,13 +1379,13 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
 
-        self._blocks[name] = get_block_cls(module)(
+        self._blocks[name] = get_proxy_cls(module)(
             "", name, module, weakref.proxy(self)
         )
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
-            self._add_block(name, value)
+            self._add_module(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
                 "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "
