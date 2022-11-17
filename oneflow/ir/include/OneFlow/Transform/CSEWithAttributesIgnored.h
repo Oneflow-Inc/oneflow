@@ -13,22 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CSEWITHATTRIBUTESIGNORED_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CSEWITHATTRIBUTESIGNORED_H_
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
 namespace oneflow {
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
-std::unique_ptr<mlir::Pass> createKernelLaunchFunctionPass();
-std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
-std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
-std::unique_ptr<mlir::Pass> createGroupMatMul();
+
+struct CSEState {
+  llvm::DenseMap<Operation*, IntegerAttr> scopeSymbolIDs;
+  llvm::DenseMap<Operation*, StringAttr> opNames;
+};
+std::unique_ptr<mlir::Pass> createCSEWithAttributesIgnored();
+std::unique_ptr<mlir::Pass> createCSEPutAttributes();
+std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
+    std::shared_ptr<CSEState> state);
 
 }  // namespace oneflow
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CSEWITHATTRIBUTESIGNORED_H_

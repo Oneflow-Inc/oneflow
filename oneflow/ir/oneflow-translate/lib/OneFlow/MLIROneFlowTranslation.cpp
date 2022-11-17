@@ -781,34 +781,59 @@ void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_TIMING", false)) { pm.enableTiming(); }
   mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
-  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
+  // TODO: add a IsFirstIRPass func
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_CSE", false)
+      && job_wrapper.IsLastIRPass() == false) {
+    auto cse_state = std::make_shared<CSEState>();
+    auto passes = createCSEPasses(cse_state);
+    pm.addPass(std::move(passes.first));
+    pm.addPass(createCSEPass());
+    pm.addPass(std::move(passes.second));
+  }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
+  // TODO: support backward or put it in a env flag
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_GROUP_MATMUL", false)) {
+    pm.addPass(oneflow::createGroupMatMul());
+  }
+  if (!job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
-  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createKernelLaunchFunctionPass());
   }
   pm.addPass(createCanonicalizerPass());
-  if (std::getenv("ONEFLOW_MLIR_PRINT_STATS") != nullptr) { pm.addPass(createPrintOpStatsPass()); }
-  llvm::raw_string_ostream os_graphviz(graphviz);
-  pm.addPass(createPrintOpGraphPass(os_graphviz));
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {
+    pm.addPass(createPrintOpStatsPass());
+  }
+  const bool shouldPrintGraphviz =
+      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_OP_GRAPH", false);
+  if (shouldPrintGraphviz) {
+    llvm::raw_string_ostream os_graphviz(graphviz);
+    pm.addPass(createPrintOpGraphPass(os_graphviz));
+  }
   if (mlir::failed(pm.run(*module))) {
     module->emitError("Failed to run round-trip passes");
     return failure();
   }
-  job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
+  if (shouldPrintGraphviz) {
+    job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
+  }
   DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   return success();
 }
@@ -839,7 +864,9 @@ void RoundTripOneFlowJob(
   if (succeeded(imp.ProcessJob())) {
     DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.imported");
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)
+        && job_wrapper.IsLastIRPass()) {
+      // for FileCheck
       module->print(llvm::outs());
     }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
