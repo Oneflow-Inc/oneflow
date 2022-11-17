@@ -39,22 +39,6 @@ enum TaskClassifier : int {
   kRunALAP = 3
 };
 
-// deciding parameter
-// The sorting order of nodes for the straighten algorithm
-enum StraightenOrder : int {
-  kTributaryLayerAscend = 0,     // small tributary layers go first
-  kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
-  kLayerAscend = 2,              // first in first out
-  kMemoryIncrementAscend = 3,    // small memory increment go first
-  kExceedTimeAscend = 4,         // small exceed time go first
-
-  kTributaryLayerDescend = 100,     // large tributary layers go first
-  kDistanceToOverlapDescend = 101,  // long distance to overlap go first
-  kLayerDescend = 102,              // last in first out
-  kMemoryIncrementDescend = 103,    // large memory increment go first
-  kExceedTimeDescend = 104,         // large exceed time go first
-};
-
 // The difference between a descending order and its corresponding ascending order
 const int kDiff4AscendDescend = 100;
 
@@ -173,29 +157,6 @@ bool IsTransferNode(TaskType task_type) {
     case TaskType::kSspVariableProxy: return true;  // 0
     default: return false;
   }
-}
-
-// Some operators have longer time in cpu and less time in gpu.
-// Running those operators without overlap would cause large gap during each iteration.
-// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
-// functions on cpu.
-bool ShortGpuTime(const OperatorConf& op_conf) {
-  if (op_conf.has_variable_conf()) {
-    // Variable operators would not be run. They just create tensors.
-    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-    return true;
-  }
-  if (op_conf.has_user_conf()) {
-    const auto& op_type_name = op_conf.user_conf().op_type_name();
-    // They are sorted according to frequency of occurrences in stable diffusion
-    if (op_type_name == "expand_dims"  // 90
-        || op_type_name == "cast"      // 16
-        || op_type_name == "expand"    // 2
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 // Classifier for the set according to the task type
@@ -372,6 +333,29 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 }
 
 }  // anonymous namespace
+
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf) {
+  if (op_conf.has_variable_conf()) {
+    // Variable operators would not be run. They just create tensors.
+    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
+    return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const auto& op_type_name = op_conf.user_conf().op_type_name();
+    // They are sorted according to frequency of occurrences in stable diffusion
+    if (op_type_name == "expand_dims"  // 90
+        || op_type_name == "cast"      // 16
+        || op_type_name == "expand"    // 2
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // SAT, a.k.a. Scholastic Aptitude Test,
 // is the college admission test in the United States of America.

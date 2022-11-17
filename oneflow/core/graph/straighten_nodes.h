@@ -27,13 +27,13 @@ enum StraightenOrder : int {
   kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
   kLayerAscend = 2,              // first in first out
   kMemoryIncrementAscend = 3,    // small memory increment go first
-  kActivationTimeAscend = 4,     // small activation time go first
+  kExceedTimeAscend = 4,         // small exceed time go first
 
   kTributaryLayerDescend = 100,     // large tributary layers go first
   kDistanceToOverlapDescend = 101,  // long distance to overlap go first
   kLayerDescend = 102,              // last in first out
   kMemoryIncrementDescend = 103,    // large memory increment go first
-  kActivationTimeDescend = 104,     // large activation time go first
+  kExceedTimeDescend = 104,         // large exceed time go first
 };
 
 // The difference between a descending order and its corresponding ascending order
@@ -41,7 +41,9 @@ const int kDiff4AscendDescend = 100;
 
 // Some operators have longer time in cpu and less time in gpu.
 // Running those operators without overlap would cause large gap during each iteration.
-bool LongerActivationTimeInCpu(const OperatorConf& op_conf);
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf);
 
 // SAT, a.k.a. Scholastic Aptitude Test,
 // is the college admission test in the United States of America.
@@ -56,7 +58,7 @@ void UpdateSat(const HashMapType& task_node2topo_struct, StraightenAlgorithmTag*
     bool exist_cpu_nodes = false;
     for (const auto& pair : task_node2topo_struct) {
       // Found a cpu node
-      if (pair.second.activation_time == 1) {
+      if (pair.second.exceed_time == 1) {
         exist_cpu_nodes = true;
         break;
       }

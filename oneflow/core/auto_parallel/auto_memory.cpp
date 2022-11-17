@@ -32,27 +32,27 @@ class TopoStruct {
   OpNode* op_node = nullptr;
   // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
-  int32_t activation_time = -1;
+  int32_t exceed_time = -1;
   bool is_reusable = false;
 
   explicit TopoStruct(SbpNode* sbp_node_);
 
   // Decide whether all the produced registers are reusable
   void ComputeIsReusable();
-  // Activation time = time of cpu - time of gpu
-  void ComputeActivationTime();
+  // Exceed time = time of cpu - time of gpu
+  void ComputeExceedTime();
 
   // deciding parameter
   // kTributaryLayerAscend = 0,     // small tributary layers go first
   // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
   // kLayerAscend = 2,              // first in first out
   // kMemoryIncrementAscend = 3,    // small memory increment go first
-  // kActivationTimeAscend = 4,     // small activation time go first
+  // kExceedTimeAscend = 4,         // small exceed time go first
   // kTributaryLayerDescend = 100,     // large tributary layers go first
   // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
   // kLayerDescend = 102,              // last in first out
   // kMemoryIncrementDescend = 103,    // large memory increment go first
-  // kActivationTimeDescend = 104,     // large activation time go first
+  // kExceedTimeDescend = 104,         // large exceed time go first
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
@@ -84,7 +84,7 @@ bool IsProducedRegisterReusable(const Operator& op) {
 TopoStruct::TopoStruct(SbpNode* sbp_node_)
     : sbp_node(sbp_node_), op_node(sbp_node_->GetOperatorNode()) {
   ComputeIsReusable();
-  ComputeActivationTime();
+  ComputeExceedTime();
 }
 
 // deciding parameter
@@ -92,12 +92,12 @@ TopoStruct::TopoStruct(SbpNode* sbp_node_)
 // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
 // kLayerAscend = 2,              // first in first out
 // kMemoryIncrementAscend = 3,    // small memory increment go first
-// kActivationTimeAscend = 4,     // small activation time go first
+// kExceedTimeAscend = 4,         // small exceed time go first
 // kTributaryLayerDescend = 100,     // large tributary layers go first
 // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
 // kLayerDescend = 102,              // last in first out
 // kMemoryIncrementDescend = 103,    // large memory increment go first
-// kActivationTimeDescend = 104,     // large activation time go first
+// kExceedTimeDescend = 104,         // large exceed time go first
 int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
   if (so >= kDiff4AscendDescend) {
@@ -109,17 +109,17 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kDistanceToOverlapAscend: return 0;
     case StraightenOrder::kLayerAscend: return sign * sbp_node->GetMinLayer();
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
-    case StraightenOrder::kActivationTimeAscend: return sign * activation_time;
+    case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
     default: return 0;
   }
 }
 
-// Activation time = time of cpu - time of gpu
-void TopoStruct::ComputeActivationTime() {
-  if (LongerActivationTimeInCpu(op_node->op().op_conf())) {
-    activation_time = 1;
+// Exceed time = time of cpu - time of gpu
+void TopoStruct::ComputeExceedTime() {
+  if (ShortGpuTime(op_node->op().op_conf())) {
+    exceed_time = 1;
   } else {
-    activation_time = 0;
+    exceed_time = 0;
   }
 }
 
