@@ -44,7 +44,7 @@ void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(
 
 }  // namespace mlir
 
-auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
+const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
