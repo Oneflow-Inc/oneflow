@@ -1,0 +1,10 @@
+Log file created at: 2022/10/26 05:56:49
+Running on machine: oneflow-26
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I20221026 05:56:49.147024 3558595 env_global_objects_scope.cpp:159] Using rpc backend: local
+I20221026 05:56:49.234593 3558595 epoll_comm_network.cpp:63] CommNet:Epoll listening on 0.0.0.0:42575
+I20221026 05:56:56.422580 3558595 version.cpp:22] OneFlow git version: v0.8.1-342-g9ca27143c2-snapshot
+I20221026 05:56:56.422669 3558595 cuda_device_manager_factory.cpp:63] CUDA runtime version: 11.7
+I20221026 05:56:56.422713 3558595 cuda_device_manager_factory.cpp:72] cuDNN version: 8.5.0
+I20221026 05:56:56.422735 3558595 cuda_device_manager_factory.cpp:85] NCCL version: 2.12.10
