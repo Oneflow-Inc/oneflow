@@ -421,8 +421,8 @@ class NonZeroFunctor {
         CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
                         || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
       }
-      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
-                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+      JUST(GetItemInScalarTensor(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 &size_val, sizeof(size_val)));
     }
     std::vector<int64_t> start{0, 0};
     std::vector<int64_t> stop{size_val, ndim};
