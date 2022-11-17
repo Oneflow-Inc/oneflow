@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <vector>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
+const int32_t INPUT_LEN = 8;
 struct FusedGetBounddingBoxesCoordGradCaptureState : public AutoGradCaptureState {
-  bool requires_grad = true;
+  std::vector<bool> requires_grad;
 };
 
 class FusedGetBounddingBoxesCoordGrad
@@ -30,17 +32,18 @@ class FusedGetBounddingBoxesCoordGrad
 
   Maybe<void> Capture(FusedGetBounddingBoxesCoordGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 8);
-    CHECK_EQ_OR_RETURN(outputs.size(), 8);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
+    CHECK_EQ_OR_RETURN(outputs.size(), INPUT_LEN);
+    for (int i = 0; i < INPUT_LEN; i++) {
+      ctx->requires_grad.push_back(inputs.at(i)->requires_grad());
+    }
+
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedGetBounddingBoxesCoordGradCaptureState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
-    CHECK_EQ_OR_RETURN(out_grads.size(), 8);
+    CHECK_EQ_OR_RETURN(out_grads.size(), INPUT_LEN);
     const auto& b1_x1_diff = out_grads.at(0);
     const auto& b1_x2_diff = out_grads.at(1);
     const auto& b1_y1_diff = out_grads.at(2);
@@ -54,8 +57,10 @@ class FusedGetBounddingBoxesCoordGrad
     auto result = JUST(functional::FusedGetBounddingBoxesCoordGrad(
         b1_x1_diff, b1_x2_diff, b1_y1_diff, b1_y2_diff, b2_x1_diff, b2_x2_diff, b2_y1_diff,
         b2_y2_diff));
-    CHECK_EQ_OR_RETURN(result->size(), 8);
-    for (int i = 0; i < result->size(); i++) { in_grads->at(i) = result->at(i); }
+    CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
+    for (int i = 0; i < result->size(); i++) {
+      if (ctx->requires_grad[i]) { in_grads->at(i) = result->at(i); }
+    }
     return Maybe<void>::Ok();
   }
 };
