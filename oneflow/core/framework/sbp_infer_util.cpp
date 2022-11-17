@@ -627,7 +627,7 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
 }
 
 int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc) {
-  return TotalByteSize4BlobDesc(logical_blob_desc);
+  return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
 }
 
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,

@@ -127,9 +127,9 @@ void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(
 
 // Compute the memory increment for all the topological structures
 void ComputeAllMemoryIncrement(
-    std::vector<TopoStruct>& topo_structs, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+    std::vector<TopoStruct>& topo_structs, HashMap<LogicalBlobId, int32_t>& lbi2id,
     const std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
-    const std::vector<int64_t>& id2blob_size) {
+    std::vector<int64_t>& id2blob_size) {
   // Compute the memory increment for produced blobs
   for (auto& topo_struct : topo_structs) {
     topo_struct.memory_increment = 0;
@@ -137,7 +137,19 @@ void ComputeAllMemoryIncrement(
     if (topo_struct.is_reusable) {
       for (const auto& obn : curr_operator.output_bns()) {
         const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
-        topo_struct.memory_increment += id2blob_size[lbi2id.at(lbi)];
+        auto it = lbi2id.find(lbi);
+        if (it == lbi2id.end()) {
+          // There exist some blobs that do not have any consumer
+          // Such as: op name:
+          // model.cls_head.loss_func.lm_loss-sparse_softmax_cross_entropy_ms-231-split_softmax_reduce_max_global_stage
+          // blob name: mask_0
+          const BlobDesc& logical_blob_desc = topo_struct.op_node->LogicalBlobDesc4Lbi(lbi);
+          lbi2id[lbi] = id2blob_size.size();
+          id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+          topo_struct.memory_increment += id2blob_size.back();
+        } else {
+          topo_struct.memory_increment += id2blob_size[it->second];
+        }
       }
     }
   }
@@ -149,6 +161,8 @@ void ComputeAllMemoryIncrement(
     }
   }
 }
+
+}  // anonymous namespace
 
 void InitMemory(SbpGraph* sbp_graph) {
   // Generate topological data structure for each sbp node
@@ -184,8 +198,6 @@ void InitMemory(SbpGraph* sbp_graph) {
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
 }
-
-}  // anonymous namespace
 
 }  // namespace auto_parallel
 }  // namespace oneflow
