@@ -39,6 +39,25 @@ enum TaskClassifier : int {
   kRunALAP = 3
 };
 
+// deciding parameter
+// The sorting order of nodes for the straighten algorithm
+enum StraightenOrder : int {
+  kTributaryLayerAscend = 0,     // small tributary layers go first
+  kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
+  kLayerAscend = 2,              // first in first out
+  kMemoryIncrementAscend = 3,    // small memory increment go first
+  kExceedTimeAscend = 4,         // small exceed time go first
+
+  kTributaryLayerDescend = 100,     // large tributary layers go first
+  kDistanceToOverlapDescend = 101,  // long distance to overlap go first
+  kLayerDescend = 102,              // last in first out
+  kMemoryIncrementDescend = 103,    // large memory increment go first
+  kExceedTimeDescend = 104,         // large exceed time go first
+};
+
+// The difference between a descending order and its corresponding ascending order
+const int kDiff4AscendDescend = 100;
+
 class TopoStruct {
  public:
   TaskNode* node = nullptr;
@@ -49,7 +68,7 @@ class TopoStruct {
   int32_t min_distance2overlap = -1;
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
-  int32_t activation_time = -1;
+  int32_t exceed_time = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -68,8 +87,10 @@ class TopoStruct {
   // Memory increment = (memory of out registers) - (memory of in registers)
   void ComputeMeomoryIncrement();
 
-  // Activation time = time of cpu - time of gpu
-  void ComputeActivationTime();
+  // Exceed time = time of cpu - time of gpu
+  // For most operators, the execution time on gpu exceed the execution time on cpu.
+  // However, overlap is needed if time of cpu > time of gpu.
+  void ComputeExceedTime();
 
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
@@ -79,12 +100,12 @@ class TopoStruct {
   // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
   // kLayerAscend = 2,              // first in first out
   // kMemoryIncrementAscend = 3,    // small memory increment go first
-  // kActivationTimeAscend = 4,     // small activation time go first
+  // kExceedTimeAscend = 4,         // small exceed time go first
   // kTributaryLayerDescend = 100,     // large tributary layers go first
   // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
   // kLayerDescend = 102,              // last in first out
   // kMemoryIncrementDescend = 103,    // large memory increment go first
-  // kActivationTimeDescend = 104,     // large activation time go first
+  // kExceedTimeDescend = 104,         // large exceed time go first
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
@@ -154,6 +175,29 @@ bool IsTransferNode(TaskType task_type) {
   }
 }
 
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf) {
+  if (op_conf.has_variable_conf()) {
+    // Variable operators would not be run. They just create tensors.
+    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
+    return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const auto& op_type_name = op_conf.user_conf().op_type_name();
+    // They are sorted according to frequency of occurrences in stable diffusion
+    if (op_type_name == "expand_dims"  // 90
+        || op_type_name == "cast"      // 16
+        || op_type_name == "expand"    // 2
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Classifier for the set according to the task type
 TaskClassifier GetTaskClassifier(const TaskNode* node) {
   // Check task.pb.h for detail
@@ -162,12 +206,7 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   TaskType task_type = node->GetTaskType();
   if (task_type == TaskType::kNormalForward) {
     const auto& op_conf = dynamic_cast<const CompTaskNode*>(node)->op()->op_conf();
-    if (op_conf.has_variable_conf()) {
-      // Variable operators would not be run. They just create tensors.
-      // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-      return TaskClassifier::kRunASAP;
-    } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu
-               && LongerActivationTimeInCpu(op_conf)) {
+    if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu && ShortGpuTime(op_conf)) {
       return TaskClassifier::kWaitingOverlapNode;
     } else {
       return TaskClassifier::kWaitingMainComputation;
@@ -268,13 +307,13 @@ void TopoStruct::ComputeMeomoryIncrement() {
   }
 }
 
-// Activation time = time of cpu - time of gpu
-void TopoStruct::ComputeActivationTime() {
+// Exceed time = time of cpu - time of gpu
+void TopoStruct::ComputeExceedTime() {
   if (node->GetTaskType() == TaskType::kNormalForward
-      && LongerActivationTimeInCpu(dynamic_cast<const CompTaskNode*>(node)->op()->op_conf())) {
-    activation_time = 1;
+      && ShortGpuTime(dynamic_cast<const CompTaskNode*>(node)->op()->op_conf())) {
+    exceed_time = 1;
   } else {
-    activation_time = 0;
+    exceed_time = 0;
   }
 }
 
@@ -283,12 +322,12 @@ void TopoStruct::ComputeActivationTime() {
 // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
 // kLayerAscend = 2,              // first in first out
 // kMemoryIncrementAscend = 3,    // small memory increment go first
-// kActivationTimeAscend = 4,     // small activation time go first
+// kExceedTimeAscend = 4,         // small exceed time go first
 // kTributaryLayerDescend = 100,     // large tributary layers go first
 // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
 // kLayerDescend = 102,              // last in first out
 // kMemoryIncrementDescend = 103,    // large memory increment go first
-// kActivationTimeDescend = 104,     // large activation time go first
+// kExceedTimeDescend = 104,         // large exceed time go first
 int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
   if (so >= kDiff4AscendDescend) {
@@ -300,7 +339,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kDistanceToOverlapAscend: return sign * min_distance2overlap;
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
-    case StraightenOrder::kActivationTimeAscend: return sign * activation_time;
+    case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
     default: return 0;
   }
 }
@@ -334,22 +373,6 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 
 }  // anonymous namespace
 
-// Some operators have longer time in cpu and less time in gpu.
-// Running those operators without overlap would cause large gap during each iteration.
-bool LongerActivationTimeInCpu(const OperatorConf& op_conf) {
-  if (op_conf.has_user_conf()) {
-    const auto& op_type_name = op_conf.user_conf().op_type_name();
-    // They are sorted according to frequency of occurrences in stable diffusion
-    if (op_type_name == "expand_dims"  // 90
-        || op_type_name == "cast"      // 16
-        || op_type_name == "expand"    // 2
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
 // SAT, a.k.a. Scholastic Aptitude Test,
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat,
@@ -363,7 +386,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
     decide_parameters->push_back(StraightenOrder::kTributaryLayerDescend);
   } else {
     // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
-    decide_parameters->push_back(StraightenOrder::kActivationTimeDescend);
+    decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
   }
@@ -384,7 +407,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     topo_struct.ComputeMeomoryIncrement();
-    topo_struct.ComputeActivationTime();
+    topo_struct.ComputeExceedTime();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {
@@ -467,7 +490,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Classify sets for the task nodes
   // 0, TaskClassifier::kWaitingOverlapNode
-  // It contains transfer nodes, and those with longer activation time in cpu if request.
+  // It contains transfer nodes, and those with less time in gpu if request.
   // std::set<TopoStruct*, comp> waiting_overlap_node;
   // 1, TaskClassifier::kWaitingMainComputation
   // std::set<TopoStruct*, comp> waiting_main_computation;
