@@ -80,7 +80,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   std::vector<Shape> shapes;
   std::vector<Symbol<DType>> dtypes;
 
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(
         tensor, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
@@ -135,20 +135,32 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
            << "Cannot create a bfloat16 tensor on gpu under cuda version: 11000";
 #endif  // CUDA_VERSION >= 11000
   }
-  PyObject* array = NULL;
   PyArray_Descr* np_dtype =
       dtype.has_value() && !is_bfloat16_dtype
           ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
           : nullptr;
-  // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
   // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
   // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
   // NPY_ARRAY_FORCECAST is needed otherwise there will a segfault.
-  array = PyArray_FromAny(data, np_dtype, 0, 0,
-                          NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr);
-  if (!array) {
+  //
+  // Even though PyArray_FromAny can cast the input array to the desired dtype
+  // if `dtype` argument is set, it fails to handle the following case:
+  // >> x = [flow.tensor([1, 2])] * 3 <-- x is a list of flow.Tensor
+  // >> y = flow.tensor(x, dtype=flow.float32) <-- returns nullptr
+  // However, the following case without `dtype` argument works well:
+  // >> x = [flow.tensor([1, 2])] * 3
+  // >> y = flow.tensor(x)
+  // So we cast the input array to the desired dtype manually.
+  PyArrayObject* _array = reinterpret_cast<PyArrayObject*>(
+      PyArray_FromAny(data, nullptr, 0, 0,
+                      NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr));
+  if (!_array) {
     return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
   }
+  // PyArray_FromArray steals a reference to np_dtype object, so no need to decref it.
+  PyObject* array = PyArray_FromArray(
+      _array, np_dtype, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST);
+  Py_DECREF(_array);
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));

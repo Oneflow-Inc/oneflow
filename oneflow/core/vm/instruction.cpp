@@ -29,7 +29,7 @@ namespace vm {
 
 std::string Instruction::DebugName() const {
   std::string instr_name = instruction_policy().DebugName(*this);
-  return instr_name + ":" + GetStreamTypeName::Visit(stream().stream_type());
+  return instr_name + ":s_" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
 void Instruction::__Init__(Stream* stream,
