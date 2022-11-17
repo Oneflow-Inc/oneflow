@@ -129,6 +129,15 @@ std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
                         std::make_unique<CSEPutAttributes>(state));
 }
 
+void registerCSEPasses(std::shared_ptr<CSEState> state) {
+  ::mlir::registerPass([state]() -> std::unique_ptr<::mlir::Pass> {
+    return std::make_unique<CSEWithAttributesIgnored>(state);
+  });
+  ::mlir::registerPass([state]() -> std::unique_ptr<::mlir::Pass> {
+    return std::make_unique<CSEPutAttributes>(state);
+  });
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
