@@ -291,24 +291,27 @@ class RmsNormParamGradKernel final : public user_op::OpKernel, public user_op::C
   };
 };
 
+template<typename T>
+size_t InferRmsNormParamGradTempBufferSize(user_op::InferContext* ctx) {
+  const auto& shape = ctx->InputTensorDesc("dy", 0).shape();
+  const auto& b_shape = ctx->InputTensorDesc("inv_rms", 0).shape();
+  const int64_t nrow = b_shape.elem_cnt();
+  const int64_t ncol = shape.elem_cnt() / nrow;
+  const int block_dim_x = rms_norm::kWarpSize;
+  const int block_dim_y = rms_norm::kWarpSize / kNProcPerThread;
+  int grid_dim_x;
+  int grid_dim_y;
+  OF_CUDA_CHECK((rms_norm::GetGrid2Dim<kNProcPerThread, T>(nrow, ncol, block_dim_x, block_dim_y,
+                                                           &grid_dim_x, &grid_dim_y)));
+  return (grid_dim_y * ncol + grid_dim_y) * sizeof(T);
+}
+
 #define REGISTER_RMS_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                  \
   REGISTER_USER_KERNEL("rms_norm_param_grad")                                           \
       .SetCreateFn<RmsNormParamGradKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-        const auto& shape = ctx->InputTensorDesc("dy", 0).shape();                      \
-        const auto& b_shape = ctx->InputTensorDesc("inv_rms", 0).shape();               \
-        const int64_t nrow = b_shape.elem_cnt();                                        \
-        const int64_t ncol = shape.elem_cnt() / nrow;                                   \
-        const int block_dim_x = rms_norm::kWarpSize;                                    \
-        const int block_dim_y = rms_norm::kWarpSize / kNProcPerThread;                  \
-        int grid_dim_x;                                                                 \
-        int grid_dim_y;                                                                 \
-        OF_CUDA_CHECK((rms_norm::GetGrid2Dim<kNProcPerThread, dtype>(                   \
-            nrow, ncol, block_dim_x, block_dim_y, &grid_dim_x, &grid_dim_y)));          \
-        return (grid_dim_y * ncol + grid_dim_y) * sizeof(dtype);                        \
-      });
+      .SetInferTmpSizeFn(InferRmsNormParamGradTempBufferSize<dtype>);
 
 REGISTER_RMS_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_RMS_NORM_PARAM_GRAD_GPU_KERNEL(double)
