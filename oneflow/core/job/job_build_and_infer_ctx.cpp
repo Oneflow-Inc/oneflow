@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/time_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -540,11 +541,22 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
 
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+    BlobDesc* blob_desc_ptr = nullptr;
+    bool find_lbi = false;
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
-      return lbi2logical_blob_desc_.at(lbi).get();
+      find_lbi = true;
+      blob_desc_ptr = lbi2logical_blob_desc_.at(lbi).get();
     }
-    return nullptr;
+    if (!find_lbi) {
+      LOG(ERROR) << op_conf.DebugString() << " can't find bn " << bn << " lbi " << lbi.DebugString()
+                 << " in lbi2logical_blob_desc_ with len" << lbi2logical_blob_desc_.size();
+    } else if (blob_desc_ptr == nullptr) {
+      LOG(ERROR) << op_conf.DebugString() << " can find bn " << bn << " lbi " << lbi.DebugString()
+                 << " in lbi2logical_blob_desc_ with len" << lbi2logical_blob_desc_.size()
+                 << " but the blob desc unique ptr is null.";
+    }
+    return blob_desc_ptr;
   };
   JUST(op->FillLogicalInBlobDesc(GetBlobDesc4BnInOp));
   JUST(op->InferParallelSignatureIf());
