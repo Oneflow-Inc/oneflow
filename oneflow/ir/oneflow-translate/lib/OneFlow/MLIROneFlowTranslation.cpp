@@ -800,6 +800,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(createCSEPass());
     pm.addPass(std::move(passes.second));
   }
+  if (job_wrapper.IsLastIRPass()) { pm.addPass(oneflow::createFuseForwardOps()); }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
   // TODO: support backward or put it in a env flag
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_GROUP_MATMUL", false)) {
