@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -289,6 +290,7 @@ class InplaceDivFunctor {
  private:
   std::shared_ptr<OpExpr> broadcast_div_op_;
 };
+
 class Atan2Functor : public BinaryFloatFunctor {
  public:
   Atan2Functor() {
@@ -328,6 +330,22 @@ class TruncDivFunctor : public BinaryFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     return BinaryFunctor::operator()(x, y);
   }
+};
+
+class LerpFunctor {
+ public:
+  LerpFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("lerp").Input("start").Input("end").Input("weight").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end,
+                           const std::shared_ptr<one::Tensor>& weight) const {
+    ;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastFModFunctor : public BinaryFunctor {
