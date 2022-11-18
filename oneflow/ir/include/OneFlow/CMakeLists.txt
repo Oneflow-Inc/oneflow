@@ -63,5 +63,4 @@ add_mlir_dialect(
   MLIROneFlowPassIncGen
   MLIROneFlowInterfacesIncGen
   MLIROneFlowOpGroupDefsIncGen
-  MLIROneFlowOpGroupDeclsIncGen
-  MLIROneFlowPdllIncGen)
+  MLIROneFlowOpGroupDeclsIncGen)

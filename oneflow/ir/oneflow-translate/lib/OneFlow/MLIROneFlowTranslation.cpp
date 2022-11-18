@@ -49,7 +49,7 @@ limitations under the License.
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
+
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"

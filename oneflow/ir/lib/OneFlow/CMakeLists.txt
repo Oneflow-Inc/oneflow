@@ -15,7 +15,7 @@ foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
-add_mlir_pdll_library(MLIROneFlowPdllIncGen expr.pdll TestPDLLPatterns.h.inc)
+add_subdirectory(PDLL)
 
 oneflow_add_mlir_dialect_library(
   MLIROneFlow

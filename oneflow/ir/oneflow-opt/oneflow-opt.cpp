@@ -24,18 +24,11 @@ limitations under the License.
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Parser/Parser.h"
-
 
 #include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
-#include "OneFlow/TestPDLLPatterns.h.inc"
-
 namespace mlir {
 struct TestOneFlowTraitFolder
     : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
@@ -48,33 +41,6 @@ struct TestOneFlowTraitFolder
 };
 void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(); }
 
-
-struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPDLLPass)
-
-  StringRef getArgument() const final { return "test-pdll-pass"; }
-  StringRef getDescription() const final { return "Test PDLL functionality"; }
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<pdl::PDLDialect>();
-  }
-  LogicalResult initialize(MLIRContext *ctx) override {
-    // Build the pattern set within the `initialize` to avoid recompiling PDL
-    // patterns during each `runOnOperation` invocation.
-    RewritePatternSet patternList(ctx);
-    populateGeneratedPDLLPatterns(patternList);
-    patterns = std::move(patternList);
-    return success();
-  }
-
-  void runOnOperation() final {
-    // Invoke the pattern driver with the provided patterns.
-    (void)applyPatternsAndFoldGreedily(getOperation(), patterns);
-  }
-
-  FrozenRewritePatternSet patterns;
-};
-void registerTestPDLLPasses() { PassRegistration<TestPDLLPass>(); }
-
 }  // namespace mlir
 
 const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
@@ -82,7 +48,6 @@ const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
-  mlir::registerTestPDLLPasses();
   mlir::registerConvertToSignlessForTosaPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
   mlir::registerGpuMapParallelLoopsPassPass();
@@ -108,6 +73,5 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::gpu::GPUDialect>();
   registry.insert<mlir::AffineDialect>();
   registry.insert<mlir::bufferization::BufferizationDialect>();
-  registry.insert<mlir::pdl::PDLDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
