@@ -33,7 +33,7 @@ def _test_global_broadcast_tensors(
 
 
 class TestGlobalBroadcastOps(flow.unittest.TestCase):
-    # flow.broadcast_shapes‘s input are shapes, so it can't be tested in global mode
+    # flow.broadcast_shapes's input are shapes, so it can't be tested in global mode
     # flow.broadcast_to is an alias of flow.expand, so its global tests are same as flow.expand's
 
     @globaltest

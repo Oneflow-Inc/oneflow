@@ -538,10 +538,10 @@ def _scatter_add_inplace(self, dim, index, src):
 def _contains(self, element):
     r"""Check if `element` is present in tensor
 
-        Args:
-            element (Tensor or scalar): element to be checked
-                for presence in current tensor"
-        """
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
     if isinstance(element, (flow.Tensor, Number)):
         # type hint doesn't understand the __contains__ result array
         return (element == self).any().item()  # type: ignore[union-attr]
@@ -554,10 +554,6 @@ def _contains(self, element):
 
 def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
     return flow._C.allclose(self, other, atol, rtol, equal_nan)
-
-
-def _broadcast_to(self, shape):
-    return flow._C.broadcast_to(self, shape)
 
 
 def RegisterMethods():
@@ -629,7 +625,6 @@ def RegisterMethods():
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
-    Tensor.broadcast_to = _broadcast_to
     Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
     Tensor.allclose = _allclose

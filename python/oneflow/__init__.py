@@ -386,7 +386,6 @@ from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
-from oneflow._C import broadcast_to
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
