@@ -66,27 +66,25 @@ class RightFastGeluAndMul {
 
   CUTLASS_HOST_DEVICE
   FragmentOutput operator()(FragmentAccumulator const& lhs, FragmentAccumulator const& rhs) const {
-    NumericArrayConverter<ElementCompute, ElementAccumulator, kCount, Round> accumulator_to_compute;
+    NumericArrayConverter<ElementOutput, ElementAccumulator, kCount, Round> accumulator_to_output;
 
-    NumericArrayConverter<ElementOutput, ElementCompute, kCount, Round> compute_to_output;
+    FragmentOutput converted_lhs = accumulator_to_output(lhs);
+    FragmentOutput converted_rhs = accumulator_to_output(rhs);
 
-    ComputeFragment converted_lhs = accumulator_to_compute(lhs);
-    ComputeFragment converted_rhs = accumulator_to_compute(rhs);
-
-    cutlass::epilogue::thread::GELU_taylor<ComputeFragment> fast_gelu;
-    cutlass::multiplies<ComputeFragment> mul;
+    cutlass::epilogue::thread::GELU_taylor<FragmentOutput> fast_gelu;
+    cutlass::multiplies<FragmentOutput> mul;
     auto fast_gelu_rhs = fast_gelu(converted_rhs);
-    return compute_to_output(mul(fast_gelu_rhs, converted_lhs));
+    return mul(fast_gelu_rhs, converted_lhs);
   }
 
   CUTLASS_HOST_DEVICE
   ElementOutput operator()(ElementAccumulator const& lhs, ElementAccumulator const& rhs) const {
-    ElementCompute convert_lhs(lhs);
-    ElementCompute convert_rhs(rhs);
-    cutlass::epilogue::thread::GELU_taylor<ElementCompute> fast_gelu;
-    cutlass::multiplies<ElementCompute> mul;
+    ElementOutput convert_lhs(lhs);
+    ElementOutput convert_rhs(rhs);
+    cutlass::epilogue::thread::GELU_taylor<ElementOutput> fast_gelu;
+    cutlass::multiplies<ElementOutput> mul;
     auto fast_gelu_lhs = fast_gelu(convert_lhs);
-    return ElementOutput(mul(fast_gelu_lhs, convert_rhs));
+    return mul(fast_gelu_lhs, convert_rhs);
   }
 };
 }  // namespace thread
