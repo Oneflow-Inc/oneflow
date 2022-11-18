@@ -237,20 +237,31 @@ REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(float)
 namespace alphafold {
 namespace gate {
 template<typename T>
+__device__ __forceinline__ T Sigmoid(const T x) {
+  const T half_of_one = static_cast<T>(0.5);
+  return half_of_one * tanh(half_of_one * x) + half_of_one;
+}
+
+template<>
+__device__ __forceinline__ half Sigmoid(const half x) {
+  return __float2half(Sigmoid(__half2float(x)));
+}
+
+template<typename T>
 struct SigmoidMulFunctor {
-  OF_DEVICE_FUNC T operator()(T g, T x) const { return x / (1 + exp(-g)); }
+  OF_DEVICE_FUNC T operator()(T g, T x) const { return x * Sigmoid(g); }
 };
 template<typename T>
 struct SigmoidMulGradXFunctor {
   OF_DEVICE_FUNC T operator()(T dout, T g) const {
-    T sigmoid_g = 1 / (1 + exp(-g));
+    T sigmoid_g = Sigmoid(g);
     return dout * sigmoid_g;
   }
 };
 template<typename T>
 struct SigmoidMulGradGFunctor {
   OF_DEVICE_FUNC T operator()(T g, T x, T dx) const {
-    T sigmoid_g = 1 / (1 + exp(-g));
+    T sigmoid_g = Sigmoid(g);
     return dx * x * (1 - sigmoid_g);
   }
 };
@@ -278,20 +289,12 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* gate = ctx->Tensor4ArgNameAndIndex("g", 0);
     auto cnt = gate->shape_view().elem_cnt();
-    if (ctx->Attr<bool>("inplace") == true) {
-      user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      CHECK(cnt == x->shape_view().elem_cnt());
-      cuda::elementwise::Binary(alphafold::gate::SigmoidMulFunctor<T>(), cnt, x->mut_dptr<T>(),
-                                gate->dptr<T>(), x->mut_dptr<T>(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    } else {
-      const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      CHECK(cnt == x->shape_view().elem_cnt());
-      user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-      cuda::elementwise::Binary(alphafold::gate::SigmoidMulFunctor<T>(), cnt, out->mut_dptr<T>(),
-                                gate->dptr<T>(), x->dptr<T>(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    }
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    CHECK(cnt == x->shape_view().elem_cnt());
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    cuda::elementwise::Binary(alphafold::gate::SigmoidMulFunctor<T>(), cnt, out->mut_dptr<T>(),
+                              gate->dptr<T>(), x->dptr<T>(),
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -353,22 +356,14 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);  // broadcast
     const user_op::Tensor* res = ctx->Tensor4ArgNameAndIndex("residual", 0);
-
     auto cnt = res->shape_view().elem_cnt();
-    if (ctx->Attr<bool>("inplace") == true) {
-      user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      cuda::elementwise::Ternary(
-          alphafold::dropout_add::DropoutAddFunctor<T>(), cnt, x->mut_dptr<T>(), x->mut_dptr<T>(),
-          mask->dptr<T>(), res->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    } else {
-      const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-      CHECK(cnt == x->shape_view().elem_cnt() && cnt == out->shape_view().elem_cnt());
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK(cnt == x->shape_view().elem_cnt() && cnt == out->shape_view().elem_cnt());
 
-      cuda::elementwise::Ternary(alphafold::dropout_add::DropoutAddFunctor<T>(), cnt,
-                                 out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(), res->dptr<T>(),
-                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    }
+    cuda::elementwise::Ternary(alphafold::dropout_add::DropoutAddFunctor<T>(), cnt,
+                               out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(), res->dptr<T>(),
+                               ctx->stream()->As<ep::CudaStream>()->cuda_stream());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
