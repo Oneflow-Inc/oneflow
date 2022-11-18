@@ -20,6 +20,9 @@ limitations under the License.
 
 namespace oneflow {
 
+// The difference between a descending order and its corresponding ascending order
+const int kDiff4AscendDescend = 100;
+
 // deciding parameter
 // The sorting order of nodes for the straighten algorithm
 enum StraightenOrder : int {
@@ -29,15 +32,15 @@ enum StraightenOrder : int {
   kMemoryIncrementAscend = 3,    // small memory increment go first
   kExceedTimeAscend = 4,         // small exceed time go first
 
-  kTributaryLayerDescend = 100,     // large tributary layers go first
-  kDistanceToOverlapDescend = 101,  // long distance to overlap go first
-  kLayerDescend = 102,              // last in first out
-  kMemoryIncrementDescend = 103,    // large memory increment go first
-  kExceedTimeDescend = 104,         // large exceed time go first
+  kTributaryLayerDescend =
+      kDiff4AscendDescend + kTributaryLayerAscend,  // large tributary layers go first
+  kDistanceToOverlapDescend =
+      kDiff4AscendDescend + kDistanceToOverlapAscend,  // long distance to overlap go first
+  kLayerDescend = kDiff4AscendDescend + kLayerAscend,  // last in first out
+  kMemoryIncrementDescend =
+      kDiff4AscendDescend + kMemoryIncrementAscend,              // large memory increment go first
+  kExceedTimeDescend = kDiff4AscendDescend + kExceedTimeAscend,  // large exceed time go first
 };
-
-// The difference between a descending order and its corresponding ascending order
-const int kDiff4AscendDescend = 100;
 
 // Some operators have longer time in cpu and less time in gpu.
 // Running those operators without overlap would cause large gap during each iteration.
@@ -51,12 +54,12 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
                           std::vector<StraightenOrder>* decide_parameters);
 
 template<class HashMapType>
-void UpdateSat(const HashMapType& task_node2topo_struct, StraightenAlgorithmTag* sat) {
+void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat) {
   *sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
   if (*sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
     bool exist_cpu_nodes = false;
-    for (const auto& pair : task_node2topo_struct) {
+    for (const auto& pair : node2topo_struct) {
       // Found a cpu node
       if (pair.second.exceed_time == 1) {
         exist_cpu_nodes = true;

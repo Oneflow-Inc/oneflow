@@ -368,11 +368,13 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
   } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
     decide_parameters->push_back(StraightenOrder::kTributaryLayerDescend);
-  } else {
-    // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
+  } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+  } else {
+    // sat == StraightenAlgorithmTag::kDisable
+    decide_parameters->push_back(StraightenOrder::kLayerAscend);
   }
 }
 

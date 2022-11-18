@@ -56,6 +56,8 @@ class TopoStruct {
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
+StraightenAlgorithmTag sat;
+
 std::vector<StraightenOrder> decide_parameters;
 
 bool IsProducedRegisterReusable(const Operator& op) {
@@ -127,14 +129,14 @@ void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(
 
 // Compute the memory increment for all the topological structures
 void ComputeAllMemoryIncrement(
-    std::vector<TopoStruct>& topo_structs, HashMap<LogicalBlobId, int32_t>& lbi2id,
+    std::vector<TopoStruct*>& topo_structs, HashMap<LogicalBlobId, int32_t>& lbi2id,
     const std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
     std::vector<int64_t>& id2blob_size) {
   // Compute the memory increment for produced blobs
   for (auto& topo_struct : topo_structs) {
-    topo_struct.memory_increment = 0;
-    const auto& curr_operator = topo_struct.op_node->op();
-    if (topo_struct.is_reusable) {
+    topo_struct->memory_increment = 0;
+    const auto& curr_operator = topo_struct->op_node->op();
+    if (topo_struct->is_reusable) {
       for (const auto& obn : curr_operator.output_bns()) {
         const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
         auto it = lbi2id.find(lbi);
@@ -143,12 +145,12 @@ void ComputeAllMemoryIncrement(
           // Such as: op name:
           // model.cls_head.loss_func.lm_loss-sparse_softmax_cross_entropy_ms-231-split_softmax_reduce_max_global_stage
           // blob name: mask_0
-          const BlobDesc& logical_blob_desc = topo_struct.op_node->LogicalBlobDesc4Lbi(lbi);
+          const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
           lbi2id[lbi] = id2blob_size.size();
           id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
-          topo_struct.memory_increment += id2blob_size.back();
+          topo_struct->memory_increment += id2blob_size.back();
         } else {
-          topo_struct.memory_increment += id2blob_size[it->second];
+          topo_struct->memory_increment += id2blob_size[it->second];
         }
       }
     }
@@ -166,14 +168,14 @@ void ComputeAllMemoryIncrement(
 
 void InitMemory(SbpGraph* sbp_graph) {
   // Generate topological data structure for each sbp node
-  HashMap<SbpNode*, TopoStruct*> sbp_node2topo_struct;
-  std::vector<TopoStruct> topo_structs;
+  HashMap<SbpNode*, TopoStruct> sbp_node2topo_struct;
+  std::vector<TopoStruct*> topo_structs;
   // Traverse all the nodes in the sbp graph
   for (const auto& sbp_node : sbp_graph->GetNodeList()) {
     CHECK(sbp_node->GetOperatorNode() != nullptr)
         << "No proxy node allow at this status. InitMemory() should be run before sbp collector!";
-    topo_structs.emplace_back(sbp_node);
-    sbp_node2topo_struct[sbp_node] = &topo_structs.back();
+    sbp_node2topo_struct.insert({sbp_node, TopoStruct(sbp_node)});
+    topo_structs.push_back(&sbp_node2topo_struct.at(sbp_node));
   }
 
   // Construct the map from a lbi to its id, consumers, blob size
@@ -181,22 +183,28 @@ void InitMemory(SbpGraph* sbp_graph) {
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
   for (auto& topo_struct : topo_structs) {
-    const auto& consumer = topo_struct.op_node->op();
+    const auto& consumer = topo_struct->op_node->op();
     for (const auto& ibn : consumer.input_bns()) {
       const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
       auto it = lbi2id.find(lbi);
       if (it == lbi2id.end()) {
         lbi2id[lbi] = id2blob_size.size();
-        const BlobDesc& logical_blob_desc = topo_struct.op_node->LogicalBlobDesc4Lbi(lbi);
+        const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
         id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
-        id2consumer_topo_structs.push_back({&topo_struct});
+        id2consumer_topo_structs.push_back({topo_struct});
       } else {
-        id2consumer_topo_structs[it->second].push_back(&topo_struct);
+        id2consumer_topo_structs[it->second].push_back(topo_struct);
       }
     }
   }
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
+
+  // Update sat, since sat might be changed in previous jobs
+  UpdateSat(sbp_node2topo_struct, &sat);
+
+  // Decide which node should run first
+  InitDecideParameters(sat, &decide_parameters);
 }
 
 }  // namespace auto_parallel
