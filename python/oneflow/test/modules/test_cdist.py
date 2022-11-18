@@ -32,8 +32,7 @@ class TestCDist(flow.unittest.TestCase):
         mode = random_utils.choice(
             [
                 "use_mm_for_euclid_dist_if_necessary",
-                "use_mm_for_euclid_dist"
-                "donot_use_mm_for_euclid_dist",
+                "use_mm_for_euclid_dist" "donot_use_mm_for_euclid_dist",
             ]
         )
         p = random_utils.choice([0, 1, 2, float("inf"), random(0.5, 4).to(float)])
