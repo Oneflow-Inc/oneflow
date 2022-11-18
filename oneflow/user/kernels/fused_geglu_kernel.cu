@@ -264,10 +264,10 @@ __global__ void FusedGegluHalf4ForwardGpu(const int in_size, const int out_size,
       fast_gelu(0, 0);
   Half4 gelu_out;
 
-#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
-  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.x), reinterpret_cast<const half*>(&gate.x));
-  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.y), reinterpret_cast<const half*>(&gate.y));
-#endif
+  gelu_out.x.x = fast_gelu(gate.x.x);
+  gelu_out.x.y = fast_gelu(gate.x.y);
+  gelu_out.y.x = fast_gelu(gate.y.x);
+  gelu_out.y.y = fast_gelu(gate.y.y);
 
   // calculate element-wise product
   y[i] = Hmul4(gelu_out, hidden_state);
