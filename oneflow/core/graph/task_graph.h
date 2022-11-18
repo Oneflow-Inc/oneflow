@@ -43,8 +43,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   virtual ~TaskGraph() override;
 
-  explicit TaskGraph();
-
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
@@ -83,8 +81,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
  protected:
-  TaskGraph();
-  explicit TaskGraph(bool enable_straighten_algorithm);
+  explicit TaskGraph();
 
   void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
@@ -139,8 +136,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 class GlobalTaskGraph final : public TaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalTaskGraph);
-  explicit GlobalTaskGraph(bool enable_straighten_algorithm)
-      : TaskGraph(enable_straighten_algorithm) {}
+  explicit GlobalTaskGraph() : TaskGraph() {}
+  ~GlobalTaskGraph() = default;
 };
 
 class BoxingTaskGraphProto;
@@ -175,10 +172,9 @@ class RankTaskGraph final : public TaskGraph {
 
   static Maybe<RankTaskGraph> New(
       const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
-      const HashSet<std::string>& var_op_names, int64_t current_rank,
-      bool enable_straighten_algorithm) {
+      const HashSet<std::string>& var_op_names, int64_t current_rank) {
     std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, current_rank));
-    JUST(graph->Init(var_op_names, enable_straighten_algorithm));
+    JUST(graph->Init(var_op_names));
     return graph;
   }
 
@@ -188,7 +184,7 @@ class RankTaskGraph final : public TaskGraph {
  private:
   RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
-  Maybe<void> Init(const HashSet<std::string>& var_op_names, bool enable_straighten_algorithm);
+  Maybe<void> Init(const HashSet<std::string>& var_op_names);
   bool ContainRank(const OpNode* op_node, int64_t rank) const;
   Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();

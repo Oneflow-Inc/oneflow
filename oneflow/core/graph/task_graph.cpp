@@ -1217,8 +1217,7 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
-                                bool enable_straighten_algorithm) {
+Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
@@ -1247,11 +1246,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
-  if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
-    StraightenNodes(this, &ordered_task_nodes_);
-  } else {
-    SetOrderInGraphForEachNode();
-  }
+  DecideExecutionOrder();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
   return Maybe<void>::Ok();
 }
