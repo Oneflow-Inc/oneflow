@@ -115,14 +115,6 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
         .Build();
   }
 
-  // S(m axis) x B -> S(m axis)
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("x", 0), m_x_axis)
-      .Broadcast(user_op::OpArg("weight", 0))
-      .Broadcast(user_op::OpArg("bias", 0))
-      .Split(out_and_add_to_output_args, out_num_axes - 2)
-      .Build();
-
   // B x S(n_axis) -> S(n_axis)
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("x", 0))
