@@ -93,8 +93,6 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FusedMatmulBiasOp::GetSbp(user_op::SbpContext* ctx) {
   // (b, m, k) * (n, k)
   const auto& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
-  const auto& w_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("weight", 0).shape();
-  const auto& b_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("bias", 0).shape();
 
   const int64_t x_num_axes = x_shape.NumAxes();
 
