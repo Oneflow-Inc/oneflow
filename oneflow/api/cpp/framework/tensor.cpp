@@ -111,7 +111,7 @@ void Tensor::copy_to(T* buffer) const {
     of::AutoMemcpy(stream, buffer, eager_blob_object->mut_dptr(), shape.Count(0) * sizeof(T),
                    of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
-  auto btb = std::make_shared<of::BlockingThenBusy>(1);
+  auto btb = std::make_shared<of::BlockingThenBusy>();
   CHECK_JUST(of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));
