@@ -20,8 +20,11 @@ limitations under the License.
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL, false);
 
 namespace user_op {
 
@@ -90,22 +93,26 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
   }
 
   const OpKernelRegistryResult* ret = nullptr;
+  int32_t cur_priority = kKernelPriorityFallback;
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
   for (const auto& reg_val : it->second) {
+    if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
+      continue;
+    }
     if (reg_val.is_matched_hob->get(ctx)) {
-      if (ret != nullptr) {
-        std::vector<std::string> debug_msgs;
-        for (const auto& local_reg_val : it->second) {
-          if (local_reg_val.is_matched_hob->get(ctx)) {
-            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
-          }
-        }
-        return Error::MultipleOpKernelsMatchedError(debug_msgs)
-               << "There are more than one kernels matching Current OperatorConf. "
-               << GetErrorMsgOfSearchedOp(ctx);
+      if (ret == nullptr || reg_val.priority > cur_priority) {
+        ret = &reg_val;
+        cur_priority = reg_val.priority;
+      } else if (ret != nullptr && reg_val.priority == cur_priority) {
+        LOG(WARNING)
+            << "There are more than one kernels with same priority matching Current OperatorConf. "
+            << GetErrorMsgOfSearchedOp(ctx);
+      } else {
+        // do nothing
       }
-      ret = &reg_val;
     }
   }
+
   if (ret == nullptr) {
     std::vector<std::string> debug_msgs;
     for (const auto& reg_val : it->second) {
@@ -123,24 +130,14 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
                                                     const KernelRegContext& ctx) {
   auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) { return false; }
-  const OpKernelRegistryResult* ret = nullptr;
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
   for (const auto& reg_val : it->second) {
-    if (reg_val.is_matched_hob->get(ctx)) {
-      if (ret != nullptr) {
-        std::vector<std::string> debug_msgs;
-        for (const auto& local_reg_val : it->second) {
-          if (local_reg_val.is_matched_hob->get(ctx)) {
-            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
-          }
-        }
-        return Error::MultipleOpKernelsMatchedError(debug_msgs)
-               << "There are more than one kernels matching Current OperatorConf: " << op_type_name;
-      }
-      ret = &reg_val;
+    if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
+      continue;
     }
+    if (reg_val.is_matched_hob->get(ctx)) { return true; }
   }
-  if (ret == nullptr) { return false; }
-  return true;
+  return false;
 }
 
 }  // namespace user_op

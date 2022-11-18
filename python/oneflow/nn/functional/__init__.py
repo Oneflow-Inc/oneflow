@@ -35,6 +35,9 @@ from .functional_maxpool import adaptive_max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
+from oneflow._C import max_unpool1d
+from oneflow._C import max_unpool2d
+from oneflow._C import max_unpool3d
 from oneflow._C import cosine_similarity, pairwise_distance
 from oneflow._C import relu
 from oneflow._C import hardtanh
@@ -83,3 +86,4 @@ from oneflow._C import unfold
 from oneflow._C import fold
 from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
+from oneflow._C import gumbel_softmax
