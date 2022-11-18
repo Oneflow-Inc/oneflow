@@ -1,25 +1,10 @@
-import os
-import dgl
 import numpy as np
-import torch
-import oneflow as flow
-import oneflow.nn as nn
-import oneflow.nn.functional as F
-import oneflow.optim as optim
-import oneflow.multiprocessing as mp
-import dgl.function as fn
-import dgl.nn.pytorch as dglnn
-import time
-import argparse
 import dgl
-import dgl.nn as dglnn
-from dgl.dataloading import DataLoader, NeighborSampler, MultiLayerFullNeighborSampler, as_edge_prediction_sampler, negative_sampler
+import oneflow as flow
 from ogb.nodeproppred import DglNodePropPredDataset
-import sklearn.metrics
 
 t2f = flow.utils.tensor.from_torch
 
-graph -> message flow graph / block / subgraph: vertex id: start from 0 
 
 def dataloader(mode="train", device="cuda"):
 

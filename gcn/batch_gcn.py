@@ -1,19 +1,13 @@
-import os
-import dgl
 import numpy as np
-import torch
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.nn.functional as F
-import oneflow.optim as optim
-import oneflow.multiprocessing as mp
-import time
 import argparse
 import tqdm
 import sklearn.metrics
 from batchloader import dataloader
 
-from gcn_spmm import GCN, GraphConvolution
+from gcn_spmm import GraphConvolution
 
 class BlockGCN(nn.Module):
     def __init__(self, in_feats, h_feats, num_classes):
