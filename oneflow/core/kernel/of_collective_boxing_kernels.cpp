@@ -66,6 +66,7 @@ class OfCollectiveBoxingGenericKernel final : public Kernel {
     int coll_id;
     int64_t actor_id;
     OfCollectiveBoxingActorContext *ctx;
+    int64_t rank;
   };
   void VirtualKernelInit(KernelContext* ctx) override;
   bool IsKernelLaunchSynchronized() const override { return false; }
@@ -119,17 +120,20 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
       args->actor_id = actor_id;
       args->coll_id = coll_id;
       args->ctx = GetOfCollectiveBoxingActorContext(ctx);
+      args->rank = rank_desc.rank();
 
       // TODO(Panlichen): debug目的捕获this
       auto cb_lambda = [](int collIdFromCqe, void *args) {
         int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
         Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
-        VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id = " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++;
+        VLOG(2) << "actor " << actor_id << " Rank<" << (static_cast<CallBackArgs *>(args))->rank << "> callback get cqe for coll_id = " << collIdFromCqe << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++;
         delete static_cast<CallBackArgs *>(args);
         return 0;
       };
 
       CallbackFunc cb_func = cb_lambda;
+      
+      VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ForwardDataContent coll_id = " << coll_id;
 
       OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
       
@@ -138,7 +142,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
       // const Shape shape = Shape(rank_desc.op_desc().shape());
       // FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
       // CHECK_GT(count, 0);
-      VLOG(1) << "actor " << actor_id << " ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " actor_ctx->coll_req_cnt_ = " << GetOfCollectiveBoxingActorContext(ctx)->coll_req_cnt_++; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
+      VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " actor_ctx->coll_req_cnt_ = " << GetOfCollectiveBoxingActorContext(ctx)->coll_req_cnt_++; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
     }
   }
 }
