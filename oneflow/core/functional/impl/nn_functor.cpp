@@ -668,16 +668,20 @@ class FusedMatmulBiasFunctor {
     }
 #endif  // CUDA_VERSION >= 10200
 
+    auto naive_fused_matmul_bias = [](const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& w,
+      const std::shared_ptr<one::Tensor>& b) -> Maybe<Tensor> {
+        return functional::BiasAdd(JUST(functional::MatMul(x, w, false, true, 1.0)), b,
+                                    x->shape()->NumAxes() - 1);
+      };
+    
     if (_add_to_output) {
       return JUST(functional::Add(
-          {JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                    x->shape()->NumAxes() - 1)),
+          {JUST(naive_fused_matmul_bias(x, weight, bias)),
            JUST(_add_to_output)},
           false));
     }
 
-    return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                      x->shape()->NumAxes() - 1));
+    return naive_fused_matmul_bias(x, weight, bias);
   }
 
  private:
