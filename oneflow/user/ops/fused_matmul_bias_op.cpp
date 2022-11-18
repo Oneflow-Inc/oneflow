@@ -100,10 +100,10 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   const int64_t w_num_axes = w_shape.NumAxes();
   const int64_t b_num_axes = b_shape.NumAxes();  // should be 1
 
-  const int32_t m_x_axis = x_num_axes - 1;
-  const int32_t k_x_axis = x_num_axes - 2;
-  const int32_t k_w_axis = w_num_axes - 2;
-  const int32_t n_w_axis = w_num_axes - 1;
+  const int32_t m_x_axis = x_num_axes - 2;
+  const int32_t k_x_axis = x_num_axes - 1;
+  const int32_t n_w_axis = w_num_axes - 2;
+  const int32_t k_w_axis = w_num_axes - 1;
   const int32_t n_b_axis = b_num_axes - 1;
 
   std::vector<user_op::OpArg> out_and_add_to_output_args;
@@ -113,48 +113,16 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   }
 
   const int64_t x_batch_dims = x_num_axes - 2;
-  const int64_t w_batch_dims = w_num_axes - 2;
-  const int64_t max_num_axes = std::max(x_num_axes, w_num_axes);
+  const int64_t max_num_axes = std::max(x_num_axes, w_num_axes);  // should be x_num_axes
   const size_t num_max_batch_dims = max_num_axes - 2;
-  auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
-    const int64_t num_batch_dims = num_dims - 2;
-    const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
-    return [num_padding_dims, shape_dim](size_t index) {
-      return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
-    };
-  };
-  auto GetABatchDim = MakeGetBatchDim(x_num_axes, x_shape);
-  auto GetBBatchDim = MakeGetBatchDim(w_num_axes, w_shape);
 
   for (int i = 0; i < num_max_batch_dims; i++) {
-    const int64_t a_batch_dim = GetABatchDim(i);
-    const int64_t b_batch_dim = GetBBatchDim(i);
-
-    if (a_batch_dim == b_batch_dim && a_batch_dim != 1) {
-      // S(b axis) x S(b axis) -> S(b axis)
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), i - (num_max_batch_dims - x_batch_dims))
-          .Split(user_op::OpArg("weight", 0), i - (num_max_batch_dims - w_batch_dims))
-          .Broadcast(user_op::OpArg("bias", 0))
-          .Split(out_and_add_to_output_args, i)
-          .Build();
-    } else if (a_batch_dim == 1 && b_batch_dim != 1) {
-      // B x S(b axis) -> S(b axis)
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("x", 0))
-          .Split(user_op::OpArg("weight", 0), i - (num_max_batch_dims - w_batch_dims))
-          .Broadcast(user_op::OpArg("bias", 0))
-          .Split(out_and_add_to_output_args, i)
-          .Build();
-    } else if (b_batch_dim == 1 && a_batch_dim != 1) {
-      // S(b axis) x B -> S(b axis)
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), i - (num_max_batch_dims - x_batch_dims))
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Broadcast(user_op::OpArg("bias", 0))
-          .Split(out_and_add_to_output_args, i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i - (num_max_batch_dims - x_batch_dims))
+        .Broadcast(user_op::OpArg("weight", 0))
+        .Broadcast(user_op::OpArg("bias", 0))
+        .Split(out_and_add_to_output_args, i)
+        .Build();
   }
 
   // S(m axis) x B -> S(m axis)
@@ -173,7 +141,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
       .Split(out_and_add_to_output_args, max_num_axes - 1)
       .Build();
 
-  // S(a_k_axis) x S(b_k_axis) -> P
+  // S(x_k_axis) x S(w_k_axis) -> P
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), k_x_axis)
       .Split(user_op::OpArg("weight", 0), k_w_axis)
