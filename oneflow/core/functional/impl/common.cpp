@@ -75,10 +75,10 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Sh
   const auto expand_shape_if_necessary = [unified_num_axes](const Shape& shape_to_expand) {
     const int64_t shape_to_expand_num_axes = shape_to_expand.NumAxes();
     if (shape_to_expand_num_axes < unified_num_axes) {
-      auto new_input_shape = Shape::Ones(unified_num_axes);
+      auto new_shape = Shape::Ones(unified_num_axes);
       std::copy(shape_to_expand.begin(), shape_to_expand.end(),
-                new_input_shape.begin() + (unified_num_axes - shape_to_expand_num_axes));
-      return new_input_shape;
+                new_shape.begin() + (unified_num_axes - shape_to_expand_num_axes));
+      return new_shape;
     }
     return shape_to_expand;
   };
