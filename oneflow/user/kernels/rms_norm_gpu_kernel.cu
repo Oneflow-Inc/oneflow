@@ -95,8 +95,8 @@ void DispatchRmsNormForwardAffine(ep::Stream* stream, const int64_t nrow, const 
                                   ComputeType* inv_rms) {
   layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncol);
   AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncol);
-  LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps, inv_rms);
+  OF_CUDA_CHECK((LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps, inv_rms)));
 }
 
 template<typename T, typename ComputeType>

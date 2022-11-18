@@ -61,7 +61,7 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int nrow, const in
         load.template load<pack_size>(row_buf + pack_offset, row, col);
 #pragma unroll
         for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
-          thread_square_sum[row_j] += row_buf[pack_offset + pack_j];
+          thread_square_sum[row_j] += row_buf[pack_offset + pack_j] * row_buf[pack_offset + pack_j];
         }
       }
 #pragma unroll
@@ -72,7 +72,8 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int nrow, const in
           load.template load<pack_size>(row_buf + pack_offset, row, col);
 #pragma unroll
           for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
-            thread_square_sum[row_j] += row_buf[pack_offset + pack_j];
+            thread_square_sum[row_j] +=
+                row_buf[pack_offset + pack_j] * row_buf[pack_offset + pack_j];
           }
         } else {
 #pragma unroll
@@ -279,8 +280,8 @@ __global__ void RmsNormBlockSMemImpl(LOAD load, STORE store, const int nrow, con
       load.template load<pack_size>(pack, row, col);
 #pragma unroll
       for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
-        buf[pack_j * num_packs + pack_i] = pack[pack_j];
-        thread_square_sum += pack[pack_j];
+        buf[pack_i * pack_size + pack_j] = pack[pack_j];
+        thread_square_sum += pack[pack_j] * pack[pack_j];
       }
     }
     ComputeType row_square_sum =
@@ -292,7 +293,7 @@ __global__ void RmsNormBlockSMemImpl(LOAD load, STORE store, const int nrow, con
       ComputeType pack[pack_size];
 #pragma unroll
       for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
-        pack[pack_j] = buf[pack_j * num_packs + pack_i] * row_inv_rms;
+        pack[pack_j] = buf[pack_i * pack_size + pack_j] * row_inv_rms;
       }
       const int col = pack_i * pack_size;
       store.template store<pack_size>(pack, row, col);
@@ -357,7 +358,9 @@ cudaError_t TryDispatchLaunchRmsNormBlockSMemImplBlockSize(cudaStream_t stream, 
   SELECT_BLOCK_SIZE_CONF(block_size_conf_2)
 #undef SELECT_BLOCK_SIZE_CONF
 
-  return cudaErrorInvalidValue;
+  *success = true;
+  return LaunchRmsNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>(
+      stream, load, store, smem_size, nrow, ncol, eps, inv_rms);
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
@@ -400,7 +403,9 @@ __global__ void RmsNormBlockUncachedImpl(LOAD load, STORE store, const int nrow,
       const int col = pack_i * pack_size;
       load.template load<pack_size>(pack, row, col);
 #pragma unroll
-      for (int pack_j = 0; pack_j < pack_size; ++pack_j) { thread_square_sum += pack[pack_j]; }
+      for (int pack_j = 0; pack_j < pack_size; ++pack_j) {
+        thread_square_sum += pack[pack_j] * pack[pack_j];
+      }
     }
     ComputeType row_square_sum =
         layer_norm::BlockAllReduce<layer_norm::SumOp, ComputeType, block_size>(thread_square_sum);
@@ -778,7 +783,10 @@ cudaError_t TryDispatchLaunchRmsNormGradBlockSMemImplBlockSize(
   SELECT_BLOCK_SIZE_CONF(block_size_conf_2)
 #undef SELECT_BLOCK_SIZE_CONF
 
-  return cudaErrorInvalidValue;
+  *success = true;
+  return LaunchRmsNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size,
+                                        block_size_conf_1>(stream, nrow, ncol, smem_size, load_x,
+                                                           load_dy, store, inv_rms);
 }
 
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
