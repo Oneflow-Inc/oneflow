@@ -72,11 +72,9 @@ nlohmann::json KernelEvent::ToJson() {
 }
 
 std::shared_ptr<KernelEvent> KernelEvent::Create(
-    const std::string& name, const std::function<std::vector<ShapeView>(void)>& shape_getter) {
+    const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter) {
   return std::shared_ptr<KernelEvent>(new KernelEvent(name, shape_getter));
 }
-
-void KernelEvent::RecordShape(const ShapeView& shape) { input_shapes_.emplace_back(shape); }
 
 std::string KernelEvent::GetFormatedInputShapes(size_t max_num_to_format) {
   if (input_shapes_.size() == 0) { return "-"; }

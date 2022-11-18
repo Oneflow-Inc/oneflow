@@ -80,7 +80,7 @@ def _test_lenet(
         with oneflow.profiler.record_function("lenet_backward_total_time") as f:
             eager_res.sum().backward()
     events = prof.key_averages(group_by_input_shape=True)
-
+    print(events)
     conv_event = get_event(
         events, "conv2d", "[(2,3,32,32), (6,3,5,5)]" if record_shapes else "-"
     )

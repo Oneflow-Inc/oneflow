@@ -24,7 +24,7 @@ namespace profiler {
 
 class EventRecorder {
  public:
-  using ShapeGetterFuncType = std::function<std::vector<ShapeView>(void)>;
+  using ShapeGetterFuncType = std::function<std::vector<Shape>(void)>;
 
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 

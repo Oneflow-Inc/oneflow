@@ -138,9 +138,7 @@ class KernelEvent final : public IEvent {
   nlohmann::json ToJson() override;
 
   static std::shared_ptr<KernelEvent> Create(
-      const std::string& name, const std::function<std::vector<ShapeView>(void)>& shape_getter);
-
-  void RecordShape(const ShapeView& shape);
+      const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
 
 #if defined(WITH_CUDA) || defined(WITH_ROCM)
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
@@ -160,15 +158,9 @@ class KernelEvent final : public IEvent {
 
  private:
   KernelEvent(const std::string& kernel_name,
-              const std::function<std::vector<ShapeView>(void)>& shape_getter)
+              const std::function<std::vector<Shape>(void)>& shape_getter)
       : IEvent(kernel_name, EventTimeUnit::kNS) {
-    if (shape_getter) { input_shapes_ = shape_getter(); 
-
-      for (const auto& _shape: input_shapes_)
-      {
-        std::cout << _shape.DebugStr() << std::endl;
-      }
-    }
+    if (shape_getter) { input_shapes_ = shape_getter(); }
   }
 
 #if defined(WITH_CUDA) || defined(WITH_ROCM)
@@ -176,7 +168,7 @@ class KernelEvent final : public IEvent {
   std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
-  std::vector<ShapeView> input_shapes_;
+  std::vector<Shape> input_shapes_;
   std::string GetFormatedInputShapes(size_t max_num_to_format = 4);
 };
 

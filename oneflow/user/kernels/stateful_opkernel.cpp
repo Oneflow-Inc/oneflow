@@ -883,13 +883,11 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        [compute_ctx]() -> std::vector<ShapeView> {
-          std::vector<ShapeView> shapes;
+        [compute_ctx]() -> std::vector<Shape> {
+          std::vector<Shape> shapes;
           for (const auto& pair : compute_ctx->inputs()) {
-            const auto _shape = compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape();
-            // std::cout << _shape.DebugStr() << std::endl;
             shapes.emplace_back(
-                _shape);
+                compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
           }
           return shapes;
         }));

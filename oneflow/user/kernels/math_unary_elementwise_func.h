@@ -250,7 +250,7 @@ struct LgammaFunctor<float> {
 
   static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
     // TODO(chengcheng): return: dy * digamma(x)
-    assert(false);
+    // assert(false);
     return 0.0f;
   }
 };
@@ -526,7 +526,7 @@ struct LgammaFunctor<double> {
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
     // TODO(chengcheng): return: dy * digamma(x)
-    assert(false);
+    // assert(false);
     return 0.0;
   }
 };
@@ -817,7 +817,7 @@ struct LgammaFunctor<half> {
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     // TODO(chengcheng): return: dy * digamma(x)
-    assert(false);
+    // assert(false);
     return GetZeroVal<half>();
   }
 };
