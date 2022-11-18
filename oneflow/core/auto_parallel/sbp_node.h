@@ -131,6 +131,8 @@ class SbpNode final {
   int32_t GetMinLayer() const { return min_layer_; }
   int32_t GetTributaryLayer() const { return tributary_layer_; }
   OpNode* GetOperatorNode() const { return op_node_; }
+  const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
+  const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
 
  private:
   friend class SbpEdge;

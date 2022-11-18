@@ -34,6 +34,7 @@ class TopoStruct {
   int64_t memory_increment = -1;
   int32_t exceed_time = -1;
   bool is_reusable = false;
+  int32_t counter = 0;
 
   explicit TopoStruct(SbpNode* sbp_node_);
 
@@ -205,6 +206,59 @@ void InitMemory(SbpGraph* sbp_graph) {
 
   // Decide which node should run first
   InitDecideParameters(sat, &decide_parameters);
+  std::cout << "Straightening order in sbp graph: " << std::endl;
+  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << std::endl; }
+
+  // Order in the waiting sets
+  struct comp {
+    bool operator()(const TopoStruct* a, const TopoStruct* b) const {
+      for (auto decide_parameter : decide_parameters) {
+        auto decide_parameter_a = a->GetDecidingParameter(decide_parameter);
+        auto decide_parameter_b = b->GetDecidingParameter(decide_parameter);
+        if (decide_parameter_a != decide_parameter_b) {
+          return decide_parameter_a < decide_parameter_b;
+        }
+      }
+      return a->op_node->op().op_name() < b->op_node->op().op_name();
+    }
+  };
+  std::set<TopoStruct*, comp> waiting_list;
+
+  // Order of execution for sbp nodes
+  std::vector<SbpNode*> ordered_sbp_nodes;
+
+  // Wait in the list
+  auto wait = [&](SbpNode* sbp_node) { waiting_list.insert(&sbp_node2topo_struct.at(sbp_node)); };
+
+  // Initialization
+  for (auto& topo_struct : topo_structs) {
+    topo_struct->counter = topo_struct->sbp_node->GetEdgesIn().size();
+    if (topo_struct->counter == 0) { wait(topo_struct->sbp_node); }
+  }
+
+  // Finish execution
+  auto finish_execution = [&](SbpNode* sbp_node) {
+    for (const auto& edge_out : sbp_node->GetEdgesOut()) {
+      SbpNode* end_node = edge_out->GetEndNode();
+      int32_t& end_node_counter = sbp_node2topo_struct.at(end_node).counter;
+      --end_node_counter;
+      if (end_node_counter == 0) { wait(end_node); }
+    }
+  };
+
+  // Execute the first node in the waiting list
+  // Make sure to check that waiting list is not empty before execution
+  auto execute = [&]() {
+    auto first_sbp_node = (*waiting_list.begin())->sbp_node;
+    // Set the order of execution for sbp nodes
+    ordered_sbp_nodes.push_back(first_sbp_node);
+    waiting_list.erase(waiting_list.begin());
+    finish_execution(first_sbp_node);
+  };
+
+  // straightening
+  while (!waiting_list.empty()) { execute(); }
+
 }
 
 }  // namespace auto_parallel

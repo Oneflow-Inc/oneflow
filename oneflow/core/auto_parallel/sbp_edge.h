@@ -95,6 +95,9 @@ class SbpEdge final {
   // Get the cut ratio
   double GetCutRatio() const;
 
+  // Constant getter
+  SbpNode* GetEndNode() const { return end_node_; }
+
  private:
   friend class SbpNode;
   friend class SbpGraph;
