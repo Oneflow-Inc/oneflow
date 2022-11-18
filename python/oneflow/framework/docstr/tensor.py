@@ -2410,3 +2410,10 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
+    """,
+)
