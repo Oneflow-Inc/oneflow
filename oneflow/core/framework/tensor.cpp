@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/eager/tensor_storage.h"
 
 namespace oneflow {
 
@@ -46,6 +47,21 @@ Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
   CHECK_OR_RETURN(is_local());  // NOLINT
   return std::dynamic_pointer_cast<LocalTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
+}
+
+Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
+    : ProxyTensor<Parameter>(tensor) {
+  CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
+  if (tensor_->is_local() && tensor_->is_eager()) {
+    CHECK_JUST(tensor_->eager_blob_object())->tensor_storage()->set_evictable(false);
+  }
+}
+Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+  JUST(tensor_->set_data(other));
+  if (tensor_->is_local() && tensor_->is_eager()) {
+    JUST(tensor_->eager_blob_object())->tensor_storage()->set_evictable(false);
+  }
+  return Maybe<void>::Ok();
 }
 
 std::shared_ptr<Tensor> Parameter::contiguous() const {

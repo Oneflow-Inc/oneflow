@@ -39,7 +39,9 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
   };
   for (int i = ops.size() - 1; i >= 0; i--) {
     auto& op = ops[i];
-    for (auto& x : op->mut_inputs()) {
+    for (int j = 0; j < op->mut_inputs().size(); j++) {
+      auto& x = op->mut_inputs()[j];
+      if (x == nullptr) { std::cout << "No." << j << " input of " << op->opkernel().op_type_name() << " is nullptr" << std::endl; continue; }
       if (x->tensor_storage().get() == storage) {
         vm::EagerBlobObject* old_ptr = x.get();
         update(x);
@@ -48,7 +50,9 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
                   << new_storage.get() << "), op addr " << op << std::endl;
       }
     }
-    for (auto& y : op->mut_outputs()) {
+    for (int j = 0; j < op->mut_outputs().size(); j++) {
+      auto& y = op->mut_outputs()[j];
+      if (y.lock() == nullptr) { std::cout << "No." << j << " output of " << op->opkernel().op_type_name() << " is nullptr" << std::endl; continue; }
       if (CHECK_NOTNULL(y.lock())->tensor_storage().get() == storage) {
         vm::EagerBlobObject* old_ptr = y.lock().get();
         update_output(y);

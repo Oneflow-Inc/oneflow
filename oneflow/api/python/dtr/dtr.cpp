@@ -84,6 +84,10 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("is_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<bool> {
     return JUST(t->eager_blob_object())->tensor_storage()->is_evictable();
   });
+  m.def("set_evictable", [](const std::shared_ptr<one::Tensor>& t, bool evictable) -> Maybe<void> {
+    JUST(t->eager_blob_object())->tensor_storage()->set_evictable(evictable);
+    return Maybe<void>::Ok();
+  });
 }
 
 }  // namespace oneflow

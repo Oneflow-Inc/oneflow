@@ -49,6 +49,7 @@ class TestDTRCorrectness(flow.unittest.TestCase):
 
         model.to('cuda')
         criterion.to('cuda')
+        model.train()
 
         learning_rate = 1e-3
         optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0)
@@ -63,12 +64,13 @@ class TestDTRCorrectness(flow.unittest.TestCase):
         )
 
         WARMUP_ITERS = 5
-        ALL_ITERS = 40
+        ALL_ITERS = 2
         total_time = 0
+        for x in model.parameters():
+            x.grad = flow.zeros_like(x).to('cuda')
         for iter in range(ALL_ITERS):
-            for x in model.parameters():
-                x.grad = flow.zeros_like(x).to('cuda')
-
+            print(f'iter {iter}')
+            flow._oneflow_internal.dtr.display('cuda')
             if iter >= WARMUP_ITERS:
                 start_time = time.time()
             logits = model(train_data)

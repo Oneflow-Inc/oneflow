@@ -90,7 +90,7 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
     const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1,
-                                              /*inplace=*/autograd_meta->is_grad_acc_inplace()));
+                                              /*inplace=*/true));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));

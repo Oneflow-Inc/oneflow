@@ -110,6 +110,11 @@ struct OpCallInstructionUtil final {
     }
     for (const auto& x : op_call_instruction_policy->inputs()) { x->tensor_storage()->Unpin(); }
     for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
+    for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
+      const auto& x = op_call_instruction_policy->inputs().at(i);
+      x->tensor_storage()->set_evictable(false);
+    }
+
     Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));
     VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     return Maybe<void>::Ok();

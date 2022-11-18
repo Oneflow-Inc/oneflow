@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from contextlib import contextmanager
 import os
 import sys
 import re
@@ -19,6 +20,7 @@ import functools
 import numpy as np
 
 import oneflow as flow
+from oneflow import nn
 import oneflow.unittest
 
 
@@ -30,8 +32,10 @@ def is_in_memory(tensor):
     return flow._oneflow_internal.dtr.is_in_memory(tensor)
 
 
-def allocated_memory(device):
-    return flow._oneflow_internal.dtr.allocated_memory(device)
+placeholder_size = 0
+
+def allocated_memory(device, include_test_placeholder=False):
+    return flow._oneflow_internal.dtr.allocated_memory(device) - (0 if include_test_placeholder else placeholder_size)
 
 
 def display(device):
@@ -47,6 +51,31 @@ def assert_no_small_piece_optimization(f):
         return f(*args, **kwargs)
 
     return new_f
+
+
+@contextmanager
+def generate_placeholder(size_mb, device):
+    global placeholder_size
+    placeholder_size = size_mb * 1024 * 1024
+    x = flow.zeros(placeholder_size, dtype=flow.int8, device=device)
+    flow._oneflow_internal.dtr.set_evictable(x, False)
+    try:
+        yield
+    finally:
+        del x
+        placeholder_size = 0
+
+
+def memory_budget(budget_mb, device):
+    def deco(f):
+        @functools.wraps(f)
+        def new_f(*args, **kwargs):
+            total_budget = int(os.environ['ONEFLOW_DTR_BUDGET_MB'])
+            assert total_budget >= budget_mb, "Not enough memory budget"
+            with generate_placeholder(total_budget - budget_mb, device):
+                return f(*args, **kwargs)
+        return new_f
+    return deco
 
 
 class TestDTR(flow.unittest.TestCase):
@@ -67,6 +96,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertEqual(allocated_memory('cuda'), 0)
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_1(self):
         x1 = flow.ones(1024 * 1024) # 4MB
         x2 = x1 * -2 # 8MB
@@ -81,6 +111,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x2.numpy(), np.zeros(x2.shape)))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_2(self):
         x1 = flow.ones(1024 * 1024) # 4MB
         x2 = x1[0]
@@ -95,6 +126,7 @@ class TestDTR(flow.unittest.TestCase):
 
     @unittest.skip("mutation other than inplace is not supported yet")
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_3(self):
         x1 = flow.ones(1024 * 1024) # 4MB
         x2 = x1 * -2 # 8MB
@@ -104,6 +136,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * -2))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_1(self):
         x1 = flow.ones(1024 * 1024) # 4MB
         self.assertTrue(is_in_memory(x1))
@@ -127,6 +160,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_2(self):
         x1 = flow.ones(1024 * 1024) # 4MB
         self.assertTrue(is_in_memory(x1))
@@ -150,6 +184,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_full_and_init_constant(self):
         x1 = flow.eye(1024, 1024) # 4MB
         self.assertTrue(is_in_memory(x1))
@@ -165,6 +200,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape) * 3))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_lifecycle_of_view_tensor(self):
         x1 = flow.eye(2, 3)
         self.assertTrue(is_in_memory(x1))
@@ -180,6 +216,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape)))
 
     @assert_no_small_piece_optimization
+    @memory_budget(12, 'cpu')
     def test_dtr_init_constant_and_scalar(self):
         x1 = flow.ones(1024, 1024)
         x2 = x1 + 1
@@ -191,6 +228,48 @@ class TestDTR(flow.unittest.TestCase):
         evict(x1)
         evict(x2)
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * 2))
+
+    @assert_no_small_piece_optimization
+    @memory_budget(90, 'cuda')
+    def test_argwhere(self):
+        x = flow.eye(1024, 1024).to('cuda')
+        (res, size) = flow._C.argwhere(x)
+        slice_tup_list = [(0, size.numpy().item(), 1)]
+        evict(res)
+        return flow.slice(res, slice_tup_list=slice_tup_list)
+
+    @assert_no_small_piece_optimization
+    @memory_budget(100, 'cuda')
+    def test_bn_and_backward(self):
+        model = nn.Sequential(
+                nn.Conv2d(3, 32, 3, 2, 1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 32, 3, 1, 1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 32, 3, 1, 1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 32, 3, 1, 1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                ).to('cuda')
+        for x in model.parameters():
+            x.grad = flow.zeros_like(x).to('cuda')
+        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
+        x = flow.ones(4, 3, 224, 224).to('cuda')
+        for i in range(10):
+            print(f'iter {i}')
+            display('cuda')
+            loss = model(x).sum()
+            print('print start')
+            print(loss)
+            print('print end')
+            loss.backward()
+            del loss
+            optimizer.step()
+            optimizer.zero_grad()
 
 
 if __name__ == "__main__":
