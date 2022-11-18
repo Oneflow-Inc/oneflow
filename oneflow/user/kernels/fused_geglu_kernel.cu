@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -34,7 +35,7 @@ namespace thread {
 template<typename ElementOutput_, int Count, typename ElementAccumulator_ = ElementOutput_,
          typename ElementCompute_ = ElementOutput_,
          FloatRoundStyle Round = FloatRoundStyle::round_to_nearest>
-class LeftFastGeluAndMul {
+class RightFastGeluAndMul {
  public:
   using ElementOutput = ElementOutput_;
   using ElementAccumulator = ElementAccumulator_;
@@ -55,7 +56,7 @@ class LeftFastGeluAndMul {
 
  public:
   CUTLASS_HOST_DEVICE
-  LeftFastGeluAndMul(Params const& /*params*/) {}
+  RightFastGeluAndMul(Params const& /*params*/) {}
 
   CUTLASS_HOST_DEVICE
   bool is_source_needed() const { return true; }
@@ -74,8 +75,8 @@ class LeftFastGeluAndMul {
 
     cutlass::epilogue::thread::GELU_taylor<ComputeFragment> fast_gelu;
     cutlass::multiplies<ComputeFragment> mul;
-    auto fast_gelu_lhs = fast_gelu(converted_lhs);
-    return compute_to_output(mul(fast_gelu_lhs, converted_rhs));
+    auto fast_gelu_rhs = fast_gelu(converted_rhs);
+    return compute_to_output(mul(fast_gelu_rhs, converted_lhs));
   }
 
   CUTLASS_HOST_DEVICE
@@ -125,7 +126,7 @@ void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, cons
       cutlass::epilogue::thread::LinearCombination<ElementOutput,
                                                    128 / cutlass::sizeof_bits<ElementOutput>::value,
                                                    ElementAccumulator, ElementCompute, kScaleType>;
-  using EpilogueOutputOp2 = cutlass::epilogue::thread::LeftFastGeluAndMul<
+  using EpilogueOutputOp2 = cutlass::epilogue::thread::RightFastGeluAndMul<
       ElementOutput, 128 / cutlass::sizeof_bits<ElementOutput>::value, ElementOutput,
       ElementCompute>;
 
@@ -215,7 +216,9 @@ __global__ void FusedGegluForwardGpu(const int in_size, const int out_size, cons
   T gate = matmul[2 * out_row * out_size + x2_col] + b[x2_col];
 
   // calculate gelu
-  T gelu_gate = Gelu<T>(gate);
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kFastGelu, T, T> fast_gelu(
+      0, 0);
+  T gelu_gate = fast_gelu(gate);
 
   // calculate element-wise product
   y[i] = gelu_gate * hidden_state;
@@ -264,10 +267,10 @@ __global__ void FusedGegluHalf4ForwardGpu(const int in_size, const int out_size,
       fast_gelu(0, 0);
   Half4 gelu_out;
 
-  gelu_out.x.x = fast_gelu(gate.x.x);
-  gelu_out.x.y = fast_gelu(gate.x.y);
-  gelu_out.y.x = fast_gelu(gate.y.x);
-  gelu_out.y.y = fast_gelu(gate.y.y);
+#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.x), reinterpret_cast<const half*>(&gate.x));
+  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.y), reinterpret_cast<const half*>(&gate.y));
+#endif
 
   // calculate element-wise product
   y[i] = Hmul4(gelu_out, hidden_state);
