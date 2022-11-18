@@ -629,14 +629,13 @@ class FusedMatmulBiasFunctor {
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& bias,
                            const Optional<one::Tensor>& _add_to_output) const {
-    int64_t n = 0, k = 0;
     /*
     x: (m_i, ... m_0, k)
     weight: (n, k) need transpose
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    k = x_shape->At(x->shape()->NumAxes() - 1);
+    const int64_t k = x_shape->At(x->shape()->NumAxes() - 1);
 
     const auto& weight_shape = weight->shape();
     const auto& bias_shape = bias->shape();
@@ -646,7 +645,7 @@ class FusedMatmulBiasFunctor {
     CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Bias's dim size should == 1";
 
-    n = weight_shape->At(0);
+    const int64_t n = weight_shape->At(0);
     CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
         << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
     CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
