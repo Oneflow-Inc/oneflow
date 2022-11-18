@@ -982,6 +982,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
   } else {
     user_opkernel->Compute(compute_ctx, state, cache);
   }
+  CHECK_JUST(compute_ctx->stream()->GetAsyncError());
 }
 
 }  // namespace one

@@ -16,23 +16,18 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
-#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/impl/common.h"
-#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 #include <sstream>
 #include <bitset>
@@ -298,6 +293,11 @@ class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
   ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
 };
 
+class ScalarTruncDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarTruncDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_truncdiv") {}
+};
+
 class ScalarFModFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarFModFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_fmod") {}
@@ -458,6 +458,64 @@ class ReduceSumFunctor {
     attrs.SetAllAttrs(reduce_axis, keepdims);
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceNanSumFunctor {
+ public:
+  ReduceNanSumFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
+
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, tensor->ndim()));
+    if (reduce_axis.size() == 0) { return tensor; }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
+    attrs.SetAllAttrs(reduce_axis, keepdims);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceNanSumWholeFunctor {
+ public:
+  ReduceNanSumWholeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
+
+    const int32_t ndim = tensor->ndim();
+    if (ndim == 0) { return tensor; }  // for 0-dim Tensor
+    std::vector<int32_t> axis(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
+    attrs.SetAllAttrs(axis, false);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -686,7 +744,8 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
+                    || x->dtype()->data_type() == DataType::kFloat16)
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
@@ -702,8 +761,12 @@ class ReduceMeanFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+    // NOTE: Should use original reduce_mean op/kernel rather than current way(ReduceSum /
+    // reduce_count) because it could encounter precision problem(like overflow) in float16 case.
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
+                    || x->dtype()->data_type() == DataType::kFloat16)
         << "RuntimeError: Can only calculate the mean of floating types.";
+
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;
     if (axis.empty()) {
@@ -840,6 +903,45 @@ class ReduceProdFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class LogSumExpFunctor {
+ public:
+  LogSumExpFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    if (x->ndim() == 0) {
+      // can't take amax of 0-dim tensor
+      return To(x, JUST(DType::Get(DataType::kFloat)), false);
+    } else if (x->nelement() == 0) {
+      // can't take amax of empty tensor
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
+      return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+    } else {
+      const std::shared_ptr<one::Tensor>& maxes = JUST(Amax(x, axis, true));
+      const std::shared_ptr<one::Tensor>& maxes_squeezed =
+          (keepdims ? maxes : JUST(SqueezeMultiple(maxes, axis)));
+      JUST(MaskedFillInplace(maxes_squeezed,
+                             JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
+      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims)))), maxes_squeezed, 1, false);
+    }
+  }
+
+ private:
+  Maybe<Tensor> SqueezeMultiple(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int32_t>& axis) const {
+    int ndims = x->ndim();
+    const auto& dims_to_squeeze = JUST(dim_list_to_bitset(axis, ndims));
+    std::shared_ptr<one::Tensor> result = x;
+    for (int i = ndims - 1; i >= 0; --i) {
+      if ((*dims_to_squeeze)[i]) {
+        std::vector<int32_t> dims = {i};
+        result = JUST(Squeeze(result, dims));
+      }
+    }
+    return result;
+  }
 };
 
 class TransposeFunctor {
@@ -1135,7 +1237,8 @@ class ClampBaseFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type())
+        || x->dtype()->data_type() == DataType::kFloat16) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());
@@ -2370,17 +2473,10 @@ class GeluWithApproximateFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& approximate) const {
-    if (approximate == "tanh") {
-      return JUST(
-          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
-                                 JUST(Add(x,
-                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
-                                                         Scalar(0.044715), false)),
-                                          1.0, false)),
-                                 Scalar(sqrt(2.0 / M_PI)), false)))),
-                             Scalar(1.0), 1.0, false)),
-              JUST(ScalarMul(x, 0.5, false))));
+    if (approximate != "none" && approximate != "tanh") {
+      return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
     }
+    if (approximate == "tanh") { return FastGelu(x); }
     return Gelu(x);
   }
 };
@@ -3080,6 +3176,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
+  m.add_functor<ReduceNanSumFunctor>("ReduceNanSum");
+  m.add_functor<ReduceNanSumWholeFunctor>("ReduceNanSumWhole");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAllWholeFunctor>("ReduceAllWhole");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
@@ -3094,6 +3192,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMaxDeviceStageGradFunctor>("ReduceMaxDeviceStageGrad");
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
+  m.add_functor<LogSumExpFunctor>("LogSumExp");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
@@ -3128,6 +3227,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
+  m.add_functor<ScalarTruncDivFunctor>("ScalarTruncDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");

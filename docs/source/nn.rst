@@ -105,9 +105,15 @@ Pooling Layers
     nn.MaxPool1d 
     nn.MaxPool2d 
     nn.MaxPool3d 
+    nn.MaxUnpool1d
+    nn.MaxUnpool2d
+    nn.MaxUnpool3d
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
+    nn.AdaptiveMaxPool1d 
+    nn.AdaptiveMaxPool2d 
+    nn.AdaptiveMaxPool3d
     nn.AvgPool1d 
     nn.AvgPool2d 
     nn.AvgPool3d
@@ -181,7 +187,8 @@ Normalization Layers
 
     nn.BatchNorm1d 
     nn.BatchNorm2d 
-    nn.BatchNorm3d 
+    nn.BatchNorm3d
+    nn.SyncBatchNorm
     nn.FusedBatchNorm1d 
     nn.FusedBatchNorm2d
     nn.FusedBatchNorm3d 

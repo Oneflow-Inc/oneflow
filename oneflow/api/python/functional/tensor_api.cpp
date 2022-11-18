@@ -141,7 +141,7 @@ class TensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = DType::Float();
+    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
@@ -173,7 +173,7 @@ class GlobalTensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = DType::Float();
+    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
@@ -195,7 +195,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
+    return functional::Empty(shape, GetDefaultDType(), device_, /*pin_memory=*/false);
   }
 };
 
@@ -206,7 +206,7 @@ class GlobalTensorWithShapeCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    return functional::GlobalEmpty(shape, DType::Float(), placement, sbp_tuple);
+    return functional::GlobalEmpty(shape, GetDefaultDType(), placement, sbp_tuple);
   }
 };
 
@@ -220,7 +220,9 @@ class AssignLocalTensorFunctor {
     // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
+    std::shared_ptr<one::Tensor> src = value;
+    if (ref->dtype() != src->dtype()) { src = JUST(To(src, ref->dtype(), false)); }
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, src}));
     return Maybe<void>::Ok();
   }
 
@@ -291,10 +293,10 @@ class LocalTensorSharedNumpyDataFunctor {
     };
 
     const auto array_size_in_bytes = PyArray_NBYTES(array);
-    auto tensor_data = std::make_shared<vm::TensorStorage>();
+    auto tensor_data = std::make_shared<vm::OutsideVmTensorStorage>();
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
-        array_size_in_bytes, /*is_allocated_in_vm*/ false);
+        array_size_in_bytes);
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);

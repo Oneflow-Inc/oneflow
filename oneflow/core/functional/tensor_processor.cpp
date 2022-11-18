@@ -37,13 +37,10 @@ Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
 }
 
 bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
-  Symbol<DType> common_dtype = DType::InvalidDataType();
+  if (tensor_tuple.size() <= 1) { return false; }
+  Symbol<DType> common_dtype = tensor_tuple[0]->dtype();
   for (auto& tensor_ptr : tensor_tuple) {
-    if (common_dtype == DType::InvalidDataType()) {
-      common_dtype = tensor_ptr->dtype();  // Initialize the common_dtype_
-    } else {
-      return true;
-    }
+    if (common_dtype != tensor_ptr->dtype()) { return true; }
   }
   return false;
 }
@@ -81,6 +78,13 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(
+    bool is_promote, const Optional<Symbol<DType>>& promote_dtype) {
+  promote_inputs_to_common_dtype_ = is_promote;
+  promote_dtype_ = promote_dtype;
+  return *this;
+}
+
 TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
   promote_integer_inputs_to_float_ = is_promote;
   CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
@@ -93,7 +97,11 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      if (promote_dtype_.has_value()) {
+        common_dtype_ = CHECK_JUST(promote_dtype_);
+      } else {
+        common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      }
       if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
         // Promotes common dtype to the default float scalar type, if needed.
         // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
@@ -102,7 +110,7 @@ Maybe<void> TensorProcessor::Apply() {
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
     } else {
       if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {
-        Symbol<DType> cast_dtype = inputs_lowest_dtype_vec_[0]->InvalidDataType()
+        Symbol<DType> cast_dtype = (inputs_lowest_dtype_vec_[0] == DType::InvalidDataType())
                                        ? DType::Float()
                                        : inputs_lowest_dtype_vec_[0];
         JUST(CastToSameType(tensor_tuple_, cast_dtype));
@@ -136,7 +144,6 @@ Maybe<void> TensorLayoutProcessor::Apply() {
   if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
     contiguous_inputs_.resize(inputs_.size());
     for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
-    converted_ = true;
   }
   // inplace operation is not allowed if input is non-contiguous and non-contiguous is
   // not supported for this operation
@@ -165,6 +172,71 @@ TensorLayoutProcessor::~TensorLayoutProcessor() {
                                          (*outputs_)[output_index]));
     (*outputs_)[output_index] = post_process_outputs_[i];
   }
+}
+
+Maybe<void> TensorAutoCastProcessor::Apply() {
+  if (!autocast::is_enabled()) { return Maybe<void>::Ok(); }
+  if (autocast_meta_.autocast_color() == autocast::kNoColor) { return Maybe<void>::Ok(); }
+  auto autocast_device_type = autocast::get_autocast_device_type();
+  auto autocast_dtype = autocast::get_autocast_dtype();
+  auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,
+                         DeviceType device_type) -> Maybe<bool> {
+    return tensor->is_local() ? JUST(tensor->device())->enum_type() == device_type
+                              : JUST(tensor->parallel_desc())->device_type() == device_type;
+  };
+  bool is_autocast_eligible = [&]() {
+    if (!autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
+      return false;
+    }
+    // Skip autocast if output data type is float32
+    if (outputs_) {
+      for (const auto& output : *outputs_) {
+        if (output && output->dtype() != autocast_dtype) { return false; }
+      }
+    }
+    // Skip autocast if any input is float32 for gray or clear list
+    if (autocast_meta_.autocast_color() != autocast::kWhite) {
+      for (int i = 0; i < inputs_.size(); ++i) {
+        if (autocast_meta_.is_args_autocast_eligible(i) && inputs_[i]->dtype()->is_floating_point()
+            && inputs_[i]->dtype() != autocast_dtype) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }();
+  // Disable autocast temporarily to avoid going into a dead loop
+  autocast::set_enabled(false);
+  if (is_autocast_eligible) {
+    const auto& args_eligible = autocast_meta_.is_args_autocast_eligible();
+    CHECK_EQ_OR_RETURN(args_eligible.size(), inputs_.size())
+        << Error::RuntimeError() << "argument autocast eligible size should equal to input size";
+    autocast_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) {
+      if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
+          && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
+        autocast_inputs_[i] = JUST(functional::To(inputs_[i], autocast_dtype, /*copy*/ false));
+      } else {
+        autocast_inputs_[i] = inputs_[i];
+      }
+    }
+  } else {
+    // Fallback to float32
+    auto common_dtype = ComputeCommonDType(inputs_);
+    auto promote_dtype = promoteTypes(common_dtype, DType::Float());
+    autocast_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) {
+      if (JUST(IsDeviceType(inputs_[i], autocast_device_type))
+          && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != promote_dtype) {
+        autocast_inputs_[i] = JUST(functional::To(inputs_[i], promote_dtype, /*copy*/ false));
+      } else {
+        autocast_inputs_[i] = inputs_[i];
+      }
+    }
+  }
+  // Enable autocast to restore autocast state
+  autocast::set_enabled(true);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

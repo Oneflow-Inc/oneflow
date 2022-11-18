@@ -43,9 +43,12 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   virtual ~TaskGraph() override;
 
+  explicit TaskGraph();
+
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -91,7 +94,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
 
   void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace

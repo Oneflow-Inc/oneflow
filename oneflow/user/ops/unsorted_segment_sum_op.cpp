@@ -154,9 +154,11 @@ namespace oneflow {
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
   const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
-  CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
+  CHECK_EQ_OR_RETURN(data.data_type(), like.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(like.data_type()) << ", but got "
+      << DataType_Name(data.data_type());
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  ctx->SetOutputDType("out", 0, ctx->InputDType("like", 0));
+  ctx->SetOutputDType("out", 0, ctx->InputDType("data", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::ModifyInputArg(

@@ -69,7 +69,7 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
       bc.Decrease();
     });
   }
-  // buzy loop wait.
+  // busy loop wait.
   bc.WaitForeverUntilCntEqualZero();
 }
 

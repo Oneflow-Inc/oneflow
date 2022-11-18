@@ -39,6 +39,12 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
 Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride, const Shape& target_shape);
 Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape);
 
+// returns tuple<unified_shape, input_need_to_broadcast, other_need_to_broadcast>
+Maybe<std::tuple<Shape, bool, bool>> InferUnifiedShapeForBroadcasting(const Shape& input_shape,
+                                                                      const Shape& other_shape);
+
+Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

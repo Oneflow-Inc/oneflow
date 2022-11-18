@@ -42,8 +42,20 @@ struct DimScatterScalarFunctor<DeviceType::kCUDA, IN_T, IDX_T, Opt> final {
   }
 };
 
-INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCUDA, UpdateScalarFunctor);
-INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCUDA, AddScalarFunctor);
+template<typename IDX_T, template<typename T> class Opt>
+struct DimScatterScalarFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
+                  const int64_t elem_cnt, const int32_t dim, int64_t upper_bound,
+                  const IDX_T* index, const float16 src, float16* output) {
+    RUN_CUDA_KERNEL((DoCUDADimScatterScalar<half, IDX_T, Opt>), stream,
+                    BlocksNum4ThreadsNum(elem_cnt), idx_nd_helper, output_nd_helper, ndim, elem_cnt,
+                    dim, upper_bound, index, src, reinterpret_cast<half*>(output));
+  }
+};
+
+INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(DeviceType::kCUDA, UpdateScalarFunctor);
+INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(DeviceType::kCUDA, AddScalarFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow

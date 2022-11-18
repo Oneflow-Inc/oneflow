@@ -58,7 +58,10 @@ Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
 Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  autograd_meta_->set_retain_grad(retain_grad);
+  if (!requires_grad() && retain_grad) {
+    return Error::RuntimeError() << "Can't retain_grad on Tensor that has requires_grad=False";
+  }
+  if (!is_leaf() && retain_grad) { autograd_meta_->set_retain_grad(retain_grad); }
   return Maybe<void>::Ok();
 }
 
@@ -117,7 +120,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(), dep_object);
+        std::make_shared<vm::InsideVmTensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -167,7 +170,7 @@ Maybe<GlobalTensorImpl> LazyGlobalTensorImpl::detach() const {
 }
 
 EagerGlobalTensorImpl::EagerGlobalTensorImpl(
-    Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad, bool is_leaf,
+    Symbol<GlobalTensorMeta> global_tensor_meta,
     const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor)
     : GlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                        cur_rank_phy_tensor->is_leaf()),
@@ -224,15 +227,13 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
-  auto* tensor_impl =
-      new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
+  auto* tensor_impl = new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor);
   return std::shared_ptr<EagerGlobalTensorImpl>(tensor_impl);
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
-  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(
-      new EagerGlobalTensorImpl(tensor_meta_, false, true, cur_rank_phy_tensor_));
+  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(new EagerGlobalTensorImpl(
+      tensor_meta_, JUST(JUST(cur_rank_phy_tensor_->detach())->AsLocalTensor())));
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<GlobalTensorImpl>(detached_impl);

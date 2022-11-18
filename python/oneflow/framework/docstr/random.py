@@ -108,6 +108,46 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow._C.randn_like,
+    """
+    randn_like(input, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a tensor with the same size as `input` that is filled with random numbers from a normal distribution with mean 0 and variance 1.
+    flow.randn_like(input) is equivalent to flow.randn(input.size(), dtype=input.dtype, device=input.device).
+
+    Args:
+        input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.
+        dtype (flow.dtype, optional): The desired data type of returned tensor. defaults to the dtype of `input`.
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
+        device (flow.device, optional): The desired device of returned local tensor. If None, defaults to the device of `input`.
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+          numbers of placement, If None, will construct local tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3,3) # construct local tensor
+        >>> y = flow.randn_like(x)
+        >>> y.shape
+        oneflow.Size([3, 3])
+        >>> y.is_global
+        False
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> sbp = flow.sbp.broadcast
+        >>> z = flow.randn_like(y, placement=placement, sbp=sbp) # construct global tensor
+        >>> z.is_global
+        True
+
+    """,
+)
+
 add_docstr(
     oneflow._C.rand,
     """
@@ -180,7 +220,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
         >>> y = flow.normal(0, 1, 5, generator=generator)
         >>> y
         tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
@@ -222,7 +263,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
         >>> y = flow.randint(0, 5, (3,3), generator=generator) # construct local tensor
         >>> y
         tensor([[2, 2, 3],
@@ -271,7 +313,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
         >>> x = flow.randn(2, 2, generator=generator)
         >>> y = flow.randint_like(x, 0, 5, generator=generator) # construct local tensor
         >>> y
@@ -314,7 +357,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
         >>> y = flow.randperm(5, generator=generator) # construct local tensor
         >>> y
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
@@ -324,6 +368,58 @@ add_docstr(
         >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.multinomial,
+    """
+    multinomial(input, num_samples, replacement=False, generator=None) -> LongTensor
+    
+    Returns a tensor where each row contains :attr:`num_samples` indices sampled
+    from the multinomial probability distribution located in the corresponding row
+    of tensor :attr:`input`.
+
+    .. note::
+      The rows of :attr:`input` do not need to sum to one (in which case we use
+      the values as weights), but must be non-negative, finite and have
+      a non-zero sum.
+
+    Indices are ordered from left to right according to when each was sampled
+    (first samples are placed in first column).
+
+    If :attr:`input` is a vector, :attr:`out` is a vector of size :attr:`num_samples`.
+
+    If :attr:`input` is a matrix with `m` rows, :attr:`out` is an matrix of shape
+    :math:`(m x num\_samples)`.
+
+    If replacement is ``True``, samples are drawn with replacement.
+
+    If not, they are drawn without replacement, which means that when a
+    sample index is drawn for a row, it cannot be drawn again for that row.
+
+    .. note::
+        When drawn without replacement, :attr:`num_samples` must be lower than
+        number of non-zero elements in :attr:`input` (or the min number of non-zero
+        elements in each row of :attr:`input` if it is a matrix).
+
+    Args:
+        input (Tensor): the input tensor containing probabilities
+        num_samples (int): number of samples to draw
+        replacement (bool, optional): whether to draw with replacement or not
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> gen = flow.manual_seed(0)
+        >>> weights = flow.tensor([0, 10, 3, 0], dtype=flow.float) # create a tensor of weights
+        >>> flow.multinomial(weights, 2)
+        tensor([1, 2], dtype=oneflow.int64)
+        >>> flow.multinomial(weights, 4, replacement=True)
+        tensor([1, 2, 1, 1], dtype=oneflow.int64)
 
     """,
 )

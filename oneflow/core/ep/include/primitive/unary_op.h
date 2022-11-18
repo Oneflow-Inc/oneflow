@@ -41,6 +41,7 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
+  kFastGelu,
   // math op
   kAbs,
   kAcos,
@@ -85,6 +86,7 @@ enum class UnaryOp {
   kIsInf,
   kIsNan,
   kIsFinite,
+  kNanAssign,
 };
 
 }

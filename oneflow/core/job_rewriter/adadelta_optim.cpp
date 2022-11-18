@@ -77,6 +77,9 @@ void GenerateAdadeltaOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Attr<bool>("maximize", maximize)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  if (optimizer_conf.has_lr_scale()) {
+    adadelta_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
   SetDynamicLossScaleSkipIf(ctx, &adadelta_update_op_builder);
   const auto adadelta_update_op = adadelta_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {adadelta_update_op.op_conf()});

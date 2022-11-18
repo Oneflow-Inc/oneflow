@@ -20,7 +20,7 @@ from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.block import TensorBlock
+from oneflow.nn.graph.proxy import ProxyTensor
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
 import oneflow as flow
@@ -30,19 +30,19 @@ class ParamGroup(object):
     def __init__(
         self, parameters: Dict[str, Any], default_options: Dict,
     ):
-        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
+        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or ProxyTensor], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
         self._parameters = list()
         for p in parameters["params"]:
             if isinstance(p, (Parameter, Tensor)):
                 self._parameters.append(p)
-            elif isinstance(p, TensorBlock):
+            elif isinstance(p, ProxyTensor):
                 # Add parameter from nn.Graph
-                self._parameters.append(p.origin)
+                self._parameters.append(p.to(Tensor))
             else:
                 raise ValueError(
-                    "parameters in ParamGroup must be Tensor or TensorBlock."
+                    "parameters in ParamGroup must be Tensor or ProxyTensor."
                 )
 
         self._options = deepcopy(default_options)
@@ -392,11 +392,7 @@ class Optimizer(object):
         """
         for param_group in self.param_groups:
             for param in param_group.parameters:
-                if param.grad is not None:
-                    if set_to_none:
-                        param.grad = None
-                    else:
-                        param.grad.zero_()
+                param._zero_grad_(set_to_none)
 
     def _parse_input_parameters(self, parameters):
         """
@@ -437,6 +433,13 @@ class Optimizer(object):
         clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
         clip_grad_norm.max_norm = max_norm
         clip_grad_norm.norm_type = norm_type
+
+    def _generate_lr_scale_for_optim_conf(self, param_group, optimizer_conf):
+        if "lr_scale" not in param_group:
+            return
+
+        lr_scale = float(param_group["lr_scale"])
+        optimizer_conf.lr_scale = lr_scale
 
     @property
     def support_sparse(self):

@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+namespace auto_parallel {
+class SbpConstructor;
+}
 
 class OpEdge;
 class OpGraph;
@@ -55,6 +58,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
  private:
   friend class OpGraph;
   friend class OpEdge;
+  friend class auto_parallel::SbpConstructor;
 
   // Setters
   Operator* mut_op() { return op_.get(); }
@@ -132,8 +136,12 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::function<bool(const OpNode* src, const OpNode* dst)> CreatePredicatorIsReachable() const;
   void UpdateCachedPredicatorIsReachable();
   std::function<bool(const OpNode* src, const OpNode* dst)> cached_predicator_is_reachable() const;
+  // Print the graph with SBP in order
+  void PrintSBPGraphDebugInfo() const;
 
  private:
+  friend class auto_parallel::SbpConstructor;
+
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
