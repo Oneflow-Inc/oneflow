@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+
 namespace mlir {
 struct TestOneFlowTraitFolder
     : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
