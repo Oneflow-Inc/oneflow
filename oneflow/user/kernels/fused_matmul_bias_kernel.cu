@@ -57,9 +57,8 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
-    // Currently only support 2D matmul.
-    DimVector in_shape(x->shape_view().NumAxes());
-    x->shape_view().ToDimVector(&in_shape);
+    DimVector in_shape({x->shape_view().Count(0, x->shape_view().NumAxes() - 1),
+                        x->shape_view().At(x->shape_view().NumAxes() - 1)});
 
     DimVector weight_shape(2);
 
@@ -72,10 +71,6 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                          /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-
-    int num_batches = 1;
-    for (int i = 0; i < x->shape_view().NumAxes() - 2; i++) num_batches *= x->shape_view().At(i);
-    cublas_n *= num_batches;
 
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
     void* y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
@@ -96,17 +91,17 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(cpp_type, data_type)     \
+#define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(data_type)               \
   REGISTER_USER_KERNEL("fused_matmul_bias")                            \
       .SetCreateFn<FusedMatmulBiasKernel>()                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == data_type));
 
-REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(double, DataType::kDouble);
-REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(float, DataType::kFloat);
-REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(half, DataType::kFloat16);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kDouble);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kFloat);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kFloat16);
 #if CUDA_VERSION >= 11000
-REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kBFloat16);
 #endif  // CUDA_VERSION >= 11000
 
 }  // namespace

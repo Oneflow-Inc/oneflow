@@ -596,7 +596,21 @@ class FusedMLPFunctor {
 
 class FusedMatmulBiasFunctor {
  public:
-  FusedMatmulBiasFunctor() {}
+  FusedMatmulBiasFunctor() {
+    _with_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                            .Input("x")
+                                            .Input("weight")
+                                            .Input("bias")
+                                            .Input("_add_to_output")
+                                            .Output("out")
+                                            .Build());
+    _without_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                               .Input("x")
+                                               .Input("weight")
+                                               .Input("bias")
+                                               .Output("out")
+                                               .Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& bias,
@@ -632,36 +646,13 @@ class FusedMatmulBiasFunctor {
       device_type = JUST(x->device())->enum_type();
     }
 
-    if ((device_type == DeviceType::kCUDA) && (3 <= kMaxInputCount)) {
+    if (device_type == DeviceType::kCUDA) {
       if (_add_to_output) {
-        std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
-                                                    .Input("x")
-                                                    .Input("weight")
-                                                    .Input("bias")
-                                                    .Input("_add_to_output")
-                                                    .Output("out")
-                                                    .Build());
-
-        return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight, bias, JUST(_add_to_output)});
+        return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
+                                              {x, weight, bias, JUST(_add_to_output)});
       } else {
-        std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
-                                                    .Input("x")
-                                                    .Input("weight")
-                                                    .Input("bias")
-                                                    .Output("out")
-                                                    .Build());
-
-        return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight, bias});
+        return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
       }
-
-      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
-                                                  .Input("x")
-                                                  .Input("weight")
-                                                  .Input("bias")
-                                                  .Output("out")
-                                                  .Build());
-
-      return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight, bias});
     }
 #endif  // CUDA_VERSION >= 10200
 
@@ -676,6 +667,10 @@ class FusedMatmulBiasFunctor {
                                       x->shape()->NumAxes() - 1));
     }
   }
+
+ private:
+  std::shared_ptr<OpExpr> _with_add_to_output_op;
+  std::shared_ptr<OpExpr> _without_add_to_output_op;
 };
 
 class FusedMatmulBiasAddReluDropoutFunctor {
