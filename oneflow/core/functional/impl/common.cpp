@@ -30,52 +30,61 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Sh
   // same shapes need no broadcasting
   if (input_shape == other_shape) { return input_shape; }
 
-  const auto num_axes = std::make_pair(input_shape.NumAxes(), other_shape.NumAxes());
+  const auto unify_shapes_with_same_num_axes = [](const Shape& input_shape,
+                                                  const Shape& other_shape) -> Maybe<Shape> {
+    // num_axes.first == num_axes.second
+    Shape target;
+    for (size_t i = 0; i < input_shape.NumAxes() /* both input_shape and other_shape are ok */;
+         ++i) {
+      const auto num_in_curr_dim = std::make_pair(input_shape.At(i), other_shape.At(i));
 
-  // num_axes.first != num_axes.second
-  // (3, 4) vs (2, 3, 1) => (1, 3, 4) vs (2, 3, 1) then do broadcast
-  if (num_axes.first < num_axes.second) {
-    auto new_input_shape = Shape::Ones(num_axes.second);
-    std::copy(input_shape.begin(), input_shape.end(),
-              new_input_shape.begin() + (num_axes.second - num_axes.first));
-    return InferUnifiedShapeForBroadcasting(new_input_shape, other_shape);
-  }
+      // A = (2, ), B = (2, ), A[0] == B[0], so C = (2, )
+      if (num_in_curr_dim.first == num_in_curr_dim.second) {
+        target.push_back(num_in_curr_dim.first);
+        continue;
+      }
 
-  // (2, 3, 1) vs (3, 4) => (2, 3, 1) vs (1, 3, 4) then do broadcast
-  if (num_axes.first > num_axes.second) {
-    auto new_other_shape = Shape::Ones(num_axes.first);
-    std::copy(other_shape.begin(), other_shape.end(),
-              new_other_shape.begin() + (num_axes.first - num_axes.second));
-    return InferUnifiedShapeForBroadcasting(input_shape, new_other_shape);
-  }
+      // A = (2, ), B = (3, ), A[0] != B[0] and A[0] != 1 and B[0] != 1, so raise RuntimeError
+      if (num_in_curr_dim.first != 1 && num_in_curr_dim.second != 1) {
+        return Error::RuntimeError()
+               << fmt::format("input and other can't be broadcasted to a single shape. [input's "
+                              "shape: {}, other's shape: {}].",
+                              input_shape.ToString(), other_shape.ToString());
+      }
 
-  // num_axes.first == num_axes.second
-  Shape target;
-  for (size_t i = 0; i < num_axes.first /* both first and secend are ok */; ++i) {
-    const auto num_in_curr_dim = std::make_pair(input_shape.At(i), other_shape.At(i));
-
-    // A = (2, ), B = (2, ), A[0] == B[0], so C = (2, )
-    if (num_in_curr_dim.first == num_in_curr_dim.second) {
-      target.push_back(num_in_curr_dim.first);
-      continue;
+      // A = (2, ), B = (1, ), A[0] != B[0] but B[0] == 1, so C = (2, )
+      target.push_back(
+          num_in_curr_dim.first == 1
+              ? num_in_curr_dim.second
+              : num_in_curr_dim.first);  // num_in_curr_dim.first and num_in_curr_dim.second can't
+                                         // be 1 at the same time
     }
+    return target;
+  };
 
-    // A = (2, ), B = (3, ), A[0] != B[0] and A[0] != 1 and B[0] != 1, so raise RuntimeError
-    if (num_in_curr_dim.first != 1 && num_in_curr_dim.second != 1) {
-      return Error::RuntimeError()
-             << fmt::format("input and other can't be broadcasted to a single shape. [input's "
-                            "shape: {}, other's shape: {}].",
-                            input_shape.ToString(), other_shape.ToString());
-    }
+  const int64_t input_num_axes = input_shape.NumAxes();
+  const int64_t other_num_axes = other_shape.NumAxes();
 
-    // A = (2, ), B = (1, ), A[0] != B[0] but B[0] == 1, so C = (2, )
-    target.push_back(
-        num_in_curr_dim.first == 1
-            ? num_in_curr_dim.second
-            : num_in_curr_dim.first);  // num_in_curr_dim.first and num_in_curr_dim.second can't
-                                       // be 1 at the same time
+  if (input_num_axes == other_num_axes) {
+    return unify_shapes_with_same_num_axes(input_shape, other_shape);
   }
-  return target;
+
+  const int64_t unified_num_axes = std::max(input_num_axes, other_num_axes);
+
+  // shape = (3, 4) and unified_num_axes = 3 ==> shape will be (1, 3, 4)
+  const auto expand_shape_if_necessary = [unified_num_axes](const Shape& shape_to_expand) {
+    const int64_t shape_to_expand_num_axes = shape_to_expand.NumAxes();
+    if (shape_to_expand_num_axes < unified_num_axes) {
+      auto new_input_shape = Shape::Ones(unified_num_axes);
+      std::copy(shape_to_expand.begin(), shape_to_expand.end(),
+                new_input_shape.begin() + (unified_num_axes - shape_to_expand_num_axes));
+      return new_input_shape;
+    }
+    return shape_to_expand;
+  };
+
+  return unify_shapes_with_same_num_axes(expand_shape_if_necessary(input_shape),
+                                         expand_shape_if_necessary(other_shape));
 }
 
 }  // namespace
