@@ -831,7 +831,6 @@ void RoundTripOneFlowJob(
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
-  context.loadDialect<mlir::pdl::PDLDialect>();
 
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
