@@ -1373,7 +1373,7 @@
 
 - name: "group_norm"
   signature:
-    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first") => GroupNorm'
+    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
   bind_python: True
 
 - name: "group_norm_grad"
@@ -1446,6 +1446,36 @@
   signature: "Tensor (Tensor x, Tensor indice, Tensor dy, Int32 ndims,
     String data_format, Int32List padding, Int32List kernel_size,
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => MaxPoolNdGrad"
+  bind_python: False
+
+- name: "max_unpool1d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[1] kernel_size, Int32List[1] stride=None,
+    Int32List[1] padding=0, Shape output_size=None) => MaxUnpool1D'
+  bind_python: True
+  
+- name: "max_unpool2d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[2] kernel_size, Int32List[2] stride=None,
+    Int32List[2] padding=0, Shape output_size=None) => MaxUnpool2D'
+  bind_python: True
+
+- name: "max_unpool3d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[3] kernel_size, Int32List[3] stride=None,
+    Int32List[3] padding=0, Shape output_size=None) => MaxUnpool3D'
+  bind_python: True
+
+- name: "max_unpool1d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool1dGrad"
+  bind_python: False
+
+- name: "max_unpool2d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool2dGrad"
+  bind_python: False
+
+- name: "max_unpool3d_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy) => MaxUnpool3dGrad"
   bind_python: False
 
 - name: "prelu"
@@ -2391,8 +2421,20 @@
   signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
   bind_python: False
 
+- name: "fused_bias_add_scale_mask_softmax_dropout"
+  signature: "TensorTuple (Tensor x, Tensor bias, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedBiasAddScaleMaskSoftmaxDropout"
+  bind_python: True
+
 - name: "fused_multi_head_attention_inference"
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  bind_python: True
+
+- name: "grouped_matmul_bias"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
+  bind_python: True
+
+- name: "grouped_matmul"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights) => GroupedMatmul"
   bind_python: True
 
 - name: "send"
@@ -2896,3 +2938,16 @@
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
+
+- name: "uniform_"
+  signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
+  bind_python: True
+
+- name: "fused_fast_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier) => FusedFastGeluMul"
+  bind_python: True
+
+- name: "fused_fast_gelu_mul_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
+  bind_python: False
+

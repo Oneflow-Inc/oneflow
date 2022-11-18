@@ -421,7 +421,7 @@ def save(
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():
-            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+            _save_tensor_to_disk(x.to(Tensor), path / f"{x.name_prefix}{x.name}")
 
         save_one_embedding_info(obj.state_dict(), path)
 

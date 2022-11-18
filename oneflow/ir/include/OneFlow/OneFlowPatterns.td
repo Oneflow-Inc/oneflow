@@ -139,7 +139,7 @@ def FusedPadConv2DPattern : Pat<
     ),
     $weight,
     $bias,
-    $bias_multiplier,
+    $_add_to_output,
     $conv2d_op_name,
     $conv2d_device_tag,
     $conv2d_device_name,
@@ -387,7 +387,7 @@ def FuseConv2DBatchNormPattern : Pat<
               $v_nd_sbp
           ),
           $bias,
-          $bias_multiplier,
+          $_add_to_output,
           $conv2d_op_name,
           $conv2d_device_tag,
           $conv2d_device_name,
