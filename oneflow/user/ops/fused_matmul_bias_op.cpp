@@ -98,6 +98,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
   const int64_t x_num_axes = x_shape.NumAxes();
 
+  const int64_t out_num_axes = x_num_axes;
   const int32_t m_x_axis = x_num_axes - 2;
   const int32_t k_x_axis = x_num_axes - 1;
 
@@ -107,10 +108,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }
 
-  const int64_t x_batch_dims = x_num_axes - 2;
-  const int64_t out_num_axes = x_num_axes;
-
-  for (int i = 0; i < x_batch_dims; i++) {
+  for (int i = 0; i < x_shape.NumAxes() - 1; i++) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
         .Broadcast(user_op::OpArg("weight", 0))
