@@ -29,11 +29,15 @@ DtrCallContext::DtrCallContext(const CallContext& call_ctx)
       outputs_(shared_to_weak(call_ctx.outputs())),
       global_tensor_infer_result_(call_ctx.global_tensor_infer_result()),
       op_interp_ctx_(call_ctx.op_interp_ctx()),
-      mem_case(std::make_shared<MemoryCase>(call_ctx.tmp_tensor().mem_case())) {}
+      tmp_tensor_(call_ctx.tmp_tensor()) {}
 
-CallContext DtrCallContext::ToCallContext() const {
-  return CallContext(composed_attrs_, inputs_, weak_to_shared(outputs_),
-                     global_tensor_infer_result_, op_interp_ctx_, mem_case);
-}
+CallContext::CallContext(const DtrCallContext& dtr_call_ctx)
+    : composed_attrs_(dtr_call_ctx.composed_attrs_),
+      inputs_(dtr_call_ctx.inputs_),
+      outputs_(weak_to_shared(dtr_call_ctx.outputs_)),
+      global_tensor_infer_result_(dtr_call_ctx.global_tensor_infer_result_),
+      op_interp_ctx_(dtr_call_ctx.op_interp_ctx_),
+      tmp_tensor_(dtr_call_ctx.tmp_tensor_) {}
+
 }  // namespace eager
 }  // namespace oneflow

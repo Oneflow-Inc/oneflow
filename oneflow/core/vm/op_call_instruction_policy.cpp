@@ -218,7 +218,7 @@ Maybe<void> OpCallInstructionPolicy::Init() {
 OpCallInstructionPolicy::OpCallInstructionPolicy(const DtrOpCallInstructionPolicy& policy)
     : id(unique_id()),
       vm_stream_(policy.vm_stream_),
-      call_ctx_(policy.dtr_call_ctx_.ToCallContext()),
+      call_ctx_(policy.dtr_call_ctx_),
       opkernel_(policy.opkernel_),
       user_opkernel_(policy.user_opkernel_),
       infer_tmp_size_fn_(policy.infer_tmp_size_fn_),

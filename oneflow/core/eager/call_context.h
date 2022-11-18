@@ -41,6 +41,15 @@ class TmpTensor final : public user_op::Tensor {
   explicit TmpTensor(const std::shared_ptr<MemoryCase>& mem_case)
       : mem_case_(mem_case), tmp_buffer_size_(0), tmp_buffer_ptr_(nullptr) {}
   ~TmpTensor() = default;
+  TmpTensor(const TmpTensor& other)
+      : mem_case_(other.mem_case_),
+        tmp_buffer_size_(other.tmp_buffer_size_),
+        tmp_buffer_ptr_(other.tmp_buffer_ptr_) {
+    CHECK_ISNULL(tmp_buffer_ptr_);
+  }
+  TmpTensor(TmpTensor&&) = delete;
+  TmpTensor& operator=(const TmpTensor& other) = delete;
+  TmpTensor& operator=(TmpTensor&&) = delete;
 
   ShapeView shape_view() const override { return ShapeView(&tmp_buffer_size_, 1); }
   MutShapeView mut_shape_view() override { return MutShapeView(&tmp_buffer_size_, 1); }
@@ -65,6 +74,8 @@ class TmpTensor final : public user_op::Tensor {
   char* tmp_buffer_ptr_;
 };
 
+class DtrCallContext;
+
 class CallContext {
  public:
   CallContext(ComposedAttrMap composed_attrs, vm::EagerBlobObjectList inputs,
@@ -78,6 +89,7 @@ class CallContext {
         global_tensor_infer_result_(global_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx),
         tmp_tensor_(mem_case) {}
+  explicit CallContext(const DtrCallContext&);
 
   ~CallContext() = default;
 
@@ -108,13 +120,15 @@ class DtrCallContext {
   CallContext ToCallContext() const;
   vm::EagerBlobObjectList& mut_inputs() { return inputs_; }
   vm::WeakEagerBlobObjectList& mut_outputs() { return outputs_; }
+  friend class CallContext;
+
  private:
   const ComposedAttrMap composed_attrs_;
   vm::EagerBlobObjectList inputs_;
   vm::WeakEagerBlobObjectList outputs_;
   const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
-  std::shared_ptr<MemoryCase> mem_case;
+  TmpTensor tmp_tensor_;
 };
 
 }  // namespace eager
