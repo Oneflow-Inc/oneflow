@@ -30,14 +30,15 @@ __global__ void FusedGetBounddingBoxesCoordForward(const int n, const T* x1, con
     const T h1_ = h1[i] / static_cast<T>(2.0);
     const T w2_ = w2[i] / static_cast<T>(2.0);
     const T h2_ = h2[i] / static_cast<T>(2.0);
-    b1_x1[i] = x1[i] - w1_;
-    b1_x2[i] = x1[i] + w1_;
-    b1_y1[i] = y1[i] - h1_;
-    b1_y2[i] = y1[i] + h1_;
-    b2_x1[i] = x2[i] - w2_;
-    b2_x2[i] = x2[i] + w2_;
-    b2_y1[i] = y2[i] - h2_;
-    b2_y2[i] = y2[i] + h2_;
+    const T x1_i = x1[i], y1_i = y1[i], x2_i = x2[i], y2_i = y2[i];
+    b1_x1[i] = x1_i - w1_;
+    b1_x2[i] = x1_i + w1_;
+    b1_y1[i] = y1_i - h1_;
+    b1_y2[i] = y1_i + h1_;
+    b2_x1[i] = x2_i - w2_;
+    b2_x2[i] = x2_i + w2_;
+    b2_y1[i] = y2_i - h2_;
+    b2_y2[i] = y2_i + h2_;
   }
 }
 
@@ -47,14 +48,22 @@ __global__ void FusedGetBounddingBoxesCoordBackward(
     const T* b2_x1_diff, const T* b2_x2_diff, const T* b2_y1_diff, const T* b2_y2_diff, T* x1_diff,
     T* y1_diff, T* w1_diff, T* h1_diff, T* x2_diff, T* y2_diff, T* w2_diff, T* h2_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    x1_diff[i] = b1_x1_diff[i] + b1_x2_diff[i];
-    y1_diff[i] = b1_y1_diff[i] + b1_y2_diff[i];
-    w1_diff[i] = (b1_x2_diff[i] - b1_x1_diff[i]) / static_cast<T>(2.0);
-    h1_diff[i] = (b1_y2_diff[i] - b1_y1_diff[i]) / static_cast<T>(2.0);
-    x2_diff[i] = b2_x1_diff[i] + b2_x2_diff[i];
-    y2_diff[i] = b2_y1_diff[i] + b2_y2_diff[i];
-    w2_diff[i] = (b2_x2_diff[i] - b2_x1_diff[i]) / static_cast<T>(2.0);
-    h2_diff[i] = (b2_y2_diff[i] - b2_y1_diff[i]) / static_cast<T>(2.0);
+    const T b1_x1_diff_i = b1_x1_diff[i];
+    const T b1_x2_diff_i = b1_x2_diff[i];
+    const T b1_y1_diff_i = b1_y1_diff[i];
+    const T b1_y2_diff_i = b1_y2_diff[i];
+    const T b2_x1_diff_i = b2_x1_diff[i];
+    const T b2_x2_diff_i = b2_x2_diff[i];
+    const T b2_y2_diff_i = b2_y2_diff[i];
+    const T b2_y1_diff_i = b2_y1_diff[i];
+    x1_diff[i] = b1_x1_diff_i + b1_x2_diff_i;
+    y1_diff[i] = b1_y1_diff_i + b1_y2_diff_i;
+    w1_diff[i] = (b1_x2_diff_i - b1_x1_diff_i) / static_cast<T>(2.0);
+    h1_diff[i] = (b1_y2_diff_i - b1_y1_diff_i) / static_cast<T>(2.0);
+    x2_diff[i] = b2_x1_diff_i + b2_x2_diff_i;
+    y2_diff[i] = b2_y1_diff_i + b2_y2_diff_i;
+    w2_diff[i] = (b2_x2_diff_i - b2_x1_diff_i) / static_cast<T>(2.0);
+    h2_diff[i] = (b2_y2_diff_i - b2_y1_diff_i) / static_cast<T>(2.0);
   }
 }
 };  // namespace
