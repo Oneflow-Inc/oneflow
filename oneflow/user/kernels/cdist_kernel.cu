@@ -128,14 +128,13 @@ __global__ static void reduce_backward_buffer(T* buffer, T* grad, int64_t reduce
   int32_t col_idx = threadIdx.x;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T agg = 0;
-  for(int32_t col = col_idx; col < reduce_size; col += blockDim.x) {
+  for (int32_t col = col_idx; col < reduce_size; col += blockDim.x) {
     int idx = row_idx * reduce_size + col_idx;
     agg += buffer[idx];
   }
   T result = BlockReduce(temp_storage).Sum(agg);
   if (threadIdx.x == 0) { grad[blockIdx.x] = result; }
 }
-
 
 template<typename T, typename Dist>
 __global__ static void CUDACDistForward(const T* x1, const T* x2, T* out, int64_t r1, int64_t r2,
@@ -163,10 +162,10 @@ __global__ static void CUDACDistForward(const T* x1, const T* x2, T* out, int64_
 }
 
 template<typename T, typename Dist>
-__global__ static void CUDACDistBackward(const T* x1, const T* x2, const T* dist, const T* dist_grad,
-                                         T* grad1, T* grad2, int64_t r1, int64_t r2, int64_t c,
-                                         int64_t r_size, int64_t r1_size, int64_t r2_size,
-                                         double p, T* buffer1, T* buffer2) {
+__global__ static void CUDACDistBackward(const T* x1, const T* x2, const T* dist,
+                                         const T* dist_grad, T* grad1, T* grad2, int64_t r1,
+                                         int64_t r2, int64_t c, int64_t r_size, int64_t r1_size,
+                                         int64_t r2_size, double p, T* buffer1, T* buffer2) {
   const int64_t batch_idx = blockIdx.x / r_size;
   const int64_t vec_out_idx = blockIdx.x - batch_idx * r_size;
   const int64_t vec1_idx = vec_out_idx / r2;
@@ -181,8 +180,10 @@ __global__ static void CUDACDistBackward(const T* x1, const T* x2, const T* dist
   T* grad2_begin = vec2_begin - x2 + grad2;
   T diff = *vec1_begin - *vec2_begin;
 
-  T* buffer1_idx = buffer1 + batch_idx * r_size * c + vec1_idx * r2 * c + threadIdx.x * r2 + vec2_idx;
-  T* buffer2_idx = buffer2 + batch_idx * r_size * c + vec2_idx * r1 * c + threadIdx.x * r1 + vec1_idx;
+  T* buffer1_idx =
+      buffer1 + batch_idx * r_size * c + vec1_idx * r2 * c + threadIdx.x * r2 + vec2_idx;
+  T* buffer2_idx =
+      buffer2 + batch_idx * r_size * c + vec2_idx * r1 * c + threadIdx.x * r1 + vec1_idx;
   *buffer1_idx = Dist::backward(diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p);
   *buffer2_idx = Dist::backward(-diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p);
 }
@@ -233,7 +234,6 @@ class CUDACDistKernel final : public user_op::OpKernel {
                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, out_ptr, r1, r2, c, r_size, r1_size, r2_size, p);
     }
-
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -276,7 +276,6 @@ class CUDACDistGradKernel final : public user_op::OpKernel {
     memset_primitive->Launch(ctx->stream(), dx1_ptr, 0, dx1->shape_view().elem_cnt() * sizeof(T));
     memset_primitive->Launch(ctx->stream(), dx2_ptr, 0, dx2->shape_view().elem_cnt() * sizeof(T));
 
-
     T* buffer1 = nullptr;
     T* buffer2 = nullptr;
     OF_CUDA_CHECK(cudaMalloc(&buffer1, out->shape_view().elem_cnt() * c * sizeof(T)));
@@ -305,8 +304,12 @@ class CUDACDistGradKernel final : public user_op::OpKernel {
           x1_ptr, x2_ptr, dist_ptr, grad_ptr, dx1_ptr, dx2_ptr, r1, r2, c, r_size, r1_size, r2_size,
           p, buffer1, buffer2);
     }
-    reduce_backward_buffer<T><<<dx1->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer1, dx1_ptr, r2);
-    reduce_backward_buffer<T><<<dx2->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer2, dx2_ptr, r1);
+    reduce_backward_buffer<T>
+        <<<dx1->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer1, dx1_ptr, r2);
+    reduce_backward_buffer<T>
+        <<<dx2->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer2, dx2_ptr, r1);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -2924,7 +2924,6 @@ class CosineSimilarityFunctor {
   }
 };
 
-
 class CDistFunctor {
  public:
   CDistFunctor() {
