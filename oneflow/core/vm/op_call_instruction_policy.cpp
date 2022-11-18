@@ -68,8 +68,9 @@ struct OpCallInstructionUtil final {
     }
     for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
-      if (x->tensor_storage()->blob_dptr() == nullptr) {
-        VLOG(1) << "recompute No." << i << " input";
+      if (!x->tensor_storage()->is_in_memory()) {
+        VLOG(1) << "recompute No." << i << " input by " << x->tensor_storage()->compute_op_type_name();
+        VLOG(2) << "storage id: " << x->tensor_storage()->id();
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false));
       }
