@@ -2429,6 +2429,14 @@
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
   bind_python: True
 
+- name: "grouped_matmul_bias"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
+  bind_python: True
+
+- name: "grouped_matmul"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights) => GroupedMatmul"
+  bind_python: True
+
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True
@@ -2942,3 +2950,4 @@
 - name: "fused_fast_gelu_mul_grad"
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
+

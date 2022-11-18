@@ -34,6 +34,7 @@ class GraphBlockType:
     BUFFER = "BUFFER"
 
 
+# Module or Tensor are both treated as Block.
 class GraphBlock(object):
     def __init__(
         self,
