@@ -45,7 +45,6 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 } // namespace
 
 namespace mlir {
-namespace test {
 void registerTestPDLLPasses() { PassRegistration<TestPDLLPass>(); }
-} // namespace test
+
 } // namespace mlir
