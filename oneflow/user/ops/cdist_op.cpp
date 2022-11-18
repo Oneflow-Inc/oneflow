@@ -37,19 +37,19 @@ Maybe<void> FwdInferTensorDesc(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> CdistOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CDistOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return FwdInferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> CdistOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> CDistOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> CdistOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> CDistOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> CdistOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CDistOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("out", 0);
   output_desc->set_data_type(x1_desc.data_type());
@@ -72,19 +72,19 @@ Maybe<void> BwdInferTensorDesc(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> CdistGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CDistGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return BwdInferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> CdistGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> CDistGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> CdistGradOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> CDistGradOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> CdistGradOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CDistGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
   user_op::TensorDesc* dx1_desc = ctx->MutOutputTensorDesc("dx1", 0);
   user_op::TensorDesc* dx2_desc = ctx->MutOutputTensorDesc("dx2", 0);

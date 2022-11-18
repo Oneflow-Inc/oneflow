@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cub/cub.cuh>
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/user_op_hob.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
@@ -119,6 +121,22 @@ struct DistReduce {
   }
 };
 
+template<typename T>
+__global__ static void reduce_backward_buffer(T* buffer, T* grad, int64_t reduce_size) {
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  int32_t row_idx = blockIdx.x;
+  int32_t col_idx = threadIdx.x;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  T agg = 0;
+  for(int32_t col = col_idx; col < reduce_size; col += blockDim.x) {
+    int idx = row_idx * reduce_size + col_idx;
+    agg += buffer[idx];
+  }
+  T result = BlockReduce(temp_storage).Sum(agg);
+  if (threadIdx.x == 0) { grad[blockIdx.x] = result; }
+}
+
+
 template<typename T, typename Dist>
 __global__ static void CUDACDistForward(const T* x1, const T* x2, T* out, int64_t r1, int64_t r2,
                                         int64_t c, int64_t r_size, int64_t r1_size, int64_t r2_size,
@@ -138,7 +156,6 @@ __global__ static void CUDACDistForward(const T* x1, const T* x2, T* out, int64_
     Dist::inc(agg, std::abs(*vec1_begin - *vec2_begin), p);
   }
 
-  __syncthreads();
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T result = BlockReduce(temp_storage).Reduce(agg, DistReduce<T, Dist>());
@@ -149,7 +166,7 @@ template<typename T, typename Dist>
 __global__ static void CUDACDistBackward(const T* x1, const T* x2, const T* dist, const T* dist_grad,
                                          T* grad1, T* grad2, int64_t r1, int64_t r2, int64_t c,
                                          int64_t r_size, int64_t r1_size, int64_t r2_size,
-                                         double p) {
+                                         double p, T* buffer1, T* buffer2) {
   const int64_t batch_idx = blockIdx.x / r_size;
   const int64_t vec_out_idx = blockIdx.x - batch_idx * r_size;
   const int64_t vec1_idx = vec_out_idx / r2;
@@ -164,15 +181,17 @@ __global__ static void CUDACDistBackward(const T* x1, const T* x2, const T* dist
   T* grad2_begin = vec2_begin - x2 + grad2;
   T diff = *vec1_begin - *vec2_begin;
 
-  atomicAdd(grad1_begin, Dist::backward(diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p));
-  atomicAdd(grad2_begin, Dist::backward(-diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p));
+  T* buffer1_idx = buffer1 + batch_idx * r_size * c + vec1_idx * r2 * c + threadIdx.x * r2 + vec2_idx;
+  T* buffer2_idx = buffer2 + batch_idx * r_size * c + vec2_idx * r1 * c + threadIdx.x * r1 + vec1_idx;
+  *buffer1_idx = Dist::backward(diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p);
+  *buffer2_idx = Dist::backward(-diff, *(dist_grad + blockIdx.x), *(dist + blockIdx.x), p);
 }
 
 template<typename T>
-class CUDACdistKernel final : public user_op::OpKernel {
+class CUDACDistKernel final : public user_op::OpKernel {
  public:
-  CUDACdistKernel() = default;
-  ~CUDACdistKernel() = default;
+  CUDACDistKernel() = default;
+  ~CUDACDistKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -214,15 +233,16 @@ class CUDACdistKernel final : public user_op::OpKernel {
                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, out_ptr, r1, r2, c, r_size, r1_size, r2_size, p);
     }
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class CUDACdistGradKernel final : public user_op::OpKernel {
+class CUDACDistGradKernel final : public user_op::OpKernel {
  public:
-  CUDACdistGradKernel() = default;
-  ~CUDACdistGradKernel() = default;
+  CUDACDistGradKernel() = default;
+  ~CUDACDistGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -256,36 +276,43 @@ class CUDACdistGradKernel final : public user_op::OpKernel {
     memset_primitive->Launch(ctx->stream(), dx1_ptr, 0, dx1->shape_view().elem_cnt() * sizeof(T));
     memset_primitive->Launch(ctx->stream(), dx2_ptr, 0, dx2->shape_view().elem_cnt() * sizeof(T));
 
+
+    T* buffer1 = nullptr;
+    T* buffer2 = nullptr;
+    OF_CUDA_CHECK(cudaMalloc(&buffer1, out->shape_view().elem_cnt() * c * sizeof(T)));
+    OF_CUDA_CHECK(cudaMalloc(&buffer2, out->shape_view().elem_cnt() * c * sizeof(T)));
+
     if (p == 0) {
       // grad is always zero
     } else if (p == 1) {
       CUDACDistBackward<T, OneDist<T>><<<out->shape_view().elem_cnt(), c, 0,
                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, dist_ptr, grad_ptr, dx1_ptr, dx2_ptr, r1, r2, c, r_size, r1_size, r2_size,
-          p);
+          p, buffer1, buffer2);
     } else if (p == 2) {
       CUDACDistBackward<T, TwoDist<T>><<<out->shape_view().elem_cnt(), c, 0,
                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, dist_ptr, grad_ptr, dx1_ptr, dx2_ptr, r1, r2, c, r_size, r1_size, r2_size,
-          p);
+          p, buffer1, buffer2);
     } else if (std::isinf(p)) {
       CUDACDistBackward<T, InfiDist<T>><<<out->shape_view().elem_cnt(), c, 0,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, dist_ptr, grad_ptr, dx1_ptr, dx2_ptr, r1, r2, c, r_size, r1_size, r2_size,
-          p);
+          p, buffer1, buffer2);
     } else {
       CUDACDistBackward<T, PDist<T>><<<out->shape_view().elem_cnt(), c, 0,
                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x1_ptr, x2_ptr, dist_ptr, grad_ptr, dx1_ptr, dx2_ptr, r1, r2, c, r_size, r1_size, r2_size,
-          p);
+          p, buffer1, buffer2);
     }
-    cudaDeviceSynchronize();
+    reduce_backward_buffer<T><<<dx1->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer1, dx1_ptr, r2);
+    reduce_backward_buffer<T><<<dx2->shape_view().elem_cnt(), kCudaThreadsNumPerBlock, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(buffer2, dx2_ptr, r1);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CUDA_CDIST_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("cdist").SetCreateFn<CUDACdistKernel<dtype>>().SetIsMatchedHob( \
+  REGISTER_USER_KERNEL("cdist").SetCreateFn<CUDACDistKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
       && (user_op::HobDataType("x1", 0) == GetDataType<dtype>::value)                  \
       && (user_op::HobDataType("x2", 0) == GetDataType<dtype>::value)                  \
@@ -297,7 +324,7 @@ REGISTER_CUDA_CDIST_KERNEL(double)
 
 #define REGISTER_CUDA_CDIST_GRAD_KERNEL(dtype)                                         \
   REGISTER_USER_KERNEL("cdist_grad")                                                   \
-      .SetCreateFn<CUDACdistGradKernel<dtype>>()                                       \
+      .SetCreateFn<CUDACDistGradKernel<dtype>>()                                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("x1", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("x2", 0) == GetDataType<dtype>::value) \

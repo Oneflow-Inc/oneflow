@@ -79,7 +79,7 @@ struct PDist {
 };
 
 template<typename T, typename Dist>
-void CpuCdistForward(ep::CpuStream* stream, const T* x1, const T* x2, T* out, int64_t size_out,
+void CpuCDistForward(ep::CpuStream* stream, const T* x1, const T* x2, T* out, int64_t size_out,
                      int64_t r1, int64_t r2, int64_t c, double p) {
   // x1 shape: (d1, d2, ..., dn, r1, c), treated as (d1 * ... * dn, r1 * c)
   // x2 shape: (d1, d2, ..., dn, r2, c), treated as (d1 * ... * dn, r2 * c)
@@ -128,7 +128,7 @@ void CpuCdistForward(ep::CpuStream* stream, const T* x1, const T* x2, T* out, in
 }
 
 template<typename T, typename Dist>
-void CpuCdistBackward(ep::CpuStream* stream, const T* x1, const T* x2, const T* dist, const T* grad,
+void CpuCDistBackward(ep::CpuStream* stream, const T* x1, const T* x2, const T* dist, const T* grad,
                       T* grad1, T* grad2, int64_t size_out, int64_t r1, int64_t r2, int64_t c,
                       double p) {
   stream->ParallelFor(
@@ -178,10 +178,10 @@ void CpuCdistBackward(ep::CpuStream* stream, const T* x1, const T* x2, const T* 
 }
 
 template<typename T>
-class CpuCdistKernel final : public user_op::OpKernel {
+class CpuCDistKernel final : public user_op::OpKernel {
  public:
-  CpuCdistKernel() = default;
-  ~CpuCdistKernel() = default;
+  CpuCDistKernel() = default;
+  ~CpuCDistKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -199,19 +199,19 @@ class CpuCdistKernel final : public user_op::OpKernel {
     T* out_ptr = out->mut_dptr<T>();
 
     if (p == 0) {
-      CpuCdistForward<T, ZeroDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
+      CpuCDistForward<T, ZeroDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
                                       out->shape_view().elem_cnt(), r1, r2, c, p);
     } else if (p == 1) {
-      CpuCdistForward<T, OneDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
+      CpuCDistForward<T, OneDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
                                      out->shape_view().elem_cnt(), r1, r2, c, p);
     } else if (p == 2) {
-      CpuCdistForward<T, TwoDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
+      CpuCDistForward<T, TwoDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
                                      out->shape_view().elem_cnt(), r1, r2, c, p);
     } else if (std::isinf(p)) {
-      CpuCdistForward<T, InfiDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
+      CpuCDistForward<T, InfiDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
                                       out->shape_view().elem_cnt(), r1, r2, c, p);
     } else {
-      CpuCdistForward<T, PDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
+      CpuCDistForward<T, PDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, out_ptr,
                                    out->shape_view().elem_cnt(), r1, r2, c, p);
     };
   }
@@ -219,10 +219,10 @@ class CpuCdistKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuCdistGradKernel final : public user_op::OpKernel {
+class CpuCDistGradKernel final : public user_op::OpKernel {
  public:
-  CpuCdistGradKernel() = default;
-  ~CpuCdistGradKernel() = default;
+  CpuCDistGradKernel() = default;
+  ~CpuCDistGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -255,19 +255,19 @@ class CpuCdistGradKernel final : public user_op::OpKernel {
     if (p == 0) {
       // grad is always zero
     } else if (p == 1) {
-      CpuCdistBackward<T, OneDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
+      CpuCDistBackward<T, OneDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
                                       grad_ptr, dx1_ptr, dx2_ptr, out->shape_view().elem_cnt(), r1,
                                       r2, c, p);
     } else if (p == 2) {
-      CpuCdistBackward<T, TwoDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
+      CpuCDistBackward<T, TwoDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
                                       grad_ptr, dx1_ptr, dx2_ptr, out->shape_view().elem_cnt(), r1,
                                       r2, c, p);
     } else if (std::isinf(p)) {
-      CpuCdistBackward<T, InfiDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
+      CpuCDistBackward<T, InfiDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
                                        grad_ptr, dx1_ptr, dx2_ptr, out->shape_view().elem_cnt(), r1,
                                        r2, c, p);
     } else {
-      CpuCdistBackward<T, PDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
+      CpuCDistBackward<T, PDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
                                     grad_ptr, dx1_ptr, dx2_ptr, out->shape_view().elem_cnt(), r1,
                                     r2, c, p);
     };
@@ -276,7 +276,7 @@ class CpuCdistGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CPU_CDIST_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("cdist").SetCreateFn<CpuCdistKernel<dtype>>().SetIsMatchedHob( \
+  REGISTER_USER_KERNEL("cdist").SetCreateFn<CpuCDistKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
       && (user_op::HobDataType("x1", 0) == GetDataType<dtype>::value)                 \
       && (user_op::HobDataType("x2", 0) == GetDataType<dtype>::value)                 \
@@ -288,7 +288,7 @@ REGISTER_CPU_CDIST_KERNEL(double)
 
 #define REGISTER_CPU_CDIST_GRAD_KERNEL(dtype)                                          \
   REGISTER_USER_KERNEL("cdist_grad")                                                   \
-      .SetCreateFn<CpuCdistGradKernel<dtype>>()                                        \
+      .SetCreateFn<CpuCDistGradKernel<dtype>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        && (user_op::HobDataType("x1", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("x2", 0) == GetDataType<dtype>::value) \
