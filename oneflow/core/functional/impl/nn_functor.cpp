@@ -649,9 +649,8 @@ class FusedMatmulBiasFunctor {
       if (_add_to_output) {
         return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
                                               {x, weight, bias, JUST(_add_to_output)});
-      } else {
-        return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
       }
+      return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
     }
 #endif  // CUDA_VERSION >= 10200
 
@@ -661,10 +660,10 @@ class FusedMatmulBiasFunctor {
                                     x->shape()->NumAxes() - 1)),
            JUST(_add_to_output)},
           false));
-    } else {
-      return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
-                                      x->shape()->NumAxes() - 1));
     }
+
+    return JUST(functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias,
+                                      x->shape()->NumAxes() - 1));
   }
 
  private:
