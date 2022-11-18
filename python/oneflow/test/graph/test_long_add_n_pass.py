@@ -71,7 +71,7 @@ def _test_long_add_n_graph(test_case, device):
 
     add_n_g = AddNGraph()
     of_lazy_out = add_n_g()
-    test_case.assertTrue(np.allclose(input_arr * 13, of_lazy_out.numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(input_arr * 12, of_lazy_out.numpy(), 1e-05, 1e-05))
 
 
 def _test_add_n_consume_multi_add_n_graph(test_case, device):
