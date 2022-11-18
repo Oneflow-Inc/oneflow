@@ -224,14 +224,14 @@ DtrEpAllocator::offset_t DtrEpAllocator::FindProperPositionInGroup(Piece* piece,
 void DtrEpAllocator::InsertToFreeList(Piece* piece) {
   const offset_t piece_left = get_offset(piece->ptr);
   const offset_t piece_right = piece_left + piece->size;
-  LOG(INFO) << "piece_left: " << piece_left << ", right: " << piece_right << std::endl;
+  VLOG(3) << "piece_left: " << piece_left << ", right: " << piece_right << std::endl;
   for (size_t i = 0; i < group_boundaries_.size(); i++) {
-    LOG(INFO) << "g left: " << group_boundaries_[i].first
+    VLOG(3) << "g left: " << group_boundaries_[i].first
               << ", right: " << group_boundaries_[i].second << std::endl;
     if ((piece_left >= group_boundaries_[i].first && piece_left < group_boundaries_[i].second)
         || (piece_right > group_boundaries_[i].first
             && piece_right <= group_boundaries_[i].second)) {
-      LOG(INFO) << "overlap" << std::endl;
+      VLOG(3) << "overlap" << std::endl;
       free_pieces_overlapping_with_group_[i].insert(piece);
     }
   }
@@ -336,6 +336,7 @@ size_t DtrEpAllocator::group_index(bool high) const {
 void DtrEpAllocator::InitMemory() {
   memory_size_ = dtr::memory_threshold();
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
+  std::cout << "memory_: " << (void*)memory_ << ", size: " << memory_size_ << std::endl;
   const size_t small_piece_area_size =
       EnvBool<ONEFLOW_DTR_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
   const size_t normal_area_size = memory_size_ - small_piece_area_size;

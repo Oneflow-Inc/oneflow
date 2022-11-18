@@ -83,7 +83,7 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
     }
     callback_(stream_policy->stream(), eager_blob_object());
     if (modifier_ == "mut" || modifier_ == "mut2") {
-      eager_blob_object()->tensor_storage()->set_evictable(false);
+      eager_blob_object()->tensor_storage()->disable_eviction();
     }
   }
 

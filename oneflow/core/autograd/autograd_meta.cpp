@@ -75,7 +75,7 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
     acc_grad_ = grad;
   }
   if (acc_grad_ != nullptr) {
-    JUST(acc_grad_->eager_blob_object())->tensor_storage()->set_evictable(false);
+    JUST(acc_grad_->eager_blob_object())->tensor_storage()->disable_eviction();
   }
   return Maybe<void>::Ok();
 }

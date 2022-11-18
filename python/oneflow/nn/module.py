@@ -244,6 +244,9 @@ class Module(object):
             else:
                 self._non_persistent_buffers_set.add(name)
 
+        if tensor is not None:
+            flow._oneflow_internal.dtr.disable_eviction(tensor)
+
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         r"""
         register_parameter(name, param)

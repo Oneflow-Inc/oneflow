@@ -29,7 +29,6 @@ TensorStorage::TensorStorage()
     : id_(unique_id_2()),
       num_pinned_(0),
       blob_bytes_(0),
-      is_evictable_(false),
       last_access_time_(0),
       compute_time_(0),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
@@ -52,7 +51,6 @@ OpCallInstructionPolicy TensorStorage::compute_op() const {
 void TensorStorage::clear_compute_op() {
   compute_op_ = nullptr;
   compute_time_ = -1;
-  is_evictable_ = false;
 }
 
 void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
@@ -63,7 +61,6 @@ void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
   compute_op_ = std::make_shared<DtrOpCallInstructionPolicy>(compute_op);
   Singleton<dtr::Env>::Get()->ops.push_back(compute_op_.get());
   compute_time_ = GetEstimatedComputeTime(compute_op);
-  is_evictable_ = true;
 }
 
 std::string TensorStorage::compute_op_type_name() const {

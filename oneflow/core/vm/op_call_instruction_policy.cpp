@@ -69,30 +69,38 @@ struct OpCallInstructionUtil final {
     for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
       if (!x->tensor_storage()->is_in_memory()) {
-        VLOG(1) << "recompute No." << i << " input by " << x->tensor_storage()->compute_op_type_name();
+        VLOG(1) << "recompute No." << i << " input by "
+                << x->tensor_storage()->compute_op_type_name();
         VLOG(2) << "storage id: " << x->tensor_storage()->id();
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false));
+        JUST(vm_stream->mut_stream_policy()->stream()->Sync());
+        CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
       x->tensor_storage()->Pin();
     }
-    std::unique_ptr<OpCallInstructionPolicy> compute_op =
-        std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
-    for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
-      const auto& y = op_call_instruction_policy->outputs().at(i);
-      if (storage_is_initialized[i] && first) {
-        VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
-                << y->tensor_storage()->compute_op_type_name() << std::endl;
-        compute_op = std::make_unique<OpCallInstructionPolicy>(
-            Singleton<dtr::Env>::Get()->update_tensor_with_storage(y->tensor_storage().get(),
-                                                                   op_call_instruction_policy));
+    const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
+      auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
+      for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
+        const auto& y = op_call_instruction_policy->outputs().at(i);
+        if (y->tensor_storage()->eviction_disabled()) {
+          continue;
+        }
+        if (storage_is_initialized[i] && first) {
+          VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
+                  << y->tensor_storage()->compute_op_type_name() << std::endl;
+          compute_op = std::make_unique<OpCallInstructionPolicy>(
+              Singleton<dtr::Env>::Get()->update_tensor_with_storage(y->tensor_storage().get(),
+                                                                     op_call_instruction_policy));
+        }
       }
-    }
+      return compute_op;
+    }();
     for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
       const auto& y = op_call_instruction_policy->outputs().at(i);
       y->tensor_storage()->Pin();
       y->tensor_storage()->Access();
-      if (first) { y->tensor_storage()->set_compute_op(*compute_op); }
+      if (first && !y->tensor_storage()->eviction_disabled()) { y->tensor_storage()->set_compute_op(*compute_op); }
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
@@ -112,7 +120,7 @@ struct OpCallInstructionUtil final {
     for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
     for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
-      x->tensor_storage()->set_evictable(false);
+      x->tensor_storage()->disable_eviction();
     }
 
     Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));

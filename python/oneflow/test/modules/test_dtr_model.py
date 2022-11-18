@@ -64,7 +64,7 @@ class TestDTRCorrectness(flow.unittest.TestCase):
         )
 
         WARMUP_ITERS = 5
-        ALL_ITERS = 2
+        ALL_ITERS = 5
         total_time = 0
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to('cuda')

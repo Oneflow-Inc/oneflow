@@ -58,7 +58,7 @@ def generate_placeholder(size_mb, device):
     global placeholder_size
     placeholder_size = size_mb * 1024 * 1024
     x = flow.zeros(placeholder_size, dtype=flow.int8, device=device)
-    flow._oneflow_internal.dtr.set_evictable(x, False)
+    flow._oneflow_internal.dtr.disable_eviction(x)
     try:
         yield
     finally:
@@ -134,6 +134,20 @@ class TestDTR(flow.unittest.TestCase):
         evict(x2)
         print(x2.numpy())
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * -2))
+
+    @assert_no_small_piece_optimization
+    @memory_budget(12, 'cuda')
+    def test_dtr_work_on_fbip_4(self):
+        x1 = flow.ones(1024 * 1024).to('cuda') # 4MB
+        x2 = x1 + 1
+        x2 += x1
+        x3 = x2.relu()
+        x4 = x3 + 1
+        evict(x3)
+        evict(x2)
+        evict(x1)
+        evict(x3)
+        self.assertTrue(np.array_equal(x4.numpy(), np.ones(x4.shape) * 4))
 
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
@@ -230,15 +244,6 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * 2))
 
     @assert_no_small_piece_optimization
-    @memory_budget(90, 'cuda')
-    def test_argwhere(self):
-        x = flow.eye(1024, 1024).to('cuda')
-        (res, size) = flow._C.argwhere(x)
-        slice_tup_list = [(0, size.numpy().item(), 1)]
-        evict(res)
-        return flow.slice(res, slice_tup_list=slice_tup_list)
-
-    @assert_no_small_piece_optimization
     @memory_budget(100, 'cuda')
     def test_bn_and_backward(self):
         model = nn.Sequential(
@@ -260,12 +265,8 @@ class TestDTR(flow.unittest.TestCase):
         optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
         x = flow.ones(4, 3, 224, 224).to('cuda')
         for i in range(10):
-            print(f'iter {i}')
-            display('cuda')
             loss = model(x).sum()
-            print('print start')
             print(loss)
-            print('print end')
             loss.backward()
             del loss
             optimizer.step()

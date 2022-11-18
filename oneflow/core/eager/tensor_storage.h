@@ -64,8 +64,9 @@ class TensorStorage {
   bool is_in_memory() const { return blob_bytes_ == 0 || blob_dptr_ != nullptr; }
   bool is_pinned() const { return num_pinned() > 0; }
   int32_t num_pinned() const { return num_pinned_; }
-  bool is_evictable() const { return is_evictable_; }
-  void set_evictable(bool evictable) { is_evictable_ = evictable; }
+  bool is_evictable() const { return compute_op_ != nullptr && !eviction_disabled_; }
+  void disable_eviction() { eviction_disabled_ = true; }
+  bool eviction_disabled() const { return eviction_disabled_; }
   int64_t id() const { return id_; }
   Maybe<double> cost(size_t override_size) const;
   std::string compute_op_type_name() const;
@@ -77,7 +78,7 @@ class TensorStorage {
   int64_t id_;
   size_t num_pinned_;
   size_t blob_bytes_;
-  bool is_evictable_;
+  bool eviction_disabled_ = false;
   double last_access_time_;
   double compute_time_;
   std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
