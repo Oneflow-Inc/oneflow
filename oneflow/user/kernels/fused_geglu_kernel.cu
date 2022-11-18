@@ -27,6 +27,71 @@ limitations under the License.
 #include "device/dual_gemm.h"
 #include "thread/left_silu_and_mul.h"
 
+namespace cutlass {
+namespace epilogue {
+namespace thread {
+
+template<typename ElementOutput_, int Count, typename ElementAccumulator_ = ElementOutput_,
+         typename ElementCompute_ = ElementOutput_,
+         FloatRoundStyle Round = FloatRoundStyle::round_to_nearest>
+class LeftFastGeluAndMul {
+ public:
+  using ElementOutput = ElementOutput_;
+  using ElementAccumulator = ElementAccumulator_;
+  using ElementCompute = ElementCompute_;
+
+  static int const kCount = Count;
+  using FragmentOutput = Array<ElementOutput, kCount>;
+  using FragmentAccumulator = Array<ElementAccumulator, kCount>;
+  using ComputeFragment = Array<ElementCompute, kCount>;
+
+  static FloatRoundStyle const kRound = Round;
+
+  struct Params {};
+
+ private:
+  ElementCompute alpha_;
+  ElementCompute beta_;
+
+ public:
+  CUTLASS_HOST_DEVICE
+  LeftFastGeluAndMul(Params const& /*params*/) {}
+
+  CUTLASS_HOST_DEVICE
+  bool is_source_needed() const { return true; }
+
+  CUTLASS_HOST_DEVICE
+  void set_k_partition(int k_partition, int k_partition_count) { assert(false); }
+
+  CUTLASS_HOST_DEVICE
+  FragmentOutput operator()(FragmentAccumulator const& lhs, FragmentAccumulator const& rhs) const {
+    NumericArrayConverter<ElementCompute, ElementAccumulator, kCount, Round> accumulator_to_compute;
+
+    NumericArrayConverter<ElementOutput, ElementCompute, kCount, Round> compute_to_output;
+
+    ComputeFragment converted_lhs = accumulator_to_compute(lhs);
+    ComputeFragment converted_rhs = accumulator_to_compute(rhs);
+
+    cutlass::epilogue::thread::GELU_taylor<ComputeFragment> fast_gelu;
+    cutlass::multiplies<ComputeFragment> mul;
+    auto fast_gelu_lhs = fast_gelu(converted_lhs);
+    return compute_to_output(mul(fast_gelu_lhs, converted_rhs));
+  }
+
+  CUTLASS_HOST_DEVICE
+  ElementOutput operator()(ElementAccumulator const& lhs, ElementAccumulator const& rhs) const {
+    ElementCompute convert_lhs(lhs);
+    ElementCompute convert_rhs(rhs);
+    cutlass::epilogue::thread::GELU_taylor<ElementCompute> fast_gelu;
+    cutlass::multiplies<ElementCompute> mul;
+    auto fast_gelu_lhs = fast_gelu(convert_lhs);
+    return ElementOutput(mul(fast_gelu_lhs, convert_rhs));
+  }
+};
+}  // namespace thread
+}  // namespace epilogue
+}  // namespace cutlass
+
 namespace oneflow {
 
 namespace {
@@ -34,7 +99,7 @@ namespace {
 template<typename T>
 void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, const T* x, const T* w,
                    const T* b, T* y) {
-  constexpr int kStages = 3;
+  constexpr int kStages = 5;
   constexpr bool kSplitKSerial = false;
   constexpr bool kUseBias = true;
   using ElementOperandA = cutlass::half_t;
@@ -60,10 +125,9 @@ void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, cons
       cutlass::epilogue::thread::LinearCombination<ElementOutput,
                                                    128 / cutlass::sizeof_bits<ElementOutput>::value,
                                                    ElementAccumulator, ElementCompute, kScaleType>;
-  using EpilogueOutputOp2 =
-      cutlass::epilogue::thread::LeftSiLUAndMul<ElementOutput,
-                                                128 / cutlass::sizeof_bits<ElementOutput>::value,
-                                                ElementOutput, ElementCompute>;
+  using EpilogueOutputOp2 = cutlass::epilogue::thread::LeftFastGeluAndMul<
+      ElementOutput, 128 / cutlass::sizeof_bits<ElementOutput>::value, ElementOutput,
+      ElementCompute>;
 
   const ElementCompute alpha0 = ElementCompute(1);
   const ElementCompute beta0 = ElementCompute(kUseBias ? 1 : 0);
