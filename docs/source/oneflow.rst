@@ -393,6 +393,9 @@ Other Ops
     triu
     cross
     bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

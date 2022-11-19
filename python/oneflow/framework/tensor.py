@@ -533,10 +533,10 @@ def _scatter_add_inplace(self, dim, index, src):
 def _contains(self, element):
     r"""Check if `element` is present in tensor
 
-        Args:
-            element (Tensor or scalar): element to be checked
-                for presence in current tensor"
-        """
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
     if isinstance(element, (flow.Tensor, Number)):
         # type hint doesn't understand the __contains__ result array
         return (element == self).any().item()  # type: ignore[union-attr]

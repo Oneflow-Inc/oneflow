@@ -34,6 +34,9 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
+  Transform/CSEWithAttributesIgnored.cpp
+  Transform/GroupMatMulOps.cpp
+  Transform/AutoNHWCOps.cpp
   TransposeHelpers.cpp
   Passes.cpp
   ${GROUPED_OP_CPP_FILES}
