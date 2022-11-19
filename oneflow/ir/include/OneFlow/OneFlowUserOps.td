@@ -5910,8 +5910,8 @@ def OneFlow__ncclLogicalSendRecvOp : OneFlow_BaseOp<"_nccl_logical_send_recv", [
 #endif // GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
 // Group: NORMALIZATION
-// crop_mirror_normalize_from_tensorbuffer, crop_mirror_normalize_from_uint8, image_normalize, l2_normalize, l2_normalize_grad, layer_norm, layer_norm_grad, layer_norm_param_grad, normal, normalization, normalization_grad, group_norm, group_norm_grad, group_norm_param_grad, batch_norm_stats, batch_norm_gather_stats_with_counts, batch_norm_elemt, batch_norm_backward_reduce, batch_norm_backward_elemt
-// Total: 19
+// crop_mirror_normalize_from_tensorbuffer, crop_mirror_normalize_from_uint8, image_normalize, l2_normalize, l2_normalize_grad, layer_norm, layer_norm_grad, layer_norm_param_grad, normal, normalization, normalization_grad, group_norm, group_norm_grad, group_norm_param_grad, batch_norm_stats, batch_norm_gather_stats_with_counts, batch_norm_elemt, batch_norm_backward_reduce, batch_norm_backward_elemt, rms_norm, rms_norm_param_grad, rms_norm_grad
+// Total: 22
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
@@ -6313,6 +6313,56 @@ def OneFlow_GroupNormParamGradOp : OneFlow_BaseOp<"group_norm_param_grad", [NoSi
   let output = (outs
     OneFlow_Tensor:$dgamma,
     OneFlow_Tensor:$dbeta
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RmsNormOp : OneFlow_BaseOp<"rms_norm", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$inv_rms
+  );
+  let attrs = (ins
+    ShapeAttr:$normalized_shape,
+    DefaultValuedAttr<F32Attr, "0.00001">:$epsilon
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RmsNormParamGradOp : OneFlow_BaseOp<"rms_norm_param_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$inv_rms
+  );
+  let output = (outs
+    OneFlow_Tensor:$weight_grad
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$inv_rms,
+    Optional<OneFlow_Tensor>:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
