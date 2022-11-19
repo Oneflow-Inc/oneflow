@@ -52,7 +52,7 @@ class TestIndexAdd(flow.unittest.TestCase):
     def test_index_add(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_index_add]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
