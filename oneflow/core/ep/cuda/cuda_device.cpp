@@ -36,6 +36,7 @@ constexpr size_t kDefaultConstBufElementCount = 1024 * 1024;
 
 template<typename T>
 void CreateConstBuffer(void** buf, T value, size_t n) {
+  LOG(INFO) << "CreateConstBuffer: size=" << n;
   OF_CUDA_CHECK(cudaMalloc(buf, n * sizeof(T)));
   std::vector<T> host(n, value);
   OF_CUDA_CHECK(cudaMemcpy(*buf, host.data(), n * sizeof(T), cudaMemcpyDefault));
@@ -122,6 +123,7 @@ void CudaDevice::DestroyEvents(Event** events, size_t count) {
 }
 
 Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size_t size) {
+  LOG(ERROR) << "CudaDevice::Alloc: size=" << size;
   CudaCurrentDeviceGuard guard(device_index_);
   CHECK(!options.HasPinnedDevice());
   cudaError_t err = cudaMalloc(ptr, size);

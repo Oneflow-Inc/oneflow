@@ -85,6 +85,9 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
       [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           if (eager_blob_object->producer_stream().has_value()) {
+            if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+              LOG(INFO) << "ReleaseTensor: shape=" << eager_blob_object->shape().ToString();
+            }
             JUST(builder->ReleaseTensor(eager_blob_object));
           }
           return Maybe<void>::Ok();

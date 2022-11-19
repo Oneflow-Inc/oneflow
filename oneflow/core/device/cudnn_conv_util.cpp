@@ -357,7 +357,10 @@ cudnnHandle_t ManagedCudnnConvResource::cudnn_handle() {
 }
 
 void* ManagedCudnnConvResource::x_mut_dptr() {
-  if (x_dptr_ == nullptr) { OF_CUDA_CHECK(cudaMalloc(&x_dptr_, x_byte_size_)); }
+  if (x_dptr_ == nullptr) {
+    LOG(INFO) << "ManagedCudnnConvResource::x_mut_dptr: size=" << x_byte_size_;
+    OF_CUDA_CHECK(cudaMalloc(&x_dptr_, x_byte_size_));
+  }
   return x_dptr_;
 }
 

@@ -302,6 +302,8 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
   if (final_allocate_bytes < aligned_size) { return false; }
 
   char* mem_ptr = nullptr;
+  LOG(INFO) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
+            << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_;
   JUST(backend_->Allocate(&mem_ptr, final_allocate_bytes));
   if (mem_ptr == nullptr) { return false; }
 

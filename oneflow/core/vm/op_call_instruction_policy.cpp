@@ -86,6 +86,11 @@ struct OpCallInstructionUtil final {
     StreamType stream_type = instruction->stream().stream_type();
     StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream_type));
     for (const auto& blob_object : op_call_instruction_policy->outputs()) {
+      if (blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+        LOG(INFO) << "AllocateOutputBlobsMemory for "
+                  << op_call_instruction_policy->DebugName(*instruction)
+                  << ", shape=" << blob_object->shape().ToString();
+      }
       if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
