@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -30,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
 
-#include <memory>
 #include <sstream>
 #include <bitset>
 
@@ -3188,7 +3186,6 @@ class FusedCenterGradFunctor {
                          .Input("b1_y2")
                          .Input("b2_y1")
                          .Input("b2_y2")
-                         .Input("rho2_diff")
                          .Output("b1_x1_diff")
                          .Output("b1_x2_diff")
                          .Output("b2_x1_diff")
@@ -3204,9 +3201,8 @@ class FusedCenterGradFunctor {
       const std::shared_ptr<one::Tensor>& b1_x1, const std::shared_ptr<one::Tensor>& b1_x2,
       const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
       const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
-      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2,
-      const std::shared_ptr<one::Tensor>& rho2_diff) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, rho2_diff}, {});
+      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
   }
 
  private:

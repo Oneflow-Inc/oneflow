@@ -30,7 +30,7 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
 
     CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
-    CHECK_EQ_OR_RETURN(outputs.size(), INPUT_LEN);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
     for (int i = 0; i < INPUT_LEN; i++) {
       ctx->requires_grad.push_back(inputs.at(i)->requires_grad());
     }
@@ -54,13 +54,10 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
     const auto& b2_y1 = ctx->SavedTensors().at(6);
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
-    const auto& rho_diff = out_grads.at(0);
-
     in_grads->resize(INPUT_LEN);
     auto result = JUST(functional::FusedCenterGrad(
-        b1_x1, b1_x2, b1_y1, b1_y2, 
-        b2_x1, b2_x2, b2_y1, b2_y2,
-        rho_diff));
+        b1_x1, b1_x2, b2_x1, b2_x2, 
+        b1_y1, b1_y2, b2_y1, b2_y2));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {
@@ -70,7 +67,7 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_center_grad", FusedCenterGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_center", FusedCenterGrad);
 
 }  // namespace one
 }  // namespace oneflow

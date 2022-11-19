@@ -27,7 +27,7 @@ def torch_center(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2):
 
 
 def _test_fused_center_impl(test_case, device, shape):
-    def compare(a, b, rtol=1e-5, atol=1e-8):
+    def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
                 a.detach().cpu().numpy(), b.detach().cpu().numpy(), rtol=rtol, atol=atol
@@ -54,7 +54,7 @@ def _test_fused_center_impl(test_case, device, shape):
             )
         )
     b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2 = x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]
-    torch_b1_x1, torch_b1_x1, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2 = (
+    torch_b1_x1, torch_b1_x2, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2 = (
         torch_x[0],
         torch_x[1],
         torch_x[2],
@@ -68,8 +68,8 @@ def _test_fused_center_impl(test_case, device, shape):
     torch_rho2 = torch_center(torch_b1_x1, torch_b1_x2, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2)
     compare(rho2, torch_rho2)
 
-    rho2.backward()
-    torch_rho2.backward()
+    rho2.sum().backward()
+    torch_rho2.sum().backward()
     compare(b1_x1.grad, torch_b1_x1.grad)
     compare(b1_x2.grad, torch_b1_x2.grad)
     compare(b2_x1.grad, torch_b2_x1.grad)
