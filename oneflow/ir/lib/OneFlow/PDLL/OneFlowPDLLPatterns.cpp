@@ -49,7 +49,7 @@ namespace mlir {
 
 namespace oneflow {
 
-void populatePDLLPasses(RewritePatternSet& patterns) { populateGeneratedPDLLPatterns(patterns); }
+void populatePDLLPatterns(RewritePatternSet& patterns) { populateGeneratedPDLLPatterns(patterns); }
 
 }  // namespace oneflow
 
