@@ -21,8 +21,8 @@ namespace {
 struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPDLLPass)
 
-  StringRef getArgument() const final { return "test-pdll-pass"; }
-  StringRef getDescription() const final { return "Test PDLL functionality"; }
+  StringRef getArgument() const final { return "oneflow-pdll"; }
+  StringRef getDescription() const final { return "Test PDLL patterns of OneFlow"; }
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<pdl::PDLDialect, pdl_interp::PDLInterpDialect>();
   }
@@ -45,6 +45,11 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 }  // namespace
 
 namespace mlir {
-void registerTestPDLLPasses() { PassRegistration<TestPDLLPass>(); }
+
+namespace oneflow {
+
+void populatePDLLPasses(RewritePatternSet& patterns) { populateGeneratedPDLLPatterns(patterns); }
+
+}  // namespace oneflow
 
 }  // namespace mlir
