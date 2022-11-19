@@ -551,6 +551,14 @@ def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
     return flow._C.allclose(self, other, atol, rtol, equal_nan)
 
 
+def _index_add(self, dim, index, source, alpha=1):
+    return flow._C.index_add(self, dim, index, source, alpha)
+
+
+def _index_add_inplace(self, dim, index, source, alpha=1):
+    return flow._C.index_add_(self, dim, index, source, alpha)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -622,6 +630,8 @@ def RegisterMethods():
     Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
     Tensor.allclose = _allclose
+    Tensor.index_add = _index_add
+    Tensor.index_add_ = _index_add_inplace
 
 
 def register_tensor_op(op_name):

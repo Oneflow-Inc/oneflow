@@ -3405,6 +3405,43 @@ class IndexAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class IndexAddInplaceFunctor {
+ public:
+  IndexAddInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("index_add")
+                         .Input("input")
+                         .Input("index")
+                         .Input("source")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
+    const float alpha_value = alpha.As<float>();
+    int64_t dim_ = dim;
+    const auto& input_shape = input->shape();
+    const int64_t& num_axes = input_shape->NumAxes();
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+    CHECK_OR_RETURN(index->dtype()->data_type() != DataType::kInt32
+                    || index->dtype()->data_type() != DataType::kInt64)
+        << "Input(Index) holds the wrong type, it holds "
+        << DataType_Name(index->dtype()->data_type())
+        << " , but "
+           "desires to be int32_t or int64_t";
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
+    attrs.SetAllAttrs(dim_, alpha_value);
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = input;
+    JUST(OpInterpUtil::Dispatch(*op_, {input, index, source}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastShapesFunctor {
  public:
   Maybe<Shape> operator()(const std::vector<Shape>& shapes) const {
@@ -3641,6 +3678,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
   m.add_functor<impl::BinCountFunctor>("BinCount");
   m.add_functor<impl::IndexAddFunctor>("IndexAdd");
+  m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
 };
 
 }  // namespace functional

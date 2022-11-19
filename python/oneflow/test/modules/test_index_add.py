@@ -46,6 +46,13 @@ def _test_index_add(test_case, device):
         )
     )
 
+    # check inplace
+    torch_x.index_add_(0, torch_index, torch_t)
+    flow_x.index_add_(0, flow_index, flow_t)
+    test_case.assertTrue(
+        np.allclose(torch_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestIndexAdd(flow.unittest.TestCase):
