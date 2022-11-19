@@ -1743,6 +1743,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logsumexp,
+    """
+    See :func:`oneflow.logsumexp`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
@@ -2401,5 +2408,12 @@ add_docstr(
         >>> x
         tensor([0., 0., 0.], dtype=oneflow.float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
     """,
 )

@@ -100,10 +100,6 @@ class CriticalSectionBeginInstructionPolicy
   void FinishInvalidInterfaceEventRecords();
   void Finish();
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : *eager_blob_objects_) { DoEach(eager_blob_object.get()); }
-  }
-
  protected:
   std::shared_ptr<NNGraphIf> nn_graph_;
   EagerBlobObjectListPtr eager_blob_objects_;
@@ -286,10 +282,6 @@ class CriticalSectionEndInstructionPolicy : public InstructionPolicy {
   void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
   void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
-
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(eager_blob_object_.get());
-  }
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;

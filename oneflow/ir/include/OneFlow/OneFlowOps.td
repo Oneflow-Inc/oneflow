@@ -76,6 +76,7 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let arguments = (ins
     F32ElementsAttr:$value,
     StrAttr:$op_name,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id,
@@ -312,6 +313,42 @@ def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleO
   }];
   let constructor = "mlir::oneflow::createConvertToSignlessForTosaPass()";
   let dependentDialects = ["func::FuncDialect"];
+}
+
+def CSEWithAttributesIgnored : Pass<"cse-with-attributes-ignored", "ModuleOp"> {
+  let summary = "ignore oneflow attributes to have cse work";
+  let description = [{
+    cse and ignore oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEWithAttributesIgnored()";
+  let dependentDialects = [];
+}
+
+def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
+  let summary = "cse and ignore oneflow attributes";
+  let description = [{
+    put back oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEPutAttributes()";
+  let dependentDialects = [];
+}
+
+def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
+  let summary = "group matmul together";
+  let description = [{
+    group matmul ops together and use cudnn batched matmul
+  }];
+  let constructor = "mlir::oneflow::createGroupMatMul()";
+  let dependentDialects = [];
+}
+
+def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
+  let summary = "fuse forward ops";
+  let description = [{
+    fuse forward ops. Usually they are actions after an op.
+  }];
+  let constructor = "mlir::oneflow::createFuseForwardOps()";
+  let dependentDialects = [];
 }
 
 #endif // ONEFLOW_PASSES
