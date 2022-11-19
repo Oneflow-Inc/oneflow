@@ -1,6 +1,6 @@
 set(EXTERNAL_TARGETS)
 
-if(CPU_THREADING_RUNTIME STREQUAL "TBB")
+if(WITH_TBB) # set(WITH_${threading_runtime_item} ON) in threading.cmake
   add_subdirectory(onetbb)
   list(APPEND EXTERNAL_TARGETS tbb)
 endif()

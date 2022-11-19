@@ -51,7 +51,6 @@ endif(NOT WITH_MLIR)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 set(PIP_INDEX_MIRROR "" CACHE STRING "")
-set(CPU_THREADING_RUNTIME "SEQ" CACHE STRING "")
 
 if(APPLE)
   set(RPC_BACKEND "LOCAL")
@@ -84,22 +83,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 7)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
-
-  if(CPU_THREADING_RUNTIME STREQUAL "OMP")
-    set(OMP_FLAGS "-fopenmp")
-  endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  # Reference:
-  # https://releases.llvm.org/11.0.0/tools/clang/docs/OpenMPSupport.html
-  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 11)
-    if(CPU_THREADING_RUNTIME STREQUAL "OMP")
-      message(
-        FATAL_ERROR
-          "libopenmp is not supported under clang10, please use TBB with '-DCPU_THREADING_RUNTIME=TBB'."
-      )
-    endif()
-  endif()
-
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 5)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
@@ -123,6 +107,8 @@ endif()
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
+
+include(threading)
 include(util)
 include(proto2cpp)
 
@@ -169,16 +155,6 @@ if(OF_LAYER_NORM_USE_FAST_MATH)
   add_definitions(-DOF_LAYER_NORM_USE_FAST_MATH)
 endif()
 
-if(CPU_THREADING_RUNTIME STREQUAL "TBB")
-  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_TBB)
-elseif(CPU_THREADING_RUNTIME STREQUAL "OMP")
-  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_OMP)
-elseif(CPU_THREADING_RUNTIME STREQUAL "SEQ")
-  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_SEQ)
-else()
-  message(FATAL_ERROR "CPU_THREADING_RUNTIME must be one of: TBB, OMP, SEQ")
-endif()
-
 if(OF_FORCE_COLORED_DIAGNOSTICS)
   add_compile_options(
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-fdiagnostics-color=always>>
@@ -207,48 +183,8 @@ set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
 
 set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
-if(WIN32)
-  set(CMAKE_BUILD_TYPE Debug)
-  add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC
-                  -D__VERSION__=\"MSVC\")
-  add_definitions(
-    -DWIN32
-    -DOS_WIN
-    -D_MBCS
-    -DWIN64
-    -DWIN32_LEAN_AND_MEAN
-    -DNOGDI
-    -DPLATFORM_WINDOWS
-    -D_ITERATOR_DEBUG_LEVEL=0)
-  add_definitions(
-    /bigobj
-    /nologo
-    /EHsc
-    /GF
-    /FC
-    /MP
-    /Gm-)
-  add_definitions(-DGOOGLE_GLOG_DLL_DECL=)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-
-  foreach(
-    flag_var
-    CMAKE_C_FLAGS
-    CMAKE_C_FLAGS_DEBUG
-    CMAKE_C_FLAGS_RELEASE
-    CMAKE_CXX_FLAGS
-    CMAKE_CXX_FLAGS_DEBUG
-    CMAKE_CXX_FLAGS_RELEASE
-    CMAKE_CXX_FLAGS_MINSIZEREL
-    CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-    if(${flag_var} MATCHES "/MD")
-      string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-    endif()
-  endforeach()
-
-  # set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
-else()
+include(windows)
+if(NOT WIN32)
   set(EXTRA_CXX_FLAGS "-std=c++14 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
 
   if(APPLE)
@@ -281,12 +217,10 @@ if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
 
-if(CPU_THREADING_RUNTIME STREQUAL "TBB")
-  set(ONETBB_URL
-      https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
-  use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
-  set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
-endif()
+set(ONETBB_URL
+    https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
+use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
+set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
 
 set(ROBIN_HOOD_HASHING_URL
     https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
@@ -310,56 +244,6 @@ set(CUTLASS_MD5 132bc2d7b635e33666dd6fab1a9ab340)
 include(cuda)
 add_subdirectory(external)
 include(third_party)
-
-if(BUILD_CUDA)
-  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
-  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
-
-    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
-
-    # V100, TITAN V
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
-
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
-    endif()
-
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      # A100
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
-    endif()
-
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
-      # GeForce RTX 30xx
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
-    endif()
-
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
-      # GeForce RTX 40xx
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
-      # NVIDIA H100
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
-    endif()
-  endif()
-
-  enable_language(CUDA)
-  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
-  set(CUDA_SEPARABLE_COMPILATION OFF)
-
-  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
-    if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
-      set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
-      list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
-    endif()
-
-    message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
-    list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
-  endif()
-endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 

@@ -18,22 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-
-#define OF_RUNTIME_SEQ 0u
-#define OF_RUNTIME_OMP 1u
-#define OF_RUNTIME_TBB 2u
-
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-#include <omp.h>
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_for.h>
-#include <tbb/global_control.h>
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// Nothing
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
-#endif
+#include "oneflow/core/thread/thread_executor.h"
+#include "oneflow/maybe/variant.h"
 
 #ifdef WITH_ONEDNN
 #include <oneapi/dnnl/dnnl.hpp>
@@ -46,34 +32,24 @@ namespace ep {
 class CpuNumThreadsGuard {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuNumThreadsGuard);
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+#if WITH_TBB
   explicit CpuNumThreadsGuard(size_t num_threads)
       : global_thread_limit(tbb::global_control::max_allowed_parallelism, num_threads) {}
   ~CpuNumThreadsGuard() {}
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#elif WITH_OMP
   explicit CpuNumThreadsGuard(size_t num_threads) : set_num_threads_(num_threads) {
     saved_num_threads_ = omp_get_max_threads();
     omp_set_num_threads(set_num_threads_);
   }
   ~CpuNumThreadsGuard() { omp_set_num_threads(saved_num_threads_); }
-
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-  explicit CpuNumThreadsGuard(size_t num_threads) {}
-  ~CpuNumThreadsGuard() {}
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
 
  private:
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+#if WITH_TBB
   tbb::global_control global_thread_limit;
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#elif WITH_OMP
   size_t set_num_threads_;
   size_t saved_num_threads_;
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
 };
 
@@ -88,6 +64,7 @@ class CpuStream : public Stream {
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
 
   explicit CpuStream(CpuDevice* device) : device_(device) {
+    // TODO: switch multi thread executor in rumtime
 #ifdef WITH_ONEDNN
     onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
@@ -104,44 +81,12 @@ class CpuStream : public Stream {
   void ParallelFor(int64_t begin, int64_t end, const F& func) {
     ParallelFor(begin, end, func, kParallelForDefaultGrain);
   }
+
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
-#if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
-    auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
-    size_t num_threads = device()->GetNumThreads();
-#endif
-    if (begin >= end) { return; }
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-    if (grain_size > 0) {
-      num_threads = std::min(num_threads, (size_t)(DivUp((end - begin), grain_size)));
-    } else {
-      num_threads = 1;
-    }
-#pragma omp parallel num_threads(num_threads)
-    {
-      int64_t omp_num_thread = omp_get_num_threads();
-      int64_t chunk_size = DivUp((end - begin), omp_num_thread);
-      int64_t omp_tid = omp_get_thread_num();
-      int64_t thread_begin_index = begin + omp_tid * chunk_size;
-      int64_t thread_end_index = std::min(end, chunk_size + thread_begin_index);
-
-      if (thread_begin_index < end) { func(thread_begin_index, thread_end_index); }
-    }
-
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    CpuNumThreadsGuard guard(num_threads);
-    size_t tmp_chunk_size = DivUp((end - begin), num_threads);
-    int64_t chunk_size = std::max(tmp_chunk_size, grain_size);
-
-    tbb::parallel_for(
-        tbb::blocked_range<int64_t>(begin, end, chunk_size),
-        [func](const tbb::blocked_range<int64_t>& r) { func(r.begin(), r.end()); },
-        tbb::static_partitioner{});
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-    func(begin, end);
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
-#endif
+    multi_thread_executor_.Visit([=](const auto& x) {
+      x->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
+    });
   }
 
 #ifdef WITH_ONEDNN
@@ -151,6 +96,16 @@ class CpuStream : public Stream {
  private:
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
+  maybe::Variant<std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorSeq>>,
+                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorOf>>,
+#ifdef WITH_TBB
+                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorTbb>>,
+#endif
+#ifdef WITH_OMP
+                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorOmp>>>
+#endif
+      multi_thread_executor_ = std::make_unique<MultiThreadExecutorBase<MultiThreadExecutorTbb>>(
+          MultiThreadExecutorTbb());
 #ifdef WITH_ONEDNN
   std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;
 #endif
