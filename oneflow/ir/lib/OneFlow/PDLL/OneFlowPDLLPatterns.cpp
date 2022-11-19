@@ -15,7 +15,7 @@
 
 using namespace mlir;
 
-#include "build/oneflow/ir/lib/OneFlow/PDLL/TestPDLLPatterns.h.inc"
+#include "oneflow/ir/lib/OneFlow/PDLL/OneFlowPatterns.h.inc"
 
 namespace {
 struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
@@ -23,10 +23,10 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 
   StringRef getArgument() const final { return "test-pdll-pass"; }
   StringRef getDescription() const final { return "Test PDLL functionality"; }
-  void getDependentDialects(DialectRegistry &registry) const override {
+  void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<pdl::PDLDialect, pdl_interp::PDLInterpDialect>();
   }
-  LogicalResult initialize(MLIRContext *ctx) override {
+  LogicalResult initialize(MLIRContext* ctx) override {
     // Build the pattern set within the `initialize` to avoid recompiling PDL
     // patterns during each `runOnOperation` invocation.
     RewritePatternSet patternList(ctx);
@@ -42,9 +42,9 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 
   FrozenRewritePatternSet patterns;
 };
-} // namespace
+}  // namespace
 
 namespace mlir {
 void registerTestPDLLPasses() { PassRegistration<TestPDLLPass>(); }
 
-} // namespace mlir
+}  // namespace mlir
