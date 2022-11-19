@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -28,21 +43,18 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
 
   Maybe<void> Capture(FusedCenterCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-
     CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     for (int i = 0; i < INPUT_LEN; i++) {
       ctx->requires_grad.push_back(inputs.at(i)->requires_grad());
     }
-    for (int i = 0; i < INPUT_LEN; i++) {
-      ctx->SaveTensorForBackward(inputs.at(i));
-    }
+    for (int i = 0; i < INPUT_LEN; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
 
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedCenterCaptureState* ctx,
-                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const FusedCenterCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
     const auto& b1_x1 = ctx->SavedTensors().at(0);
@@ -55,9 +67,8 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
     in_grads->resize(INPUT_LEN);
-    auto result = JUST(functional::FusedCenterGrad(
-        b1_x1, b1_x2, b2_x1, b2_x2, 
-        b1_y1, b1_y2, b2_y1, b2_y2));
+    auto result =
+        JUST(functional::FusedCenterGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {

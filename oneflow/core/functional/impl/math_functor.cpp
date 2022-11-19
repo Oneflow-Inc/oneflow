@@ -3167,7 +3167,8 @@ class FusedCenterFunctor {
       const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
       const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
       const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
   }
 
  private:
@@ -3202,7 +3203,8 @@ class FusedCenterGradFunctor {
       const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
       const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
       const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
   }
 
  private:
