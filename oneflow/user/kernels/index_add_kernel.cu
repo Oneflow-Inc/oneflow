@@ -52,11 +52,8 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* index = ctx->Tensor4ArgNameAndIndex("index", 0);
     const user_op::Tensor* source = ctx->Tensor4ArgNameAndIndex("source", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    std::cout << "enter here" << std::endl;
     const int64_t dim = ctx->Attr<int64_t>("dim");
-    std::cout << "dim: " << dim << std::endl;
     const float alpha = ctx->Attr<float>("alpha");
-    std::cout << "dim: " << dim << ", alpha: " << alpha << std::endl;
     const ShapeView& input_shape = input->shape_view();
     const ShapeView& source_shape = source->shape_view();
     std::vector<int64_t> input_stride(input->stride().begin(), input->stride().end());
@@ -65,6 +62,9 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const int64_t delta = input_shape.At(dim) - source_dim;
     DataType index_dtype = index->data_type();
     const int32_t n = input->shape_view().elem_cnt();
+    Memcpy<DeviceType::kCUDA>(
+        ctx->stream(), output->mut_dptr<void>(), input->dptr<void>(),
+        input->shape_view().elem_cnt() * GetSizeOfDataType(input->data_type()));
     if (GetSizeOfDataType(index_dtype) == 4) {
       RUN_CUDA_KERNEL((index_add_cuda_kernel<T, int32_t>), ctx->stream(), n, n, input->dptr<T>(),
                       index->dptr<int32_t>(), source->dptr<T>(), output->mut_dptr<T>(), stride,

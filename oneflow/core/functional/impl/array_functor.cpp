@@ -3386,7 +3386,7 @@ class IndexAddFunctor {
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
     const float alpha_value = alpha.As<float>();
-    int32_t dim_ = dim;
+    int64_t dim_ = dim;
     const auto& input_shape = input->shape();
     const int64_t& num_axes = input_shape->NumAxes();
     dim_ = JUST(maybe_wrap_dim(dim_, num_axes));

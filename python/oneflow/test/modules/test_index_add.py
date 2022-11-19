@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import numpy as np
 import torch
 from collections import OrderedDict
 
@@ -29,12 +30,21 @@ def _test_index_add(test_case, device):
     )
     torch_index = torch.tensor([0, 4, 2]).to(device)
     torch_y = torch.index_add(torch_x, 0, torch_index, torch_t)
+    torch_y_alpha = torch.index_add(torch_x, 0, torch_index, torch_t, alpha=-1)
 
     flow_x = flow.ones(5, 3).to(device)
     flow_t = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float).to(device)
     flow_index = flow.tensor([0, 4, 2]).to(device)
     flow_y = flow.index_add(flow_x, 0, flow_index, flow_t)
-    print(flow_y)
+    flow_y_alpha = flow.index_add(flow_x, 0, flow_index, flow_t, alpha=-1)
+    test_case.assertTrue(
+        np.allclose(torch_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
+    )
+    test_case.assertTrue(
+        np.allclose(
+            torch_y_alpha.cpu().numpy(), flow_y_alpha.cpu().numpy(), 1e-05, 1e-05
+        )
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
