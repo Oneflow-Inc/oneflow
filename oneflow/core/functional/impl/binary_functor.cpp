@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/binary_functor.h"
-#include <cstdint>
 
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
@@ -315,9 +314,9 @@ class Atan2Functor : public BinaryFloatFunctor {
     auto broad_x_ = x;
     auto broad_y_ = y;
     if (x_element == 1) {
-      broad_x_ = JUST(functional::Mul(JUST(functional::OnesLike(y)), x));
+      broad_x_ = JUST(functional::Expand(x, *y->shape()));
     } else if (y_element == 1) {
-      broad_y_ = JUST(functional::Mul(JUST(functional::OnesLike(x)), y));
+      broad_y_ = JUST(functional::Expand(y, *x->shape()));
     } else if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
       return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes() << ") must match the size of tensor b "
                                       "(" << y->shape()->NumAxes() << ") at non-singleton dimension 1";
