@@ -313,10 +313,10 @@ class MatMulFunctor {
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    if (a_num_axes == 1 && b_num_axes == 2) { 
-      result = JUST(VectorMatrixProduct(cast_a, cast_b)); 
-    } else if (a_num_axes == 2 && b_num_axes == 1) { 
-      result = JUST(MatrixVectorProduct(cast_a, cast_b)); 
+    if (a_num_axes == 1 && b_num_axes == 2) {
+      result = JUST(VectorMatrixProduct(cast_a, cast_b));
+    } else if (a_num_axes == 2 && b_num_axes == 1) {
+      result = JUST(MatrixVectorProduct(cast_a, cast_b));
     } else if (a_num_axes == 2 && b_num_axes == 2) {
       result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {cast_a, cast_b}, attrs));
     } else if (a_num_axes == b_num_axes) {
@@ -338,7 +338,9 @@ class MatMulFunctor {
 
     if((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
-    } else { return result; }
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -390,7 +392,9 @@ class BatchMatMulFunctor {
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
     if((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
-    } else { return result; }
+    } else {
+      return result;
+    }
   }
 
  private:

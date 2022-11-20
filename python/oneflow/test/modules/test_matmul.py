@@ -40,7 +40,7 @@ class TestModule(flow.unittest.TestCase):
         x = random_tensor(ndim=2, dim1=k).to(device)
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
-    
+
     @autotest(n=5, check_graph=False)
     def test_flow_tensor_matmul_with_random_int_data(test_case):
         x = np.random.randint(10, 21, size=5)
@@ -51,7 +51,9 @@ class TestModule(flow.unittest.TestCase):
         flow_x = flow.tensor(x).to(flow.int)
         flow_y = flow.tensor(y).to(flow.int)
         flow_output_numpy = flow_x.matmul(flow_y).numpy()
-        test_case.assertTrue(np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05))
+        test_case.assertTrue(
+            np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
+        )
 
     @autotest(n=5, check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
