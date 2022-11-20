@@ -250,6 +250,8 @@ Tensor class reference
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point

@@ -43,7 +43,7 @@ class TestAsStrided(flow.unittest.TestCase):
         storage_offset = random(0, 3).to(int)
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
-    
+
     @autotest(n=10)
     def test_flow_as_strided_tensor_method(test_case):
         device = random_device()
