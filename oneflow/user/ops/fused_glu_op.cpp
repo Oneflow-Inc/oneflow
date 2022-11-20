@@ -18,45 +18,45 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ auto FusedGluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {  
+/* static */ auto FusedGluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   // check existance of optional args
   bool is_split_mode = false;
-  if (ctx->user_op_conf().has_input("v", 0) && ctx->user_op_conf().has_input("c", 0)) { 
-    is_split_mode = true; 
+  if (ctx->user_op_conf().has_input("v", 0) && ctx->user_op_conf().has_input("c", 0)) {
+    is_split_mode = true;
   } else {
-    CHECK(!(ctx->user_op_conf().has_input("v", 0) || ctx->user_op_conf().has_input("c", 0)) );
+    CHECK(!(ctx->user_op_conf().has_input("v", 0) || ctx->user_op_conf().has_input("c", 0)));
   }
 
   // data parallelism
-  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes()-1;
+  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes() - 1;
        ++i) {
-    if(is_split_mode) {
+    if (is_split_mode) {
       ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), i)
-        .Broadcast(user_op::OpArg("w", 0))
-        .Broadcast(user_op::OpArg("b", 0))
-        .Broadcast(user_op::OpArg("v", 0))
-        .Broadcast(user_op::OpArg("c", 0))
-        .Split(ctx->outputs(), i)
-        .Build();
+          .Split(user_op::OpArg("x", 0), i)
+          .Broadcast(user_op::OpArg("w", 0))
+          .Broadcast(user_op::OpArg("b", 0))
+          .Broadcast(user_op::OpArg("v", 0))
+          .Broadcast(user_op::OpArg("c", 0))
+          .Split(ctx->outputs(), i)
+          .Build();
     } else {
       ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), i)
-        .Broadcast(user_op::OpArg("w", 0))
-        .Broadcast(user_op::OpArg("b", 0))
-        .Split(ctx->outputs(), i)
-        .Build();
+          .Split(user_op::OpArg("x", 0), i)
+          .Broadcast(user_op::OpArg("w", 0))
+          .Broadcast(user_op::OpArg("b", 0))
+          .Split(ctx->outputs(), i)
+          .Build();
     }
   }
 
   // model parallelism
-  if(is_split_mode) {
+  if (is_split_mode) {
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("x", 0))
         .Split(user_op::OpArg("w", 0), 1)
-        .Split(user_op::OpArg("b", 0), 1)
+        .Split(user_op::OpArg("b", 0), 0)
         .Split(user_op::OpArg("v", 0), 1)
-        .Split(user_op::OpArg("c", 0), 1)
+        .Split(user_op::OpArg("c", 0), 0)
         .Split(ctx->outputs(), 1)
         .Build();
   }
@@ -72,10 +72,10 @@ namespace oneflow {
 
   // check existance of optional args
   bool is_split_mode = false;
-  if (ctx->has_input("v", 0) && ctx->has_input("c", 0)) { 
-    is_split_mode = true; 
+  if (ctx->has_input("v", 0) && ctx->has_input("c", 0)) {
+    is_split_mode = true;
   } else {
-    CHECK(!(ctx->has_input("v", 0) || ctx->has_input("c", 0)) );
+    CHECK(!(ctx->has_input("v", 0) || ctx->has_input("c", 0)));
   }
 
   // check dimensions of x, w and b
@@ -89,9 +89,7 @@ namespace oneflow {
       << "get " << w_shape.At(1) << " and " << x_shape.At(x_num_axes - 1);
   CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
       << "get " << b_shape.At(0) << " and " << w_shape.At(0);
-  if (!is_split_mode) {
-    CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0);
-  }
+  if (!is_split_mode) { CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0); }
 
   // check both dimensions and input shapes of v and c (optional)
   if (is_split_mode) {
@@ -153,9 +151,7 @@ namespace oneflow {
   // set output data type
   ctx->SetOutputDType("y", 0, x_dtype);
   ctx->SetOutputDType("matmul_wx", 0, x_dtype);
-  if (is_split_mode) {
-    ctx->SetOutputDType("matmul_vx", 0, x_dtype);
-  }
+  if (is_split_mode) { ctx->SetOutputDType("matmul_vx", 0, x_dtype); }
 
   return Maybe<void>::Ok();
 }

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -29,19 +30,36 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
+// just for debugging (TODO: delete later)
+#define FUSEDGLU_OPTIMIZED
+
 namespace oneflow {
 
 namespace {
 
-template<typename T, ep::primitive::UnaryOp act_type>
+template<typename Func>
+unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int64_t elem_cnt,
+                             const int32_t block_size, const int32_t pack_size) {
+  auto* cuda_stream = stream->As<ep::CudaStream>();
+  const int64_t pack_num = elem_cnt / pack_size;
+  const int32_t num_blocks = std::max<int64_t>(1, (pack_num + block_size - 1) / block_size);
+  const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
+  int max_active_blocks = 0;
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func, block_size,
+                                                              /*shared_memory*/ 0));
+  return std::min(num_blocks, max_active_blocks * multi_processor_count);
+}
+
+#ifndef FUSEDGLU_OPTIMIZED
+template<typename T, ep::primitive::UnaryOp act_type, typename IndexType>
 __global__ void FusedGluForwardGpu(
-    const int64_t m, const int64_t n, const int64_t k, const int64_t stride,
+    const IndexType m, const IndexType n, const IndexType k, const IndexType stride,
     ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act, const T* matmul_wx,
     const T* b, const T* matmul_vx, const T* c, T* y) {
   CUDA_1D_KERNEL_LOOP(i, m * n) {
     // obtain the row and col index in output tensor "y"
-    const int64_t y_row = i / n;
-    const int64_t y_col = i - y_row * n;
+    const IndexType y_row = i / n;
+    const IndexType y_col = i - y_row * n;
 
     // calculate the hidden_state and gate
     T hidden_state = matmul_wx[y_row * stride + y_col] + b[y_col];
@@ -54,43 +72,202 @@ __global__ void FusedGluForwardGpu(
     y[i] = hidden_state * act_gate;
   }
 }
+#else
 
-}  // namespace
+template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
+__global__ void FusedGluForwardGpu(
+    const IndexType m, const IndexType n, const IndexType k, const IndexType stride,
+    const IndexType elem_cnt, ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act,
+    const T* matmul_wx, const T* b, const T* matmul_vx, const T* c, T* y) {
+  // obtain global thread index
+  IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+  // define type of Pack
+  using LoadPack = cuda::elementwise::Packed<T, pack_size>;
+
+  // workload of current thread
+  for (IndexType linear_index = global_thread_id * pack_size,
+                 step = gridDim.x * blockDim.x * pack_size;
+       linear_index < elem_cnt; linear_index += step) {
+    // obtain the row and col index in output tensor "y"
+    const IndexType y_row = linear_index / n;
+    const IndexType y_col = linear_index - y_row * n;
+
+    // cast type to load type
+    const LoadPack* matmul_wx_load =
+        reinterpret_cast<const LoadPack*>(matmul_wx + y_row * stride + y_col);
+    const LoadPack* matmul_vx_load =
+        reinterpret_cast<const LoadPack*>(matmul_vx + y_row * stride + y_col);
+    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b + y_col);
+    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c + y_col);
+
+    // init vectors
+    LoadPack matmul_wx_vec = *matmul_wx_load;
+    LoadPack matmul_vx_vec = *matmul_vx_load;
+    LoadPack b_vec = *b_load;
+    LoadPack c_vec = *c_load;
+    LoadPack y_store;
+
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) {
+      // calculate the hidden_state and gate
+      T hidden_state = matmul_wx_vec.elem[i] + b_vec.elem[i];
+      T gate = matmul_vx_vec.elem[i] + c_vec.elem[i];
+
+      // calculate activation
+      T act_gate = act(gate);
+
+      // calculate element-wise product
+      y_store.elem[i] = hidden_state * act_gate;
+    }
+    *(reinterpret_cast<LoadPack*>(y + linear_index)) = y_store;
+  }
+}
+
+#endif  // FUSEDGLU_OPTIMIZED
+
+template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
+void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
+                              int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+                              const T* c, T* y) {
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
+#ifndef FUSEDGLU_OPTIMIZED
+  if (m * n < GetMaxVal<int32_t>()) {
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
+                    /* CUDA stream */ stream,
+                    /* number of threads */ m * n,
+                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+  } else {
+    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
+                    /* CUDA stream */ stream,
+                    /* number of threads */ m * n,
+                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+  }
+#else
+  int64_t elem_cnt = m * n;
+  constexpr int32_t block_size = 128;
+  unsigned int grid_size =
+      ComputeGridSize(stream, FusedGluForwardGpu<T, IndexType, act_type, pack_size>, elem_cnt,
+                      block_size, pack_size);
+  FusedGluForwardGpu<T, IndexType, act_type, pack_size>
+      <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          m, n, k, stride, elem_cnt, act, matmul_wx, b, matmul_vx, c, y);
+#endif
+}
+
+template<typename T, ep::primitive::UnaryOp act_type, int32_t pack_size>
+void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
+                       int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+                       const T* c, T* y) {
+  if (m * n < (1 << 30)) {
+    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, n, k, stride, matmul_wx, b,
+                                                              matmul_vx, c, y);
+  } else {
+    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, n, k, stride, matmul_wx, b,
+                                                              matmul_vx, c, y);
+  }
+}
 
 template<typename T, ep::primitive::UnaryOp act_type>
-void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n,
-                                const int64_t k, int64_t stride, const T* matmul_wx, const T* b,
-                                const T* matmul_vx, const T* c, T* y) {
-  ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
-  RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type>),
-                  /* CUDA stream */ stream,
-                  /* number of threads */ m * n,
-                  /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
+void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
+                       int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+                       const T* c, T* y) {
+  const auto IsAligned = [&](const size_t alignment) {
+    const uintptr_t matmul_wx_ptr = reinterpret_cast<uintptr_t>(matmul_wx);
+    const uintptr_t matmul_vx_ptr = reinterpret_cast<uintptr_t>(matmul_vx);
+    const uintptr_t b_ptr = reinterpret_cast<uintptr_t>(b);
+    const uintptr_t c_ptr = reinterpret_cast<uintptr_t>(c);
+    const uintptr_t y_ptr = reinterpret_cast<uintptr_t>(y);
+
+    return (/* memory address alignment */
+            matmul_wx_ptr % alignment == 0 && matmul_vx_ptr % alignment == 0
+            && b_ptr % alignment == 0 && c_ptr % alignment == 0
+            && y_ptr % alignment == 0
+            /* #element per row alignment */
+            && n % (alignment / sizeof(T)) == 0);
+  };
+
+  if (IsAligned(16)) {
+    switch (sizeof(T)) {
+      case 16:
+        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 8:
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 4:
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 2:
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      default:
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+    }
+  } else if (IsAligned(8)) {
+    switch (sizeof(T)) {
+      case 8:
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 4:
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 2:
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      default:
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+    }
+  } else if (IsAligned(4)) {
+    switch (sizeof(T)) {
+      case 4:
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 2:
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      default:
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+    }
+  } else if (IsAligned(2)) {
+    switch (sizeof(T)) {
+      case 2:
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      default:
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+    }
+  } else {
+    DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+  }
 }
 
 template<typename T>
-void DispatchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n,
-                                const int64_t k, int64_t stride, const T* matmul_wx, const T* b,
-                                const T* matmul_vx, const T* c, T* y,
-                                const std::string& activation) {
-  if(activation == "none"){
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kIdentity>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
+                            int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+                            const T* c, T* y, const std::string& activation) {
+  if (activation == "none") {
+    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity>(stream, m, n, k, stride, matmul_wx, b,
+                                                            matmul_vx, c, y);
   } else if (activation == "sigmoid") {
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kSigmoid>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid>(stream, m, n, k, stride, matmul_wx, b,
+                                                           matmul_vx, c, y);
   } else if (activation == "relu") {
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kRelu>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kRelu>(stream, m, n, k, stride, matmul_wx, b,
+                                                        matmul_vx, c, y);
   } else if (activation == "gelu") {
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kGelu>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kGelu>(stream, m, n, k, stride, matmul_wx, b,
+                                                        matmul_vx, c, y);
   } else if (activation == "fast_gelu") {
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kFastGelu>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kFastGelu>(stream, m, n, k, stride, matmul_wx, b,
+                                                            matmul_vx, c, y);
   } else if (activation == "silu") {
-    LaunchFusedGluForwardGpu<T, ep::primitive::UnaryOp::kSilu>(
-      stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSilu>(stream, m, n, k, stride, matmul_wx, b,
+                                                        matmul_vx, c, y);
   } else {
     UNIMPLEMENTED();
   }
@@ -153,14 +330,14 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     }
 
     // dispatch according to activation type
-    DispatchFusedGluForwardGpu<T>(
+    DispatchActivationType<T>(
         ctx->stream(),
         /*m, n, k=*/m, n, k,
         /*stride=*/is_split_mode ? n : 2 * n,
         /*matmul_wx=*/out_tensor_matmul_wx->dptr<T>(),
         /*b=*/input_tensor_b->dptr<T>(),
         /*matmul_vx=*/
-            is_split_mode ? out_tensor_matmul_vx->dptr<T>() : out_tensor_matmul_wx->dptr<T>() + n,
+        is_split_mode ? out_tensor_matmul_vx->dptr<T>() : out_tensor_matmul_wx->dptr<T>() + n,
         /*c=*/is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
         /*y=*/out_tensor_y->mut_dptr<T>(),
         /*activation=*/ctx->Attr<std::string>("activation"));
@@ -169,12 +346,15 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+}  // namespace
+
 #define REGISTER_GPU_FUSED_GLU_KERNEL(dtype)                           \
   REGISTER_USER_KERNEL("fused_glu")                                    \
       .SetCreateFn<GpuFusedGluKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_GPU_FUSED_GLU_KERNEL(double)
 REGISTER_GPU_FUSED_GLU_KERNEL(float)
 REGISTER_GPU_FUSED_GLU_KERNEL(half)
 REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)

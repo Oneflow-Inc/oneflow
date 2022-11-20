@@ -3100,8 +3100,7 @@ class FusedGluFunctor {
     } else if (!v && !c) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
     } else {
-      return Error::RuntimeError()
-             << "expected consistant existance of tensor v and c";
+      return Error::RuntimeError() << "expected consistant existance of tensor v and c";
     }
   }
 
