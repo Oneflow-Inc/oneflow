@@ -23,9 +23,11 @@ namespace {
 
 template<typename T>
 struct FusedCenterForwardFunctor {
-  __device__ T Compute(T b1_x1, T b1_x2, T b2_x1, T b2_x2, T b1_y1, T b1_y2, T b2_y1, T b2_y2) const {
-    return ((b2_x1 + b2_x2 - b1_x1 - b1_x2) * (b2_x1 + b2_x2 - b1_x1 - b1_x2) + \
-            (b2_y1 + b2_y2 - b1_y1 - b1_y2) * (b2_y1 + b2_y2 - b1_y1 - b1_y2)) / static_cast<T>(4.0);
+  __device__ T Compute(T b1_x1, T b1_x2, T b2_x1, T b2_x2, T b1_y1, T b1_y2, T b2_y1,
+                       T b2_y2) const {
+    return ((b2_x1 + b2_x2 - b1_x1 - b1_x2) * (b2_x1 + b2_x2 - b1_x1 - b1_x2)
+            + (b2_y1 + b2_y2 - b1_y1 - b1_y2) * (b2_y1 + b2_y2 - b1_y1 - b1_y2))
+           / static_cast<T>(4.0);
   }
 };
 
@@ -106,8 +108,8 @@ class FusedCenterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("fused_get_center_dist")                                 \
+#define REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("fused_get_center_dist")                        \
       .SetCreateFn<FusedCenterKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("rho2", 0) == GetDataType<dtype>::value));
@@ -155,10 +157,10 @@ class FusedCenterGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)                    \
-  REGISTER_USER_KERNEL("fused_get_center_dist_grad")                              \
-      .SetCreateFn<FusedCenterGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)   \
+#define REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)         \
+  REGISTER_USER_KERNEL("fused_get_center_dist_grad")                   \
+      .SetCreateFn<FusedCenterGradKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(float)
