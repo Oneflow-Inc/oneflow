@@ -97,10 +97,13 @@ class ScalarMathBaseFunctor {
       }
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
-      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      // Promote type to Int64 when tensor is Bool type but scalar is int type.
+      // Promote type to Float32 when op is scalar_div.
       if (DType::priority_order[x->dtype()->data_type()]
           == DType::priority_order[DType::Bool()->data_type()]) {
         lowest_dtype = DType::Int64();
+      } else if (op_->op_type_name() == "scalar_div") {
+        lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
       }
