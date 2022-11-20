@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 #include <sstream>
 #include <bitset>
@@ -912,8 +913,37 @@ class LogSumExpFunctor {
   LogSumExpFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
-    return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+    if (x->ndim() == 0) {
+      // can't take amax of 0-dim tensor
+      return To(x, JUST(DType::Get(DataType::kFloat)), false);
+    } else if (x->nelement() == 0) {
+      // can't take amax of empty tensor
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
+      return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+    } else {
+      const std::shared_ptr<one::Tensor>& maxes = JUST(Amax(x, axis, true));
+      const std::shared_ptr<one::Tensor>& maxes_squeezed =
+          (keepdims ? maxes : JUST(SqueezeMultiple(maxes, axis)));
+      JUST(MaskedFillInplace(maxes_squeezed,
+                             JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
+      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims)))), maxes_squeezed, 1, false);
+    }
+  }
+
+ private:
+  Maybe<Tensor> SqueezeMultiple(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int32_t>& axis) const {
+    int ndims = x->ndim();
+    const auto& dims_to_squeeze = JUST(dim_list_to_bitset(axis, ndims));
+    std::shared_ptr<one::Tensor> result = x;
+    for (int i = ndims - 1; i >= 0; --i) {
+      if ((*dims_to_squeeze)[i]) {
+        std::vector<int32_t> dims = {i};
+        result = JUST(Squeeze(result, dims));
+      }
+    }
+    return result;
   }
 };
 
@@ -3119,6 +3149,82 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class FusedGetBounddingBoxesCoordFunctor {
+ public:
+  FusedGetBounddingBoxesCoordFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord")
+                         .Input("x1")
+                         .Input("y1")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("x2")
+                         .Input("y2")
+                         .Input("w2")
+                         .Input("h2")
+                         .Output("b1_x1")
+                         .Output("b1_x2")
+                         .Output("b1_y1")
+                         .Output("b1_y2")
+                         .Output("b2_x1")
+                         .Output("b2_x2")
+                         .Output("b2_y1")
+                         .Output("b2_y2")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& x1, const std::shared_ptr<one::Tensor>& y1,
+      const std::shared_ptr<one::Tensor>& w1, const std::shared_ptr<one::Tensor>& h1,
+      const std::shared_ptr<one::Tensor>& x2, const std::shared_ptr<one::Tensor>& y2,
+      const std::shared_ptr<one::Tensor>& w2, const std::shared_ptr<one::Tensor>& h2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x1, y1, w1, h1, x2, y2, w2, h2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetBounddingBoxesCoordGradFunctor {
+ public:
+  FusedGetBounddingBoxesCoordGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord_grad")
+                         .Input("b1_x1_diff")
+                         .Input("b1_x2_diff")
+                         .Input("b1_y1_diff")
+                         .Input("b1_y2_diff")
+                         .Input("b2_x1_diff")
+                         .Input("b2_x2_diff")
+                         .Input("b2_y1_diff")
+                         .Input("b2_y2_diff")
+                         .Output("x1_diff")
+                         .Output("y1_diff")
+                         .Output("w1_diff")
+                         .Output("h1_diff")
+                         .Output("x2_diff")
+                         .Output("y2_diff")
+                         .Output("w2_diff")
+                         .Output("h2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& b1_x1_diff,
+                                const std::shared_ptr<one::Tensor>& b1_x2_diff,
+                                const std::shared_ptr<one::Tensor>& b1_y1_diff,
+                                const std::shared_ptr<one::Tensor>& b1_y2_diff,
+                                const std::shared_ptr<one::Tensor>& b2_x1_diff,
+                                const std::shared_ptr<one::Tensor>& b2_x2_diff,
+                                const std::shared_ptr<one::Tensor>& b2_y1_diff,
+                                const std::shared_ptr<one::Tensor>& b2_y2_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_,
+                                               {b1_x1_diff, b1_x2_diff, b1_y1_diff, b1_y2_diff,
+                                                b2_x1_diff, b2_x2_diff, b2_y1_diff, b2_y2_diff},
+                                               {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3234,6 +3340,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
+  m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
 };
 
 }  // namespace functional

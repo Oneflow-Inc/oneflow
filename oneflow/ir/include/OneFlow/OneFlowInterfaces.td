@@ -116,5 +116,46 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
+def BiasAddCompatibleInterface : OpInterface<"BiasAddCompatible"> {
+  let description = [{
+    Interface of ops used as bias add
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "bool", "isLastDim", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "b", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "out", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def MatMulCompatibleInterface : OpInterface<"MatMulCompatible"> {
+  let description = [{
+    Interface of ops used as matmul
+  }];
+
+  let methods = [
+    InterfaceMethod<"is this a transpose_a=false, transpose_b=true matmul",
+        "bool", "isLinear", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "a", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "b", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "out", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

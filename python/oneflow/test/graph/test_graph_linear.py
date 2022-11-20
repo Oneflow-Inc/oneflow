@@ -83,7 +83,7 @@ def _test_linear_graph_func(test_case, device):
     np_out = np.matmul(input_arr, np_weight)
     test_case.assertTrue(np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05))
 
-    @flow.nn.Graph.to_graph
+    @flow.nn.Graph.trace
     def linear_func(x):
         return linear(x)
 
