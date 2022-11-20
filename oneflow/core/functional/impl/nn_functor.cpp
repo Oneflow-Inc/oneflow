@@ -290,22 +290,36 @@ class MatMulFunctor {
                            const bool& transpose_b, const double& alpha) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
-
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor a's dim should >= 1";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
+    std::shared_ptr<one::Tensor> result;
+    if ((cast_a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
-    if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
-    if (a_num_axes == 2 && b_num_axes == 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
-    }
-    if (a_num_axes == b_num_axes) {
+    if (a_num_axes == 1 && b_num_axes == 2) {
+      result = JUST(VectorMatrixProduct(cast_a, cast_b));
+    } else if (a_num_axes == 2 && b_num_axes == 1) {
+      result = JUST(MatrixVectorProduct(cast_a, cast_b));
+    } else if (a_num_axes == 2 && b_num_axes == 2) {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {cast_a, cast_b}, attrs));
+    } else if (a_num_axes == b_num_axes) {
       bool if_batch_matmul = true;
       for (int i = 0; i < a_num_axes - 2; ++i) {
         if (a_shape->At(i) != b_shape->At(i)) {
@@ -314,10 +328,19 @@ class MatMulFunctor {
         }
       }
       if (if_batch_matmul) {
-        return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
+      } else {
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
       }
+    } else {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -352,7 +375,26 @@ class BatchMatMulFunctor {
         << matmul_dim_b << " of mat2, please check input!";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
