@@ -42,7 +42,7 @@ Maybe<void> FusedCenterOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
- 
+
 Maybe<void> FusedCenterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return FusedCenterOp::InferLogicalTensorDesc(ctx);
 }

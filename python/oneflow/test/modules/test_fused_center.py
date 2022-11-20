@@ -1,9 +1,12 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +26,9 @@ import oneflow.unittest
 
 
 def torch_center(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2):
-    return ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4
+    return (
+        (b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2
+    ) / 4
 
 
 def _test_fused_get_center_dist_impl(test_case, device, shape):
@@ -53,8 +58,26 @@ def _test_fused_get_center_dist_impl(test_case, device, shape):
                 requires_grad=True,
             )
         )
-    b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2 = x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]
-    torch_b1_x1, torch_b1_x2, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2 = (
+    b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2 = (
+        x[0],
+        x[1],
+        x[2],
+        x[3],
+        x[4],
+        x[5],
+        x[6],
+        x[7],
+    )
+    (
+        torch_b1_x1,
+        torch_b1_x2,
+        torch_b2_x1,
+        torch_b2_x2,
+        torch_b1_y1,
+        torch_b1_y2,
+        torch_b2_y1,
+        torch_b2_y2,
+    ) = (
         torch_x[0],
         torch_x[1],
         torch_x[2],
