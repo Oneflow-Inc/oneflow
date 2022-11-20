@@ -39,9 +39,6 @@ add_docstr(
         self[:, index[i], :] += alpha * src[:, i, :]  # if dim == 1
         self[:, :, index[i]] += alpha * src[:, :, i]  # if dim == 2
 
-    Note:
-        {forward_reproducibility_note}
-
     Args:
         dim (int): dimension along which to index
         index (Tensor): indices of ``source`` to select from,
