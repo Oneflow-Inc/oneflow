@@ -87,8 +87,19 @@ def _test_fused_get_center_dist_impl(test_case, device, shape):
         torch_x[6],
         torch_x[7],
     )
-    rho2 = flow._C.fused_get_center_dist(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2)
-    torch_rho2 = torch_center(torch_b1_x1, torch_b1_x2, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2)
+    rho2 = flow._C.fused_get_center_dist(
+        b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2
+    )
+    torch_rho2 = torch_center(
+        torch_b1_x1,
+        torch_b1_x2,
+        torch_b2_x1,
+        torch_b2_x2,
+        torch_b1_y1,
+        torch_b1_y2,
+        torch_b2_y1,
+        torch_b2_y2,
+    )
     compare(rho2, torch_rho2)
 
     rho2.sum().backward()
