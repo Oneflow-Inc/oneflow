@@ -67,7 +67,7 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_center", FusedCenterGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_center_dist", FusedCenterGrad);
 
 }  // namespace one
 }  // namespace oneflow

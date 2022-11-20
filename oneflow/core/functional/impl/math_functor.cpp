@@ -3149,7 +3149,7 @@ class InplaceAddCDivFunctor {
 class FusedCenterFunctor {
  public:
   FusedCenterFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_center")
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3177,7 +3177,7 @@ class FusedCenterFunctor {
 class FusedCenterGradFunctor {
  public:
   FusedCenterGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_center_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist_grad")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")

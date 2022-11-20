@@ -24,8 +24,8 @@ namespace {
 template<typename T>
 struct FusedCenterForwardFunctor {
   __device__ T Compute(T b1_x1, T b1_x2, T b2_x1, T b2_x2, T b1_y1, T b1_y2, T b2_y1, T b2_y2) const {
-    return (static_cast<T>(pow(b2_x1 + b2_x2 - b1_x1 - b1_x2, 2)) + \
-            static_cast<T>(pow(b2_y1 + b2_y2 - b1_y1 - b1_y2, 2))) / static_cast<T>(4.0);
+    return ((b2_x1 + b2_x2 - b1_x1 - b1_x2) * (b2_x1 + b2_x2 - b1_x1 - b1_x2) + \
+            (b2_y1 + b2_y2 - b1_y1 - b1_y2) * (b2_y1 + b2_y2 - b1_y1 - b1_y2)) / static_cast<T>(4.0);
   }
 };
 
@@ -58,24 +58,18 @@ __global__ void FusedCenterBackward(
     T* b1_x1_diff, T* b1_x2_diff, T* b2_x1_diff, T* b2_x2_diff,
     T* b1_y1_diff, T* b1_y2_diff, T* b2_y1_diff, T* b2_y2_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const T b1_x1_i = b1_x1[i];
-    const T b1_x2_i = b1_x2[i];
-    const T b1_y1_i = b1_y1[i];
-    const T b1_y2_i = b1_y2[i];
-    const T b2_x1_i = b2_x1[i];
-    const T b2_x2_i = b2_x2[i];
-    const T b2_y2_i = b2_y2[i];
-    const T b2_y1_i = b2_y1[i];
+    const T b_x_diff = b1_x1[i] + b1_x2[i] - b2_x1[i] - b2_x2[i];
+    const T b_y_diff = b1_y1[i] + b1_y2[i] - b2_y1[i] - b2_y2[i];
 
-    b1_x1_diff[i] = (b1_x1_i + b1_x2_i - b2_x1_i - b2_x2_i) / static_cast<T>(2);
-    b1_x2_diff[i] = (b1_x1_i + b1_x2_i - b2_x1_i - b2_x2_i) / static_cast<T>(2);
-    b2_x1_diff[i] = (b2_x1_i + b2_x2_i - b1_x1_i - b1_x2_i) / static_cast<T>(2);
-    b2_x2_diff[i] = (b2_x1_i + b2_x2_i - b1_x1_i - b1_x2_i) / static_cast<T>(2);
+    b1_x1_diff[i] = b_x_diff / static_cast<T>(2.0);
+    b1_x2_diff[i] = b_x_diff / static_cast<T>(2.0);
+    b2_x1_diff[i] = b_x_diff / static_cast<T>(-2.0);
+    b2_x2_diff[i] = b_x_diff / static_cast<T>(-2.0);
 
-    b1_y1_diff[i] = (b1_y1_i + b1_y2_i - b2_y1_i - b2_y2_i) / static_cast<T>(2);
-    b1_y2_diff[i] = (b1_y1_i + b1_y2_i - b2_y1_i - b2_y2_i) / static_cast<T>(2);
-    b2_y1_diff[i] = (b2_y1_i + b2_y2_i - b1_y1_i - b1_y2_i) / static_cast<T>(2);
-    b2_y2_diff[i] = (b2_y1_i + b2_y2_i - b1_y1_i - b1_y2_i) / static_cast<T>(2);
+    b1_y1_diff[i] = b_y_diff / static_cast<T>(2.0);
+    b1_y2_diff[i] = b_y_diff / static_cast<T>(2.0);
+    b2_y1_diff[i] = b_y_diff / static_cast<T>(-2.0);
+    b2_y2_diff[i] = b_y_diff / static_cast<T>(-2.0);
   }
 }
 
@@ -103,9 +97,9 @@ class FusedCenterKernel final : public user_op::OpKernel {
 
     const int64_t elem_cnt = b1_x1->shape_view().elem_cnt();
 
-    FusedCenterForwardFunctor<T> fused_center_forward_functor{};
+    FusedCenterForwardFunctor<T> fused_get_center_dist_forward_functor{};
 
-    RUN_CUDA_KERNEL((FusedCenterForward<decltype(fused_center_forward_functor), T>), ctx->stream(), elem_cnt, fused_center_forward_functor, elem_cnt,
+    RUN_CUDA_KERNEL((FusedCenterForward<decltype(fused_get_center_dist_forward_functor), T>), ctx->stream(), elem_cnt, fused_get_center_dist_forward_functor, elem_cnt,
       b1_x1->dptr<T>(),
       b1_x2->dptr<T>(),
       b2_x1->dptr<T>(),
@@ -120,15 +114,15 @@ class FusedCenterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_CENTER_CUDA_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("fused_center")                                 \
+#define REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("fused_get_center_dist")                                 \
       .SetCreateFn<FusedCenterKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("rho2", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_CENTER_CUDA_KERNEL(float)
-REGISTER_FUSED_CENTER_CUDA_KERNEL(double)
-REGISTER_FUSED_CENTER_CUDA_KERNEL(half)
+REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(float)
+REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(double)
+REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(half)
 
 template<typename T>
 class FusedCenterGradKernel final : public user_op::OpKernel {
@@ -169,14 +163,14 @@ class FusedCenterGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_CENTER_GRAD_CUDA_KERNEL(dtype)                    \
-  REGISTER_USER_KERNEL("fused_center_grad")                              \
+#define REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("fused_get_center_dist_grad")                              \
       .SetCreateFn<FusedCenterGradKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)   \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_CENTER_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_CENTER_GRAD_CUDA_KERNEL(double)
-REGISTER_FUSED_CENTER_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

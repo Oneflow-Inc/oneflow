@@ -26,7 +26,7 @@ def torch_center(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2):
     return ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4
 
 
-def _test_fused_center_impl(test_case, device, shape):
+def _test_fused_get_center_dist_impl(test_case, device, shape):
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
@@ -64,7 +64,7 @@ def _test_fused_center_impl(test_case, device, shape):
         torch_x[6],
         torch_x[7],
     )
-    rho2 = flow._C.fused_center(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2)
+    rho2 = flow._C.fused_get_center_dist(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2)
     torch_rho2 = torch_center(torch_b1_x1, torch_b1_x2, torch_b2_x1, torch_b2_x2, torch_b1_y1, torch_b1_y2, torch_b2_y1, torch_b2_y2)
     compare(rho2, torch_rho2)
 
@@ -82,9 +82,9 @@ def _test_fused_center_impl(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
-    def test_fused_center(test_case):
+    def test_fused_get_center_dist(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_fused_center_impl]
+        arg_dict["test_fun"] = [_test_fused_get_center_dist_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(583, 1), (759, 1), (1234, 1)]
         for arg in GenArgList(arg_dict):
