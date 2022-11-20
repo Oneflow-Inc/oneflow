@@ -28,8 +28,7 @@ namespace vm {
 
 class EpStreamPolicyBase : public StreamPolicy {
  public:
-  EpStreamPolicyBase(Symbol<Device> device,
-                     std::unique_ptr<BinAllocator<ThreadSafeLock>>&& backend_allocator)
+  EpStreamPolicyBase(Symbol<Device> device, std::unique_ptr<vm::Allocator>&& backend_allocator)
       : device_(device),
         ep_event_provier_(),
         ep_stream_(nullptr),
@@ -89,7 +88,7 @@ class EpStreamPolicyBase : public StreamPolicy {
   std::unique_ptr<EpEventProvider> ep_event_provier_;
   mutable std::shared_ptr<ep::Device> ep_device_;
   mutable ep::Stream* ep_stream_;
-  std::unique_ptr<BinAllocator<ThreadSafeLock>> ep_allocator_;
+  std::unique_ptr<vm::Allocator> ep_allocator_;
 };
 
 }  // namespace vm

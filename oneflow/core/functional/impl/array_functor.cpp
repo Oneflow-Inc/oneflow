@@ -421,8 +421,8 @@ class NonZeroFunctor {
         CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
                         || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
       }
-      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
-                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+      JUST(GetItemInScalarTensor(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 &size_val, sizeof(size_val)));
     }
     std::vector<int64_t> start{0, 0};
     std::vector<int64_t> stop{size_val, ndim};
@@ -1564,7 +1564,12 @@ class FlipFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& dims) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims");
-    attrs.SetAllAttrs(dims);
+    if (dims.empty()) {
+      attrs.SetAllAttrs(dims);
+    } else {
+      std::vector<int32_t> flip_dims = *JUST(CheckAxis(dims, x->ndim()));
+      attrs.SetAllAttrs(flip_dims);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -3352,7 +3357,9 @@ class FillTensorFunctor {
         << "fill_ only supports 0-dimension value tensor but got tensor with " << ndim
         << " dimensions.";
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, in->dtype())
+             .AddInputs({in, value})
+             .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     auto outputs = std::make_shared<TensorTuple>(1);
     (*outputs)[0] = in;
@@ -3364,6 +3371,37 @@ class FillTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastShapesFunctor {
+ public:
+  Maybe<Shape> operator()(const std::vector<Shape>& shapes) const {
+    return InferUnifiedShapeForBroadcasting(shapes);
+  }
+};
+
+class BroadcastTensorsFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+    if (tensors.empty()) { return Error::RuntimeError() << "tensors should not be empty."; }
+
+    Shape shape_to_broadcast;
+    std::deque<bool> need_to_broadcast;
+
+    std::tie(shape_to_broadcast, need_to_broadcast) =
+        *JUST(InferUnifiedShapeForBroadcastingWithInfo([&tensors]() {
+          std::vector<Shape> shapes;
+          for (auto& x : tensors) { shapes.push_back(*x->shape()); }
+          return shapes;
+        }()));
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      outputs->emplace_back(need_to_broadcast.at(i)  // NOLINT
+                                ? JUST(functional::Expand(tensors.at(i), shape_to_broadcast))
+                                : tensors.at(i));
+    }
+    return outputs;
+  }
+};
 class BinCountFunctor {
  public:
   BinCountFunctor() {
@@ -3564,6 +3602,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
+  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+  m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
   m.add_functor<impl::BinCountFunctor>("BinCount");
 };
 
