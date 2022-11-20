@@ -281,7 +281,7 @@ class MatMulFunctor {
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
-    DeviceType device_type;
+    DeviceType device_type{};
     if (a->is_global()) {
       device_type = JUST(a->parallel_desc())->device_type();
     } else {
@@ -290,7 +290,7 @@ class MatMulFunctor {
     std::shared_ptr<one::Tensor> cast_a = a;
     std::shared_ptr<one::Tensor> cast_b = b;
     std::shared_ptr<one::Tensor> result;
-    if((! cast_a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+    if((cast_a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
       cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
     }
@@ -322,7 +322,7 @@ class MatMulFunctor {
       result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
     }
 
-    if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+    if((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
     } else { return result; }
   }
@@ -368,13 +368,13 @@ class BatchMatMulFunctor {
     }
     std::shared_ptr<one::Tensor> cast_a = a;
     std::shared_ptr<one::Tensor> cast_b = b;
-    if ((!a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
       cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
     }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
-    if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+    if((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
       return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
     } else { return result; }
   }
