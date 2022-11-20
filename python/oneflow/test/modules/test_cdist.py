@@ -36,7 +36,7 @@ class TestCDist(flow.unittest.TestCase):
                 "donot_use_mm_for_euclid_dist",
             ]
         )
-        p = random_utils.choice([0, 1, 2, float("inf"), random(0.5, 4).to(float)])
+        p = random_utils.choice([0.0, 1.0, 2.0, float("inf"), random(0.5, 4).to(float)])
         x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2).to(device)
         return torch.cdist(x1, x2, p=p, compute_mode=mode)
