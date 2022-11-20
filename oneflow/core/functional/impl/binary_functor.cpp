@@ -318,8 +318,10 @@ class Atan2Functor : public BinaryFloatFunctor {
     } else if (y_element == 1) {
       broad_y_ = JUST(functional::Expand(y, *x->shape()));
     } else if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
-      return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes() << ") must match the size of tensor b "
-                                      "(" << y->shape()->NumAxes() << ") at non-singleton dimension 1";
+      return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes()
+                                   << ") must match the size of tensor b "
+                                      "("
+                                   << y->shape()->NumAxes() << ") at non-singleton dimension 1";
     } else {
       return Error::RuntimeError() << "";
     }
