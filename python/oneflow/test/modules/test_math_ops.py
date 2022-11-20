@@ -287,7 +287,7 @@ class TestAtan(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=3).to(device)
         z = torch.atan2(x, y)
         return z
-    
+
     @autotest(n=5)
     def test_flow_atan2_with_1elem_data(test_case):
         device = random_device()
