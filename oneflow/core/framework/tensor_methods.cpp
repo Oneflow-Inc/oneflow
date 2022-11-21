@@ -469,7 +469,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
   std::shared_ptr<Tensor> flatten_full_indices;
   if (inp_maybe_overlap || out_maybe_overlap) {
     flatten_full_indices = JUST(functional::Arange(Scalar(0), Scalar(base_size), Scalar(1),
-                                                   grad->dtype(), JUST(grad->device())));
+                                                   DType::Int64(), JUST(grad->device())));
   }
 
   // Step (2): use output geometry to scatter gradients into storage
@@ -498,7 +498,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
     auto inp_indices = JUST(functional::Reshape(
         flatten_full_indices, Shape({flatten_full_indices->shape()->elem_cnt()})));
 
-    auto ones = JUST(functional::Constant(Shape({1}), 0, DType::Int64(), JUST(grad->device())));
+    auto ones = JUST(functional::Constant(Shape({1}), 0, grad->dtype(), JUST(grad->device())));
     count = JUST(functional::IndexAddInplace(count, 0, inp_indices, ones, Scalar(1.0)));
     count = JUST(functional::Expand(count, *inp_indices->shape()));
     storage = JUST(functional::Div(storage, count));  // this will give nan outside visible range
