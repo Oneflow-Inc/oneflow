@@ -16,8 +16,11 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 
+#include "oneflow/core/common/error.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -288,10 +292,41 @@ class InplaceDivFunctor {
  private:
   std::shared_ptr<OpExpr> broadcast_div_op_;
 };
+
 class Atan2Functor : public BinaryFloatFunctor {
  public:
   Atan2Functor() {
     op_ = CHECK_JUST(one::OpBuilder("atan2").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    const int64_t x_element = x->nelement();
+    const int64_t y_element = y->nelement();
+    CHECK_GT_OR_RETURN(x_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << x_element;
+    CHECK_GT_OR_RETURN(y_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << y_element;
+
+    if ((x_element != 1 && y_element != 1) && (x->shape()->NumAxes() == y->shape()->NumAxes())) {
+      return BinaryFloatFunctor::operator()(x, y);
+    }
+
+    auto broad_x_ = x;
+    auto broad_y_ = y;
+    if (x_element == 1) {
+      broad_x_ = JUST(functional::Expand(x, *y->shape()));
+    } else if (y_element == 1) {
+      broad_y_ = JUST(functional::Expand(y, *x->shape()));
+    } else if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
+      return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes()
+                                   << ") must match the size of tensor b "
+                                      "("
+                                   << y->shape()->NumAxes() << ") at non-singleton dimension 1";
+    } else {
+      return Error::RuntimeError() << "";
+    }
+
+    return BinaryFloatFunctor::operator()(broad_x_, broad_y_);
   }
 };
 
@@ -405,6 +440,31 @@ class BroadcastLessEqualFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastIsCloseFunctor {
+ public:
+  BroadcastIsCloseFunctor() {
+    eq_nan_op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_isclose_eq_nan").Input("x").Input("y").Output("z").Build());
+    neq_nan_op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_isclose_neq_nan").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y, const float atol,
+                           const float rtol, const bool equal_nan) const {
+    auto& attr = THREAD_CACHED_MUTABLE_ATTR_MAP("atol", "rtol", "equal_nan");
+    attr.SetAllAttrs(atol, rtol, equal_nan);
+    if (equal_nan) {
+      return OpInterpUtil::Dispatch<Tensor>(*eq_nan_op_, {x, y}, attr);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*neq_nan_op_, {x, y}, attr);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> eq_nan_op_;
+  std::shared_ptr<OpExpr> neq_nan_op_;
+};
+
 class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
@@ -467,6 +527,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
+  m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
 };
 
 }  // namespace functional

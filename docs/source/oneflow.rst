@@ -66,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
@@ -318,6 +319,7 @@ Reduction Ops
     nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
@@ -347,6 +349,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,6 +392,10 @@ Other Ops
     repeat_interleave
     triu
     cross
+    bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

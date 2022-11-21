@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -259,6 +260,7 @@ DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
+DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -270,6 +272,7 @@ DIRECT_PASS_FUNC(PyTensorObject_clamp_max_, functional::clamp_max_)
 DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
 DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
 DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
+DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
 DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
@@ -289,11 +292,17 @@ DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
+DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
+DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
+DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
+DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
+DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
+DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -783,6 +792,18 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value))
       << Error::TypeError() << "tensor_setitem(): argument 'value' must be tensor or scalar, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
+  const auto& index_item = functional::PyUnpackTensorIndex(item);
+
+  // NOTE: use masked_fill_(local,global) to avoid D2H in TensorSetItem if index is bool tensor
+  if (functional::PyScalarCheck(value) && index_item.size() == 1 && index_item[0].IsTensor()) {
+    const auto& index_tensor = index_item[0].tensor();
+    if (index_tensor->shape() == tensor->shape()
+        && (index_tensor->dtype() == DType::Bool() || index_tensor->dtype() == DType::UInt8())) {
+      ASSERT_PTR(
+          functional::MaskedFillInplace(tensor, index_tensor, functional::PyUnpackScalar(value)));
+      return 0;
+    }
+  }
 
   if (tensor->is_global()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
@@ -815,7 +836,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
+  ASSERT(functional::TensorSetItem(tensor, index_item, value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
@@ -882,6 +903,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
     {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -913,11 +935,17 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
     {"nansum", (PyCFunction)PyTensorObject_nansum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -979,6 +1007,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 

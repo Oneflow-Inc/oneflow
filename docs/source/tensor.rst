@@ -332,6 +332,7 @@ Tensor class reference
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -373,3 +374,9 @@ Tensor class reference
     Tensor.scatter_
     Tensor.scatter_add
     Tensor.scatter_add_
+    Tensor.bernoulli
+    Tensor.bernoulli_
+    Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
+    Tensor.broadcast_to

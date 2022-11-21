@@ -1743,6 +1743,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logsumexp,
+    """
+    See :func:`oneflow.logsumexp`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
@@ -2339,5 +2346,74 @@ add_docstr(
         >>> x.nansum(dim=1, keepdim=True)
         tensor([[1.],
                 [2.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bincount,
+    """
+    See :func:`oneflow.bincount`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([0, 2, 3]).int()
+        >>> x.bincount()
+        tensor([1, 0, 1, 1], dtype=oneflow.int64)
+        >>> weight = flow.Tensor([0.1, 0.2, 0.3])
+        >>> x.bincount(weight)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000], dtype=oneflow.float32)
+        >>> x.bincount(weight, minlength=5)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000, 0.0000], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli,
+    """
+    See :func:`oneflow.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli()
+        tensor([1., 1., 1.], dtype=oneflow.float32)
+        >>> x.bernoulli(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli_,
+    """
+    The inplace version of :func:`oneflow.Tensor.bernoulli_`.
+
+    See :func:`oneflow.Tensor.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli_(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+        >>> x
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
     """,
 )
