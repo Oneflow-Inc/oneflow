@@ -22,7 +22,6 @@ add_docstr(
     index_add_(dim, index, source, *, alpha=1) -> Tensor
 
     The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.index_add_.html.
 
     Accumulate the elements of :attr:`alpha` times ``source`` into the :attr:`self`
     tensor by adding to the indices in the order given in :attr:`index`. For example,
@@ -81,7 +80,7 @@ add_docstr(
 add_docstr(
     oneflow._C.index_add_,
     r"""
-    index_add(dim, index, source, *, alpha=1) -> Tensor
+    index_add_(dim, index, source, *, alpha=1) -> Tensor
 
     Out-of-place version of :meth:`oneflow.Tensor.index_add_`.
     """,
