@@ -15,7 +15,6 @@ limitations under the License.
 */
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_TMP_BUFFER_MANAGER_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_TMP_BUFFER_MANAGER_H_
-#include <memory>
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
