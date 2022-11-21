@@ -379,3 +379,4 @@ Tensor class reference
     Tensor.bincount
     Tensor.isclose
     Tensor.allclose
+    Tensor.broadcast_to
