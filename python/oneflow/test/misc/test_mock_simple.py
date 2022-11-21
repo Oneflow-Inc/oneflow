@@ -17,5 +17,6 @@ import torch
 
 print(torch.__file__.find("mock_torch") != -1)
 
+
 def f():
     return torch.__package__
