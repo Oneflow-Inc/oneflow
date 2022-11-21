@@ -22,11 +22,18 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 def get_dtype_str(dtype):
     return str(dtype).split(".")[-1]
 
+
 dtype_list = [
-    torch.int8, torch.int32, torch.int64, torch.float16, torch.float32, torch.float64
+    torch.int8,
+    torch.int32,
+    torch.int64,
+    torch.float16,
+    torch.float32,
+    torch.float64,
 ]
 
 
@@ -42,7 +49,9 @@ class TestBinaryMathOpsDtype(flow.unittest.TestCase):
 
             for op in ["+", "-", "*", "/"]:
                 y = eval(f"x1 {op} x2")
-                test_case.assertEqual(get_dtype_str(y.oneflow.dtype), get_dtype_str(y.pytorch.dtype))
+                test_case.assertEqual(
+                    get_dtype_str(y.oneflow.dtype), get_dtype_str(y.pytorch.dtype)
+                )
 
 
 if __name__ == "__main__":
