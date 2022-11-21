@@ -42,7 +42,6 @@ def _test_index_add(test_case, device):
     flow_index = flow.tensor([0, 4, 2]).to(device)
     flow_y = flow.index_add(flow_x, 0, flow_index, flow_t)
     flow_y_alpha = flow.index_add(flow_x, 0, flow_index, flow_t, alpha=-1)
-    print(flow_y)
     test_case.assertTrue(
         np.allclose(torch_origin_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
     )
