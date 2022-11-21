@@ -29,7 +29,10 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> IndexAddOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
+/* static */ Maybe<void> IndexAddOp::GetSbp(user_op::SbpContext* ctx) {
+  // TODO(yangzhimin): support more valid sbp signature.
+  return Maybe<void>::Ok();
+}
 
 /* static */ Maybe<void> IndexAddOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
