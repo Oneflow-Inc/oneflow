@@ -1371,6 +1371,14 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
+- name: "rms_norm"
+  signature: "Tensor (Tensor x, Tensor weight=None, Shape normalized_shape, Float epsilon=1e-6) => RMSNorm"
+  bind_python: True
+
+- name: "rms_norm_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
+  bind_python: False
+
 - name: "group_norm"
   signature:
     'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
@@ -1639,6 +1647,14 @@
   signature:
     'Tensor (Tensor dy, Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0,
     Bool align_corners=False, Int64List[3] output_size=None, String data_format="channels_first") => UpsampleTrilinear3DGrad'
+  bind_python: False
+
+- name: "fused_get_boundding_boxes_coord"
+  signature: "TensorTuple (Tensor x1, Tensor y1, Tensor w1, Tensor h1, Tensor x2, Tensor y2, Tensor w2, Tensor h2) => FusedGetBounddingBoxesCoord"
+  bind_python: True
+
+- name: "fused_get_boundding_boxes_coord_grad"
+  signature: "TensorTuple (Tensor b1_x1_diff, Tensor b1_x2_diff, Tensor b1_y1_diff, Tensor b1_y2_diff, Tensor b2_x1_diff, Tensor b2_x2_diff, Tensor b2_y1_diff, Tensor b2_y2_diff) => FusedGetBounddingBoxesCoordGrad"
   bind_python: False
 
 - name: "abs"
@@ -2164,12 +2180,12 @@
   signature: "Void (TensorTuple x) => StreamTouch"
   bind_python: True
 
-- name: "broadcast"
-  signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
-  bind_python: True
-
-- name: "broadcast"
-  signature: "TensorTuple (TensorTuple inputs, *, Int64 src_rank=0, Bool inplace=True) => BroadcastTensors"
+- name: "comm_broadcast"
+  signature:
+    [
+      "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => CommBroadcast",
+      "TensorTuple (TensorTuple inputs, *, Int64 src_rank=0, Bool inplace=True) => CommBroadcastTensors",
+    ]
   bind_python: True
 
 - name: "local_all_reduce"
@@ -2427,6 +2443,22 @@
 
 - name: "fused_multi_head_attention_inference"
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  bind_python: True
+
+- name: "fused_get_center_dist"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"
+  bind_python: True
+
+- name: "fused_get_center_dist_grad"
+  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenterGrad"
+  bind_python: False
+
+- name: "grouped_matmul_bias"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
+  bind_python: True
+
+- name: "grouped_matmul"
+  signature: "TensorTuple (TensorTuple xs, TensorTuple weights) => GroupedMatmul"
   bind_python: True
 
 - name: "send"
@@ -2923,6 +2955,17 @@
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
 
+- name: "broadcast_shapes"
+  signature: "Shape (ShapeList shapes) => BroadcastShapes"
+  bind_python: True
+
+- name: "broadcast_tensors"
+  signature: "TensorTuple (TensorTuple tensors) => BroadcastTensors"
+  bind_python: True
+
+- name: "broadcast_to"
+  signature: "Tensor (Tensor x, Shape shape) => BroadcastTo"
+  bind_python: True
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
@@ -2934,3 +2977,12 @@
 - name: "uniform_"
   signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
   bind_python: True
+
+- name: "fused_fast_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier) => FusedFastGeluMul"
+  bind_python: True
+
+- name: "fused_fast_gelu_mul_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
+  bind_python: False
+

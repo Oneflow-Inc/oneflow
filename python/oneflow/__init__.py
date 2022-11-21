@@ -405,6 +405,11 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
+from oneflow.nn.modules.broadcast_ops import (
+    broadcast_tensors,
+    broadcast_shapes,
+    broadcast_to,
+)
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
 # autocast
