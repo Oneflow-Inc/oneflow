@@ -36,7 +36,8 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op, bool is_mapping_size = false) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
+                                                 bool is_mapping_size = false) {
   OperatorConf op_conf;
   if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
     op->emitError("fail to convert user op attributes");
@@ -118,9 +119,7 @@ const ParallelContext& RegContext::parallel_ctx() const {
 const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) const {
   auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-  if (it == arg2tensor_desc_.end()) {
-    LOG(FATAL) << "TensorDesc not found for arg_name: " << arg_name << " index: " << index;
-  }
+  if (it == arg2tensor_desc_.end()) { return nullptr; }
   return &(it->second);
 }
 const ArgVec& RegContext::inputs() const { return inputs_; }

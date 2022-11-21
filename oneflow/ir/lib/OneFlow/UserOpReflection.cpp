@@ -159,10 +159,9 @@ Source GetOpSourceByName(Operation* op, const std::string& to_find) {
 
     op->emitError(to_find + " not found in this op");
     return {Source::INVALID, -1};
-  } else {
-    op->emitError("Not support op which is not user  op");
-    return {Source::INVALID, -1};
   }
+  op->emitError("Not support op which is not user  op");
+  return {Source::INVALID, -1};
 }
 
 template<template<typename T> class Trait>
