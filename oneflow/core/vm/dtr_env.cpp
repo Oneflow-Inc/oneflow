@@ -72,8 +72,13 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
                 << old_ptr << " to " << x.get() << std::endl;
     }
   }
+  // set compute_op_ and compute_time_
   new_storage->set_compute_op(storage->compute_op());
+  // set blob_bytes_
+  new_storage->set_blob_dptr(nullptr, storage->blob_bytes());
+  // set is_initialized_
   new_storage->set_initialized();
+  // set last_access_time_
   new_storage->Access();
   storage->clear_compute_op();
   return new_compute_op;
