@@ -88,8 +88,10 @@ class TestDTR(flow.unittest.TestCase):
         ), "Please set ONEFLOW_VM_NO_SCHEDULER_THREAD to True, 1 or ON"
         # check the memory is empty at the beginning of every test case
         if allocated_memory('cpu') > 0:
+            print('allocated_memory(cpu):', allocated_memory('cpu'))
             display('cpu')
         if allocated_memory('cuda') > 0:
+            print('allocated_memory(cuda):', allocated_memory('cuda'))
             display('cuda')
 
         self.assertEqual(allocated_memory('cpu'), 0)
