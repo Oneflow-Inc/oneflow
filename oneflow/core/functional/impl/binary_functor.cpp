@@ -15,8 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include <cstdint>
 
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -27,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -341,7 +344,17 @@ class LerpFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
                            const std::shared_ptr<one::Tensor>& end,
                            const std::shared_ptr<one::Tensor>& weight) const {
-    ;
+    const int64_t weight_elem_cnt = weight->nelement();
+    
+
+    CHECK_EQ_OR_RETURN(start->shape(), end->shape());
+    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type()) << Error::RuntimeError() << "expected dtype float for `weights` but got dtype " << weight->dtype()->name();
+
+    if (weight_elem_cnt == 1) {
+      auto broad_weight = JUST(functional::Expand(weight, *start->shape()));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {start, end, broad_weight}, {});
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {start, end, weight}, {});
   }
 
  private:
@@ -512,6 +525,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
   m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
+  m.add_functor<impl::LerpFunctor>("Lerp");
 };
 
 }  // namespace functional

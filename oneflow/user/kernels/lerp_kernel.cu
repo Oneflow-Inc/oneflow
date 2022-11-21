@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
@@ -51,7 +50,7 @@ class CudaLerpKernel final : public user_op::OpKernel {
     const T* start_ptr = start->dptr<T>();
     const T* end_ptr = end->dptr<T>();
     const T* weight_ptr = weight->dptr<T>();
-    T* out_ptr = out->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
     RUN_CUDA_KERNEL((LerpForwardGpu<T>), ctx->stream(), start_elem_cnt, start_elem_cnt, start_ptr, end_ptr, weight_ptr, out_ptr);
   }

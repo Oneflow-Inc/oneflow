@@ -245,6 +245,10 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
   bind_python: False
 
+- name: "lerp"
+  signature: "Tensor (Tensor start, Tensor end, Tensor weight) => Lerp"
+  bind_python: True
+
 - name: "trunc_divide"
   signature:
     [

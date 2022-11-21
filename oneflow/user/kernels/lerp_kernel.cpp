@@ -43,7 +43,7 @@ class CpuLerpKernel final : public user_op::OpKernel {
     const T* start_ptr = start->dptr<T>();
     const T* end_ptr = end->dptr<T>();
     const T* weight_ptr = weight->dptr<T>();
-    T* out_ptr = out->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
     FOR_RANGE(int64_t, i, 0, start_elem_cnt) {
       out_ptr[i] = start_ptr[i] + weight_ptr[i] * (end_ptr[i] - start_ptr[i]);
