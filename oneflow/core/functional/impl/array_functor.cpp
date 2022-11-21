@@ -3399,7 +3399,12 @@ class IndexAddFunctor {
     dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
     attrs.SetAllAttrs(dim_, alpha_value);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, source}, attrs);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, input->dtype())
+             .AddInputs({input, source})
+             .Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, input_tuple.at(1)}, attrs);
   }
 
  private:
@@ -3436,7 +3441,12 @@ class IndexAddInplaceFunctor {
     JUST(CheckInplaceValid(input));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = input;
-    JUST(OpInterpUtil::Dispatch(*op_, {input, index, source}, outputs.get(), attrs));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, input->dtype())
+             .AddInputs({input, source})
+             .Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    JUST(OpInterpUtil::Dispatch(*op_, {input, index, input_tuple.at(1)}, outputs.get(), attrs));
     return outputs->at(0);
   }
 
