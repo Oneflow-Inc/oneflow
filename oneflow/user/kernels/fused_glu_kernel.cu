@@ -30,7 +30,7 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
-// just for debugging (TODO: delete later)
+
 #define FUSEDGLU_OPTIMIZED
 
 namespace oneflow {
@@ -38,10 +38,8 @@ namespace oneflow {
 namespace {
 
 template<typename Func>
-unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int64_t elem_cnt,
-                             const int32_t block_size, const int32_t pack_size) {
+unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_size, const int32_t pack_num) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
-  const int64_t pack_num = elem_cnt / pack_size;
   const int32_t num_blocks = std::max<int64_t>(1, (pack_num + block_size - 1) / block_size);
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   int max_active_blocks = 0;
@@ -76,8 +74,8 @@ __global__ void FusedGluForwardGpu(
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 __global__ void FusedGluForwardGpu(
-    const IndexType m, const IndexType n, const IndexType k, const IndexType stride,
-    const IndexType elem_cnt, ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act,
+    const IndexType m, const IndexType packed_n, const IndexType k, const IndexType stride,
+    const IndexType packed_num, ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act,
     const T* matmul_wx, const T* b, const T* matmul_vx, const T* c, T* y) {
   // obtain global thread index
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -86,20 +84,17 @@ __global__ void FusedGluForwardGpu(
   using LoadPack = cuda::elementwise::Packed<T, pack_size>;
 
   // workload of current thread
-  for (IndexType linear_index = global_thread_id * pack_size,
-                 step = gridDim.x * blockDim.x * pack_size;
-       linear_index < elem_cnt; linear_index += step) {
+  for (IndexType packed_index = global_thread_id, step = gridDim.x * blockDim.x;
+       packed_index < packed_num; packed_index += step) {
     // obtain the row and col index in output tensor "y"
-    const IndexType y_row = linear_index / n;
-    const IndexType y_col = linear_index - y_row * n;
+    const IndexType y_packed_row = packed_index / packed_n;
+    const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    const LoadPack* matmul_wx_load =
-        reinterpret_cast<const LoadPack*>(matmul_wx + y_row * stride + y_col);
-    const LoadPack* matmul_vx_load =
-        reinterpret_cast<const LoadPack*>(matmul_vx + y_row * stride + y_col);
-    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b + y_col);
-    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c + y_col);
+    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx + y_packed_row * stride + y_packed_col * pack_size);
+    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(matmul_vx + y_packed_row * stride + y_packed_col * pack_size);
+    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b + y_packed_col * pack_size);
+    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c + y_packed_col * pack_size);
 
     // init vectors
     LoadPack matmul_wx_vec = *matmul_wx_load;
@@ -120,38 +115,30 @@ __global__ void FusedGluForwardGpu(
       // calculate element-wise product
       y_store.elem[i] = hidden_state * act_gate;
     }
-    *(reinterpret_cast<LoadPack*>(y + linear_index)) = y_store;
+    *(reinterpret_cast<LoadPack*>(y + packed_index * pack_size)) = y_store;
   }
 }
 
 #endif  // FUSEDGLU_OPTIMIZED
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
-void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
+void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n, const int64_t k,
                               int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
                               const T* c, T* y) {
   ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
 #ifndef FUSEDGLU_OPTIMIZED
-  if (m * n < GetMaxVal<int32_t>()) {
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
-  } else {
-    RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
-                    /* CUDA stream */ stream,
-                    /* number of threads */ m * n,
-                    /* args */ m, n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
-  }
+  RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
+                  /* CUDA stream */ stream,
+                  /* number of threads */ m * packed_n,
+                  /* args */ m, packed_n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
 #else
-  int64_t elem_cnt = m * n;
+  int64_t pack_num = m * packed_n;
   constexpr int32_t block_size = 128;
   unsigned int grid_size =
-      ComputeGridSize(stream, FusedGluForwardGpu<T, IndexType, act_type, pack_size>, elem_cnt,
-                      block_size, pack_size);
+      ComputeGridSize(stream, FusedGluForwardGpu<T, IndexType, act_type, pack_size>, block_size, pack_num);
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          m, n, k, stride, elem_cnt, act, matmul_wx, b, matmul_vx, c, y);
+          m, packed_n, k, stride, pack_num, act, matmul_wx, b, matmul_vx, c, y);
 #endif
 }
 
@@ -159,11 +146,19 @@ template<typename T, ep::primitive::UnaryOp act_type, int32_t pack_size>
 void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
                        int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
                        const T* c, T* y) {
-  if (m * n < (1 << 30)) {
-    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, n, k, stride, matmul_wx, b,
+  // convert n based on pack size
+#ifndef FUSEDGLU_OPTIMIZED
+  const int64_t packed_n = n;
+#else
+  const int64_t packed_n = n/pack_size;
+#endif
+
+  // dispatch index type
+  if (m*packed_n < GetMaxVal<int32_t>()) {
+    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, packed_n, k, stride, matmul_wx, b,
                                                               matmul_vx, c, y);
   } else {
-    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, n, k, stride, matmul_wx, b,
+    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, packed_n, k, stride, matmul_wx, b,
                                                               matmul_vx, c, y);
   }
 }
@@ -189,17 +184,17 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
 
   if (IsAligned(16)) {
     switch (sizeof(T)) {
-      case 16:
-        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
-        break;
       case 8:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       case 4:
         DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       case 2:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 1:
+        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       default:
         DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
@@ -207,14 +202,14 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
     }
   } else if (IsAligned(8)) {
     switch (sizeof(T)) {
-      case 8:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
-        break;
       case 4:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       case 2:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 1:
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       default:
         DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
@@ -222,11 +217,11 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
     }
   } else if (IsAligned(4)) {
     switch (sizeof(T)) {
-      case 4:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
-        break;
       case 2:
         DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
+        break;
+      case 1:
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       default:
         DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
@@ -234,7 +229,7 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
     }
   } else if (IsAligned(2)) {
     switch (sizeof(T)) {
-      case 2:
+      case 1:
         DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride, matmul_wx, b, matmul_vx, c, y);
         break;
       default:

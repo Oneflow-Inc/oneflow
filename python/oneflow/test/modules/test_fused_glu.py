@@ -26,6 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 # from oneflow.test_utils.automated_test_util import *
 
+is_profiling = True
 
 class Glu(nn.Module):
     def __init__(self):
@@ -76,6 +77,38 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
+def _test_fused_glu_split_profiling(test_case, params: dict):
+    # config test data
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
+    act = params["act"]
+
+    # generate random input
+    x = np.random.randn(2, m, k)
+    w = np.random.randn(n, k)  # transpose
+    # w_t = np.transpose(weight).contiguous() #sync
+    b = np.random.randn(n)
+    v = np.random.randn(n, k)  # transpose
+    c = np.random.randn(n)
+
+    # transfer to gpu memory
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
+    input_tensor_v = flow.FloatTensor(v).to("cuda")
+    input_tensor_c = flow.FloatTensor(c).to("cuda")
+
+    # test: fused op
+    output_tensor_y = flow._C.fused_glu(
+        x=input_tensor_x,
+        w=input_tensor_w,
+        b=input_tensor_b,
+        v=input_tensor_v,
+        c=input_tensor_c,
+        activation=act,
+    )
+
 
 def _test_fused_glu_split(test_case, params: dict):
     # config test data
@@ -93,11 +126,11 @@ def _test_fused_glu_split(test_case, params: dict):
     c = np.random.randn(n)
 
     # transfer to gpu memory
-    input_tensor_x = flow.Tensor(x).to("cuda")
-    input_tensor_w = flow.Tensor(w).to("cuda")
-    input_tensor_b = flow.Tensor(b).to("cuda")
-    input_tensor_v = flow.Tensor(v).to("cuda")
-    input_tensor_c = flow.Tensor(c).to("cuda")
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
+    input_tensor_v = flow.FloatTensor(v).to("cuda")
+    input_tensor_c = flow.FloatTensor(c).to("cuda")
 
     # test: fused op
     output_tensor_y = flow._C.fused_glu(
@@ -130,6 +163,33 @@ def _test_fused_glu_split(test_case, params: dict):
         )
     )
 
+def _test_fused_glu_profiling(test_case, params: dict):
+    # config test data
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
+    act = params["act"]
+
+    # generate random input
+    x = np.random.randn(2, m, k)
+    w = np.random.randn(n * 2, k)  # transpose
+    # w_t = np.transpose(weight).contiguous() #sync
+    b = np.random.randn(n * 2)
+
+    # transfer tensors to gpu memory
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
+
+    # test: fused op
+    output_tensor_y = flow._C.fused_glu(
+        x=input_tensor_x,
+        w=input_tensor_w,
+        b=input_tensor_b,
+        v=None,
+        c=None,
+        activation=act,
+    )
 
 def _test_fused_glu(test_case, params: dict):
     # config test data
@@ -145,9 +205,9 @@ def _test_fused_glu(test_case, params: dict):
     b = np.random.randn(n * 2)
 
     # transfer tensors to gpu memory
-    input_tensor_x = flow.Tensor(x).to("cuda")
-    input_tensor_w = flow.Tensor(w).to("cuda")
-    input_tensor_b = flow.Tensor(b).to("cuda")
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
 
     # test: fused op
     output_tensor_y = flow._C.fused_glu(
@@ -184,34 +244,59 @@ def _test_fused_glu(test_case, params: dict):
 class TestFusedGlu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_fused_glu,
-            _test_fused_glu_split,
-        ]
-        arg_dict["params"] = [
-            # m=256, k=1280, n=5120
-            {"m": 256, "k": 1280, "n": 5120, "act": "none"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "relu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
-            # m=1024, k=640, n=2560
-            {"m": 1024, "k": 640, "n": 2560, "act": "none"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "gelu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
-            # m=4096, k=320, n=1280
-            {"m": 4096, "k": 320, "n": 1280, "act": "none"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
-        ]
+        # set up test functions
+        if is_profiling:
+            # for profiling test
+            arg_dict["test_fun"] = [
+                _test_fused_glu_profiling,
+                _test_fused_glu_split_profiling,
+            ]
+        else:
+            # for functionality test
+            arg_dict["test_fun"] = [
+                _test_fused_glu,
+                _test_fused_glu_split,
+            ]
 
+        # set up profiling functions
+        if is_profiling:
+            # set up test functions
+            arg_dict["params"] = [
+                # for profiling
+                # Testcase: 
+                # 1. 与原来比 (end to end 时延)
+                # 2. 无法整除的情况
+                # 3. m, n, k -> [100M]
+                {"m": 256, "k": 1280, "n": 1280, "act": "sigmoid"},
+                {"m": 256, "k": 1280, "n": 2560, "act": "sigmoid"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
+            ]
+        else:
+            # for functionality test
+            arg_dict["params"] = [
+                # m=256, k=1280, n=5120
+                {"m": 256, "k": 1280, "n": 5120, "act": "none"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "relu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
+                # m=1024, k=640, n=2560
+                {"m": 1024, "k": 640, "n": 2560, "act": "none"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "gelu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
+                # m=4096, k=320, n=1280
+                {"m": 4096, "k": 320, "n": 1280, "act": "none"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
+            ]
+        
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
