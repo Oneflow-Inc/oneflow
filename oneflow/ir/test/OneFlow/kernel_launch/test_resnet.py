@@ -26,7 +26,6 @@ import numpy as np
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-# os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -37,8 +36,6 @@ from networks.resnet50 import resnet50
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     resnet = resnet50()
-    x = x.cuda()
-    resnet.to("cuda")
 
     eager_res = resnet(x)
 
