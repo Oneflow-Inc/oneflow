@@ -72,10 +72,10 @@ class TestIndexAdd(flow.unittest.TestCase):
     @profile(torch.index_add)
     def profile_index_add(test_case):
         torch.index_add(
-            torch.ones(500, 30),
+            torch.ones(50, 30),
             0,
-            torch.arange(300),
-            torch.arange(1, 901).reshape(30, 30),
+            torch.arange(30),
+            torch.arange(1, 901, dtype=torch.float32).reshape(30, 30),
         )
 
 
