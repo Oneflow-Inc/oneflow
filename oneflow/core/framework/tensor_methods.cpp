@@ -393,6 +393,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
                             const std::shared_ptr<one::Tensor>& input,
                             const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
                             const int64_t& storage_offset) {
+  // reference: torch/csrc/autograd/FunctionsManual.cpp
   const size_t odim = dy->ndim();
   std::vector<int64_t> out_sizes_, out_strides_;
   out_sizes_.reserve(odim);
