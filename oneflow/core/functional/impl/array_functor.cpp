@@ -3385,17 +3385,18 @@ class IndexAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
-    const float alpha_value = alpha.As<float>();
-    int64_t dim_ = dim;
-    const auto& input_shape = input->shape();
-    const int64_t& num_axes = input_shape->NumAxes();
-    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+    CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
+        << "index_copy_(): Number of indices (," << index->shape()->Count(0)
+        << ", \") should be equal to source.size(dim) (," << source->shape()->At(dim) << ", \")";
     CHECK_OR_RETURN(index->dtype()->data_type() != DataType::kInt32
                     || index->dtype()->data_type() != DataType::kInt64)
         << "Input(Index) holds the wrong type, it holds "
         << DataType_Name(index->dtype()->data_type())
         << " , but "
            "desires to be int32_t or int64_t";
+    const float alpha_value = alpha.As<float>();
+    int64_t dim_ = dim;
+    dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
     attrs.SetAllAttrs(dim_, alpha_value);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, source}, attrs);
@@ -3418,17 +3419,18 @@ class IndexAddInplaceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
-    const float alpha_value = alpha.As<float>();
-    int64_t dim_ = dim;
-    const auto& input_shape = input->shape();
-    const int64_t& num_axes = input_shape->NumAxes();
-    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+    CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
+        << "index_copy_(): Number of indices (," << index->shape()->Count(0)
+        << ", \") should be equal to source.size(dim) (," << source->shape()->At(dim) << ", \")";
     CHECK_OR_RETURN(index->dtype()->data_type() != DataType::kInt32
                     || index->dtype()->data_type() != DataType::kInt64)
         << "Input(Index) holds the wrong type, it holds "
         << DataType_Name(index->dtype()->data_type())
         << " , but "
            "desires to be int32_t or int64_t";
+    const float alpha_value = alpha.As<float>();
+    int64_t dim_ = dim;
+    dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
     attrs.SetAllAttrs(dim_, alpha_value);
     JUST(CheckInplaceValid(input));

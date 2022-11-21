@@ -57,7 +57,6 @@ def _test_rmsnorm(
     )
 
     torch_dtype = torch.float16 if dtype is flow.float16 else torch.float32
-    # torch_dtype = torch.float32
     torch_x = torch.tensor(np_x).to(device=device, dtype=torch_dtype)
     torch_weight = (
         torch.tensor(np_weight).to(device=device, dtype=torch_dtype) if affine else None
@@ -73,28 +72,29 @@ def _test_rmsnorm(
     )
     (torch_y * torch_rand_init_grad).sum().backward()
 
-    torch_y = torch_y.detach().cpu()
-    torch_x_grad = torch_x.grad.detach().cpu()
+    torch_y = torch_y.detach().cpu().numpy()
+    torch_x_grad = torch_x.grad.detach().cpu().numpy()
     if affine:
-        torch_weight_grad = torch_weight.grad.detach().cpu()
+        torch_weight_grad = torch_weight.grad.detach().cpu().numpy()
 
     x = flow.tensor(np_x).to(device=device, dtype=dtype)
     weight = flow.tensor(np_weight).to(device=device, dtype=dtype) if affine else None
-    rand_init_grad = flow.tensor(np_rand_init_grad).to(device=device, dtype=dtype)
     x.requires_grad_(True)
     if affine:
         weight.requires_grad_(True)
     y = flow._C.rms_norm(x, weight, normalized_shape, eps)
+    # np_rand_init_grad = np.random.randn(*tuple(y.shape)).astype(np.float32)
+    rand_init_grad = flow.tensor(np_rand_init_grad).to(device=device, dtype=dtype)
     (y * rand_init_grad).sum().backward()
 
-    y = y.detach().cpu()
-    x_grad = x.grad.detach().cpu()
+    y = y.detach().cpu().numpy()
+    x_grad = x.grad.detach().cpu().numpy()
     if affine:
-        weight_grad = weight.grad.detach().cpu()
+        weight_grad = weight.grad.detach().cpu().numpy()
 
     def compare(a, b, a_name, b_name, atol=1e-5, rtol=1e-8):
         test_case.assertTrue(
-            np.allclose(a.numpy(), b.numpy(), atol=atol, rtol=rtol),
+            np.allclose(a, b, atol=atol, rtol=rtol),
             f"\n{'=' * 80}"
             f"\n{a_name}:"
             f"\n{a}"
@@ -103,14 +103,14 @@ def _test_rmsnorm(
             f"\n{b}"
             f"\n{'-' * 80}"
             f"\ndiff:"
-            f"\n{a.numpy() - b.numpy()}"
+            f"\n{a - b}"
             f"\n{'*' * 80}"
             f"\nshape={shape}"
             f"\normalized_shape={normalized_shape}"
             f"\naffine={affine}"
             f"\ndtype={dtype}"
             f"\ndevice={device}"
-            f"\n{a_name} vs. {b_name} max abs diff: {np.max(np.abs(a.numpy() - b.numpy()))}",
+            f"\n{a_name} vs. {b_name} max abs diff: {np.max(np.abs(a - b))}",
         )
 
     if dtype is flow.float16:
