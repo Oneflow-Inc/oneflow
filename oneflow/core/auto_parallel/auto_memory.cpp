@@ -129,10 +129,10 @@ void TopoStruct::ComputeExceedTime() {
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
 // Compute the memory increment for all the topological structures
-void ComputeAllMemoryIncrement(
-    std::vector<TopoStruct*>& topo_structs, HashMap<LogicalBlobId, int32_t>& lbi2id,
-    const std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
-    std::vector<int64_t>& id2blob_size) {
+void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
+                               HashMap<LogicalBlobId, int32_t>& lbi2id,
+                               std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
+                               std::vector<int64_t>& id2blob_size) {
   // Compute the memory increment for produced blobs
   for (auto& topo_struct : topo_structs) {
     topo_struct->memory_increment = 0;
@@ -149,6 +149,8 @@ void ComputeAllMemoryIncrement(
           const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
           lbi2id[lbi] = id2blob_size.size();
           id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+          // There are some inconsistency between id2blob_size and id2consumer_topo_structs
+          // We would deal with that at the end to avoid division by 0
           topo_struct->memory_increment += id2blob_size.back();
         } else {
           topo_struct->memory_increment += id2blob_size[it->second];
@@ -162,6 +164,13 @@ void ComputeAllMemoryIncrement(
     for (auto& consumer_topo_struct : id2consumer_topo_structs[index]) {
       consumer_topo_struct->memory_increment -= memory_decrease;
     }
+  }
+  // Add empty vectors for all those blobs without consumers
+  int32_t have_consumer_size = id2consumer_topo_structs.size();
+  id2consumer_topo_structs.resize(id2blob_size.size());
+  for (int32_t i = have_consumer_size; i < id2consumer_topo_structs.size(); i++) {
+    id2consumer_topo_structs[i].clear();
+    std::cout << "id: " << i << ", count: " << id2consumer_topo_structs[i].size() << std::endl;
   }
 }
 
