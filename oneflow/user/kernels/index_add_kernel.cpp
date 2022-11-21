@@ -26,7 +26,7 @@ void index_add_cpu_kernel(const int64_t n, const T* input, const IndexT* index, 
   const int64_t stride_source_dim = stride * source_dim;
   for (int i = 0; i < n; i++) {
     int64_t pre_index = i / stride_source_dim;
-    int64_t dim_index = i % stride_source_dim / stride;
+    int64_t dim_index = (i - i / stride_source_dim * stride_source_dim) / stride;
     IndexT source_dim_idx = index[dim_index];
     int64_t output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride;
     output[output_index] += static_cast<T>(alpha) * source[i];
@@ -56,7 +56,7 @@ class IndexAddCpuKernel final : public user_op::OpKernel {
     const int64_t source_dim = source_shape.At(dim);
     const int64_t delta = input_shape.At(dim) - source_dim;
     DataType index_dtype = index->data_type();
-    const int32_t n = input->shape_view().elem_cnt();
+    const int32_t n = source->shape_view().elem_cnt();
     Memcpy<DeviceType::kCPU>(
         ctx->stream(), output->mut_dptr<void>(), input->dptr<void>(),
         input->shape_view().elem_cnt() * GetSizeOfDataType(input->data_type()));
@@ -77,6 +77,8 @@ class IndexAddCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
 
+REGISTER_INDEX_ADD_CPU_KERNEL(int8_t)
+REGISTER_INDEX_ADD_CPU_KERNEL(int32_t)
 REGISTER_INDEX_ADD_CPU_KERNEL(float)
 REGISTER_INDEX_ADD_CPU_KERNEL(double)
 

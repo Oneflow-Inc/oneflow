@@ -28,10 +28,28 @@ __global__ void index_add_cuda_kernel(const int64_t n, const T* input, const Ind
                                       const T* source, T* output, const int64_t stride,
                                       const int64_t source_dim, const int64_t delta,
                                       const float alpha) {
+  // For x = flow.ones(5, 3)
+  // source = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float)
+  // index = flow.tensor([0, 4, 2])
+  // dim = 0
+  // We have:
+  // stride = 3
+  // source_dim = 3
+  // stride * source_dim = 9
+  // alpha = 1.0
+  // delta = 5 - 3 = 2
+
+  // For i = 8
+  // pre_index = i / stride_source_dim = 8 / 9 = 0
+  // dim_index = i % stride_source_dim / stride = 8 % 9 / 3 = 0
+  // source_dim_idx = index[dim_index] = index[0] = 0
+  // output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride = 9 + (2 * 0 + 0 -
+  // 0) * 3 = 9 cuda::atomic::Add(output + output_index, static_cast<T>(alpha) * source[i])=>
+  // output[9] += 1.0 * 9 = 10.0
   const int64_t stride_source_dim = stride * source_dim;
   CUDA_1D_KERNEL_LOOP(i, n) {
     int64_t pre_index = i / stride_source_dim;
-    int64_t dim_index = i % stride_source_dim / stride;
+    int64_t dim_index = (i - i / stride_source_dim * stride_source_dim) / stride;
     IndexT source_dim_idx = index[dim_index];
     int64_t output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride;
     cuda::atomic::Add(output + output_index, static_cast<T>(alpha) * source[i]);
@@ -61,7 +79,7 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const int64_t source_dim = source_shape.At(dim);
     const int64_t delta = input_shape.At(dim) - source_dim;
     DataType index_dtype = index->data_type();
-    const int32_t n = input->shape_view().elem_cnt();
+    const int32_t n = source->shape_view().elem_cnt();
     Memcpy<DeviceType::kCUDA>(
         ctx->stream(), output->mut_dptr<void>(), input->dptr<void>(),
         input->shape_view().elem_cnt() * GetSizeOfDataType(input->data_type()));
