@@ -23,14 +23,19 @@ from oneflow.test_utils.test_util import GenArgList
 import unittest
 from oneflow.test_utils.automated_test_util import *
 
+
 def _test_index_add(test_case, device):
     torch_origin_x = torch_origin.ones(5, 3).to(device)
-    torch_origin_t = torch_origin.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=torch_origin.float).to(
-        device
-    )
+    torch_origin_t = torch_origin.tensor(
+        [[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=torch_origin.float
+    ).to(device)
     torch_origin_index = torch_origin.tensor([0, 4, 2]).to(device)
-    torch_origin_y = torch_origin.index_add(torch_origin_x, 0, torch_origin_index, torch_origin_t)
-    torch_origin_y_alpha = torch_origin.index_add(torch_origin_x, 0, torch_origin_index, torch_origin_t, alpha=-1)
+    torch_origin_y = torch_origin.index_add(
+        torch_origin_x, 0, torch_origin_index, torch_origin_t
+    )
+    torch_origin_y_alpha = torch_origin.index_add(
+        torch_origin_x, 0, torch_origin_index, torch_origin_t, alpha=-1
+    )
 
     flow_x = flow.ones(5, 3).to(device)
     flow_t = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float).to(device)
@@ -66,7 +71,13 @@ class TestIndexAdd(flow.unittest.TestCase):
 
     @profile(torch.index_add)
     def profile_index_add(test_case):
-        torch.index_add(torch.ones(500, 30), 0, torch.arange(300), torch.arange(1, 901).reshape(30, 30))
+        torch.index_add(
+            torch.ones(500, 30),
+            0,
+            torch.arange(300),
+            torch.arange(1, 901).reshape(30, 30),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
