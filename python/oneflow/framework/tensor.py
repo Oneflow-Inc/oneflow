@@ -171,11 +171,6 @@ def _scalar_int(self):
     return self.numpy().astype(np.int64).item()
 
 
-def _item(self):
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
-
-
 def _new_empty(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
@@ -538,10 +533,10 @@ def _scatter_add_inplace(self, dim, index, src):
 def _contains(self, element):
     r"""Check if `element` is present in tensor
 
-        Args:
-            element (Tensor or scalar): element to be checked
-                for presence in current tensor"
-        """
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
     if isinstance(element, (flow.Tensor, Number)):
         # type hint doesn't understand the __contains__ result array
         return (element == self).any().item()  # type: ignore[union-attr]
@@ -606,7 +601,6 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.item = _item
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist

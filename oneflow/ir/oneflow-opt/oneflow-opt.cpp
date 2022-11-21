@@ -47,6 +47,8 @@ void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(
 
 }  // namespace mlir
 
+const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
+
 int32_t main(int32_t argc, char** argv) {
   mlir::okl::registerPasses();
   mlir::registerAllPasses();
@@ -61,6 +63,9 @@ int32_t main(int32_t argc, char** argv) {
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::okl::registerOneFlowPasses();
   mlir::registerOutlineJitFunctionPassPass();
+  mlir::oneflow::registerCSEPasses(global_cse_state);
+  mlir::registerFuseForwardOpsPass();
+  mlir::registerGroupMatMulPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::sbp::SBPDialect>();

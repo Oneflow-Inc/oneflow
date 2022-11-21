@@ -34,6 +34,7 @@ import oneflow.framework.id_util as id_util
 from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
 import pickle
+from oneflow.nn.graph import GraphTensor
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
@@ -421,7 +422,10 @@ def save(
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():
-            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+            _save_tensor_to_disk(
+                x.to(Tensor),
+                path / f"{x.to(GraphTensor).name_prefix}{x.to(GraphTensor).name}",
+            )
 
         save_one_embedding_info(obj.state_dict(), path)
 
