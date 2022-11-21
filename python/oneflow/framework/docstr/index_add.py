@@ -70,16 +70,16 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.index_add,
+    oneflow._C.index_add,
     r"""
     index_add(input, dim, index, source, *, alpha=1, out=None) -> Tensor
 
-    See :meth:`~Tensor.index_add_` for function description.
+    See :meth:`oneflow.Tensor.index_add_` for function description.
     """,
 )
 
 add_docstr(
-    oneflow.Tensor.index_add,
+    oneflow._C.index_add_,
     r"""
     index_add(dim, index, source, *, alpha=1) -> Tensor
 
