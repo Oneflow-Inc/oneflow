@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 namespace okl {
+using namespace user_op;
 
 InferContext::InferContext(RegContext* reg_ctx) : reg_ctx_(reg_ctx) {}
 

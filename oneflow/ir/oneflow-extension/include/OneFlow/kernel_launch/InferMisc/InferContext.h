@@ -28,21 +28,20 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-using namespace user_op;
 class InferContext final : public user_op::InferContext {
  public:
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
   explicit InferContext(RegContext* reg_ctx);
 
-  const TensorDesc& InputTensorDesc(const std::string& arg_name, int32_t index) const override {
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name, int32_t index) const override {
     return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  const TensorDesc& OutputTensorDesc(const std::string& arg_name, int32_t index) const override {
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name, int32_t index) const override {
     return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) override { TODO(); }
-  const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+  user_op::TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) override { TODO(); }
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override;
 
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override;
@@ -113,7 +112,7 @@ class InferContext final : public user_op::InferContext {
   int64_t parallel_num() const override { TODO(); }
 
  private:
-  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const override;
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const override;
 
   RegContext* reg_ctx_;
 };

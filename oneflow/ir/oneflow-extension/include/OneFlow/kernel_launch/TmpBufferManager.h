@@ -44,7 +44,6 @@ class TmpBufferMapper final : public oneflow::user_op::Tensor {
   size_t offset_;
 };
 
-using namespace user_op;
 class TmpBufferManager {
  public:
   static std::unordered_map<std::string, size_t> offset_list_;

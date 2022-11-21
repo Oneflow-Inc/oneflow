@@ -25,7 +25,6 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-using namespace user_op;
 class InitContext final : public user_op::KernelCacheContext, public user_op::KernelInitContext {
  public:
   explicit InitContext(RunContext* run_ctx)
@@ -35,7 +34,7 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
 
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
   const ParallelContext& parallel_ctx() const override { return run_ctx_->parallel_ctx(); }
-  const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
   }
@@ -43,7 +42,7 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     TODO();
   }
-  const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
   }
@@ -61,8 +60,8 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   RunContext* run_ctx_;
   RegContext* reg_ctx_;
 
-  const UserOpConfWrapper& user_op_conf() const override { return reg_ctx_->user_op_conf(); }
-  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const override {
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return reg_ctx_->user_op_conf(); }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const override {
     return reg_ctx_->Attr4Name(attr_name);
   }
 };
