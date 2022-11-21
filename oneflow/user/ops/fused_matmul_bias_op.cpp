@@ -97,7 +97,6 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   const int64_t x_num_axes = x_shape.NumAxes();
 
   const int64_t out_num_axes = x_num_axes;
-  const int32_t m_x_axis = x_num_axes - 2;
   const int32_t k_x_axis = x_num_axes - 1;
 
   std::vector<user_op::OpArg> out_and_add_to_output_args;
