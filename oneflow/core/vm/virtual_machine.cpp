@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/odb.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/env_var/vm.h"
@@ -65,7 +66,10 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* engine,
 }
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler"); };
+  *Initializer = [&]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
+    odb::InitThisThreadType(odb::kSchedulerThreadType);
+  };
 }
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
@@ -425,6 +429,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, Str
     }();
     const auto& WorkerInitializer = [thread_tag](vm::ThreadCtx* thread_ctx) {
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + thread_tag);
+      odb::InitThisThreadType(odb::kWorkerThreadType);
     };
     auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
     {

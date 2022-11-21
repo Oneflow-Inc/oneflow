@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PROFILER_PROFILER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/odb.h"
 
 namespace oneflow {
 
@@ -44,6 +45,7 @@ class RangeGuard final {
 
  private:
   std::shared_ptr<RangeGuardCtx> ctx_;
+  odb::Guard odb_guard_;
 };
 
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name) ::oneflow::profiler::NameThisHostThread(name)
