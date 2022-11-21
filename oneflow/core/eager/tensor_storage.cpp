@@ -49,12 +49,15 @@ OpCallInstructionPolicy TensorStorage::compute_op() const {
 }
 
 void TensorStorage::clear_compute_op() {
+  if (compute_op_ == nullptr) { return; }
+  Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
   compute_op_ = nullptr;
   compute_time_ = -1;
 }
 
 void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
   if (compute_op_) {
+    CHECK(false);
     // Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
   }
   // copy a new OpCallInstructionPolicy
