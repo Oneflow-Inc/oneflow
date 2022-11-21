@@ -14,43 +14,44 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
-import torch
+import torch as torch_origin
 from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 import unittest
-
+from oneflow.test_utils.automated_test_util import *
 
 def _test_index_add(test_case, device):
-    torch_x = torch.ones(5, 3).to(device)
-    torch_t = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=torch.float).to(
+    torch_origin_x = torch_origin.ones(5, 3).to(device)
+    torch_origin_t = torch_origin.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=torch_origin.float).to(
         device
     )
-    torch_index = torch.tensor([0, 4, 2]).to(device)
-    torch_y = torch.index_add(torch_x, 0, torch_index, torch_t)
-    torch_y_alpha = torch.index_add(torch_x, 0, torch_index, torch_t, alpha=-1)
+    torch_origin_index = torch_origin.tensor([0, 4, 2]).to(device)
+    torch_origin_y = torch_origin.index_add(torch_origin_x, 0, torch_origin_index, torch_origin_t)
+    torch_origin_y_alpha = torch_origin.index_add(torch_origin_x, 0, torch_origin_index, torch_origin_t, alpha=-1)
 
     flow_x = flow.ones(5, 3).to(device)
     flow_t = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float).to(device)
     flow_index = flow.tensor([0, 4, 2]).to(device)
     flow_y = flow.index_add(flow_x, 0, flow_index, flow_t)
     flow_y_alpha = flow.index_add(flow_x, 0, flow_index, flow_t, alpha=-1)
+    print(flow_y)
     test_case.assertTrue(
-        np.allclose(torch_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
+        np.allclose(torch_origin_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
     )
     test_case.assertTrue(
         np.allclose(
-            torch_y_alpha.cpu().numpy(), flow_y_alpha.cpu().numpy(), 1e-05, 1e-05
+            torch_origin_y_alpha.cpu().numpy(), flow_y_alpha.cpu().numpy(), 1e-05, 1e-05
         )
     )
 
     # check inplace
-    torch_x.index_add_(0, torch_index, torch_t)
+    torch_origin_x.index_add_(0, torch_origin_index, torch_origin_t)
     flow_x.index_add_(0, flow_index, flow_t)
     test_case.assertTrue(
-        np.allclose(torch_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
+        np.allclose(torch_origin_y.cpu().numpy(), flow_y.cpu().numpy(), 1e-05, 1e-05)
     )
 
 
@@ -63,6 +64,9 @@ class TestIndexAdd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @profile(torch.index_add)
+    def profile_index_add(test_case):
+        torch.index_add(torch.ones(500, 30), 0, torch.arange(300), torch.arange(1, 901).reshape(30, 30))
 
 if __name__ == "__main__":
     unittest.main()
