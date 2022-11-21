@@ -224,8 +224,8 @@ void InitMemory(SbpGraph* sbp_graph) {
   };
   std::set<TopoStruct*, comp> waiting_list;
 
-  // Order of execution for sbp nodes
-  std::vector<SbpNode*> ordered_sbp_nodes;
+  // Order of execution for topological structs
+  std::vector<TopoStruct*> ordered_topo_structs;
 
   // Wait in the list
   auto wait = [&](SbpNode* sbp_node) { waiting_list.insert(&sbp_node2topo_struct.at(sbp_node)); };
@@ -249,16 +249,70 @@ void InitMemory(SbpGraph* sbp_graph) {
   // Execute the first node in the waiting list
   // Make sure to check that waiting list is not empty before execution
   auto execute = [&]() {
-    auto first_sbp_node = (*waiting_list.begin())->sbp_node;
+    auto first_topo_struct = *waiting_list.begin();
     // Set the order of execution for sbp nodes
-    ordered_sbp_nodes.push_back(first_sbp_node);
+    ordered_topo_structs.push_back(first_topo_struct);
     waiting_list.erase(waiting_list.begin());
-    finish_execution(first_sbp_node);
+    finish_execution(first_topo_struct->sbp_node);
   };
 
   // straightening
   while (!waiting_list.empty()) { execute(); }
 
+  // Calculate the maximum reusable memory and mark those fixed memory
+  int64_t max_reusable_memory = 0;
+  int64_t curr_reusable_memroy = 0;
+  std::vector<int32_t> id2count(id2blob_size.size(), -1);
+  for (auto& topo_struct : ordered_topo_structs) {
+    const auto& curr_operator = topo_struct->op_node->op();
+    if (topo_struct->is_reusable) {
+      for (const auto& obn : curr_operator.output_bns()) {
+        const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+        int32_t index = lbi2id.at(lbi);
+        // Reusable blobs born
+        curr_reusable_memroy += id2blob_size[index];
+        id2count[index] = id2consumer_topo_structs[index].size();
+      }
+    } else {
+      // Any non-reusable blobs belongs to the support of the maximum memory blob set
+      topo_struct->sbp_node->SetInMemorySupport(true);
+    }
+    // Record the maximum memory
+    if (curr_reusable_memroy > max_reusable_memory) { max_reusable_memory = curr_reusable_memroy; }
+    // Those reusable blobs who do not have a consumer would die immediately
+    // For example:
+    // register_num: 1, op_name:
+    // "model.cls_head.loss_func.lm_loss-sparse_softmax_cross_entropy_ms-231-split_softmax_reduce_max_device_stage",
+    // blob_name: "mask_0", shape { dim: 2048 dim: 21248 },
+    // data_type: kBool, time_shape { dim: 1 dim: 1 }, enable_reuse_mem: true,
+    // alloc_before_actor: 369, free_after_actor: 369
+    if (topo_struct->is_reusable) {
+      for (const auto& obn : curr_operator.output_bns()) {
+        const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+        int32_t index = lbi2id.at(lbi);
+        // Do not have consumer
+        if (id2count[index] == 0) {
+          // Reusable blobs die
+          curr_reusable_memroy -= id2blob_size[index];
+        }
+      }
+    }
+    // Reduce the counter and kill the blobs if count to 0
+    for (const auto& ibn : curr_operator.input_bns()) {
+      const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(ibn);
+      int32_t index = lbi2id.at(lbi);
+      if (id2count[index] > 0) {
+        --id2count[index];
+        if (id2count[index] == 0) {
+          // Reusable blobs die
+          curr_reusable_memroy -= id2blob_size[index];
+        }
+      }
+    }
+  }
+  
+  // Make sure that every blob dies
+  CHECK_EQ(curr_reusable_memroy, 0) << " Have not kill all the reusable blobs!";
 }
 
 }  // namespace auto_parallel

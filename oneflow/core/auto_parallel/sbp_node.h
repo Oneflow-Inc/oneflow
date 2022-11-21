@@ -134,6 +134,9 @@ class SbpNode final {
   const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
 
+  // Setter
+  void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }
+
  private:
   friend class SbpEdge;
   friend class SbpGraph;
@@ -186,6 +189,9 @@ class SbpNode final {
   int32_t counter_ = 0;
   // Accumulate trunk cost from consumer to the end
   double acc_trunk_cost_ = -1.0;
+
+  // The produced blob belongs to the support of the total memory
+  bool in_memory_support_ = false;
 
   // Let one node point to another
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);
