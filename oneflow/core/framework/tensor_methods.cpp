@@ -463,8 +463,8 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
   auto out_effective_offset = storage_offset - shared_offset;
   auto base_size = std::max(MinStorageSize(inp_sizes_, inp_strides_, inp_effective_offset),
                             MinStorageSize(out_sizes_, out_strides_, out_effective_offset));
-  // auto storage = grad.new_zeros({base_size});
-  auto storage = JUST(functional::Constant(*grad->shape(), 0, grad->dtype(), JUST(grad->device())));
+  auto storage =
+      JUST(functional::Constant(Shape({base_size}), 0, grad->dtype(), JUST(grad->device())));
 
   std::shared_ptr<Tensor> flatten_full_indices;
   if (inp_maybe_overlap || out_maybe_overlap) {

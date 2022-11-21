@@ -64,8 +64,7 @@ class TestAsStrided(flow.unittest.TestCase):
         z = x.as_strided((2, 2, 3), (1, 1, 2), storage_offset)
         return z
 
-    # TODO:(zhaoluyang) some bug in as_strided backward to be fixed, related to the view mechanism.
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10)
     def test_flow_as_strided_with_stride(test_case):
         device = random_device()
         dim0 = np.random.randint(2, 4)
