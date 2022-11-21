@@ -42,35 +42,37 @@ class TestDTRCorrectness(flow.unittest.TestCase):
         np.random.seed(seed)
         random.seed(seed)
 
+        device = 'cuda'
+
         bs = 115
         model = flowvision.models.resnet50()
 
         criterion = nn.CrossEntropyLoss()
 
-        model.to('cuda')
-        criterion.to('cuda')
+        model.to(device)
+        criterion.to(device)
         model.train()
 
         learning_rate = 1e-3
         optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0)
 
         train_data = flow.tensor(
-            np.random.uniform(size=(bs, 3, 224, 224)).astype(np.float32), device='cuda'
+            np.random.uniform(size=(bs, 3, 224, 224)).astype(np.float32), device=device
         )
         train_label = flow.tensor(
             (np.random.uniform(size=(bs,)) * 1000).astype(np.int32),
             dtype=flow.int32,
-            device='cuda',
+            device=device,
         )
 
         WARMUP_ITERS = 5
-        ALL_ITERS = 5
+        ALL_ITERS = 30
         total_time = 0
         for x in model.parameters():
-            x.grad = flow.zeros_like(x).to('cuda')
+            x.grad = flow.zeros_like(x).to(device)
         for iter in range(ALL_ITERS):
             print(f'iter {iter}')
-            flow._oneflow_internal.dtr.display('cuda')
+            flow._oneflow_internal.dtr.display(device)
             if iter >= WARMUP_ITERS:
                 start_time = time.time()
             logits = model(train_data)

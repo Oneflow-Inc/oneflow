@@ -134,7 +134,7 @@ double get_cost(const vm::TensorStorage* storage) {
   if (storage == nullptr) { return 0.; }
   double cost = CHECK_JUST(storage->cost(0));
 
-  CHECK(!isnan(cost));
+  CHECK(!std::isnan(cost));
   return cost;
 }
 
@@ -142,7 +142,7 @@ double get_cost(const vm::TensorStorage* storage, size_t size) {
   if (storage == nullptr) { return 0.; }
   double cost = CHECK_JUST(storage->cost(size));
 
-  CHECK(!isnan(cost));
+  CHECK(!std::isnan(cost));
   return cost;
 }
 

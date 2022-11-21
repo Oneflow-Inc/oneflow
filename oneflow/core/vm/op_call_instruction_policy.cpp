@@ -83,9 +83,7 @@ struct OpCallInstructionUtil final {
       auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
       for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
         const auto& y = op_call_instruction_policy->outputs().at(i);
-        if (y->tensor_storage()->eviction_disabled()) {
-          continue;
-        }
+        if (y->tensor_storage()->eviction_disabled()) { continue; }
         if (storage_is_initialized[i] && first) {
           VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
                   << y->tensor_storage()->compute_op_type_name() << std::endl;
@@ -100,7 +98,9 @@ struct OpCallInstructionUtil final {
       const auto& y = op_call_instruction_policy->outputs().at(i);
       y->tensor_storage()->Pin();
       y->tensor_storage()->Access();
-      if (first && !y->tensor_storage()->eviction_disabled()) { y->tensor_storage()->set_compute_op(*compute_op); }
+      if (first && !y->tensor_storage()->eviction_disabled()) {
+        y->tensor_storage()->set_compute_op(*compute_op);
+      }
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
