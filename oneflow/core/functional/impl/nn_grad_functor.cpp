@@ -1068,8 +1068,6 @@ class GroupNormParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-<<<<<<< HEAD
-=======
 class RMSNormGradFunctor {
  public:
   RMSNormGradFunctor() {
@@ -1113,7 +1111,6 @@ class RMSNormGradFunctor {
   std::shared_ptr<OpExpr> param_grad_op_;
 };
 
->>>>>>> 22d0ea6361b1755d8b1eb18d1d03fe76150e9ab4
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {

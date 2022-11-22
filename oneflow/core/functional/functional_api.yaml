@@ -1371,8 +1371,6 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
-<<<<<<< HEAD
-=======
 - name: "rms_norm"
   signature: "Tensor (Tensor x, Tensor weight=None, Shape normalized_shape, Float epsilon=1e-6) => RMSNorm"
   bind_python: True
@@ -1381,7 +1379,6 @@
   signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
   bind_python: False
 
->>>>>>> 22d0ea6361b1755d8b1eb18d1d03fe76150e9ab4
 - name: "group_norm"
   signature:
     'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
@@ -2448,8 +2445,6 @@
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
   bind_python: True
 
-<<<<<<< HEAD
-=======
 - name: "fused_get_center_dist"
   signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"
   bind_python: True
@@ -2458,7 +2453,6 @@
   signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenterGrad"
   bind_python: False
 
->>>>>>> 22d0ea6361b1755d8b1eb18d1d03fe76150e9ab4
 - name: "grouped_matmul_bias"
   signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
   bind_python: True
@@ -2969,8 +2963,6 @@
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
 
-<<<<<<< HEAD
-=======
 - name: "broadcast_shapes"
   signature: "Shape (ShapeList shapes) => BroadcastShapes"
   bind_python: True
@@ -2982,7 +2974,6 @@
 - name: "broadcast_to"
   signature: "Tensor (Tensor x, Shape shape) => BroadcastTo"
   bind_python: True
->>>>>>> 22d0ea6361b1755d8b1eb18d1d03fe76150e9ab4
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
