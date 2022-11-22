@@ -1,0 +1,10 @@
+#include "OneFlow/OneFlowOps.td"
+
+Pattern {
+  let op = op<oneflow.dropout>(op<oneflow.bias_add>(a: Value, b: Value));
+//   let random_mask_like = op<oneflow.random_mask_like>;
+//   let fused_bias_add_mask_scale = op<oneflow.fused_bias_add_mask_scale>; 
+  replace op with (a, b);
+}
+
+ 
