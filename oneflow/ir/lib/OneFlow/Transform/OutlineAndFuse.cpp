@@ -212,10 +212,7 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
-<<<<<<< HEAD
-=======
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
 
->>>>>>> master
 }  // namespace oneflow
 }  // namespace mlir
