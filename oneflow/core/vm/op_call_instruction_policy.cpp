@@ -40,7 +40,7 @@ struct OpCallInstructionUtil final {
     Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, instruction));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
-      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
+      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator, instruction));
     }
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     user_op::OpKernelState* state = nullptr;
@@ -86,25 +86,35 @@ struct OpCallInstructionUtil final {
     StreamType stream_type = instruction->stream().stream_type();
     StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream_type));
     for (const auto& blob_object : op_call_instruction_policy->outputs()) {
-      if (blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-        LOG(INFO) << "AllocateOutputBlobsMemory for "
-                  << op_call_instruction_policy->DebugName(*instruction)
-                  << ", shape=" << blob_object->shape().ToString();
-      }
       if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
+      }
+      if (blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+        LOG(ERROR) << "OpCallInstructionPolicy::AllocateOutputBlobsMemory ["
+                   << op_call_instruction_policy->DebugName(*instruction)
+                   << "] stream=" << StreamType_Name(stream_type)
+                   << ", shape=" << blob_object->shape().ToString()
+                   << ", dptr=" << (void*)blob_object->tensor_storage()->blob_dptr();
       }
     }
     return Maybe<void>::Ok();
   }
 
   static inline Maybe<void> TryAllocateTempStorage(
-      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
+      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator,
+      Instruction* instruction) {
     OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
+      if (tmp_tensor->mem_case().device_type() == DeviceType::kCUDA) {
+        StreamType stream_type = instruction->stream().stream_type();
+        LOG(ERROR) << "OpCallInstructionPolicy::TryAllocateTempStorage ["
+                   << op_call_instruction_policy->DebugName(*instruction)
+                   << "] stream=" << StreamType_Name(stream_type)
+                   << ", tmp_buffer_size=" << byte_size;
+      }
       char* mem_ptr = nullptr;
       JUST(allocator->Allocate(&mem_ptr, byte_size));
       tmp_tensor->set_tmp_buffer_ptr(mem_ptr);

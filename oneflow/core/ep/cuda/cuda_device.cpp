@@ -36,7 +36,6 @@ constexpr size_t kDefaultConstBufElementCount = 1024 * 1024;
 
 template<typename T>
 void CreateConstBuffer(void** buf, T value, size_t n) {
-  LOG(INFO) << "CreateConstBuffer: size=" << n;
   OF_CUDA_CHECK(cudaMalloc(buf, n * sizeof(T)));
   std::vector<T> host(n, value);
   OF_CUDA_CHECK(cudaMemcpy(*buf, host.data(), n * sizeof(T), cudaMemcpyDefault));

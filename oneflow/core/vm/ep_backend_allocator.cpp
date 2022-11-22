@@ -21,8 +21,9 @@ namespace oneflow {
 namespace vm {
 
 Maybe<void> EpBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  LOG(INFO) << "EpBackendAllocator::Allocate: size=" << size
-            << ", device_type=" << DeviceType_Name(ep_device_->device_type());
+  if (ep_device_->device_type() == DeviceType::kCUDA) {
+    LOG(ERROR) << "EpBackendAllocator::Allocate: size=" << size;
+  }
   return ep_device_->Alloc(allocation_options_, reinterpret_cast<void**>(mem_ptr), size);
 }
 

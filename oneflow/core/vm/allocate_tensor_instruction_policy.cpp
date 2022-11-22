@@ -34,6 +34,12 @@ std::string AllocateTensorInstructionPolicy::DebugName(const vm::Instruction& in
 void AllocateTensorInstructionPolicy::Compute(Instruction* instruction) {
   Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
   for (const auto& eager_blob_object : eager_blob_objects_) {
+    if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+      LOG(ERROR) << "AllocateTensorInstructionPolicy TryAllocateBlobBodyMemory ["
+                 << DebugName(*instruction)
+                 << "] stream=" << StreamType_Name(instruction->stream().stream_type())
+                 << ", shape=" << eager_blob_object->shape().ToString();
+    }
     CHECK_JUST(eager_blob_object->TryAllocateBlobBodyMemory(allocator));
   }
 }

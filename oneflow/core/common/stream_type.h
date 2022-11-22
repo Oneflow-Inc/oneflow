@@ -35,6 +35,21 @@ enum class StreamType {
   kPinnedCompute
 };
 
+inline std::string StreamType_Name(StreamType stream_type) {
+  switch (stream_type) {
+    case StreamType::kInvalid: return "StreamType::kInvalid";
+    case StreamType::kCompute: return "StreamType::kCompute";
+    case StreamType::kHost2Device: return "StreamType::kHost2Device";
+    case StreamType::kDevice2Host: return "StreamType::kDevice2Host";
+    case StreamType::kCcl: return "StreamType::kCcl";
+    case StreamType::kBarrier: return "StreamType::kBarrier";
+    case StreamType::kCriticalSection: return "StreamType::kCriticalSection";
+    case StreamType::kLazyJobLauncher: return "StreamType::kLazyJobLauncher";
+    case StreamType::kPinnedCompute: return "StreamType::kPinnedCompute";
+    default: LOG(FATAL) << "invalid StreamType " << int(stream_type);
+  }
+}
+
 template<typename DerivedT>
 struct StreamTypeVisitor {
   template<typename... Args>

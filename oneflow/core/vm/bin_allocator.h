@@ -302,8 +302,8 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
   if (final_allocate_bytes < aligned_size) { return false; }
 
   char* mem_ptr = nullptr;
-  LOG(INFO) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
-            << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_;
+  LOG(ERROR) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
+             << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_;
   JUST(backend_->Allocate(&mem_ptr, final_allocate_bytes));
   if (mem_ptr == nullptr) { return false; }
 
@@ -393,6 +393,9 @@ Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size)
   if (piece == nullptr) {
     if (JUST(AllocateBlockToExtendTotalMem(aligned_size))) { piece = FindPiece(aligned_size); }
   }
+
+  LOG(ERROR) << "BinAllocator::Allocate size=" << size << ", aligned_size=" << aligned_size
+             << ", piece size=" << piece->size << ", bin_num=" << piece->bin_num;
 
   CHECK_NOTNULL_OR_RETURN(piece)
       << Error::OutOfMemoryError() << "Error! : Out of memory when allocate size : " << size

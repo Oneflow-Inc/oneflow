@@ -66,7 +66,15 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
   }
 
  protected:
-  void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
+  void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+               Instruction* instruction, bool is_prepare = false) const {
+    if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+      LOG(ERROR) << "ReleaseTensorInstructionPolicy::Release [" << this->DebugName(*instruction)
+                 << "] stream=" << StreamType_Name(instruction->stream().stream_type())
+                 << ", shape=" << eager_blob_object->shape().ToString()
+                 << ", is_prepare=" << is_prepare
+                 << ", dptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
+    }
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
 
@@ -99,14 +107,14 @@ class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
     DataType data_type = eager_blob_object()->data_type();
     CHECK_OR_RETURN(IsPODDataType(data_type));
     if (eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
-      Release(eager_blob_object());
+      Release(eager_blob_object(), instruction, true);
     }
     return Maybe<void>::Ok();
   }
 
   void Compute(vm::Instruction* instruction) override {
     if (!eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
-      Release(eager_blob_object());
+      Release(eager_blob_object(), instruction);
     }
   }
 };
@@ -122,7 +130,7 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 
   Maybe<void> Prepare(vm::Instruction* instruction) override { return Maybe<void>::Ok(); }
 
-  void Compute(vm::Instruction* instruction) override { Release(eager_blob_object()); }
+  void Compute(vm::Instruction* instruction) override { Release(eager_blob_object(), instruction); }
 };
 
 struct MakeReleaseTensorInstructionPolicy
