@@ -8,18 +8,20 @@ Pattern {
   let op_name: Attr;
   let hierarchy: Attr;
   let scope_symbol_id: Attr;
+  let axis: Attr;
   let op =
-    op<oneflow.dropout>(op<oneflow.bias_add>(a: Value, b: Value) {device_name = device_name, op_name = bias_add_op_name}) {
-      rate = rate,
-      op_name = op_name,
+    op<oneflow.dropout>(op<oneflow.bias_add>(a: Value, b: Value) {device_name = device_name, op_name = bias_add_op_name, axis = axis}) {
+      rate = rate, op_name = op_name,
       device_name = device_name, device_tag = device_tag, hierarchy = hierarchy, scope_symbol_id = scope_symbol_id
     } -> (out: Type, mask: Type);
 
   rewrite op with {
-    let random_mask_like = op<oneflow.random_mask_like>(a){rate = rate, op_name = op_name,
+    let random_mask_like = op<oneflow.random_mask_like>(a){
+      rate = rate, op_name = op_name,
       device_name = device_name, device_tag = device_tag, hierarchy = hierarchy, scope_symbol_id = scope_symbol_id
     } -> (mask);
-    let fused_bias_add_mask_scale = op<oneflow.fused_bias_add_mask_scale>(a, b, random_mask_like) {op_name = bias_add_op_name,
+    let fused_bias_add_mask_scale = op<oneflow.fused_bias_add_mask_scale>(a, b, random_mask_like) {
+      op_name = bias_add_op_name, axis = axis,
       device_name = device_name, device_tag = device_tag, hierarchy = hierarchy, scope_symbol_id = scope_symbol_id
     } -> (out);
     replace op with (fused_bias_add_mask_scale.0, random_mask_like.0);
