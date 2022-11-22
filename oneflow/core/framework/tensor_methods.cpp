@@ -482,6 +482,9 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
         JUST(functional::Reshape(grad, Shape({grad->shape()->elem_cnt()}))), Scalar(1.0)));
   } else {
     // assume that new tensors have 0 storage offset
+    // torch impl: storage.as_strided(out_sizes_, out_strides_, out_effective_offset)
+    //     .copy_(grad);
+    // TODO(wangyinggang): use functional::copy_ replace this TensorSetItem
     storage = JUST(functional::AsStrided(storage, out_sizes_, out_strides_, out_effective_offset));
     functional::TensorIndex ellipsis_index;
     ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
