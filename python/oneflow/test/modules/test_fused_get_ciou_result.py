@@ -26,7 +26,7 @@ import oneflow.unittest
 
 
 def _test_get_ciou_result_impl(test_case, device, shape):
-    eps = 0
+    eps = 1e-7
     x = []
     torch_x = []
     for _ in range(4):

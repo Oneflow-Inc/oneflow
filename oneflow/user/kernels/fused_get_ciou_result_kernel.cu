@@ -25,7 +25,7 @@ __global__ void FusedGetCiouResultForward(const int n, const T* v, const T* iou,
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T v_i = v[i];
     const T iou_i = iou[i];
-    const T alpha = v_i / (v_i - iou_i + static_cast<T>(1 + eps));
+    const T alpha = v_i / (v_i - iou_i + static_cast<T>(1.0 + eps));
     y[i] = iou_i - (rho2[i] / c2[i] + v_i * alpha);
   }
 }
