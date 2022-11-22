@@ -131,7 +131,15 @@ class Optimizer(object):
 
         self._parse_input_parameters(parameters)
 
-        self.step = _decorate_step(self.step)
+        dtr_enabled = True
+        if not dtr_enabled:
+            # _decorate_step makes mutable update interleaved with backward
+            # computation, producing wrong results in DTR if the original
+            # weight is used to recompute other tensors.
+            # Besides, it makes parameters remain in memory by unknown reasons
+            # even after parameters and optimizer are not hold by python
+            # interpreter.
+            self.step = _decorate_step(self.step)
 
     def add_param_group(self, param_group) -> None:
         r"""
