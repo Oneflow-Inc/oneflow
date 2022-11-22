@@ -20,7 +20,7 @@ set_property(TARGET cutlass_fmha_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
 )
 add_library(cutlass_dual_gemm_headers INTERFACE)
 set_property(TARGET cutlass_dual_gemm_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-  $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/43_dual_gemm>
+  $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/45_dual_gemm>
   $<INSTALL_INTERFACE:include>
 )
 
