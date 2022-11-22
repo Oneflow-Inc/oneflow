@@ -157,8 +157,8 @@ PyObject* WrapTensorTuple(const TensorTuple& tensortuple,
                            const std::string& name) {{
   PyObjectPtr r(PyStructSequence_New(get_namedtuple(name)));
   if (!r) {{ throw py::error_already_set(); }}
-  for (int i = 0; i < tensortuple.size(); i++) {{
-    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple.at(i)));
+  for (int i = 0; i < tensortuple.size(); ++i) {{
+    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple[i]));
   }}
   return r.release();
 }}
