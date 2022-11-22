@@ -19,8 +19,8 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/KernelLaunchState.h"
+#include "OneFlow/kernel_launch/RegContext.h"
 
 #include <memory>
 #include <utility>

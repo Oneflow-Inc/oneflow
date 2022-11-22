@@ -19,7 +19,7 @@ limitations under the License.
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/LauncherContext.h"
+#include "OneFlow/kernel_launch/LauncherContext.h"
 
 namespace oneflow {
 namespace okl {

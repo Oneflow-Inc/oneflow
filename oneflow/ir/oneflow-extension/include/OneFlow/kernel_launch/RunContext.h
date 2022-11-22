@@ -17,8 +17,8 @@ limitations under the License.
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/TmpBufferManager.h"
+#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/TmpBufferManager.h"
 #include "OneFlow/OKL/OKLOps.h"
 
 namespace oneflow {

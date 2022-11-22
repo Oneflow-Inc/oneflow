@@ -1,3 +1,5 @@
+include_directories(${PROJECT_SOURCE_DIR}/oneflow-extension/include)
+
 oneflow_add_mlir_library(
   MLIROneFlowExtension
   mlir_jit_op.cpp

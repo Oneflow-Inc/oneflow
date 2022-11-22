@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferMisc/InferContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/TmpBufferManager.h"
+#include "OneFlow/kernel_launch/InferMisc/InferContext.h"
+#include "OneFlow/kernel_launch/TmpBufferManager.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Casting.h"
