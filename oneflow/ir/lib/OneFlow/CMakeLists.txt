@@ -42,6 +42,7 @@ oneflow_add_mlir_dialect_library(
   TransposeHelpers.cpp
   Passes.cpp
   OneFlowCanonicalizers.cpp
+  OneFlowRewrites.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow

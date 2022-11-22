@@ -7,6 +7,10 @@ namespace oneflow {
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
 
+namespace rewrites {
+void populateRewrites(RewritePatternSet& patterns);
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

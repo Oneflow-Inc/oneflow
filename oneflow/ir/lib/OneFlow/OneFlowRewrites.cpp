@@ -1,0 +1,60 @@
+//===- TestPDLByteCode.cpp - Test PDLL functionality ----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+#include "OneFlow/OneFlowOps.h"
+
+using namespace mlir;
+
+#include "oneflow/ir/lib/OneFlow/PDLL/OneFlowPatterns.h.inc"
+
+namespace mlir {
+
+namespace oneflow {
+
+namespace {
+
+static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter, Value a, Value b,
+                                                       Attribute axis, Attribute rate,
+                                                       Operation* random_mask_like,
+                                                       Operation* dropout) {
+  auto dropout_op = llvm::dyn_cast<DropoutOp>(dropout);
+  auto mask_op = llvm::dyn_cast<RandomMaskLikeOp>(random_mask_like);
+  SmallVector<Value, 4> operands;
+  operands.push_back(a);
+  operands.push_back(b);
+  operands.push_back(mask_op.out());
+  NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
+  fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), axis);
+  fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), rate);
+  fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+  return rewriter.create<oneflow::FusedBiasAddMaskScaleOp>(
+      dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
+      fused_bias_add_dropout_attributes);
+}
+
+}  // namespace
+
+namespace rewrites {
+
+void populateRewrites(RewritePatternSet& patterns) {
+  patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
+                                                    BuildFusedBiasAddMaskScaleOpWithRate);
+}
+
+}  // namespace rewrites
+
+}  // namespace oneflow
+
+}  // namespace mlir

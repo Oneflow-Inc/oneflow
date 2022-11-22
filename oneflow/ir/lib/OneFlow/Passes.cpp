@@ -35,6 +35,7 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/OneFlowPatternUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
@@ -1028,6 +1029,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   populatePDLLPatterns(patterns);
+  rewrites::populateRewrites(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
