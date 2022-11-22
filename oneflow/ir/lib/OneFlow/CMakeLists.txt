@@ -41,6 +41,7 @@ oneflow_add_mlir_dialect_library(
   Transform/AutoNHWCOps.cpp
   TransposeHelpers.cpp
   Passes.cpp
+  OneFlowCanonicalizers.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
