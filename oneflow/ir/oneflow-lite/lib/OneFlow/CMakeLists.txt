@@ -1,0 +1,16 @@
+oneflow_add_mlir_library(
+  OneFlowLiteConversion
+  ConvertToLiteExecutable.cpp
+  FlatbufferUtils.cpp
+  DEPENDS
+  MLIRIR
+  MLIRParser
+  MLIRPass
+  MLIRSPIRVDialect
+  MLIRTranslateLib
+  MLIRSupport
+  MLIROneFlow
+  flatcc-runtime
+  LINK_LIBS
+  flatcc-runtime
+)

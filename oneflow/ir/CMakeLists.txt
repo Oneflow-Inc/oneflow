@@ -94,6 +94,8 @@ if(WITH_MLIR)
   add_subdirectory(oneflow-runner)
 endif(WITH_MLIR)
 
+add_subdirectory(oneflow-lite)
+
 if(BUILD_PYTHON)
   foreach(llvm_include_dir ${LLVM_INCLUDE_DIRS})
     if(llvm_include_dir MATCHES "/include$")
