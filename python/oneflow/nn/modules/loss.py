@@ -99,31 +99,74 @@ class L1Loss(_Loss):
 
 
 class CrossEntropyLoss(_WeightedLoss):
-    """This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
+    r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.CrossEntropyLoss.html.
+
+    This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
+    If provided, the optional argument `weight` should be a 1D Tensor assigning weight to each of the classes.
+    This is particularly useful when you have an unbalanced training set.
 
     The `input` is expected to contain raw, unnormalized scores for each class.
-
     `input` has to be a Tensor of size either :math:`(minibatch, C)` or
     :math:`(minibatch, C, d_1, d_2, ..., d_K)`
-    with :math:`K \\geq 1` for the `K`-dimensional case (described later).
+    with :math:`K \geq 1` for the `K`-dimensional case (described later).
 
-    This criterion expects a class index in the range :math:`[0, C-1]` as the
-    `target` for each value of a 1D tensor of size `minibatch`;
+    The target that this criterion expects should contain either:
 
-    The loss can be described as:
+    - Class indices in the range :math:`[0, C)` where :math:`C` is the number of classes; if
+      `ignore_index` is specified, this loss also accepts this class index (this index
+      may not necessarily be in the class range). The unreduced (i.e. with :attr:`reduction`
+      set to ``'none'``) loss for this case can be described as:
 
-    .. math::
-        \\text{loss}(x, class) = -\\log\\left(\\frac{\\exp(x[class])}{\\sum_j \\exp(x[j])}\\right)
-                       = -x[class] + \\log\\left(\\sum_j \\exp(x[j])\\right)
+      .. math::
+          \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+          l_n = - w_{y_n} \log \frac{\exp(x_{n,y_n})}{\sum_{c=1}^C \exp(x_{n,c})}
+          \cdot \mathbb{1}\{y_n \not= \text{ignore_index}\}
 
-    Can also be used for higher dimension inputs, such as 2D images, by providing
-    an input of size :math:`(minibatch, C, d_1, d_2, ..., d_K)` with :math:`K \\geq 1`,
-    where :math:`K` is the number of dimensions, and a target of appropriate shape
-    (see below).
+      where :math:`x` is the input, :math:`y` is the target, :math:`w` is the weight,
+      :math:`C` is the number of classes, and :math:`N` spans the minibatch dimension as well as
+      :math:`d_1, ..., d_k` for the `K`-dimensional case. If
+      :attr:`reduction` is not ``'none'`` (default ``'mean'``), then
+
+      .. math::
+          \ell(x, y) = \begin{cases}
+              \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{y_n} \cdot \mathbb{1}\{y_n \not= \text{ignore_index}\}} l_n, &
+               \text{if reduction} = \text{'mean';}\\
+                \sum_{n=1}^N l_n,  &
+                \text{if reduction} = \text{'sum'.}
+            \end{cases}
+
+      Note that this case is equivalent to the combination of :class:`~torch.nn.LogSoftmax` and
+      :class:`~torch.nn.NLLLoss`.
+
+    - Probabilities for each class; useful when labels beyond a single class per minibatch item
+      are required, such as for blended labels, label smoothing, etc. The unreduced (i.e. with
+      :attr:`reduction` set to ``'none'``) loss for this case can be described as:
+
+      .. math::
+          \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+          l_n = - \sum_{c=1}^C w_c \log \frac{\exp(x_{n,c})}{\sum_{i=1}^C \exp(x_{n,i})} y_{n,c}
+
+      where :math:`x` is the input, :math:`y` is the target, :math:`w` is the weight,
+      :math:`C` is the number of classes, and :math:`N` spans the minibatch dimension as well as
+      :math:`d_1, ..., d_k` for the `K`-dimensional case. If
+      :attr:`reduction` is not ``'none'`` (default ``'mean'``), then
+
+      .. math::
+          \ell(x, y) = \begin{cases}
+              \frac{\sum_{n=1}^N l_n}{N}, &
+               \text{if reduction} = \text{'mean';}\\
+                \sum_{n=1}^N l_n,  &
+                \text{if reduction} = \text{'sum'.}
+            \end{cases}
+
 
     Args:
+        weight (oneflow.Tensor, optional): a manual rescaling weight given to each class.
+            If given, has to be a Tensor of size `C`
         ignore_index (int, optional): Specifies a target value that is ignored and does not
             contribute to the input gradient. When ``reduction`` is ``mean``, the loss is averaged
             over non-ignored targets. Note that ``ignore_index`` is only applicable when the target
@@ -137,6 +180,22 @@ class CrossEntropyLoss(_WeightedLoss):
             The targets become a mixture of the original ground truth and a uniform
             distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
             Default: :math:`0.0`.
+
+    Shape:
+        - Input: Shape ::math:`(N, C)` or :math:`(N, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`
+          in the case of `K`-dimensional loss.
+        - Target: If containing class indices, shape :math:`(N)` or :math:`(N, d_1, d_2, ..., d_K)` with
+          :math:`K \geq 1` in the case of K-dimensional loss where each value should be between :math:`[0, C)`.
+          If containing class probabilities, same shape as the input and each value should be between :math:`[0, 1]`.
+        - Output: If reduction is 'none', same shape as the target. Otherwise, scalar.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                C ={} & \text{number of classes} \\
+                N ={} & \text{batch size} \\
+            \end{aligned}
 
 
     For example:
@@ -166,6 +225,12 @@ class CrossEntropyLoss(_WeightedLoss):
         >>> out_label_smoothing = flow.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.5)(input, target)
         >>> out_label_smoothing
         tensor([1.0586, 1.1654, 0.8864], dtype=oneflow.float32)
+        >>> probs = flow.tensor([[ 0.99495536,  0.28255007, -0.2775054 ],
+        ...    [ 0.42397153,  0.01075112,  0.56527734],
+        ...    [ 0.72356546, -0.1304398 ,  0.4068744 ]], dtype=flow.float32)
+        >>> out = flow.nn.CrossEntropyLoss()(input, probs)
+        >>> out
+        tensor(1.3305, dtype=oneflow.float32)
 
     """
 

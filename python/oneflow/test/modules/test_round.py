@@ -40,6 +40,18 @@ class TestRound(flow.unittest.TestCase):
         y = torch.round(x)
         return y
 
+    @autotest(check_graph=True)
+    def test_flow_round_half_to_even(test_case):
+        device = random_device()
+        random_shape = [random(1, 10).to(int).value() for _ in range(4)]
+        random_tenosr = np.random.randint(-99999, 99999, size=random_shape)
+        x = torch.tensor(random_tenosr).to(device)
+        y = torch.full(x.shape, 0.5).to(device)
+        y += x
+        y = y.requires_grad_()
+        z = torch.round(y)
+        return z
+
 
 if __name__ == "__main__":
     unittest.main()

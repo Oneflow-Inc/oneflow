@@ -140,9 +140,15 @@ from oneflow.nn.modules.pooling import (
     MaxPool1d,
     MaxPool2d,
     MaxPool3d,
+    MaxUnpool1d,
+    MaxUnpool2d,
+    MaxUnpool3d,
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
+    AdaptiveMaxPool1d,
+    AdaptiveMaxPool2d,
+    AdaptiveMaxPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (

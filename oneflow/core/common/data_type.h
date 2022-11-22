@@ -25,6 +25,8 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #endif
+#include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/bfloat16_math.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -34,7 +36,17 @@ limitations under the License.
 
 namespace oneflow {
 
+template<>
+struct IsScalarType<bfloat16> final {
+  static const bool value = true;
+};
+
 typedef half_float::half float16;
+
+template<>
+struct IsScalarType<float16> final {
+  static const bool value = true;
+};
 
 template<typename T>
 struct IsFloat16;
@@ -96,7 +108,8 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
@@ -236,7 +249,14 @@ struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
-#endif
+#if CUDA_VERSION >= 11000
+template<>
+struct DevDType<DeviceType::kCUDA, bfloat16> {
+  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(bfloat16) != sizeof(nv_bfloat16)");
+  typedef nv_bfloat16 type;
+};
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
 
 // Func
 

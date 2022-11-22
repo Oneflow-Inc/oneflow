@@ -76,6 +76,12 @@ class SbpContext : public SbpContextBase {
   SbpContext() = default;
   ~SbpContext() override = default;
 
+  // hierarchy value is the value at the dimension corresponding to the current SBP
+  // For example, 2 machines, 4 gpus per machine, hierarchy = [2, 4]
+  // Suppose we have nd_sbp = (S0, B)
+  // The hierarchy value corresponding to S0 is 2
+  // The hierarchy value corresponding to B is 4.
+  virtual int64_t hierarchy_value() const = 0;
   virtual UserOpSbpSignatureBuilder NewBuilder() = 0;
 };
 
@@ -96,6 +102,8 @@ struct GetSbpFnUtil {
 };
 
 Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx, const SbpParallel& default_sbp);
+Maybe<void> SetSrcOpNdSbp(const NdSbpSignature& nd_sbp_sig, const std::string& blob_name,
+                          OperatorConf* op_conf);
 
 }  // namespace user_op
 

@@ -41,7 +41,9 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
+  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(mask_desc.data_type());
   ctx->SetOutputDType("y", 0, x_desc.data_type());
   ctx->SetOutputDType("softmax_y", 0, x_desc.data_type());
   return Maybe<void>::Ok();
@@ -110,8 +112,11 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), softmax_y_desc.data_type())
-      << " dy and softmax_y dtype must equal";
-  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
+      << "InferDataType Failed. Expected " << DataType_Name(softmax_y_desc.data_type())
+      << ", but got " << DataType_Name(dy_desc.data_type());
+  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(mask_desc.data_type());
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   dx_desc->set_data_type(dy_desc.data_type());
   return Maybe<void>::Ok();

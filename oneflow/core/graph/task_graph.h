@@ -46,6 +46,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -80,8 +81,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
  protected:
-  TaskGraph();
-  explicit TaskGraph(bool enable_straighten_algorithm);
+  explicit TaskGraph();
 
   void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
@@ -91,7 +91,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
 
   void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace
@@ -135,8 +136,15 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 class GlobalTaskGraph final : public TaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalTaskGraph);
-  explicit GlobalTaskGraph(bool enable_straighten_algorithm)
-      : TaskGraph(enable_straighten_algorithm) {}
+  ~GlobalTaskGraph() = default;
+  static Maybe<GlobalTaskGraph> New() {
+    std::shared_ptr<GlobalTaskGraph> graph(new GlobalTaskGraph());
+    JUST(graph->Init());
+    return graph;
+  }
+ private:
+  GlobalTaskGraph() = default;
+  Maybe<void> Init();
 };
 
 class BoxingTaskGraphProto;
@@ -171,10 +179,9 @@ class RankTaskGraph final : public TaskGraph {
 
   static Maybe<RankTaskGraph> New(
       const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
-      const HashSet<std::string>& var_op_names, int64_t current_rank,
-      bool enable_straighten_algorithm) {
+      const HashSet<std::string>& var_op_names, int64_t current_rank) {
     std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, current_rank));
-    JUST(graph->Init(var_op_names, enable_straighten_algorithm));
+    JUST(graph->Init(var_op_names));
     return graph;
   }
 
@@ -184,7 +191,7 @@ class RankTaskGraph final : public TaskGraph {
  private:
   RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
-  Maybe<void> Init(const HashSet<std::string>& var_op_names, bool enable_straighten_algorithm);
+  Maybe<void> Init(const HashSet<std::string>& var_op_names);
   bool ContainRank(const OpNode* op_node, int64_t rank) const;
   Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();

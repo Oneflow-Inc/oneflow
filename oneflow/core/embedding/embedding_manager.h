@@ -136,6 +136,10 @@ class EmbeddingState {
   virtual void* LookupEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingLookupEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
+  virtual void OnEmbeddingGatherStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingGatherIn(int64_t iter) = 0;
+  virtual void OnEmbeddingGatherEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
   virtual void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;

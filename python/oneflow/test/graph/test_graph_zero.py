@@ -19,6 +19,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
@@ -164,9 +165,9 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
             def __init__(self):
                 super().__init__()
                 self.mixed_linear0 = mixed_linear0
-                self.mixed_linear0.config.activation_checkpointing = True
+                self.mixed_linear0.to(GraphModule).activation_checkpointing = True
                 self.mixed_linear1 = mixed_linear1
-                self.mixed_linear1.config.activation_checkpointing = True
+                self.mixed_linear1.to(GraphModule).activation_checkpointing = True
                 self.add_optimizer(of_sgd)
 
                 self.config.enable_amp(True)
@@ -211,7 +212,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         for state in linear_t_g._state():
             test_case.assertEqual(
-                state.origin.sbp, (oneflow.sbp.split(dim=0), oneflow.sbp.split(dim=0))
+                state.to(flow.Tensor).sbp,
+                (oneflow.sbp.split(dim=0), oneflow.sbp.split(dim=0)),
             )
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).

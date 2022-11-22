@@ -66,12 +66,44 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   DataType dtype = ctx->InputDType("a", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
+      << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+      << DataType_Name(ctx->InputDType("b", 0));
   if (ctx->has_input("_add_to_output", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
+    CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype)
+        << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+        << DataType_Name(ctx->InputDType("_add_to_output", 0));
   }
   ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
+}
+
+// Theoretically computation cost of matrix multiplication is the products of the number of matrix
+// and first dimension of matrix a, second dimension of matrix a, second dimension of matrix
+// b. If there is any splitting sbp parallel, the computation cost will be divided by number of
+// machines. If we use S(1) at matrix a and S(0) at matrix b, then it will be P at output matrix.
+// This is why we don't use SbpParallel at output matrix.
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
+  bool transpose_b = ctx->Attr<bool>("transpose_b");
+  const Shape& shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
+  int64_t n = 0;
+  if (!transpose_b) {
+    n = shape_b.At(shape_b.NumAxes() - 1);
+  } else {
+    n = shape_b.At(shape_b.NumAxes() - 2);
+  }
+
+  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("a", 0).elem_cnt() * n;
+  const auto& nd_sbp_a = ctx->NdSbp4ArgNameAndIndex("a", 0);
+  const auto& nd_sbp_b = ctx->NdSbp4ArgNameAndIndex("b", 0);
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  for (int32_t sbp_dim = 0; sbp_dim < nd_sbp_a.sbp_parallel_size(); sbp_dim++) {
+    if (nd_sbp_a.sbp_parallel(sbp_dim).has_split_parallel()
+        || nd_sbp_b.sbp_parallel(sbp_dim).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(sbp_dim);
+    }
+  }
+  return logical_computation_cost;
 }
 
 }  // namespace
@@ -82,6 +114,10 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 /*static*/ Maybe<void> MatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ Maybe<double> MatmulOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
+  return GetComputationCost(ctx);
 }
 
 /* static */ Maybe<void> MatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -208,6 +244,11 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<double> BatchMatmulOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return GetComputationCost(ctx);
+}
+
 /* static */ Maybe<void> BatchMatmulOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
@@ -245,7 +286,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
     const int64_t a_batch_dim = GetABatchDim(i);
     const int64_t b_batch_dim = GetBBatchDim(i);
     CHECK(((a_batch_dim != 1 && b_batch_dim == 1) || (a_batch_dim == 1 && b_batch_dim != 1)
-           || (a_batch_dim == 1 && b_batch_dim == 1)))
+           || (a_batch_dim == b_batch_dim)))
         << "Batch Dims could not broadcast, please check. ";
     out_dim_vec[i] = std::max(a_batch_dim, b_batch_dim);
   }
@@ -405,6 +446,11 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 
+/*static*/ Maybe<double> BroadcastMatmulOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return GetComputationCost(ctx);
+}
+
 /* static */ Maybe<void> BroadcastMatmulGradBOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
@@ -430,6 +476,23 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
+/*static*/ Maybe<double> BroadcastMatmulGradBOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  const Shape& shape_a = ctx->Shape4ArgNameAndIndex("a", 0);
+  int64_t n = shape_a.At(shape_a.NumAxes() - 2);
+
+  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("b", 0).elem_cnt() * n;
+  const auto& nd_sbp_a = ctx->NdSbp4ArgNameAndIndex("a", 0);
+  const auto& nd_sbp_b = ctx->NdSbp4ArgNameAndIndex("b", 0);
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  for (int32_t sbp_dim = 0; sbp_dim < nd_sbp_a.sbp_parallel_size(); sbp_dim++) {
+    if (nd_sbp_a.sbp_parallel(sbp_dim).has_split_parallel()
+        || nd_sbp_b.sbp_parallel(sbp_dim).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(sbp_dim);
+    }
+  }
+  return logical_computation_cost;
+}
 /* static */ Maybe<void> BroadcastMatmulGradBOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
   int64_t last_axis = a_shape.NumAxes() - 1;
