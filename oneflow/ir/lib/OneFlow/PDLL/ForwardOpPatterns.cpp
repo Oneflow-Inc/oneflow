@@ -16,13 +16,15 @@
 
 using namespace mlir;
 
-#include "oneflow/ir/lib/OneFlow/PDLL/OneFlowPatterns.h.inc"
+#include "oneflow/ir/lib/OneFlow/PDLL/ForwardOpPatterns.h.inc"
 
 namespace mlir {
 
 namespace oneflow {
 
-void populatePDLLPatterns(RewritePatternSet& patterns) { populateGeneratedPDLLPatterns(patterns); }
+void populateForwardOpPatterns(RewritePatternSet& patterns) {
+  populateGeneratedPDLLPatterns(patterns);
+}
 
 }  // namespace oneflow
 

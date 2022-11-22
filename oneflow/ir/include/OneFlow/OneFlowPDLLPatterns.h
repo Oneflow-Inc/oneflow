@@ -6,7 +6,7 @@ namespace mlir {
 
 namespace oneflow {
 
-void populatePDLLPatterns(RewritePatternSet& patterns);
+void populateForwardOpPatterns(RewritePatternSet& patterns);
 
 }  // namespace oneflow
 

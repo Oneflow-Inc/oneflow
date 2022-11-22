@@ -991,7 +991,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
-  populatePDLLPatterns(patterns);
+  populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
