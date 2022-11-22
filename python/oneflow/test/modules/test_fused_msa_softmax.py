@@ -124,5 +124,23 @@ class TestFusedMsaSoftmax(flow.unittest.TestCase):
         _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "global_col", True)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestFusedMsaBiasaddSigmoidMul(flow.unittest.TestCase):
+    def test_fused_msa_softmax(test_case):
+
+        test_case.assertTrue(True)
+
+@flow.unittest.skip_unless_1n1d()
+class TestFusedMsaBiasaddDropoutResidual(flow.unittest.TestCase):
+    def test_fused_msa_softmax(test_case):
+
+        test_case.assertTrue(True)
+
+@flow.unittest.skip_unless_1n1d()
+class TestFusedMsaTmu(flow.unittest.TestCase):
+    def test_fused_msa_softmax(test_case):
+
+        test_case.assertTrue(True)
+
 if __name__ == "__main__":
     unittest.main()

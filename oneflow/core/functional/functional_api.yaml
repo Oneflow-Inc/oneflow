@@ -2437,20 +2437,28 @@
   signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedMSASoftmaxGrad'
   bind_python: False
 
-- name: "fused_msa_sigmoid_mul"
-  signature: "Tensor (Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMul"
+- name: "fused_msa_biasadd_sigmoid_mul"
+  signature: "Tensor (Tensor b, Tensor g, Tensor x, Bool inplace=False) => FusedMSABiasaddSigmoidMul"
   bind_python: True
 
-- name: "fused_msa_sigmoid_mul_grad"
-  signature: "TensorTuple (Tensor dout, Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMulGrad"
+- name: "fused_msa_biasadd_sigmoid_mul_grad"
+  signature: "Tensor (Tensor dout, Tensor b, Tensor g, Tensor x, Bool inplace=False) => FusedMSABiasaddSigmoidMulGrad"
   bind_python: False
 
-- name: "fused_msa_dropout_add"
-  signature: "Tensor (Tensor x, Tensor mask, Tensor residual, Bool inplace=False) => FusedMSADropoutAdd"
+- name: "fused_msa_biasadd_dropout_residual"
+  signature: "Tensor (Tensor bias, Tensor x, Tensor mask, Tensor residual, Bool inplace=False) => FusedMSABiasaddDropoutResidual"
   bind_python: True
 
-- name: "fused_msa_dropout_add_grad"
-  signature: "Tensor (Tensor dout, Tensor mask, Bool inplace=False) => FusedMSADropoutAddGrad"
+- name: "fused_msa_biasadd_dropout_residual_grad"
+  signature: "Tensor (Tensor dout, Tensor mask, Bool inplace=False) => FusedMSABiasaddDropoutResidualGrad"
+  bind_python: False
+
+- name: "fused_msa_tmu"
+  signature: "Tensor (Tensor x1, Tensor b1, Tensor x2, Tensor b2, Tensor mask, Tensor residual, Bool inplace=False) => FusedMSATmu"
+  bind_python: True
+
+- name: "fused_msa_tmu_grad"
+  signature: "TensorTuple (Tensor dout, Tensor x1, Tensor b1, Tensor x2, Tensor b2, Tensor mask, Bool inplace=False) => FusedMSATmuGrad"
   bind_python: False
 
 - name: "grouped_matmul_bias"

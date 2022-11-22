@@ -2919,8 +2919,9 @@ def OneFlow_FusedMSASoftmaxGradOp : OneFlow_BaseOp<"fused_msa_softmax_grad", [No
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSASigmoidMulOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSABiasaddSigmoidMulOp : OneFlow_BaseOp<"fused_msa_biasadd_sigmoid_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
+    OneFlow_Tensor:$b,
     OneFlow_Tensor:$g,
     OneFlow_Tensor:$x
   );
@@ -2936,15 +2937,15 @@ def OneFlow_FusedMSASigmoidMulOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSASigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSABiasaddSigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_biasadd_sigmoid_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout,
+    OneFlow_Tensor:$b,
     OneFlow_Tensor:$g,
     OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$dg,
-    OneFlow_Tensor:$dx
+    OneFlow_Tensor:$dg
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$inplace
@@ -2955,8 +2956,9 @@ def OneFlow_FusedMSASigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_gra
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSADropoutAddOp : OneFlow_BaseOp<"fused_msa_dropout_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSABiasaddDropoutResidualOp : OneFlow_BaseOp<"fused_msa_biasadd_dropout_residual", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
+    OneFlow_Tensor:$bias,
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$mask,
     OneFlow_Tensor:$residual
@@ -2973,13 +2975,56 @@ def OneFlow_FusedMSADropoutAddOp : OneFlow_BaseOp<"fused_msa_dropout_add", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSADropoutAddGradOp : OneFlow_BaseOp<"fused_msa_dropout_add_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSABiasaddDropoutResidualGradOp : OneFlow_BaseOp<"fused_msa_biasadd_dropout_residual_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout,
     OneFlow_Tensor:$mask
   );
   let output = (outs
     OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedMSATmuOp : OneFlow_BaseOp<"fused_msa_tmu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$b1,
+    OneFlow_Tensor:$x2,
+    OneFlow_Tensor:$b2,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$residual
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedMSATmuGradOp : OneFlow_BaseOp<"fused_msa_tmu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout,
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$b1,
+    OneFlow_Tensor:$x2,
+    OneFlow_Tensor:$b2,
+    OneFlow_Tensor:$mask
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx1,
+    OneFlow_Tensor:$dx2
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$inplace

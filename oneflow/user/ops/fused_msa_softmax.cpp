@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -155,118 +158,142 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType g_type = ctx->InputDType("g", 0);
   DataType x_type = ctx->InputDType("x", 0);
+  DataType b_type = ctx->InputDType("b", 0);
   CHECK_EQ_OR_RETURN(g_type, x_type);
+  CHECK_EQ_OR_RETURN(b_type, x_type);
   ctx->SetOutputDType("out", 0, g_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
+  const Shape& b_shape = ctx->InputShape("b", 0);
   const Shape& g_shape = ctx->InputShape("g", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   CHECK_EQ_OR_RETURN(g_shape, x_shape);
+  const int32_t n = x_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(b_shape.At(0), x_shape.At(n - 1));
   ctx->SetOutputShape("out", 0, g_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSASigmoidMulOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddSigmoidMulOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const bool inplace = ctx->Attr<bool>("inplace");
   if (inplace) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("g", 0), 0).Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), 0)
+        .Split(user_op::OpArg("g", 0), 0)
+        .Split(user_op::OpArg("b", 0), 0)
+        .Build();
+  } else {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), 0)
+        .Split(user_op::OpArg("g", 0), 0)
+        .Split(user_op::OpArg("b", 0), 0)
+        .Split(user_op::OpArg("out", 0), 0)
+        .Build();
   }
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("g", 0), 0)
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType dout_type = ctx->InputDType("dout", 0);
   DataType x_type = ctx->InputDType("x", 0);
   DataType g_type = ctx->InputDType("g", 0);
+  DataType b_type = ctx->InputDType("b", 0);
   CHECK_EQ_OR_RETURN(g_type, dout_type);
   CHECK_EQ_OR_RETURN(x_type, dout_type);
+  CHECK_EQ_OR_RETURN(b_type, dout_type);
   const bool inplace = ctx->Attr<bool>("inplace");
   CHECK_EQ_OR_RETURN(inplace, false);
   ctx->SetOutputDType("dg", 0, g_type);
-  ctx->SetOutputDType("dx", 0, x_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const Shape& dout_shape = ctx->InputShape("dout", 0);
   const Shape& g_shape = ctx->InputShape("g", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& b_shape = ctx->InputShape("b", 0);
   CHECK_EQ_OR_RETURN(g_shape, dout_shape);
   CHECK_EQ_OR_RETURN(x_shape, dout_shape);
+  const int32_t n = x_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(b_shape.At(0), x_shape.At(n - 1));
   ctx->SetOutputShape("dg", 0, g_shape);
-  ctx->SetOutputShape("dx", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASigmoidMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSASigmoidMulGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
       .Split(user_op::OpArg("g", 0), 0)
+      .Split(user_op::OpArg("b", 0), 0)
       .Split(user_op::OpArg("out", 0), 0)
       .Split(user_op::OpArg("dg", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType x_type = ctx->InputDType("x", 0);
+  DataType bias_type = ctx->InputDType("bias", 0);
   DataType mask_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_type, x_type);
+  CHECK_EQ_OR_RETURN(bias_type, x_type);
   DataType res_type = ctx->InputDType("residual", 0);
   CHECK_EQ_OR_RETURN(res_type, x_type);
   ctx->SetOutputDType("out", 0, x_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSABiasaddDropoutResidualOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& bias_shape = ctx->InputShape("bias", 0);
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  CHECK_EQ_OR_RETURN(mask_shape, x_shape);
+  const int32_t n = x_shape.NumAxes();
+  // CHECK_EQ_OR_RETURN(mask_shape, x_shape);
+  CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(n - 1));
   const Shape& res_shape = ctx->InputShape("residual", 0);
   CHECK_EQ_OR_RETURN(res_shape, x_shape);
   ctx->SetOutputShape("out", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSADropoutAddOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const bool inplace = ctx->Attr<bool>("inplace");
   if (inplace) {
     ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("bias", 0))
         .Split(user_op::OpArg("x", 0), 0)
         .Split(user_op::OpArg("mask", 0), 0)
         .Split(user_op::OpArg("residual", 0), 0)
         .Build();
   } else {
     ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("bias", 0))
         .Split(user_op::OpArg("x", 0), 0)
         .Split(user_op::OpArg("mask", 0), 0)
         .Split(user_op::OpArg("residual", 0), 0)
@@ -276,7 +303,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualGradOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType dout_type = ctx->InputDType("dout", 0);
   DataType mask_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_type, dout_type);
@@ -286,25 +314,124 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
   const Shape& dout_shape = ctx->InputShape("dout", 0);
   const Shape& mask_shape = ctx->InputShape("mask", 0);
   CHECK_EQ_OR_RETURN(mask_shape, dout_shape);
+  auto db_shape = Shape();
+  auto axes = dout_shape.NumAxes();
+  db_shape.push_back(dout_shape.At(axes - 1));
   ctx->SetOutputShape("dx", 0, dout_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSADropoutAddGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSADropoutAddGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSABiasaddDropoutResidualGradOp::GetSbp(user_op::SbpContext* ctx)
+    -> Maybe<void> {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dout", 0), 0)
       .Split(user_op::OpArg("mask", 0), 0)
       .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
+
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType x1_type = ctx->InputDType("x1", 0);
+  DataType b1_type = ctx->InputDType("b1", 0);
+  DataType x2_type = ctx->InputDType("x2", 0);
+  DataType b2_type = ctx->InputDType("b2", 0);
+  DataType r_type = ctx->InputDType("residual", 0);
+  DataType mask_type = ctx->InputDType("mask", 0);
+  CHECK_EQ_OR_RETURN(b1_type, x1_type);
+  CHECK_EQ_OR_RETURN(x2_type, x1_type);
+  CHECK_EQ_OR_RETURN(b2_type, x1_type);
+  CHECK_EQ_OR_RETURN(r_type, x1_type);
+  CHECK_EQ_OR_RETURN(mask_type, x1_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  CHECK_EQ_OR_RETURN(inplace, false);
+  ctx->SetOutputDType("dx", 0, x1_type);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  const Shape& x1_shape = ctx->InputShape("x1", 0);
+  const Shape& b1_shape = ctx->InputShape("b1", 0);
+  const Shape& x2_shape = ctx->InputShape("x2", 0);
+  const Shape& b2_shape = ctx->InputShape("b2", 0);
+  const Shape& r_shape = ctx->InputShape("residual", 0);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  CHECK_EQ_OR_RETURN(x2_shape, x1_shape);
+  CHECK_EQ_OR_RETURN(r_shape, x1_shape);
+  auto axes = x1_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(b1_shape.At(0), x1_shape.At(axes - 1));
+  CHECK_EQ_OR_RETURN(b2_shape.At(0), x1_shape.At(axes - 1));
+  ctx->SetOutputShape("out", 0, x1_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSATmuOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x1", 0), 0)
+      .Broadcast(user_op::OpArg("b1", 0))
+      .Split(user_op::OpArg("x2", 0), 0)
+      .Broadcast(user_op::OpArg("b2", 0))
+      .Broadcast(user_op::OpArg("mask", 0))
+      .Split(user_op::OpArg("residual", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType dout_type = ctx->InputDType("dout", 0);
+  DataType x1_type = ctx->InputDType("x1", 0);
+  DataType b1_type = ctx->InputDType("b1", 0);
+  DataType x2_type = ctx->InputDType("x2", 0);
+  DataType b2_type = ctx->InputDType("b2", 0);
+  DataType mask_type = ctx->InputDType("mask", 0);
+  CHECK_EQ_OR_RETURN(x1_type, dout_type);
+  CHECK_EQ_OR_RETURN(b1_type, dout_type);
+  CHECK_EQ_OR_RETURN(x2_type, dout_type);
+  CHECK_EQ_OR_RETURN(b2_type, dout_type);
+  CHECK_EQ_OR_RETURN(mask_type, dout_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  CHECK_EQ_OR_RETURN(inplace, false);
+  ctx->SetOutputDType("dx1", 0, dout_type);
+  ctx->SetOutputDType("dx2", 0, dout_type);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const Shape& dout_shape = ctx->InputShape("dout", 0);
+  ctx->SetOutputShape("dx1", 0, dout_shape);
+  ctx->SetOutputShape("dx2", 0, dout_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSATmuGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSATmuGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dout", 0), 0)
+      .Split(user_op::OpArg("mask", 0), 0)
+      .Split(user_op::OpArg("dx1", 0), 0)
+      .Split(user_op::OpArg("dx2", 0), 0)
       .Build();
 
   return Maybe<void>::Ok();
