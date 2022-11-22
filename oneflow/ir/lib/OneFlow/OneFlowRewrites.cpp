@@ -45,7 +45,7 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
   attributes.append(llvm::StringRef("scale"), rewriter.getF32FloatAttr(scale));
   attributes.erase(dropout_op.rateAttrName());
-  return rewriter.create<oneflow::FusedBiasAddMaskScaleOp>(
+  return rewriter.create<FusedBiasAddMaskScaleOp>(
       dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands, attributes);
 }
 
