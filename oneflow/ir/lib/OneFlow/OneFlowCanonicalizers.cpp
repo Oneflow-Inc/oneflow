@@ -16,7 +16,7 @@ struct PutSeed : public OpRewritePattern<RandomMaskLikeOp> {
     if (op->hasAttr(op.seedAttrName())) {
       return failure();
     } else {
-      op->setAttr(op.seedAttrName(), GetDefaultSeed(rewriter));
+      op->setAttr(op.seedAttrName(), rewrites::GetDefaultSeed(rewriter));
       return success();
     }
   }

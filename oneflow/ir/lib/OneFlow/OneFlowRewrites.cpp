@@ -14,6 +14,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "OneFlow/OneFlowOps.h"
+#include "oneflow/core/framework/random_generator.h"
 
 using namespace mlir;
 
@@ -48,6 +49,11 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
                                                   operands, attributes);
 }
 
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -55,6 +61,11 @@ namespace rewrites {
 void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
+}
+
+mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
+  const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
+  return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
 }  // namespace rewrites

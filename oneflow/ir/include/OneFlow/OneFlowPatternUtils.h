@@ -5,11 +5,12 @@ namespace mlir {
 
 namespace oneflow {
 
-mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
-
 namespace rewrites {
+
+mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
 void populateRewrites(RewritePatternSet& patterns);
-}
+
+}  // namespace rewrites
 
 }  // namespace oneflow
 
