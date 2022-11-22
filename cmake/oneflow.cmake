@@ -385,6 +385,10 @@ if(BUILD_PYTHON)
     list(APPEND gen_pip_args --cuda=${CUDA_VERSION})
   endif()
 
+  if(BUILD_ROCM)
+    list(APPEND gen_pip_args --rocm=${DTK_VERSION})
+  endif()
+
   add_custom_target(
     of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
