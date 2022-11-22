@@ -1156,6 +1156,40 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FlashAttentionGradFunctor {
+ public:
+  FlashAttentionGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flash_attention_grad")
+                         .Input("out_grad")
+                         .Input("out")
+                         .Input("softmax_lse")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Input("cu_seqlens_q")
+                         .Input("cu_seqlens_k")
+                         .Output("query_grad")
+                         .Output("key_grad")
+                         .Output("value_grad")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& out,
+      const std::shared_ptr<one::Tensor>& softmax_lse, const std::shared_ptr<one::Tensor>& query,
+      const std::shared_ptr<one::Tensor>& key, const std::shared_ptr<one::Tensor>& value,
+      const std::shared_ptr<one::Tensor>& cu_seqlens_q,
+      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const float softmax_scale,
+      const bool causal, const float dropout_rate) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("softmax_scale", "causal", "dropout_rate");
+    attrs.SetAllAttrs(softmax_scale, causal, dropout_rate);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CublasBiasAddReluMatmulGradFunctor {
  public:
   CublasBiasAddReluMatmulGradFunctor() {
@@ -1565,6 +1599,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
+  m.add_functor<impl::FlashAttentionGradFunctor>("FlashAttentionGrad");
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
   m.add_functor<impl::FusedReluDropoutGradFunctor>("FusedReluDropoutGrad");

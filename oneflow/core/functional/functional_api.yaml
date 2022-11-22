@@ -2385,6 +2385,14 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1) => FusedScaleTril"
   bind_python: True
 
+- name: "flash_attention"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Float softmax_scale, Bool causal, Float dropout_rate) => FlashAttention"
+  bind_python: True
+
+- name: "flash_attention_grad"
+  signature: "TensorTuple (Tensor out_grad, Tensor out, Tensor softmax_lse, Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Float softmax_scale, Bool causal, Float dropout_rate) => FlashAttentionGrad"
+  bind_python: True
+
 - name: "fused_bias_add_gelu"
   signature: "Tensor (Tensor a, Tensor b, *, Int32 axis) => FusedBiasAddGelu"
   bind_python: True

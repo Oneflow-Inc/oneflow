@@ -2688,6 +2688,58 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FlashAttentionOp : OneFlow_BaseOp<"flash_attention", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$query,
+    OneFlow_Tensor:$key,
+    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$cu_seqlens_q,
+    OneFlow_Tensor:$cu_seqlens_k
+  );
+  let output = (outs
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$softmax_lse
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$causal,
+    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
+def OneFlow_FlashAttentionGradOp : OneFlow_BaseOp<"flash_attention_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$out_grad,
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$softmax_lse,
+    OneFlow_Tensor:$query,
+    OneFlow_Tensor:$key,
+    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$cu_seqlens_q,
+    OneFlow_Tensor:$cu_seqlens_k
+  );
+  let output = (outs
+    OneFlow_Tensor:$query_grad,
+    OneFlow_Tensor:$key_grad,
+    OneFlow_Tensor:$value_grad
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$causal,
+    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
 def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,

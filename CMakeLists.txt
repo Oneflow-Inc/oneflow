@@ -307,6 +307,12 @@ set(CUTLASS_URL
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 d7bb086af184aa4f24fa22e02f515bae)
 
+set(FLASH_ATTENTION_URL
+    https://github.com/Oneflow-Inc/flash-attention/archive/d80920c22c2484f1c76332f5393b3a2594851211.zip
+)
+use_mirror(VARIABLE FLASH_ATTENTION_URL URL ${FLASH_ATTENTION_URL})
+set(FLASH_ATTENTION_MD5 0cc400b822b2d7e034c04e54a79adf1a)
+
 include(cuda)
 add_subdirectory(external)
 include(third_party)

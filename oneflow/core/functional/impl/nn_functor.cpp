@@ -3324,6 +3324,36 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
+class FlashAttentionFunctor {
+ public:
+  FlashAttentionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flash_attention")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Input("cu_seqlens_q")
+                         .Input("cu_seqlens_k")
+                         .Output("out")
+                         .Output("softmax_lse")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& query,
+                                const std::shared_ptr<one::Tensor>& key,
+                                const std::shared_ptr<one::Tensor>& value,
+                                const std::shared_ptr<one::Tensor>& cu_seqlens_q,
+                                const std::shared_ptr<one::Tensor>& cu_seqlens_k,
+                                const float softmax_scale, const bool causal,
+                                const float dropout_rate) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("softmax_scale", "causal", "dropout_rate");
+    attrs.SetAllAttrs(softmax_scale, causal, dropout_rate);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
@@ -4927,6 +4957,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedBiasAddScaleMaskSoftmaxDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::FlashAttentionFunctor>("FlashAttention");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
