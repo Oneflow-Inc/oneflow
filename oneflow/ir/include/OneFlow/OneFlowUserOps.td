@@ -9867,6 +9867,25 @@ def OneFlow_IndexAddOp : OneFlow_BaseOp<"index_add", [NoSideEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_IndexAddOp : OneFlow_BaseOp<"index_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index,
+    OneFlow_Tensor:$source
+  );
+  let output = (outs
+    OneFlow_Tensor:$output
+  );
+  let attrs = (ins
+    SI64Attr: $dim,
+    F32Attr: $alpha
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_AsStridedGradOp : OneFlow_BaseOp<"as_strided_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,

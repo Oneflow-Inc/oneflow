@@ -49,7 +49,7 @@ __global__ void index_add_cuda_kernel(const int64_t n, const T* input, const Ind
   const int64_t stride_source_dim = stride * source_dim;
   CUDA_1D_KERNEL_LOOP(i, n) {
     int64_t pre_index = i / stride_source_dim;
-    int64_t dim_index = (i - i / stride_source_dim * stride_source_dim) / stride;
+    int64_t dim_index = (i - pre_index * stride_source_dim) / stride;
     IndexT source_dim_idx = index[dim_index];
     int64_t output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride;
     cuda::atomic::Add(output + output_index, static_cast<T>(alpha) * source[i]);

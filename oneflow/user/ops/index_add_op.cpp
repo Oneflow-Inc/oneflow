@@ -30,18 +30,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IndexAddOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& input_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
-  int64_t dim = ctx->Attr<int64_t>("dim");
-  FOR_RANGE(int64_t, i, 0, input_tensor.shape().NumAxes()) {
-    if (i != dim) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), i)
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("source", 0), i)
-          .Split(user_op::OpArg("output", 0), i)
-          .Build();
-    }
-  }
+  // TODO(yangzhimin): support more valid sbp signature.
   return Maybe<void>::Ok();
 }
 
