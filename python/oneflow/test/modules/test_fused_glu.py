@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import unittest
 import time
+import datetime
 import numpy as np
 from collections import OrderedDict
 
@@ -76,6 +77,43 @@ class Glu(nn.Module):
             return hidden_state * flow._C.fast_gelu(gate)
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
+
+def _test_glu_split_profiling(test_case, params: dict):
+    # config test data
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
+    act = params["act"]
+
+    # generate random input
+    x = np.random.randn(2, m, k)
+    w = np.random.randn(n, k)  # transpose
+    # w_t = np.transpose(weight).contiguous() #sync
+    b = np.random.randn(n)
+    v = np.random.randn(n, k)  # transpose
+    c = np.random.randn(n)
+
+    # transfer to gpu memory
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
+    input_tensor_v = flow.FloatTensor(v).to("cuda")
+    input_tensor_c = flow.FloatTensor(c).to("cuda")
+
+    flow_module = Glu()
+    begin = datetime.datetime.now()
+    origin_output_tensor_y = flow_module.forward(
+        x=input_tensor_x,
+        w=input_tensor_w,
+        b=input_tensor_b,
+        v=input_tensor_v,
+        c=input_tensor_c,
+        split_mode=True,
+        activation=act,
+    )
+    end = datetime.datetime.now()
+    interval = end-begin
+    print(interval.total_seconds())
 
 def _test_fused_glu_split_profiling(test_case, params: dict):
     # config test data
@@ -162,6 +200,38 @@ def _test_fused_glu_split(test_case, params: dict):
             rtol=1e-4,
         )
     )
+
+def _test_glu_profiling(test_case, params: dict):
+    # config test data
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
+    act = params["act"]
+
+    # generate random input
+    x = np.random.randn(2, m, k)
+    w = np.random.randn(n * 2, k)  # transpose
+    # w_t = np.transpose(weight).contiguous() #sync
+    b = np.random.randn(n * 2)
+
+    # transfer tensors to gpu memory
+    input_tensor_x = flow.FloatTensor(x).to("cuda")
+    input_tensor_w = flow.FloatTensor(w).to("cuda")
+    input_tensor_b = flow.FloatTensor(b).to("cuda")
+
+    # test: naive result
+    flow_module = Glu()
+    begin = datetime.datetime.now()
+    origin_output_tensor_y = flow_module.forward(
+        x=input_tensor_x,
+        w=input_tensor_w,
+        b=input_tensor_b,
+        split_mode=False,
+        activation=act,
+    )
+    end = datetime.datetime.now()
+    interval = end-begin
+    print(interval.total_seconds())
 
 def _test_fused_glu_profiling(test_case, params: dict):
     # config test data
@@ -250,6 +320,8 @@ class TestFusedGlu(flow.unittest.TestCase):
             arg_dict["test_fun"] = [
                 _test_fused_glu_profiling,
                 _test_fused_glu_split_profiling,
+                _test_glu_profiling,
+                _test_glu_split_profiling
             ]
         else:
             # for functionality test
@@ -299,6 +371,7 @@ class TestFusedGlu(flow.unittest.TestCase):
         
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+            
 
 
 if __name__ == "__main__":
