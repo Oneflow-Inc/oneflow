@@ -198,6 +198,7 @@ Normalization Layers
     nn.InstanceNorm3d 
     nn.LayerNorm
     nn.RMSLayerNorm
+    nn.RMSNorm
 
 Recurrent Layers
 ----------------
