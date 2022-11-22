@@ -41,6 +41,30 @@ namespace oneflow {
 
 namespace {
 
+static std::atomic<int64_t> uniqID{0};
+
+std::string getUniqName(llvm::StringRef name) {
+  uniqID += 1;
+  return name.str() + "-mlir-gen-" + std::to_string(uniqID);
+}
+
+static Operation* CopyUserOpAttrs(PatternRewriter& rewriter, Operation* src, Operation* dst) {
+  dst->setAttr(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+               OpTrait::IsOpConfCompatible<void>::getDeviceTag(src));
+  dst->setAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+               OpTrait::IsOpConfCompatible<void>::getDeviceName(src));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(src)) {
+    dst->setAttr(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(src)) {
+    dst->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+  }
+  dst->setAttr(
+      OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+      rewriter.getStringAttr(getUniqName(OpTrait::IsOpConfCompatible<void>::getOpName(src).str())));
+  return dst;
+}
+
 static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter, Value a, Value b,
                                                        Value mask, Attribute axis, Attribute rate,
                                                        Operation* dropout) {
@@ -76,6 +100,7 @@ namespace rewrites {
 void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
+  patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
