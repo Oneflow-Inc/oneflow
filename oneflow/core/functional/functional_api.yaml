@@ -2649,6 +2649,14 @@
     ]
   bind_python: True
 
+- name: "index_add"
+  signature: "Tensor (Tensor input, Int64 dim, Tensor index, Tensor source, Scalar alpha=1.0) => IndexAdd"
+  bind_python: True
+
+- name: "index_add_"
+  signature: "Tensor (Tensor input, Int64 dim, Tensor index, Tensor source, Scalar alpha=1.0) => IndexAddInplace"
+  bind_python: True
+
 - name: "rnn_tanh_cell"
   signature: "Tensor (Tensor input, Tensor hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => RnnTanhCell"
   bind_python: True
