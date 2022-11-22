@@ -2967,6 +2967,9 @@ def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_gra
     OneFlow_Tensor:$drho2,
     OneFlow_Tensor:$dc2
   );
+  let attrs = (ins
+    F32Attr: $eps
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

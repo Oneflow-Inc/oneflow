@@ -3290,6 +3290,57 @@ class FusedGetBounddingBoxesCoordGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGetCiouResultFunctor {
+ public:
+  FusedGetCiouResultFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result")
+                         .Input("v")
+                         .Input("iou")
+                         .Input("rho2")
+                         .Input("c2")
+                         .Output("y")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& v,
+                           const std::shared_ptr<one::Tensor>& iou,
+                           const std::shared_ptr<one::Tensor>& rho2,
+                           const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {v, iou, rho2, c2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouResultGradFunctor {
+ public:
+  FusedGetCiouResultGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result_grad")
+                         .Input("dy")
+                         .Input("v")
+                         .Input("iou")
+                         .Input("rho2")
+                         .Output("c2")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& v,
+                                const std::shared_ptr<one::Tensor>& iou,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, v, iou, rho2, c2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3409,6 +3460,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
   m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
   m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
+  m.add_functor<impl::FusedGetCiouResultFunctor>("FusedGetCiouResult");
+  m.add_functor<impl::FusedGetCiouResultGradFunctor>("FusedGetCiouResultGrad");
 };
 
 }  // namespace functional
