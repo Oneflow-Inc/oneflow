@@ -38,7 +38,7 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   attributes.set("axis", axis);
   attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                  rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(dropout).str()
-                                        + "fuse_bias_add"));
+                                        + "-fuse-bias-add"));
   float scale = 1.0f;
   float rate_float = rate.cast<FloatAttr>().getValueAsDouble();
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
