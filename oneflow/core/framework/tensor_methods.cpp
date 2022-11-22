@@ -524,8 +524,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
-      (*in_grads)[0] =
-          JUST(functional::AsStridedGrad(out_grads[0], input, sizes, strides, storage_offset));
+      (*in_grads)[0] = JUST(AsStridedGrad(out_grads[0], input, sizes, strides, storage_offset));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
