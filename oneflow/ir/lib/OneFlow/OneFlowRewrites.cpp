@@ -35,17 +35,18 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   operands.push_back(a);
   operands.push_back(b);
   operands.push_back(mask_op.out());
-  NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
-  fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), axis);
+  NamedAttrList attributes = dropout_op->getAttrs();
+  attributes.append(llvm::StringRef("axis"), axis);
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(dropout).str()
+                                        + "fuse_bias_add"));
   float scale = 1.0f;
   float rate_float = rate.cast<FloatAttr>().getValueAsDouble();
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
-  fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"),
-                                           rewriter.getF32FloatAttr(scale));
-  fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+  attributes.append(llvm::StringRef("scale"), rewriter.getF32FloatAttr(scale));
+  attributes.erase(dropout_op.rateAttrName());
   return rewriter.create<oneflow::FusedBiasAddMaskScaleOp>(
-      dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
-      fused_bias_add_dropout_attributes);
+      dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands, attributes);
 }
 
 }  // namespace
