@@ -26,28 +26,29 @@ import numpy as np
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
+import oneflow.nn as nn
 
-from networks.resnet50 import resnet50
 
 
-def _test_okl_resnet(test_case):
+def _test_okl_conv2d(test_case):
     x = flow.randn(2, 3, 224, 224)
-    resnet = resnet50()
     x = x.cuda()
-    resnet.to("cuda")
+    conv = nn.Conv2d( 3, 2, kernel_size=7, stride=2, padding=3, bias=False).to("cuda")
 
-    eager_res = resnet(x)
+    eager_res = conv(x)
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.resnet = resnet
+
+            self.net = conv
 
         def build(self, x):
-            return self.resnet(x)
+            return self.net(x)
 
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x)
@@ -59,8 +60,8 @@ def _test_okl_resnet(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestOKLResNet(flow.unittest.TestCase):
     @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    def test_okl_resnet(test_case):
-        _test_okl_resnet(test_case)
+    def test_okl_conv2d(test_case):
+        _test_okl_conv2d(test_case)
 
 
 if __name__ == "__main__":
