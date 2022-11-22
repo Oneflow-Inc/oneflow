@@ -121,7 +121,7 @@ from oneflow.nn.modules.loss import (
     CombinedMarginLoss,
     TripletMarginLoss,
 )
-from oneflow.nn.modules.normalization import GroupNorm, LayerNorm, RMSLayerNorm
+from oneflow.nn.modules.normalization import GroupNorm, LayerNorm, RMSLayerNorm, RMSNorm
 from oneflow.nn.modules.padding import (
     ConstantPad1d,
     ConstantPad2d,
@@ -140,6 +140,9 @@ from oneflow.nn.modules.pooling import (
     MaxPool1d,
     MaxPool2d,
     MaxPool3d,
+    MaxUnpool1d,
+    MaxUnpool2d,
+    MaxUnpool3d,
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,

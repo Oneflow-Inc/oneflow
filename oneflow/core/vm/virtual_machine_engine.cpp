@@ -431,7 +431,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_instruction_list.list_head_.list_head_.container_ and
   // pending_instruction_list.list_head_.list_head_.size_ is not a fatal error because
-  // VirtualMachineEngine::Schedule is always in a buzy loop. All instructions will get handled
+  // VirtualMachineEngine::Schedule is always in a busy loop. All instructions will get handled
   // eventually.
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_instruction_list().size()` used here, because VirtualMachineEngine::Schedule is more
