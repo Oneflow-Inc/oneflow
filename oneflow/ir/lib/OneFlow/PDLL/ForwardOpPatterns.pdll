@@ -11,7 +11,9 @@ Pattern {
   let scope_symbol_id: Attr;
   let axis: Attr;
   let op =
-    op<oneflow.dropout>(op<oneflow.bias_add>(a: Value, b: Value) {device_name = device_name, axis = axis}) {
+    op<oneflow.dropout>(
+      op<oneflow.bias_add>(a: Value, b: Value) {axis = axis,
+      device_name = device_name, device_tag = device_tag}) {
       rate = rate, op_name = op_name,
       device_name = device_name, device_tag = device_tag, hierarchy = hierarchy, scope_symbol_id = scope_symbol_id
     } -> (out: Type, mask: Type);
