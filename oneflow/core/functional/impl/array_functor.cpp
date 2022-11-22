@@ -3375,12 +3375,12 @@ class FillTensorFunctor {
 class IndexAddFunctor {
              .AddInputs({input, source})
              .Apply());
-    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, input_tuple.at(1)}, attrs);
-  }
+             TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+             return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, input_tuple.at(1)}, attrs);
+}
 
- private:
-  std::shared_ptr<OpExpr> op_;
+private : std::shared_ptr<OpExpr>
+              op_;
 };
 
 class IndexAddInplaceFunctor {
@@ -3459,8 +3459,8 @@ class BroadcastTensorsFunctor {
 };
 class BinCountFunctor {
  public:
-    op_ = CHECK_JUST(OpBuilder("bincount").Input("in").Output("out").Build());
-    weight_op_ =
+  op_ = CHECK_JUST(OpBuilder("bincount").Input("in").Output("out").Build());
+  weight_op_ =
   }
 
                            const Optional<int64_t>& minlength) const {
@@ -3473,184 +3473,182 @@ class BinCountFunctor {
       if (x->is_global()) { local_tensor = JUST(GlobalToLocal(x, false)); }
       int64_t min = 0;
       const auto& callback_min =
-            SyncAutoMemcpy(stream, &min, eager_blob_object->dptr(), sizeof(min),
-                           memory::MakeHostMemCase(), eager_blob_object->mem_case());
+          SyncAutoMemcpy(stream, &min, eager_blob_object->dptr(), sizeof(min),
+                         memory::MakeHostMemCase(), eager_blob_object->mem_case());
       JUST(SyncAccessTensorWithTimeOut(tensor_min, callback_min, "const"));
       CHECK_GE_OR_RETURN(min, 0) << "bincount only supports 1-d non-negative integral inputs.";
       auto tensor_max = JUST(functional::Max(local_tensor));
       const auto& callback_max =
-            SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
-                           memory::MakeHostMemCase(), eager_blob_object->mem_case());
+          SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
+                         memory::MakeHostMemCase(), eager_blob_object->mem_case());
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback_max, "const"));
       max += 1;
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
-    if (minlength) {
-      max = std::max(JUST(minlength), max);
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
+      if (minlength) { max = std::max(JUST(minlength), max); }
+      attrs.SetAllAttrs(max);
+      if (weight) {
+        CHECK_EQ_OR_RETURN(JUST(weight)->nelement(), x->nelement())
+            << "input and weights should have the same length";
+        return OpInterpUtil::Dispatch<Tensor>(*weight_op_, {x, JUST(weight)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      }
     }
-    attrs.SetAllAttrs(max);
-    if (weight) {
-      CHECK_EQ_OR_RETURN(JUST(weight)->nelement(), x->nelement())
-          << "input and weights should have the same length";
-      return OpInterpUtil::Dispatch<Tensor>(*weight_op_, {x, JUST(weight)}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
-  }
 
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> weight_op_;
-};
+   private:
+    std::shared_ptr<OpExpr> op_;
+    std::shared_ptr<OpExpr> weight_op_;
+  };
 
-}  // namespace impl
+  }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
-  m.add_functor<impl::ArgMinFunctor>("ArgMin");
-  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
-  m.add_functor<impl::ConstantFunctor>("Constant");
-  m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
-  m.add_functor<impl::EmptyFunctor>("Empty");
-  m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
-  m.add_functor<impl::OnesLikeFunctor>("OnesLike");
-  m.add_functor<impl::FlattenFunctor>("Flatten");
-  m.add_functor<impl::FillFunctor>("Fill");
-  m.add_functor<impl::FillTensorFunctor>("FillTensor");
-  m.add_functor<impl::WhereFunctor>("Where");
-  m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
-  m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
-  m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
-  m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
-  m.add_functor<impl::NonZeroFunctor>("NonZero");
-  m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
-  m.add_functor<impl::ConcatFunctor>("Concat");
-  m.add_functor<impl::StackFunctor>("Stack");
-  m.add_functor<impl::StackGradFunctor>("StackGrad");
-  m.add_functor<impl::AtLeast1DFunctor>("AtLeast1D");
-  m.add_functor<impl::AtLeast1DListFunctor>("AtLeast1D");
-  m.add_functor<impl::AtLeast2DFunctor>("AtLeast2D");
-  m.add_functor<impl::AtLeast2DListFunctor>("AtLeast2D");
-  m.add_functor<impl::AtLeast3DFunctor>("AtLeast3D");
-  m.add_functor<impl::AtLeast3DListFunctor>("AtLeast3D");
-  m.add_functor<impl::HStackFunctor>("HStack");
-  m.add_functor<impl::ColumnStackFunctor>("ColumnStack");
-  m.add_functor<impl::VStackFunctor>("VStack");
-  m.add_functor<impl::RowStackFunctor>("RowStack");
-  m.add_functor<impl::DStackFunctor>("DStack");
-  m.add_functor<impl::ExpandFunctor>("Expand");
-  m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
-  m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
-  m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
-  m.add_functor<impl::SqueezeFunctor>("Squeeze");
-  m.add_functor<impl::RollFunctor>("Roll");
-  m.add_functor<impl::GatherFunctor>("Gather");
-  m.add_functor<impl::DimGatherFunctor>("DimGather");
-  m.add_functor<impl::ArgSortFunctor>("ArgSort");
-  m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
-  m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
-  m.add_functor<impl::GatherNdFunctor>("GatherNd");
-  m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
-  m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
-  m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
-  m.add_functor<impl::ReshapeFunctor>("Reshape");
-  m.add_functor<impl::ViewFunctor>("View");
-  m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
-  m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
-  m.add_functor<impl::NarrowFunctor>("Narrow");
-  m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
-  m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
-  m.add_functor<impl::SliceFunctor>("Slice");
-  m.add_functor<impl::SliceGradFunctor>("SliceGrad");
-  m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
-  m.add_functor<impl::CopyFunctor>("Copy");
-  m.add_functor<impl::FlipFunctor>("Flip");
-  m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
-  m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
-  m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
-  m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
-  m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
-  m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
-  m.add_functor<impl::UpsampleBilinear2DGradFunctor>("UpsampleBilinear2DGrad");
-  m.add_functor<impl::UpsampleLinear1DFunctor>("UpsampleLinear1D");
-  m.add_functor<impl::UpsampleLinear1DGradFunctor>("UpsampleLinear1DGrad");
-  m.add_functor<impl::UpsampleNearest1DFunctor>("UpsampleNearest1D");
-  m.add_functor<impl::UpsampleNearest1DGradFunctor>("UpsampleNearest1DGrad");
-  m.add_functor<impl::UpsampleBicubic2DFunctor>("UpsampleBicubic2D");
-  m.add_functor<impl::UpsampleBicubic2DGradFunctor>("UpsampleBicubic2DGrad");
-  m.add_functor<impl::UpsampleNearest3DFunctor>("UpsampleNearest3D");
-  m.add_functor<impl::UpsampleNearest3DGradFunctor>("UpsampleNearest3DGrad");
-  m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
-  m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
-  m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
-  m.add_functor<impl::UnsortedSegmentSumFunctor>("UnsortedSegmentSum");
-  m.add_functor<impl::TrilFunctor>("Tril");
-  m.add_functor<impl::TriuFunctor>("Triu");
-  m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");
-  m.add_functor<impl::DiagFunctor>("Diag");
-  m.add_functor<impl::DiagGradFunctor>("DiagGrad");
-  m.add_functor<impl::DiagonalFunctor>("Diagonal");
-  m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
-  m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
-  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kUpdate>>("DimScatterUpdate");
-  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kAdd>>("DimScatterAdd");
-  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kMultiply>>("DimScatterMul");
-  m.add_functor<impl::DimScatterFunctor>("DimScatter");
-  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kUpdate>>(
-      "DimScatterUpdateScalar");
-  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kAdd>>(
-      "DimScatterAddScalar");
-  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kMultiply>>(
-      "DimScatterMulScalar");
-  m.add_functor<impl::DimScatterScalarFunctor>("DimScatterScalar");
-  m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
+  ONEFLOW_FUNCTION_LIBRARY(m) {
+    m.add_functor<impl::ArgMaxFunctor>("ArgMax");
+    m.add_functor<impl::ArgMinFunctor>("ArgMin");
+    m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
+    m.add_functor<impl::ConstantFunctor>("Constant");
+    m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
+    m.add_functor<impl::EmptyFunctor>("Empty");
+    m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
+    m.add_functor<impl::OnesLikeFunctor>("OnesLike");
+    m.add_functor<impl::FlattenFunctor>("Flatten");
+    m.add_functor<impl::FillFunctor>("Fill");
+    m.add_functor<impl::FillTensorFunctor>("FillTensor");
+    m.add_functor<impl::WhereFunctor>("Where");
+    m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
+    m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
+    m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
+    m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+    m.add_functor<impl::NonZeroFunctor>("NonZero");
+    m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
+    m.add_functor<impl::ConcatFunctor>("Concat");
+    m.add_functor<impl::StackFunctor>("Stack");
+    m.add_functor<impl::StackGradFunctor>("StackGrad");
+    m.add_functor<impl::AtLeast1DFunctor>("AtLeast1D");
+    m.add_functor<impl::AtLeast1DListFunctor>("AtLeast1D");
+    m.add_functor<impl::AtLeast2DFunctor>("AtLeast2D");
+    m.add_functor<impl::AtLeast2DListFunctor>("AtLeast2D");
+    m.add_functor<impl::AtLeast3DFunctor>("AtLeast3D");
+    m.add_functor<impl::AtLeast3DListFunctor>("AtLeast3D");
+    m.add_functor<impl::HStackFunctor>("HStack");
+    m.add_functor<impl::ColumnStackFunctor>("ColumnStack");
+    m.add_functor<impl::VStackFunctor>("VStack");
+    m.add_functor<impl::RowStackFunctor>("RowStack");
+    m.add_functor<impl::DStackFunctor>("DStack");
+    m.add_functor<impl::ExpandFunctor>("Expand");
+    m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
+    m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+    m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
+    m.add_functor<impl::SqueezeFunctor>("Squeeze");
+    m.add_functor<impl::RollFunctor>("Roll");
+    m.add_functor<impl::GatherFunctor>("Gather");
+    m.add_functor<impl::DimGatherFunctor>("DimGather");
+    m.add_functor<impl::ArgSortFunctor>("ArgSort");
+    m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
+    m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
+    m.add_functor<impl::GatherNdFunctor>("GatherNd");
+    m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
+    m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
+    m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
+    m.add_functor<impl::ReshapeFunctor>("Reshape");
+    m.add_functor<impl::ViewFunctor>("View");
+    m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
+    m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
+    m.add_functor<impl::NarrowFunctor>("Narrow");
+    m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
+    m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
+    m.add_functor<impl::SliceFunctor>("Slice");
+    m.add_functor<impl::SliceGradFunctor>("SliceGrad");
+    m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
+    m.add_functor<impl::CopyFunctor>("Copy");
+    m.add_functor<impl::FlipFunctor>("Flip");
+    m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
+    m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
+    m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
+    m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
+    m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
+    m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
+    m.add_functor<impl::UpsampleBilinear2DGradFunctor>("UpsampleBilinear2DGrad");
+    m.add_functor<impl::UpsampleLinear1DFunctor>("UpsampleLinear1D");
+    m.add_functor<impl::UpsampleLinear1DGradFunctor>("UpsampleLinear1DGrad");
+    m.add_functor<impl::UpsampleNearest1DFunctor>("UpsampleNearest1D");
+    m.add_functor<impl::UpsampleNearest1DGradFunctor>("UpsampleNearest1DGrad");
+    m.add_functor<impl::UpsampleBicubic2DFunctor>("UpsampleBicubic2D");
+    m.add_functor<impl::UpsampleBicubic2DGradFunctor>("UpsampleBicubic2DGrad");
+    m.add_functor<impl::UpsampleNearest3DFunctor>("UpsampleNearest3D");
+    m.add_functor<impl::UpsampleNearest3DGradFunctor>("UpsampleNearest3DGrad");
+    m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
+    m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
+    m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+    m.add_functor<impl::UnsortedSegmentSumFunctor>("UnsortedSegmentSum");
+    m.add_functor<impl::TrilFunctor>("Tril");
+    m.add_functor<impl::TriuFunctor>("Triu");
+    m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");
+    m.add_functor<impl::DiagFunctor>("Diag");
+    m.add_functor<impl::DiagGradFunctor>("DiagGrad");
+    m.add_functor<impl::DiagonalFunctor>("Diagonal");
+    m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
+    m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
+    m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kUpdate>>("DimScatterUpdate");
+    m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kAdd>>("DimScatterAdd");
+    m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kMultiply>>("DimScatterMul");
+    m.add_functor<impl::DimScatterFunctor>("DimScatter");
+    m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kUpdate>>(
+        "DimScatterUpdateScalar");
+    m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kAdd>>(
+        "DimScatterAddScalar");
+    m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kMultiply>>(
+        "DimScatterMulScalar");
+    m.add_functor<impl::DimScatterScalarFunctor>("DimScatterScalar");
+    m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
 
-  m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
-  m.add_functor<impl::CastLikeFunctor>("CastLike");
-  m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
-  m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
-  m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
-  m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
-  m.add_functor<impl::DivGradFunctor>("DivGrad");
-  m.add_functor<impl::IdentityFunctor>("Identity");
-  m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
-  m.add_functor<impl::AmpBlackIdentityFunctor>("AmpBlackIdentity");
-  m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
-  m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
-  m.add_functor<impl::SplitFunctor>("Split");
-  m.add_functor<impl::UnbindFunctor>("Unbind");
-  m.add_functor<impl::ChunkFunctor>("Chunk");
-  m.add_functor<impl::SplitLikeFunctor>("SplitLike");
-  m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
-  m.add_functor<impl::BatchGatherFunctor>("BatchGather");
-  m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
-  m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
-  m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
-  m.add_functor<impl::MeshgridFunctor>("Meshgrid");
-  m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
-  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor>("To");
-  m.add_functor<impl::TopKFunctor>("TopK");
-  m.add_functor<impl::InTopKFunctor>("InTopK");
-  m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
-  m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
-  m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
-  m.add_functor<impl::RepeatFunctor>("Repeat");
-  m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
-  m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
-  m.add_functor<impl::RepeatInterLeaveTensorFunctor>("RepeatInterLeaveTensor");
-  m.add_functor<impl::TileFunctor>("Tile");
-  m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
-  m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
-  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
-  m.add_functor<impl::PinMemoryFunctor>("PinMemory");
-  m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
-  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
-  m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
-  m.add_functor<impl::BinCountFunctor>("BinCount");
-  m.add_functor<impl::IndexAddFunctor>("IndexAdd");
-  m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
-};
+    m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+    m.add_functor<impl::CastLikeFunctor>("CastLike");
+    m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
+    m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
+    m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
+    m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
+    m.add_functor<impl::DivGradFunctor>("DivGrad");
+    m.add_functor<impl::IdentityFunctor>("Identity");
+    m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
+    m.add_functor<impl::AmpBlackIdentityFunctor>("AmpBlackIdentity");
+    m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
+    m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
+    m.add_functor<impl::SplitFunctor>("Split");
+    m.add_functor<impl::UnbindFunctor>("Unbind");
+    m.add_functor<impl::ChunkFunctor>("Chunk");
+    m.add_functor<impl::SplitLikeFunctor>("SplitLike");
+    m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
+    m.add_functor<impl::BatchGatherFunctor>("BatchGather");
+    m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
+    m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
+    m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
+    m.add_functor<impl::MeshgridFunctor>("Meshgrid");
+    m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
+    m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
+                  impl::ToDeviceFunctor>("To");
+    m.add_functor<impl::TopKFunctor>("TopK");
+    m.add_functor<impl::InTopKFunctor>("InTopK");
+    m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
+    m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
+    m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
+    m.add_functor<impl::RepeatFunctor>("Repeat");
+    m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
+    m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
+    m.add_functor<impl::RepeatInterLeaveTensorFunctor>("RepeatInterLeaveTensor");
+    m.add_functor<impl::TileFunctor>("Tile");
+    m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
+    m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
+    m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
+    m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+    m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
+    m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+    m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
+    m.add_functor<impl::BinCountFunctor>("BinCount");
+    m.add_functor<impl::IndexAddFunctor>("IndexAdd");
+    m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
+  };
 
-}  // namespace functional
-}  // namespace one
-}  // namespace oneflow
+  }  // namespace functional
+  }  // namespace one
+  }  // namespace oneflow

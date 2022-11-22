@@ -142,6 +142,7 @@ class GlobalTaskGraph final : public TaskGraph {
     JUST(graph->Init());
     return graph;
   }
+
  private:
   GlobalTaskGraph() = default;
   Maybe<void> Init();
