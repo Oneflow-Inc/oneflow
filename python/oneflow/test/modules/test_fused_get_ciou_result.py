@@ -32,7 +32,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
     for _ in range(4):
         tmp = flow.tensor(
             np.random.uniform(0, 1, shape),
-            dtype=flow.float64,
+            dtype=flow.float32,
             device=flow.device(device),
             requires_grad=True,
         )
@@ -40,7 +40,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
         torch_x.append(
             torch.tensor(
                 tmp.numpy(),
-                dtype=torch.float64,
+                dtype=torch.float32,
                 device=torch.device(device),
                 requires_grad=True,
             )
@@ -57,7 +57,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
         torch_alpha = torch_v / (torch_v - torch_iou + (1.0 + eps))
     torch_y = torch_iou - (torch_rho2 / torch_c2 + torch_v * torch_alpha)
 
-    def compare(a, b, rtol=1e-5, atol=1e-8):
+    def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
                 a.detach().cpu().numpy(), b.detach().cpu().numpy(), rtol=rtol, atol=atol
@@ -84,8 +84,9 @@ class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_get_ciou_result_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(492), (691, 1), (1162, 1)]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        for i in range(1000):
+            for arg in GenArgList(arg_dict):
+                arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
