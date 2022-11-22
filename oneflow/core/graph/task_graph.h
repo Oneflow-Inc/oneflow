@@ -136,8 +136,15 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 class GlobalTaskGraph final : public TaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalTaskGraph);
-  explicit GlobalTaskGraph() : TaskGraph() {}
   ~GlobalTaskGraph() = default;
+  static Maybe<GlobalTaskGraph> New() {
+    std::shared_ptr<GlobalTaskGraph> graph(new GlobalTaskGraph());
+    JUST(graph->Init());
+    return graph;
+  }
+ private:
+  GlobalTaskGraph() = default;
+  Maybe<void> Init();
 };
 
 class BoxingTaskGraphProto;

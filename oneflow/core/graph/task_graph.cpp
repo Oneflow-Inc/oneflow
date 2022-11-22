@@ -455,40 +455,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph() {
-  OpGraph* op_graph = Singleton<OpGraph>::Get();
-  sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
-  boxing_logger_ = CreateBoxingLogger();
-  hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
-  HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
-
-  op_graph->ForEachNode([&](const OpNode* op_node) {
-    std::vector<CompTaskNode*>* sorted_comp_tasks = &(op_node2sorted_comp_tasks[op_node]);
-    GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
-    for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
-  });
-
-  op_graph->ForEachEdge([&](const OpEdge* op_edge) {
-    BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
-    (this->*method)(op_edge, op_node2sorted_comp_tasks.at(op_edge->src_node()),
-                    op_node2sorted_comp_tasks.at(op_edge->dst_node()));
-  });
-
-  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
-    const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
-    const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
-    if (src->op().op_conf().has_src_subset_tick_conf()) {
-      UNIMPLEMENTED();
-    } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
-      UNIMPLEMENTED();
-    } else {
-      ConnectCtrlEdges(src_task_nodes, dst_task_nodes);
-    }
-  });
-
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
-}
-
+TaskGraph::TaskGraph() = default;
 TaskGraph::~TaskGraph() = default;
 
 TaskEdge* TaskGraph::NewTaskEdgeWithLbi(const LogicalBlobId& lbi) {
@@ -931,6 +898,41 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
   ConnectWithLbi(proxy_node, dst_node, lbi);
+}
+
+Maybe<void> GlobalTaskGraph::Init() {
+  OpGraph* op_graph = Singleton<OpGraph>::Get();
+  sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+  boxing_logger_ = CreateBoxingLogger();
+  hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
+  HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
+
+  op_graph->ForEachNode([&](const OpNode* op_node) {
+    std::vector<CompTaskNode*>* sorted_comp_tasks = &(op_node2sorted_comp_tasks[op_node]);
+    GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
+    for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
+  });
+
+  op_graph->ForEachEdge([&](const OpEdge* op_edge) {
+    BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
+    (this->*method)(op_edge, op_node2sorted_comp_tasks.at(op_edge->src_node()),
+                    op_node2sorted_comp_tasks.at(op_edge->dst_node()));
+  });
+
+  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
+    const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
+    const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
+    if (src->op().op_conf().has_src_subset_tick_conf()) {
+      UNIMPLEMENTED();
+    } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
+      UNIMPLEMENTED();
+    } else {
+      ConnectCtrlEdges(src_task_nodes, dst_task_nodes);
+    }
+  });
+
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> BoxingTaskGraph::Init() {

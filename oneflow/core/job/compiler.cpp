@@ -66,7 +66,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  auto task_gph = std::make_unique<GlobalTaskGraph>();
+  auto task_gph = CHECK_JUST(GlobalTaskGraph::New());
   using std::placeholders::_1;
   LazyMode::Guard guard(true);
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
