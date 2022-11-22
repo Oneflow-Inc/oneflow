@@ -166,12 +166,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
     }
   }
   // Add empty vectors for all those blobs without consumers
-  int32_t have_consumer_size = id2consumer_topo_structs.size();
   id2consumer_topo_structs.resize(id2blob_size.size());
-  for (int32_t i = have_consumer_size; i < id2consumer_topo_structs.size(); i++) {
-    id2consumer_topo_structs[i].clear();
-    std::cout << "id: " << i << ", count: " << id2consumer_topo_structs[i].size() << std::endl;
-  }
 }
 
 }  // anonymous namespace
@@ -215,6 +210,7 @@ void InitMemory(SbpGraph* sbp_graph) {
 
   // Decide which node should run first
   InitDecideParameters(sat, &decide_parameters);
+  // TODO: Switch to VLOG(3) later
   std::cout << "Straightening order in sbp graph: " << std::endl;
   for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << std::endl; }
 
@@ -268,26 +264,32 @@ void InitMemory(SbpGraph* sbp_graph) {
   // straightening
   while (!waiting_list.empty()) { execute(); }
 
-  // Calculate the maximum reusable memory and mark those fixed memory
+  // Mark the memory support, which contains two part:
+  // All the non-reusable memory and those blobs which is a part of the maximum reusable memory
   int64_t max_reusable_memory = 0;
-  int64_t curr_reusable_memroy = 0;
+  int64_t curr_reusable_memory = 0;
   std::vector<int32_t> id2count(id2blob_size.size(), -1);
-  for (auto& topo_struct : ordered_topo_structs) {
+  // Blobs born, increase count and memory
+  auto GenerateBlobs = [&](TopoStruct* topo_struct) {
     const auto& curr_operator = topo_struct->op_node->op();
     if (topo_struct->is_reusable) {
       for (const auto& obn : curr_operator.output_bns()) {
         const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
         int32_t index = lbi2id.at(lbi);
         // Reusable blobs born
-        curr_reusable_memroy += id2blob_size[index];
+        curr_reusable_memory += id2blob_size[index];
         id2count[index] = id2consumer_topo_structs[index].size();
       }
-    } else {
-      // Any non-reusable blobs belongs to the support of the maximum memory blob set
-      topo_struct->sbp_node->SetInMemorySupport(true);
     }
-    // Record the maximum memory
-    if (curr_reusable_memroy > max_reusable_memory) { max_reusable_memory = curr_reusable_memroy; }
+    // TODO: Move to memory initialization
+    // else {
+    //   // Any non-reusable blobs belongs to the support of the maximum memory blob set
+    //   topo_struct->sbp_node->SetInMemorySupport(true);
+    // }
+  };
+  // Blobs die, decrease count and memory
+  auto KillBlobs = [&](TopoStruct* topo_struct) {
+    const auto& curr_operator = topo_struct->op_node->op();
     // Those reusable blobs who do not have a consumer would die immediately
     // For example:
     // register_num: 1, op_name:
@@ -302,7 +304,7 @@ void InitMemory(SbpGraph* sbp_graph) {
         // Do not have consumer
         if (id2count[index] == 0) {
           // Reusable blobs die
-          curr_reusable_memroy -= id2blob_size[index];
+          curr_reusable_memory -= id2blob_size[index];
         }
       }
     }
@@ -314,14 +316,48 @@ void InitMemory(SbpGraph* sbp_graph) {
         --id2count[index];
         if (id2count[index] == 0) {
           // Reusable blobs die
-          curr_reusable_memroy -= id2blob_size[index];
+          curr_reusable_memory -= id2blob_size[index];
         }
       }
     }
+  };
+  // Calculate the maximum reusable memory and mark those fixed memory
+  for (auto& topo_struct : ordered_topo_structs) {
+    // Blobs born, increase count and memory
+    GenerateBlobs(topo_struct);
+    // Record the maximum memory
+    if (curr_reusable_memory > max_reusable_memory) { max_reusable_memory = curr_reusable_memory; }
+    // Blobs die, decrease count and memory
+    KillBlobs(topo_struct);
   }
-  
+
   // Make sure that every blob dies
-  CHECK_EQ(curr_reusable_memroy, 0) << " Have not kill all the reusable blobs!";
+  CHECK_EQ(curr_reusable_memory, 0) << " Have not kill all the reusable blobs!";
+
+  // Mark those reusable memory which constitute the maximum reusable memroy
+  for (auto& topo_struct : ordered_topo_structs) {
+    // Blobs born, increase count and memory
+    GenerateBlobs(topo_struct);
+    // Mark the first found support
+    if (curr_reusable_memory == max_reusable_memory) {
+      // Mark the temporary memory created by this operator
+      if (topo_struct->is_reusable) {
+        const auto& curr_operator = topo_struct->op_node->op();
+        for (const auto& obn : curr_operator.output_bns()) {
+          const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+          int32_t index = lbi2id.at(lbi);
+          // We would use id2count != 0 to record the lbi support
+          // Those obn with no consumers have id2count[index] == 0, now it would be set to 1
+          id2count[index] = 1;
+        }
+      }
+      // The other lbi in the support would have a non-zero id2count
+      // No further process needed
+      break;
+    }
+    // Blobs die, decrease count and memory
+    KillBlobs(topo_struct);
+  }
 }
 
 }  // namespace auto_parallel
