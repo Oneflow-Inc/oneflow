@@ -50,6 +50,8 @@ class VirtualMachine final {
   Maybe<void> ShrinkAllMem();
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
+  size_t flying_instruction_cnt() const { return engine().flying_instruction_cnt(); }
+
  private:
   friend class InstructionsBuilder;
 

@@ -118,7 +118,7 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
 
 def BiasAddCompatibleInterface : OpInterface<"BiasAddCompatible"> {
   let description = [{
-    Interface of NCHW compatibility
+    Interface of ops used as bias add
   }];
 
   let methods = [
@@ -137,7 +137,7 @@ def BiasAddCompatibleInterface : OpInterface<"BiasAddCompatible"> {
 
 def MatMulCompatibleInterface : OpInterface<"MatMulCompatible"> {
   let description = [{
-    Interface of NCHW compatibility
+    Interface of ops used as matmul
   }];
 
   let methods = [

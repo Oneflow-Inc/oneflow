@@ -30,6 +30,7 @@ std::unique_ptr<mlir::Pass> createCSEWithAttributesIgnored();
 std::unique_ptr<mlir::Pass> createCSEPutAttributes();
 std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
     std::shared_ptr<CSEState> state);
+void registerCSEPasses(std::shared_ptr<CSEState> state);
 
 }  // namespace oneflow
 

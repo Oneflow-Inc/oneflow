@@ -18,6 +18,7 @@ import unittest
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
+import torch as ori_torch
 
 binary_ops = [
     torch.add,
@@ -111,6 +112,26 @@ class TestBroadcastOps(flow.unittest.TestCase):
         input0 = torch.ones(2, 64, 8, 16, 16, 4)
         input1 = torch.ones(64, 8, 1, 16, 1)
         torch.add(input0, input1)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBroadcastOpsOther(flow.unittest.TestCase):
+    def test_broadcast_shapes(test_case):
+        shapes = (2,), (3, 1), (1, 1, 1)
+        test_case.assertTrue(
+            flow.broadcast_shapes(*shapes), ori_torch.broadcast_shapes(*shapes),
+        )
+
+    @autotest(n=3)
+    def test_broadcast_tensors(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim0=1, dim1=4).to(device=device)
+        y = random_tensor(ndim=2, dim0=3, dim1=1).to(device=device)
+        return torch.broadcast_tensors(x, y)
+
+    def test_broadcast_to(test_case):
+        # see flow.expand, because broadcast_to is an alias of flow.expand
+        pass
 
 
 if __name__ == "__main__":

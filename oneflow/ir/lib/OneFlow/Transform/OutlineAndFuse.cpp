@@ -156,6 +156,42 @@ class GroupMatMulPass : public GroupMatMulBase<GroupMatMulPass> {
   }
 };
 
+struct GroupNormActivationPattern : public OpRewritePattern<GroupNormOp> {
+  explicit GroupNormActivationPattern(MLIRContext* context)
+      : OpRewritePattern<GroupNormOp>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(oneflow::GroupNormOp op, PatternRewriter& rewriter) const override {
+    if (op.activation() == "none") {
+      llvm::SmallVector<Operation*, 4> act_ops{};
+      for (auto& u : op.y().getUses()) {
+        if (auto act_op = dyn_cast<oneflow::SiluOp>(u.getOwner())) { act_ops.push_back(act_op); }
+      }
+      NamedAttrList attributes(op->getAttrs());
+      attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                     rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
+                                            + "_with_activation"));
+      attributes.set("activation", rewriter.getStringAttr("silu"));
+      auto gn_with_act = rewriter.create<GroupNormOp>(op->getLoc(), op->getResultTypes(),
+                                                      op.getOperands(), attributes);
+      for (auto act : act_ops) {
+        if (auto op = dyn_cast<oneflow::SiluOp>(act)) {
+          op.out().replaceAllUsesWith(gn_with_act.y());
+        }
+      }
+      return success();
+    }
+    return failure();
+  }
+};
+
+class FuseForwardOpsPass : public FuseForwardOpsBase<FuseForwardOpsPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    patterns.add<GroupNormActivationPattern>(op->getContext());
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
@@ -176,5 +212,10 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
+<<<<<<< HEAD
+=======
+std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
+
+>>>>>>> master
 }  // namespace oneflow
 }  // namespace mlir

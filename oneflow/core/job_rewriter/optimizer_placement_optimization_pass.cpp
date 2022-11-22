@@ -429,7 +429,7 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
       }
     }
     if (!split_is_allowed) {
-      VLOG(3) << var_node->op().op_name() << " failed to change form B to S "
+      VLOG(3) << var_node->op().op_name() << " failed to change from B to S "
               << " with op conf " << new_var_op_conf.variable_conf().DebugString();
       continue;
     }
@@ -442,7 +442,7 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
       SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
     }
     prev_allowed_op_name = var_node->op().op_name();
-    VLOG(3) << var_node->op().op_name() << " succeed to change form B to " << new_split_signature
+    VLOG(3) << var_node->op().op_name() << " succeed to change from B to " << new_split_signature
             << " on ranks dim " << split_dim << " with op conf "
             << new_var_op_conf.variable_conf().DebugString();
   }

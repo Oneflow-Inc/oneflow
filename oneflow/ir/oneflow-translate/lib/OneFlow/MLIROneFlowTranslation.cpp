@@ -793,14 +793,16 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
-  // TODO: add a IsFirstIRPass func
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_CSE", false)
-      && job_wrapper.IsLastIRPass() == false) {
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_CSE", false)) {
     auto cse_state = std::make_shared<CSEState>();
     auto passes = createCSEPasses(cse_state);
     pm.addPass(std::move(passes.first));
     pm.addPass(createCSEPass());
     pm.addPass(std::move(passes.second));
+  }
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_FORWARD_OPS", false)) {
+    pm.addPass(oneflow::createFuseForwardOps());
   }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
   // TODO: support backward or put it in a env flag

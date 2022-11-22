@@ -28,8 +28,8 @@ namespace oneflow {
 
 namespace {
 
-static auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
-static auto MAGIC_SCOPE_SYMBOL_ID = 77777;
+static const auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
+static const auto MAGIC_SCOPE_SYMBOL_ID = 77777;
 
 struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
   explicit EraseAttributes(mlir::MLIRContext* context, std::shared_ptr<CSEState> state)
@@ -87,7 +87,7 @@ struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> 
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
  public:
   explicit CSEWithAttributesIgnored() {}
-  explicit CSEWithAttributesIgnored(std::shared_ptr<CSEState> state) { state_ = state; }
+  explicit CSEWithAttributesIgnored(std::shared_ptr<CSEState> state) : state_(state) {}
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
@@ -127,6 +127,15 @@ std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
     std::shared_ptr<CSEState> state) {
   return std::make_pair(std::make_unique<CSEWithAttributesIgnored>(state),
                         std::make_unique<CSEPutAttributes>(state));
+}
+
+void registerCSEPasses(std::shared_ptr<CSEState> state) {
+  ::mlir::registerPass([state]() -> std::unique_ptr<::mlir::Pass> {
+    return std::make_unique<CSEWithAttributesIgnored>(state);
+  });
+  ::mlir::registerPass([state]() -> std::unique_ptr<::mlir::Pass> {
+    return std::make_unique<CSEPutAttributes>(state);
+  });
 }
 
 }  // namespace oneflow
