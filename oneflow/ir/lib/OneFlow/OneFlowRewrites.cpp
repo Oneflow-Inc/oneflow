@@ -33,7 +33,7 @@ limitations under the License.
 
 using namespace mlir;
 
-#include "oneflow/ir/lib/OneFlow/PDLL/OneFlowPatterns.h.inc"
+#include "oneflow/ir/lib/OneFlow/PDLL/ForwardOpPatterns.h.inc"
 
 namespace mlir {
 
