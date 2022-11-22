@@ -26,13 +26,13 @@ import oneflow.unittest
 
 
 def _test_get_ciou_result_impl(test_case, device, shape):
-    eps = 1e-7
+    eps = 0
     x = []
     torch_x = []
     for _ in range(4):
         tmp = flow.tensor(
-            np.random.randn(*shape),
-            dtype=flow.float32,
+            np.random.uniform(0, 1, shape),
+            dtype=flow.float64,
             device=flow.device(device),
             requires_grad=True,
         )
@@ -40,7 +40,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
         torch_x.append(
             torch.tensor(
                 tmp.numpy(),
-                dtype=torch.float32,
+                dtype=torch.float64,
                 device=torch.device(device),
                 requires_grad=True,
             )
@@ -51,10 +51,10 @@ def _test_get_ciou_result_impl(test_case, device, shape):
         torch_x[0],
         torch_x[1],
         torch_x[2],
-        torch_x[3]
+        torch_x[3],
     )
     with torch.no_grad():
-        torch_alpha = torch_v / (torch_v - torch_iou + (1 + eps))
+        torch_alpha = torch_v / (torch_v - torch_iou + (1.0 + eps))
     torch_y = torch_iou - (torch_rho2 / torch_c2 + torch_v * torch_alpha)
 
     def compare(a, b, rtol=1e-5, atol=1e-8):
@@ -66,15 +66,16 @@ def _test_get_ciou_result_impl(test_case, device, shape):
         )
 
     compare(y, torch_y)
-    
-    # res = y.sum()
-    # torch_res = torch_y.sum()
-    # res.sum().backward()
-    # torch_res.sum().backward()
-    # compare(v.grad, torch_v.grad)
-    # compare(iou.grad, torch_iou.grad)
-    # compare(rho2.grad, torch_rho2.grad)
-    # compare(c2.grad, torch_c2.grad)
+
+    res = y.sum()
+    torch_res = torch_y.sum()
+    res.backward()
+    torch_res.backward()
+    compare(v.grad, torch_v.grad)
+    compare(iou.grad, torch_iou.grad)
+    compare(rho2.grad, torch_rho2.grad)
+    compare(c2.grad, torch_c2.grad)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
@@ -82,7 +83,7 @@ class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_get_ciou_result_impl]
         arg_dict["device"] = ["cuda"]
-        arg_dict["shape"] = [(710, 1), (897, 1), (1340, 1)]
+        arg_dict["shape"] = [(492), (691, 1), (1162, 1)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

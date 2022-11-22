@@ -3323,7 +3323,11 @@ class FusedGetCiouResultGradFunctor {
                          .Input("v")
                          .Input("iou")
                          .Input("rho2")
-                         .Output("c2")
+                         .Input("c2")
+                         .Output("dv")
+                         .Output("diou")
+                         .Output("drho2")
+                         .Output("dc2")
                          .Build());
   }
 
