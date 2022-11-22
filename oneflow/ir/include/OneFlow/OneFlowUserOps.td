@@ -2944,6 +2944,9 @@ def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSi
   let output = (outs
     OneFlow_Tensor:$y
   );
+  let attrs = (ins
+    F32Attr: $eps
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

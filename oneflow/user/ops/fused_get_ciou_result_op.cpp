@@ -56,39 +56,23 @@ Maybe<void> FusedGetCiouResultOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> FusedGetCiouResultGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& b1_x1_diff = ctx->InputTensorDesc("b1_x1_diff", 0);
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
 
-  user_op::TensorDesc* x1_diff = ctx->MutOutputTensorDesc("x1_diff", 0);
-  x1_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  x1_diff->set_shape(b1_x1_diff.shape());
+  user_op::TensorDesc* dv = ctx->MutOutputTensorDesc("dv", 0);
+  dv->set_is_dynamic(dy.is_dynamic());
+  dv->set_shape(dy.shape());
 
-  user_op::TensorDesc* y1_diff = ctx->MutOutputTensorDesc("y1_diff", 0);
-  y1_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  y1_diff->set_shape(b1_x1_diff.shape());
+  user_op::TensorDesc* diou = ctx->MutOutputTensorDesc("diou", 0);
+  diou->set_is_dynamic(dy.is_dynamic());
+  diou->set_shape(dy.shape());
 
-  user_op::TensorDesc* w1_diff = ctx->MutOutputTensorDesc("w1_diff", 0);
-  w1_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  w1_diff->set_shape(b1_x1_diff.shape());
+  user_op::TensorDesc* drho2 = ctx->MutOutputTensorDesc("drho2", 0);
+  drho2->set_is_dynamic(dy.is_dynamic());
+  drho2->set_shape(dy.shape());
 
-  user_op::TensorDesc* h1_diff = ctx->MutOutputTensorDesc("h1_diff", 0);
-  h1_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  h1_diff->set_shape(b1_x1_diff.shape());
-
-  user_op::TensorDesc* x2_diff = ctx->MutOutputTensorDesc("x2_diff", 0);
-  x2_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  x2_diff->set_shape(b1_x1_diff.shape());
-
-  user_op::TensorDesc* y2_diff = ctx->MutOutputTensorDesc("y2_diff", 0);
-  y2_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  y2_diff->set_shape(b1_x1_diff.shape());
-
-  user_op::TensorDesc* w2_diff = ctx->MutOutputTensorDesc("w2_diff", 0);
-  w2_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  w2_diff->set_shape(b1_x1_diff.shape());
-
-  user_op::TensorDesc* h2_diff = ctx->MutOutputTensorDesc("h2_diff", 0);
-  h2_diff->set_is_dynamic(b1_x1_diff.is_dynamic());
-  h2_diff->set_shape(b1_x1_diff.shape());
+  user_op::TensorDesc* dc2 = ctx->MutOutputTensorDesc("dc2", 0);
+  dc2->set_is_dynamic(dy.is_dynamic());
+  dc2->set_shape(dy.shape());
 
   return Maybe<void>::Ok();
 }
@@ -98,56 +82,36 @@ Maybe<void> FusedGetCiouResultGradOp::InferPhysicalTensorDesc(user_op::InferCont
 }
 
 Maybe<void> FusedGetCiouResultGradOp::InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& b1_x1_diff = ctx->InputTensorDesc("b1_x1_diff", 0);
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
 
-  user_op::TensorDesc* x1_diff = ctx->MutOutputTensorDesc("x1_diff", 0);
-  x1_diff->set_data_type(b1_x1_diff.data_type());
+  user_op::TensorDesc* dv = ctx->MutOutputTensorDesc("dv", 0);
+  dv->set_data_type(dy.data_type());
 
-  user_op::TensorDesc* y1_diff = ctx->MutOutputTensorDesc("y1_diff", 0);
-  y1_diff->set_data_type(b1_x1_diff.data_type());
+  user_op::TensorDesc* diou = ctx->MutOutputTensorDesc("diou", 0);
+  diou->set_data_type(dy.data_type());
 
-  user_op::TensorDesc* w1_diff = ctx->MutOutputTensorDesc("w1_diff", 0);
-  w1_diff->set_data_type(b1_x1_diff.data_type());
+  user_op::TensorDesc* drho2 = ctx->MutOutputTensorDesc("drho2", 0);
+  drho2->set_data_type(dy.data_type());
 
-  user_op::TensorDesc* h1_diff = ctx->MutOutputTensorDesc("h1_diff", 0);
-  h1_diff->set_data_type(b1_x1_diff.data_type());
-
-  user_op::TensorDesc* x2_diff = ctx->MutOutputTensorDesc("x2_diff", 0);
-  x2_diff->set_data_type(b1_x1_diff.data_type());
-
-  user_op::TensorDesc* y2_diff = ctx->MutOutputTensorDesc("y2_diff", 0);
-  y2_diff->set_data_type(b1_x1_diff.data_type());
-
-  user_op::TensorDesc* w2_diff = ctx->MutOutputTensorDesc("w2_diff", 0);
-  w2_diff->set_data_type(b1_x1_diff.data_type());
-
-  user_op::TensorDesc* h2_diff = ctx->MutOutputTensorDesc("h2_diff", 0);
-  h2_diff->set_data_type(b1_x1_diff.data_type());
+  user_op::TensorDesc* dc2 = ctx->MutOutputTensorDesc("dc2", 0);
+  dc2->set_data_type(dy.data_type());
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FusedGetCiouResultGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& b1_x1_diff =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1_diff", 0);
-  FOR_RANGE(int64_t, i, 0, b1_x1_diff.shape().NumAxes()) {
+  const user_op::TensorDesc& dy = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes()) {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("b1_x1_diff", 0), i)
-        .Split(user_op::OpArg("b1_x2_diff", 0), i)
-        .Split(user_op::OpArg("b1_y1_diff", 0), i)
-        .Split(user_op::OpArg("b1_y2_diff", 0), i)
-        .Split(user_op::OpArg("b2_x1_diff", 0), i)
-        .Split(user_op::OpArg("b2_x2_diff", 0), i)
-        .Split(user_op::OpArg("b2_y1_diff", 0), i)
-        .Split(user_op::OpArg("b2_y2_diff", 0), i)
-        .Split(user_op::OpArg("x1_diff", 0), i)
-        .Split(user_op::OpArg("y1_diff", 0), i)
-        .Split(user_op::OpArg("w1_diff", 0), i)
-        .Split(user_op::OpArg("h1_diff", 0), i)
-        .Split(user_op::OpArg("x2_diff", 0), i)
-        .Split(user_op::OpArg("y2_diff", 0), i)
-        .Split(user_op::OpArg("w2_diff", 0), i)
-        .Split(user_op::OpArg("h2_diff", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("v", 0), i)
+        .Split(user_op::OpArg("iou", 0), i)
+        .Split(user_op::OpArg("rho2", 0), i)
+        .Split(user_op::OpArg("c2", 0), i)
+        .Split(user_op::OpArg("dv", 0), i)
+        .Split(user_op::OpArg("diou", 0), i)
+        .Split(user_op::OpArg("drho2", 0), i)
+        .Split(user_op::OpArg("dc2", 0), i)
         .Build();
   }
   return Maybe<void>::Ok();
