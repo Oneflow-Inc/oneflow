@@ -107,6 +107,7 @@ Indexing, Slicing, Joining, Mutating Ops
     vsplit
     vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
