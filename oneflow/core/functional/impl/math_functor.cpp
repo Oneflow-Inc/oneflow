@@ -82,6 +82,10 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
+    if (scalar.As<double>() == 1
+        && (op_->op_type_name() == "scalar_mul" || op_->op_type_name() == "scalar_div")) {
+      return x;
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
                                                  "int_operand", "has_int_operand");
     TensorProcessor tensor_processor;

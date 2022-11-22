@@ -126,7 +126,7 @@ class Linear(Module):
 
     def forward(self, x):
         if self.use_fused_mlp:
-            return flow._C.fused_mlp(x, [self.weight], [self.bias], True)
+            return flow._C.fused_matmul_bias(x, self.weight, self.bias)
         res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.bias is not None:
             res += self.bias
