@@ -2517,6 +2517,16 @@ class CumProdFunctor : public CumBaseFunctor {
   CumProdFunctor() : CumBaseFunctor("cumprod") {}
 };
 
+class CumMaxFunctor : public CumBaseFunctor {
+ public:
+  CumMaxFunctor() : CumBaseFunctor("cummax") {}
+};
+
+class CumMinFunctor : public CumBaseFunctor {
+ public:
+  CumMinFunctor() : CumBaseFunctor("cummin") {}
+};
+
 class CumGradBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> op_;
@@ -3256,6 +3266,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumProdFunctor>("Cumprod");
+  m.add_functor<CumMaxFunctor>("CumMax");
+  m.add_functor<CumMinFunctor>("CumMin");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");

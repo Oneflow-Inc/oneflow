@@ -38,6 +38,14 @@ template<typename T>
 struct ProdFunctor {
   __device__ __forceinline__ T operator()(const T a, const T b) const { return a * b; }
 };
+template<typename T>
+struct MaxFunctor {
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return max(a, b); }
+};
+template<typename T>
+struct MinFunctor {
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return min(a, b); }
+};
 
 template<typename T, template<typename> class BinaryFunc>
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
@@ -176,6 +184,14 @@ void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const
     ScanInnerMostDimKernel<T, 16, 32, ProdFunctor>
         <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
                                                          /*init*/ 1);
+  } else if (std::is_same<BinaryFunctor<T>, MaxFunctor<T>>::value) {
+    ScanInnerMostDimKernel<T, 16, 32, MaxFunctor>
+        <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
+                                                         /*init*/ 1);
+  } else if (std::is_same<BinaryFunctor<T>, MinFunctor<T>>::value) {
+    ScanInnerMostDimKernel<T, 16, 32, MinFunctor>
+        <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
+                                                         /*init*/ 1);
   } else {
     UNIMPLEMENTED() << "Only Support cumsum and cumprod for now.";
   }
@@ -232,7 +248,9 @@ class GpuCumKernel : public user_op::OpKernel {
 
 #define CUMOP_SEQ                              \
   OF_PP_MAKE_TUPLE_SEQ("cumprod", ProdFunctor) \
-  OF_PP_MAKE_TUPLE_SEQ("cumsum", SumFunctor)
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", SumFunctor) \
+  OF_PP_MAKE_TUPLE_SEQ("cummax", MaxFunctor)  \
+  OF_PP_MAKE_TUPLE_SEQ("cummin", MinFunctor) 
 
 #define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                              \
   REGISTER_USER_KERNEL(op_name)                                                        \
