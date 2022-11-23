@@ -185,11 +185,7 @@ def _normalize(fmt):
 
 def _remove_square_brackets_and_content_inside(fmt):
     # "TensorTuple[values], TensorTuple[indices]" -> "TensorTuple, TensorTuple"
-    return re.sub(r"\[[^()]*\]", "", fmt)
-
-def _extract_content_inside_square_brackets(fmt):
-    # "TensorTuple[values], TensorTuple[indices]" -> "["values", "indices"]"
-    return re.findall(r"\[(.*?)\]", fmt)
+    return re.sub(r"\[[^()]*?\]", "", fmt)
 
 
 def _std_decay(fmt):
@@ -206,7 +202,7 @@ def parse_function_params(fmt):
         raise ValueError('Missing "(" in function def: ' + fmt)
 
     header = _normalize(fmt[0:open_paren])
-    items = _remove_square_brackets_and_content_inside(header).split(" ")
+    items = _normalize(_remove_square_brackets_and_content_inside(header)).split(" ")
     if (len(items)) != 1:
         raise ValueError(
             "Missing return type or more than 1 return type in function def: " + fmt
@@ -354,14 +350,11 @@ class Return:
         return self._cpp_type if to_cpp else self._type
 
     def check_named_tuple(self, fmt):
-        if "[" in fmt:
-            # return named_tuple
-            type = _normalize(_remove_square_brackets_and_content_inside(fmt))
-            return_names = _extract_content_inside_square_brackets(fmt)[0].split(",")
-            assert len(return_names) > 0, "Missing ']' for argument def: " + fmt
+        matches = re.match(r"(.*?)\s*\[(.*?)\]", fmt)
+        if matches is None:
+            type, return_names = _normalize(fmt), None
         else:
-            type = _normalize(fmt)
-            return_names = None
+            type, return_names = matches.group(1), matches.group(2)
         return type, return_names
 
 
