@@ -99,7 +99,6 @@ def compare_with_numpy_adamw(
             if i == reload_state_step:
                 state_dict = adam.state_dict()
                 adam = flow.optim.AdamW(x, contiguous_params=contiguous_params)
-                adam = flow.optim.AdamW(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -236,7 +235,6 @@ def compare_with_numpy_adamw_clip_grad(
             if i == reload_state_step:
                 state_dict = adam.state_dict()
                 adam = flow.optim.AdamW(x, contiguous_params=contiguous_params)
-                adam = flow.optim.AdamW(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)

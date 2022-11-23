@@ -95,7 +95,6 @@ def compare_with_numpy_sgd(
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
-                sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -230,7 +229,6 @@ def compare_with_numpy_sgd_clip_grad(
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
-                sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)

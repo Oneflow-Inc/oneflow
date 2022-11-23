@@ -101,7 +101,6 @@ def compare_with_numpy_adam(
                 adam = flow.optim.Adam(
                     [{"params": x,}], contiguous_params=contiguous_params
                 )
-                adam = flow.optim.Adam([{"params": x,}],)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -242,7 +241,6 @@ def compare_with_numpy_adam_clip_grad(
                 adam = flow.optim.Adam(
                     [{"params": x,}], contiguous_params=contiguous_params
                 )
-                adam = flow.optim.Adam([{"params": x,}])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
