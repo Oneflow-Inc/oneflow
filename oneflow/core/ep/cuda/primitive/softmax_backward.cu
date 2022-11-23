@@ -32,7 +32,7 @@ enum class Algorithm {
 };
 
 template<Algorithm algorithm, typename T>
-void SoftmaxBackwardGpu(cudaStream_t cuda_stream, size_t rows, size_t cols, const T* y, const T* dy,
+void SoftmaxBackwardGpu(GPU(Stream_t) cuda_stream, size_t rows, size_t cols, const T* y, const T* dy,
                         T* dx) {
   using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
   cuda::softmax::DirectLoad<T, ComputeType> load_y(y, cols);
@@ -60,7 +60,7 @@ class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
 
   void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
               void* dx) override {
-    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
     SoftmaxBackwardGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(y),
                                      reinterpret_cast<const T*>(dy), reinterpret_cast<T*>(dx));
   }

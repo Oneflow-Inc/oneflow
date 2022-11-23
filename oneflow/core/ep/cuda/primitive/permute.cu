@@ -16,7 +16,11 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/common/primitive/permute_impl.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda_runtime.h>
+#endif
 
 namespace oneflow {
 
@@ -192,7 +196,7 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
 }
 
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-void LaunchBatchTransposeKernel(cudaStream_t& cuda_stream,
+void LaunchBatchTransposeKernel(GPU(Stream_t)& cuda_stream,
                                 const PermuteKernelParams<num_dims, IndexType>& params,
                                 const IndexType& num_batches, const IndexType& rows,
                                 const IndexType& cols) {
@@ -264,7 +268,7 @@ void LaunchKernel(Stream* stream, const int64_t* src_dims, const void* src, cons
                   void* dst, size_t count) {
   PermuteKernelParams<num_dims, IndexType> params =
       MakePermuteParams<num_dims, IndexType>(src_dims, src, permutation, dst, count);
-  cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
 
   if (num_dims == 2 || num_dims == 3) {
     IndexType num_batches;

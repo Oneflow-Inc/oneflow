@@ -276,3 +276,175 @@ void CudaStream::LaunchGraph(const CudaGraphExecutable* executable) {
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+namespace oneflow {
+
+namespace ep {
+
+namespace {
+
+constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
+
+void SetAffinityByDevice(int dev_id) {
+  auto node_device_desc_mgr = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
+  if (node_device_desc_mgr == nullptr) { return; }
+  auto node_device_desc = node_device_desc_mgr->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
+      node_device_desc->GetDevice(hardware::kCudaDeviceDescriptorClassName, dev_id));
+  if (!cuda_device) { return; }
+  node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
+  node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
+}
+
+}  // namespace
+
+#ifdef WITH_ROCM_GRAPHS
+
+CudaGraphExecutable::CudaGraphExecutable() : graph_exec_(nullptr), dev_(-1) {}
+
+CudaGraphExecutable::~CudaGraphExecutable() { Reset(); }
+
+void CudaGraphExecutable::Update(hipGraph_t graph) {
+  int dev = -1;
+  OF_CUDA_CHECK(hipGetDevice(&dev));
+  if (dev != dev_) { Reset(); }
+  dev_ = dev;
+  if (graph_exec_ != nullptr) {
+    hipGraphExecUpdateResult update_result{};
+    hipGraphNode_t error_node = nullptr;
+    OF_CUDA_CHECK(hipGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
+    if (update_result == hipGraphExecUpdateSuccess) { return; }
+  }
+  Reset();
+  OF_CUDA_CHECK(hipGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
+}
+
+void CudaGraphExecutable::Launch(hipStream_t stream) const {
+  OF_CUDA_CHECK(hipGraphLaunch(graph_exec_, stream));
+}
+
+bool CudaGraphExecutable::IsInstantiated() const { return graph_exec_ != nullptr; }
+
+void CudaGraphExecutable::Reset() {
+  if (graph_exec_ != nullptr) {
+    CudaCurrentDeviceGuard guard(dev_);
+    OF_CUDA_CHECK(hipGraphExecDestroy(graph_exec_));
+  }
+}
+
+#endif  // WITH_ROCM_GRAPHS
+
+CudaStream::CudaStream(CudaDevice* device)
+    : device_index_(device->device_index()), device_(device) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  // cuda_stream
+  const char* stream_flags_env_name = "ONEFLOW_EP_CUDA_STREAM_FLAGS";
+  if (std::getenv(stream_flags_env_name) != nullptr) {
+    const unsigned int stream_flags = ParseIntegerFromEnv(stream_flags_env_name, 0);
+    OF_CUDA_CHECK(hipStreamCreateWithFlags(&cuda_stream_, stream_flags));
+  } else {
+    OF_CUDA_CHECK(hipStreamCreate(&cuda_stream_));
+  }  // cublas_handle
+  OF_CUBLAS_CHECK(hipblasCreate(&cublas_handle_));
+  OF_CUBLAS_CHECK(hipblasSetStream(cublas_handle_, cuda_stream_));
+
+  workspace_size_ = kDefaultWorkspaceSize;
+  OF_CUDA_CHECK(hipMalloc(&workspace_, workspace_size_));
+
+  OF_CUDNN_CHECK(hipdnnCreate(&cudnn_handle_));
+ 
+  OF_CUDNN_CHECK(hipdnnSetStream(cudnn_handle_, cuda_stream_));
+}
+
+CudaStream::~CudaStream() {
+  CudaCurrentDeviceGuard guard(device_index_);
+  OF_CUDA_CHECK(hipStreamSynchronize(cuda_stream_));
+  OF_CUDNN_CHECK(hipdnnDestroy(cudnn_handle_));
+  OF_CUBLAS_CHECK(hipblasDestroy(cublas_handle_));
+
+  OF_CUDA_CHECK(hipStreamDestroy(cuda_stream_));
+  OF_CUDA_CHECK(hipFree(workspace_));
+}
+
+Maybe<void> CudaStream::OnExecutionContextSetup() {
+  OF_CUDA_CHECK(hipSetDevice(device_index_));
+  SetAffinityByDevice(device_index_);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CudaStream::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
+
+DeviceType CudaStream::device_type() const { return DeviceType::kCUDA; }
+
+CudaDevice* CudaStream::device() const { return device_; }
+
+Maybe<void> CudaStream::Sync() {
+  hipError_t err = hipStreamSynchronize(cuda_stream_);
+  if (err == hipSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << hipGetErrorString(err) << " (" << err << ") ";
+  }
+}
+
+void CudaStream::RecordEvent(Event* event) {
+  auto* cuda_event = static_cast<CudaEvent*>(event);  // NOLINT
+  OF_CUDA_CHECK(hipEventRecord(cuda_event->cuda_event(), cuda_stream_));
+}
+
+Maybe<void> CudaStream::GetAsyncError() {
+  hipError_t err = hipGetLastError();
+  if (err == hipSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << hipGetErrorString(err) << " (" << err << ") ";
+  }
+}
+
+hipStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
+
+hipblasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
+
+void* CudaStream::cublas_workspace() const { return workspace_; }
+
+size_t CudaStream::cublas_workspace_size() const { return workspace_size_; }
+
+hipdnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
+
+const hipDeviceProp_t& CudaStream::device_properties() const { return device_->properties(); }
+
+int CudaStream::cuda_arch() const {
+  return device_->properties().major * 100 + device_->properties().minor * 10;
+}
+
+#ifdef WITH_ROCM_GRAPHS
+
+void CudaStream::BeginGraphCapture() {
+  CHECK(!is_graph_capturing_);
+  is_graph_capturing_ = true;
+  OF_CUDA_CHECK(hipStreamBeginCapture(cuda_stream_, hipStreamCaptureModeThreadLocal));
+}
+
+void CudaStream::EndGraphCapture(CudaGraphExecutable* executable) {
+  hipGraph_t graph = nullptr;
+  OF_CUDA_CHECK(hipStreamEndCapture(cuda_stream_, &graph));
+  executable->Update(graph);
+  OF_CUDA_CHECK(hipGraphDestroy(graph));
+  is_graph_capturing_ = false;
+}
+
+bool CudaStream::IsGraphCapturing() const { return is_graph_capturing_; }
+
+void CudaStream::LaunchGraph(const CudaGraphExecutable* executable) {
+  executable->Launch(cuda_stream_);
+}
+
+#endif  // WITH_ROCM_GRAPHS
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM

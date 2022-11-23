@@ -71,20 +71,20 @@ nv_bfloat16 GetValue<nv_bfloat16>(Scalar value) {
 #endif  // CUDA_VERSION >= 11000
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack != 0), void>::type LaunchPackFill(cudaStream_t stream, T* dst,
+typename std::enable_if<(pack != 0), void>::type LaunchPackFill(GPU(Stream_t) stream, T* dst,
                                                                 T value, size_t count) {
   FillGpu<T, pack>
       <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream>>>(dst, value, count);
 }
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack == 0), void>::type LaunchPackFill(cudaStream_t stream, T* dst,
+typename std::enable_if<(pack == 0), void>::type LaunchPackFill(GPU(Stream_t) stream, T* dst,
                                                                 T value, size_t count) {
   LOG(FATAL) << "wrong alignment";
 }
 
 template<typename T>
-void LaunchFill(cudaStream_t stream, T* dst, T value, size_t count) {
+void LaunchFill(GPU(Stream_t) stream, T* dst, T value, size_t count) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
   if (uintptr % 16 == 0) {
     LaunchPackFill<T, 16 / sizeof(T)>(stream, dst, value, count);
@@ -107,7 +107,7 @@ class FillImpl : public Fill {
   ~FillImpl() override = default;
 
   void Launch(Stream* stream, void* dst, Scalar value, size_t count) override {
-    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
     LaunchFill<T>(cuda_stream, reinterpret_cast<T*>(dst), GetValue<T>(value), count);
   }
 };

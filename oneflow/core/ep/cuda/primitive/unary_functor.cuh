@@ -17,8 +17,12 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
+#else
 #include <cuda.h>
-
+#endif
 namespace oneflow {
 namespace ep {
 namespace primitive {

@@ -17,7 +17,11 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/constant_pad.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda_runtime.h>
+#endif
 
 namespace oneflow {
 

@@ -66,3 +66,55 @@ void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+namespace oneflow {
+
+namespace ep {
+
+CudaDeviceManager::CudaDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
+CudaDeviceManager::~CudaDeviceManager() = default;
+
+DeviceManagerRegistry* CudaDeviceManager::registry() const { return registry_; }
+
+std::shared_ptr<Device> CudaDeviceManager::GetDevice(size_t device_index) {
+  std::lock_guard<std::mutex> lock(devices_mutex_);
+  if (device_index < devices_.size() && devices_.at(device_index)) {
+    return devices_.at(device_index);
+  }
+  auto device = std::make_shared<CudaDevice>(device_index, this);
+  if (device_index >= devices_.size()) { devices_.resize(device_index + 1); }
+  devices_.at(device_index) = device;
+  return device;
+}
+
+size_t CudaDeviceManager::GetDeviceCount(size_t primary_device_index) {
+  CudaCurrentDeviceGuard guard(primary_device_index);
+  return this->GetDeviceCount();
+}
+
+size_t CudaDeviceManager::GetDeviceCount() {
+  int count = 0;
+  hipError_t err = hipGetDeviceCount(&count);
+  if (err == hipErrorNoDevice || err == hipErrorInsufficientDriver) { return 0; }
+  OF_CUDA_CHECK(err);
+  return count;
+}
+
+size_t CudaDeviceManager::GetActiveDeviceIndex() {
+  int device = 0;
+  OF_CUDA_CHECK(hipGetDevice(&device));
+  return static_cast<size_t>(device);
+}
+
+void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
+  OF_CUDA_CHECK(hipSetDevice(static_cast<int>(device_index)));
+}
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+

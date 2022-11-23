@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/event.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/include/allocation_options.h"
+#include "oneflow/core/ep/include/gpu_macro.h"
 
 namespace oneflow {
 

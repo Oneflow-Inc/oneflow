@@ -27,6 +27,11 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
+#endif  // WITH_ROCM
+
 namespace oneflow {
 
 namespace ep {
@@ -87,6 +92,9 @@ TEST_F(PrimitiveTest, TestFill) {
                                              1024);
 #endif  // CUDA_VERSION >= 11000
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
+#endif  // WITH_ROCM
   TestFill<DataType::kBool, bool>(&device_manager_registry_, available_device_types_, 1024);
 }
 

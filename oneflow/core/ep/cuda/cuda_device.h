@@ -75,4 +75,60 @@ class CudaDevice : public Device {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+#include <hip/hip_runtime.h>
+
+namespace oneflow {
+
+namespace ep {
+
+class CudaDevice : public Device {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaDevice);
+  explicit CudaDevice(int device_index, DeviceManager* device_manager);
+  ~CudaDevice() override;
+
+  void SetAsActiveDevice() override;
+
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
+  size_t device_index() const override { return device_index_; }
+  DeviceManager* device_manager() const override { return device_manager_; }
+
+  Stream* CreateStream() override;
+  void DestroyStream(Stream* stream) override;
+
+  void CreateEvents(Event** events, size_t count) override;
+  void DestroyEvents(Event** events, size_t count) override;
+
+  Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) override;
+  void Free(const AllocationOptions& options, void* ptr) override;
+  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
+  void FreePinned(const AllocationOptions& options, void* ptr) override;
+
+  const hipDeviceProp_t& properties() const;
+
+  const void* GetConstZeros(DataType data_type, size_t n) const;
+  const void* GetConstOnes(DataType data_type, size_t n) const;
+
+ private:
+  int device_index_;
+  std::mutex events_mutex_;
+  std::vector<Event*> events_;
+  unsigned int event_flags_;
+  hipDeviceProp_t properties_;
+  DeviceManager* device_manager_;
+  int64_t const_buf_elem_cnt_;
+  void* const_zeros_buffer_;
+  void* const_ones_buffer_fp32_;
+  void* const_ones_buffer_fp16_;
+  void* const_ones_buffer_bf16_;
+};
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+
 #endif  // ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_H_
