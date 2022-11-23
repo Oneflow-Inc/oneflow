@@ -84,9 +84,8 @@ class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_get_ciou_result_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(492), (691, 1), (1162, 1)]
-        for i in range(1000):
-            for arg in GenArgList(arg_dict):
-                arg[0](test_case, *arg[1:])
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

@@ -39,10 +39,11 @@ __global__ void FusedGetCiouResultBackward(const int n, const T* dy, const T* v,
     const T c2_i = c2[i];
     const T iou_i = iou[i];
     const T alpha = v_i / (v_i - iou_i + static_cast<T>(1.0 + eps));
-    dv[i] = -alpha;
-    diou[i] = static_cast<T>(1.0);
-    drho2[i] = static_cast<T>(-1.0) / c2[i];
-    dc2[i] = rho2[i] / (c2_i * c2_i);
+    const T dy_i = dy[i];
+    dv[i] = -alpha * dy_i;
+    diou[i] = static_cast<T>(1.0) * dy_i;
+    drho2[i] = static_cast<T>(-1.0) / c2[i] * dy_i;
+    dc2[i] = rho2[i] / (c2_i * c2_i) * dy_i;
   }
 }
 };  // namespace
