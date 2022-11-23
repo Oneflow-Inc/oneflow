@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdint>
 
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -299,6 +300,36 @@ class Atan2Functor : public BinaryFloatFunctor {
   Atan2Functor() {
     op_ = CHECK_JUST(one::OpBuilder("atan2").Input("x").Input("y").Output("z").Build());
   }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    const int64_t x_element = x->nelement();
+    const int64_t y_element = y->nelement();
+    CHECK_GT_OR_RETURN(x_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << x_element;
+    CHECK_GT_OR_RETURN(y_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << y_element;
+
+    if ((x_element != 1 && y_element != 1) && (x->shape()->NumAxes() == y->shape()->NumAxes())) {
+      return BinaryFloatFunctor::operator()(x, y);
+    }
+
+    auto broad_x_ = x;
+    auto broad_y_ = y;
+    if (x_element == 1) {
+      broad_x_ = JUST(functional::Expand(x, *y->shape()));
+    } else if (y_element == 1) {
+      broad_y_ = JUST(functional::Expand(y, *x->shape()));
+    } else if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
+      return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes()
+                                   << ") must match the size of tensor b "
+                                      "("
+                                   << y->shape()->NumAxes() << ") at non-singleton dimension 1";
+    } else {
+      return Error::RuntimeError() << "";
+    }
+
+    return BinaryFloatFunctor::operator()(broad_x_, broad_y_);
+  }
 };
 
 class PowFunctor : public BinaryFloatFunctor {
@@ -345,16 +376,41 @@ class LerpFunctor {
                            const std::shared_ptr<one::Tensor>& end,
                            const std::shared_ptr<one::Tensor>& weight) const {
     const int64_t weight_elem_cnt = weight->nelement();
-    
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes());
 
-    CHECK_EQ_OR_RETURN(start->shape(), end->shape());
-    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type()) << Error::RuntimeError() << "expected dtype float for `weights` but got dtype " << weight->dtype()->name();
+    std::shared_ptr<Tensor> broadcast_start = start;
+    std::shared_ptr<Tensor> broadcast_end = end;
+    if (*start->shape() != *end->shape()) {
+      const int64_t dim = start->shape()->NumAxes();
+      bool broadcast_start_status = false;
+      bool broadcast_end_status = false;
+      
+      for (int64_t i = 0; i < dim; i++) {
+        int64_t start_shape_i = start->shape()->At(i);
+        int64_t end_shape_i = end->shape()->At(i);
+        if (start_shape_i > end_shape_i) {
+          broadcast_end_status = true;
+          break;
+        } else if (start_shape_i < end_shape_i) {
+          broadcast_start_status = true;
+          break;
+        }
+      }
+
+      if (broadcast_start_status) {
+        broadcast_start = JUST(functional::BroadcastTo(broadcast_start, *end->shape()));
+      } else if (broadcast_end_status) {
+        broadcast_end = JUST(functional::BroadcastTo(broadcast_end, *start->shape()));
+      }
+    }
+
+    CHECK_EQ_OR_RETURN(broadcast_start->dtype()->data_type(), weight->dtype()->data_type()) << Error::RuntimeError() << "expected dtype float for `weights` but got dtype " << weight->dtype()->name();
 
     if (weight_elem_cnt == 1) {
-      auto broad_weight = JUST(functional::Expand(weight, *start->shape()));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {start, end, broad_weight}, {});
+      auto broadcast_weight = JUST(functional::Expand(weight, *broadcast_start->shape()));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, broadcast_weight}, {});
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {start, end, weight}, {});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, weight}, {});
   }
 
  private:

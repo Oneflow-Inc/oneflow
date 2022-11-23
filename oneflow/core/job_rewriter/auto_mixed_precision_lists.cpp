@@ -47,7 +47,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
                                "fused_cross_feature_interaction_v2_grad",
-                               "fused_multi_head_attention_inference"};
+                               "fused_multi_head_attention_inference",
+                               "grouped_matmul_bias"};
   return white_list;
 }
 
@@ -91,6 +92,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "layer_norm_param_grad",
                               "layer_norm_grad",
+                              "rms_norm",
+                              "rms_norm_grad",
+                              "rms_norm_param_grad",
                               "dropout",
                               "dropout_grad",
                               "softmax",

@@ -20,6 +20,7 @@ import tempfile
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 def _test_linear_graph_save_load_global_broadcast(
@@ -228,8 +229,8 @@ def _test_graph_save_load_global_split_2(
         def __init__(self, module_pipleine):
             super().__init__()
             self.module_pipeline = module_pipleine
-            self.module_pipeline.m_stage0.config.set_stage(0, P0)
-            self.module_pipeline.m_stage1.config.set_stage(1, P1)
+            self.module_pipeline.m_stage0.to(GraphModule).set_stage(0, P0)
+            self.module_pipeline.m_stage1.to(GraphModule).set_stage(1, P1)
             self.config.set_gradient_accumulation_steps(2)
             self.add_optimizer(
                 flow.optim.SGD(self.module_pipeline.parameters(), lr=0.001)
@@ -517,10 +518,10 @@ def _test_graph_save_load_global_split_4(
         def __init__(self, module_pipleine):
             super().__init__()
             self.module_pipeline = module_pipleine
-            self.module_pipeline.m_stage0.config.set_stage(0, P0)
-            self.module_pipeline.m_stage1.config.set_stage(1, P1)
-            self.module_pipeline.m_stage2.config.set_stage(2, P2)
-            self.module_pipeline.m_stage3.config.set_stage(3, P3)
+            self.module_pipeline.m_stage0.to(GraphModule).set_stage(0, P0)
+            self.module_pipeline.m_stage1.to(GraphModule).set_stage(1, P1)
+            self.module_pipeline.m_stage2.to(GraphModule).set_stage(2, P2)
+            self.module_pipeline.m_stage3.to(GraphModule).set_stage(3, P3)
             self.config.set_gradient_accumulation_steps(2)
             self.add_optimizer(
                 flow.optim.SGD(self.module_pipeline.parameters(), lr=0.001)
