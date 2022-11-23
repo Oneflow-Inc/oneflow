@@ -315,9 +315,11 @@ class NormalFunctor {
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
     Symbol<DType> dtype = DType::Float();
+    DataType dtype_val = GetDefaultDType()->data_type();
+
     if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+      dtype_val = JUST(optional_dtype)->data_type();
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
     }
@@ -343,8 +345,8 @@ class NormalFunctor {
     }
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
-    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                      dtype->data_type(), static_cast<int64_t>(gen->current_seed()));
+    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape, dtype_val,
+                      static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
