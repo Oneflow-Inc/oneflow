@@ -459,7 +459,7 @@ void SbpNode::SpreadMaxLayer(
   }
 }
 
-// Drop down the maximum layer with the minimum layer form consumer
+// Drop down the maximum layer with the minimum layer from consumer
 
 void SbpNode::DropMaxLayer(int32_t upper_bound) {
   if (upper_bound < max_layer_ || max_layer_ < 0) { max_layer_ = upper_bound; }
@@ -654,7 +654,7 @@ void SbpNode::SetTrunkWaitTime(double trunk_wait_time) {
   }
 }
 
-// Drop down the maximum layer with the minimum layer form consumer
+// Drop down the maximum layer with the minimum layer from consumer
 
 void SbpNode::DropTributaryLayer(int32_t upper_bound) {
   if (upper_bound < tributary_layer_ || tributary_layer_ < 0) { tributary_layer_ = upper_bound; }
