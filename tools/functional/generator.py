@@ -187,6 +187,7 @@ def _remove_square_brackets_and_content_inside(fmt):
     # "TensorTuple[values], TensorTuple[indices]" -> "TensorTuple, TensorTuple"
     return re.sub(r"\[[^()]*\]", "", fmt)
 
+
 def _extract_content_inside_square_brackets(fmt):
     # "TensorTuple[values], TensorTuple[indices]" -> "["values", "indices"]"
     return re.findall(r"\[(.*?)\]", fmt)
