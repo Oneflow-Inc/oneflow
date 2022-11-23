@@ -30,9 +30,6 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
-
-#define FUSEDGLU_OPTIMIZED
-
 namespace oneflow {
 
 namespace {
@@ -47,30 +44,6 @@ unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_
                                                               /*shared_memory*/ 0));
   return std::min(num_blocks, max_active_blocks * multi_processor_count);
 }
-
-#ifndef FUSEDGLU_OPTIMIZED
-template<typename T, ep::primitive::UnaryOp act_type, typename IndexType>
-__global__ void FusedGluForwardGpu(
-    const IndexType m, const IndexType n, const IndexType k, const IndexType stride,
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act, const T* matmul_wx,
-    const T* b, const T* matmul_vx, const T* c, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, m * n) {
-    // obtain the row and col index in output tensor "y"
-    const IndexType y_row = i / n;
-    const IndexType y_col = i - y_row * n;
-
-    // calculate the hidden_state and gate
-    T hidden_state = matmul_wx[y_row * stride + y_col] + b[y_col];
-    T gate = matmul_vx[y_row * stride + y_col] + c[y_col];
-
-    // calculate activation
-    T act_gate = act(gate);
-
-    // calculate element-wise product
-    y[i] = hidden_state * act_gate;
-  }
-}
-#else
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 __global__ void FusedGluForwardGpu(
@@ -119,19 +92,11 @@ __global__ void FusedGluForwardGpu(
   }
 }
 
-#endif  // FUSEDGLU_OPTIMIZED
-
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n, const int64_t k,
                               int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
                               const T* c, T* y) {
   ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
-#ifndef FUSEDGLU_OPTIMIZED
-  RUN_CUDA_KERNEL((FusedGluForwardGpu<T, act_type, IndexType>),
-                  /* CUDA stream */ stream,
-                  /* number of threads */ m * packed_n,
-                  /* args */ m, packed_n, k, stride, act, matmul_wx, b, matmul_vx, c, y);
-#else
   int64_t pack_num = m * packed_n;
   constexpr int32_t block_size = 128;
   unsigned int grid_size =
@@ -139,7 +104,6 @@ void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           m, packed_n, k, stride, pack_num, act, matmul_wx, b, matmul_vx, c, y);
-#endif
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, int32_t pack_size>
@@ -147,11 +111,7 @@ void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t n, con
                        int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
                        const T* c, T* y) {
   // convert n based on pack size
-#ifndef FUSEDGLU_OPTIMIZED
-  const int64_t packed_n = n;
-#else
   const int64_t packed_n = n/pack_size;
-#endif
 
   // dispatch index type
   if (m*packed_n < GetMaxVal<int32_t>()) {
@@ -299,13 +259,55 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
       CHECK((!ctx->has_input("v", 0)) && (!(ctx->has_input("c", 0))));
     }
 
-    // TODO: validate dimension and number of axes
+    // obtain tensor shapes
+    const ShapeView& x_shape = input_tensor_x->shape_view();
+    const ShapeView& w_shape = input_tensor_w->shape_view();
+    const ShapeView& b_shape = input_tensor_b->shape_view();
+    const ShapeView& y_shape = out_tensor_y->shape_view();
+
+    // validate dimension and number of axes
+    CHECK_GE(x_shape.NumAxes(), 2)
+      << "number of axes of \'x\' should have be greater than 1, yet get "
+      << x_shape.NumAxes();
+    CHECK_EQ(w_shape.NumAxes(), 2)
+      << "number of axes of \'w\' should have be equal to 2, yet get "
+      << w_shape.NumAxes(), 2;
+    CHECK_EQ(b_shape.NumAxes(), 1)
+      << "number of axes of \'b\' should have be equal to 1, yet get "
+      << b_shape.NumAxes();
+    
+    // check input tensor shapes
+    size_t x_num_axes = x_shape.NumAxes();
+    CHECK_EQ(w_shape.At(1), x_shape.At(x_num_axes - 1))
+        << "dimension 1 of \'w\'(" << w_shape.At(1) << ") is not consistant with the last dimension of \'x\'("
+        << x_shape.At(x_num_axes - 1) << ")";
+    CHECK_EQ(b_shape.At(0), w_shape.At(0))
+        << "dimension 0 of \'b\'(" << b_shape.At(0) << ") is not consistant with dimension 0 of \'w\'("
+        << w_shape.At(0) << ")";
+    if (!is_split_mode) { 
+      CHECK_EQ(w_shape.At(1) % 2, 0)
+        << "dimension 1 of \'w\' is not divisible by 2";
+    }
+
+    // check optional input tensor shapes
+    if (is_split_mode) {
+      const ShapeView& v_shape = input_tensor_v->shape_view();
+      const ShapeView& c_shape = input_tensor_b->shape_view();
+
+      CHECK_EQ(v_shape.NumAxes(), 2)
+        << "number of axes of \'v\' should have be equal to 2, yet get " <<  v_shape.NumAxes();
+      CHECK_EQ(c_shape.NumAxes(), 1)
+        << "number of axes of \'c\' should have be equal to 1, yet get " <<  c_shape.NumAxes();
+      CHECK_EQ(v_shape, w_shape)
+        << "the shape of \'v\' is not consistant with \'w\'";
+      CHECK_EQ(c_shape, b_shape)
+        << "the shape of \'c\' is not consistant with \'b\'";
+    }
 
     // infer m, n, k
-    const int64_t input_x_num_axes = input_tensor_x->shape_view().NumAxes();
-    const int64_t m = input_tensor_x->shape_view().Count(0, input_x_num_axes - 1);
-    const int64_t n = out_tensor_y->shape_view().At(input_x_num_axes - 1);
-    const int64_t k = input_tensor_x->shape_view().At(input_x_num_axes - 1);
+    const int64_t m = x_shape.Count(0, x_num_axes - 1);
+    const int64_t n = y_shape.At(x_num_axes - 1);
+    const int64_t k = x_shape.At(x_num_axes - 1);
 
     // calculate matmul_wx (and matmul_vx) through primitive
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
@@ -352,6 +354,8 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
 REGISTER_GPU_FUSED_GLU_KERNEL(double)
 REGISTER_GPU_FUSED_GLU_KERNEL(float)
 REGISTER_GPU_FUSED_GLU_KERNEL(half)
+#if CUDA_VERSION >= 11000
 REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow

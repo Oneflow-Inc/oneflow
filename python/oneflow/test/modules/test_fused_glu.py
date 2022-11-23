@@ -25,9 +25,7 @@ import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-# from oneflow.test_utils.automated_test_util import *
-
-is_profiling = True
+is_profiling = False
 
 class Glu(nn.Module):
     def __init__(self):
@@ -78,43 +76,9 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
-def _test_glu_split_profiling(test_case, params: dict):
-    # config test data
-    m = params["m"]
-    n = params["n"]
-    k = params["k"]
-    act = params["act"]
-
-    # generate random input
-    x = np.random.randn(2, m, k)
-    w = np.random.randn(n, k)  # transpose
-    # w_t = np.transpose(weight).contiguous() #sync
-    b = np.random.randn(n)
-    v = np.random.randn(n, k)  # transpose
-    c = np.random.randn(n)
-
-    # transfer to gpu memory
-    input_tensor_x = flow.FloatTensor(x).to("cuda")
-    input_tensor_w = flow.FloatTensor(w).to("cuda")
-    input_tensor_b = flow.FloatTensor(b).to("cuda")
-    input_tensor_v = flow.FloatTensor(v).to("cuda")
-    input_tensor_c = flow.FloatTensor(c).to("cuda")
-
-    flow_module = Glu()
-    begin = datetime.datetime.now()
-    origin_output_tensor_y = flow_module.forward(
-        x=input_tensor_x,
-        w=input_tensor_w,
-        b=input_tensor_b,
-        v=input_tensor_v,
-        c=input_tensor_c,
-        split_mode=True,
-        activation=act,
-    )
-    end = datetime.datetime.now()
-    interval = end-begin
-    print(interval.total_seconds())
-
+'''
+    @desp: profiling fused glu implementation with split weight matrix
+'''
 def _test_fused_glu_split_profiling(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -147,7 +111,9 @@ def _test_fused_glu_split_profiling(test_case, params: dict):
         activation=act,
     )
 
-
+'''
+    @desp: check the functionality of fused glu implementation with split weight matrix
+'''
 def _test_fused_glu_split(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -201,38 +167,9 @@ def _test_fused_glu_split(test_case, params: dict):
         )
     )
 
-def _test_glu_profiling(test_case, params: dict):
-    # config test data
-    m = params["m"]
-    n = params["n"]
-    k = params["k"]
-    act = params["act"]
-
-    # generate random input
-    x = np.random.randn(2, m, k)
-    w = np.random.randn(n * 2, k)  # transpose
-    # w_t = np.transpose(weight).contiguous() #sync
-    b = np.random.randn(n * 2)
-
-    # transfer tensors to gpu memory
-    input_tensor_x = flow.FloatTensor(x).to("cuda")
-    input_tensor_w = flow.FloatTensor(w).to("cuda")
-    input_tensor_b = flow.FloatTensor(b).to("cuda")
-
-    # test: naive result
-    flow_module = Glu()
-    begin = datetime.datetime.now()
-    origin_output_tensor_y = flow_module.forward(
-        x=input_tensor_x,
-        w=input_tensor_w,
-        b=input_tensor_b,
-        split_mode=False,
-        activation=act,
-    )
-    end = datetime.datetime.now()
-    interval = end-begin
-    print(interval.total_seconds())
-
+'''
+    @desp: profiling fused glu implementation
+'''
 def _test_fused_glu_profiling(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -261,6 +198,9 @@ def _test_fused_glu_profiling(test_case, params: dict):
         activation=act,
     )
 
+'''
+    @desp: check the functionality of fused glu implementation
+'''
 def _test_fused_glu(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -320,8 +260,6 @@ class TestFusedGlu(flow.unittest.TestCase):
             arg_dict["test_fun"] = [
                 _test_fused_glu_profiling,
                 _test_fused_glu_split_profiling,
-                _test_glu_profiling,
-                _test_glu_split_profiling
             ]
         else:
             # for functionality test
@@ -335,13 +273,9 @@ class TestFusedGlu(flow.unittest.TestCase):
             # set up test functions
             arg_dict["params"] = [
                 # for profiling
-                # Testcase: 
-                # 1. 与原来比 (end to end 时延)
-                # 2. 无法整除的情况
-                # 3. m, n, k -> [100M]
-                {"m": 256, "k": 1280, "n": 1280, "act": "sigmoid"},
-                {"m": 256, "k": 1280, "n": 2560, "act": "sigmoid"},
-                {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
+                {"m": 256, "k": 1280, "n": 1280, "act": "none"},
+                {"m": 256, "k": 1280, "n": 2560, "act": "none"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "none"},
             ]
         else:
             # for functionality test

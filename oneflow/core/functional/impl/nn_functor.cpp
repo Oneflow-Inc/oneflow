@@ -3093,14 +3093,67 @@ class FusedGluFunctor {
                            const std::shared_ptr<one::Tensor>& w,
                            const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
                            const Optional<one::Tensor>& c, const std::string& activation) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
-    attrs.SetAllAttrs(activation);
-    if (v && c) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    // check whether the user provide splited tensors
+    bool is_split_mode;
+    if(v && c){
+      is_split_mode = true;
     } else if (!v && !c) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+      is_split_mode = false;
     } else {
       return Error::RuntimeError() << "expected consistant existance of tensor v and c";
+    }
+
+    // obtain input shape
+    const auto& x_shape = *(x->shape());
+    const auto& w_shape = *(w->shape());
+    const auto& b_shape = *(b->shape());
+    
+    // check number of axes of x, w and b
+    CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+      << "number of axes of \'x\' should have be greater than 1, yet get " <<  x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
+      << "number of axes of \'w\' should have be equal to 2, yet get " <<  w_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
+      << "number of axes of \'b\' should have be equal to 1, yet get " <<  b_shape.NumAxes();
+
+    // check input shapes of w and b
+    size_t x_num_axes = x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.At(1), x_shape.At(x_num_axes - 1))
+      << "dimension 1 of \'w\'(" << w_shape.At(1) << ") is not consistant with the last dimension of \'x\'("
+      << x_shape.At(x_num_axes - 1) << ")";
+    CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
+      << "dimension 0 of \'b\'(" << b_shape.At(0) << ") is not consistant with dimension 0 of \'w\'("
+      << w_shape.At(0) << ")";
+    if (!is_split_mode) { 
+      CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0)
+      << "dimension 1 of \'w\' is not divisible by 2";
+    }
+
+    // check both dimensions and input shapes of v and c (optional)
+    if (is_split_mode) {
+      const auto& v_shape = *(JUST(v)->shape());
+      const auto& c_shape = *(JUST(c)->shape());
+
+      CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
+        << "number of axes of \'v\' should have be equal to 2, yet get " <<  v_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
+        << "number of axes of \'c\' should have be equal to 1, yet get " <<  c_shape.NumAxes();
+
+      CHECK_OR_RETURN(v_shape == w_shape)
+        << "the shape of \'v\' is not consistant with \'w\'";
+      CHECK_OR_RETURN(c_shape == b_shape)
+        << "the shape of \'c\' is not consistant with \'b\'";
+    }
+
+    // set activation attribute
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
+    attrs.SetAllAttrs(activation);
+
+    // dispatch corresponding operator
+    if (is_split_mode) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
     }
   }
 

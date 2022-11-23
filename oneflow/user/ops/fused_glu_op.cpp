@@ -24,7 +24,8 @@ namespace oneflow {
   if (ctx->user_op_conf().has_input("v", 0) && ctx->user_op_conf().has_input("c", 0)) {
     is_split_mode = true;
   } else {
-    CHECK(!(ctx->user_op_conf().has_input("v", 0) || ctx->user_op_conf().has_input("c", 0)));
+    CHECK(!(ctx->user_op_conf().has_input("v", 0) || ctx->user_op_conf().has_input("c", 0)))
+      << "\'v\' and \'c\' should have consistant existance";
   }
 
   // data parallelism
@@ -79,28 +80,40 @@ namespace oneflow {
   }
 
   // check dimensions of x, w and b
-  CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2);  // support dimension larger than 2
-  CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1);
+  CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+    << "number of axes of \'x\' should have be greater than 1, yet get " <<  x_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
+    << "number of axes of \'w\' should have be equal to 2, yet get " <<  w_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
+    << "number of axes of \'b\' should have be equal to 1, yet get " <<  b_shape.NumAxes();
 
   // check input shapes of w and b
   size_t x_num_axes = x_shape.NumAxes();
   CHECK_EQ_OR_RETURN(w_shape.At(1), x_shape.At(x_num_axes - 1))
-      << "get " << w_shape.At(1) << " and " << x_shape.At(x_num_axes - 1);
+      << "dimension 1 of \'w\'(" << w_shape.At(1) << ") is not consistant with the last dimension of \'x\'("
+      << x_shape.At(x_num_axes - 1) << ")";
   CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
-      << "get " << b_shape.At(0) << " and " << w_shape.At(0);
-  if (!is_split_mode) { CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0); }
+      << "dimension 0 of \'b\'(" << b_shape.At(0) << ") is not consistant with dimension 0 of \'w\'("
+      << w_shape.At(0) << ")";
+  if (!is_split_mode) { 
+    CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0)
+      << "dimension 1 of \'w\' is not divisible by 2";
+  }
 
   // check both dimensions and input shapes of v and c (optional)
   if (is_split_mode) {
     const Shape& v_shape = ctx->InputShape("v", 0);
     const Shape& c_shape = ctx->InputShape("c", 0);
 
-    CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1);
+    CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
+      << "number of axes of \'v\' should have be equal to 2, yet get " <<  v_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
+      << "number of axes of \'c\' should have be equal to 1, yet get " <<  c_shape.NumAxes();
 
-    CHECK_OR_RETURN(v_shape == w_shape);
-    CHECK_OR_RETURN(c_shape == b_shape);
+    CHECK_OR_RETURN(v_shape == w_shape)
+      << "the shape of \'v\' is not consistant with \'w\'";
+    CHECK_OR_RETURN(c_shape == b_shape)
+      << "the shape of \'c\' is not consistant with \'b\'";
   }
 
   // set shape of the output tensor y
@@ -137,15 +150,19 @@ namespace oneflow {
   DataType x_dtype = ctx->InputDType("x", 0);
 
   // check types of x, w and b
-  CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), x_dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype)
+    << "data type of \'w\' is not consitant with \'x\'";
+  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), x_dtype)
+    << "data type of \'b\' is not consitant with \'x\'";
 
   bool is_split_mode = ctx->has_input("v", 0) && ctx->has_input("c", 0);
 
   // check types of v and c (optional)
   if (is_split_mode) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), x_dtype);
-    CHECK_EQ_OR_RETURN(ctx->InputDType("c", 0), x_dtype);
+    CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), x_dtype)
+      << "data type of \'v\' is not consitant with \'x\'";
+    CHECK_EQ_OR_RETURN(ctx->InputDType("c", 0), x_dtype)
+      << "data type of \'c\' is not consitant with \'x\'";
   }
 
   // set output data type
