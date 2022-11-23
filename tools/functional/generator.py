@@ -186,23 +186,7 @@ def _normalize(fmt):
 
 
 def _remove_angle_brackets(fmt):
-    return re.sub(r"\<[^()]*\>", "", fmt)
-
-
-def _split_ignore_in_brackets(fmt: str):
-    params = fmt.split(",")
-    if len(params) == 1:
-        return params
-    results = []
-    i = 0
-    while i < len(params) - 1:
-        if "<" in params[i] and ">" in params[i + 1]:
-            results.append(params[i] + "," + params[i + 1])
-            i += 2
-        else:
-            results.append(params[i])
-            i += 1
-    return results
+    return re.sub(r"\[[^()]*\]", "", fmt)
 
 
 def _std_decay(fmt):
@@ -225,8 +209,7 @@ def parse_function_params(fmt):
             "Missing return type or more than 1 return type in function def: " + fmt
         )
 
-    items = _split_ignore_in_brackets(header)
-    params.append(items[0])
+    params.append(header)
 
     close_paren = fmt.rfind(")")
     if close_paren == -1:
@@ -404,14 +387,13 @@ class Return:
     def to_string(self, to_cpp=False):
         return self._cpp_type if to_cpp else self._type
 
-    @staticmethod
-    def check_named_tuple(fmt):
-        sp = fmt.rfind("<")
+    def check_named_tuple(self, fmt):
+        sp = fmt.rfind("[")
         if sp != -1:
             _type = _normalize(fmt[:sp])
             param_names = _normalize(fmt[sp:])
-            sp = param_names.rfind(">")
-            assert sp != -1, "Missing '>' for argument def: " + fmt
+            sp = param_names.rfind("]")
+            assert sp != -1, "Missing ']' for argument def: " + fmt
             param_names = param_names[1:sp]
             _return_names = [_normalize(x) for x in param_names.split(",")]
         else:

@@ -281,7 +281,7 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple<values, indices> (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
     ]
   bind_python: True
@@ -1428,7 +1428,7 @@
 
 - name: "max_pool2d"
   signature:
-    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None,
+    'TensorTuple[output, indices] (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None,
     Int32List[2] padding=0, Int32List[2] dilation=1,
     Bool return_indices=True, Bool ceil_mode=False,
     String data_format="channels_first") => MaxPool2D'
