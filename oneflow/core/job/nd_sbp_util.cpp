@@ -78,15 +78,19 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
       ranges[split_axis] = bs.At(id);
     }
   } else {
+    Shape physical_shape(logical_shape);
     FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
       const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(i);
       if (sbp_parallel.has_split_parallel()) {
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
         CHECK_GE(split_axis, 0);
         CHECK_LT(split_axis, ranges.size());
-        CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
-        const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
-        const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
+        CHECK_GE(ranges[split_axis].size(), parallel_hierarchy.At(i));
+        const BalancedSplitter bs(physical_shape.At(split_axis), parallel_hierarchy.At(i));
+        const auto& range = bs.At(parallel_rank.at(i));
+        const int64_t range_size = range.size();
+        const int64_t dim_start = ranges[split_axis].begin() + range.begin();
+        physical_shape.Set(split_axis, range_size);
         ranges[split_axis].mut_begin() = dim_start;
         ranges[split_axis].mut_end() = dim_start + range_size;
       }
