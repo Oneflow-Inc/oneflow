@@ -55,9 +55,9 @@ __global__ void FusedCenterForward(FUNCTOR functor, const int n, const T* b1_x1,
 template<typename T>
 __global__ void FusedCenterBackward(const int n, const T* b1_x1, const T* b1_x2, const T* b2_x1,
                                     const T* b2_x2, const T* b1_y1, const T* b1_y2, const T* b2_y1,
-                                    const T* b2_y2, const T* rho2_diff, T* b1_x1_diff, T* b1_x2_diff, 
-                                    T* b2_x1_diff, T* b2_x2_diff, T* b1_y1_diff, T* b1_y2_diff, 
-                                    T* b2_y1_diff, T* b2_y2_diff) {
+                                    const T* b2_y2, const T* rho2_diff, T* b1_x1_diff,
+                                    T* b1_x2_diff, T* b2_x1_diff, T* b2_x2_diff, T* b1_y1_diff,
+                                    T* b1_y2_diff, T* b2_y1_diff, T* b2_y2_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T b_x_diff = b1_x1[i] + b1_x2[i] - b2_x1[i] - b2_x2[i];
     const T b_y_diff = b1_y1[i] + b1_y2[i] - b2_y1[i] - b2_y2[i];
@@ -150,9 +150,9 @@ class FusedCenterGradKernel final : public user_op::OpKernel {
 
     RUN_CUDA_KERNEL((FusedCenterBackward<T>), ctx->stream(), elem_cnt, elem_cnt, b1_x1->dptr<T>(),
                     b1_x2->dptr<T>(), b2_x1->dptr<T>(), b2_x2->dptr<T>(), b1_y1->dptr<T>(),
-                    b1_y2->dptr<T>(), b2_y1->dptr<T>(), b2_y2->dptr<T>(), rho2_diff->dptr<T>(), 
-                    b1_x1_diff->mut_dptr<T>(), b1_x2_diff->mut_dptr<T>(), b2_x1_diff->mut_dptr<T>(), 
-                    b2_x2_diff->mut_dptr<T>(), b1_y1_diff->mut_dptr<T>(), b1_y2_diff->mut_dptr<T>(), 
+                    b1_y2->dptr<T>(), b2_y1->dptr<T>(), b2_y2->dptr<T>(), rho2_diff->dptr<T>(),
+                    b1_x1_diff->mut_dptr<T>(), b1_x2_diff->mut_dptr<T>(), b2_x1_diff->mut_dptr<T>(),
+                    b2_x2_diff->mut_dptr<T>(), b1_y1_diff->mut_dptr<T>(), b1_y2_diff->mut_dptr<T>(),
                     b2_y1_diff->mut_dptr<T>(), b2_y2_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -3306,9 +3306,10 @@ class FusedGetCiouDiagonalAngleFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& w1, const std::shared_ptr<one::Tensor>& h1,
-      const std::shared_ptr<one::Tensor>& w2, const std::shared_ptr<one::Tensor>& h2, const float eps) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& w1,
+                           const std::shared_ptr<one::Tensor>& h1,
+                           const std::shared_ptr<one::Tensor>& w2,
+                           const std::shared_ptr<one::Tensor>& h2, const float eps) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
     attrs.SetAllAttrs(eps);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {w1, h1, w2, h2}, attrs);
@@ -3360,10 +3361,11 @@ class FusedGetCiouDiagonalAngleGradFunctor {
                          .Build());
   }
 
-  Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& w1, const std::shared_ptr<one::Tensor>& h1,
-      const std::shared_ptr<one::Tensor>& w2, const std::shared_ptr<one::Tensor>& h2,
-      const std::shared_ptr<one::Tensor>& v_diff, const float eps) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& w1,
+                                const std::shared_ptr<one::Tensor>& h1,
+                                const std::shared_ptr<one::Tensor>& w2,
+                                const std::shared_ptr<one::Tensor>& h2,
+                                const std::shared_ptr<one::Tensor>& v_diff, const float eps) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
     attrs.SetAllAttrs(eps);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {w1, h1, w2, h2, v_diff}, attrs);
