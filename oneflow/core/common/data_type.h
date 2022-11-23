@@ -36,7 +36,17 @@ limitations under the License.
 
 namespace oneflow {
 
+template<>
+struct IsScalarType<bfloat16> final {
+  static const bool value = true;
+};
+
 typedef half_float::half float16;
+
+template<>
+struct IsScalarType<float16> final {
+  static const bool value = true;
+};
 
 template<typename T>
 struct IsFloat16;

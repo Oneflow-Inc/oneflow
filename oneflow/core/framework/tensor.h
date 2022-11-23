@@ -91,6 +91,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
+  virtual int32_t get_grad_fn_output_index() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
@@ -102,6 +103,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() = 0;
+  virtual void set_grad_fn_output_index(int32_t idx) = 0;
   virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
@@ -217,6 +219,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
+  int32_t get_grad_fn_output_index() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return 0;
+  }
   Maybe<Tensor> acc_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -237,6 +243,7 @@ class StaticZerosTensor final : public Tensor {
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
+  void set_grad_fn_output_index(int32_t idx) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   std::shared_ptr<FunctionNode> mut_grad_fn_node() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
@@ -286,16 +293,19 @@ class TensorIf : public Tensor {
   // acc_grad is tensor's accumulated grad in more than once backward operation,
   // and current_grad is temporary grad to shared data with different FunctionNode
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
+  int32_t get_grad_fn_output_index() const override { return grad_fn_output_index_; }
 
   // Setters for autograd
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
   std::shared_ptr<FunctionNode> mut_grad_fn_node() override { return grad_fn_node_; }
+  void set_grad_fn_output_index(int32_t idx) override { grad_fn_output_index_ = idx; }
 
  protected:
   TensorIf() = default;
   std::shared_ptr<FunctionNode> grad_fn_node_;
+  int32_t grad_fn_output_index_ = -1;
 };
 
 template<typename DerivedT>

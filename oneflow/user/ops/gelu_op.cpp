@@ -33,7 +33,7 @@ Maybe<void> InferGeluDataType(user_op::InferContext* ctx) {
 Maybe<void> GetGeluSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   return Maybe<void>::Ok();
 }
@@ -127,6 +127,74 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
 }
 /*static*/ auto FastGeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return GetGeluGradSbp(ctx);
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  const Shape& m_shape = ctx->InputShape("multiplier", 0);
+  CHECK_OR_RETURN(ctx->InputShape("multiplier", 0) == in_shape)
+      << "Expected multiplier shape " << in_shape.ToString() << ", but got " << m_shape.ToString();
+  ctx->SetOutputShape("out", 0, in_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType in_dtype = ctx->InputDType("in", 0);
+  const DataType m_dtype = ctx->InputDType("multiplier", 0);
+  CHECK_EQ_OR_RETURN(m_dtype, in_dtype)
+      << "Expected multiplier data type " << DataType_Name(in_dtype) << ", but got "
+      << DataType_Name(m_dtype);
+  ctx->SetOutputDType("out", 0, in_dtype);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetGeluSbp(ctx);
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
+  const Shape& m_shape = ctx->InputShape("multiplier", 0);
+  CHECK_EQ_OR_RETURN(out_diff_shape, in_shape);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(m_shape, in_shape);         // NOLINT(maybe-need-error-msg)
+  ctx->SetOutputShape("in_diff", 0, in_shape);
+  ctx->SetOutputShape("multiplier_diff", 0, m_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulGradOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType in_dtype = ctx->InputDType("in", 0);
+  const DataType out_diff_dtype = ctx->InputDType("out_diff", 0);
+  const DataType m_dtype = ctx->InputDType("multiplier", 0);
+  CHECK_EQ_OR_RETURN(out_diff_dtype, in_dtype);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(m_dtype, in_dtype);         // NOLINT(maybe-need-error-msg)
+  ctx->SetOutputDType("in_diff", 0, in_dtype);
+  ctx->SetOutputDType("multiplier_diff", 0, m_dtype);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedFastGeluMulGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("in", 0))
+      .Broadcast(user_op::OpArg("multiplier", 0))
+      .PartialSum(user_op::OpArg("out_diff", 0))
+      .PartialSum(user_op::OpArg("in_diff", 0))
+      .PartialSum(user_op::OpArg("multiplier_diff", 0))
+      .Build();
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

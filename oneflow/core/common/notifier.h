@@ -32,6 +32,10 @@ class Notifier final {
   NotifierStatus WaitAndClearNotifiedCnt();
   void Close();
 
+  Maybe<void> TimedWaitAndClearNotifiedCnt(size_t timeout_seconds);
+  Maybe<void> TimedWaitAndClearNotifiedCnt(
+      const std::function<Maybe<bool>()>& StopWaitingAfterTimeout);
+
  private:
   size_t notified_cnt_;
   std::mutex mutex_;
