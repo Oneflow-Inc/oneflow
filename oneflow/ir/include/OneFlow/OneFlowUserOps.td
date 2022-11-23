@@ -4137,7 +4137,7 @@ def OneFlow_CDistOp : OneFlow_BaseOp<"cdist", [NoSideEffect, DeclareOpInterfaceM
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "2.0">:$p
+    DefaultValuedAttr<F64Attr, "2.0">:$p
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4157,7 +4157,7 @@ def OneFlow_CDistGradOp : OneFlow_BaseOp<"cdist_grad", [NoSideEffect, DeclareOpI
     OneFlow_Tensor:$dx2
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "2.0">:$p
+    DefaultValuedAttr<F64Attr, "2.0">:$p
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
