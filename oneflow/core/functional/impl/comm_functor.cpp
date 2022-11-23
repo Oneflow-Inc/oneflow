@@ -174,9 +174,9 @@ auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
 
 }  // namespace
 
-class BroadcastFunctor {
+class CommBroadcastFunctor {
  public:
-  BroadcastFunctor() = default;
+  CommBroadcastFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
                            bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
@@ -188,9 +188,9 @@ class BroadcastFunctor {
   }
 };
 
-class BroadcastTensorsFunctor {
+class CommBroadcastTensorsFunctor {
  public:
-  BroadcastTensorsFunctor() = default;
+  CommBroadcastTensorsFunctor() = default;
   Maybe<one::TensorTuple> operator()(const one::TensorTuple& inputs, int64_t src_rank,
                                      bool inplace) const {
     if (inputs.empty()) { return inputs; }
@@ -442,8 +442,8 @@ class LocalReduceFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
-  m.add_functor<impl::BroadcastFunctor>("Broadcast");
-  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+  m.add_functor<impl::CommBroadcastFunctor>("CommBroadcast");
+  m.add_functor<impl::CommBroadcastTensorsFunctor>("CommBroadcastTensors");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
   m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
