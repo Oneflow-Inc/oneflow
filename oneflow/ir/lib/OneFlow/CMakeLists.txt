@@ -15,6 +15,8 @@ foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
+add_subdirectory(PDLL)
+
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
   SBP/SBPDialect.cpp
@@ -39,6 +41,8 @@ oneflow_add_mlir_dialect_library(
   Transform/AutoNHWCOps.cpp
   TransposeHelpers.cpp
   Passes.cpp
+  OneFlowCanonicalizers.cpp
+  OneFlowRewrites.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
@@ -55,6 +59,7 @@ oneflow_add_mlir_dialect_library(
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIROneFlowPDLLPatterns
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)

@@ -4284,7 +4284,6 @@ class RocAucScoreFunctor {
 class MultiTensorSgdUpdateFunctor {
  public:
   MultiTensorSgdUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
@@ -4314,10 +4313,48 @@ class MultiTensorSgdUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+class MultiTensorMomentumUpdateFunctor {
+ public:
+  MultiTensorMomentumUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_momentum_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("momentum_buf", n + 1)
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& momentum_buf, const double& scale,
+                         const float& weight_decay, const float& learning_rate_val,
+                         const float& momentum, const float& dampening, const bool& nesterov,
+                         const bool& maximize) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val",
+                                                 "momentum", "dampening", "nesterov", "maximize");
+    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum, dampening, nesterov,
+                      maximize);
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(3 * size);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size,
+                input.begin() + 2 * size);
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 class MultiTensorAdamUpdateFunctor {
  public:
   MultiTensorAdamUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
@@ -4818,6 +4855,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
+  m.add_functor<impl::MultiTensorMomentumUpdateFunctor>("MultiTensorMomentumUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
   m.add_functor<impl::DeformConv2dFunctor>("DeformConv2d");
   m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
