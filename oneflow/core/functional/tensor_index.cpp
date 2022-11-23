@@ -42,7 +42,7 @@ int64_t CountSpecifiedDims(const TensorIndex& index) {
       specified_ndims++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
+      if (IsMaskTensor(tensor)) {
         specified_ndims += tensor->ndim();
       } else {
         specified_ndims++;
@@ -247,6 +247,11 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
 
 }  // namespace
 
+bool IsMaskTensor(const std::shared_ptr<Tensor>& tensor) {
+  return tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+         || tensor->dtype() == DType::Bool();
+}
+
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
@@ -316,7 +321,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      if (IsValidScalarTensorIndex(tensor)) {
+      if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
         if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kUInt8) {
           int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
           if (integer < 0) { integer += shape.At(dim); }
@@ -558,6 +563,8 @@ Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index = tensor_indices[i];
       if (tensor_index == nullptr) { continue; }
       if (tensor_index->is_local()) {
+        // NOTE: LocalToGlobal should be called in eager mode
+        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
         tensor_indices[i] = JUST(ToGlobal(tensor_index, placement,
                                           std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
                                           grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));

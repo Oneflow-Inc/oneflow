@@ -86,9 +86,7 @@ class SbpEdge final {
   double GetMaxCost() const;
 
   // Assemble copy cost
-  // compute_cost = true: It is computing cost
-  // compute_cost = false: It is deciding whether this edge needs the wait time.
-  void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector);
+  void InitializeCopyCost(const std::string& ibn, bool use_sbp_collector);
 
   // find the cut ratio
   // (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
