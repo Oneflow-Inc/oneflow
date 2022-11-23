@@ -283,6 +283,7 @@ def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
