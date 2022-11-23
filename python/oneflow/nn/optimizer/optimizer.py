@@ -212,7 +212,9 @@ class Optimizer(object):
         self._state = dict()
         self._state["step"] = 0
 
-        self._parse_input_parameters(parameters, options.get("contiguous_params", False))
+        self._parse_input_parameters(
+            parameters, options.get("contiguous_params", False)
+        )
 
         self.step = _decorate_step(self.step)
 
