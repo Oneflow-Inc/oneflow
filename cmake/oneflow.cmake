@@ -574,6 +574,7 @@ if(BUILD_CPP_API)
     llvm-PerfectShuffle
     llvm-tblgen
     mlir-tblgen
+    mlir-pdll
     obj2yaml
     oneflow_tblgen
     yaml-bench
