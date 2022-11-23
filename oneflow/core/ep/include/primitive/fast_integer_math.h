@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_
 #define ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_
 #include "oneflow/core/common/data_type.h"
+#ifdef WITH_ROCM
+#include "hip/device_functions.h" // /opt/rocm/hip/include/hip
+#endif
 #include <cassert>
 
 namespace oneflow {
@@ -28,7 +31,7 @@ template<typename T>
 struct FastIntegerMath {
   OF_DEVICE_FUNC FastIntegerMath() {}
   OF_DEVICE_FUNC explicit FastIntegerMath(T operand) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     int leading_zeroes = __clzll(operand);
 #else
     int leading_zeroes = __builtin_clz(operand);

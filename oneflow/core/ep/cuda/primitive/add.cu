@@ -47,17 +47,17 @@ __global__ void AddGpu(const Args*... srcs, T* dst, size_t count) {
 }
 
 template<typename T, typename... Args>
-void LaunchAddGpu(cudaStream_t stream, const Args*... srcs, T* dst, size_t count) {
+void LaunchAddGpu(GPU(Stream_t) stream, const Args*... srcs, T* dst, size_t count) {
   AddGpu<T, Args...>
       <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream>>>(srcs..., dst, count);
 }
 
 template<typename T>
-void DispatchLaunch(cudaStream_t stream, const T* const* srcs, size_t arity, T* dst, size_t count) {
+void DispatchLaunch(GPU(Stream_t) stream, const T* const* srcs, size_t arity, T* dst, size_t count) {
   if (arity == 0) {
-    OF_CUDA_CHECK(cudaMemsetAsync(dst, 0, count * sizeof(T), stream));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(dst, 0, count * sizeof(T), stream));
   } else if (arity == 1) {
-    OF_CUDA_CHECK(cudaMemcpyAsync(dst, srcs[0], count * sizeof(T), cudaMemcpyDefault, stream));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(dst, srcs[0], count * sizeof(T), GPU(MemcpyDefault), stream));
   } else if (arity == 2) {
     OF_CUDA_CHECK((cuda::elementwise::Binary<AddFunctor<T, T>, T, T, T>(
         AddFunctor<T, T>(), count, dst, srcs[0], srcs[1], stream)));
@@ -94,7 +94,7 @@ class AddImpl : public Add {
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
     DispatchLaunch(cuda_stream, reinterpret_cast<const T* const*>(srcs), arity,
                    reinterpret_cast<T*>(dst), count);
   }

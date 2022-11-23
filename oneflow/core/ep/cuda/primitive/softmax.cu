@@ -32,7 +32,7 @@ enum class Algorithm {
 };
 
 template<Algorithm algorithm, typename T>
-void SoftmaxGpu(cudaStream_t cuda_stream, size_t rows, size_t cols, const T* x, T* y) {
+void SoftmaxGpu(GPU(Stream_t) cuda_stream, size_t rows, size_t cols, const T* x, T* y) {
   using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
   oneflow::cuda::softmax::DirectLoad<T, ComputeType> load(x, cols);
   oneflow::cuda::softmax::DirectStore<ComputeType, T> store(y, cols);
@@ -55,7 +55,7 @@ class SoftmaxImpl : public SoftmaxBase {
   ~SoftmaxImpl() override = default;
 
   void Launch(Stream* stream, size_t rows, size_t cols, const void* x, void* y) override {
-    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
     SoftmaxGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
                              reinterpret_cast<T*>(y));
   }

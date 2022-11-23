@@ -47,4 +47,33 @@ class CudaEvent : public Event {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+#include "oneflow/core/device/cuda_util.h"
+
+namespace oneflow {
+
+namespace ep {
+
+class CudaEvent : public Event {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaEvent);
+  explicit CudaEvent(unsigned int flags);
+  ~CudaEvent() override;
+
+  Maybe<bool> QueryDone() override;
+  Maybe<void> Sync() override;
+
+  hipEvent_t cuda_event();
+
+ private:
+  hipEvent_t cuda_event_;
+};
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+
 #endif  // ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_

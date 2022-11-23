@@ -17,8 +17,11 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/common/primitive/copy_nd.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda_runtime.h>
-
+#endif
 namespace oneflow {
 
 namespace ep {
@@ -49,7 +52,7 @@ __global__ void CopyNdKernel(CopyNdKernelParams<num_dims, IndexType> params) {
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(Stream* stream, CopyNdKernelParams<num_dims, IndexType> params) {
-  cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
   CopyNdKernel<num_dims, movement_size, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
 }

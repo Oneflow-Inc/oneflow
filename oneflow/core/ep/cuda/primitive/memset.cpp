@@ -57,3 +57,49 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemsetFactory, MemsetFactoryImpl);
 }  // namespace oneflow
 
 #endif
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/ep/include/primitive/memset.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#include <hip/hip_runtime.h>
+
+namespace oneflow {
+
+namespace ep {
+namespace primitive {
+
+namespace {
+
+class MemsetImpl : public Memset {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MemsetImpl);
+  MemsetImpl() = default;
+  ~MemsetImpl() override = default;
+
+  void Launch(Stream* stream, void* ptr, int value, size_t count) override {
+    auto* cuda_stream = stream->As<CudaStream>();
+    OF_CUDA_CHECK(hipMemsetAsync(ptr, value, count, cuda_stream->cuda_stream()));
+  }
+};
+
+class MemsetFactoryImpl : public MemsetFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MemsetFactoryImpl);
+  MemsetFactoryImpl() = default;
+  ~MemsetFactoryImpl() override = default;
+
+  std::unique_ptr<Memset> New() override { return std::unique_ptr<Memset>(new MemsetImpl()); }
+};
+
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemsetFactory, MemsetFactoryImpl);
+
+}  // namespace
+
+}  // namespace primitive
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif
+

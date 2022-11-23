@@ -99,7 +99,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorMod, double, double> {
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined( __HIP_DEVICE_COMPILE__)
     coef = sqrt(static_cast<Src>(2.0) / acos(static_cast<Src>(-1.0)));
 #else
     coef = std::sqrt(static_cast<Src>(2.0) / std::acos(static_cast<Src>(-1.0)));

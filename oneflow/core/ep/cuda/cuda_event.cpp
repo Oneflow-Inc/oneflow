@@ -54,3 +54,44 @@ cudaEvent_t CudaEvent::cuda_event() { return cuda_event_; }
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+namespace oneflow {
+
+namespace ep {
+
+CudaEvent::CudaEvent(unsigned int flags) : cuda_event_{} {
+  OF_CUDA_CHECK(hipEventCreateWithFlags(&cuda_event_, flags));
+}
+
+CudaEvent::~CudaEvent() { OF_CUDA_CHECK(hipEventDestroy(cuda_event_)); }
+
+Maybe<bool> CudaEvent::QueryDone() {
+  hipError_t err = hipEventQuery(cuda_event_);
+  if (err == hipSuccess) {
+    return Maybe<bool>(true);
+  } else if (err == hipErrorNotReady) {
+    return Maybe<bool>(false);
+  } else {
+    return Error::RuntimeError() << hipGetErrorString(err);
+  }
+}
+
+Maybe<void> CudaEvent::Sync() {
+  hipError_t err = hipEventSynchronize(cuda_event_);
+  if (err == hipSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << hipGetErrorString(err);
+  }
+}
+
+hipEvent_t CudaEvent::cuda_event() { return cuda_event_; }
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+

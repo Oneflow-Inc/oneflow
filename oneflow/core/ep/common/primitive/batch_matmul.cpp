@@ -93,6 +93,10 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, BatchMatmulFactory,
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BatchMatmulFactory,
                            BatchMatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BatchMatmulFactory,
+                           BatchMatmulFactoryImpl<DeviceType::kCUDA>);
+#endif  // WITH_ROCM
 
 }  // namespace
 

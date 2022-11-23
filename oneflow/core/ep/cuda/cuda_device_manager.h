@@ -50,4 +50,36 @@ class CudaDeviceManager : public DeviceManager {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+namespace oneflow {
+namespace ep {
+
+class CudaDevice;
+
+class CudaDeviceManager : public DeviceManager {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceManager);
+  CudaDeviceManager(DeviceManagerRegistry* registry);
+  ~CudaDeviceManager() override;
+
+  DeviceManagerRegistry* registry() const override;
+  std::shared_ptr<Device> GetDevice(size_t device_index) override;
+  size_t GetDeviceCount(size_t primary_device_index) override;
+  size_t GetDeviceCount() override;
+  size_t GetActiveDeviceIndex() override;
+  void SetActiveDeviceByIndex(size_t device_index) override;
+
+ private:
+  std::mutex devices_mutex_;
+  std::vector<std::shared_ptr<CudaDevice>> devices_;
+  DeviceManagerRegistry* registry_;
+};
+
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+
 #endif  // ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_

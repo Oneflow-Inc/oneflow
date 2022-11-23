@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/event.h"
+#include "oneflow/core/ep/include/gpu_macro.h"
 
 namespace oneflow {
 

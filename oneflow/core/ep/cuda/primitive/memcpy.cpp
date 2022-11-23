@@ -60,3 +60,51 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemcpyFactory, MemcpyFactoryImpl);
 }  // namespace oneflow
 
 #endif
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#include <hip/hip_runtime.h>
+
+namespace oneflow {
+
+namespace ep {
+namespace primitive {
+
+namespace {
+
+class MemcpyImpl : public Memcpy {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MemcpyImpl);
+  MemcpyImpl() = default;
+  ~MemcpyImpl() override = default;
+
+  void Launch(Stream* stream, void* dst, const void* src, size_t count) override {
+    if (dst == src) { return; }
+    auto* cuda_stream = stream->As<CudaStream>();
+    OF_CUDA_CHECK(hipMemcpyAsync(dst, src, count, hipMemcpyDefault, cuda_stream->cuda_stream()));
+  }
+};
+
+class MemcpyFactoryImpl : public MemcpyFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MemcpyFactoryImpl);
+  MemcpyFactoryImpl() = default;
+  ~MemcpyFactoryImpl() override = default;
+
+  std::unique_ptr<Memcpy> New(MemcpyKind kind) override {
+    return std::unique_ptr<Memcpy>(new MemcpyImpl());
+  }
+};
+
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemcpyFactory, MemcpyFactoryImpl);
+
+}  // namespace
+
+}  // namespace primitive
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif

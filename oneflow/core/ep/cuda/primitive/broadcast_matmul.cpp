@@ -207,3 +207,215 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastMatmulFactory, BroadcastM
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
+#include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
+namespace oneflow {
+
+namespace ep {
+namespace primitive {
+
+namespace broadcast_matmul {
+
+namespace internal {
+
+namespace {
+
+constexpr size_t kMaxNumDims = 8;
+
+Optional<hipblasDatatype_t> OptCudaDataType(DataType data_type) {
+  switch (data_type) {
+    case kFloat: return HIPBLAS_R_32F;
+    case kDouble: return HIPBLAS_R_64F;
+    case kFloat16: return HIPBLAS_R_16F;
+// #if CUDA_VERSION >= 11000
+//     case kBFloat16: return CUDA_R_16BF;
+// #endif  // CUDA_VERSION >= 11000
+    default: return NullOpt;
+  }
+}
+
+hipblasDatatype_t GetCudaDataType(DataType data_type) {
+  auto cuda_data_type = OptCudaDataType(data_type);
+  CHECK(cuda_data_type.has_value());
+  return cuda_data_type.value_or(HIPBLAS_R_32F);
+}
+
+union CublasScalarParameter {
+  double d;
+  float s;
+};
+
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, hipblasDatatype_t compute_type) {
+  CublasScalarParameter sp{};
+  if (compute_type == HIPBLAS_R_64F) {
+    sp.d = scalar.Value<double>();
+  } else if (compute_type == HIPBLAS_R_32F) {
+    sp.s = scalar.Value<float>();
+  } else if (compute_type == HIPBLAS_R_16F) {
+    sp.s = scalar.Value<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sp;
+}
+
+hipblasDatatype_t GetComputeType(DataType data_type) {
+  switch (data_type) {
+    case kFloat: return HIPBLAS_R_32F;
+    case kDouble: return HIPBLAS_R_64F;
+    case kFloat16: return HIPBLAS_R_16F;
+// #if CUDA_VERSION >= 11000
+//     case kBFloat16: return HIPBLAS_R_32F;
+// #endif  // CUDA_VERSION >= 11000
+    default: UNIMPLEMENTED(); return HIPBLAS_R_32F;
+  }
+}
+
+void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
+                           BlasTransposeType transpose_b, int64_t num_batch_dims,
+                           const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
+                           const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
+                           int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
+                           Scalar beta, void* c) {
+  auto* cuda_stream = stream->As<CudaStream>();
+  const auto cuda_data_type = GetCudaDataType(data_type);
+  const auto compute_type = GetComputeType(data_type);
+  const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
+  __half h_alpha = 0;
+  if (compute_type == HIPBLAS_R_16F) {
+      h_alpha = __float2half(sp_alpha.s);
+  }
+  const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
+    if (transpose_type == BlasTransposeType::N) {
+      return HIPBLAS_OP_N;
+    } else if (transpose_type == BlasTransposeType::T) {
+      return HIPBLAS_OP_T;
+    } else {
+      UNIMPLEMENTED();
+      return HIPBLAS_OP_N;
+    }
+  };
+  const hipblasOperation_t cublas_trans_a = GetCublasOperation(transpose_b);
+  const hipblasOperation_t cublas_trans_b = GetCublasOperation(transpose_a);
+  const int cublas_m = n;
+  const int cublas_n = m;
+  const int cublas_k = k;
+  int cublas_lda = 0;
+  if (transpose_b == BlasTransposeType::N) {
+    cublas_lda = n;
+  } else if (transpose_b == BlasTransposeType::T) {
+    cublas_lda = k;
+  } else {
+    UNIMPLEMENTED();
+  }
+  int cublas_ldb = 0;
+  if (transpose_a == BlasTransposeType::N) {
+    cublas_ldb = k;
+  } else if (transpose_a == BlasTransposeType::T) {
+    cublas_ldb = m;
+  } else {
+    UNIMPLEMENTED();
+  }
+  const int cublas_ldc = n;
+ 
+  hipblasGemmAlgo_t algo = HIPBLAS_GEMM_DEFAULT;  
+
+  if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
+    const void* cublas_a = b;
+    const void* cublas_b = a;
+    void* cublas_c = c;
+    const int64_t a_batch_count = a_batch_dims[0];
+    const int64_t b_batch_count = b_batch_dims[0];
+    CHECK(a_batch_count == 1 || b_batch_count == 1 || a_batch_count == b_batch_count);
+    CHECK_GT(a_batch_count, 0);
+    CHECK_GT(b_batch_count, 0);
+    const int batch_count = std::max(a_batch_count, b_batch_count);
+    const long long int cublas_stride_a = b_batch_count == 1 ? 0 : cublas_m * cublas_k;
+    const long long int cublas_stride_b = a_batch_count == 1 ? 0 : cublas_k * cublas_n;
+    const long long int cublas_stride_c = cublas_m * cublas_n;
+    const auto sp_beta = GetCublasScalarParameter(beta, compute_type);
+    __half h_beta = 0;
+    if (compute_type == HIPBLAS_R_16F) {
+      h_beta = __float2half(sp_beta.s);
+      OF_CUBLAS_CHECK(hipblasGemmStridedBatchedEx(
+        cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
+        &h_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b, cuda_data_type,
+        cublas_ldb, cublas_stride_b, &h_beta, cublas_c, cuda_data_type, cublas_ldc,
+        cublas_stride_c, batch_count, compute_type, algo));
+    } else {
+      OF_CUBLAS_CHECK(hipblasGemmStridedBatchedEx(
+        cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
+        &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b, cuda_data_type,
+        cublas_ldb, cublas_stride_b, &sp_beta, cublas_c, cuda_data_type, cublas_ldc,
+        cublas_stride_c, batch_count, compute_type, algo));
+    }
+    
+  } else {
+    auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
+      const auto sp_beta = GetCublasScalarParameter(batch_beta, compute_type);
+      __half h_beta = 0;
+      const void* cublas_a = batch_b;
+      const void* cublas_b = batch_a;
+      void* cublas_c = batch_c;
+      if (compute_type == HIPBLAS_R_16F) {
+        h_beta = __float2half(sp_beta.s);
+        OF_CUBLAS_CHECK(hipblasGemmEx(
+          cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+          cublas_k, &h_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
+          cublas_ldb, &h_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
+      } else {
+        OF_CUBLAS_CHECK(hipblasGemmEx(
+          cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+          cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
+          cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
+      }
+      
+    };
+    ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
+                               a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
+  }
+}
+
+class BroadcastMatmulFactoryImpl : public BroadcastMatmulFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastMatmulFactoryImpl);
+  BroadcastMatmulFactoryImpl() = default;
+  ~BroadcastMatmulFactoryImpl() override = default;
+
+  std::unique_ptr<BroadcastMatmul> New(DataType data_type, BlasTransposeType transpose_a,
+                                       BlasTransposeType transpose_b,
+                                       size_t max_num_dims) override {
+    auto cuda_data_type = OptCudaDataType(data_type);
+    if (max_num_dims <= kMaxNumDims && cuda_data_type.has_value()) {
+      return std::make_unique<BroadcastMatmulImpl<kMaxNumDims>>(data_type, transpose_a,
+                                                                transpose_b);
+    } else {
+      return nullptr;
+    }
+  }
+};
+
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastMatmulFactory, BroadcastMatmulFactoryImpl);
+
+}  // namespace
+
+}  // namespace internal
+
+}  // namespace broadcast_matmul
+
+}  // namespace primitive
+}  // namespace ep
+
+}  // namespace oneflow
+
+#endif  // WITH_ROCM
+
