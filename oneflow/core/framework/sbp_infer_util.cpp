@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
@@ -628,6 +630,19 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
 
 int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc) {
   return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+}
+
+int64_t MaxByteSize4BlobDescSbp(const BlobDesc& logical_blob_desc, const NdSbp& nd_sbp,
+                                const Shape& hierarchy) {
+  Shape blob_shape = logical_blob_desc.shape();
+  for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
+    const auto& sbp = nd_sbp.sbp_parallel(sbp_id);
+    if (sbp.has_split_parallel()) {
+      int32_t split_axis = sbp.split_parallel().axis();
+      blob_shape.Set(split_axis, CeilQuotient(blob_shape.At(split_axis), hierarchy.At(sbp_id)));
+    }
+  }
+  return blob_shape.elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
 }
 
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,

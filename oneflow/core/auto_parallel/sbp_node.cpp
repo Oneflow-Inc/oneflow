@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_graph.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -149,7 +150,6 @@ void SbpNode::InitializeSbp() {
 };
 
 // Let one node point to another
-
 void SbpNode::StartPointToEnd(SbpNode* start_node, SbpNode* end_node) {
   // generate the edge between them
   SbpEdge* e = new SbpEdge(start_node, end_node);
@@ -379,7 +379,6 @@ void SbpNode::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const {
 
 // Get the n ring neighborhood of this node
 // Pre-allocate buffer, which will be faster.
-
 void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                 std::vector<int32_t>& nbh_1ring,
                                 const std::vector<SbpNode*>& node_list,
@@ -440,7 +439,6 @@ int32_t SbpNode::GetMinLayer(
 }
 
 // Spread the minimum layer to compute the maximum layer of producers
-
 void SbpNode::SpreadMaxLayer(
     const HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
@@ -460,25 +458,23 @@ void SbpNode::SpreadMaxLayer(
 }
 
 // Drop down the maximum layer with the minimum layer form consumer
-
 void SbpNode::DropMaxLayer(int32_t upper_bound) {
   if (upper_bound < max_layer_ || max_layer_ < 0) { max_layer_ = upper_bound; }
 }
+
 // Set max_layer_ = min_layer_ if this node does not have any consumer
 // This is the end of the whole graph
 // We could also set it to be the maximum of the min_layer_ in the graph. (It should be the same.)
-
 void SbpNode::LiftMaxLayer() {
   if (max_layer_ < min_layer_) { max_layer_ = min_layer_; }
 }
-// Set max_layer_ = upper_bound if this node does not have any consumer
 
+// Set max_layer_ = upper_bound if this node does not have any consumer
 void SbpNode::LiftMaxLayer(int32_t upper_bound) {
   if (max_layer_ < min_layer_) { max_layer_ = upper_bound; }
 }
 
 // Get the minimum element in Cost
-
 double SbpNode::GetMinCost() const {
   // Check the size of Cost
   CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
@@ -487,7 +483,6 @@ double SbpNode::GetMinCost() const {
 }
 
 // Set the cut ratio
-
 double SbpNode::GetCutRatio() const {
   double curr_cut_ratio = 1.0;
   for (auto* this_edge : edges_in_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
@@ -497,7 +492,6 @@ double SbpNode::GetCutRatio() const {
 
 // Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
-
 void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
   if (on_trunk_) { return; }
@@ -520,7 +514,6 @@ void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node
 }
 
 // Count consumers and any downstream nodes defined by control edges
-
 void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
@@ -533,7 +526,6 @@ void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp
 }
 
 // Compute the minimal available wait time for producers or upstream nodes
-
 void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                                   const std::vector<double>& acc_trunk_cost,
                                   const HashMap<std::string, SbpNode*>& op_name2sbp_node,
@@ -607,7 +599,6 @@ void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
 }
 
 // Drop down the available wait time with the minimum cost from downstream
-
 void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
   if (acc_trunk_cost_ < 0.0 || acc_trunk_cost_ > curr_trunk_cost) {
     acc_trunk_cost_ = curr_trunk_cost;
@@ -615,7 +606,6 @@ void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
 }
 
 // Assemble copy cost for all the incoming edges
-
 void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
@@ -639,8 +629,30 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
   }
 }
 
-// Reduce and set the wait time for op in the trunk
+// Assemble memory cost
+void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                               const std::vector<int32_t>& id2count) {
+  const auto& curr_operator = op_node_->op();
+  for (const auto& obn : curr_operator.output_bns()) {
+    const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+    // Fixed memory or in the support of the reusable memory
+    if (!is_reusable || id2count.at(lbi2id.at(lbi)) > 0) {
+      // If not in support, memory_ would be empty.
+      in_memory_support_ = true;
+      memory_.resize(sbp_sig_list_.size(), 0);
+      const auto& logical_blob_desc = op_node_->LogicalBlobDesc4Lbi(lbi);
+      const auto& hierarchy = *CHECK_JUST(curr_operator.GetParallelDesc4BnInOp(obn))->hierarchy();
+      for (int32_t sbp_sig_id = 0; sbp_sig_id < sbp_sig_list_.size(); sbp_sig_id++) {
+        // This compute the memory at rank 0, the largest one.
+        // We could be faster if we just compute the average memory.
+        memory_[sbp_sig_id] += MaxByteSize4BlobDescSbp(
+            logical_blob_desc, sbp_sig_list_[sbp_sig_id].bn_in_op2nd_sbp().at(obn), hierarchy);
+      }
+    }
+  }
+}
 
+// Reduce and set the wait time for op in the trunk
 void SbpNode::SetTrunkWaitTime(double trunk_wait_time) {
   // only reduce the wait time for operators in the trunk
   if (on_trunk_) {
@@ -655,13 +667,11 @@ void SbpNode::SetTrunkWaitTime(double trunk_wait_time) {
 }
 
 // Drop down the maximum layer with the minimum layer form consumer
-
 void SbpNode::DropTributaryLayer(int32_t upper_bound) {
   if (upper_bound < tributary_layer_ || tributary_layer_ < 0) { tributary_layer_ = upper_bound; }
 }
 
 // Compute maximum layer for tributaries
-
 void SbpNode::SpreadTributaryLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;

@@ -358,6 +358,11 @@ void InitMemory(SbpGraph* sbp_graph) {
     // Blobs die, decrease count and memory
     KillBlobs(topo_struct);
   }
+
+  // Initiailize memory for each sbp node
+  for (auto& topo_struct : topo_structs) {
+    topo_struct->sbp_node->InitializeMemory(topo_struct->is_reusable, lbi2id, id2count);
+  }
 }
 
 }  // namespace auto_parallel

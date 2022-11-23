@@ -128,6 +128,8 @@ double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
                                       const ParallelDesc& consumer_parallel_desc);
 
 int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc);
+int64_t MaxByteSize4BlobDescSbp(const BlobDesc& logical_blob_desc, const NdSbp& nd_sbp,
+                                const Shape& hierarchy);
 
 }  // namespace oneflow
 

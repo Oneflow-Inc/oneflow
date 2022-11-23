@@ -126,6 +126,9 @@ class SbpNode final {
 
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool use_sbp_collector);
+  // Assemble memory cost
+  void InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                        const std::vector<int32_t>& id2count);
 
   // Constant getter
   int32_t GetMinLayer() const { return min_layer_; }
@@ -192,6 +195,8 @@ class SbpNode final {
 
   // The produced blob belongs to the support of the total memory
   bool in_memory_support_ = false;
+  // The consumed memory for different sbp strategies
+  std::vector<int64_t> memory_;
 
   // Let one node point to another
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);
