@@ -74,4 +74,4 @@ PyObject* returned_structseq_repr(PyStructSequence* obj) {
 }  // namespace one
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
