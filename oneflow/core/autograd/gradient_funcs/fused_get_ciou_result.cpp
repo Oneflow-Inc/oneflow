@@ -39,8 +39,8 @@ class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradC
     ctx->iou_requires_grad = inputs.at(1)->requires_grad();
     ctx->rho2_requires_grad = inputs.at(2)->requires_grad();
     ctx->c2_requires_grad = inputs.at(3)->requires_grad();
-    if (ctx->v_requires_grad || ctx->iou_requires_grad || ctx->rho2_requires_grad
-        || ctx->c2_requires_grad) {
+    if (ctx->v_requires_grad && ctx->iou_requires_grad && ctx->rho2_requires_grad
+        && ctx->c2_requires_grad) {
       ctx->SaveTensorForBackward(outputs.at(1));  // alpha
       ctx->SaveTensorForBackward(inputs.at(2));   // rho2
       ctx->SaveTensorForBackward(inputs.at(3));   // c2
@@ -62,10 +62,13 @@ class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradC
     in_grads->resize(4);
     auto result = JUST(functional::FusedGetCiouResultGrad(dy, alpha, rho2, c2));
     CHECK_EQ_OR_RETURN(result->size(), 4);
-    if (ctx->v_requires_grad) { in_grads->at(0) = result->at(0); }
-    if (ctx->iou_requires_grad) { in_grads->at(1) = result->at(1); }
-    if (ctx->rho2_requires_grad) { in_grads->at(2) = result->at(2); }
-    if (ctx->c2_requires_grad) { in_grads->at(3) = result->at(3); }
+    if (ctx->v_requires_grad && ctx->iou_requires_grad && ctx->rho2_requires_grad
+        && ctx->c2_requires_grad) {
+      in_grads->at(0) = result->at(0);
+      in_grads->at(1) = result->at(1);
+      in_grads->at(2) = result->at(2);
+      in_grads->at(3) = result->at(3);
+    }
     return Maybe<void>::Ok();
   }
 
