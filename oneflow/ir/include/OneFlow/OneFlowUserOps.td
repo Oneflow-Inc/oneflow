@@ -2460,7 +2460,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.">:$scale
+    DefaultValuedAttr<F32Attr, "1.">:$scale
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6491,8 +6491,8 @@ def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoSideEffect, Decla
 #endif // GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
 // Group: OPTIMIZER
-// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update
-// Total: 14
+// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update, multi_tensor_sgd_update, multi_tensor_momentum_update, multi_tensor_adam_update, multi_tensor_sgd_update_with_cast, multi_tensor_momentum_update_with_cast, multi_tensor_adam_update_with_cast
+// Total: 19
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
@@ -6896,6 +6896,37 @@ def OneFlow_MultiTensorSgdUpdateOp : OneFlow_BaseOp<"multi_tensor_sgd_update", [
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_MultiTensorMomentumUpdateOp : OneFlow_BaseOp<"multi_tensor_momentum_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$model,
+    Variadic<OneFlow_Tensor>:$model_diff,
+    Variadic<OneFlow_Tensor>:$momentum_buf,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "1.">:$learning_rate_scale,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$momentum,
+    DefaultValuedAttr<F32Attr, "0.">:$dampening,
+    DefaultValuedAttr<BoolAttr, "false">:$nesterov,
+    DefaultValuedAttr<BoolAttr, "false">:$maximize
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 def OneFlow_MultiTensorAdamUpdateOp : OneFlow_BaseOp<"multi_tensor_adam_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$model,
@@ -6949,6 +6980,38 @@ def OneFlow_MultiTensorSgdUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_sgd_up
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_MultiTensorMomentumUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_momentum_update_with_cast", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$model,
+    Variadic<OneFlow_Tensor>:$model_diff,
+    Variadic<OneFlow_Tensor>:$model_copy,
+    Variadic<OneFlow_Tensor>:$momentum_buf,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "1.">:$learning_rate_scale,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$momentum,
+    DefaultValuedAttr<F32Attr, "0.">:$dampening,
+    DefaultValuedAttr<BoolAttr, "false">:$nesterov,
+    DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -9662,6 +9725,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
