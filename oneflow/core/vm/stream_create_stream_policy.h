@@ -32,7 +32,10 @@ class Device;
 
 struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
   static Maybe<vm::StreamPolicy> VisitCompute(Symbol<Device> device) {
-    return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
+    auto sp = std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
+    LOG(ERROR) << "ComputeStreamPolicy allocator " << (void*)sp->mut_allocator()
+               << ", device_type=" << device->type();
+    return sp;
   }
   static Maybe<vm::StreamPolicy> VisitHost2Device(Symbol<Device> device) {
     std::unique_ptr<vm::Allocator> allocator{};
@@ -42,14 +45,18 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
       allocator =
           std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on h2d stream.");
     }
+    LOG(ERROR) << "Host2DeviceStreamPolicy allocator " << (void*)allocator.get();
     return std::shared_ptr<vm::StreamPolicy>(
         new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }
   static Maybe<vm::StreamPolicy> VisitDevice2Host(Symbol<Device> device) {
-    return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
+    auto sp = std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
+    LOG(ERROR) << "Device2HostStreamPolicy allocator " << (void*)sp->mut_allocator();
+    return sp;
   }
   static Maybe<vm::StreamPolicy> VisitCcl(Symbol<Device> device) {
     auto allocator = vm::EventRecordedEpStreamPolicy::CreateEpBackendDeviceAllocator(device);
+    LOG(ERROR) << "CclStreamPolicy allocator " << (void*)allocator.get();
     return std::shared_ptr<vm::StreamPolicy>(
         new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }
@@ -63,7 +70,9 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
     return std::shared_ptr<vm::StreamPolicy>(new vm::LazyJobStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitPinnedCompute(Symbol<Device> device) {
-    return std::shared_ptr<vm::StreamPolicy>(new vm::PinnedEpStreamPolicy(device));
+    auto sp = std::shared_ptr<vm::StreamPolicy>(new vm::PinnedEpStreamPolicy(device));
+    LOG(ERROR) << "PinnedComputeStreamPolicy allocator " << (void*)sp->mut_allocator();
+    return sp;
   }
 };
 

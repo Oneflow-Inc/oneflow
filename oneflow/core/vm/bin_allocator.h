@@ -273,7 +273,7 @@ typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(si
   }
   if (piece != nullptr) {
     std::ostringstream ss;
-    ss << "BinAllocator::FindPiece: aligned_size=" << aligned_size
+    ss << "BinAllocator::FindPiece (" << (void*)this << ") aligned_size=" << aligned_size
        << ", found piece ptr=" << (void*)piece->ptr << ", origin size=" << found_piece_size
        << ", origin bin_num=" << bin_num << ", size=" << piece->size;
     if (new_piece != nullptr) {
@@ -338,9 +338,10 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
 
   CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second) << "existed mem_ptr";
 
-  LOG(ERROR) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
-             << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_
-             << ", new piece ptr=" << (void*)mem_ptr << ", bin_num=" << piece->bin_num;
+  LOG(ERROR) << "BinAllocator::AllocateBlockToExtendTotalMem (" << (void*)this
+             << ") allocating bytes=" << final_allocate_bytes
+             << ", allocated bytes=" << total_memory_bytes_ << ", new piece ptr=" << (void*)mem_ptr
+             << ", size=" << piece->size << ", bin_num=" << piece->bin_num;
 
   return true;
 }
@@ -407,7 +408,8 @@ Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size)
     return Maybe<void>::Ok();
   }
   size_t aligned_size = MemAlignedBytes(size, alignment_);
-  LOG(ERROR) << "BinAllocator::Allocate size =" << size << ", aligned_size=" << aligned_size;
+  LOG(ERROR) << "BinAllocator::Allocate (" << (void*)this << ") size=" << size
+             << ", aligned_size=" << aligned_size;
 
   Piece* piece = FindPiece(aligned_size);
 
@@ -469,8 +471,8 @@ void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   }
   InsertPiece2Bin(last_piece_insert_to_bin);
 
-  LOG(ERROR) << "BinAllocator::Deallocate: ptr=" << (void*)mem_ptr << ", size=" << size
-             << ", merge_next=" << merge_next << ", merge_prev=" << merge_prev
+  LOG(ERROR) << "BinAllocator::Deallocate (" << (void*)this << ") ptr=" << (void*)mem_ptr
+             << ", size=" << size << ", merge_next=" << merge_next << ", merge_prev=" << merge_prev
              << ", recycle piece size=" << last_piece_insert_to_bin->size
              << ", bin_num=" << last_piece_insert_to_bin->bin_num
              << ", ptr=" << (void*)last_piece_insert_to_bin->ptr;
