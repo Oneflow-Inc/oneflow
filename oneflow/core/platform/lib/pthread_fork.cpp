@@ -31,7 +31,7 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 
 namespace {
 void CurrentRankVmSync() {
-  odb::BreakpointRangeModeGuard(odb::kDisableBreakpointRange);
+  odb::BreakpointRangeModeGuard odb_guard(odb::kDisableBreakpointRange);
   if (SyncVmModeGuard::IsCurrentSyncVmMode()) { return; }
   // Instructions in forked subprocesses are not dispatched to vm,
   // so no need to sync vm in these processes.

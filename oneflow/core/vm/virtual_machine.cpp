@@ -326,7 +326,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
       //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
       do {
         if (odb::GetStopVMFlag<odb::kSchedulerThreadType>()) {
-          odb::BreakpointRangeModeGuard(odb::kDisableBreakpointRange);
+          odb::BreakpointRangeModeGuard odb_guard(odb::kDisableBreakpointRange);
           engine_->HandleProbes();
           continue;
         }

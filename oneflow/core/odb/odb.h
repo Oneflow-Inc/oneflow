@@ -20,9 +20,10 @@ namespace oneflow {
 namespace odb {
 
 enum ThreadType {
-  kNormalThreadType = 0,
-  kSchedulerThreadType = 1,
-  kWorkerThreadType = 2,
+  kInvalidThreadType = 0,
+  kNormalThreadType = 1,
+  kSchedulerThreadType = 2,
+  kWorkerThreadType = 3,
 };
 
 void InitThisThreadType(ThreadType thread_type);
@@ -48,6 +49,8 @@ class BreakpointRangeModeGuard final {
  private:
   BreakpointRangeMode prev_mode_;
 };
+
+void SetBreakpointThreadType(ThreadType thread_type);
 
 template<ThreadType thread_type>
 bool GetStopVMFlag();

@@ -23,6 +23,20 @@ namespace odb {
 
 namespace {
 
+std::atomic<ThreadType>* MutBreakpointThreadType() {
+  static std::atomic<ThreadType> thread_type(kInvalidThreadType);
+  return &thread_type;
+}
+
+}
+
+void SetBreakpointThreadType(ThreadType thread_type) {
+  *MutBreakpointThreadType() = thread_type;
+}
+
+
+namespace {
+
 ThreadType* MutThreadLocalThreadType() {
   static thread_local ThreadType thread_type = kNormalThreadType;
   return &thread_type;
@@ -30,36 +44,19 @@ ThreadType* MutThreadLocalThreadType() {
 
 ThreadType GetThreadLocalThreadType() { return *MutThreadLocalThreadType(); }
 
+void DoNothing() {}
+
 }  // namespace
 
 void InitThisThreadType(ThreadType thread_type) { *MutThreadLocalThreadType() = thread_type; }
 
-namespace {
-
-void DoNothing() {}
-
-// anchor for gdb breakpoint
-void BreakpointAnchor() { DoNothing(); }
-
-}  // namespace
-
 BreakpointRange::BreakpointRange() {
   if (BreakpointRangeModeGuard::Current() == kDisableBreakpointRange) { return; }
-  switch (GetThreadLocalThreadType()) {
-    case kNormalThreadType: BreakpointAnchor(); break;
-    case kSchedulerThreadType: BreakpointAnchor(); break;
-    case kWorkerThreadType: BreakpointAnchor(); break;
-  }
+  ThreadType thread_type = GetThreadLocalThreadType();
+  DoNothing();
 }
 
-BreakpointRange::~BreakpointRange() {
-  if (BreakpointRangeModeGuard::Current() == kDisableBreakpointRange) { return; }
-  switch (GetThreadLocalThreadType()) {
-    case kNormalThreadType: BreakpointAnchor(); break;
-    case kSchedulerThreadType: BreakpointAnchor(); break;
-    case kWorkerThreadType: BreakpointAnchor(); break;
-  }
-}
+BreakpointRange::~BreakpointRange() {}
 
 namespace {
 
@@ -79,7 +76,7 @@ BreakpointRangeModeGuard::~BreakpointRangeModeGuard() {
   *MutThreadLocalBreakpointRangeMode() = prev_mode_;
 }
 
-/*static*/ BreakpointRangeMode BreakpointRangeModeGuard::Current() const {
+/*static*/ BreakpointRangeMode BreakpointRangeModeGuard::Current() {
   return *MutThreadLocalBreakpointRangeMode();
 }
 
