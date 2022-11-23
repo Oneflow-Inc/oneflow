@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -27,13 +28,13 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/framework/random_generator.h"
 #include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/OneFlowPatternUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
@@ -392,11 +393,6 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
-IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
-  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
-                          APInt(64, value, /*isSigned=*/true));
-}
-
 ::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
                                                               OpResult conv_result,
                                                               OpResult pad_result) {
@@ -533,32 +529,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
   return {};
 }
 
-::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,
-                                                                  OpResult dropout_result,
-                                                                  OpResult bias_add_result,
-                                                                  Operation* mask) {
-  if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
-    if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
-      SmallVector<Value, 4> operands;
-      operands.push_back(bias_add_op.a());
-      operands.push_back(bias_add_op.b());
-      operands.push_back(mask->getResults()[0]);
-      NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
-      fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), bias_add_op.axisAttr());
-      fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
-      fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
-      auto res = rewriter
-                     .create<oneflow::FusedBiasAddMaskScaleOp>(
-                         dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
-                         fused_bias_add_dropout_attributes)
-                     ->getResults();
-      // bias_add and dropout op is expected to be erased if it is not used
-      return res;
-    }
-  }
-  return {};
-}
-
 struct ReplaceVariablePattern : public ::mlir::RewritePattern {
   explicit ReplaceVariablePattern(::mlir::MLIRContext* context)
       : ::mlir::RewritePattern("oneflow.variable", 1, context, {"oneflow.variable_ir"}) {}
@@ -650,11 +620,6 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     return ::mlir::success();
   }
 };
-
-mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
-  const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
-  return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
-}
 
 LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
                                       PatternRewriter& rewriter) {
@@ -1026,7 +991,8 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
-  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
+  populateForwardOpPatterns(patterns);
+  rewrites::populateRewrites(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
