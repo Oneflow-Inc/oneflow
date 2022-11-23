@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -3371,6 +3372,119 @@ class FillTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class IndexAddFunctor {
+ public:
+  IndexAddFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("index_add")
+                         .Input("input")
+                         .Input("index")
+                         .Input("source")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
+    CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
+        << "index_copy_(): Number of indices (," << index->shape()->Count(0)
+        << ", \") should be equal to source.size(dim) (," << source->shape()->At(dim) << ", \")";
+    CHECK_OR_RETURN(index->dtype()->data_type() != DataType::kInt32
+                    || index->dtype()->data_type() != DataType::kInt64)
+        << "Input(Index) holds the wrong type, it holds "
+        << DataType_Name(index->dtype()->data_type())
+        << " , but "
+           "desires to be int32_t or int64_t";
+    const float alpha_value = alpha.As<float>();
+    int64_t dim_ = dim;
+    dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
+    attrs.SetAllAttrs(dim_, alpha_value);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, input->dtype())
+             .AddInputs({input, source})
+             .Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, input_tuple.at(1)}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class IndexAddInplaceFunctor {
+ public:
+  IndexAddInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("index_add")
+                         .Input("input")
+                         .Input("index")
+                         .Input("source")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
+    CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
+        << "index_copy_(): Number of indices (," << index->shape()->Count(0)
+        << ", \") should be equal to source.size(dim) (," << source->shape()->At(dim) << ", \")";
+    CHECK_OR_RETURN(index->dtype()->data_type() != DataType::kInt32
+                    || index->dtype()->data_type() != DataType::kInt64)
+        << "Input(Index) holds the wrong type, it holds "
+        << DataType_Name(index->dtype()->data_type())
+        << " , but "
+           "desires to be int32_t or int64_t";
+    const float alpha_value = alpha.As<float>();
+    int64_t dim_ = dim;
+    dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
+    attrs.SetAllAttrs(dim_, alpha_value);
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = input;
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, input->dtype())
+             .AddInputs({input, source})
+             .Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    JUST(OpInterpUtil::Dispatch(*op_, {input, index, input_tuple.at(1)}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastShapesFunctor {
+ public:
+  Maybe<Shape> operator()(const std::vector<Shape>& shapes) const {
+    return InferUnifiedShapeForBroadcasting(shapes);
+  }
+};
+
+class BroadcastTensorsFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+    if (tensors.empty()) { return Error::RuntimeError() << "tensors should not be empty."; }
+
+    Shape shape_to_broadcast;
+    std::deque<bool> need_to_broadcast;
+
+    std::tie(shape_to_broadcast, need_to_broadcast) =
+        *JUST(InferUnifiedShapeForBroadcastingWithInfo([&tensors]() {
+          std::vector<Shape> shapes;
+          for (auto& x : tensors) { shapes.push_back(*x->shape()); }
+          return shapes;
+        }()));
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      outputs->emplace_back(need_to_broadcast.at(i)  // NOLINT
+                                ? JUST(functional::Expand(tensors.at(i), shape_to_broadcast))
+                                : tensors.at(i));
+    }
+    return outputs;
+  }
+};
 class BinCountFunctor {
  public:
   BinCountFunctor() {
@@ -3571,7 +3685,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
+  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+  m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
   m.add_functor<impl::BinCountFunctor>("BinCount");
+  m.add_functor<impl::IndexAddFunctor>("IndexAdd");
+  m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
 };
 
 }  // namespace functional
