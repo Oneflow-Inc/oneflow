@@ -337,7 +337,9 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   }
   const int cublas_ldc = n;
  
-  hipblasGemmAlgo_t algo = HIPBLAS_GEMM_DEFAULT;  
+  hipblasGemmAlgo_t algo = HIPBLAS_GEMM_DEFAULT;
+  const static bool allow_half_accumulation =
+          ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", true);  
 
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     const void* cublas_a = b;
@@ -360,7 +362,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
         cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
         &h_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b, cuda_data_type,
         cublas_ldb, cublas_stride_b, &h_beta, cublas_c, cuda_data_type, cublas_ldc,
-        cublas_stride_c, batch_count, compute_type, algo));
+        cublas_stride_c, batch_count, allow_half_accumulation ? compute_type : HIPBLAS_R_32F, algo));
     } else {
       OF_CUBLAS_CHECK(hipblasGemmStridedBatchedEx(
         cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
@@ -381,7 +383,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
         OF_CUBLAS_CHECK(hipblasGemmEx(
           cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
           cublas_k, &h_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
-          cublas_ldb, &h_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
+          cublas_ldb, &h_beta, cublas_c, cuda_data_type, cublas_ldc, allow_half_accumulation ? compute_type : HIPBLAS_R_32F, algo));
       } else {
         OF_CUBLAS_CHECK(hipblasGemmEx(
           cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
