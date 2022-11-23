@@ -51,6 +51,15 @@ ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor
       });
 }
 
+ALWAYS_INLINE inline auto HobInputSize(const std::string& tensor_name) {
+  std::ostringstream string_stream;
+  string_stream << "size of input \'" << tensor_name << "\'";
+  return hob::make_custom(string_stream.str(),
+                          [tensor_name](const KernelRegContext& ctx) -> int32_t {
+                            return ctx.user_op_conf().input_size(tensor_name);
+                          });
+}
+
 template<typename T>
 ALWAYS_INLINE inline auto HobAttr(const std::string& attr_name) {
   return hob::make_custom(attr_name, [attr_name](const user_op::KernelRegContext& ctx) -> const T& {

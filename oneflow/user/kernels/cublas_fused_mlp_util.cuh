@@ -94,7 +94,14 @@ cublasComputeType_t GetComputeType(DataType data_type) {
         return CUBLAS_COMPUTE_32F;
       }
     case kDouble: return CUBLAS_COMPUTE_64F;
-    case kFloat16: return CUBLAS_COMPUTE_32F;
+    case kFloat16:
+      const static bool allow_half_accumulation =
+          ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+      if (allow_half_accumulation) {
+        return CUBLAS_COMPUTE_16F;
+      } else {
+        return CUBLAS_COMPUTE_32F;
+      }
     case kBFloat16: return CUBLAS_COMPUTE_32F;
     default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
@@ -103,6 +110,7 @@ cublasComputeType_t GetComputeType(DataType data_type) {
 union CublasScalarParameter {
   double d;
   float s;
+  half h;
 };
 
 CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
@@ -111,6 +119,8 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
     sp.d = scalar.Value<double>();
   } else if (compute_type == CUBLAS_COMPUTE_32F || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32) {
     sp.s = scalar.Value<float>();
+  } else if (compute_type == CUBLAS_COMPUTE_16F) {
+    sp.h = static_cast<half>(scalar.Value<float>());
   } else {
     UNIMPLEMENTED();
   }

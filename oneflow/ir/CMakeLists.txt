@@ -35,6 +35,7 @@ endif()
 
 set_property(GLOBAL PROPERTY LLVM_INSTALL_DIR ${LLVM_INSTALL_DIR})
 set(MLIR_TABLEGEN_EXE mlir-tblgen)
+set(MLIR_PDLL_TABLEGEN_EXE mlir-pdll)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})

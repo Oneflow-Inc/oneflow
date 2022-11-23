@@ -106,12 +106,12 @@ def _test_graph_slice_update(test_case, placement, sbp):
     ref_grad = np.ones((8, 16))
     ref_grad[:, :8] = 0
     test_case.assertTrue(
-        np.array_equal(-graph.module.ref_grad.origin.numpy(), ref_grad)
+        np.array_equal(-graph.module.ref_grad.to(flow.Tensor).numpy(), ref_grad)
     )
     # value grad
     value_grad = np.ones((8, 8))
     test_case.assertTrue(
-        np.array_equal(-graph.module.value_grad.origin.numpy(), value_grad)
+        np.array_equal(-graph.module.value_grad.to(flow.Tensor).numpy(), value_grad)
     )
 
 
