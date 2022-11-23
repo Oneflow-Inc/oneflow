@@ -61,7 +61,14 @@ class BinaryFloatFunctor {
       tensor_x = JUST(functional::To(x, device_str));
     }
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({tensor_x, y}, DType::Float()).Apply());
+    if (promoteTypes(tensor_x->dtype(), y->dtype())->is_integer()) {
+      tensor_processor.AddInputs({tensor_x, y}, DType::Float());
+    } else {
+      tensor_processor.AddInputs({tensor_x, y})
+          .PromoteInputsToCommonDtype(true)
+          .PromoteIntegerInputsToFloatDtype(true);
+    }
+    JUST(tensor_processor.Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
