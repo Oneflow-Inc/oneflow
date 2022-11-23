@@ -35,7 +35,8 @@ namespace oneflow {
 namespace {
 
 template<typename Func>
-unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_size, const int32_t pack_num) {
+unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_size,
+                             const int32_t pack_num) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const int32_t num_blocks = std::max<int64_t>(1, (pack_num + block_size - 1) / block_size);
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
@@ -64,8 +65,10 @@ __global__ void FusedGluForwardGpu(
     const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx + y_packed_row * stride + y_packed_col * pack_size);
-    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(matmul_vx + y_packed_row * stride + y_packed_col * pack_size);
+    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(
+        matmul_wx + y_packed_row * stride + y_packed_col * pack_size);
+    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(
+        matmul_vx + y_packed_row * stride + y_packed_col * pack_size);
     const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b + y_packed_col * pack_size);
     const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c + y_packed_col * pack_size);
 
@@ -93,14 +96,14 @@ __global__ void FusedGluForwardGpu(
 }
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
-void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n, const int64_t k,
-                              int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
-                              const T* c, T* y) {
+void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n,
+                              const int64_t k, int64_t stride, const T* matmul_wx, const T* b,
+                              const T* matmul_vx, const T* c, T* y) {
   ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
   int64_t pack_num = m * packed_n;
   constexpr int32_t block_size = 128;
-  unsigned int grid_size =
-      ComputeGridSize(stream, FusedGluForwardGpu<T, IndexType, act_type, pack_size>, block_size, pack_num);
+  unsigned int grid_size = ComputeGridSize(
+      stream, FusedGluForwardGpu<T, IndexType, act_type, pack_size>, block_size, pack_num);
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           m, packed_n, k, stride, pack_num, act, matmul_wx, b, matmul_vx, c, y);
@@ -111,15 +114,15 @@ void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t n, con
                        int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
                        const T* c, T* y) {
   // convert n based on pack size
-  const int64_t packed_n = n/pack_size;
+  const int64_t packed_n = n / pack_size;
 
   // dispatch index type
-  if (m*packed_n < GetMaxVal<int32_t>()) {
-    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, packed_n, k, stride, matmul_wx, b,
-                                                              matmul_vx, c, y);
+  if (m * packed_n < GetMaxVal<int32_t>()) {
+    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, packed_n, k, stride,
+                                                              matmul_wx, b, matmul_vx, c, y);
   } else {
-    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, packed_n, k, stride, matmul_wx, b,
-                                                              matmul_vx, c, y);
+    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, packed_n, k, stride,
+                                                              matmul_wx, b, matmul_vx, c, y);
   }
 }
 
@@ -267,26 +270,24 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
 
     // validate dimension and number of axes
     CHECK_GE(x_shape.NumAxes(), 2)
-      << "number of axes of \'x\' should have be greater than 1, yet get "
-      << x_shape.NumAxes();
+        << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
     CHECK_EQ(w_shape.NumAxes(), 2)
-      << "number of axes of \'w\' should have be equal to 2, yet get "
-      << w_shape.NumAxes(), 2;
+        << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes(),
+        2;
     CHECK_EQ(b_shape.NumAxes(), 1)
-      << "number of axes of \'b\' should have be equal to 1, yet get "
-      << b_shape.NumAxes();
-    
+        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+
     // check input tensor shapes
     size_t x_num_axes = x_shape.NumAxes();
     CHECK_EQ(w_shape.At(1), x_shape.At(x_num_axes - 1))
-        << "dimension 1 of \'w\'(" << w_shape.At(1) << ") is not consistant with the last dimension of \'x\'("
-        << x_shape.At(x_num_axes - 1) << ")";
+        << "dimension 1 of \'w\'(" << w_shape.At(1)
+        << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
+        << ")";
     CHECK_EQ(b_shape.At(0), w_shape.At(0))
-        << "dimension 0 of \'b\'(" << b_shape.At(0) << ") is not consistant with dimension 0 of \'w\'("
-        << w_shape.At(0) << ")";
-    if (!is_split_mode) { 
-      CHECK_EQ(w_shape.At(1) % 2, 0)
-        << "dimension 1 of \'w\' is not divisible by 2";
+        << "dimension 0 of \'b\'(" << b_shape.At(0)
+        << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    if (!is_split_mode) {
+      CHECK_EQ(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
     }
 
     // check optional input tensor shapes
@@ -295,13 +296,11 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
       const ShapeView& c_shape = input_tensor_b->shape_view();
 
       CHECK_EQ(v_shape.NumAxes(), 2)
-        << "number of axes of \'v\' should have be equal to 2, yet get " <<  v_shape.NumAxes();
+          << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
       CHECK_EQ(c_shape.NumAxes(), 1)
-        << "number of axes of \'c\' should have be equal to 1, yet get " <<  c_shape.NumAxes();
-      CHECK_EQ(v_shape, w_shape)
-        << "the shape of \'v\' is not consistant with \'w\'";
-      CHECK_EQ(c_shape, b_shape)
-        << "the shape of \'c\' is not consistant with \'b\'";
+          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+      CHECK_EQ(v_shape, w_shape) << "the shape of \'v\' is not consistant with \'w\'";
+      CHECK_EQ(c_shape, b_shape) << "the shape of \'c\' is not consistant with \'b\'";
     }
 
     // infer m, n, k

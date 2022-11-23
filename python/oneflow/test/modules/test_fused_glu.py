@@ -27,6 +27,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 is_profiling = False
 
+
 class Glu(nn.Module):
     def __init__(self):
         super().__init__()
@@ -76,9 +77,12 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
-'''
+
+"""
     @desp: profiling fused glu implementation with split weight matrix
-'''
+"""
+
+
 def _test_fused_glu_split_profiling(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -111,9 +115,12 @@ def _test_fused_glu_split_profiling(test_case, params: dict):
         activation=act,
     )
 
-'''
+
+"""
     @desp: check the functionality of fused glu implementation with split weight matrix
-'''
+"""
+
+
 def _test_fused_glu_split(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -167,9 +174,12 @@ def _test_fused_glu_split(test_case, params: dict):
         )
     )
 
-'''
+
+"""
     @desp: profiling fused glu implementation
-'''
+"""
+
+
 def _test_fused_glu_profiling(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -198,9 +208,12 @@ def _test_fused_glu_profiling(test_case, params: dict):
         activation=act,
     )
 
-'''
+
+"""
     @desp: check the functionality of fused glu implementation
-'''
+"""
+
+
 def _test_fused_glu(test_case, params: dict):
     # config test data
     m = params["m"]
@@ -302,10 +315,9 @@ class TestFusedGlu(flow.unittest.TestCase):
                 {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
                 {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
             ]
-        
+
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-            
 
 
 if __name__ == "__main__":
