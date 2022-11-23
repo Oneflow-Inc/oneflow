@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifndef ONEFLOW_USER_KERNELS_FUSED_SOFTMAX_H_
+#define ONEFLOW_USER_KERNELS_FUSED_SOFTMAX_H_
+
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
+namespace cuda {
+namespace fused_softmax {
 
-namespace fused_scale_mask_softmax {
-
-namespace {
-
-void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
-                           const int64_t* b_dims, size_t* simplified_num_dims,
-                           int64_t* simplified_a_dims, int64_t* simplified_b_dims) {
+inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
+                                  const int64_t* b_dims, size_t* simplified_num_dims,
+                                  int64_t* simplified_a_dims, int64_t* simplified_b_dims) {
   const size_t num_max_dims = std::max(num_a_dims, num_b_dims);
   auto MakeGetDim = [num_max_dims](size_t num_dims, const int64_t* dims) {
     const int64_t num_padding_dims = num_max_dims - num_dims;
@@ -209,8 +211,59 @@ struct ElementwiseScaleMaskStore {
   ElementwiseMaskSoftmaxParams params;
 };
 
-}  // namespace
+template<typename SRC, typename DST>
+struct MaskScaleLoad {
+  MaskScaleLoad(const SRC* src, const bool* mask, int64_t row_size, SRC scale)
+      : src(src), mask(mask), row_size(row_size), scale(scale) {}
+  template<int N>
+  __device__ void load(DST* dst, int64_t row, int64_t col) const {
+    cuda::softmax::Pack<SRC, N> pack;
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
+               * static_cast<DST>(scale);
+    }
+  }
+  const SRC* src;
+  const bool* mask;
+  int64_t row_size;
+  SRC scale;
+};
 
-}  // namespace fused_scale_mask_softmax
+template<typename SRC, typename DST>
+struct DropoutStore {
+  DropoutStore(DST* dst, DST* softmax_y, const bool* mask, int64_t row_size, DST scale)
+      : dst(dst), softmax_y(softmax_y), mask(mask), row_size(row_size), scale(scale) {}
+  template<int N>
+  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    cuda::softmax::Pack<DST, N> softmax_y_pack;
+    cuda::softmax::Pack<DST, N> dst_pack;
+    const int64_t offset = (row * row_size + col) / N;
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
+      dst_pack.elem[i] =
+          static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
+    }
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y) + offset) =
+        softmax_y_pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
+  }
+  DST* dst;
+  DST* softmax_y;
+  const bool* mask;
+  int64_t row_size;
+  DST scale;
+};
 
+}  // namespace fused_softmax
+}  // namespace cuda
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_FUSED_SOFTMAX_H_
