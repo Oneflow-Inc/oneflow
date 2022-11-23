@@ -2264,8 +2264,8 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad
-// Total: 32
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad, fused_get_ciou_result, fused_get_ciou_result_grad
+// Total: 34
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
@@ -2927,6 +2927,45 @@ def OneFlow_FusedGetBounddingBoxesCoordGradOp : OneFlow_BaseOp<"fused_get_boundd
     OneFlow_Tensor:$y2_diff,
     OneFlow_Tensor:$w2_diff,
     OneFlow_Tensor:$h2_diff
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$iou,
+    OneFlow_Tensor:$rho2,
+    OneFlow_Tensor:$c2
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$alpha
+  );
+  let attrs = (ins
+    F32Attr: $eps
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$alpha,
+    OneFlow_Tensor:$rho2,
+    OneFlow_Tensor:$c2
+  );
+  let output = (outs
+    OneFlow_Tensor:$dv,
+    OneFlow_Tensor:$diou,
+    OneFlow_Tensor:$drho2,
+    OneFlow_Tensor:$dc2
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
