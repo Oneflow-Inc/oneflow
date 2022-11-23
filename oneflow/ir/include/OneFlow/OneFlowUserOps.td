@@ -2942,7 +2942,8 @@ def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSi
     OneFlow_Tensor:$c2
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$alpha
   );
   let attrs = (ins
     F32Attr: $eps
@@ -2956,8 +2957,7 @@ def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSi
 def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$v,
-    OneFlow_Tensor:$iou,
+    OneFlow_Tensor:$alpha,
     OneFlow_Tensor:$rho2,
     OneFlow_Tensor:$c2
   );
@@ -2966,9 +2966,6 @@ def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_gra
     OneFlow_Tensor:$diou,
     OneFlow_Tensor:$drho2,
     OneFlow_Tensor:$dc2
-  );
-  let attrs = (ins
-    F32Attr: $eps
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

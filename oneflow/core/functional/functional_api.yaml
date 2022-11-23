@@ -1658,11 +1658,11 @@
   bind_python: False
 
 - name: "fused_get_ciou_result"
-  signature: "Tensor (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResult"
+  signature: "TensorTuple (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResult"
   bind_python: True
 
 - name: "fused_get_ciou_result_grad"
-  signature: "TensorTuple (Tensor dy ,Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResultGrad"
+  signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
   bind_python: False
 
 - name: "abs"

@@ -3299,16 +3299,17 @@ class FusedGetCiouResultFunctor {
                          .Input("rho2")
                          .Input("c2")
                          .Output("y")
+                         .Output("alpha")
                          .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& v,
-                           const std::shared_ptr<one::Tensor>& iou,
-                           const std::shared_ptr<one::Tensor>& rho2,
-                           const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& v,
+                                const std::shared_ptr<one::Tensor>& iou,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
     attrs.SetAllAttrs(eps);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {v, iou, rho2, c2}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {v, iou, rho2, c2}, attrs);
   }
 
  private:
@@ -3320,8 +3321,7 @@ class FusedGetCiouResultGradFunctor {
   FusedGetCiouResultGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result_grad")
                          .Input("dy")
-                         .Input("v")
-                         .Input("iou")
+                         .Input("alpha")
                          .Input("rho2")
                          .Input("c2")
                          .Output("dv")
@@ -3332,13 +3332,10 @@ class FusedGetCiouResultGradFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                                const std::shared_ptr<one::Tensor>& v,
-                                const std::shared_ptr<one::Tensor>& iou,
+                                const std::shared_ptr<one::Tensor>& alpha,
                                 const std::shared_ptr<one::Tensor>& rho2,
-                                const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
-    attrs.SetAllAttrs(eps);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, v, iou, rho2, c2}, attrs);
+                                const std::shared_ptr<one::Tensor>& c2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, alpha, rho2, c2}, {});
   }
 
  private:

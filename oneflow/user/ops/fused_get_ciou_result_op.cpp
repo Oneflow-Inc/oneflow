@@ -25,6 +25,10 @@ Maybe<void> FusedGetCiouResultOp::InferLogicalTensorDesc(user_op::InferContext* 
   y->set_is_dynamic(v.is_dynamic());
   y->set_shape(v.shape());
 
+  user_op::TensorDesc* ahpha = ctx->MutOutputTensorDesc("alpha", 0);
+  ahpha->set_is_dynamic(v.is_dynamic());
+  ahpha->set_shape(v.shape());
+
   return Maybe<void>::Ok();
 }
 
@@ -38,6 +42,9 @@ Maybe<void> FusedGetCiouResultOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   y->set_data_type(v.data_type());
 
+  user_op::TensorDesc* alpha = ctx->MutOutputTensorDesc("alpha", 0);
+  alpha->set_data_type(v.data_type());
+
   return Maybe<void>::Ok();
 }
 
@@ -50,6 +57,7 @@ Maybe<void> FusedGetCiouResultOp::GetSbp(user_op::SbpContext* ctx) {
         .Split(user_op::OpArg("rho2", 0), i)
         .Split(user_op::OpArg("c2", 0), i)
         .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("alpha", 0), i)
         .Build();
   }
   return Maybe<void>::Ok();
@@ -104,8 +112,7 @@ Maybe<void> FusedGetCiouResultGradOp::GetSbp(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("dy", 0), i)
-        .Split(user_op::OpArg("v", 0), i)
-        .Split(user_op::OpArg("iou", 0), i)
+        .Split(user_op::OpArg("alpha", 0), i)
         .Split(user_op::OpArg("rho2", 0), i)
         .Split(user_op::OpArg("c2", 0), i)
         .Split(user_op::OpArg("dv", 0), i)

@@ -46,7 +46,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
             )
         )
     v, iou, rho2, c2 = x[0], x[1], x[2], x[3]
-    y = flow._C.fused_get_ciou_result(v, iou, rho2, c2, eps)
+    y = flow._C.fused_get_ciou_result(v, iou, rho2, c2, eps)[0]
     torch_v, torch_iou, torch_rho2, torch_c2 = (
         torch_x[0],
         torch_x[1],
