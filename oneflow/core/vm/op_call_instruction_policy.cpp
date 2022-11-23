@@ -95,6 +95,7 @@ struct OpCallInstructionUtil final {
                    << op_call_instruction_policy->DebugName(*instruction)
                    << "] stream=" << StreamType_Name(stream_type)
                    << ", shape=" << blob_object->shape().ToString()
+                   << ", size=" << blob_object->tensor_storage()->blob_bytes()
                    << ", dptr=" << (void*)blob_object->tensor_storage()->blob_dptr();
       }
     }
@@ -108,16 +109,16 @@ struct OpCallInstructionUtil final {
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
+      char* mem_ptr = nullptr;
+      JUST(allocator->Allocate(&mem_ptr, byte_size));
+      tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
       if (tmp_tensor->mem_case().device_type() == DeviceType::kCUDA) {
         StreamType stream_type = instruction->stream().stream_type();
         LOG(ERROR) << "OpCallInstructionPolicy::TryAllocateTempStorage ["
                    << op_call_instruction_policy->DebugName(*instruction)
                    << "] stream=" << StreamType_Name(stream_type)
-                   << ", tmp_buffer_size=" << byte_size;
+                   << ", tmp_buffer_size=" << byte_size << ", ptr=" << (void*)mem_ptr;
       }
-      char* mem_ptr = nullptr;
-      JUST(allocator->Allocate(&mem_ptr, byte_size));
-      tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
     return Maybe<void>::Ok();
   }

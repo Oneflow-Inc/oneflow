@@ -98,10 +98,6 @@ Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
         << "This blob has been allocated memory, but less than needed space.";
   } else {
     char* dptr = nullptr;
-    if (mem_case_->device_type() == DeviceType::kCUDA) {
-      LOG(ERROR) << "EagerBlobObject::TryAllocateBlobBodyMemory: shape=" << shape().ToString()
-                 << ", required_body_bytes=" << required_body_bytes;
-    }
     JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
@@ -111,6 +107,12 @@ Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+
+    // if (mem_case_->device_type() == DeviceType::kCUDA) {
+    //   LOG(ERROR) << "EagerBlobObject::TryAllocateBlobBodyMemory: shape=" << shape().ToString()
+    //              << ", required_body_bytes=" << required_body_bytes;
+    // }
+
     return true;
   }
   return false;

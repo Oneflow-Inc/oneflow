@@ -229,10 +229,14 @@ void BinAllocator<ThreadLock>::UnMarkPiece(Piece* piece) {
 template<typename ThreadLock>
 typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
-  for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
+  Piece* piece = nullptr;
+  Piece* new_piece = nullptr;
+  int32_t bin_num = 0;
+  size_t found_piece_size = 0;
+  for (bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
-      Piece* piece = *it;
+      piece = *it;
       CHECK(piece->is_free);
       CHECK_NOTNULL(piece->ptr);
       CHECK_EQ(piece->bin_num, bin_num);
@@ -241,8 +245,9 @@ typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(si
         bin->pieces.erase(it);
         piece->bin_num = kInvalidBinNum;
         piece->is_free = false;
+        found_piece_size = piece->size;
         if (piece->size >= aligned_size * 2 || piece->size - aligned_size >= kPieceSplitThreshold) {
-          Piece* new_piece = AllocatePiece();
+          new_piece = AllocatePiece();
           new_piece->ptr = piece->ptr + aligned_size;
           new_piece->size = piece->size - aligned_size;
           piece->size = aligned_size;
@@ -260,11 +265,24 @@ typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(si
           InsertPiece2Bin(new_piece);
           MarkPiece(new_piece);
         }
-        return piece;
+        break;
+      } else {
+        piece = nullptr;
       }
     }
   }
-  return nullptr;
+  if (piece != nullptr) {
+    std::ostringstream ss;
+    ss << "BinAllocator::FindPiece: aligned_size=" << aligned_size
+       << ", found piece ptr=" << (void*)piece->ptr << ", origin size=" << found_piece_size
+       << ", origin bin_num=" << bin_num << ", size=" << piece->size;
+    if (new_piece != nullptr) {
+      ss << ", new piece ptr=" << (void*)new_piece->ptr << ", size=" << new_piece->size
+         << ", bin_num=" << new_piece->bin_num;
+    }
+    LOG(ERROR) << ss.str();
+  }
+  return piece;
 }
 
 template<typename ThreadLock>
@@ -302,8 +320,6 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
   if (final_allocate_bytes < aligned_size) { return false; }
 
   char* mem_ptr = nullptr;
-  LOG(ERROR) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
-             << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_;
   JUST(backend_->Allocate(&mem_ptr, final_allocate_bytes));
   if (mem_ptr == nullptr) { return false; }
 
@@ -321,6 +337,10 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
   MarkPiece(piece);
 
   CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second) << "existed mem_ptr";
+
+  LOG(ERROR) << "BinAllocator::AllocateBlockToExtendTotalMem: allocating bytes="
+             << final_allocate_bytes << ", allocated bytes=" << total_memory_bytes_
+             << ", new piece ptr=" << (void*)mem_ptr << ", bin_num=" << piece->bin_num;
 
   return true;
 }
@@ -387,15 +407,13 @@ Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size)
     return Maybe<void>::Ok();
   }
   size_t aligned_size = MemAlignedBytes(size, alignment_);
+  LOG(ERROR) << "BinAllocator::Allocate size =" << size << ", aligned_size=" << aligned_size;
 
   Piece* piece = FindPiece(aligned_size);
 
   if (piece == nullptr) {
     if (JUST(AllocateBlockToExtendTotalMem(aligned_size))) { piece = FindPiece(aligned_size); }
   }
-
-  LOG(ERROR) << "BinAllocator::Allocate size=" << size << ", aligned_size=" << aligned_size
-             << ", piece size=" << piece->size << ", bin_num=" << piece->bin_num;
 
   CHECK_NOTNULL_OR_RETURN(piece)
       << Error::OutOfMemoryError() << "Error! : Out of memory when allocate size : " << size
@@ -432,10 +450,14 @@ void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   Piece* next_p = piece->next;
   Piece* prev_p = piece->prev;
 
+  bool merge_next = false;
+  bool merge_prev = false;
+
   if (next_p != nullptr && next_p->is_free) {
     CHECK_EQ(next_p->ptr, piece->ptr + piece->size);
     RemovePieceFromBin(next_p);
     MergeNeighbourFreePiece(piece, next_p);
+    merge_next = true;
   }
 
   if (prev_p != nullptr && prev_p->is_free) {
@@ -443,8 +465,15 @@ void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
     RemovePieceFromBin(prev_p);
     MergeNeighbourFreePiece(prev_p, piece);
     last_piece_insert_to_bin = prev_p;
+    merge_prev = true;
   }
   InsertPiece2Bin(last_piece_insert_to_bin);
+
+  LOG(ERROR) << "BinAllocator::Deallocate: ptr=" << (void*)mem_ptr << ", size=" << size
+             << ", merge_next=" << merge_next << ", merge_prev=" << merge_prev
+             << ", recycle piece size=" << last_piece_insert_to_bin->size
+             << ", bin_num=" << last_piece_insert_to_bin->bin_num
+             << ", ptr=" << (void*)last_piece_insert_to_bin->ptr;
 }
 
 }  // namespace vm
