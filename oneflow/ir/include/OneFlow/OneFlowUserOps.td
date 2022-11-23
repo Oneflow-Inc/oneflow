@@ -2963,7 +2963,8 @@ def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_get_center_dist_grad", [No
     OneFlow_Tensor:$b1_y1,
     OneFlow_Tensor:$b1_y2,
     OneFlow_Tensor:$b2_y1,
-    OneFlow_Tensor:$b2_y2
+    OneFlow_Tensor:$b2_y2,
+    OneFlow_Tensor:$rho2_diff
   );
   let output = (outs
     OneFlow_Tensor:$b1_x1_diff,
