@@ -40,6 +40,8 @@ void launch(void* run_ctx, void* kernel) {
   oneflow::okl::RunContext* compute_ctx_ =
       static_cast<typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>>(run_ctx);
   engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
+  // OF_CUDA_CHECK(cudaDeviceSynchronize());
+  // OF_CUDA_CHECK(cudaGetLastError());
 }
 }  // extern "C"
 

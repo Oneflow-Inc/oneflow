@@ -99,7 +99,8 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
   }
   auto op_name = GetOp()->getName().stripDialect().str();
-  if (const auto op_type_name = GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
+  if (const auto op_type_name =
+          GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
     op_name = op_type_name.str();
   }
 
