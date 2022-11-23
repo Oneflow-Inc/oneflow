@@ -156,6 +156,7 @@ return_type_aliases = {
     "Tensor": "Maybe<one::Tensor>",
     "TensorTuple": "Maybe<one::TensorTuple>",
     "String": "Maybe<std::string>",
+    "Shape": "Maybe<Shape>",
     **{k: "Maybe<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
