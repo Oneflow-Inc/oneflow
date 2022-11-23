@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/odb.h"
+#include "oneflow/core/odb/odb.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/env_var/vm.h"
@@ -79,7 +79,10 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     std::chrono::time_point<std::chrono::steady_clock> start{};
     do {
-      while (thread_ctx->TryReceiveAndRun()) { start = std::chrono::steady_clock::now(); }
+      while (thread_ctx->TryReceiveAndRun()) {
+        start = std::chrono::steady_clock::now();
+        odb::TryBlockVMThread<odb::kSchedulerThreadType>();
+      }
       std::this_thread::yield();
     } while (MicrosecondsFrom(start) < kExpireMicroseconds);
   }
@@ -322,6 +325,11 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
       // used
       //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
       do {
+        if (odb::GetStopVMFlag<odb::kSchedulerThreadType>()) {
+          odb::BreakpointRangeModeGuard(odb::kDisableBreakpointRange);
+          engine_->HandleProbes();
+          continue;
+        }
         const size_t total_inserted = engine_->total_inserted_instruction_cnt();
         const size_t total_erased = engine_->total_erased_instruction_cnt();
         engine_->Schedule(schedule_ctx);

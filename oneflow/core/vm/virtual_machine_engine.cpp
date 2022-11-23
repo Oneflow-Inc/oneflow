@@ -448,6 +448,10 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
     DispatchAndPrescheduleInstructions(schedule_ctx);
   }
   // handle scheduler probes
+  HandleProbes();
+}
+
+void VirtualMachineEngine::HandleProbes() {
   if (unlikely(local_probe_list_.size())) {
     HandleLocalProbe();
   } else if (unlikely(probe_list_.thread_unsafe_size())) {

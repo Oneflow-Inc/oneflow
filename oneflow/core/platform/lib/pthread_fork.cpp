@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/sync_vm_mode_guard.h"
+#include "oneflow/core/odb/odb.h"
 
 namespace oneflow {
 
@@ -30,6 +31,7 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 
 namespace {
 void CurrentRankVmSync() {
+  odb::BreakpointRangeModeGuard(odb::kDisableBreakpointRange);
   if (SyncVmModeGuard::IsCurrentSyncVmMode()) { return; }
   // Instructions in forked subprocesses are not dispatched to vm,
   // so no need to sync vm in these processes.

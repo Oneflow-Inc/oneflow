@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PROFILER_ODB_H_
-#define ONEFLOW_CORE_PROFILER_ODB_H_
+#ifndef ONEFLOW_CORE_ODB_ODB_H_
+#define ONEFLOW_CORE_ODB_ODB_H_
 
 namespace oneflow {
 namespace odb {
@@ -27,16 +27,39 @@ enum ThreadType {
 
 void InitThisThreadType(ThreadType thread_type);
 
-class Guard final {
+class BreakpointRange final {
  public:
-  Guard();
-  ~Guard();
+  BreakpointRange();
+  ~BreakpointRange();
+};
+
+enum BreakpointRangeMode {
+  kEnableBreakpointRange = 0,
+  kDisableBreakpointRange = 1,
+};
+
+class BreakpointRangeModeGuard final {
+ public:
+  explicit BreakpointRangeModeGuard(BreakpointRangeMode mode);
+  ~BreakpointRangeModeGuard();
+
+  static BreakpointRangeMode Current();
 
  private:
-  int64_t depth_;
+  BreakpointRangeMode prev_mode_;
 };
+
+template<ThreadType thread_type>
+bool GetStopVMFlag();
+template<ThreadType thread_type>
+void StopVMThread();
+template<ThreadType thread_type>
+void RestartVMThread();
+
+template<ThreadType thread_type>
+void TryBlockVMThread();
 
 }  // namespace odb
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PROFILER_ODB_H_
+#endif  // ONEFLOW_CORE_ODB_ODB_H_

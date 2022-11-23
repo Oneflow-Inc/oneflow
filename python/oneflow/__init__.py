@@ -438,6 +438,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.asyncs
+import oneflow.odb
 import oneflow.one_embedding
 import oneflow.profiler
 

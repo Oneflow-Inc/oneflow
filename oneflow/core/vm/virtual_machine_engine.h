@@ -92,6 +92,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
   void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
+  void HandleProbes();
+
  private:
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
