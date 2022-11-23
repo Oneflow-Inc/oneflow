@@ -182,7 +182,8 @@ def _normalize(fmt):
     return re.sub(r"\s+", " ", fmt)
 
 
-def _remove_angle_brackets(fmt):
+def _remove_square_brackets_and_content_inside(fmt):
+    # "TensorTuple[values], TensorTuple[indices]" -> "TensorTuple, TensorTuple"
     return re.sub(r"\[[^()]*\]", "", fmt)
 
 
@@ -200,7 +201,7 @@ def parse_function_params(fmt):
         raise ValueError('Missing "(" in function def: ' + fmt)
 
     header = _normalize(fmt[0:open_paren])
-    items = _remove_angle_brackets(header).split(" ")
+    items = _remove_square_brackets_and_content_inside(header).split(" ")
     if (len(items)) != 1:
         raise ValueError(
             "Missing return type or more than 1 return type in function def: " + fmt
