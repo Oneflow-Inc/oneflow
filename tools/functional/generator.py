@@ -187,6 +187,10 @@ def _remove_square_brackets_and_content_inside(fmt):
     # "TensorTuple[values], TensorTuple[indices]" -> "TensorTuple, TensorTuple"
     return re.sub(r"\[[^()]*\]", "", fmt)
 
+def _extract_content_inside_square_brackets(fmt):
+    # "TensorTuple[values], TensorTuple[indices]" -> "["values", "indices"]"
+    return re.findall(r"\[(.*?)\]", fmt)
+
 
 def _std_decay(fmt):
     fmt = fmt.strip()
@@ -350,18 +354,15 @@ class Return:
         return self._cpp_type if to_cpp else self._type
 
     def check_named_tuple(self, fmt):
-        sp = fmt.rfind("[")
-        if sp != -1:
-            _type = _normalize(fmt[:sp])
-            param_names = _normalize(fmt[sp:])
-            sp = param_names.rfind("]")
-            assert sp != -1, "Missing ']' for argument def: " + fmt
-            param_names = param_names[1:sp]
-            _return_names = [_normalize(x) for x in param_names.split(",")]
+        if "[" in fmt:
+            # return named_tuple
+            type = _normalize(_remove_square_brackets_and_content_inside(fmt))
+            return_names = _extract_content_inside_square_brackets(fmt)[0].split(",")
+            assert len(return_names) > 0, "Missing ']' for argument def: " + fmt
         else:
-            _type = _normalize(fmt)
-            _return_names = None
-        return _type, _return_names
+            type = _normalize(fmt)
+            return_names = None
+        return type, return_names
 
 
 class FunctionSignature:
