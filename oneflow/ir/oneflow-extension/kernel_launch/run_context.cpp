@@ -78,7 +78,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
         });
   } else if (source.type == Source::BUFFER) {
     auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-    return tmp_buffer_manager_.get();
+    return tmp_buffer_manager_->GetBufferTensor();
   }
   exit(1);
 }

@@ -46,6 +46,8 @@ class TmpBufferManager {
   static std::shared_ptr<TmpBufferManager> InitTmpBufferManager(user_op::Tensor* tensor);
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
+  user_op::Tensor* GetBufferTensor() { return &tensor_; }
+
  private:
   TmpBufferTensor tensor_;
 };
