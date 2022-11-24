@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -2893,13 +2894,20 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
-        << Error::RuntimeError()
-        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
     if (input->is_global()) {
-      std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      if (!device_.has_value()) {
+        std::string device_type = JUST(input->parallel_desc())->device_tag();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      } else {
+        if (!GlobalMode::is_enabled()) {
+          CHECK_OR_RETURN(!device_.has_value())
+              << Error::RuntimeError()
+              << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+              << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+        }
+        std::string device_type = device_.value_or(Symbol<Device>())->type();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      }
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =

@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/job/global_mode.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -272,6 +276,16 @@ class RandNFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      auto parallel_desc = GlobalMode::parallel_desc();
+      if (device.has_value()) {
+        ParallelConf parallel_conf = parallel_desc->parallel_conf();
+        parallel_conf.set_device_tag(device.value_or(Symbol<Device>())->type());
+        parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      }
+      return JUST(functional::GlobalRandN(shape, parallel_desc,
+          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
+    }
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
