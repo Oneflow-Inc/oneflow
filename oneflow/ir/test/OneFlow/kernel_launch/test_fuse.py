@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s
 
 import os
 import sys
@@ -30,9 +30,6 @@ os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-
-from networks.resnet50 import resnet50
-
 
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
