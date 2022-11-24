@@ -670,8 +670,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         max_smem_size);
-
-    std::cout << "only run once max smem " << max_smem_size << std::endl;
     return true;
   }();
   int sm_count = 0;
@@ -687,9 +685,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         &max_active_blocks_conf_1,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
         block_size_conf_1, smem);
-
-    std::cout << "smem " << smem << " max_active_blocks_conf_1  " << max_active_blocks_conf_1
-              << std::endl;
     if (err != cudaSuccess) { return err; }
   }
   if (max_active_blocks_conf_1 <= 0) {
@@ -702,8 +697,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         &max_active_blocks_conf_4,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         block_size_conf_4, smem);
-    std::cout << "smem " << smem << " max_active_blocks_conf_4  " << max_active_blocks_conf_4
-              << std::endl;
     if (err != cudaSuccess) { return err; }
   }
 
@@ -719,8 +712,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         &max_active_blocks_conf_3,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
         block_size_conf_3, smem);
-    std::cout << "smem " << smem << " max_active_blocks_conf_3  " << max_active_blocks_conf_3
-              << std::endl;
     if (err != cudaSuccess) { return err; }
   }
 
@@ -736,8 +727,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         &max_active_blocks_conf_2,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
         block_size_conf_2, smem);
-    std::cout << "smem " << smem << " max_active_blocks_conf_2  " << max_active_blocks_conf_2
-              << std::endl;
     if (err != cudaSuccess) { return err; }
   }
 
@@ -1230,7 +1219,6 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
     err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
     if (err != cudaSuccess) { return err; }
   }
-  std::cout << "sm count is " << sm_count;
   const size_t smem = cols * sizeof(ComputeType) * 2;
   int max_active_blocks_conf_1;
   {
@@ -1254,7 +1242,6 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
         block_size_conf_4, smem);
     if (err != cudaSuccess) { return err; }
   }
-  std::cout << "max_active_blocks_conf_4 " << max_active_blocks_conf_4 << " rows " << rows;
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1
       || (max_active_blocks_conf_4 > 0 && rows <= sm_count)) {
     *success = true;
