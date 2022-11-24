@@ -21,10 +21,9 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-class TmpBufferManager final : public oneflow::user_op::Tensor {
+class TmpBufferTensor final : public oneflow::user_op::Tensor {
  public:
-  explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
-
+  explicit TmpBufferTensor(user_op::Tensor* tensor) : tensor_(tensor) {}
   ShapeView shape_view() const override { return tensor_->shape_view(); }
   MutShapeView mut_shape_view() override { return tensor_->mut_shape_view(); }
   const Stride& stride() const override { return tensor_->stride(); }
@@ -36,11 +35,19 @@ class TmpBufferManager final : public oneflow::user_op::Tensor {
   }
   void* mut_raw_dptr() override { return (reinterpret_cast<char*>(tensor_->mut_raw_dptr())); }
 
+ private:
+  user_op::Tensor* tensor_;
+};
+
+class TmpBufferManager {
+ public:
+  explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
+
   static std::shared_ptr<TmpBufferManager> InitTmpBufferManager(user_op::Tensor* tensor);
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
  private:
-  user_op::Tensor* tensor_;
+  TmpBufferTensor tensor_;
 };
 
 }  // namespace okl
