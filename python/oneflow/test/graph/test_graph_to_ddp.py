@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import unittest
 import os
 import numpy as np
@@ -20,9 +35,7 @@ def _test_linear_train_graph_with_ddp(test_case):
         flow.nn.init.constant_(linear_dp.weight, 2.068758)
 
         of_sgd = flow.optim.SGD(
-            [{"params": linear_dp.parameters()}],
-            lr=0.001,
-            momentum=0.9,
+            [{"params": linear_dp.parameters()}], lr=0.001, momentum=0.9,
         )
 
         x = flow.ones((6, 800), placement=PC, sbp=S0)
@@ -51,11 +64,12 @@ def _test_linear_train_graph_with_ddp(test_case):
                 return out
 
         linear_t_g = LinearTrainGraphWithDDP()
-        #linear_t_g.debug(1)
+        # linear_t_g.debug(1)
         linear_e_g = LinearEvalGraphWithDDP()
-        #linear_e_g.debug(1)
+        # linear_e_g.debug(1)
 
         result_check_list = []
+
         def one_train_iter(iter_cnt=0):
             out = linear_t_g(x)
             result_check_list.append(out)
@@ -93,9 +107,7 @@ def _test_linear_train_graph_with_ddp(test_case):
         flow.nn.init.constant_(linear_dp.weight, 2.068758)
 
         of_sgd = flow.optim.SGD(
-            [{"params": linear_dp.parameters()}],
-            lr=0.001,
-            momentum=0.9,
+            [{"params": linear_dp.parameters()}], lr=0.001, momentum=0.9,
         )
 
         with global_mode.guard(True, placement=PC, sbp=S0):
@@ -106,7 +118,7 @@ def _test_linear_train_graph_with_ddp(test_case):
             print("==> x.device form a global tensor: ", x.device)
             with global_mode.guard(False):
                 print("=====> cur global mode with false", global_mode.is_enabled())
-                #print("==> x.device form a global tensor: ", x.device)
+                # print("==> x.device form a global tensor: ", x.device)
             print("==> x.device form a global tensor: ", x.device)
 
         class LinearTrainGraphWithDDP(flow.nn.Graph):
@@ -160,15 +172,16 @@ def _test_linear_train_graph_with_ddp(test_case):
                     sample = flow.randn(out.shape, device="cpu").to(device)
                     out = out + sample * 100
                     out = out - sample * 100
-                
+
                 return out
 
         linear_t_g = LinearTrainGraphWithDDP()
-        #linear_t_g.debug(1)
+        # linear_t_g.debug(1)
         linear_e_g = LinearEvalGraphWithDDP()
-        #linear_e_g.debug(1)
+        # linear_e_g.debug(1)
 
         result_check_list = []
+
         def one_train_iter(iter_cnt=0):
             out = linear_t_g(x)
             result_check_list.append(out)
@@ -201,17 +214,23 @@ def _test_linear_train_graph_with_ddp(test_case):
     test_case.assertEqual(len(graph_check_list), iter_num + 1)
     test_case.assertEqual(len(graph_ddp_check_list), iter_num + 1)
     for i in range(iter_num + 1):
-        test_case.assertTrue(np.allclose(graph_check_list[i].numpy(), graph_ddp_check_list[i].numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-         ),
-          f"current index {i} \n base {graph_check_list[i].numpy()} \n ddp {graph_ddp_check_list[i].numpy()} \n diff {graph_ddp_check_list[i].numpy() - graph_check_list[i].numpy()}");
+        test_case.assertTrue(
+            np.allclose(
+                graph_check_list[i].numpy(),
+                graph_ddp_check_list[i].numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            ),
+            f"current index {i} \n base {graph_check_list[i].numpy()} \n ddp {graph_ddp_check_list[i].numpy()} \n diff {graph_ddp_check_list[i].numpy() - graph_check_list[i].numpy()}",
+        )
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithDDP(oneflow.unittest.TestCase):
     def test_linear_train_graph_with_ddp(test_case):
         _test_linear_train_graph_with_ddp(test_case)
+
 
 if __name__ == "__main__":
     unittest.main()

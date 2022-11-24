@@ -284,7 +284,8 @@ class RandNFunctor {
         parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
       }
       return JUST(functional::GlobalRandN(shape, parallel_desc,
-          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                          requires_grad));
     }
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }

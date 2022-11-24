@@ -597,7 +597,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
       return JUST(Device::New(device_tag));
     }
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
-                           "'.placement' for global tensors.";
+                          "'.placement' for global tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "GlobalTensor has no mut_device property";
