@@ -30,7 +30,6 @@ Pattern FusedBiasAddGeluPattern {
       {device_name = device_name, device_tag = device_tag} -> (out: Type);
 
   rewrite gelu with{
-    let fused_bias_add_gelu = CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
-    replace gelu with fused_bias_add_gelu.0;
+    replace gelu with CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
   };
 }
