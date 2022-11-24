@@ -171,6 +171,8 @@ class ParamGroup(object):
 
     @property
     def origin_parameters(self):
+        """the original parameters used when parameters' shape affects the calculation
+        """
         return self._parameters
 
 
@@ -317,13 +319,18 @@ class Optimizer(object):
             raise ValueError(
                 "loaded state dict has a different number of parameter groups"
             )
-        param_lens = (len(g.parameters) for g in groups)
-        saved_lens = (len(g["params"]) for g in saved_groups)
-        if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
-            raise ValueError(
-                "loaded state dict contains a parameter group "
-                "that doesn't match the size of optimizer's group"
-            )
+
+        for param, saved_param in zip(groups, saved_groups):
+            if param["contiguous_params"] != saved_param["_options"]["contiguous_params"]:
+                raise ValueError(
+                    "loaded contiguous_params state doesn't match the optimizer"
+                )
+
+            if len(param.parameters) != len(saved_param["params"]):
+                raise ValueError(
+                    "loaded state dict contains a parameter group "
+                    "that doesn't match the size of optimizer's group"
+                ) 
 
         # Update the state
         id_map = {
@@ -398,7 +405,7 @@ class Optimizer(object):
             packed = {
                 k: v
                 for k, v in group.items()
-                if k not in ["_contiguous_parameters", "_parameters", "params_dict"]
+                if k not in ["_contiguous_parameters", "_parameters", "params_dict", "contiguous_params"]
             }
             param_mappings.update(
                 {
