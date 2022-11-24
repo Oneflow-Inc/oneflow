@@ -76,7 +76,15 @@ EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>&
       tensor_storage_(tensor_storage),
       storage_offset_(storage_offset) {}
 
-EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
+EagerLocalTensorImpl::~EagerLocalTensorImpl() {
+  std::ostringstream ss;
+  ss << "EagerLocalTensorImpl destruction this=" << (void*)this;
+  ss << ", blob=" << (void*)eager_blob_object_.get();
+  if (eager_blob_object_) { ss << ", use_count=" << eager_blob_object_.use_count(); }
+  ss << ", storage=" << (void*)tensor_storage_.get();
+  if (tensor_storage_) { ss << ", use_count=" << tensor_storage_.use_count(); }
+  LOG(ERROR) << ss.str();
+}
 
 Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
@@ -85,9 +93,12 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
       [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           if (eager_blob_object->producer_stream().has_value()) {
-            // if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-            //   LOG(ERROR) << "ReleaseTensor: shape=" << eager_blob_object->shape().ToString();
-            // }
+            if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
+              LOG(ERROR) << "ReleaseTensor blob=" << (void*)eager_blob_object.get()
+                         << ", shape=" << eager_blob_object->shape().ToString()
+                         << ", size=" << eager_blob_object->tensor_storage()->blob_bytes()
+                         << ", ptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
+            }
             JUST(builder->ReleaseTensor(eager_blob_object));
           }
           return Maybe<void>::Ok();

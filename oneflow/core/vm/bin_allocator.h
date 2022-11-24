@@ -396,6 +396,9 @@ bool BinAllocator<ThreadLock>::DeallocateFreeBlockForGarbageCollection() {
       mem_ptr2block_.erase(it);
       backend_->Deallocate(ptr, block.size);
     }
+    LOG(ERROR) << "BinAllocator::DeallocateFreeBlockForGarbageCollection (" << (void*)this
+               << ") total_free_bytes=" << total_free_bytes
+               << ", total_memory_bytes=" << total_memory_bytes_;
   }
   return total_free_bytes > 0;
 }

@@ -94,6 +94,7 @@ struct OpCallInstructionUtil final {
         LOG(ERROR) << "OpCallInstructionPolicy::AllocateOutputBlobsMemory ["
                    << op_call_instruction_policy->DebugName(*instruction)
                    << "] stream=" << StreamType_Name(stream_type)
+                   << ", blob=" << (void*)blob_object.get()
                    << ", shape=" << blob_object->shape().ToString()
                    << ", size=" << blob_object->tensor_storage()->blob_bytes()
                    << ", dptr=" << (void*)blob_object->tensor_storage()->blob_dptr();

@@ -131,6 +131,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    std::ostringstream ss;
+    ss << "Call op " << user_op_expr.op_type_name() << " outputs: ";
+    for (const auto& blob : output_eager_blob_objects) { ss << (void*)blob.get() << ", "; }
+    LOG(ERROR) << ss.str();
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
   }));

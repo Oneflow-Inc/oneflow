@@ -71,6 +71,7 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
     if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
       LOG(ERROR) << "ReleaseTensorInstructionPolicy::Release [" << this->DebugName(*instruction)
                  << "] stream=" << StreamType_Name(instruction->stream().stream_type())
+                 << ", blob=" << (void*)eager_blob_object.get()
                  << ", shape=" << eager_blob_object->shape().ToString()
                  << ", is_prepare=" << is_prepare
                  << ", dptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();

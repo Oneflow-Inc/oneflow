@@ -28,7 +28,10 @@ TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_st
     : storage_(tensor_storage) {}
 
 TensorStorage::~TensorStorage() {
-  if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(storage_); }
+  if (!IsShuttingDown() && releaser_hook_) {
+    LOG(ERROR) << "TensorStorage destruction this=" << (void*)this;
+    (*releaser_hook_)(storage_);
+  }
 }
 
 }  // namespace one
