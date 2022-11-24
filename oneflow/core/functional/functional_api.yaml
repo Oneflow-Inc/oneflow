@@ -1665,6 +1665,14 @@
   signature: "TensorTuple (Tensor b1_x1_diff, Tensor b1_x2_diff, Tensor b1_y1_diff, Tensor b1_y2_diff, Tensor b2_x1_diff, Tensor b2_x2_diff, Tensor b2_y1_diff, Tensor b2_y2_diff) => FusedGetBounddingBoxesCoordGrad"
   bind_python: False
 
+- name: "fused_get_ciou_result"
+  signature: "TensorTuple (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResult"
+  bind_python: True
+
+- name: "fused_get_ciou_result_grad"
+  signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
+  bind_python: False
+
 - name: "abs"
   signature: "Tensor (Tensor x) => Abs"
   bind_python: True
