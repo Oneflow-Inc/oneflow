@@ -47,7 +47,7 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  (node->*InferBlobDescs())(parallel_ctx());
+  (node->*GetExecNodeMethodInferBlobDescs())(parallel_ctx());
 }
 
 REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kSourceTick);

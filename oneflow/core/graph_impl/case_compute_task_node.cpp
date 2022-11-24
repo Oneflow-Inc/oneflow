@@ -71,7 +71,7 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(sole_op->BnInOp2Lbi(name));
     node->BindBnWithRegst(name, out_regst);
   }
-  (node->*InferBlobDescs())(parallel_ctx());
+  (node->*GetExecNodeMethodInferBlobDescs())(parallel_ctx());
 }
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

@@ -52,7 +52,7 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
-  ExecNode::InferBlobDescsMethod InferBlobDescs() const override {
+  ExecNode::InferBlobDescsMethod GetExecNodeMethodInferBlobDescs() const override {
     return GetInferBlobDescsMethod::Visit(CHECK_JUST(CurrentCompileMode()));
   }
 

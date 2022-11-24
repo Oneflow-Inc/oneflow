@@ -56,7 +56,7 @@ void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
   mut_exec_gph().TopoForEachNode(
-      [this](ExecNode* node) { (node->*InferBlobDescs())(parallel_ctx()); });
+      [this](ExecNode* node) { (node->*GetExecNodeMethodInferBlobDescs())(parallel_ctx()); });
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {

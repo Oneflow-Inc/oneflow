@@ -33,6 +33,7 @@ struct TaskTypeVisitor {
       case TaskType::kUnpack: return DerivedT::VisitUnpack(std::forward<Args>(args)...);
       case TaskType::kRepeat: return DerivedT::VisitRepeat(std::forward<Args>(args)...);
       case TaskType::kAcc: return DerivedT::VisitAcc(std::forward<Args>(args)...);
+      case TaskType::kAccCtrlTick: return DerivedT::VisitAccCtrlTick(std::forward<Args>(args)...);
       case TaskType::kSrcSubsetTick:
         return DerivedT::VisitSrcSubsetTick(std::forward<Args>(args)...);
       case TaskType::kDstSubsetTick:

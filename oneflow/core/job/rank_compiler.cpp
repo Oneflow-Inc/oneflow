@@ -82,6 +82,8 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   });
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
+  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  task_gph->DecideExecutionOrder();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   const JobDesc& job_desc = GlobalJobDesc();
@@ -92,7 +94,6 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       task_gph->EnableInplaceMemSharing(dev_nodes, IsReachable);
     });
   }
-  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   // put infomation from task_gph into plan.
@@ -122,8 +123,11 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
+  // TODO(chengcheng): set inplace hint for cpu regst
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  PlanUtil::SetForceInplaceMemBlock(plan);
   return Maybe<void>::Ok();
 }
 
