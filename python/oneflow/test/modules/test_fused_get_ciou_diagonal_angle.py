@@ -27,7 +27,9 @@ import oneflow.unittest
 
 
 def torch_get_ciou_diagonal_angle(w1, h1, w2, h2, eps=1e-8):
-    return (4 / math.pi ** 2) * torch.pow(torch.atan(w2 / (h2 + eps)) - torch.atan(w1 / (h1 + eps)), 2)
+    return (4 / math.pi ** 2) * torch.pow(
+        torch.atan(w2 / (h2 + eps)) - torch.atan(w1 / (h1 + eps)), 2
+    )
 
 
 def _test_fused_get_ciou_diagonal_angle_impl(test_case, device, shape):
@@ -63,24 +65,14 @@ def _test_fused_get_ciou_diagonal_angle_impl(test_case, device, shape):
         x[2],
         x[3],
     )
-    (
-        torch_w1,
-        torch_h1,
-        torch_w2,
-        torch_h2,
-    ) = (
+    (torch_w1, torch_h1, torch_w2, torch_h2,) = (
         torch_x[0],
         torch_x[1],
         torch_x[2],
         torch_x[3],
     )
     v = flow._C.fused_get_ciou_diagonal_angle(w1, h1, w2, h2, eps=1e-8)
-    torch_v = torch_get_ciou_diagonal_angle(
-        torch_w1,
-        torch_h1,
-        torch_w2,
-        torch_h2,
-    )
+    torch_v = torch_get_ciou_diagonal_angle(torch_w1, torch_h1, torch_w2, torch_h2,)
     compare(v, torch_v)
 
     v.sum().backward()
