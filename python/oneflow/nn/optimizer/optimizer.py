@@ -605,7 +605,7 @@ class Optimizer(object):
 
             warnings.warn(
                 "do not set contiguous_params and fused at the same time, "
-                "only contiguous_params is set."
+                "now only contiguous_params is set."
             )
 
     def _check_buff_valid(self, ):
