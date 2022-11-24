@@ -37,7 +37,7 @@ from networks.resnet50 import resnet50
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     bn = nn.BatchNorm2d(3)
-    eager_res = flow.relu(bn(x)+x)
+    eager_res = flow.relu(bn(x) + x)
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):

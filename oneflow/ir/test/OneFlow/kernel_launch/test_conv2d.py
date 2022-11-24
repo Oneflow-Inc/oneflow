@@ -33,11 +33,10 @@ import oneflow.unittest
 import oneflow.nn as nn
 
 
-
 def _test_okl_conv2d(test_case):
     x = flow.randn(2, 3, 224, 224)
     x = x.cuda()
-    conv = nn.Conv2d( 3, 2, kernel_size=7, stride=2, padding=3, bias=False).to("cuda")
+    conv = nn.Conv2d(3, 2, kernel_size=7, stride=2, padding=3, bias=False).to("cuda")
 
     eager_res = conv(x)
 
