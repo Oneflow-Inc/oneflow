@@ -21,14 +21,14 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+
 import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from networks.resnet50 import resnet50
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
 
 
 def _test_okl_resnet(test_case):
