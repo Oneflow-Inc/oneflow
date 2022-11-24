@@ -20,7 +20,7 @@ Pattern {
   };
 }
 
-Pattern FusedBiasAddGeluPattern {
+Pattern {
   let device_name: Attr;
   let device_tag: Attr;
   let axis: Attr;
