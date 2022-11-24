@@ -235,7 +235,7 @@ template<typename T>
 class GpuFusedGluKernel final : public user_op::OpKernel {
  public:
   GpuFusedGluKernel() = default;
-  ~GpuFusedGluKernel() = default;
+  ~GpuFusedGluKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;

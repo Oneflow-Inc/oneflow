@@ -3308,7 +3308,7 @@ class FusedGluFunctor {
                            const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
                            const Optional<one::Tensor>& c, const std::string& activation) const {
     // check whether the user provide splited tensors
-    bool is_split_mode;
+    bool is_split_mode = false;
     if (v && c) {
       is_split_mode = true;
     } else if (!v && !c) {
