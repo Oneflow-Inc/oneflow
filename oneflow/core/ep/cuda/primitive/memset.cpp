@@ -61,7 +61,7 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemsetFactory, MemsetFactoryImpl);
 #ifdef WITH_ROCM
 
 #include "oneflow/core/ep/include/primitive/memset.h"
-#include "oneflow/core/ep/rocm/cuda_stream.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <hip/hip_runtime.h>
 
 namespace oneflow {
