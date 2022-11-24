@@ -55,7 +55,7 @@ def do_bias_add_gelu_graph(test_case, with_cuda):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestBiasAddDropout(oneflow.unittest.TestCase):
+class TestBiasAddGelu(oneflow.unittest.TestCase):
     def test_bias_add_gelu_graph(test_case):
         do_bias_add_gelu_graph(test_case, True)
 
