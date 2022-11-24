@@ -1011,8 +1011,8 @@ class AsStridedFunctor {
     op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
-                           const int32_t& storage_offset) const {
+                           const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
+                           const int64_t& storage_offset) const {
     CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
     for (size_t i = 0; i < size.size(); i++) {
       CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
@@ -1040,8 +1040,11 @@ class AsStridedGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
-                           const int32_t& storage_offset) const {
+                           const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
+                           const int64_t& storage_offset) const {
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::AsStridedGrad(dy, input, size, stride, storage_offset));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size", "stride", "storage_offset");
     attrs.SetAllAttrs(size, stride, storage_offset);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
@@ -1849,9 +1852,9 @@ class SelectFunctor {
         << "], but got " << index << ")";
     int32_t pos_index = index >= 0 ? index : index + size;
 
-    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    std::vector<int64_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
     const auto& stride = *JUST(input->stride());
-    std::vector<int32_t> strides(stride.begin(), stride.end());
+    std::vector<int64_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
     sizes.erase(sizes.begin() + pos_dim);
@@ -3297,6 +3300,58 @@ class FusedGetBounddingBoxesCoordGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGetCiouResultFunctor {
+ public:
+  FusedGetCiouResultFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result")
+                         .Input("v")
+                         .Input("iou")
+                         .Input("rho2")
+                         .Input("c2")
+                         .Output("y")
+                         .Output("alpha")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& v,
+                                const std::shared_ptr<one::Tensor>& iou,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {v, iou, rho2, c2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouResultGradFunctor {
+ public:
+  FusedGetCiouResultGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result_grad")
+                         .Input("dy")
+                         .Input("alpha")
+                         .Input("rho2")
+                         .Input("c2")
+                         .Output("dv")
+                         .Output("diou")
+                         .Output("drho2")
+                         .Output("dc2")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& alpha,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, alpha, rho2, c2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3416,6 +3471,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
   m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
   m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
+  m.add_functor<impl::FusedGetCiouResultFunctor>("FusedGetCiouResult");
+  m.add_functor<impl::FusedGetCiouResultGradFunctor>("FusedGetCiouResultGrad");
 };
 
 }  // namespace functional

@@ -29,39 +29,35 @@ import oneflow.unittest
 import oneflow.sysconfig
 
 
-def do_bias_add_dropout_graph(test_case, with_cuda, prob):
+def do_bias_add_gelu_graph(test_case, with_cuda):
     x = flow.randn(2, 3, 4, 5)
     bias = flow.randn(5)
-    dropout = flow.nn.Dropout(p=prob)
+    gelu = flow.nn.GELU()
     if with_cuda:
         x = x.cuda()
         bias = bias.to("cuda")
-        dropout.to("cuda")
+        gelu.to("cuda")
 
-    eager_res = dropout(flow._C.bias_add(x, bias, axis=3))
+    eager_res = gelu(flow._C.bias_add(x, bias, axis=3))
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.dropout = dropout
+            self.gelu = gelu
 
         def build(self, x, bias):
-            return self.dropout(flow._C.bias_add(x, bias, axis=3))
+            return self.gelu(flow._C.bias_add(x, bias, axis=3))
 
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x, bias)
-    if prob == 1.0:
-        test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
-    else:
-        test_case.assertTrue(lazy_res.sum().item() != 0.0)
+    test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestBiasAddDropout(oneflow.unittest.TestCase):
-    def test_bias_add_dropout_graph(test_case):
-        do_bias_add_dropout_graph(test_case, True, 1.0)
-        do_bias_add_dropout_graph(test_case, True, 0.5)
+class TestBiasAddGelu(oneflow.unittest.TestCase):
+    def test_bias_add_gelu_graph(test_case):
+        do_bias_add_gelu_graph(test_case, True)
 
 
 if __name__ == "__main__":
