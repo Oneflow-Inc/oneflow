@@ -992,7 +992,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
-  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
