@@ -129,7 +129,7 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
 }
 
 Source GetOpSourceByName(Operation* op, const std::string& to_find) {
-  if (auto user_op = llvm::dyn_cast_or_null<UserOpCompatible>(op)) {
+  if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
     auto found = [&](std::vector<std::string> keys,
                      bool find_in_results /*or in operands*/ = false) -> int {
       auto offset = 0;
@@ -141,7 +141,7 @@ Source GetOpSourceByName(Operation* op, const std::string& to_find) {
       return -1;
     };
 
-    if (auto alternative_name = dyn_cast_or_null<HasAlternativeOpTypeName>(op)) {
+    if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
       if (auto offset = found(*alternative_name.inputKeys()); offset != -1) {
         return {Source::INPUT, offset};
       }
