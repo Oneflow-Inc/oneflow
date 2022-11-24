@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 #include "device/dual_gemm.h"
 #include "thread/left_silu_and_mul.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace cutlass {
 namespace epilogue {
@@ -169,7 +170,7 @@ void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, cons
 
   DualGemm dual_gemm_op;
   dual_gemm_op.initialize(arguments, stream->cublas_workspace(), stream->cuda_stream());
-  dual_gemm_op();
+  dual_gemm_op(stream->cuda_stream());
 }
 
 template<typename T>
@@ -278,7 +279,7 @@ __global__ void FusedGegluHalf4ForwardGpu(const int in_size, const int out_size,
 
 template<typename T>
 
-class GpuFusedGegluKernel final : public user_op::OpKernel {
+class GpuFusedGegluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuFusedGegluKernel() = default;
   ~GpuFusedGegluKernel() = default;

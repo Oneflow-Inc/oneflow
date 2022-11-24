@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/cuda/layer_norm.cuh"
 #include <cub/cub.cuh>
 #include <cutlass/fast_math.h>
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -294,7 +295,7 @@ void LaunchGroupNormBackward(ep::Stream* stream, const int64_t num_instances,
 }  // namespace
 
 template<typename T>
-class GroupNormGpuKernel final : public user_op::OpKernel {
+class GroupNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GroupNormGpuKernel() = default;
   ~GroupNormGpuKernel() = default;

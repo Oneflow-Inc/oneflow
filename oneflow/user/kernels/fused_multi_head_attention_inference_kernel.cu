@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -163,7 +164,8 @@ void DispatchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   }
 }
 
-class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
+class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
+                                                     public user_op::CudaGraphSupport {
  public:
   FusedMultiHeadAttentionInferenceKernel() = default;
   ~FusedMultiHeadAttentionInferenceKernel() override = default;
