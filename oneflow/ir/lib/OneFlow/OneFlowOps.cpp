@@ -311,23 +311,6 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   /*inv_variance */ odsState.addTypes(x.getType());
 }
 
-void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& odsState,
-                             mlir::Value like, StringRef op_name, StringRef device_tag,
-                             ArrayAttr device_name, IntegerAttr scope_symbol_id,
-                             ArrayAttr hierarchy, mlir::FloatAttr rate, mlir::IntegerAttr seed) {
-  odsState.addOperands(like);
-  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
-  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
-  if (scope_symbol_id) {
-    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
-  }
-  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  odsState.addAttribute(rateAttrName(odsState.name), rate);
-  odsState.addAttribute(seedAttrName(odsState.name), seed);
-  odsState.addTypes(like.getType());
-}
-
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
