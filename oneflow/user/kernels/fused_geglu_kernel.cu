@@ -104,8 +104,8 @@ void DualGemmGeglu(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, cons
   using ElementOperandA = cutlass::half_t;
   using ElementOperandB = cutlass::half_t;
   using ElementOutput = cutlass::half_t;
-  using ElementAccumulator = float;
-  using ElementCompute = float;
+  using ElementAccumulator = cutlass::half_t;
+  using ElementCompute = cutlass::half_t;
   using ThreadblockShape = cutlass::gemm::GemmShape<128, 64, 32>;
   using WarpShape = cutlass::gemm::GemmShape<64, 32, 32>;
   using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;
