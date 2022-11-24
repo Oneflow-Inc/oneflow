@@ -135,6 +135,7 @@ class RMSprop(Optimizer):
         weight_decay: float = 0,
         momentum: float = 0.0,
         centered: bool = False,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
@@ -147,6 +148,7 @@ class RMSprop(Optimizer):
         options["eps"] = eps
         options["weight_decay"] = weight_decay
         options["centered"] = centered
+        options["contiguous_params"] = contiguous_params
         super().__init__(params, options)
 
         for param_group in self.param_groups:

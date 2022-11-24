@@ -113,6 +113,7 @@ class LAMB(Optimizer):
         adam_w_mode: bool = True,
         do_bias_correction: bool = True,
         amsgrad: bool = False,
+        contiguous_params: bool = False,
     ):
         if amsgrad:
             # TODO: supported amsgrad in Lamb
@@ -137,6 +138,7 @@ class LAMB(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
+        options["contiguous_params"] = contiguous_params
 
         super().__init__(params, options)
 

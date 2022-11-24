@@ -98,6 +98,7 @@ class Adagrad(Optimizer):
         weight_decay: float = 0,
         initial_accumulator_value: float = 0.0,
         eps: float = 1e-10,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
@@ -112,6 +113,7 @@ class Adagrad(Optimizer):
         options["lr_decay"] = lr_decay
         options["weight_decay"] = weight_decay
         options["eps"] = eps
+        options["contiguous_params"] = contiguous_params
         super().__init__(params, options)
 
         for param_group in self.param_groups:
