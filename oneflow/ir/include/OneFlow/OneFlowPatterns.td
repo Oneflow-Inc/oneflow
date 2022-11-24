@@ -209,37 +209,6 @@ def FusedScaleTrilPattern2 : Pat<
   ]
 >;
 
-def FusedBiasAddGeluPattern : Pat<
-  (
-    OneFlow_GeluOp : $gelu_op
-    (
-      OneFlow_BiasAddOp
-        $a,
-        $b,
-        $bias_add_op_name,
-        $bias_add_device_tag,
-        $bias_add_device_name,
-        $bias_add_scope_symbol_id,
-        $bias_add_hierarchy,
-        $axis
-    ),
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy
-  ),
-  (OneFlow_FusedBiasAddGeluOp $a, $b,
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy,
-    $axis
-  ),
-  []
->;
-
 def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
 // TODO: check mean and inv_variance are not used
 def NormalizationAddReluPattern : Pattern<
