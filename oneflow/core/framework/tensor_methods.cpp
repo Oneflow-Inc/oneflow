@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_methods.h"
+#include <glog/logging.h>
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -49,8 +51,8 @@ bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   return false;
 }
 
-static inline bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
-                                        const std::vector<int64_t>& strides) {
+static bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
+                                 const std::vector<int64_t>& strides) {
   // reference: torch/csrc/autograd/FunctionsManual.cpp _maybe_overlapping_memory()
   if (sizes.size() > 0) {
     std::vector<std::size_t> argsort(sizes.size());
@@ -67,8 +69,8 @@ static inline bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
   return false;
 }
 
-static inline int64_t MinStorageSize(const std::vector<int64_t>& sizes,
-                                     const std::vector<int64_t>& strides, int64_t storage_offset) {
+static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
+                              const std::vector<int64_t>& strides, int64_t storage_offset) {
   int64_t storage_size = storage_offset + 1;
   int64_t ndim = sizes.size();
   for (size_t i = 0; i < ndim; i++) {
@@ -392,6 +394,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
                             const std::shared_ptr<one::Tensor>& input,
                             const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
                             const int64_t& storage_offset) {
+  CHECK_OR_RETURN(input->is_local()) << "input must be local tensor.";
   // reference: torch/csrc/autograd/FunctionsManual.cpp
   const size_t odim = dy->ndim();
   std::vector<int64_t> out_sizes_, out_strides_;
@@ -416,7 +419,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
   // Step (2)~(4) for the algorithm in NOTE [ Detecting Memory Overlap Within A
   // Strided Tensor ]
   //              on output geometry
-  auto out_maybe_overlap = IsOverlappingMemorys(out_sizes_, out_strides_);
+  const bool out_maybe_overlap = IsOverlappingMemorys(out_sizes_, out_strides_);
 
   // For input geometry,
   //   check for size 0 dimensions,
@@ -443,7 +446,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
   // Step (1)~(4) for the algorithm in NOTE [ Detecting Memory Overlap Within A
   // Strided Tensor ]
   //              on input geometry
-  auto inp_maybe_overlap = IsOverlappingMemorys(inp_sizes_, inp_strides_);
+  const bool inp_maybe_overlap = IsOverlappingMemorys(inp_sizes_, inp_strides_);
 
   // Rest of this function implements
   // Step (1)~(4) for the algorithm in NOTE [ as_strided Backward and

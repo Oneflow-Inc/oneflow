@@ -33,11 +33,11 @@ bool IsEnvViewDisabled();
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
 
-static inline bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
-                                        const std::vector<int64_t>& strides);
+static bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
+                                 const std::vector<int64_t>& strides);
 
-static inline int64_t MinStorageSize(const std::vector<int64_t>& sizes,
-                                     const std::vector<int64_t>& strides, int64_t storage_offset);
+static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
+                              const std::vector<int64_t>& strides, int64_t storage_offset);
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset);
