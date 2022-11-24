@@ -209,6 +209,9 @@ required = _RequiredParameter()
 
 class Optimizer(object):
     def __init__(self, parameters, options):
+        self._make_options_valid(options)
+        print(options)
+
         self.param_groups = list()
         self._default_options = options
         self._state = dict()
@@ -592,3 +595,16 @@ class Optimizer(object):
                 sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
                 sparse_variable_op_names = sparse_opt_conf.include_op_names
                 sparse_variable_op_names.op_name.append(vars_conf[param].name)
+
+    def _make_options_valid(self, options):
+        if options["contiguous_params"] and options["fused"]:
+            options["contiguous_params"] = False
+            options["fused"] = False
+
+            warnings.warn(
+                "should not set contiguous and fused at the same time, "
+                "both are set to False."
+            )
+
+    def _check_buff_valid(self, ):
+        pass
