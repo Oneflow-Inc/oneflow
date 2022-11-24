@@ -249,6 +249,10 @@
   signature: "Tensor (Tensor start, Tensor end, Tensor weight) => Lerp"
   bind_python: True
 
+- name: "lerp_grad"
+  signature: "TensorTuple (Tensor start, Tensor end, Tensor weight, Tensor out_diff) => LerpGrad"
+  bind_python: False
+
 - name: "trunc_divide"
   signature:
     [

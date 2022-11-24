@@ -65,6 +65,58 @@ REGISTER_CPU_LERP_KERNEL(int8_t)
 REGISTER_CPU_LERP_KERNEL(int32_t)
 REGISTER_CPU_LERP_KERNEL(int64_t)
 
+template<typename T>
+class CpuLerpGradKernel final : public user_op::OpKernel {
+ public:
+  CpuLerpGradKernel() = default;
+  ~CpuLerpGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* start = ctx->Tensor4ArgNameAndIndex("start", 0);
+    const user_op::Tensor* end = ctx->Tensor4ArgNameAndIndex("end", 0);
+    const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+    const user_op::Tensor* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
+    user_op::Tensor* start_diff = ctx->Tensor4ArgNameAndIndex("start_diff", 0);
+    user_op::Tensor* end_diff = ctx->Tensor4ArgNameAndIndex("end_diff", 0);
+    user_op::Tensor* weight_diff = ctx->Tensor4ArgNameAndIndex("weight_diff", 0);
+
+    const int64_t start_elem_cnt = start->shape_view().elem_cnt();
+    const int64_t end_elem_cnt = end->shape_view().elem_cnt();
+    const int64_t weight_elem_cnt = weight->shape_view().elem_cnt();
+    CHECK_EQ(start_elem_cnt, end_elem_cnt);
+    CHECK_EQ(start_elem_cnt, weight_elem_cnt);
+
+    const T* start_ptr = start->dptr<T>();
+    const T* end_ptr = end->dptr<T>();
+    const T* weight_ptr = weight->dptr<T>();
+    const T* out_diff_ptr = out_diff->dptr<T>();
+    T* start_diff_ptr = start_diff->mut_dptr<T>();
+    T* end_diff_ptr = end_diff->mut_dptr<T>();
+    T* weight_diff_ptr = weight_diff->mut_dptr<T>();
+
+    FOR_RANGE(int64_t, i, 0, start_elem_cnt) {
+      start_diff_ptr[i] = (static_cast<T>(1.0) - weight_ptr[i]) * out_diff_ptr[i];
+      end_diff_ptr[i] = weight_ptr[i] * out_diff_ptr[i];
+      weight_diff_ptr[i] = (end_ptr[i] - start_ptr[i]) * out_diff_ptr[i];
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CPU_LERP_GRAD_KERNEL(dtype)                               \
+  REGISTER_USER_KERNEL("lerp_grad")                                        \
+      .SetCreateFn<CpuLerpGradKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)      \
+                       && (user_op::HobDataType("start_diff", 0) == GetDataType<dtype>::value));
+
+REGISTER_CPU_LERP_GRAD_KERNEL(float)
+REGISTER_CPU_LERP_GRAD_KERNEL(double)
+REGISTER_CPU_LERP_GRAD_KERNEL(uint8_t)
+REGISTER_CPU_LERP_GRAD_KERNEL(int8_t)
+REGISTER_CPU_LERP_GRAD_KERNEL(int32_t)
+REGISTER_CPU_LERP_GRAD_KERNEL(int64_t)
+
 }  // namespace
 
 }  // namespace oneflow

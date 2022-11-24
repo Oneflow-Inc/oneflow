@@ -60,4 +60,71 @@ Maybe<void> LerpOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> LerpGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+  const user_op::TensorDesc& start = ctx->InputTensorDesc("start", 0);
+  const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
+  const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+  const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
+
+  CHECK_EQ_OR_RETURN(start.shape(), end.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), weight.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), out_diff.shape());
+
+  user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
+  user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
+  user_op::TensorDesc* weight_diff = ctx->MutOutputTensorDesc("weight_diff", 0);
+  start_diff->set_is_dynamic(start.is_dynamic());
+  start_diff->set_shape(start.shape());
+
+  end_diff->set_is_dynamic(start.is_dynamic());
+  end_diff->set_shape(start.shape());
+
+  weight_diff->set_is_dynamic(start.is_dynamic());
+  weight_diff->set_shape(start.shape());
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LerpGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return LerpGradOp::InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> LerpGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& start = ctx->InputTensorDesc("start", 0);
+  const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
+  const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+  const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
+
+  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), weight.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), out_diff.data_type());
+
+  user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
+  user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
+  user_op::TensorDesc* weight_diff = ctx->MutOutputTensorDesc("weight_diff", 0);
+  start_diff->set_data_type(start.data_type());
+
+  end_diff->set_data_type(start.data_type());
+
+  weight_diff->set_data_type(start.data_type());
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LerpGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& start = ctx->LogicalTensorDesc4InputArgNameAndIndex("start", 0);
+  FOR_RANGE(int64_t, i, 0, start.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("start", 0), i)
+        .Split(user_op::OpArg("end", 0), i)
+        .Split(user_op::OpArg("weight", 0), i)
+        .Split(user_op::OpArg("out_diff", 0), i)
+        .Split(user_op::OpArg("start_diff", 0), i)
+        .Split(user_op::OpArg("end_diff", 0), i)
+        .Split(user_op::OpArg("weight_diff", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

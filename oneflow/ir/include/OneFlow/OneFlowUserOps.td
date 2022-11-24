@@ -115,7 +115,7 @@ class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : On
 
 #endif // GET_ONEFLOW_BASE_OP_DEFINITIONS
 
-// Group: BINARY TODO(hujiakui: add lerp)
+// Group: BINARY
 // bias_add, cast_like, celu_grad, diag_grad, diagonal_grad, dot, dropout_grad, elementwise_maximum, elementwise_minimum, elu_grad, floordiv, truncdiv, gelu_grad, fast_gelu_grad, grid_sample, hardsigmoid_grad, hardshrink_grad, hardswish_grad, l1_l2_regularize_gradient, leaky_relu_grad, lerp, lerp_grad, masked_fill, mish_grad, narrow_grad, pow, prelu, relu_grad, selu_grad, silu_grad, softshrink_grad, threshold_grad, tf_prelu, unfold_tensor_grad, xdivy, xlogy
 // Total: 36
 
@@ -295,7 +295,6 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInte
   let has_data_type_infer_fn = 1;
 }
 
-// TODO
 def OneFlow_LerpOp : OneFlow_BaseOp<"lerp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$start,
@@ -304,6 +303,24 @@ def OneFlow_LerpOp : OneFlow_BaseOp<"lerp", [NoSideEffect, DeclareOpInterfaceMet
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_LerpGradOp : OneFlow_BaseOp<"lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$start,
+    OneFlow_Tensor:$end,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$out_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$start_diff,
+    OneFlow_Tensor:$end_diff,
+    OneFlow_Tensor:$weight_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

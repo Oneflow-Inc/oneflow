@@ -417,6 +417,31 @@ class LerpFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LerpGradFunctor {
+ public:
+  LerpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("lerp_grad")
+                         .Input("start")
+                         .Input("end")
+                         .Input("weight")
+                         .Input("out_diff")
+                         .Output("start_diff")
+                         .Output("end_diff")
+                         .Output("weight_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& start,
+                                const std::shared_ptr<one::Tensor>& end,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& out_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {start, end, weight, out_diff}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
@@ -582,6 +607,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
   m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
   m.add_functor<impl::LerpFunctor>("Lerp");
+  m.add_functor<impl::LerpGradFunctor>("LerpGrad");
 };
 
 }  // namespace functional
