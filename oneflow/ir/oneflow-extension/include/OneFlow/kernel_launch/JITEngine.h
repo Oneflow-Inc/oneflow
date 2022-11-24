@@ -25,8 +25,7 @@ namespace oneflow {
 namespace okl {
 
 using FetchArgs = std::tuple<LauncherContext*, int>;
-using LaunchArgs =
-    std::tuple<RunContext*, const oneflow::user_op::OpKernel*>;
+using LaunchArgs = std::tuple<RunContext*, const oneflow::user_op::OpKernel*>;
 
 class JITEngine {
  public:

@@ -34,15 +34,17 @@ class InferContext final : public user_op::InferContext {
 
   explicit InferContext(RegContext* reg_ctx);
 
-  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name, int32_t index) const override {
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
     return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name, int32_t index) const override {
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name,
+                                              int32_t index) const override {
     return *LogicalTensorDesc4ArgNameAndIndex(arg_name, index);
   }
   user_op::TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) override { TODO(); }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override;
+                                                               int32_t index) const override;
 
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override;
 
@@ -112,7 +114,8 @@ class InferContext final : public user_op::InferContext {
   int64_t parallel_num() const override { TODO(); }
 
  private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const override;
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override;
 
   RegContext* reg_ctx_;
 };
