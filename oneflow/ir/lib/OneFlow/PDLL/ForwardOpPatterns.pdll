@@ -19,3 +19,17 @@ Pattern {
     replace dropout with (fused_bias_add_mask_scale.0, random_mask_like.0);
   };
 }
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let axis: Attr;
+  let gelu =
+    op<oneflow.gelu>(
+      op<oneflow.bias_add>(a: Value, b: Value) {axis = axis, device_name = device_name, device_tag = device_tag})
+      {device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite gelu with{
+    replace gelu with CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
+  };
+}

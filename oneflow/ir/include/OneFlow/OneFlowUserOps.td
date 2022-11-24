@@ -9714,18 +9714,6 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
-  let builders = [
-    OpBuilder<(ins
-      "Value":$like,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "FloatAttr":$rate,
-      "IntegerAttr":$seed
-    )>
-  ];
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
