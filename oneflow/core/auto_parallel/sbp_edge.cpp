@@ -31,7 +31,6 @@ namespace auto_parallel {
 
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
-
 SbpEdge::SbpEdge(SbpNode* start_node, SbpNode* mid_node, SbpNode* end_node, SbpEdge* first_edge,
                  SbpEdge* second_edge)
     : start_node_(start_node), mid_node_(mid_node), end_node_(end_node) {
@@ -65,9 +64,9 @@ void SbpEdge::SummarizeCost() {
     mid_node_sbp_sig_.resize(start_node_sbp_size);
     int32_t end_node_sbp_size = end_node_->cost_.size();
     int32_t mid_node_sbp_size = mid_node_->cost_.size();
-    for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
+    for (int32_t sbp_start = 0; sbp_start < start_node_sbp_size; sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
-      memory_[sbp_start].resize(end_node_sbp_size);
+      if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
       mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         double copy_cost = 0.0;
@@ -80,7 +79,7 @@ void SbpEdge::SummarizeCost() {
         for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
           copy_cost = mid_node_->cost_[sbp_mid];
-          memory_cost = 0;
+          memory_cost = mid_node_->GetMemory(sbp_mid);
           // Add first edge cost
           if (edge_list_[0]->start_node_ == start_node_) {
             copy_cost += edge_list_[0]->cost_[sbp_start][sbp_mid];
@@ -118,7 +117,7 @@ void SbpEdge::SummarizeCost() {
     int32_t end_node_sbp_size = end_node_->cost_.size();
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
-      memory_[sbp_start].resize(end_node_sbp_size);
+      if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         double copy_cost = 0;
         int64_t memory_cost = 0;
@@ -228,7 +227,6 @@ double SbpEdge::GreedyStrategy() {
 }
 
 // Get the minimum element in Cost
-
 double SbpEdge::GetMinCost() {
   // used the stored value if pre-computed.
   if (min_cost_ >= 0) { return min_cost_; }
@@ -244,7 +242,6 @@ double SbpEdge::GetMinCost() {
 }
 
 // Get the maximum element in Cost
-
 double SbpEdge::GetMaxCost() const {
   // used the stored value if pre-computed.
   // if (max_cost >= 0) return max_cost;
@@ -261,7 +258,6 @@ double SbpEdge::GetMaxCost() const {
 }
 
 // Assemble copy cost
-
 void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector) {
   // In this part, we assemble the cost from nodes to nodes.
   if (start_node_->op_node_ && end_node_->op_node_) {
@@ -321,7 +317,6 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector)
 }
 
 // Set the cut ratio
-
 double SbpEdge::GetCutRatio() const {
   int32_t num = 0;
   for (int32_t i = 0; i < cost_.size(); i++) {
@@ -334,7 +329,6 @@ double SbpEdge::GetCutRatio() const {
 
 // find the cut ratio
 // (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
-
 double SbpEdge::FindCutRatio(int32_t threshold) const {
   double cut_ratio = GetCutRatio();
   // lift the cut ratio to 1 to filter out some improper couples to avoid unlimited merging

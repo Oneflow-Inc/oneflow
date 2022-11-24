@@ -212,7 +212,7 @@ class SbpNode final {
 
 // In dynamic programming, we can not minimize a vector (copy cost, memory cost)
 // Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
-// TODO: How can we remove const? We might need to tune kMemoryRatio for inadequate memory. 
+// TODO: How can we remove const? We might need to tune kMemoryRatio for inadequate memory.
 static const double kMemoryRatio = 1.0;
 
 }  // namespace auto_parallel
