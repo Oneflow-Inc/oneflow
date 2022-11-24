@@ -33,3 +33,23 @@ Pattern {
     replace gelu with CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
   };
 }
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let x: Value;
+  let moving_mean: Value;
+  let moving_variance: Value;
+  let gamma: Value;
+  let beta: Value;
+  let addend: Value;
+  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
+  let relu =
+    op<oneflow.relu>(
+      op<oneflow.add_n2>(normalization.0, addend) {device_name = device_name, device_tag = device_tag})
+      {device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite relu with{
+    replace relu with CopyUserOpAttrs(relu, op<oneflow.normalization_add_relu>(x, addend, moving_mean, moving_variance, gamma, beta) -> (out));
+  };
+}
