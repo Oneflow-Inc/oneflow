@@ -47,7 +47,7 @@ Pattern {
   let gamma: Value;
   let beta: Value;
   let addend: Value;
-  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
+  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
   let relu =
     op<oneflow.relu>(
       op<oneflow.add_n2>(normalization.0, addend) {device_name = device_name, device_tag = device_tag})
