@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-pdll-to-checksum
         name: find cache
         id: find-cache
         timeout-minutes: 5
