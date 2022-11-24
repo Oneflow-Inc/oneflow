@@ -16,6 +16,10 @@ limitations under the License.
 # RUN: python3 %s
 
 import os
+
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+
 import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -23,10 +27,6 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
 import unittest
 import numpy as np
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
