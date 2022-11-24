@@ -18,8 +18,23 @@ limitations under the License.
 
 #ifdef WITH_ROCM
 #define GPU(str) hip##str
+void SYNCWARP()
+{
+    __syncthreads();
+}
+void TRAP()
+{
+    asm volatile("s_trap 0;");}
 #else
 #define GPU(str) cuda##str
+void SYNCWARP()
+{
+    __syncwarp();
+}
+void TRAP()
+{
+    __trap();
+}
 #endif
 
 #endif // ONEFLOW_CORE_EP_GPU_MACRO_H_
