@@ -591,8 +591,9 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
-    OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
-                          "'.placement' for global tensors.";
+    return JUST(impl_->cur_rank_phy_tensor())->device();
+    // OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
+    //                       "'.placement' for global tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "GlobalTensor has no mut_device property";

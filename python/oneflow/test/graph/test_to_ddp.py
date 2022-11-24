@@ -5,6 +5,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.graph import GraphModule
+import oneflow._oneflow_internal.global_mode as global_mode
 
 
 def _test_linear_train_graph_with_ddp(test_case):
@@ -97,7 +98,15 @@ def _test_linear_train_graph_with_ddp(test_case):
             momentum=0.9,
         )
 
-        x = flow.ones((6, 800), placement=PC, sbp=S0)
+        with global_mode.guard(True, placement=PC, sbp=[S0]):
+        #with global_mode.guard(False):
+            print("=====> cur global mode with true", global_mode.is_enabled())
+            print("=====> cur global mode placement", global_mode.placement())
+            print("=====> cur global mode sbp", global_mode.sbp())
+            x = flow.ones((6, 800), placement=PC, sbp=S0)
+            print("==> x.device form a global tensor: ", x.device)
+            with global_mode.guard(False):
+                print("=====> cur global mode with false", global_mode.is_enabled())
 
         class LinearTrainGraphWithDDP(flow.nn.Graph):
             def __init__(self):
@@ -118,6 +127,8 @@ def _test_linear_train_graph_with_ddp(test_case):
                 self.linear_dp = linear_dp
 
             def build(self, x):
+                #device = self.linear_dp.weight.device
+                #print(device)
                 x = x.to_global(placement=P)
                 out = self.linear_dp(x)
                 return out
