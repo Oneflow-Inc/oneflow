@@ -71,8 +71,8 @@ __global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf,
 template<typename T>
 struct AsStridedFunctor final {
   void operator()(ep::Stream* stream, const T* input_buf, T* output_buf, const int64_t* dest_dims,
-                  const int32_t* stride, const int32_t dest_num_dims, const int32_t storage_offset,
-                  const int32_t input_num, const int32_t output_num) {
+                  const int64_t* stride, const int64_t dest_num_dims, const int64_t storage_offset,
+                  const int64_t input_num, const int64_t output_num) {
     NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(dest_dims, dest_num_dims);
     AsStridedParams<NUM_DIM, int64_t> params;
     params.destIndexOffsetHelper = destIndexOffsetHelper;
@@ -94,8 +94,8 @@ struct AsStridedFunctor final {
 template<typename T>
 struct AsStridedGradFunctor final {
   void operator()(ep::Stream* stream, const T* dy_buf, T* dx_buf, const int64_t* dy_dims,
-                  const int32_t* stride, const int32_t dy_num_dims, const int32_t storage_offset,
-                  const int32_t dx_num, const int32_t dy_num) {
+                  const int64_t* stride, const int64_t dy_num_dims, const int64_t storage_offset,
+                  const int64_t dx_num, const int64_t dy_num) {
     NdIndexOffsetHelper<int64_t, NUM_DIM> dyIndexOffsetHelper(dy_dims, dy_num_dims);
     AsStridedParams<NUM_DIM, int64_t> params;
     params.destIndexOffsetHelper = dyIndexOffsetHelper;
@@ -127,9 +127,9 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const auto size = ctx->Attr<std::vector<int32_t>>("size");
-    const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
-    const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
+    const auto size = ctx->Attr<std::vector<int64_t>>("size");
+    const auto stride = ctx->Attr<std::vector<int64_t>>("stride");
+    const int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     size_t dest_num_dims = output->shape_view().NumAxes();
     const int64_t* dest_dims = output->shape_view().ptr();
@@ -157,9 +157,9 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto size = ctx->Attr<std::vector<int32_t>>("size");
-    const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
-    const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
+    const auto size = ctx->Attr<std::vector<int64_t>>("size");
+    const auto stride = ctx->Attr<std::vector<int64_t>>("stride");
+    const int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     size_t dy_num_dims = dy->shape_view().NumAxes();
     const int64_t* dy_dims = dy->shape_view().ptr();
