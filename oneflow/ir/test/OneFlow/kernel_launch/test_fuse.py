@@ -31,6 +31,7 @@ import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
 
+
 def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     bn = nn.BatchNorm2d(3)
