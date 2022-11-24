@@ -171,7 +171,7 @@ class ParamGroup(object):
 
     @property
     def origin_parameters(self):
-        """the original parameters used when parameters' shape affects the calculation
+        """original parameters are used when parameters' shape affects the calculation
         """
         return self._parameters
 
@@ -210,7 +210,6 @@ required = _RequiredParameter()
 class Optimizer(object):
     def __init__(self, parameters, options):
         self._make_options_valid(options)
-        print(options)
 
         self.param_groups = list()
         self._default_options = options
@@ -324,6 +323,8 @@ class Optimizer(object):
             )
 
         for param, saved_param in zip(groups, saved_groups):
+            # the contiguous_params property is remained in state_dict,
+            # so contiguous_params of state_dict and current optimizer should match.
             if param["contiguous_params"] != saved_param["_options"]["contiguous_params"]:
                 raise ValueError(
                     "loaded contiguous_params state doesn't match the optimizer"
@@ -597,13 +598,14 @@ class Optimizer(object):
                 sparse_variable_op_names.op_name.append(vars_conf[param].name)
 
     def _make_options_valid(self, options):
+        """handle the conflict between optimizer options
+        """
         if options["contiguous_params"] and options["fused"]:
-            options["contiguous_params"] = False
             options["fused"] = False
 
             warnings.warn(
-                "should not set contiguous and fused at the same time, "
-                "both are set to False."
+                "do not set contiguous_params and fused at the same time, "
+                "only contiguous_params is set."
             )
 
     def _check_buff_valid(self, ):
