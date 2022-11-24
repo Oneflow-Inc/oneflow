@@ -354,7 +354,8 @@ class Return:
         if matches is None:
             type, return_names = _normalize(fmt), None
         else:
-            type, return_names = matches.group(1), matches.group(2)
+            type = matches.group(1)
+            return_names = [_normalize(x) for x in matches.group(2).split(",")]
         return type, return_names
 
 
