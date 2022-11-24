@@ -136,6 +136,7 @@ class SbpNode final {
   OpNode* GetOperatorNode() const { return op_node_; }
   const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
+  int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
 
   // Setter
   void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }
@@ -208,6 +209,11 @@ class SbpNode final {
   // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_trunk_cost);
 };  // class SbpNode
+
+// In dynamic programming, we can not minimize a vector (copy cost, memory cost)
+// Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
+// TODO: How can we remove const? We might need to tune kMemoryRatio for inadequate memory. 
+static const double kMemoryRatio = 1.0;
 
 }  // namespace auto_parallel
 }  // namespace oneflow

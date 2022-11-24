@@ -97,6 +97,7 @@ class SbpEdge final {
 
   // Constant getter
   SbpNode* GetEndNode() const { return end_node_; }
+  int64_t GetMemory(int32_t i, int32_t j) const { return in_memory_support_ ? memory_[i][j] : 0; }
 
  private:
   friend class SbpNode;
@@ -135,6 +136,11 @@ class SbpEdge final {
   // Would be initialized after GetMinCost();
   // Only used in the final graph.
   double min_cost_ = -1.0;
+
+  // The produced blob belongs to the support of the total memory
+  bool in_memory_support_ = false;
+  // The consumed memory for different sbp strategies
+  std::vector<std::vector<int64_t>> memory_;
 };
 
 }  // namespace auto_parallel
