@@ -54,6 +54,6 @@ Pattern {
       {device_name = device_name, device_tag = device_tag} -> (out: Type);
 
   rewrite relu with{
-    replace relu with CopyUserOpAttrs(relu, op<oneflow.normalization_add_relu>(x, addend, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 1]> : vector<6xi32>">, operand_segment_sizes = attr<"dense<[1, 1, 1, 1]> : vector<4xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum});
+    replace relu with CopyUserOpAttrs(relu, op<oneflow.normalization_add_relu>(x, addend, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 1]> : vector<6xi32>">, result_segment_sizes = attr<"dense<[1, 1, 1, 1]> : vector<4xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum});
   };
 }
