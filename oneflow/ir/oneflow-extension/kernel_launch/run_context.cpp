@@ -15,8 +15,10 @@ limitations under the License.
 */
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/OKL/OKLOps.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/kernel_launch/InferMisc/InitContext.h"
+#include "OneFlow/kernel_launch/InferMisc/InferContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -27,7 +29,14 @@ namespace oneflow {
 namespace okl {
 
 RunContext::RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeContext* comp)
-    : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
+    : reg_ctx_(std::move(reg)), comp_ctx_(comp) {
+  InitContext init_ctx(this);
+  kernel_state_ = reg_ctx_->kernel_->CreateOpKernelState(&init_ctx);
+  kernel_cache_ = reg_ctx_->kernel_->InitOpKernelCache(&init_ctx);
+
+  tmp_buffer_manager_ =
+      TmpBufferManager::InitTmpBufferManager(comp_ctx_->Tensor4ArgNameAndIndex("tmp_buffer", 0));
+}
 
 const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) const {
@@ -41,6 +50,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   // LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
   //            << " offset: " << source.offset;
   if (source.type == Source::OUTPUT) {
+    if (op->getNumResults() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getResult(index + source.offset);
     for (auto use : val.getUsers()) {
       if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
@@ -50,6 +60,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
   } else if (source.type == Source::INPUT) {
+    if (op->getNumOperands() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
@@ -66,7 +77,8 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           return nullptr;
         });
   } else if (source.type == Source::BUFFER) {
-    return comp_ctx_->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
+    return tmp_buffer_manager_->GetBufferTensor();
   }
   exit(1);
 }

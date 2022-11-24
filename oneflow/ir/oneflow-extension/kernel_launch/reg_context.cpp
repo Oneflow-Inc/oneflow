@@ -20,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/InferMisc/InferContext.h"
+#include "OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -36,9 +36,10 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
+                                                 bool is_mapping_size = false) {
   OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf))) {
+  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
     op->emitError("fail to convert user op attributes");
     exit(1);
   }
@@ -67,6 +68,7 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
     inputs_.push_back(operand_id.value());
   }
+
   for (const auto& result_id : ::llvm::enumerate(
            ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op))) {
     user_op::NaiveTensorDesc tensor_desc{};
@@ -87,6 +89,7 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
     outputs_.push_back(result_id.value());
   }
+
   auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(op);
   if (dev_tag == "cpu") {
     device_type_ = DeviceType::kCPU;
@@ -95,6 +98,17 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
   } else {
     LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
   }
+  auto op_name = GetOp()->getName().stripDialect().str();
+  if (const auto op_type_name =
+          GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
+    op_name = op_type_name.str();
+  }
+
+  reg_res_ =
+      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_name, *this));
+  kernel_ = reg_res_->create_fn();
+
+  conf_wrapper_ = GetConfWrapper(op_, true);
 }
 
 DeviceType RegContext::device_type() const { return device_type_; }
@@ -106,9 +120,7 @@ const ParallelContext& RegContext::parallel_ctx() const {
 const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) const {
   auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-  if (it == arg2tensor_desc_.end()) {
-    LOG(FATAL) << "TensorDesc not found for arg_name: " << arg_name << " index: " << index;
-  }
+  if (it == arg2tensor_desc_.end()) { return nullptr; }
   return &(it->second);
 }
 const ArgVec& RegContext::inputs() const { return inputs_; }
@@ -122,20 +134,10 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
   return user_op_conf().Attr4Name(attr_name);
 }
 
-::mlir::Operation* RegContext::GetOp() const { return op_; }
-
-const user_op::OpKernel* RegContext::GenKernel() {
-  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      GetOp()->getName().stripDialect().str(), *this));
-  return reg_res->create_fn();
-}
-
 size_t RegContext::GetTmpBufferSize() {
-  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      GetOp()->getName().stripDialect().str(), *this));
-  if (reg_res->need_temp_storage) {
+  if (reg_res_->need_temp_storage) {
     InferContext infer_ctx(this);
-    return reg_res->infer_tmp_size_fn(&infer_ctx);
+    return reg_res_->infer_tmp_size_fn(&infer_ctx);
   }
   return 0;
 }

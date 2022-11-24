@@ -17,7 +17,8 @@ limitations under the License.
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/TmpBufferManager.h"
 #include "OneFlow/OKL/OKLOps.h"
 
 namespace oneflow {
@@ -41,12 +42,20 @@ class RunContext final : public user_op::KernelComputeContext {
 
   const user_op::UserOpConfWrapper& user_op_conf() const override;
 
+  RegContext* GetRegContext() { return reg_ctx_.get(); }
+  user_op::OpKernelState* FetchState() const { return kernel_state_.get(); }
+  user_op::OpKernelCache* FetchCache() const { return kernel_cache_.get(); }
+
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
   std::shared_ptr<RegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
+
+  std::shared_ptr<user_op::OpKernelState> kernel_state_;
+  std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
+  std::shared_ptr<okl::TmpBufferManager> tmp_buffer_manager_;
 };
 }  // namespace okl
 }  // namespace oneflow

@@ -20,9 +20,9 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/LauncherContext.h"
+#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/kernel_launch/LauncherContext.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace oneflow {
@@ -51,7 +51,7 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
           index = kernel_vec_.size();
 
           auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          kernel_vec_.push_back(reg_ctx->GenKernel());
+          kernel_vec_.push_back(reg_ctx->GetKernel());
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
         .Case([&](mlir::okl::BuildRegContextOp elem) {

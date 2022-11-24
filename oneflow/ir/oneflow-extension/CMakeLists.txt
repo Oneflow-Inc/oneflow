@@ -1,3 +1,5 @@
+include_directories(${PROJECT_SOURCE_DIR}/oneflow-extension/include)
+
 oneflow_add_mlir_library(
   MLIROneFlowExtension
   mlir_jit_op.cpp
@@ -9,6 +11,7 @@ oneflow_add_mlir_library(
   kernel_launch/reg_context.cpp
   kernel_launch/run_context.cpp
   kernel_launch/infer_context.cpp
+  kernel_launch/tmp_buffer_manager.cpp
   ir_pass.cpp
   lr_jit.cpp
   mlir_gen.cpp

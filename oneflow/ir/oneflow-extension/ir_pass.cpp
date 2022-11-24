@@ -16,7 +16,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
+#include "OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"

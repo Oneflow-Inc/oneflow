@@ -45,19 +45,23 @@ class RegContext final : public user_op::KernelRegContext {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
 
-  ::mlir::Operation* GetOp() const;
-
-  const user_op::OpKernel* GenKernel();
+  ::mlir::Operation* GetOp() const { return op_; };
+  const user_op::OpKernel* GetKernel() const { return kernel_; };
 
   size_t GetTmpBufferSize();
 
  private:
+  friend class RunContext;
+
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
+
+  const user_op::OpKernelRegistryResult* reg_res_ = nullptr;
+  const user_op::OpKernel* kernel_ = nullptr;
 };
 
 }  // namespace okl

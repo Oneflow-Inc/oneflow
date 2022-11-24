@@ -19,24 +19,27 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/JITEngine.h"
+#include "OneFlow/kernel_launch/JITEngine.h"
+#include "OneFlow/kernel_launch/RunContext.h"
 
 extern "C" {
 void* fetch_run_ctx(void* launcher, int64_t index) {
-  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-      ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
+      ->FetchRunCtx(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
 }
 
 void* fetch_kernel(void* launcher, int64_t index) {
-  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-      ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
+      ->FetchKernel(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
 }
 
 void launch(void* run_ctx, void* kernel) {
   const oneflow::user_op::OpKernel* engine =
-      ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel);
+      static_cast<typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>>(kernel);
 
-  engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)run_ctx);
+  oneflow::okl::RunContext* compute_ctx_ =
+      static_cast<typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>>(run_ctx);
+  engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
 }
 }  // extern "C"
 

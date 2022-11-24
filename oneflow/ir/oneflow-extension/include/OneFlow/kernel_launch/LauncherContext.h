@@ -23,8 +23,8 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/kernel_launch/RunContext.h"
 
 namespace oneflow {
 namespace okl {
