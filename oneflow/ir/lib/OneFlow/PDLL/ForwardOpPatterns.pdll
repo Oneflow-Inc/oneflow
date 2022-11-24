@@ -45,7 +45,7 @@ Pattern {
   let gamma: Value;
   let beta: Value;
   let addend: Value;
-  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {axis = axis, device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
+  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {axis = axis, epsilon = epsilon, device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
   let relu =
     op<oneflow.relu>(
       op<oneflow.add_n2>(normalization.0, addend) {device_name = device_name, device_tag = device_tag})
