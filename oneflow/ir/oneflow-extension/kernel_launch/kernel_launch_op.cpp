@@ -100,7 +100,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                                   \
+        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                               \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -141,7 +141,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                                   \
+        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                               \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

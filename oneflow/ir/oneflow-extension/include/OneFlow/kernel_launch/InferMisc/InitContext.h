@@ -35,7 +35,7 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
   const ParallelContext& parallel_ctx() const override { return run_ctx_->parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                               int32_t index) const override {
+                                                        int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
   }
 
@@ -43,7 +43,7 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
     TODO();
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+                                                               int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
   }
   const ParallelDesc& parallel_desc() const override { TODO(); }
@@ -60,8 +60,11 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   RunContext* run_ctx_;
   RegContext* reg_ctx_;
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return reg_ctx_->user_op_conf(); }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const override {
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    return reg_ctx_->user_op_conf();
+  }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
     return reg_ctx_->Attr4Name(attr_name);
   }
 };
