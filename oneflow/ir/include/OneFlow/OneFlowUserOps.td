@@ -9757,18 +9757,6 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
-  let builders = [
-    OpBuilder<(ins
-      "Value":$like,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "FloatAttr":$rate,
-      "IntegerAttr":$seed
-    )>
-  ];
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9984,9 +9972,9 @@ def OneFlow_AsStridedOp : OneFlow_BaseOp<"as_strided", [NoSideEffect, DeclareOpI
     OneFlow_Tensor:$output
   );
   let attrs = (ins
-    SI32ArrayAttr:$size,
-    SI32ArrayAttr:$stride,
-    DefaultValuedAttr<SI32Attr, "0">:$storage_offset
+    SI64ArrayAttr:$size,
+    SI64ArrayAttr:$stride,
+    DefaultValuedAttr<SI64Attr, "0">:$storage_offset
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -10022,9 +10010,9 @@ def OneFlow_AsStridedGradOp : OneFlow_BaseOp<"as_strided_grad", [NoSideEffect, D
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    SI32ArrayAttr:$size,
-    SI32ArrayAttr:$stride,
-    DefaultValuedAttr<SI32Attr, "0">:$storage_offset
+    SI64ArrayAttr:$size,
+    SI64ArrayAttr:$stride,
+    DefaultValuedAttr<SI64Attr, "0">:$storage_offset
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
