@@ -76,7 +76,6 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     const auto operand = std::get<1>(idOperand);
     auto blob_desc = GetBlobDescFromMlirTensorType(operand.getType().cast<TensorType>());
     auto bn = arg_name + "_" + std::to_string(arg_id);
-    LOG(ERROR) << "emplace bn: " << bn;
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
   }
