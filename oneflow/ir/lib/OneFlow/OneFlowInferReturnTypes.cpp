@@ -66,6 +66,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   auto op = CHECK_JUST(ConstructOp(op_conf));
   ::oneflow::HashMap<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;
+  LOG(ERROR) << op->op_conf().DebugString();
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
       auto operand_it = operand_mapping_.find(bn);
