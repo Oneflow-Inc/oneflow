@@ -16,6 +16,7 @@ limitations under the License.
 // this file should contains functions to get operands and results with user op name and index
 
 #include "OneFlow/UserOpConversion.h"
+#include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/framework/user_op_def.h"
 
 namespace mlir {
@@ -181,34 +182,31 @@ LogicalResult ConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr 
       (*user_conf->mutable_attr())[id.str()] = user_attr;
     }
   }
-  // {
-  //   std::vector<std::string> keys{};
-  //   std::vector<int32_t> sizes{};
-  //   if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op,
-  //   keys,
-  //                                                                                        sizes)))
-  //                                                                                        {
-  //     op->emitError("fail to convert user op input order");
-  //     return failure();
-  //   }
-  //   for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-  // }
-  // {
-  //   std::vector<std::string> keys{};
-  //   std::vector<int32_t> sizes{};
-  //   if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys,
-  //                                                                                       sizes)))
-  //                                                                                       {
-  //     op->emitError("fail to convert user op output order");
-  //     return failure();
-  //   }
-  //   for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
-  // }
   return success();
 }
 
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
   std::string op_type_name = GetOpTypeName(op);
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys,
+                                                                                         sizes))) {
+      op->emitError("fail to convert user op input order");
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys,
+                                                                                        sizes))) {
+      op->emitError("fail to convert user op output order");
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+  }
   return ConvertUserOpAttributes(op_type_name, op->getAttrDictionary(), op_conf);
 }
 

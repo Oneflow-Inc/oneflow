@@ -113,7 +113,6 @@ class Importer {
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
-  LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
   void SetOpStateLoc(const ::oneflow::OperatorConf&, OperationState&);
 
  private:
