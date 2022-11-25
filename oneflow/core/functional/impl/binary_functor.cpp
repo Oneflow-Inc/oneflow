@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include <cstdint>
+#include <memory>
 
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/error.h"
@@ -440,6 +441,33 @@ class LerpGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class QuantileFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, 
+                           const std::shared_ptr<one::Tensor>& q,
+                           const Optional<int64_t>& dim, bool keepdim,
+                           const std::string& interpolation) const {
+    auto input_shape = input->shape();
+    auto device = JUST(input->device());
+    auto dtype = input->dtype();
+    const int64_t num_axes = input_shape->NumAxes();
+
+    const auto get_dim = [num_axes]() -> int64_t {
+      const int64_t ndim = num_axes;
+      if (ndim == 0 || ndim == 1 || ndim == 3) {
+        return 0;
+      } else {
+        return 1;
+      }
+    };
+
+    int64_t dim_ = dim ? JUST(dim) : get_dim();
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+
+    return ;
+  }
 };
 
 class BroadcastFModFunctor : public BinaryFunctor {
