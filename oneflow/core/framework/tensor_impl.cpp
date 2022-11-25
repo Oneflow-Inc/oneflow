@@ -169,6 +169,8 @@ std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
   auto detached_impl = std::make_shared<EagerLocalTensorImpl>(tensor_storage_, false, true);
   detached_impl->eager_blob_object_ = eager_blob_object_;
+  LOG(ERROR) << "EagerLocalTensorImpl::detach this=" << (void*)this
+             << ", detached=" << (void*)detached_impl.get();
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 

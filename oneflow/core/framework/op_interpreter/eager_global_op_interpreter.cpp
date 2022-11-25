@@ -261,6 +261,7 @@ Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToLocalOpExpr& op_expr
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs.at(0);
   const auto& local_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
+  LOG(ERROR) << "GlobalToLocalOpExpr Apply";
   bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
   JUST(local_tensor->set_requires_grad(requires_grad));
   local_tensor->set_is_leaf(!requires_grad);

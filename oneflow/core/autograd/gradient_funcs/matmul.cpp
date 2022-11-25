@@ -203,6 +203,9 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
       ctx->b_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // input b
     }
   }
+
+  LOG(INFO) << "BroadcastMatmul::Capture requires_grad_a=" << ctx->requires_grad_a
+            << ", requires_grad_b=" << ctx->requires_grad_b;
   return Maybe<void>::Ok();
 }
 

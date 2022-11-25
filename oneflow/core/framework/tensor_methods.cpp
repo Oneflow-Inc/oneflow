@@ -76,6 +76,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(
       tensor_impl->InitEagerBlobObject(tensor_meta, JUST(blob_object->compute_local_dep_object())));
 
+  LOG(ERROR) << "BasicView input_impl=" << (void*)JUST(input->mut_eager_local_tensor_impl())
+             << ", tensor_impl=" << (void*)tensor_impl.get();
+
   auto view_tensor = std::make_shared<LocalTensor>(tensor_impl);
 
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
