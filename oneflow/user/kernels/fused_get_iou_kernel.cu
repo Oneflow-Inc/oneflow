@@ -37,13 +37,11 @@ __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, con
             diou_i = diou[i];
     const T w_h_eps = w1_i * h1_i + w2_i * h2_i + static_cast<T>(eps);
     const T w_h_eps_inter_diff = w_h_eps - inter_i;
-    const T w_h_eps_inter_diff_square = w_h_eps_inter_diff * w_h_eps_inter_diff;
-    const T inter_div_w_h_eps_inter_diff_square = inter_i / w_h_eps_inter_diff_square;
-    dinter[i] = w_h_eps / w_h_eps_inter_diff_square * diou_i;
-    dw1[i] = inter_div_w_h_eps_inter_diff_square * h1_i * diou_i;
-    dh1[i] = inter_div_w_h_eps_inter_diff_square * w1_i * diou_i;
-    dw2[i] = inter_div_w_h_eps_inter_diff_square * h2_i * diou_i;
-    dh2[i] = inter_div_w_h_eps_inter_diff_square * w2_i * diou_i;
+    dinter[i] = w_h_eps * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    dw1[i] = h1_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    dh1[i] = w1_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    dw2[i] = h2_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    dh2[i] = w2_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
   }
 }
 };  // namespace

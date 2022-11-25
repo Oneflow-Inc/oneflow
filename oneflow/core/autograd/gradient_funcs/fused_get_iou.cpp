@@ -22,7 +22,7 @@ namespace oneflow {
 namespace one {
 
 struct FusedGetIouGradCaptureState : public AutoGradCaptureState {
-  bool requires_grad = false;
+  bool requires_grad = true;
   float eps = 1e-8;
 };
 
@@ -39,7 +39,9 @@ class FusedGetIouGrad : public OpExprGradFunction<FusedGetIouGradCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 5);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    for (int i = 0; i < inputs.size(); i++) { ctx->requires_grad &= inputs.at(i)->requires_grad(); }
+    for (int i = 0; i < inputs.size(); i++) {
+      ctx->requires_grad = ctx->requires_grad && inputs.at(i)->requires_grad();
+    }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->eps = JUST(composed_attrs.GetAttr<float>("eps"));
     if (ctx->requires_grad) {
