@@ -29,7 +29,30 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "oneflow/core/framework/op_generated.h"
 
+namespace oneflow {
+REGISTER_USER_OP("normalization_add_relu")
+    .Input("x")
+    .OptionalInput("addend")
+    .OptionalInput("moving_mean")
+    .OptionalInput("moving_variance")
+    .Input("gamma")
+    .Input("beta")
+    .Output("y")
+    .Output("reserve_space")
+    .OptionalOutput("mean")
+    .OptionalOutput("inv_variance")
+    .Attr<int32_t>("axis", 0)
+    .Attr<float>("epsilon", 0.)
+    .Attr<bool>("training", false)
+    .Attr<float>("momentum", 0.)
+    .SetGetSbpFn(&NormalizationAddReluOp::GetSbp)
+    .SetLogicalTensorDescInferFn(&NormalizationAddReluOp::InferLogicalTensorDesc)
+    .SetPhysicalTensorDescInferFn(&NormalizationAddReluOp::InferPhysicalTensorDesc)
+    .SetDataTypeInferFn(&NormalizationAddReluOp::InferDataType)
+    .SetInputArgModifyFn(&NormalizationAddReluOp::ModifyInputArg);
+}
 namespace mlir {
 struct TestOneFlowTraitFolder
     : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
