@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/UserOpConversion.h"
+#include "OneFlow/UserOpReflection.h"
 
 namespace mlir {
 
@@ -62,22 +63,29 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   ::oneflow::OperatorConf op_conf{};
-  CHECK(ConvertUserOp("normalization_add_relu", op_conf, operands, attributes).succeeded());
+  const auto op_type_name = "normalization_add_relu";
+  CHECK(ConvertUserOp(op_type_name, op_conf, operands, attributes).succeeded());
   auto op = CHECK_JUST(ConstructOp(op_conf));
-  ::oneflow::HashMap<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
+  std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;
   LOG(ERROR) << op->op_conf().DebugString();
+
+  auto operand_ids =
+      user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands, attributes);
+
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
-    if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
-      auto operand_it = operand_mapping_.find(bn);
-      if (operand_it == operand_mapping_.end()) {
-        auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
-        CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
-      } else {
-        auto found = GetBlobDescFromMlirTensorType(operand_it->second.getType().cast<TensorType>());
-        CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
-      }
-    }
+    // if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
+    //   auto operand_it = operand_mapping_.find(bn);
+    //   if (operand_it == operand_mapping_.end()) {
+    //     auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
+    //     CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
+    //   } else {
+    //     auto found =
+    //     GetBlobDescFromMlirTensorType(operand_it->second.getType().cast<TensorType>());
+    //     CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
+    //   }
+    // }
+    LOG(FATAL) << "bn: " << bn;
     return lbi2logical_blob_desc_.at(bn).get();
   };
   ::oneflow::ParallelDesc* parallel_desc = nullptr;

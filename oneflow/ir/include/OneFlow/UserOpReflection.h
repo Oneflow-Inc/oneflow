@@ -38,6 +38,7 @@ template<template<typename T> class Trait>
 class ArgIds {
  public:
   explicit ArgIds(Operation* op);
+  explicit ArgIds(llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes);
   std::vector<ArgID>::const_iterator begin() const { return ids_.begin(); }
   std::vector<ArgID>::const_iterator end() const { return ids_.end(); }
 

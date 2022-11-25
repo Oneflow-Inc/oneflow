@@ -248,8 +248,27 @@ ArgIds<Trait>::ArgIds(Operation* op) {
   }
 }
 
+template<template<typename T> class Trait>
+ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, ValueRange operands,
+                      DictionaryAttr attributes) {
+  std::vector<std::string> keys{};
+  std::vector<int32_t> sizes{};
+  CHECK(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+            op_type_name, operands, attributes, keys, sizes)
+            .succeeded());
+  for (int i = 0; i < keys.size(); i += 1) {
+    auto& key = keys[i];
+    for (size_t j = 0; j < sizes.size(); j += 1) {
+      ArgID id{key, j};
+      ids_.push_back(id);
+    }
+  }
+}
+
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(Operation*);
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(Operation*);
+template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(
+    llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes);
 
 }  // namespace user_op
 
