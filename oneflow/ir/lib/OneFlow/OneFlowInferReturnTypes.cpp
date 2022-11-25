@@ -23,6 +23,9 @@ namespace oneflow {
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
+  attributes.dump();
+  for (auto operand : operands) { operand.dump(); }
+  TODO();
   return failure();
 }
 
