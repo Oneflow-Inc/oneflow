@@ -3200,6 +3200,7 @@ class FusedCenterGradFunctor {
                          .Input("b1_y2")
                          .Input("b2_y1")
                          .Input("b2_y2")
+                         .Input("rho2_diff")
                          .Output("b1_x1_diff")
                          .Output("b1_x2_diff")
                          .Output("b2_x1_diff")
@@ -3215,9 +3216,10 @@ class FusedCenterGradFunctor {
       const std::shared_ptr<one::Tensor>& b1_x1, const std::shared_ptr<one::Tensor>& b1_x2,
       const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
       const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
-      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2) const {
+      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2,
+      const std::shared_ptr<one::Tensor>& rho2_diff) const {
     return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, rho2_diff}, {});
   }
 
  private:
@@ -3300,6 +3302,31 @@ class FusedGetBounddingBoxesCoordGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGetCiouDiagonalAngleFunctor {
+ public:
+  FusedGetCiouDiagonalAngleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Output("v")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& w1,
+                           const std::shared_ptr<one::Tensor>& h1,
+                           const std::shared_ptr<one::Tensor>& w2,
+                           const std::shared_ptr<one::Tensor>& h2, const float eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {w1, h1, w2, h2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedGetCiouResultFunctor {
  public:
   FusedGetCiouResultFunctor() {
@@ -3320,6 +3347,36 @@ class FusedGetCiouResultFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
     attrs.SetAllAttrs(eps);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {v, iou, rho2, c2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouDiagonalAngleGradFunctor {
+ public:
+  FusedGetCiouDiagonalAngleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle_grad")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Input("v_diff")
+                         .Output("w1_diff")
+                         .Output("h1_diff")
+                         .Output("w2_diff")
+                         .Output("h2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& w1,
+                                const std::shared_ptr<one::Tensor>& h1,
+                                const std::shared_ptr<one::Tensor>& w2,
+                                const std::shared_ptr<one::Tensor>& h2,
+                                const std::shared_ptr<one::Tensor>& v_diff, const float eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {w1, h1, w2, h2, v_diff}, attrs);
   }
 
  private:
@@ -3471,6 +3528,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
   m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
   m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
+  m.add_functor<impl::FusedGetCiouDiagonalAngleFunctor>("FusedGetCiouDiagonalAngle");
+  m.add_functor<impl::FusedGetCiouDiagonalAngleGradFunctor>("FusedGetCiouDiagonalAngleGrad");
   m.add_functor<impl::FusedGetCiouResultFunctor>("FusedGetCiouResult");
   m.add_functor<impl::FusedGetCiouResultGradFunctor>("FusedGetCiouResultGrad");
 };

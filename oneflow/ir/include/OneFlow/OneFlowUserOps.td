@@ -2264,8 +2264,8 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad, fused_get_ciou_result, fused_get_ciou_result_grad
-// Total: 34
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad, fused_get_ciou_result, fused_get_ciou_result_grad, fused_get_ciou_diagonal_angle, fused_get_ciou_diagonal_angle_grad
+// Total: 36
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
@@ -3002,7 +3002,8 @@ def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_get_center_dist_grad", [No
     OneFlow_Tensor:$b1_y1,
     OneFlow_Tensor:$b1_y2,
     OneFlow_Tensor:$b2_y1,
-    OneFlow_Tensor:$b2_y2
+    OneFlow_Tensor:$b2_y2,
+    OneFlow_Tensor:$rho2_diff
   );
   let output = (outs
     OneFlow_Tensor:$b1_x1_diff,
@@ -3013,6 +3014,48 @@ def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_get_center_dist_grad", [No
     OneFlow_Tensor:$b1_y2_diff,
     OneFlow_Tensor:$b2_y1_diff,
     OneFlow_Tensor:$b2_y2_diff
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGetCiouDiagonalAngleOp : OneFlow_BaseOp<"fused_get_ciou_diagonal_angle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$w1,
+    OneFlow_Tensor:$h1,
+    OneFlow_Tensor:$w2,
+    OneFlow_Tensor:$h2
+  );
+  let output = (outs
+    OneFlow_Tensor:$v
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "1e-08">:$eps
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGetCiouDiagonalAngleGradOp : OneFlow_BaseOp<"fused_get_ciou_diagonal_angle_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$w1,
+    OneFlow_Tensor:$h1,
+    OneFlow_Tensor:$w2,
+    OneFlow_Tensor:$h2,
+    OneFlow_Tensor:$v_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$w1_diff,
+    OneFlow_Tensor:$h1_diff,
+    OneFlow_Tensor:$w2_diff,
+    OneFlow_Tensor:$h2_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "1e-08">:$eps
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
