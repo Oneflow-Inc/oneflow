@@ -106,7 +106,8 @@ struct FusedCiouAngleBackwardFunctor<half> {
 template<typename T>
 struct CalcAngleFunctor {
   __device__ T ComputeDelta(T w1, T h1, T w2, T h2, float eps) const {
-    return static_cast<T>(8.0) * (atan(w2 / (h2 + eps)) - atan(w1 / (h1 + eps))) / static_cast<T>((M_PI * M_PI));
+    return static_cast<T>(8.0) * (atan(w2 / (h2 + eps)) - atan(w1 / (h1 + eps)))
+           / static_cast<T>((M_PI * M_PI));
   }
 
   __device__ T Compute1(T w1, T h1, float eps) const {
@@ -125,7 +126,8 @@ struct CalcAngleFunctor<half> {
     float h1f = __half2float(h1);
     float w2f = __half2float(w2);
     float h2f = __half2float(h2);
-    return __float2half(8.0 * (atan(w2f / (h2f + eps)) - atan(w1f / (h1f + eps))) / static_cast<float>((M_PI * M_PI)));
+    return __float2half(8.0 * (atan(w2f / (h2f + eps)) - atan(w1f / (h1f + eps)))
+                        / static_cast<float>((M_PI * M_PI)));
   }
 
   __device__ half Compute1(half w1, half h1, float eps) const {
@@ -142,9 +144,11 @@ struct CalcAngleFunctor<half> {
 };
 
 template<typename FUNCTOR_BACKWARD, typename FUNCTOR_ANGLE, typename T>
-__global__ void FusedCiouAngleBackward(FUNCTOR_BACKWARD functor_backward, FUNCTOR_ANGLE functor_angle, const int n, const T* w1, const T* h1,
-                                       const T* w2, const T* h2, const T* v_diff, const float eps,
-                                       T* w1_diff, T* h1_diff, T* w2_diff, T* h2_diff) {
+__global__ void FusedCiouAngleBackward(FUNCTOR_BACKWARD functor_backward,
+                                       FUNCTOR_ANGLE functor_angle, const int n, const T* w1,
+                                       const T* h1, const T* w2, const T* h2, const T* v_diff,
+                                       const float eps, T* w1_diff, T* h1_diff, T* w2_diff,
+                                       T* h2_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T w1_i = w1[i];
     const T h1_i = h1[i];
@@ -228,12 +232,12 @@ class FusedGetCiouDiagonalAngleGradKernel final : public user_op::OpKernel {
     FusedCiouAngleBackwardFunctor<T> fused_get_ciou_diagonal_angle_grad_functor{};
     CalcAngleFunctor<T> calc_angle_functor{};
 
-    RUN_CUDA_KERNEL(
-        (FusedCiouAngleBackward<decltype(fused_get_ciou_diagonal_angle_grad_functor), decltype(calc_angle_functor), T>),
-        ctx->stream(), elem_cnt, fused_get_ciou_diagonal_angle_grad_functor, calc_angle_functor, elem_cnt,
-        w1->dptr<T>(), h1->dptr<T>(), w2->dptr<T>(), h2->dptr<T>(), v_diff->dptr<T>(),
-        eps, w1_diff->mut_dptr<T>(), h1_diff->mut_dptr<T>(), w2_diff->mut_dptr<T>(),
-        h2_diff->mut_dptr<T>());
+    RUN_CUDA_KERNEL((FusedCiouAngleBackward<decltype(fused_get_ciou_diagonal_angle_grad_functor),
+                                            decltype(calc_angle_functor), T>),
+                    ctx->stream(), elem_cnt, fused_get_ciou_diagonal_angle_grad_functor,
+                    calc_angle_functor, elem_cnt, w1->dptr<T>(), h1->dptr<T>(), w2->dptr<T>(),
+                    h2->dptr<T>(), v_diff->dptr<T>(), eps, w1_diff->mut_dptr<T>(),
+                    h1_diff->mut_dptr<T>(), w2_diff->mut_dptr<T>(), h2_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
