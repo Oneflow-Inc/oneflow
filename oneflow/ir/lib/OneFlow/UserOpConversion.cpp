@@ -239,10 +239,12 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     auto input_key = std::get<0>(tuple);
     auto input_size = std::get<1>(tuple);
     for (int32_t i = 0; i < input_size; i++) {
+      auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
       if (auto result = operands[input_idx].dyn_cast<mlir::OpResult>()) {
-        auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
         *(input_s_ptr) = GetOutputLbn(result).getValue();
         input_idx += 1;
+      } else if (auto argument = operands[input_idx].dyn_cast<mlir::BlockArgument>()) {
+        *(input_s_ptr) = "BlockArgument/" + std::to_string(argument.getArgNumber());
       } else {
         LOG(FATAL) << "fail to convert MLIR result to protobuf, op_type_name: "
                           + op_type_name.str();
