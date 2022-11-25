@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -449,11 +450,8 @@ class QuantileFunctor {
                            const std::shared_ptr<one::Tensor>& q,
                            const Optional<int64_t>& dim, bool keepdim,
                            const std::string& interpolation) const {
-    auto input_shape = input->shape();
-    auto device = JUST(input->device());
-    auto dtype = input->dtype();
-    const int64_t num_axes = input_shape->NumAxes();
-
+    // get wrapped dim
+    int64_t num_axes = input->ndim();
     const auto get_dim = [num_axes]() -> int64_t {
       const int64_t ndim = num_axes;
       if (ndim == 0 || ndim == 1 || ndim == 3) {
@@ -462,9 +460,56 @@ class QuantileFunctor {
         return 1;
       }
     };
+    int64_t wrapped_dim = dim ? JUST(dim) : get_dim();
+    wrapped_dim = JUST(maybe_wrap_dim(wrapped_dim, num_axes));
 
-    int64_t dim_ = dim ? JUST(dim) : get_dim();
-    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+    // get output's shape
+    DimVector out_shape;
+    if (dim && num_axes > 0) {
+      out_shape = input->shape()->dim_vec();
+      if (keepdim) {
+        out_shape[wrapped_dim] = 1;
+      } else {
+        out_shape.erase(out_shape.begin() + wrapped_dim);
+      }
+    } else if (keepdim) {
+      // out_shape = std::vector<int64_t>(input->ndim(), 1);
+      out_shape = DimVector(num_axes, 1);
+    }
+    if (q->ndim() > 0) {
+      out_shape.insert(out_shape.begin(), q->nelement());
+    }
+
+    // compute quantile output
+    // Flatten input if no dim provided else move dim to reduce as last dimension.
+    // Sort to efficiently query kth values.
+    std::shared_ptr<one::Tensor> sorted;
+    if (!dim) {
+      // sorted = std::get<0>(self.flatten().sort());
+    } else if (wrapped_dim == num_axes - 1) {
+      // sorted = std::get<0>(self.sort());
+    } else {
+      // sorted = std::get<0>(self.unsqueeze(-1).transpose(wrapped_dim, -1).sort());
+    }
+
+    // Treat q as a 1D tensor for the following computations
+    if (q->ndim() == 0) {
+      out_shape.insert(out_shape.begin(), q->nelement());
+    }
+
+    // View input as reduced_size + size of dim to reduce
+    DimVector input_shape(out_shape.size());
+    std::copy(out_shape.begin() + 1, out_shape.end(), input_shape.begin());
+    input_shape[input_shape.size() - 1] = sorted->shape()->dim_vec()[-1];
+    sorted = JUST(functional::View(sorted, Shape(input_shape)));
+
+    // // Ensure converting from int64_t to double won't overflow
+    // TORCH_CHECK(
+    //     sorted.size(-1) <= std::pow(2, 24),
+    //     "quantile() input tensor is too large");
+
+    // Convert q in [0, 1] to ranks in [0, reduction_size)
+    
 
     return ;
   }
