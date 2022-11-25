@@ -99,7 +99,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("cumprod", CumProdGrad);
 
 struct CumMaxMinCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
-  int32_t dim = 0;
+  int64_t dim = 0;
   int32_t indices_index = 0;
 };
 
@@ -125,15 +125,12 @@ Maybe<void> CumMaxMinGrad::Init(const OpExpr& op) {
 
 Maybe<void> CumMaxMinGrad::Capture(CumMaxMinCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
-  std::cout << "run20 --- " << std::endl;
   ctx->requires_grad = inputs.at(0)->requires_grad();
-  std::cout << "run21 --- " << std::endl;
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  std::cout << "run22 --- " << std::endl;
 
   ctx->indices_index = ctx->SaveTensorForBackward(outputs.at(1));
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
+  ctx->dim = JUST(composed_attrs.GetAttr<int64_t>("dim"));
 
   return Maybe<void>::Ok();
 }
@@ -141,12 +138,13 @@ Maybe<void> CumMaxMinGrad::Capture(CumMaxMinCaptureState* ctx, const TensorTuple
 Maybe<void> CumMaxMinGrad::Apply(const CumMaxMinCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_LE_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_LE_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
 
   const auto& indices = ctx->SavedTensors().at(ctx->indices_index);
   const int32_t dim = ctx->dim;
-  (*in_grads)[0] =
-      JUST(functional::DimScatterAdd((*in_grads)[0], dim, indices, out_grads.at(0), true));
+  in_grads->resize(1);
+  (*in_grads)[0] = JUST(functional::DimScatterAdd(JUST(functional::ZerosLike(out_grads.at(0))), dim,
+                                                  indices, out_grads.at(0), false));
 
   return Maybe<void>::Ok();
 }

@@ -237,10 +237,10 @@ void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
 }  // namespace
 
 template<typename T, template<typename> class BinaryFunc>
-class GpuCumKernel : public user_op::OpKernel {
+class GpuCumWithIndicesKernel : public user_op::OpKernel {
  public:
-  GpuCumKernel() = default;
-  ~GpuCumKernel() = default;
+  GpuCumWithIndicesKernel() = default;
+  ~GpuCumWithIndicesKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -274,28 +274,28 @@ class GpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define CUMOP_SEQ                            \
+#define CUM_WITH_INDICES_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ("cummax", MaxFunctor) \
   OF_PP_MAKE_TUPLE_SEQ("cummin", MinFunctor)
 
-#define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                              \
+#define REGISTER_CUM_WITH_INDICES_OP_KERNEL(dtype, op_name, op_functor)                \
   REGISTER_USER_KERNEL(op_name)                                                        \
-      .SetCreateFn<GpuCumKernel<dtype, op_functor>>()                                  \
+      .SetCreateFn<GpuCumWithIndicesKernel<dtype, op_functor>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize<dtype, op_functor>);
 
-#define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
-  REGISTER_CUMOP_KERNEL(float, op_name, op_functor)           \
-  REGISTER_CUMOP_KERNEL(double, op_name, op_functor)          \
-  REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \
-  REGISTER_CUMOP_KERNEL(int64_t, op_name, op_functor)
+#define REGISTER_CUM_WITH_INDICES_OP_KERNEL_WITH_DTYPE(op_name, op_functor) \
+  REGISTER_CUM_WITH_INDICES_OP_KERNEL(float, op_name, op_functor)           \
+  REGISTER_CUM_WITH_INDICES_OP_KERNEL(double, op_name, op_functor)          \
+  REGISTER_CUM_WITH_INDICES_OP_KERNEL(int32_t, op_name, op_functor)         \
+  REGISTER_CUM_WITH_INDICES_OP_KERNEL(int64_t, op_name, op_functor)
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_CUMOP_KERNEL_WITH_DTYPE, CUMOP_SEQ);
+OF_PP_FOR_EACH_TUPLE(REGISTER_CUM_WITH_INDICES_OP_KERNEL_WITH_DTYPE, CUM_WITH_INDICES_OP_SEQ);
 
-#undef REGISTER_CUMOP_KERNEL
-#undef REGISTER_CUMOP_KERNEL_WITH_DTYPE
-#undef CUMOP_SEQ
+#undef REGISTER_CUM_WITH_INDICES_OP_KERNEL
+#undef REGISTER_CUM_WITH_INDICES_OP_KERNEL_WITH_DTYPE
+#undef CUM_WITH_INDICES_OP_SEQ
 
 #endif
 }  // namespace oneflow
