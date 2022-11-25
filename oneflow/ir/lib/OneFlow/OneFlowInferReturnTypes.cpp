@@ -83,11 +83,6 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
       operand_index += 1;
     }
   }
-  for (const auto& pair : llvm::zip(operand_ids, operands)) {
-    auto operand_id = std::get<0>(pair);
-    auto operand = std::get<1>(pair);
-    auto bn = operand_id.first + "_" + std::to_string(operand_id.second);
-  }
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
     if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
