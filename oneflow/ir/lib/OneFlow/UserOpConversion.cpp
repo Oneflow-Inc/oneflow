@@ -71,8 +71,8 @@ const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
 
 }  // namespace
 
-LogicalResult ConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr attributes,
-                                      ::oneflow::OperatorConf& op_conf) {
+LogicalResult doConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr attributes,
+                                        ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   CHECK(saveAttrToOpConf(attributes, &op_conf).succeeded());
@@ -185,6 +185,21 @@ LogicalResult ConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr 
   return success();
 }
 
+LogicalResult ConvertUserOpAttributes(std::string& op_type_name, ValueRange operands,
+                                      DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf) {
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+            op_type_name, operands, attributes, keys, sizes))) {
+      LOG(FATAL) << "fail to get filtered segment key and sizes";
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
+  return doConvertUserOpAttributes(op_type_name, attributes, op_conf);
+}
+
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
   std::string op_type_name = GetOpTypeName(op);
   {
@@ -207,7 +222,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
   }
-  return ConvertUserOpAttributes(op_type_name, op->getAttrDictionary(), op_conf);
+  return doConvertUserOpAttributes(op_type_name, op->getAttrDictionary(), op_conf);
 }
 
 }  // namespace user_op

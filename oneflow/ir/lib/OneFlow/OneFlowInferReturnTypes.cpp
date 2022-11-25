@@ -51,7 +51,7 @@ LogicalResult ConvertUserOp(::oneflow::OperatorConf& op_conf, ValueRange operand
   // }
   std::string op_type_name =
       attributes.get(OpTrait::IsAlternative<void>::getOpTypeNameAttr()).cast<StringAttr>().str();
-  if (!succeeded(user_op::ConvertUserOpAttributes(op_type_name, attributes, op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op_type_name, operands, attributes, op_conf))) {
     return failure();
   }
   return success();
@@ -63,8 +63,8 @@ LogicalResult ConvertUserOp(::oneflow::OperatorConf& op_conf, ValueRange operand
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
-  TODO();
   ::oneflow::OperatorConf op_conf{};
+  CHECK(ConvertUserOp(op_conf, operands, attributes).succeeded());
   auto op = CHECK_JUST(ConstructOp(op_conf));
   ::oneflow::HashMap<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;

@@ -26,6 +26,11 @@ namespace user_op {
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, ValueRange values,
+                                            DictionaryAttr attributes,
+                                            std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes);
 
 using ArgID = std::pair<std::string, int32_t>;
 

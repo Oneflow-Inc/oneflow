@@ -23,8 +23,8 @@ namespace oneflow {
 
 namespace user_op {
 
-LogicalResult ConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr attributes,
-                                      ::oneflow::OperatorConf& op_conf);
+LogicalResult ConvertUserOpAttributes(std::string& op_type_name, ValueRange operands,
+                                      DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf);
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
 
 }  // namespace user_op

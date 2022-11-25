@@ -27,6 +27,8 @@ template<template<typename T> class Trait>
 const std::vector<std::string>* GetFullKeys(UserOpCompatible& uc, Operation* op);
 template<template<typename T> class Trait>
 std::vector<std::string> GetFullKeys(UserOp op);
+template<template<typename T> class Trait>
+std::vector<std::string> GetFullKeys(::llvm::StringRef op_type_name);
 
 template<>
 const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOpCompatible& uc,
@@ -54,6 +56,18 @@ std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOp o
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOp op) {
   return mlir::oneflow::support::GetOutputKeys(op.op_type_name().str());
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(
+    ::llvm::StringRef op_type_name) {
+  return mlir::oneflow::support::GetInputKeys(op_type_name.str());
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(
+    ::llvm::StringRef op_type_name) {
+  return mlir::oneflow::support::GetOutputKeys(op_type_name.str());
 }
 
 template<template<typename T> class Trait>
@@ -173,10 +187,49 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   return success();
 }
 
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, ValueRange values,
+                                            DictionaryAttr attributes,
+                                            std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes) {
+  const std::vector<std::string> full_keys = GetFullKeys<Trait>(op_type_name);
+  std::vector<int32_t> full_sizes{};
+  const StringRef attr_name = GetSegmentSizeAttr<Trait>();
+  if (auto size_attr = attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>()) {
+    if (!size_attr) return failure();
+    auto segment_sizes = size_attr.getValues<int32_t>();
+    if (full_keys.size() != segment_sizes.size()) {
+      LOG(FATAL) << "fail to convert op inputs, attr_name: " << attr_name.str()
+                 << ", full_keys: " << full_keys.size()
+                 << ", segment_sizes: " << segment_sizes.size();
+      return failure();
+    };
+    full_sizes = {segment_sizes.begin(), segment_sizes.end()};
+  } else {
+    if (full_keys.size() == 1) {
+      full_sizes.push_back(values.size());
+    } else {
+      LOG(FATAL) << "set attr: " << attr_name.str();
+    }
+  }
+  for (const auto& key_size_tuple : llvm::zip(full_keys, full_sizes)) {
+    const std::string& key = std::get<0>(key_size_tuple);
+    const int32_t size = std::get<1>(key_size_tuple);
+    if (size > 0) {
+      keys.push_back(key);
+      sizes.push_back(size);
+    }
+  }
+  return success();
+}
+
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
     Operation* op, std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
     Operation* op, std::vector<std::string>& keys, std::vector<int32_t>& sizes);
+template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+    llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes,
+    std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 
 template<template<typename T> class Trait>
 ArgIds<Trait>::ArgIds(Operation* op) {
