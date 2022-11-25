@@ -393,40 +393,6 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
-::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
-                                                              OpResult conv_result,
-                                                              OpResult pad_result) {
-  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-    if (auto pad_op = llvm::dyn_cast<oneflow::PadOp>(pad_result.getDefiningOp())) {
-      NamedAttrList attributes = conv_op->getAttrs();
-      SmallVector<Value, 4> operands;
-      operands.push_back(pad_op.x());
-      operands.push_back(conv_op.weight());
-      if (conv_op.bias()) operands.push_back(conv_op.bias());
-      llvm::SmallVector<int32_t> padding_before_array;
-      if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
-        for (auto val : pad_op.padding_before().getValue().take_back(2)) {
-          padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-        }
-      } else {
-        padding_before_array.push_back(
-            pad_op.padding_before().getValue()[1].cast<IntegerAttr>().getValue().getSExtValue());
-        padding_before_array.push_back(
-            pad_op.padding_before().getValue()[2].cast<IntegerAttr>().getValue().getSExtValue());
-      }
-      attributes.set(conv_op.padding_beforeAttrName(),
-                     getSI32ArrayAttr(rewriter, padding_before_array));
-      auto res = rewriter
-                     .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-                                                operands, attributes)
-                     ->getResults();
-      // pad op is expected to be erased if it is not used
-      return res;
-    }
-  }
-  return {};
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
