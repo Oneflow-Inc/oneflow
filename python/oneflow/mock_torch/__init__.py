@@ -46,8 +46,10 @@ class ModuleWrapper(ModuleType):
         else:
             return attr
 
-def _is_torch(s : str):
+
+def _is_torch(s: str):
     return s == "torch" or s.startswith("torch.")
+
 
 class OneflowImporter(MetaPathFinder, Loader):
     def __init__(self):
