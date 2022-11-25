@@ -54,11 +54,11 @@ namespace oneflow {
   if (is_split_mode) {
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("x", 0))
-        .Split(user_op::OpArg("w", 0), 1)
+        .Split(user_op::OpArg("w", 0), 0)
         .Split(user_op::OpArg("b", 0), 0)
-        .Split(user_op::OpArg("v", 0), 1)
+        .Split(user_op::OpArg("v", 0), 0)
         .Split(user_op::OpArg("c", 0), 0)
-        .Split(ctx->outputs(), 1)
+        .Split(ctx->outputs(), ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes()-1)
         .Build();
   }
 
@@ -115,7 +115,7 @@ namespace oneflow {
   }
 
   // set shape of the output tensor y
-  Shape y_shape = ctx->InputShape("x", 0);  // borrow from input shape
+  Shape y_shape = x_shape;  // borrow from input shape
   size_t y_num_axes = x_num_axes;
   if (is_split_mode) {
     y_shape.Set(y_num_axes - 1, w_shape.At(0));
@@ -126,8 +126,7 @@ namespace oneflow {
   y_tensor->set_shape(y_shape);
 
   // set shape of the output tensors of both matmul_wx and matmul_vx
-  Shape matmul_wx_shape = ctx->InputShape("x", 0);  // borrow from input shape
-  matmul_wx_shape.Set(x_num_axes - 2, x_shape.At(x_num_axes - 2));
+  Shape matmul_wx_shape = x_shape;  // borrow from input shape
   matmul_wx_shape.Set(x_num_axes - 1, w_shape.At(0));
   user_op::TensorDesc* matmul_wx_tensor = ctx->MutOutputTensorDesc("matmul_wx", 0);
   matmul_wx_tensor->set_shape(matmul_wx_shape);
