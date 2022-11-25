@@ -1665,6 +1665,14 @@
   signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
   bind_python: False
 
+- name: "fused_get_iou"
+  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIou"
+  bind_python: True
+
+- name: "fused_get_iou_grad"
+  signature: "TensorTuple (Tensor diou, Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIouGrad"
+  bind_python: False
+
 - name: "abs"
   signature: "Tensor (Tensor x) => Abs"
   bind_python: True
