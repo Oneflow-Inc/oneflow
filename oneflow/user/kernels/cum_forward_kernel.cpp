@@ -69,9 +69,7 @@ class CpuCumKernel : public user_op::OpKernel {
 
 #define CUMOP_SEQ                                \
   OF_PP_MAKE_TUPLE_SEQ("cumprod", BinaryFuncMul) \
-  OF_PP_MAKE_TUPLE_SEQ("cumsum", BinaryFuncAdd) \
-  OF_PP_MAKE_TUPLE_SEQ("cummax", BinaryFuncMax) \
-  OF_PP_MAKE_TUPLE_SEQ("cummin", BinaryFuncMin) 
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", BinaryFuncAdd)
 
 #define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                                       \
   REGISTER_USER_KERNEL(op_name).SetCreateFn<CpuCumKernel<dtype, op_functor>>().SetIsMatchedHob( \

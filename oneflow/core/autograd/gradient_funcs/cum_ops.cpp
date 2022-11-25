@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -95,6 +96,63 @@ class CumProdGrad : public CumGrad<CumCaptureState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cumprod", CumProdGrad);
+
+struct CumMaxMinCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+  int32_t dim = 0;
+  int32_t indices_index = 0;
+};
+
+class CumMaxMinGrad : public OpExprGradFunction<CumMaxMinCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(CumMaxMinCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const CumMaxMinCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+  std::shared_ptr<OpExpr> grad_op_;
+};
+
+Maybe<void> CumMaxMinGrad::Init(const OpExpr& op) {
+  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CumMaxMinGrad::Capture(CumMaxMinCaptureState* ctx, const TensorTuple& inputs,
+                                   const TensorTuple& outputs, const AttrMap& attrs) const {
+  std::cout << "run20 --- " << std::endl;
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  std::cout << "run21 --- " << std::endl;
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  std::cout << "run22 --- " << std::endl;
+
+  ctx->indices_index = ctx->SaveTensorForBackward(outputs.at(1));
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CumMaxMinGrad::Apply(const CumMaxMinCaptureState* ctx, const TensorTuple& out_grads,
+                                 TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  CHECK_LE_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+
+  const auto& indices = ctx->SavedTensors().at(ctx->indices_index);
+  const int32_t dim = ctx->dim;
+  (*in_grads)[0] =
+      JUST(functional::DimScatterAdd((*in_grads)[0], dim, indices, out_grads.at(0), true));
+
+  return Maybe<void>::Ok();
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("cummax", CumMaxMinGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cummin", CumMaxMinGrad);
 
 }  // namespace one
 }  // namespace oneflow

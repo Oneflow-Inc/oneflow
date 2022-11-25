@@ -2562,11 +2562,11 @@
   bind_python: True
 
 - name: "cummax"
-  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => CumMax"
+  signature: "TensorTuple (Tensor input, Int64 dim, *, DataType dtype=None) => CumMax"
   bind_python: True
 
 - name: "cummin"
-  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => CumMin"
+  signature: "TensorTuple (Tensor input, Int64 dim, *, DataType dtype=None) => CumMin"
   bind_python: True
 
 - name: "cumprod_grad"

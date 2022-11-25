@@ -92,50 +92,34 @@ Maybe<void> CumProdGradOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CumMaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumMaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-Maybe<void> CumMaxOp::GetSbp(user_op::SbpContext* ctx) {
-  const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  auto dim = ctx->Attr<int64_t>("dim");
-  for (auto i = dim + 1; i < in_tensor_desc.shape().NumAxes(); i++) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+#define DEF_CUM_OP(op_class_name_prefix)                                                      \
+  Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));                                     \
+    ctx->SetOutputShape("indices", 0, ctx->InputShape("x", 0));                               \
+    return Maybe<void>::Ok();                                                                 \
+  }                                                                                           \
+  Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                       \
+  }                                                                                           \
+  Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {                    \
+    const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);         \
+    auto dim = ctx->Attr<int64_t>("dim");                                                     \
+    for (auto i = dim + 1; i < in_tensor_desc.shape().NumAxes(); i++) {                       \
+      ctx->NewBuilder()                                                                       \
+          .Split(user_op::OpArg("x", 0), i)                                                   \
+          .Split(user_op::OpArg("indices", 0), i)                                             \
+          .Split(user_op::OpArg("y", 0), i)                                                   \
+          .Build();                                                                           \
+    }                                                                                         \
+    return Maybe<void>::Ok();                                                                 \
+  }                                                                                           \
+  Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) {           \
+    ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));                                     \
+    ctx->SetOutputDType("indices", 0, DataType::kInt64);                                      \
+    return Maybe<void>::Ok();                                                                 \
   }
-  return Maybe<void>::Ok();
-}
 
-Maybe<void> CumMaxOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumMinOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumMinOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-Maybe<void> CumMinOp::GetSbp(user_op::SbpContext* ctx) {
-  const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  auto dim = ctx->Attr<int64_t>("dim");
-  for (auto i = dim + 1; i < in_tensor_desc.shape().NumAxes(); i++) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumMinOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
-  return Maybe<void>::Ok();
-}
+DEF_CUM_OP(CumMax);
+DEF_CUM_OP(CumMin);
 
 }  // namespace oneflow

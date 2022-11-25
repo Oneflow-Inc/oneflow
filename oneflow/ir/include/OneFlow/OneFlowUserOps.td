@@ -4712,7 +4712,8 @@ def OneFlow_CumMaxOp : OneFlow_BaseOp<"cummax", [NoSideEffect, DeclareOpInterfac
     OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$indices
   );
   let attrs = (ins
     SI64Attr:$dim
@@ -4728,7 +4729,8 @@ def OneFlow_CumMinOp : OneFlow_BaseOp<"cummin", [NoSideEffect, DeclareOpInterfac
     OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$indices
   );
   let attrs = (ins
     SI64Attr:$dim

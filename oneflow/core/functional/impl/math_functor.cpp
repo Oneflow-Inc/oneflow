@@ -2520,14 +2520,41 @@ class CumProdFunctor : public CumBaseFunctor {
   CumProdFunctor() : CumBaseFunctor("cumprod") {}
 };
 
-class CumMaxFunctor : public CumBaseFunctor {
+class CumWithIndicesBaseFunctor {
  public:
-  CumMaxFunctor() : CumBaseFunctor("cummax") {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim,
+                                const Optional<Symbol<DType>>& dtype) const {
+    auto ndim = input->ndim();
+    dim = JUST(maybe_wrap_dim(dim, ndim));
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
+    attrs.SetAllAttrs(dim);
+    TensorProcessor tensor_processor;
+    if (dtype) {
+      JUST(tensor_processor.AddInputs({input}, JUST(dtype)).Apply());
+    } else {
+      JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    }
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, input_tuple, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
 };
 
-class CumMinFunctor : public CumBaseFunctor {
+class CumMaxFunctor : public CumWithIndicesBaseFunctor {
  public:
-  CumMinFunctor() : CumBaseFunctor("cummin") {}
+  CumMaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cummax").Input("x").Output("y").Output("indices").Build());
+  };
+};
+
+class CumMinFunctor : public CumWithIndicesBaseFunctor {
+ public:
+  CumMinFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cummin").Input("x").Output("y").Output("indices").Build());
+  };
 };
 
 class CumGradBaseFunctor {
