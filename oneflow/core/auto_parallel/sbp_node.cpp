@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
@@ -165,31 +166,49 @@ void SbpNode::SummarizeCost() {
   if (children_.size() == child_node_sbp_sig_.size()) { return; }
   int32_t previous_children_size = child_node_sbp_sig_.size();
   child_node_sbp_sig_.resize(children_.size());
+  in_memory_support_ =
+      in_memory_support_
+      || std::any_of(children_.begin() + previous_children_size, children_.end(),
+                     [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
+  if (in_memory_support_) { memory_.resize(cost_.size(), 0); }
+  // Buffer
+  double min_cost = 0, curr_cost = 0;
+  int64_t min_memory_cost = 0, memory_cost = 0;
+  double min_weighted_sum = 0.0, weighted_sum = 0.0;
+  int32_t min_sbp_child = 0;
   // Only deal with new children_
   for (int32_t child = previous_children_size; child < children_.size(); child++) {
     child_node_sbp_sig_[child].resize(cost_.size());
 
     for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
-      double min_cost = 0, curr_cost = 0;
-      for (int32_t sbp_child = 0; sbp_child < children_[child]->cost_.size(); sbp_child++) {
-        if (children_[child]->edges_in_.size()) {
+      SbpNode* child_node = children_[child];
+      for (int32_t sbp_child = 0; sbp_child < child_node->cost_.size(); sbp_child++) {
+        if (child_node->edges_in_.size()) {
           // edge in graph: father -> child
-          curr_cost = children_[child]->edges_in_[0]->cost_[sbp_this][sbp_child]
-                      + children_[child]->cost_[sbp_child];
-
+          curr_cost =
+              child_node->edges_in_[0]->cost_[sbp_this][sbp_child] + child_node->cost_[sbp_child];
+          memory_cost = child_node->edges_in_[0]->GetMemory(sbp_this, sbp_child)
+                        + child_node->GetMemory(sbp_child);
         } else {
           // edge in graph: child -> father
-          curr_cost = children_[child]->edges_out_[0]->cost_[sbp_child][sbp_this]
-                      + children_[child]->cost_[sbp_child];
+          curr_cost =
+              child_node->edges_out_[0]->cost_[sbp_child][sbp_this] + child_node->cost_[sbp_child];
+          memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
+                        + child_node->GetMemory(sbp_child);
         }
+        weighted_sum = curr_cost + kMemoryRatio * memory_cost;
         // update min_cost with fixed SbpSignature for this node and child node
-        if (sbp_child == 0 || curr_cost < min_cost) {
+        if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
           min_cost = curr_cost;
-          child_node_sbp_sig_[child][sbp_this] = sbp_child;
+          min_memory_cost = memory_cost;
+          min_weighted_sum = weighted_sum;
+          min_sbp_child = sbp_child;
         }
       }
+      child_node_sbp_sig_[child][sbp_this] = min_sbp_child;
       // Add the cost for child node to this node
       cost_[sbp_this] += min_cost;
+      if (in_memory_support_) { memory_[sbp_this] += min_memory_cost; }
     }
   }
 }

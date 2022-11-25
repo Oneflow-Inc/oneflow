@@ -60,6 +60,14 @@ void SbpEdge::SummarizeCost() {
   cost_.resize(start_node_sbp_size);
   // Copy cost and memory cost
   if (mid_node_) {
+    // Buffer
+    double copy_cost = 0.0;
+    int64_t memory_cost = 0;
+    double weighted_sum = 0.0;
+    double min_weighted_sum = 0.0;
+    double min_copy_cost = 0.0;
+    int64_t min_memory_cost = 0;
+    int32_t min_sbp_mid = 0;
     // Node elimination
     mid_node_sbp_sig_.resize(start_node_sbp_size);
     int32_t end_node_sbp_size = end_node_->cost_.size();
@@ -69,13 +77,6 @@ void SbpEdge::SummarizeCost() {
       if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
       mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
-        double copy_cost = 0.0;
-        int64_t memory_cost = 0;
-        double weighted_sum = 0.0;
-        double min_weighted_sum = 0.0;
-        double min_copy_cost = 0.0;
-        int64_t min_memory_cost = 0;
-        int32_t min_sbp_mid = 0;
         for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
           copy_cost = mid_node_->cost_[sbp_mid];
