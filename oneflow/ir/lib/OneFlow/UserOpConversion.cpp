@@ -71,10 +71,10 @@ const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
 
 }  // namespace
 
-LogicalResult doConvertUserOpAttributes(std::string& op_type_name, DictionaryAttr attributes,
+LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, DictionaryAttr attributes,
                                         ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
-  op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
+  op_conf.mutable_user_conf()->set_op_type_name(op_type_name.str());
   CHECK(saveAttrToOpConf(attributes, &op_conf).succeeded());
   for (auto id_attr : attributes) {
     auto id = id_attr.getName();
@@ -106,7 +106,7 @@ LogicalResult doConvertUserOpAttributes(std::string& op_type_name, DictionaryAtt
       auto attr_name = id.str();
       Attribute attr = id_attr.getValue();
       auto user_attr = ::oneflow::AttrValue();
-      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
+      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name.str(), attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {
@@ -185,7 +185,7 @@ LogicalResult doConvertUserOpAttributes(std::string& op_type_name, DictionaryAtt
   return success();
 }
 
-LogicalResult ConvertUserOpAttributes(std::string& op_type_name, ValueRange operands,
+LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
                                       DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf) {
   {
     std::vector<std::string> keys{};

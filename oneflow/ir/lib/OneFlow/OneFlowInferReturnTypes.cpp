@@ -36,8 +36,8 @@ std::unique_ptr<::oneflow::BlobDesc> GetBlobDescFromMlirTensorType(TensorType te
 }
 
 static auto MagicalOpName = "INFER_MAGICAL";
-LogicalResult ConvertUserOp(::oneflow::OperatorConf& op_conf, ValueRange operands,
-                            DictionaryAttr attributes) {
+LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorConf& op_conf,
+                            ValueRange operands, DictionaryAttr attributes) {
   oneflow::ConfOpAdaptor conf_op_adaptor(operands, attributes);
   std::string op_name = MagicalOpName;
   auto& user_conf = *op_conf.mutable_user_conf();
@@ -49,8 +49,6 @@ LogicalResult ConvertUserOp(::oneflow::OperatorConf& op_conf, ValueRange operand
   //   op->emitError("fail to convert user op outputs");
   //   return failure();
   // }
-  std::string op_type_name =
-      attributes.get(OpTrait::IsAlternative<void>::getOpTypeNameAttr()).cast<StringAttr>().str();
   if (!succeeded(user_op::ConvertUserOpAttributes(op_type_name, operands, attributes, op_conf))) {
     return failure();
   }
@@ -64,7 +62,7 @@ LogicalResult ConvertUserOp(::oneflow::OperatorConf& op_conf, ValueRange operand
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   ::oneflow::OperatorConf op_conf{};
-  CHECK(ConvertUserOp(op_conf, operands, attributes).succeeded());
+  CHECK(ConvertUserOp("normalization_add_relu", op_conf, operands, attributes).succeeded());
   auto op = CHECK_JUST(ConstructOp(op_conf));
   ::oneflow::HashMap<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;
