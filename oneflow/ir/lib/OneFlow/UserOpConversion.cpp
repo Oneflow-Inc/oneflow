@@ -37,9 +37,11 @@ LogicalResult saveAttrToOpConf(DictionaryAttr attributes, ::oneflow::OperatorCon
                          .dyn_cast_or_null<StringAttr>()) {
     op_conf->set_name(op_name.str());
   }
-  op_conf->set_device_tag(attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
-                              .cast<StringAttr>()
-                              .str());
+  auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                        .dyn_cast_or_null<StringAttr>();
+  CHECK(device_tag) << "attr absent: "
+                    << OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr().str();
+  op_conf->set_device_tag(device_tag.str());
   ;
   return success();
 }
@@ -187,16 +189,16 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
 
 LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
                                       DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf) {
-  {
-    std::vector<std::string> keys{};
-    std::vector<int32_t> sizes{};
-    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-            op_type_name, operands, attributes, keys, sizes))) {
-      LOG(FATAL) << "fail to get filtered segment key and sizes";
-      return failure();
-    }
-    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-  }
+  //   {
+  //     std::vector<std::string> keys{};
+  //     std::vector<int32_t> sizes{};
+  //     if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+  //             op_type_name, operands, attributes, keys, sizes))) {
+  //       LOG(FATAL) << "fail to get filtered segment key and sizes";
+  //       return failure();
+  //     }
+  //     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  //   }
   return doConvertUserOpAttributes(op_type_name, attributes, op_conf);
 }
 
