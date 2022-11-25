@@ -23,6 +23,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "0"
 
 import unittest
 import numpy as np
