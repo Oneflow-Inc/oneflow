@@ -67,14 +67,6 @@ Maybe<void> FusedGetIouGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx
   dh1->set_is_dynamic(diou.is_dynamic());
   dh1->set_shape(diou.shape());
 
-  user_op::TensorDesc* dw2 = ctx->MutOutputTensorDesc("dw2", 0);
-  dw2->set_is_dynamic(diou.is_dynamic());
-  dw2->set_shape(diou.shape());
-
-  user_op::TensorDesc* dh2 = ctx->MutOutputTensorDesc("dh2", 0);
-  dh2->set_is_dynamic(diou.is_dynamic());
-  dh2->set_shape(diou.shape());
-
   user_op::TensorDesc* dinter = ctx->MutOutputTensorDesc("dinter", 0);
   dinter->set_is_dynamic(diou.is_dynamic());
   dinter->set_shape(diou.shape());
@@ -95,12 +87,6 @@ Maybe<void> FusedGetIouGradOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* dh1 = ctx->MutOutputTensorDesc("dh1", 0);
   dh1->set_data_type(diou.data_type());
 
-  user_op::TensorDesc* dw2 = ctx->MutOutputTensorDesc("dw2", 0);
-  dw2->set_data_type(diou.data_type());
-
-  user_op::TensorDesc* dh2 = ctx->MutOutputTensorDesc("dh2", 0);
-  dh2->set_data_type(diou.data_type());
-
   user_op::TensorDesc* dinter = ctx->MutOutputTensorDesc("dinter", 0);
   dinter->set_data_type(diou.data_type());
 
@@ -119,8 +105,6 @@ Maybe<void> FusedGetIouGradOp::GetSbp(user_op::SbpContext* ctx) {
         .Split(user_op::OpArg("inter", 0), i)
         .Split(user_op::OpArg("dw1", 0), i)
         .Split(user_op::OpArg("dh1", 0), i)
-        .Split(user_op::OpArg("dw2", 0), i)
-        .Split(user_op::OpArg("dh2", 0), i)
         .Split(user_op::OpArg("dinter", 0), i)
         .Build();
   }

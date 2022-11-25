@@ -31,7 +31,7 @@ __global__ void FusedGetIouForward(const int n, const T* w1, const T* h1, const 
 template<typename T>
 __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, const T* h1,
                                     const T* w2, const T* h2, const T* inter, T* dw1, T* dh1,
-                                    T* dw2, T* dh2, T* dinter, const float eps) {
+                                    T* dinter, const float eps) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T w1_i = w1[i], h1_i = h1[i], w2_i = w2[i], h2_i = h2[i], inter_i = inter[i],
             diou_i = diou[i];
@@ -41,8 +41,6 @@ __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, con
     dinter[i] = w_h_eps * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
     dw1[i] = h1_i * common_for_dwh;
     dh1[i] = w1_i * common_for_dwh;
-    dw2[i] = h2_i * common_for_dwh;
-    dh2[i] = w2_i * common_for_dwh;
   }
 }
 };  // namespace
@@ -102,8 +100,6 @@ class FusedGetIouGradGpuKernel final : public user_op::OpKernel {
 
     user_op::Tensor* dw1 = ctx->Tensor4ArgNameAndIndex("dw1", 0);
     user_op::Tensor* dh1 = ctx->Tensor4ArgNameAndIndex("dh1", 0);
-    user_op::Tensor* dw2 = ctx->Tensor4ArgNameAndIndex("dw2", 0);
-    user_op::Tensor* dh2 = ctx->Tensor4ArgNameAndIndex("dh2", 0);
     user_op::Tensor* dinter = ctx->Tensor4ArgNameAndIndex("dinter", 0);
 
     float eps = ctx->Attr<float>("eps");
@@ -112,8 +108,7 @@ class FusedGetIouGradGpuKernel final : public user_op::OpKernel {
 
     RUN_CUDA_KERNEL((FusedGetIouBackward<T>), ctx->stream(), elem_cnt, elem_cnt, diou->dptr<T>(),
                     w1->dptr<T>(), h1->dptr<T>(), w2->dptr<T>(), h2->dptr<T>(), inter->dptr<T>(),
-                    dw1->mut_dptr<T>(), dh1->mut_dptr<T>(), dw2->mut_dptr<T>(), dh2->mut_dptr<T>(),
-                    dinter->mut_dptr<T>(), eps);
+                    dw1->mut_dptr<T>(), dh1->mut_dptr<T>(), dinter->mut_dptr<T>(), eps);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

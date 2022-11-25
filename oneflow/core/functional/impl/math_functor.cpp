@@ -3391,8 +3391,6 @@ class FusedGetIouGradFunctor {
                          .Input("inter")
                          .Output("dw1")
                          .Output("dh1")
-                         .Output("dw2")
-                         .Output("dh2")
                          .Output("dinter")
                          .Build());
   }

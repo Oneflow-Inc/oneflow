@@ -34,7 +34,7 @@ def _test_get_iou_impl(test_case, device, shape):
             np.random.uniform(0, 1, shape),
             dtype=flow.float64,
             device=flow.device(device),
-            requires_grad=True,
+            requires_grad=True if (_ < 2 or _ > 3) else False,
         )
         x.append(tmp)
         torch_x.append(
@@ -42,7 +42,7 @@ def _test_get_iou_impl(test_case, device, shape):
                 tmp.numpy(),
                 dtype=torch.float64,
                 device=torch.device(device),
-                requires_grad=True,
+                requires_grad=True if (_ < 2 or _ > 3) else False,
             )
         )
     w1, h1, w2, h2, inter = x[0], x[1], x[2], x[3], x[4]
@@ -74,8 +74,6 @@ def _test_get_iou_impl(test_case, device, shape):
     torch_res.backward()
     compare(w1.grad, torch_w1.grad)
     compare(h1.grad, torch_h1.grad)
-    compare(w2.grad, torch_w2.grad)
-    compare(h2.grad, torch_h2.grad)
     compare(inter.grad, torch_inter.grad)
 
 

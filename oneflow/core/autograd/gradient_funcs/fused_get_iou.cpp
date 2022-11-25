@@ -39,9 +39,9 @@ class FusedGetIouGrad : public OpExprGradFunction<FusedGetIouGradCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 5);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    for (int i = 0; i < inputs.size(); i++) {
-      ctx->requires_grad = ctx->requires_grad && inputs.at(i)->requires_grad();
-    }
+    ctx->requires_grad = ctx->requires_grad && inputs.at(0)->requires_grad();
+    ctx->requires_grad = ctx->requires_grad && inputs.at(1)->requires_grad();
+    ctx->requires_grad = ctx->requires_grad && inputs.at(4)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->eps = JUST(composed_attrs.GetAttr<float>("eps"));
     if (ctx->requires_grad) {
@@ -69,9 +69,11 @@ class FusedGetIouGrad : public OpExprGradFunction<FusedGetIouGradCaptureState> {
 
     in_grads->resize(5);
     auto result = JUST(functional::FusedGetIouGrad(diou, w1, h1, w2, h2, inter, ctx->eps));
-    CHECK_EQ_OR_RETURN(result->size(), 5);
+    CHECK_EQ_OR_RETURN(result->size(), 3);
     if (ctx->requires_grad) {
-      for (int i = 0; i < in_grads->size(); i++) { in_grads->at(i) = result->at(i); }
+      in_grads->at(0) = result->at(0);
+      in_grads->at(1) = result->at(1);
+      in_grads->at(4) = result->at(2);
     }
     return Maybe<void>::Ok();
   }

@@ -3008,8 +3008,6 @@ def OneFlow_FusedGetIouGradOp : OneFlow_BaseOp<"fused_get_iou_grad", [NoSideEffe
   let output = (outs
     OneFlow_Tensor:$dw1,
     OneFlow_Tensor:$dh1,
-    OneFlow_Tensor:$dw2,
-    OneFlow_Tensor:$dh2,
     OneFlow_Tensor:$dinter
   );
   let attrs = (ins
