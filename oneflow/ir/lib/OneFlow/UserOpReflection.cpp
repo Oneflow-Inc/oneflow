@@ -241,7 +241,7 @@ ArgIds<Trait>::ArgIds(Operation* op) {
   }
   for (int i = 0; i < keys.size(); i += 1) {
     auto& key = keys[i];
-    for (size_t j = 0; j < sizes.size(); j += 1) {
+    for (size_t j = 0; j < sizes[i]; j += 1) {
       ArgID id{key, j};
       ids_.push_back(id);
     }
@@ -258,7 +258,7 @@ ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, ValueRange operands,
             .succeeded());
   for (int i = 0; i < keys.size(); i += 1) {
     auto& key = keys[i];
-    for (size_t j = 0; j < sizes.size(); j += 1) {
+    for (size_t j = 0; j < sizes[i]; j += 1) {
       ArgID id{key, j};
       ids_.push_back(id);
     }
