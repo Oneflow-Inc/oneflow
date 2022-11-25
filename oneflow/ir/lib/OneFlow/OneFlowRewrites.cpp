@@ -88,6 +88,45 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
                                                   operands, attributes);
 }
 
+static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value y, Value out, Value bias,
+                                          Attribute padding_before, Attribute data_format,
+                                          Operation* conv) {
+  auto conv_op = llvm::dyn_cast<Conv2DOp>(conv);
+  assert(conv_op);
+  SmallVector<Value, 4> operands;
+  operands.push_back(y);
+  operands.push_back(out);
+  if (bias) { operands.push_back(bias); }
+  NamedAttrList attributes = conv_op->getAttrs();
+  llvm::SmallVector<int32_t> padding_before_array;
+
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(conv).str()
+                                        + "-fuse-conv"));
+
+  if (data_format.cast<StringAttr>().str() == "channels_first") {
+    for (auto val : padding_before.cast<ArrayAttr>().getValue().take_back(2)) {
+      padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+    }
+  } else {
+    padding_before_array.push_back(padding_before.cast<ArrayAttr>()
+                                       .getValue()[1]
+                                       .cast<IntegerAttr>()
+                                       .getValue()
+                                       .getSExtValue());
+    padding_before_array.push_back(padding_before.cast<ArrayAttr>()
+                                       .getValue()[2]
+                                       .cast<IntegerAttr>()
+                                       .getValue()
+                                       .getSExtValue());
+  }
+
+  attributes.set(conv_op.padding_beforeAttrName(),
+                 getSI32ArrayAttr(rewriter, padding_before_array));
+  return rewriter.create<Conv2DOp>(conv_op->getLoc(), conv_op.out().getType(), operands,
+                                   attributes);
+}
+
 IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
   return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                           APInt(64, value, /*isSigned=*/true));
@@ -101,6 +140,8 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
+  patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
+                                                    CreateConv2dAndErasePad);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
