@@ -138,6 +138,7 @@ CudnnTensorDesc* GetBiasCudnnTensorDesc<3>(const std::string& data_format, int32
 }
 
 struct ConvCudnnOpKernelCache final : public user_op::OpKernelCache {
+  std::unique_ptr<Optional<cudnnConvolutionFwdAlgo_t>> algo;
   std::unique_ptr<CudnnTensorDesc> bias_desc;
 };
 
@@ -154,15 +155,17 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const auto& data_format = ctx->Attr<std::string>("data_format");
     int32_t filters = ctx->Attr<int32_t>("filters");
 
-    std::shared_ptr<ConvCudnnOpKernelCache> state(new ConvCudnnOpKernelCache());
+    std::shared_ptr<ConvCudnnOpKernelCache> cache(new ConvCudnnOpKernelCache());
+
+    cache->algo.reset(new Optional<cudnnConvolutionFwdAlgo_t>());
 
     const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
-      state->bias_desc.reset(
+      cache->bias_desc.reset(
           GetBiasCudnnTensorDesc<NDims>(data_format, filters, bias->data_type()));
     }
 
-    return state;
+    return cache;
   }
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
@@ -173,17 +176,22 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
+    CHECK_NOTNULL(conv_cache);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     if (in->shape_view().elem_cnt() == 0) return;
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
     CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
         in, weight, out, buf, ctx, ctx->stream(), cudnn_conf.has_cudnn_conv_force_fwd_algo(),
         cudnn_conf.cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    if (!(*conv_cache->algo)) { (*conv_cache->algo) = algo_perf.algo; }
+    const auto algo = conv_cache->algo->value_or(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM);
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
 
     const void* beta = nullptr;
@@ -200,7 +208,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     }
 
 #if CUDNN_MAJOR >= 8
-    if (bias != nullptr && algo_perf.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
+    if (bias != nullptr && algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
         && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
       const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
       CHECK_NOTNULL(conv_cache);
@@ -210,10 +218,10 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
                                                   CUDNN_PROPAGATE_NAN, 0));
       OF_CUDNN_CHECK(cudnnConvolutionBiasActivationForward(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
-          args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
-          algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, beta, args.ydesc.Get(),
-          out->mut_dptr(), conv_cache->bias_desc->Get(), bias->dptr(), activation_desc,
-          args.ydesc.Get(), out->mut_dptr()));
+          args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(), algo,
+          buf->mut_dptr(), args.params.max_ws_size, beta, args.ydesc.Get(), out->mut_dptr(),
+          conv_cache->bias_desc->Get(), bias->dptr(), activation_desc, args.ydesc.Get(),
+          out->mut_dptr()));
       OF_CUDNN_CHECK(cudnnDestroyActivationDescriptor(activation_desc));
       return;
     }
@@ -226,8 +234,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         out->mut_dptr()));
 
     if (bias != nullptr) {
-      const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
-      CHECK_NOTNULL(conv_cache);
       OF_CUDNN_CHECK(cudnnAddTensor(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
                                     CudnnSPOnePtr(in->data_type()), conv_cache->bias_desc->Get(),
                                     bias->dptr(), CudnnSPOnePtr(in->data_type()), args.ydesc.Get(),
@@ -237,10 +243,14 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
                             user_op::OpKernelState* state) const override {
-    return Singleton<ResourceDesc, ForSession>::Get()
-        ->resource()
-        .cudnn_conf()
-        .cudnn_conv_heuristic_search_algo();
+    return true;
+  }
+
+  bool IsReadyForCapture(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+                         const user_op::OpKernelCache* cache) const override {
+    const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
+    CHECK_NOTNULL(conv_cache);
+    return conv_cache->algo->has_value();
   }
 };
 
