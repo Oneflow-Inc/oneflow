@@ -137,6 +137,7 @@ class SbpNode final {
   const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
   int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
+  int64_t GetMemory() const { return GetMemory(final_sbp_sig_id_); }
 
   // Setter
   void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }

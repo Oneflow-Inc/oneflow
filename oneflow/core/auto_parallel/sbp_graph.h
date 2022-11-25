@@ -93,6 +93,7 @@ class SbpGraph final {
 
   // Constant getter
   std::vector<SbpNode*>& GetNodeList() { return node_list_; }
+  int64_t GetMemory() const;
 
  private:
   friend class SbpCollector;

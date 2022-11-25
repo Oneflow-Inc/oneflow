@@ -69,7 +69,7 @@ void SbpGraph::SetDefaultSbpSig() const {
 };
 
 double SbpGraph::ComputeCost() const {
-  // Over All Cost under current strategy
+  // Over all cost under current strategy
   double graph_cost_ = 0;
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
@@ -80,6 +80,16 @@ double SbpGraph::ComputeCost() const {
     }
   }
   return graph_cost_;
+}
+
+int64_t SbpGraph::GetMemory() const {
+  // Over all memory under current strategy
+  int64_t total_memory = 0;
+  for (const auto& this_node : node_list_) {
+    total_memory += this_node->GetMemory();
+    for (const auto& edge_out : this_node->edges_out_) { total_memory += edge_out->GetMemory(); }
+  }
+  return total_memory;
 }
 
 int32_t SbpGraph::NodeElimination(SbpNode* this_node) {

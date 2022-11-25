@@ -98,6 +98,9 @@ class SbpEdge final {
   // Constant getter
   SbpNode* GetEndNode() const { return end_node_; }
   int64_t GetMemory(int32_t i, int32_t j) const { return in_memory_support_ ? memory_[i][j] : 0; }
+  int64_t GetMemory() const {
+    return GetMemory(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
+  }
 
  private:
   friend class SbpNode;
