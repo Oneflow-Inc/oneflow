@@ -60,7 +60,7 @@ class SbpEdge final {
   void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool merged_node_is_start_node, bool duplicating_first_node,
-                     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2children_sig_id);
+                     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id);
   // Determine Final SbpSignature for attachment of this edge
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this

@@ -140,16 +140,16 @@ void SbpEdge::SummarizeCost() {
 
 void SbpEdge::DuplicateCost(
     bool merged_node_is_start_node, bool duplicating_first_node,
-    const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2children_sig_id) {
-  const int32_t num_sig = merged_sig_id2children_sig_id.size();
+    const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id) {
+  const int32_t num_sig = merged_sig_id2half_sig_id.size();
   std::vector<std::vector<double>> copy_cost;
   std::vector<std::vector<int32_t>> temp_mid_node_sbp_sig;
   if (merged_node_is_start_node) {
     copy_cost.resize(num_sig);
     if (mid_node_) { temp_mid_node_sbp_sig.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
-      const int32_t sig_idx = duplicating_first_node ? merged_sig_id2children_sig_id[i].first
-                                                     : merged_sig_id2children_sig_id[i].second;
+      const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[i].first
+                                                     : merged_sig_id2half_sig_id[i].second;
       copy_cost[i] = cost_[sig_idx];
       if (mid_node_) { temp_mid_node_sbp_sig[i] = mid_node_sbp_sig_[sig_idx]; }
     }
@@ -161,8 +161,8 @@ void SbpEdge::DuplicateCost(
       copy_cost[i].resize(num_sig);
       if (mid_node_) { temp_mid_node_sbp_sig[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
-        const int32_t sig_idx = duplicating_first_node ? merged_sig_id2children_sig_id[j].first
-                                                       : merged_sig_id2children_sig_id[j].second;
+        const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[j].first
+                                                       : merged_sig_id2half_sig_id[j].second;
         copy_cost[i][j] = cost_[i][sig_idx];
         if (mid_node_) { temp_mid_node_sbp_sig[i][j] = mid_node_sbp_sig_[i][sig_idx]; }
       }

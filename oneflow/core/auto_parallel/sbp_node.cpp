@@ -66,17 +66,17 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
         const double edge_cost =
             common_edge->start_node_ == first ? common_edge->cost_[i][j] : common_edge->cost_[j][i];
         if (edge_cost < GetValidMaxCopyCost()) {
-          merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
+          merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
           cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
         }
       }
     }
-    CHECK(merged_sig_id2children_sig_id_.size() > 0)
+    CHECK(merged_sig_id2half_sig_id_.size() > 0)
         << "0 size for merge child edge, min cost: " << min_cost;
   } else {
     for (int32_t i = 0; i < first->cost_.size(); i++) {
       for (int32_t j = 0; j < second->cost_.size(); j++) {
-        merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
+        merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
         cost_.emplace_back(first->cost_[i] + second->cost_[j]);
       }
     }
@@ -86,9 +86,9 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   // If the original sbp pair does not go through, then use 0 as default.
   final_sbp_sig_id_ = 0;
   // Track the original strategy
-  for (int32_t sig_id = 0; sig_id < merged_sig_id2children_sig_id_.size(); sig_id++) {
-    if (merged_sig_id2children_sig_id_[sig_id].first == first->final_sbp_sig_id_
-        && merged_sig_id2children_sig_id_[sig_id].second == second->final_sbp_sig_id_) {
+  for (int32_t sig_id = 0; sig_id < merged_sig_id2half_sig_id_.size(); sig_id++) {
+    if (merged_sig_id2half_sig_id_[sig_id].first == first->final_sbp_sig_id_
+        && merged_sig_id2half_sig_id_[sig_id].second == second->final_sbp_sig_id_) {
       final_sbp_sig_id_ = sig_id;
     }
   }
@@ -103,19 +103,19 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   edges_out_.insert(edges_out_.end(), second->edges_out_.begin(), second->edges_out_.end());
   // Merge SbpEdge Cost
   for (SbpEdge*& this_edge : first->edges_in_) {
-    this_edge->DuplicateCost(false, true, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(false, true, merged_sig_id2half_sig_id_);
     this_edge->end_node_ = this;
   }
   for (SbpEdge*& this_edge : first->edges_out_) {
-    this_edge->DuplicateCost(true, true, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(true, true, merged_sig_id2half_sig_id_);
     this_edge->start_node_ = this;
   }
   for (SbpEdge*& this_edge : second->edges_in_) {
-    this_edge->DuplicateCost(false, false, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(false, false, merged_sig_id2half_sig_id_);
     this_edge->end_node_ = this;
   }
   for (SbpEdge*& this_edge : second->edges_out_) {
-    this_edge->DuplicateCost(true, false, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(true, false, merged_sig_id2half_sig_id_);
     this_edge->start_node_ = this;
   }
   // Remove edges from original nodes
@@ -238,8 +238,8 @@ bool SbpNode::EliminateItselfAsChild() {
 void SbpNode::FinalizeSbp() {
   if (!half_node_.empty()) {
     // Finalize Sbp of merged nodes
-    half_node_[0]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].first;
-    half_node_[1]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].second;
+    half_node_[0]->final_sbp_sig_id_ = merged_sig_id2half_sig_id_[final_sbp_sig_id_].first;
+    half_node_[1]->final_sbp_sig_id_ = merged_sig_id2half_sig_id_[final_sbp_sig_id_].second;
   }
 
   // Finalize Sbp of children_
