@@ -27,6 +27,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 #include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/UserOpConversion.h"
 
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -713,7 +714,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(ConvertUserOpAttributes(op, *op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }

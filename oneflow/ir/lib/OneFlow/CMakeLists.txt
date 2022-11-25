@@ -30,6 +30,7 @@ oneflow_add_mlir_dialect_library(
   OneFlowSupport.cpp
   OneFlowUtils.cpp
   UserOpReflection.cpp
+  UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/PTXToCubin.cpp

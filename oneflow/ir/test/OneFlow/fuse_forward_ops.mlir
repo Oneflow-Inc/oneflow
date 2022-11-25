@@ -29,11 +29,10 @@ module  {
     return %out : tensor<2x3x4x5xf32>
   }
 
-  func.func @GraphToRun_2(%output_4: tensor<2x3x224x224xf32>, %output_0: tensor<3xf32>, %output_1: tensor<3xf32>, %output_2: tensor<3xf32>, %output_3: tensor<3xf32>) -> tensor<2x3x224x224xf32> {
-    %y, %mean, %inv_variance = "oneflow.normalization"(%output_4, %output_0, %output_1, %output_2, %output_3) {axis = 1 : si32, device_name = ["@0:0"], device_tag = "cpu", epsilon = 9.99999974E-6 : f32, hierarchy = [1], momentum = 0.899999976 : f32, op_name = "normalization-2", operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>, result_segment_sizes = dense<1> : vector<3xi32>, scope_symbol_id = 12 : i64, training = true} : (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>) -> (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>)
-    %0 = "oneflow.add_n2"(%y, %output_4) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "add_n-7", op_type_name = "add_n", scope_symbol_id = 12 : i64} : (tensor<2x3x224x224xf32>, tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32>
-    %1 = "oneflow.relu"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-8", scope_symbol_id = 12 : i64} : (tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32>
-    // CHECK: oneflow.normalization_add_relu
-    return %1 : tensor<2x3x224x224xf32>
-  }
+  // func.func @GraphToRun_2(%output_4: tensor<2x3x224x224xf32>, %output_0: tensor<3xf32>, %output_1: tensor<3xf32>, %output_2: tensor<3xf32>, %output_3: tensor<3xf32>) -> tensor<2x3x224x224xf32> {
+  //   %y, %mean, %inv_variance = "oneflow.normalization"(%output_4, %output_0, %output_1, %output_2, %output_3) {axis = 1 : si32, device_name = ["@0:0"], device_tag = "cpu", epsilon = 9.99999974E-6 : f32, hierarchy = [1], momentum = 0.899999976 : f32, op_name = "normalization-2", operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>, result_segment_sizes = dense<1> : vector<3xi32>, scope_symbol_id = 12 : i64, training = true} : (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>) -> (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>)
+  //   %0 = "oneflow.add_n2"(%y, %output_4) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "add_n-7", op_type_name = "add_n", scope_symbol_id = 12 : i64} : (tensor<2x3x224x224xf32>, tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32>
+  //   %1 = "oneflow.relu"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-8", scope_symbol_id = 12 : i64} : (tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32>
+  //   return %1 : tensor<2x3x224x224xf32>
+  // }
 }
