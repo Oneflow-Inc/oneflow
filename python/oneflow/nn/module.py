@@ -148,19 +148,34 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
-        for hook in itertools.chain(self._forward_pre_hooks.values()):
+        for hook in self._forward_pre_hooks.values():
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
 
+        for hook in self._backward_hooks.values():
+            pass
+
         res = self.forward(*args, **kwargs)
 
-        for hook in itertools.chain(self._forward_hooks.values()):
+        for hook in self._forward_hooks.values():
             result = hook(self, args, res)
             if result is not None:
                 res = result
+        
+        if len(self._backward_hooks) > 0:
+            is_tuple = isinstance(res, tuple)
+            if not is_tuple:
+                res = (res,)
+            grad_output = [None] * len(res) if isinstance(res, tuple)
+            for i, x in enumerate(res):
+                if isinstance(x, flow.Tensor):
+                    def tmp(grad):
+                        grad_output[i] = grad
+                    x.register_hook(tmp)
+                    
 
         return res
 
