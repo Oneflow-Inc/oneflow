@@ -33,15 +33,16 @@ __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, con
                                     const T* w2, const T* h2, const T* inter, T* dw1, T* dh1,
                                     T* dw2, T* dh2, T* dinter, const float eps) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const T w1_i = w1[i], h1_i = h1[i], w2_i = h2[i], h2_i = h2[i], inter_i = inter[i],
+    const T w1_i = w1[i], h1_i = h1[i], w2_i = w2[i], h2_i = h2[i], inter_i = inter[i],
             diou_i = diou[i];
     const T w_h_eps = w1_i * h1_i + w2_i * h2_i + static_cast<T>(eps);
     const T w_h_eps_inter_diff = w_h_eps - inter_i;
+    const T common_for_dwh = -inter_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
     dinter[i] = w_h_eps * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
-    dw1[i] = h1_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
-    dh1[i] = w1_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
-    dw2[i] = h2_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
-    dh2[i] = w2_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    dw1[i] = h1_i * common_for_dwh;
+    dh1[i] = w1_i * common_for_dwh;
+    dw2[i] = h2_i * common_for_dwh;
+    dh2[i] = w2_i * common_for_dwh;
   }
 }
 };  // namespace

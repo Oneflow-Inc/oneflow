@@ -26,7 +26,7 @@ import oneflow.unittest
 
 
 def _test_get_iou_impl(test_case, device, shape):
-    eps = 0
+    eps = 1e-7
     x = []
     torch_x = []
     for _ in range(5):
@@ -54,29 +54,11 @@ def _test_get_iou_impl(test_case, device, shape):
         torch_x[3],
         torch_x[4],
     )
-    # union = torch_w1 * torch_h1 + torch_w2 * torch_h2 - torch_inter + eps
     torch_iou = torch_inter / (
         torch_w1 * torch_h1 + torch_w2 * torch_h2 - torch_inter + eps
     )
 
-    def compare(a, b, rtol=1e-3, atol=1e-3, w1=w1, h1=h1, w2=w2, h2=h2, inter=inter):
-        w1 = w1.numpy().flatten()
-        h1 = h1.numpy().flatten()
-        w2 = w2.numpy().flatten()
-        h2 = h2.numpy().flatten()
-        inter = inter.numpy().flatten()
-        iou = a.numpy().flatten()
-        torch_iou = b.detach().cpu().numpy()
-        for i in range(len(iou)):
-            if abs(iou[i] - torch_iou[i]) > 1e-3:
-                print("w1: ", w1[i])
-                print("h1: ", h1[i])
-                print("w2: ", w2[i])
-                print("h2: ", h2[i])
-                print("inter: ", inter[i])
-                print("iou: ", iou[i])
-                print("torch_iou: ", torch_iou[i])
-                exit(0)
+    def compare(a, b, rtol=1e-5, atol=1e-5, w1=w1, h1=h1, w2=w2, h2=h2, inter=inter):
         test_case.assertTrue(
             np.allclose(
                 a.detach().cpu().numpy(), b.detach().cpu().numpy(), rtol=rtol, atol=atol
