@@ -61,7 +61,7 @@ LogicalResult Compile(int argc, char** argv) {
 
   ConvertOptions options;
   if (targets.empty()) {
-    options.target = "X86";
+    options.target = "host";
   } else {
     if (targets.size() > 1) {
       llvm::errs() << "Support only one target currently.\n";

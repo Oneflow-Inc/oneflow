@@ -15,13 +15,53 @@ limitations under the License.
 */
 #include "OneFlow/ConvertToLiteExecutable.h"
 
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowOpTraits.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/Transform/FoldVariable.h"
+#include "OneFlow/Transform/InferPlacement.h"
+#include "OneFlow/Transform/InsertTransferOp.h"
+#include "OneFlow/Transform/MemoryPlanning.h"
+
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/Passes.h"
+
 namespace mlir {
 namespace oneflow {
 
 namespace lite {
 
 LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, ConvertOptions options,
-                                      LiteExecutable* executable) {}
+                                      LiteExecutable* executable) {
+  mlir::PassManager pm(context);
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createLiteFoldVariablePass());
+  pm.addPass(createLiteInferPlacementPass(options.target));
+  pm.addPass(createLiteInsertTransferOpPass());
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createLiteMemoryPlanningPass());
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Failed to run oneflow lite compilation passes.\n";
+    return failure();
+  }
+
+  Operation* job_op = nullptr;
+  auto find_first_job = [&](oneflow::Job job) -> WalkResult {
+    job_op = job.getOperation();
+    return WalkResult::interrupt();
+  };
+  module.getOperation()->walk(find_first_job);
+  if (!job_op) {
+    llvm::errs() << "Job not found in module: " << *module;
+    return failure();
+  }
+  llvm::errs() << *module << "\n";
+  return success();
+}
 
 }  // namespace lite
 
