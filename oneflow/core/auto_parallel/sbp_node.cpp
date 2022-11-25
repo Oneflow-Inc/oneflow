@@ -56,6 +56,8 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
+    in_memory_support_ =
+        first->in_memory_support_ || second->in_memory_support_ || common_edge->in_memory_support_;
     double min_cost = GetMaxVal<float>();
     for (const auto& row : common_edge->cost_) {
       for (const double& c : row) min_cost = std::min(min_cost, c);
@@ -68,16 +70,23 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
         if (edge_cost < GetValidMaxCopyCost()) {
           merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
           cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
+          if (in_memory_support_) {
+            memory_.push_back((common_edge->start_node_ == first ? common_edge->GetMemory(i, j)
+                                                                 : common_edge->GetMemory(j, i))
+                              + first->GetMemory(i) + second->GetMemory(j));
+          }
         }
       }
     }
     CHECK(merged_sig_id2half_sig_id_.size() > 0)
         << "0 size for merge child edge, min cost: " << min_cost;
   } else {
+    in_memory_support_ = first->in_memory_support_ || second->in_memory_support_;
     for (int32_t i = 0; i < first->cost_.size(); i++) {
       for (int32_t j = 0; j < second->cost_.size(); j++) {
         merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
         cost_.emplace_back(first->cost_[i] + second->cost_[j]);
+        if (in_memory_support_) { memory_.push_back(first->GetMemory(i) + second->GetMemory(j)); }
       }
     }
   }
