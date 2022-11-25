@@ -65,26 +65,22 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   CHECK(ConvertUserOp(op_type_name, op_conf, operands, attributes).succeeded());
   auto op = CHECK_JUST(ConstructOp(op_conf));
   std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
-  std::unordered_map<std::string, mlir::Value> operand_mapping_;
   LOG(ERROR) << op->op_conf().DebugString();
 
   auto operand_ids =
       user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands, attributes);
 
+  for (const auto& pair : llvm::zip(operand_ids, operands)) {
+    auto operand_id = std::get<0>(pair);
+    auto operand = std::get<1>(pair);
+    auto bn = operand_id.first + "_" + std::to_string(operand_id.second);
+    auto blob_desc = GetBlobDescFromMlirTensorType(operand.getType().cast<TensorType>());
+    lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
+  }
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
-    // if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
-    //   auto operand_it = operand_mapping_.find(bn);
-    //   if (operand_it == operand_mapping_.end()) {
-    //     auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
-    //     CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
-    //   } else {
-    //     auto found =
-    //     GetBlobDescFromMlirTensorType(operand_it->second.getType().cast<TensorType>());
-    //     CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
-    //   }
-    // }
-    LOG(FATAL) << "bn: " << bn;
-    return lbi2logical_blob_desc_.at(bn).get();
+    auto it = lbi2logical_blob_desc_.find(bn);
+    if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
+    return it->second.get();
   };
   ::oneflow::ParallelDesc* parallel_desc = nullptr;
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
