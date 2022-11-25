@@ -85,12 +85,12 @@ __global__ void FusedGluForwardGpu(
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n,
-                              const int64_t k, int64_t packed_stride, const T* matmul_wx, const T* b,
-                              const T* matmul_vx, const T* c, T* y) {
+                              const int64_t k, int64_t packed_stride, const T* matmul_wx,
+                              const T* b, const T* matmul_vx, const T* c, T* y) {
   ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
   int64_t pack_num = m * packed_n;
   constexpr int32_t block_size = 128;
-  unsigned int grid_size = (pack_num+block_size-1) / block_size;
+  unsigned int grid_size = (pack_num + block_size - 1) / block_size;
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           m, packed_n, k, packed_stride, pack_num, act, matmul_wx, b, matmul_vx, c, y);
@@ -135,59 +135,73 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
   if (IsAligned(16)) {
     switch (sizeof(T)) {
       case 8:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride/2, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 4:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride/4, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 2:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride/8, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride / 8, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 1:
-        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride/16, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride / 16, matmul_wx, b, matmul_vx, c,
+                                           y);
         break;
       default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride/1, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
     }
   } else if (IsAligned(8)) {
     switch (sizeof(T)) {
       case 4:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride/2, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 2:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride/4, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 1:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride/8, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride / 8, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride/1, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
     }
   } else if (IsAligned(4)) {
     switch (sizeof(T)) {
       case 2:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride/2, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       case 1:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride/4, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride/1, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
     }
   } else if (IsAligned(2)) {
     switch (sizeof(T)) {
       case 1:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride/2, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
       default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride/1, matmul_wx, b, matmul_vx, c, y);
+        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
+                                          y);
         break;
     }
   } else {
-    DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride/1, matmul_wx, b, matmul_vx, c, y);
+    DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c, y);
   }
 }
 

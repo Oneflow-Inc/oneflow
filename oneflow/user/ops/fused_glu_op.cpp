@@ -58,7 +58,8 @@ namespace oneflow {
         .Split(user_op::OpArg("b", 0), 0)
         .Split(user_op::OpArg("v", 0), 0)
         .Split(user_op::OpArg("c", 0), 0)
-        .Split(ctx->outputs(), ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes()-1)
+        .Split(ctx->outputs(),
+               ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes() - 1)
         .Build();
   }
 
