@@ -61,16 +61,17 @@ __global__ void FusedCenterBackward(const int n, const T* b1_x1, const T* b1_x2,
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T b_x_diff = b1_x1[i] + b1_x2[i] - b2_x1[i] - b2_x2[i];
     const T b_y_diff = b1_y1[i] + b1_y2[i] - b2_y1[i] - b2_y2[i];
+    const T rho2_diff_i = rho2_diff[i];
 
-    b1_x1_diff[i] = rho2_diff[i] * b_x_diff / static_cast<T>(2.0);
-    b1_x2_diff[i] = rho2_diff[i] * b_x_diff / static_cast<T>(2.0);
-    b2_x1_diff[i] = rho2_diff[i] * b_x_diff / static_cast<T>(-2.0);
-    b2_x2_diff[i] = rho2_diff[i] * b_x_diff / static_cast<T>(-2.0);
+    b1_x1_diff[i] = rho2_diff_i * b_x_diff / static_cast<T>(2.0);
+    b1_x2_diff[i] = rho2_diff_i * b_x_diff / static_cast<T>(2.0);
+    b2_x1_diff[i] = rho2_diff_i * b_x_diff / static_cast<T>(-2.0);
+    b2_x2_diff[i] = rho2_diff_i * b_x_diff / static_cast<T>(-2.0);
 
-    b1_y1_diff[i] = rho2_diff[i] * b_y_diff / static_cast<T>(2.0);
-    b1_y2_diff[i] = rho2_diff[i] * b_y_diff / static_cast<T>(2.0);
-    b2_y1_diff[i] = rho2_diff[i] * b_y_diff / static_cast<T>(-2.0);
-    b2_y2_diff[i] = rho2_diff[i] * b_y_diff / static_cast<T>(-2.0);
+    b1_y1_diff[i] = rho2_diff_i * b_y_diff / static_cast<T>(2.0);
+    b1_y2_diff[i] = rho2_diff_i * b_y_diff / static_cast<T>(2.0);
+    b2_y1_diff[i] = rho2_diff_i * b_y_diff / static_cast<T>(-2.0);
+    b2_y2_diff[i] = rho2_diff_i * b_y_diff / static_cast<T>(-2.0);
   }
 }
 
