@@ -70,12 +70,23 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   auto operand_ids =
       user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands, attributes);
 
+  auto operand_index = 0;
+  for (const auto& pair : operand_ids) {
+    const auto& arg_name = pair.first;
+    const auto& arg_num = pair.second;
+    for (size_t i = 0; i < arg_num; i++) {
+      auto blob_desc =
+          GetBlobDescFromMlirTensorType(operands[operand_index].getType().cast<TensorType>());
+      auto bn = arg_name + "_" + std::to_string(i);
+      LOG(ERROR) << "emplace bn: " << bn;
+      lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
+      operand_index += 1;
+    }
+  }
   for (const auto& pair : llvm::zip(operand_ids, operands)) {
     auto operand_id = std::get<0>(pair);
     auto operand = std::get<1>(pair);
     auto bn = operand_id.first + "_" + std::to_string(operand_id.second);
-    auto blob_desc = GetBlobDescFromMlirTensorType(operand.getType().cast<TensorType>());
-    lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
   }
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
