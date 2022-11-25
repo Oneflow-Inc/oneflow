@@ -227,6 +227,32 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
   return doConvertUserOpAttributes(op_type_name, op->getAttrDictionary(), op_conf);
 }
 
+LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands,
+                                  DictionaryAttr attributes, ::oneflow::UserOpConf* user_conf) {
+  std::vector<std::string> keys{};
+  std::vector<int32_t> sizes{};
+  CHECK(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+            op_type_name, operands, attributes, keys, sizes)
+            .succeeded());
+  int32_t input_idx = 0;
+  for (auto tuple : llvm::zip(keys, sizes)) {
+    auto input_key = std::get<0>(tuple);
+    auto input_size = std::get<1>(tuple);
+    for (int32_t i = 0; i < input_size; i++) {
+      if (auto result = operands[input_idx].dyn_cast<mlir::OpResult>()) {
+        auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
+        *(input_s_ptr) = GetOutputLbn(result).getValue();
+        input_idx += 1;
+      } else {
+        LOG(FATAL) << "fail to convert MLIR result to protobuf, op_type_name: "
+                          + op_type_name.str();
+        return failure();
+      }
+    }
+  }
+  return success();
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow

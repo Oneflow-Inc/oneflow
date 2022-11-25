@@ -270,6 +270,39 @@ template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(Oper
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(
     llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes);
 
+llvm::Optional<std::string> GetOutputLbn(OpResult result) {
+  const auto def_op = result.getDefiningOp();
+  if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
+    return def_op
+        ->getAttrOfType<ArrayAttr>(
+            OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())[result.getResultNumber()]
+        .dyn_cast<StringAttr>()
+        .getValue()
+        .str();
+  } else {
+    std::vector<std::string> def_op_keys{};
+    std::vector<int32_t> def_op_sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
+            def_op, def_op_keys, def_op_sizes))) {
+      def_op->emitError("fail to get output lbn");
+      return llvm::None;
+    }
+    const auto result_number = result.getResultNumber();
+    uint32_t size_sum = 0;
+    for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
+      auto name = std::get<0>(name_size_tuple);
+      auto size = std::get<1>(name_size_tuple);
+      if ((size_sum + size) > result_number) {
+        const uint32_t bn_i = result_number - size_sum;
+        return OpTrait::IsOpConfCompatible<void>::getOpName(def_op).str() + "/" + name + "_"
+               + std::to_string(bn_i);
+      }
+      size_sum += size;
+    }
+  }
+  return llvm::None;
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow

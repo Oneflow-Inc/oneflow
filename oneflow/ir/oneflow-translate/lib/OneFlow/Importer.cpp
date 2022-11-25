@@ -506,39 +506,6 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   return success();
 }
 
-llvm::Optional<std::string> GetOutputLbn(OpResult result) {
-  const auto def_op = result.getDefiningOp();
-  if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
-    return def_op
-        ->getAttrOfType<ArrayAttr>(
-            OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())[result.getResultNumber()]
-        .dyn_cast<StringAttr>()
-        .getValue()
-        .str();
-  } else {
-    std::vector<std::string> def_op_keys{};
-    std::vector<int32_t> def_op_sizes{};
-    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
-            def_op, def_op_keys, def_op_sizes))) {
-      def_op->emitError("fail to get output lbn");
-      return llvm::None;
-    }
-    const auto result_number = result.getResultNumber();
-    uint32_t size_sum = 0;
-    for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
-      auto name = std::get<0>(name_size_tuple);
-      auto size = std::get<1>(name_size_tuple);
-      if ((size_sum + size) > result_number) {
-        const uint32_t bn_i = result_number - size_sum;
-        return OpTrait::IsOpConfCompatible<void>::getOpName(def_op).str() + "/" + name + "_"
-               + std::to_string(bn_i);
-      }
-      size_sum += size;
-    }
-  }
-  return llvm::None;
-}
-
 LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
@@ -557,7 +524,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
     for (int32_t i = 0; i < input_size; i++) {
       if (auto result = GetDataInputOperands(op)[input_idx].dyn_cast<mlir::OpResult>()) {
         auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
-        *(input_s_ptr) = GetOutputLbn(result).getValue();
+        *(input_s_ptr) = user_op::GetOutputLbn(result).getValue();
         input_idx += 1;
       } else {
         op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
@@ -754,7 +721,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
     return failure();
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
-  auto output_lbn = GetOutputLbn(result).getValue();
+  auto output_lbn = user_op::GetOutputLbn(result).getValue();
   output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(

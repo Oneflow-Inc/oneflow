@@ -26,7 +26,8 @@ namespace user_op {
 LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
                                       DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf);
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
-
+ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes,
+                    ::oneflow::UserOpConf* user_conf);
 }  // namespace user_op
 
 }  // namespace oneflow

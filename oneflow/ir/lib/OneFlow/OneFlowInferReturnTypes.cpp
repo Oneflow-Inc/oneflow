@@ -41,7 +41,8 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
                             ValueRange operands, DictionaryAttr attributes) {
   oneflow::ConfOpAdaptor conf_op_adaptor(operands, attributes);
   std::string op_name = MagicalOpName;
-  auto& user_conf = *op_conf.mutable_user_conf();
+  CHECK(user_op::ConvertUserOpInputs(op_type_name, op_conf, operands, op_conf.mutable_user_conf())
+            .succeeded());
   // if (!succeeded(ConvertUserOpInputs(op, op_name, user_conf))) {
   //   op->emitError("fail to convert user op inputs");
   //   return failure();

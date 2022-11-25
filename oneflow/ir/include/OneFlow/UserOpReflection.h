@@ -46,6 +46,8 @@ class ArgIds {
   std::vector<ArgID> ids_;
 };
 
+llvm::Optional<std::string> GetOutputLbn(OpResult result);
+
 }  // namespace user_op
 
 }  // namespace oneflow

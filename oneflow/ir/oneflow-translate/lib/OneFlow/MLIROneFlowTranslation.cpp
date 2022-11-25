@@ -732,7 +732,7 @@ LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
   for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
     auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-    std::string new_val = GetOutputLbn(result).getValue();
+    std::string new_val = user_op::GetOutputLbn(result).getValue();
     job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
         &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
   }
