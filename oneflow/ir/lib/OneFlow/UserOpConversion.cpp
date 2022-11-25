@@ -242,7 +242,6 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
       auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
       if (auto result = operands[input_idx].dyn_cast<mlir::OpResult>()) {
         *(input_s_ptr) = GetOutputLbn(result).getValue();
-        input_idx += 1;
       } else if (auto argument = operands[input_idx].dyn_cast<mlir::BlockArgument>()) {
         *(input_s_ptr) = "BlockArgument/" + std::to_string(argument.getArgNumber());
       } else {
@@ -250,6 +249,7 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
                           + op_type_name.str();
         return failure();
       }
+      input_idx += 1;
     }
   }
   return success();
