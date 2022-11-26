@@ -612,7 +612,7 @@ class Optimizer(object):
     def _make_options_valid(self, options):
         """handle the conflict between optimizer options
         """
-        if options["contiguous_params"] and options["fused"]:
+        if options["contiguous_params"] and options.get("fused", False):
             options["fused"] = False
 
             warnings.warn(
