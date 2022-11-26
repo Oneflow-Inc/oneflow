@@ -20,38 +20,49 @@ namespace oneflow {
 
 Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->InputTensorDesc("x1", 0);
+  Stride x1_stride = Stride(1, 1);
+  Shape x1_shape = x1.shape();
 
   user_op::TensorDesc* b1_x1 = ctx->MutOutputTensorDesc("b1_x1", 0);
   b1_x1->set_is_dynamic(x1.is_dynamic());
-  b1_x1->set_shape(x1.shape());
+  b1_x1->set_shape(x1_shape);
+  // For one-yolov5, we can directly set output stride to (1, 1), beause input shape must be (n, 1).
+  ctx->SetOutputStride("b1_x1", 0, x1_stride);
 
   user_op::TensorDesc* b1_x2 = ctx->MutOutputTensorDesc("b1_x2", 0);
   b1_x2->set_is_dynamic(x1.is_dynamic());
-  b1_x2->set_shape(x1.shape());
+  b1_x2->set_shape(x1_shape);
+  ctx->SetOutputStride("b1_x2", 0, x1_stride);
 
   user_op::TensorDesc* b1_y1 = ctx->MutOutputTensorDesc("b1_y1", 0);
   b1_y1->set_is_dynamic(x1.is_dynamic());
-  b1_y1->set_shape(x1.shape());
+  b1_y1->set_shape(x1_shape);
+  ctx->SetOutputStride("b1_y1", 0, x1_stride);
 
   user_op::TensorDesc* b1_y2 = ctx->MutOutputTensorDesc("b1_y2", 0);
   b1_y2->set_is_dynamic(x1.is_dynamic());
-  b1_y2->set_shape(x1.shape());
+  b1_y2->set_shape(x1_shape);
+  ctx->SetOutputStride("b1_y2", 0, x1_stride);
 
   user_op::TensorDesc* b2_x1 = ctx->MutOutputTensorDesc("b2_x1", 0);
   b2_x1->set_is_dynamic(x1.is_dynamic());
-  b2_x1->set_shape(x1.shape());
+  b2_x1->set_shape(x1_shape);
+  ctx->SetOutputStride("b2_x1", 0, x1_stride);
 
   user_op::TensorDesc* b2_x2 = ctx->MutOutputTensorDesc("b2_x2", 0);
   b2_x2->set_is_dynamic(x1.is_dynamic());
-  b2_x2->set_shape(x1.shape());
+  b2_x2->set_shape(x1_shape);
+  ctx->SetOutputStride("b2_x2", 0, x1_stride);
 
   user_op::TensorDesc* b2_y1 = ctx->MutOutputTensorDesc("b2_y1", 0);
   b2_y1->set_is_dynamic(x1.is_dynamic());
-  b2_y1->set_shape(x1.shape());
+  b2_y1->set_shape(x1_shape);
+  ctx->SetOutputStride("b2_y1", 0, x1_stride);
 
   user_op::TensorDesc* b2_y2 = ctx->MutOutputTensorDesc("b2_y2", 0);
   b2_y2->set_is_dynamic(x1.is_dynamic());
-  b2_y2->set_shape(x1.shape());
+  b2_y2->set_shape(x1_shape);
+  ctx->SetOutputStride("b2_y2", 0, x1_stride);
 
   return Maybe<void>::Ok();
 }
