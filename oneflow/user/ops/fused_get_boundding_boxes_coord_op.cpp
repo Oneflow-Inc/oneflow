@@ -26,43 +26,34 @@ Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::Infer
   user_op::TensorDesc* b1_x1 = ctx->MutOutputTensorDesc("b1_x1", 0);
   b1_x1->set_is_dynamic(x1.is_dynamic());
   b1_x1->set_shape(x1_shape);
-  // For one-yolov5, we can directly set output stride to (1, 1), beause input shape must be (n, 1).
-  ctx->SetOutputStride("b1_x1", 0, x1_stride);
 
   user_op::TensorDesc* b1_x2 = ctx->MutOutputTensorDesc("b1_x2", 0);
   b1_x2->set_is_dynamic(x1.is_dynamic());
   b1_x2->set_shape(x1_shape);
-  ctx->SetOutputStride("b1_x2", 0, x1_stride);
 
   user_op::TensorDesc* b1_y1 = ctx->MutOutputTensorDesc("b1_y1", 0);
   b1_y1->set_is_dynamic(x1.is_dynamic());
   b1_y1->set_shape(x1_shape);
-  ctx->SetOutputStride("b1_y1", 0, x1_stride);
 
   user_op::TensorDesc* b1_y2 = ctx->MutOutputTensorDesc("b1_y2", 0);
   b1_y2->set_is_dynamic(x1.is_dynamic());
   b1_y2->set_shape(x1_shape);
-  ctx->SetOutputStride("b1_y2", 0, x1_stride);
 
   user_op::TensorDesc* b2_x1 = ctx->MutOutputTensorDesc("b2_x1", 0);
   b2_x1->set_is_dynamic(x1.is_dynamic());
   b2_x1->set_shape(x1_shape);
-  ctx->SetOutputStride("b2_x1", 0, x1_stride);
 
   user_op::TensorDesc* b2_x2 = ctx->MutOutputTensorDesc("b2_x2", 0);
   b2_x2->set_is_dynamic(x1.is_dynamic());
   b2_x2->set_shape(x1_shape);
-  ctx->SetOutputStride("b2_x2", 0, x1_stride);
 
   user_op::TensorDesc* b2_y1 = ctx->MutOutputTensorDesc("b2_y1", 0);
   b2_y1->set_is_dynamic(x1.is_dynamic());
   b2_y1->set_shape(x1_shape);
-  ctx->SetOutputStride("b2_y1", 0, x1_stride);
 
   user_op::TensorDesc* b2_y2 = ctx->MutOutputTensorDesc("b2_y2", 0);
   b2_y2->set_is_dynamic(x1.is_dynamic());
   b2_y2->set_shape(x1_shape);
-  ctx->SetOutputStride("b2_y2", 0, x1_stride);
 
   return Maybe<void>::Ok();
 }
