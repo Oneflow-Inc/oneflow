@@ -73,6 +73,7 @@ class ParamGroup(object):
         if self.contiguous_params:
             self.params_dict = dict()
             self._contiguous_parameters = list()
+            self.data_ptrs = []
             self._make_contiguous_params(parameters)
 
         self._options = deepcopy(default_options)
@@ -130,6 +131,8 @@ class ParamGroup(object):
                 self.params_dict[buf_type].grad_buf[index : index + size].view(shape)
             )
             p._is_grad_acc_inplace = True
+            self.data_ptrs.append(id(p))
+
             self.params_dict[buf_type].index += numel_in_bucket(p)
 
         for buf_type in self.params_dict.keys():
@@ -137,6 +140,15 @@ class ParamGroup(object):
                 buf_type
             ].grad_buf
             self._contiguous_parameters.append(self.params_dict[buf_type].param_buf)
+
+    def check_contiguous_params_valid(self):
+        if not self.contiguous_params:
+            return True
+
+        for param, data_ptr in zip(self.origin_parameters, self.data_ptrs):
+            if id(param) != data_ptr:
+                return False
+        return True
 
     def __getitem__(self, key):
         return self._options[key]
@@ -608,5 +620,25 @@ class Optimizer(object):
                 "now only contiguous_params is set."
             )
 
-    def _check_buff_valid(self, ):
-        pass
+    def check_contiguous_optim_valid(self):
+        r"""
+        If contiguous_params is set, this function can be used to check whether the
+        addresses of original parameters are valid in contiguous buffer.
+
+        >>> import oneflow
+        >>> import oneflow.optim as optim
+        >>> w1 = oneflow.ones((3, 3), requires_grad=True)
+        >>> w2 = oneflow.ones((3, 3), requires_grad=True)
+        >>> sgd = optim.SGD([w1, w2], contiguous_params=True)
+        >>> sgd.check_contiguous_optim_valid()
+        >>> sgd.param_groups[0].origin_parameters[0] = oneflow.ones(1)
+        >>> sgd.check_contiguous_optim_valid()
+        ValueError: The data or gradient in contiguous buffer has been invalidated. Please use inplace operations to handle contiguous parameters.
+
+        """
+        for param_group in self.param_groups:
+            if not param_group.check_contiguous_params_valid():
+                raise ValueError(
+                    "The data or gradient in contiguous buffer has been invalidated. "
+                    "Please use inplace operations to handle contiguous parameters. "
+                )
