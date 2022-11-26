@@ -278,6 +278,22 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   return parallel_conf;
 }
 
+::oneflow::DeviceType generateDeviceName(DictionaryAttr attributes) {
+  ::oneflow::ParallelConf parallel_conf{};
+  auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                        .dyn_cast_or_null<StringAttr>();
+  CHECK(device_tag) << "attr absent: "
+                    << OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr().str();
+  if (device_tag.str() == "cpu") {
+    return ::oneflow::DeviceType::kCPU;
+  } else if (device_tag.str() == "cuda") {
+    return ::oneflow::DeviceType::kCUDA;
+  } else {
+    LOG(FATAL) << "unsupported device tag: " << device_tag.str();
+    return ::oneflow::DeviceType::kInvalidDevice;
+  }
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow
