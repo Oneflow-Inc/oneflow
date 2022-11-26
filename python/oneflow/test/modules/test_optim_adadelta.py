@@ -39,6 +39,7 @@ def compare_with_numpy_adadelta(
     weight_decay,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -52,6 +53,7 @@ def compare_with_numpy_adadelta(
             rho=rho,
             eps=eps,
             maximize=maximize,
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -67,7 +69,7 @@ def compare_with_numpy_adadelta(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adadelta.state_dict()
-                adadelta = flow.optim.Adadelta([x])
+                adadelta = flow.optim.Adadelta([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -116,6 +118,7 @@ def compare_with_numpy_adadelta_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -137,6 +140,7 @@ def compare_with_numpy_adadelta_clip_grad(
             rho=rho,
             eps=eps,
             maximize=maximize,
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -153,7 +157,7 @@ def compare_with_numpy_adadelta_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adadelta.state_dict()
-                adadelta = flow.optim.Adadelta([x])
+                adadelta = flow.optim.Adadelta([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -206,6 +210,7 @@ class TestAdadelta(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adadelta(test_case, *arg)
@@ -226,6 +231,7 @@ class TestAdadelta(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adadelta_clip_grad(test_case, *arg)

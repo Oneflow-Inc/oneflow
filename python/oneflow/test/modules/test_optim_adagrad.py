@@ -39,6 +39,7 @@ def compare_with_numpy_adagrad(
     eps,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -58,6 +59,7 @@ def compare_with_numpy_adagrad(
             ],
             lr_decay=lr_decay,
             initial_accumulator_value=initial_accumulator_value,
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -73,7 +75,7 @@ def compare_with_numpy_adagrad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adagrad.state_dict()
-                adagrad = flow.optim.Adagrad([x])
+                adagrad = flow.optim.Adagrad([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -118,6 +120,7 @@ def compare_with_numpy_adagrad_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -139,6 +142,7 @@ def compare_with_numpy_adagrad_clip_grad(
             ],
             lr_decay=lr_decay,
             initial_accumulator_value=initial_accumulator_value,
+            contiguous_params=contiguous_params
         )
 
         def train_one_iter(grad):
@@ -155,7 +159,7 @@ def compare_with_numpy_adagrad_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adagrad.state_dict()
-                adagrad = flow.optim.Adagrad([x])
+                adagrad = flow.optim.Adagrad([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -206,6 +210,7 @@ class TestAdagrad(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-08, 1e-07]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adagrad(test_case, *arg)
@@ -226,6 +231,7 @@ class TestAdagrad(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adagrad_clip_grad(test_case, *arg)

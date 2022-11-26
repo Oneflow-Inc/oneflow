@@ -40,6 +40,7 @@ def compare_with_numpy_lamb(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
 
     np.random.seed(1000)
@@ -66,7 +67,7 @@ def compare_with_numpy_lamb(
             optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm
             optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
 
-        lamb = flow.optim.LAMB([optim_kwargs])
+        lamb = flow.optim.LAMB([optim_kwargs], contiguous_params=contiguous_params)
 
         def train_one_iter(grad):
             grad_tensor = flow.tensor(
@@ -87,7 +88,7 @@ def compare_with_numpy_lamb(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = lamb.state_dict()
-                lamb = flow.optim.LAMB([optim_kwargs])
+                lamb = flow.optim.LAMB([optim_kwargs], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -172,6 +173,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)

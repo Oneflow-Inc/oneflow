@@ -39,6 +39,7 @@ def compare_with_numpy_rmsprop(
     centered,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     check_allclose=True,
 ):
     random_grad_seq = []
@@ -61,7 +62,8 @@ def compare_with_numpy_rmsprop(
                     "momentum": momentum,
                     "centered": centered,
                 }
-            ]
+            ],
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -80,7 +82,7 @@ def compare_with_numpy_rmsprop(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop([x])
+                rmsprop = flow.optim.RMSprop([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -136,6 +138,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     check_allclose=True,
 ):
     random_grad_seq = []
@@ -160,7 +163,8 @@ def compare_with_numpy_rmsprop_clip_grad(
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
-            ]
+            ],
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -180,7 +184,7 @@ def compare_with_numpy_rmsprop_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop([x])
+                rmsprop = flow.optim.RMSprop([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -238,6 +242,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["centered"] = [False, True]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
         arg_dict["check_allclose"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
@@ -257,6 +262,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contigusou_params"] = [False, True]
         arg_dict["check_allclose"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
