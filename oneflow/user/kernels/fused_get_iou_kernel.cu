@@ -37,8 +37,9 @@ __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, con
             diou_i = diou[i];
     const T w_h_eps = w1_i * h1_i + w2_i * h2_i + static_cast<T>(eps);
     const T w_h_eps_inter_diff = w_h_eps - inter_i;
-    const T common_for_dwh = -inter_i * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
-    dinter[i] = w_h_eps * diou_i / w_h_eps_inter_diff / w_h_eps_inter_diff;
+    const T w_h_eps_inter_diff_square = w_h_eps_inter_diff * w_h_eps_inter_diff;
+    const T common_for_dwh = -inter_i * diou_i / w_h_eps_inter_diff_square;
+    dinter[i] = w_h_eps * diou_i / w_h_eps_inter_diff_square;
     dw1[i] = h1_i * common_for_dwh;
     dh1[i] = w1_i * common_for_dwh;
   }
