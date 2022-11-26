@@ -202,6 +202,8 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import contiguous
 from oneflow._C import cumprod
+from oneflow._C import cummax
+from oneflow._C import cummin
 from oneflow._C import swapaxes
 from oneflow._C import amax
 from oneflow._C import swapdims

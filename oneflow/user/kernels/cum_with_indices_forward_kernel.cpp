@@ -56,7 +56,7 @@ void CumWithIndicesForward(const T* in_ptr, T* out_ptr, int64_t* indices_ptr, in
   int64_t* tmp_indices_ptr_base = indices_ptr;
   auto step = space * down_space;
   for (auto i = 0; i < up_space; i++) {
-    *tmp_indices_ptr_base = 0;
+    for (auto k = 0; k < down_space; k++) { tmp_indices_ptr_base[k] = 0L; }
     for (auto j = 1; j < space; j++) {
       auto* tmp_out_ptr = tmp_out_ptr_base + j * down_space;
       auto* last_tmp_out_ptr = tmp_out_ptr - down_space;

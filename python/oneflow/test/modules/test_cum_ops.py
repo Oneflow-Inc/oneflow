@@ -42,12 +42,32 @@ class TestCumOp(flow.unittest.TestCase):
         y = torch.cumprod(x, dim)
         return y
 
+    @autotest(n=5)
+    def test_cummax(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        y = torch.cummax(x, dim)
+        return y
+
+    @autotest(n=5)
+    def test_cummin(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        y = torch.cummin(x, dim)
+        return y
+
     def test_cumop_with_dtype(test_case):
         x = flow.tensor([2, 3, 4])
         cumsum_res = flow.cumsum(x, dim=0, dtype=flow.float)
         cumprod_res = flow.cumprod(x, dim=0, dtype=flow.float)
+        cummax_res = flow.cumprod(x, dim=0, dtype=flow.float)[0]
+        cummin_res = flow.cumprod(x, dim=0, dtype=flow.float)[0]
         test_case.assertEqual(cumsum_res.dtype, flow.float)
         test_case.assertEqual(cumprod_res.dtype, flow.float)
+        test_case.assertEqual(cummax_res.dtype, flow.float)
+        test_case.assertEqual(cummin_res.dtype, flow.float)
 
     @autotest(n=5, check_graph=True)
     def test_cumsum(test_case):
@@ -130,6 +150,18 @@ class TestCumOp(flow.unittest.TestCase):
         input = torch.ones(100, 1280)
         torch.cumprod(input, dim=0)
         torch.cumprod(input, dim=1)
+
+    @profile(torch.cummax)
+    def profile_cummax(test_case):
+        input = torch.ones(100, 1280)
+        torch.cummax(input, dim=0)
+        torch.cummax(input, dim=1)
+
+    @profile(torch.cummin)
+    def profile_cummin(test_case):
+        input = torch.ones(100, 1280)
+        torch.cummin(input, dim=0)
+        torch.cummin(input, dim=1)
 
 
 if __name__ == "__main__":
