@@ -95,6 +95,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   };
   ::oneflow::ParallelConf parallel_conf = user_op::generateParallelConf(attributes);
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
+  op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
   return failure();
 }
