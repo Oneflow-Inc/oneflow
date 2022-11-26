@@ -20,7 +20,6 @@ namespace oneflow {
 
 Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->InputTensorDesc("x1", 0);
-  Stride x1_stride = Stride(1, 1);
   Shape x1_shape = x1.shape();
 
   user_op::TensorDesc* b1_x1 = ctx->MutOutputTensorDesc("b1_x1", 0);
