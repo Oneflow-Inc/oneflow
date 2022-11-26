@@ -39,9 +39,8 @@ class FusedGetIouGrad : public OpExprGradFunction<FusedGetIouGradCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 5);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = ctx->requires_grad && inputs.at(0)->requires_grad();
-    ctx->requires_grad = ctx->requires_grad && inputs.at(1)->requires_grad();
-    ctx->requires_grad = ctx->requires_grad && inputs.at(4)->requires_grad();
+    ctx->requires_grad = inputs.at(0)->requires_grad() && inputs.at(1)->requires_grad()
+                         && inputs.at(4)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->eps = JUST(composed_attrs.GetAttr<float>("eps"));
     if (ctx->requires_grad) {
