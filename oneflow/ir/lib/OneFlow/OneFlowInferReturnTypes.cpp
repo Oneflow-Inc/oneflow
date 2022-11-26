@@ -40,7 +40,7 @@ static auto MagicalOpName = "INFER_MAGICAL";
 LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorConf& op_conf,
                             ValueRange operands, DictionaryAttr attributes) {
   oneflow::ConfOpAdaptor conf_op_adaptor(operands, attributes);
-  std::string op_name = MagicalOpName;
+  op_conf.set_name(MagicalOpName);
   CHECK(
       user_op::ConvertUserOpInputs(op_type_name, operands, attributes, op_conf.mutable_user_conf())
           .succeeded());
@@ -77,14 +77,13 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     operand_index += 1;
   }
   static auto MAX_OUTPUT_NUM = 10;
-  std::string op_name = MagicalOpName;
   for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
     for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM; arg_id++) {
       auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
       auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
       lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
       (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
-          ::oneflow::GenLogicalBlobName(op_name, bn));
+          ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
     }
   }
   LOG(ERROR) << op_conf.DebugString();
