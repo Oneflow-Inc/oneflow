@@ -28,6 +28,8 @@ LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange o
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
 LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands,
                                   DictionaryAttr attributes, ::oneflow::UserOpConf* user_conf);
+::oneflow::ParallelConf generateParallelConf(DictionaryAttr attributes);
+
 }  // namespace user_op
 
 }  // namespace oneflow

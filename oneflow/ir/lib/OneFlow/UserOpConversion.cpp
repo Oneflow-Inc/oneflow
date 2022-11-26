@@ -255,6 +255,29 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   return success();
 }
 
+::oneflow::ParallelConf generateParallelConf(DictionaryAttr attributes) {
+  ::oneflow::ParallelConf parallel_conf{};
+  auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                        .dyn_cast_or_null<StringAttr>();
+  CHECK(device_tag) << "attr absent: "
+                    << OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr().str();
+  parallel_conf.set_device_tag(device_tag.str());
+  auto device_name = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
+                         .dyn_cast_or_null<ArrayAttr>();
+  CHECK(device_name) << "attr absent: "
+                     << OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr().str();
+  for (auto s : device_name.getValue()) {
+    parallel_conf.add_device_name(s.cast<StringAttr>().str());
+  }
+  if (auto hierarchy = attributes.get(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
+                           .dyn_cast_or_null<ArrayAttr>()) {
+    for (auto dim : hierarchy.getValue()) {
+      parallel_conf.mutable_hierarchy()->add_dim(dim.template dyn_cast<IntegerAttr>().getInt());
+    }
+  }
+  return parallel_conf;
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow

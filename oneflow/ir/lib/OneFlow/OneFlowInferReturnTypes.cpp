@@ -93,8 +93,9 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
     return it->second.get();
   };
-  ::oneflow::ParallelDesc* parallel_desc = nullptr;
-  CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
+  ::oneflow::ParallelConf parallel_conf = user_op::generateParallelConf(attributes);
+  ::oneflow::ParallelDesc parallel_desc{parallel_conf};
+  CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
   return failure();
 }
 
