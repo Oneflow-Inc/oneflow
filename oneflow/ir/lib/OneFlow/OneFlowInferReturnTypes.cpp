@@ -63,10 +63,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   ::oneflow::OperatorConf op_conf{};
   const auto op_type_name = "normalization_add_relu";
   CHECK(ConvertUserOp(op_type_name, op_conf, operands, attributes).succeeded());
-  auto op = CHECK_JUST(ConstructOp(op_conf));
   std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
-  LOG(ERROR) << op->op_conf().DebugString();
-
   auto operand_ids =
       user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands, attributes);
   auto operand_index = 0;
@@ -75,10 +72,23 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     const auto& arg_id = std::get<0>(idOperand).second;
     const auto operand = std::get<1>(idOperand);
     auto blob_desc = GetBlobDescFromMlirTensorType(operand.getType().cast<TensorType>());
-    auto bn = arg_name + "_" + std::to_string(arg_id);
+    auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
   }
+  static auto MAX_OUTPUT_NUM = 10;
+  std::string op_name = MagicalOpName;
+  for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
+    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM; arg_id++) {
+      auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
+      auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
+      lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
+      (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
+          ::oneflow::GenLogicalBlobName(op_name, bn));
+    }
+  }
+  LOG(ERROR) << op_conf.DebugString();
+  auto op = CHECK_JUST(ConstructOp(op_conf));
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
     if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
