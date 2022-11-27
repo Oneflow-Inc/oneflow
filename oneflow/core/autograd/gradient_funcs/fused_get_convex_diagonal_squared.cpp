@@ -20,12 +20,13 @@ namespace oneflow {
 namespace one {
 
 const int32_t INPUT_LEN = 8;
-struct FusedCenterCaptureState : public AutoGradCaptureState {
+struct FusedGetConvexDiagonalSquaredCaptureState : public AutoGradCaptureState {
   std::vector<bool> requires_grad;
   float eps = 1e-8;
 };
 
-class FusedGetConvexDiagonalSquaredGrad : public OpExprGradFunction<FusedCenterCaptureState> {
+class FusedGetConvexDiagonalSquaredGrad
+    : public OpExprGradFunction<FusedGetConvexDiagonalSquaredCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -34,7 +35,7 @@ class FusedGetConvexDiagonalSquaredGrad : public OpExprGradFunction<FusedCenterC
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(FusedCenterCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedGetConvexDiagonalSquaredCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -48,8 +49,8 @@ class FusedGetConvexDiagonalSquaredGrad : public OpExprGradFunction<FusedCenterC
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedCenterCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const FusedGetConvexDiagonalSquaredCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& c2_diff = out_grads.at(0);
 

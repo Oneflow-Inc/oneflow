@@ -20,21 +20,6 @@ namespace oneflow {
 
 Maybe<void> FusedGetConvexDiagonalSquaredOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
-  const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
-  const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
-  const user_op::TensorDesc& b1_y2 = ctx->InputTensorDesc("b1_y2", 0);
-  const user_op::TensorDesc& b2_x1 = ctx->InputTensorDesc("b2_x1", 0);
-  const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
-  const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
-  const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_x2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_y1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_y2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_x1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_x2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y2.shape());
 
   user_op::TensorDesc* c2 = ctx->MutOutputTensorDesc("c2", 0);
   c2->set_is_dynamic(b1_x1.is_dynamic());
@@ -49,21 +34,6 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::InferPhysicalTensorDesc(user_op::In
 
 Maybe<void> FusedGetConvexDiagonalSquaredOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
-  const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
-  const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
-  const user_op::TensorDesc& b1_y2 = ctx->InputTensorDesc("b1_y2", 0);
-  const user_op::TensorDesc& b2_x1 = ctx->InputTensorDesc("b2_x1", 0);
-  const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
-  const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
-  const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
 
   user_op::TensorDesc* c2 = ctx->MutOutputTensorDesc("c2", 0);
   c2->set_data_type(b1_x1.data_type());
@@ -76,10 +46,10 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::GetSbp(user_op::SbpContext* ctx) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("b1_x1", 0), i)
         .Split(user_op::OpArg("b1_x2", 0), i)
-        .Split(user_op::OpArg("b1_y1", 0), i)
-        .Split(user_op::OpArg("b1_y2", 0), i)
         .Split(user_op::OpArg("b2_x1", 0), i)
         .Split(user_op::OpArg("b2_x2", 0), i)
+        .Split(user_op::OpArg("b1_y1", 0), i)
+        .Split(user_op::OpArg("b1_y2", 0), i)
         .Split(user_op::OpArg("b2_y1", 0), i)
         .Split(user_op::OpArg("b2_y2", 0), i)
         .Split(user_op::OpArg("c2", 0), i)
@@ -90,24 +60,7 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::GetSbp(user_op::SbpContext* ctx) {
 
 Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  const user_op::TensorDesc& c2_diff = ctx->InputTensorDesc("c2_diff", 0);
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
-  const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
-  const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
-  const user_op::TensorDesc& b1_y2 = ctx->InputTensorDesc("b1_y2", 0);
-  const user_op::TensorDesc& b2_x1 = ctx->InputTensorDesc("b2_x1", 0);
-  const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
-  const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
-  const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_x2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_y1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_y2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_x1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_x2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y1.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), c2_diff.shape());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_is_dynamic(b1_x1.is_dynamic());
@@ -150,24 +103,7 @@ Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferPhysicalTensorDesc(
 }
 
 Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& c2_diff = ctx->InputTensorDesc("c2_diff", 0);
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
-  const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
-  const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
-  const user_op::TensorDesc& b1_y2 = ctx->InputTensorDesc("b1_y2", 0);
-  const user_op::TensorDesc& b2_x1 = ctx->InputTensorDesc("b2_x1", 0);
-  const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
-  const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
-  const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), c2_diff.data_type());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_data_type(b1_x1.data_type());
@@ -203,18 +139,18 @@ Maybe<void> FusedGetConvexDiagonalSquaredGradOp::GetSbp(user_op::SbpContext* ctx
         .Split(user_op::OpArg("c2_diff", 0), i)
         .Split(user_op::OpArg("b1_x1", 0), i)
         .Split(user_op::OpArg("b1_x2", 0), i)
-        .Split(user_op::OpArg("b1_y1", 0), i)
-        .Split(user_op::OpArg("b1_y2", 0), i)
         .Split(user_op::OpArg("b2_x1", 0), i)
         .Split(user_op::OpArg("b2_x2", 0), i)
+        .Split(user_op::OpArg("b1_y1", 0), i)
+        .Split(user_op::OpArg("b1_y2", 0), i)
         .Split(user_op::OpArg("b2_y1", 0), i)
         .Split(user_op::OpArg("b2_y2", 0), i)
         .Split(user_op::OpArg("b1_x1_diff", 0), i)
         .Split(user_op::OpArg("b1_x2_diff", 0), i)
-        .Split(user_op::OpArg("b1_y1_diff", 0), i)
-        .Split(user_op::OpArg("b1_y2_diff", 0), i)
         .Split(user_op::OpArg("b2_x1_diff", 0), i)
         .Split(user_op::OpArg("b2_x2_diff", 0), i)
+        .Split(user_op::OpArg("b1_y1_diff", 0), i)
+        .Split(user_op::OpArg("b1_y2_diff", 0), i)
         .Split(user_op::OpArg("b2_y1_diff", 0), i)
         .Split(user_op::OpArg("b2_y2_diff", 0), i)
         .Build();

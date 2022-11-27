@@ -110,7 +110,7 @@ class FusedGetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_get_convex_diagonal_squared")            \
       .SetCreateFn<FusedGetConvexDiagonalSquaredKernel<dtype>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("c2", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(float)
 REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(double)
