@@ -349,7 +349,7 @@ class Optimizer(object):
             # the contiguous_params property is remained in state_dict,
             # so contiguous_params of state_dict and current optimizer should match.
             if (
-                param.get("contiguous_params", False)
+                "contiguous_params" in param and param["contiguous_params"]
                 != saved_param["_options"].get("contiguous_params", False)
             ):
                 raise ValueError(
