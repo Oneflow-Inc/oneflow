@@ -49,13 +49,12 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     return failure();
   }
 
-  Operation* job_op = nullptr;
-  auto find_first_job = [&](oneflow::Job job) -> WalkResult {
-    job_op = job.getOperation();
+  Operation* root = nullptr;
+  module.getOperation()->walk<WalkOrder::PreOrder>([&](oneflow::Job job) -> WalkResult {
+    root = job.getOperation();
     return WalkResult::interrupt();
-  };
-  module.getOperation()->walk(find_first_job);
-  if (!job_op) {
+  });
+  if (!root) {
     llvm::errs() << "Job not found in module: " << *module;
     return failure();
   }
