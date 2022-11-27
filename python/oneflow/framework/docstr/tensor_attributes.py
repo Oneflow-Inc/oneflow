@@ -92,6 +92,26 @@ oneflow.placement.__doc__ = r"""
         
     """
 
+oneflow.placement.all.__doc__ = r"""
+    oneflow.placement.all(device_type) -> oneflow.placement
+
+    Returns a placement that contains all available devices.
+
+    Args:
+        device_type (str): cuda or cpu
+
+    For examples:
+
+    .. code-block:: python
+
+        # Runs on 4 ranks
+        import oneflow as flow
+
+        p = flow.placement.all("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
+        p = flow.placement.all("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
+
+    """
+
 oneflow.sbp.sbp.__doc__ = r"""
     A ``oneflow.sbp`` is an object representing that how the data of the global tensor is distributed across the ranks of the ``Tensor`` placement.
 
