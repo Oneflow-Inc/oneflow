@@ -240,7 +240,12 @@ class Optimizer(object):
         self._parse_input_parameters(parameters)
 
         self.step = _decorate_step(self.step)
-        self._state_not_saved = ["_contiguous_parameters", "_parameters", "params_dict", "contiguous_params",]
+        self._state_not_saved = [
+            "_contiguous_parameters",
+            "_parameters",
+            "params_dict",
+            "contiguous_params",
+        ]
 
     def add_param_group(self, param_group) -> None:
         r"""
