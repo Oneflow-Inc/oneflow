@@ -64,12 +64,12 @@ __global__ void FusedGetConvexDiagonalSquaredBackward(
     const T c2_diff_ch = static_cast<T>(2) * ch * c2_diff[i];
     b1_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? static_cast<T>(1) : static_cast<T>(0));
     b2_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? static_cast<T>(0) : static_cast<T>(1));
-    b1_x1_diff[i] = -c2_diff_cw * (b1_x1[i] > b2_x1[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_x1_diff[i] = -c2_diff_cw * (b1_x1[i] > b2_x1[i] ? static_cast<T>(0) : static_cast<T>(1));
+    b1_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? static_cast<T>(1) : static_cast<T>(0));
+    b2_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? static_cast<T>(0) : static_cast<T>(1));
     b1_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? static_cast<T>(1) : static_cast<T>(0));
     b2_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? static_cast<T>(0) : static_cast<T>(1));
-    b1_y1_diff[i] = -c2_diff_ch * (b1_y1[i] > b2_y1[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_y1_diff[i] = -c2_diff_ch * (b1_y1[i] > b2_y1[i] ? static_cast<T>(0) : static_cast<T>(1));
+    b1_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? static_cast<T>(1) : static_cast<T>(0));
+    b2_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? static_cast<T>(0) : static_cast<T>(1));
   }
 }
 
