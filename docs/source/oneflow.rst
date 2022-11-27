@@ -376,6 +376,8 @@ Other Ops
     cast
     cumprod 
     cumsum 
+    cummax
+    cummin
     decode_onerec
     diag 
     diagonal 

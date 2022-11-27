@@ -1846,6 +1846,67 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.cummax,
+    """oneflow.cummax(input, dim) -> Tensor
+
+    Returns a tuple (values, indices) where values is the cumulative maximum of elements of input in the dimension dim.
+    And indices is the index location of each maximum value found in the dimension dim.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.cummax.html
+
+    Args:
+        input (Tensor):  the input tensor.
+        dim (int):  the dimension to do cummax whose valid range is [-N, N-1), and the N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cummax result.
+
+    For example:
+
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> input = flow.tensor([1, 2, 1])
+        >>> flow.cummax(input, dim=0)
+        (tensor([1, 2, 2], dtype=oneflow.int64), tensor([0, 1, 1], dtype=oneflow.int64))
+        >>> y = flow.cummax(input, dim=0)
+        >>> y[0]
+        tensor([1, 2, 2], dtype=oneflow.int64)
+        >>> y[1]
+        tensor([0, 1, 1], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.cummin,
+    """oneflow.cummin(input, dim) -> Tensor
+
+    Returns a tuple (values, indices) where values is the cumulative minimum of elements of input in the dimension dim.
+    And indices is the index location of each minimum value found in the dimension dim.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.cummin.html
+
+    Args:
+        input (Tensor):  the input tensor.
+        dim (int):  the dimension to do cummin whose valid range is [-N, N-1), and the N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cummin result.
+
+    For example:
+
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> input = flow.tensor([1, 2, 1])
+        >>> y = flow.cummin(input, dim=0)
+        >>> y[0]
+        tensor([1, 1, 1], dtype=oneflow.int64)
+        >>> y[1]
+        tensor([0, 0, 2], dtype=oneflow.int64)
+    """,
+)
 
 add_docstr(
     oneflow.trunc,

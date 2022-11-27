@@ -212,6 +212,8 @@ Tensor class reference
     Tensor.cuda
     Tensor.cumprod
     Tensor.cumsum
+    Tensor.cummax
+    Tensor.cummin
     Tensor.data
     Tensor.dot
     Tensor.detach

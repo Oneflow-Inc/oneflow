@@ -2417,3 +2417,17 @@ add_docstr(
     See :func:`oneflow.broadcast_to`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.cummax,
+    """
+    See :func:`oneflow.cummax`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cummin,
+    """
+    See :func:`oneflow.cummin`
+    """,
+)
