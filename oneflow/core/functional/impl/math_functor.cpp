@@ -3526,11 +3526,11 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   }
 
   Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& b1_x1, const std::shared_ptr<one::Tensor>& b1_x2,
-      const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
-      const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
-      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2,
-      const std::shared_ptr<one::Tensor>& c2_diff, const float& eps) const {
+      const std::shared_ptr<one::Tensor>& c2_diff, const std::shared_ptr<one::Tensor>& b1_x1,
+      const std::shared_ptr<one::Tensor>& b1_x2, const std::shared_ptr<one::Tensor>& b2_x1,
+      const std::shared_ptr<one::Tensor>& b2_x2, const std::shared_ptr<one::Tensor>& b1_y1,
+      const std::shared_ptr<one::Tensor>& b1_y2, const std::shared_ptr<one::Tensor>& b2_y1,
+      const std::shared_ptr<one::Tensor>& b2_y2, const float& eps) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
     attrs.SetAllAttrs(eps);
     return OpInterpUtil::Dispatch<TensorTuple>(

@@ -25,11 +25,14 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def torch_fused_get_convex_diagonal_squared(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, eps):
+def torch_fused_get_convex_diagonal_squared(
+    b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, eps
+):
     cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)
     ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)
     c2 = cw ** 2 + ch ** 2 + eps
     return c2
+
 
 def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
     def compare(a, b, rtol=1e-5, atol=1e-5):
@@ -100,7 +103,7 @@ def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
         torch_b1_y2,
         torch_b2_y1,
         torch_b2_y2,
-        eps
+        eps,
     )
     compare(c2, torch_c2)
 
