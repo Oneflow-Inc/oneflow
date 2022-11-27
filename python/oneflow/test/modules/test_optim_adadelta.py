@@ -210,7 +210,7 @@ class TestAdadelta(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["contigusou_params"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adadelta(test_case, *arg)
@@ -231,7 +231,7 @@ class TestAdadelta(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["contigusou_params"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adadelta_clip_grad(test_case, *arg)

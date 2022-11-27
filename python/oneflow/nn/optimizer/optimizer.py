@@ -51,7 +51,6 @@ class ParamGroup(object):
         self,
         parameters: Dict[str, Any],
         default_options: Dict,
-        contiguous_params: bool = False,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or ProxyTensor], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
@@ -68,14 +67,7 @@ class ParamGroup(object):
                 raise ValueError(
                     "parameters in ParamGroup must be Tensor or ProxyTensor."
                 )
-
-        self.contiguous_params = contiguous_params
-        if self.contiguous_params:
-            self.params_dict = dict()
-            self._contiguous_parameters = list()
-            self.data_ptrs = []
-            self._make_contiguous_params(parameters)
-
+        
         self._options = deepcopy(default_options)
         # rewrite options in default_options
         for key in self._options:
@@ -91,6 +83,14 @@ class ParamGroup(object):
             self._enable_clip_grad = True
             self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
+
+        self._make_options_valid()
+        self.contiguous_params = self._options.get('contiguous_params', False)
+        if self.contiguous_params:
+            self.params_dict = dict()
+            self._contiguous_parameters = list()
+            self.data_ptrs = []
+            self._make_contiguous_params(parameters)
 
     def _make_contiguous_params(self, parameters):
         def numel_in_bucket(tensor: flow.Tensor):
@@ -149,6 +149,17 @@ class ParamGroup(object):
             if id(param) != data_ptr:
                 return False
         return True
+
+    def _make_options_valid(self):
+        """handle the conflict between optimizer options
+        """
+        if self._options.get("contiguous_params", False) and self._options.get("fused", False):
+            self._options["fused"] = False
+
+            warnings.warn(
+                "do not set contiguous_params and fused at the same time, "
+                "now only contiguous_params is set."
+            )
 
     def __getitem__(self, key):
         return self._options[key]
@@ -221,20 +232,16 @@ required = _RequiredParameter()
 
 class Optimizer(object):
     def __init__(self, parameters, options):
-        self._make_options_valid(options)
-
         self.param_groups = list()
         self._default_options = options
         self._state = dict()
         self._state["step"] = 0
 
-        self._parse_input_parameters(
-            parameters, options.get("contiguous_params", False)
-        )
+        self._parse_input_parameters(parameters)
 
         self.step = _decorate_step(self.step)
 
-    def add_param_group(self, param_group, contiguous_params=False) -> None:
+    def add_param_group(self, param_group) -> None:
         r"""
         
         Add a param group to the :class:`Optimizer` s `param_groups`.
@@ -310,9 +317,7 @@ class Optimizer(object):
         if not param_set.isdisjoint(set(param_group["params"])):
             raise ValueError("some parameters appear in more than one parameter group")
 
-        self.param_groups.append(
-            ParamGroup(param_group, self._default_options, contiguous_params)
-        )
+        self.param_groups.append(ParamGroup(param_group, self._default_options))
 
         for param in param_group["params"]:
             assert param.is_leaf, "parameters must be leaf tensor"
@@ -508,7 +513,7 @@ class Optimizer(object):
             for param in param_group.parameters:
                 param._zero_grad_(set_to_none)
 
-    def _parse_input_parameters(self, parameters, contiguous_params):
+    def _parse_input_parameters(self, parameters):
         """
         Supports such parameters:
             1. Iterator: flow.optim.SGD(module.parameters(), lr=0.1)
@@ -518,26 +523,18 @@ class Optimizer(object):
         if isinstance(parameters, collections.abc.Iterator):
             # Iterator
             self.param_groups.append(
-                ParamGroup(
-                    {"params": list(parameters)},
-                    self._default_options,
-                    contiguous_params,
-                )
+                ParamGroup({"params": list(parameters)}, self._default_options)
             )
         elif isinstance(parameters, collections.abc.Iterable):
             # List[Dict]
             if isinstance(parameters[0], dict):
                 for param in parameters:
                     assert isinstance(param, dict)
-                    self.param_groups.append(
-                        ParamGroup(param, self._default_options, contiguous_params)
-                    )
+                    self.param_groups.append(ParamGroup(param, self._default_options))
             # List[Parameter or Tensor]
             else:
                 self.param_groups.append(
-                    ParamGroup(
-                        {"params": parameters}, self._default_options, contiguous_params
-                    )
+                    ParamGroup({"params": parameters}, self._default_options)
                 )
         else:
             raise TypeError(
@@ -608,17 +605,6 @@ class Optimizer(object):
                 sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
                 sparse_variable_op_names = sparse_opt_conf.include_op_names
                 sparse_variable_op_names.op_name.append(vars_conf[param].name)
-
-    def _make_options_valid(self, options):
-        """handle the conflict between optimizer options
-        """
-        if options["contiguous_params"] and options.get("fused", False):
-            options["fused"] = False
-
-            warnings.warn(
-                "do not set contiguous_params and fused at the same time, "
-                "now only contiguous_params is set."
-            )
 
     def check_contiguous_optim_valid(self):
         r"""

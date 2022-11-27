@@ -61,9 +61,9 @@ def compare_with_numpy_rmsprop(
                     "weight_decay": weight_decay,
                     "momentum": momentum,
                     "centered": centered,
+                    "contiguous_params": contiguous_params,
                 }
-            ],
-            contiguous_params=contiguous_params,
+            ]
         )
 
         def train_one_iter(grad):
@@ -162,9 +162,9 @@ def compare_with_numpy_rmsprop_clip_grad(
                     "centered": centered,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
+                    "contiguous_params": contiguous_params,
                 }
-            ],
-            contiguous_params=contiguous_params,
+            ]
         )
 
         def train_one_iter(grad):
@@ -242,10 +242,11 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["centered"] = [False, True]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["contigusou_params"] = [False, True]
+        arg_dict["contiguous_params"] = [True, False]
         arg_dict["check_allclose"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
+            break
 
     def test_rmsprop_clip_grad(test_case):
         arg_dict = OrderedDict()
@@ -262,7 +263,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["contigusou_params"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
         arg_dict["check_allclose"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
