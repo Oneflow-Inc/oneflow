@@ -48,9 +48,7 @@ class ContiguousParamsUnit(object):
 
 class ParamGroup(object):
     def __init__(
-        self,
-        parameters: Dict[str, Any],
-        default_options: Dict,
+        self, parameters: Dict[str, Any], default_options: Dict,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or ProxyTensor], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
@@ -67,7 +65,7 @@ class ParamGroup(object):
                 raise ValueError(
                     "parameters in ParamGroup must be Tensor or ProxyTensor."
                 )
- 
+
         self._options = deepcopy(default_options)
         # rewrite options in default_options
         for key in self._options:
@@ -85,7 +83,7 @@ class ParamGroup(object):
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
         self._make_options_valid()
-        self.contiguous_params = self._options.get('contiguous_params', False)
+        self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
             self.params_dict = dict()
             self._contiguous_parameters = list()
@@ -153,7 +151,9 @@ class ParamGroup(object):
     def _make_options_valid(self):
         """handle the conflict between optimizer options
         """
-        if self._options.get("contiguous_params", False) and self._options.get("fused", False):
+        if self._options.get("contiguous_params", False) and self._options.get(
+            "fused", False
+        ):
             self._options["fused"] = False
 
             warnings.warn(

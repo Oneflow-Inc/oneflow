@@ -142,7 +142,7 @@ def compare_with_numpy_adagrad_clip_grad(
             ],
             lr_decay=lr_decay,
             initial_accumulator_value=initial_accumulator_value,
-            contiguous_params=contiguous_params
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
