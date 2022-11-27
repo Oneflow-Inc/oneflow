@@ -42,7 +42,7 @@ int64_t CountSpecifiedDims(const TensorIndex& index) {
       specified_ndims++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
+      if (IsMaskTensor(tensor)) {
         specified_ndims += tensor->ndim();
       } else {
         specified_ndims++;
@@ -246,6 +246,11 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
 }
 
 }  // namespace
+
+bool IsMaskTensor(const std::shared_ptr<Tensor>& tensor) {
+  return tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+         || tensor->dtype() == DType::Bool();
+}
 
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
@@ -525,11 +530,11 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
       << Error::IndexError() << "Index out of range (expected to be in range of [" << -size << ","
       << size - 1 << "], but got " << index << ")";
   int32_t pos_index = index >= 0 ? index : index + size;
-  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
+  std::vector<int64_t> sizes(input->shape()->dim_vec().begin() + 1,
                              input->shape()->dim_vec().end());
   const auto& stride = *JUST(input->stride());
-  const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
-  std::vector<int32_t> strides(stride.begin() + 1, stride.end());
+  const int64_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
+  std::vector<int64_t> strides(stride.begin() + 1, stride.end());
   return functional::AsStrided(input, sizes, strides, storage_offset);
 }
 
@@ -558,6 +563,8 @@ Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index = tensor_indices[i];
       if (tensor_index == nullptr) { continue; }
       if (tensor_index->is_local()) {
+        // NOTE: LocalToGlobal should be called in eager mode
+        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
         tensor_indices[i] = JUST(ToGlobal(tensor_index, placement,
                                           std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
                                           grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
