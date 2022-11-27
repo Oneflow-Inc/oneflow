@@ -342,7 +342,10 @@ class Optimizer(object):
         for param, saved_param in zip(groups, saved_groups):
             # the contiguous_params property is remained in state_dict,
             # so contiguous_params of state_dict and current optimizer should match.
-            if param["contiguous_params"] != saved_param["_options"]["contiguous_params"]:
+            if (
+                param["contiguous_params"]
+                != saved_param["_options"]["contiguous_params"]
+            ):
                 raise ValueError(
                     "loaded contiguous_params state doesn't match the optimizer"
                 )
@@ -351,7 +354,7 @@ class Optimizer(object):
                 raise ValueError(
                     "loaded state dict contains a parameter group "
                     "that doesn't match the size of optimizer's group"
-                ) 
+                )
 
         # Update the state
         id_map = {
@@ -426,7 +429,13 @@ class Optimizer(object):
             packed = {
                 k: v
                 for k, v in group.items()
-                if k not in ["_contiguous_parameters", "_parameters", "params_dict", "contiguous_params"]
+                if k
+                not in [
+                    "_contiguous_parameters",
+                    "_parameters",
+                    "params_dict",
+                    "contiguous_params",
+                ]
             }
             param_mappings.update(
                 {
