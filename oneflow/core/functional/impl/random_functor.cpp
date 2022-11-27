@@ -201,8 +201,7 @@ class RandFunctor {
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
-          && dtype_val != DataType::kFloat16) {
+      if (!JUST(dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
@@ -314,14 +313,12 @@ class NormalFunctor {
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    Symbol<DType> dtype = DType::Float();
-    DataType dtype_val = GetDefaultDType()->data_type();
-
+    Symbol<DType> dtype = GetDefaultDType();
     if (optional_dtype.has_value()) {
-      dtype_val = JUST(optional_dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+      if (!JUST(optional_dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
+      dtype = JUST(optional_dtype);
     }
     Symbol<Device> device = JUST(Device::New("cpu"));
     if (optional_device.has_value()) { device = JUST(optional_device); }
@@ -345,8 +342,8 @@ class NormalFunctor {
     }
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
-    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape, dtype_val,
-                      static_cast<int64_t>(gen->current_seed()));
+    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
+                      dtype->data_type(), static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
@@ -394,10 +391,10 @@ class GlobalNormalFunctor {
 
     Symbol<DType> dtype = DType::Float();
     if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+      if (!JUST(optional_dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
+      dtype = JUST(optional_dtype);
     }
 
     if (out.has_value()) {
