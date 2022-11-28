@@ -61,18 +61,25 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   return success();
 }
 
-}  // namespace
+size_t getResultSize(DictionaryAttr attributes) {
+  const StringRef attr_name = OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr();
+  const DenseIntElementsAttr& size_attr =
+      attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>();
+  CHECK(size_attr) << "Attr " << attr_name.str() << " is not found or not DenseIntElementsAttr";
+  auto size = 0;
+  for (auto s : size_attr.getValues<int32_t>()) { size += s; }
+  return size;
+}
 
-::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
-    ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+::mlir::LogicalResult inferReturnTypesWithOpTypeName(
+    llvm::StringRef op_type_name, ::mlir::MLIRContext* context, ::mlir::ValueRange operands,
+    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   ::oneflow::OperatorConf op_conf{};
-  const auto op_type_name = "normalization_add_relu";
   CHECK(ConvertUserOp(op_type_name, op_conf, operands, attributes).succeeded());
   std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   auto operand_ids =
-      user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands, attributes);
+      user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands.size(), attributes);
   auto operand_index = 0;
   for (const auto& idOperand : llvm::zip(operand_ids, operands)) {
     const auto& arg_name = std::get<0>(idOperand).first;
@@ -83,15 +90,16 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
   }
-  static auto MAX_OUTPUT_NUM_PER_BN = 1;
-  for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
-    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
-      auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
-      auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
-      lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
-      (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
-          ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
-    }
+  auto result_ids = user_op::ArgIds<OpTrait::AttrSizedResultSegments>(
+      op_type_name, getResultSize(attributes), attributes);
+  for (const auto& result_id : result_ids) {
+    const auto& arg_name = result_id.first;
+    const auto& arg_id = result_id.second;
+    const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
+    auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
+    lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
+    (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
+        ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
   }
   auto op = CHECK_JUST(ConstructOp(op_conf, user_op::getDeviceTypeFromAttrDictionary(attributes)));
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
@@ -103,14 +111,24 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
   op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
-  for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
-    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
-      const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
-      const auto* desc = lbi2logical_blob_desc_.at(bn).get();
-      if (auto t = getTensorTypeFromBlobDesc(context, desc)) { inferredReturnTypes.push_back(t); }
-    }
+  for (const auto& result_id : result_ids) {
+    const auto& arg_name = result_id.first;
+    const auto& arg_id = result_id.second;
+    const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
+    const auto* desc = lbi2logical_blob_desc_.at(bn).get();
+    if (auto t = getTensorTypeFromBlobDesc(context, desc)) { inferredReturnTypes.push_back(t); }
   }
   return success();
+}
+
+}  // namespace
+
+::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
+    ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
+  return inferReturnTypesWithOpTypeName("normalization_add_relu", context, operands, attributes,
+                                        regions, inferredReturnTypes);
 }
 
 }  // namespace oneflow

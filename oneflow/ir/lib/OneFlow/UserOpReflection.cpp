@@ -188,7 +188,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
 }
 
 template<template<typename T> class Trait>
-LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, ValueRange values,
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, size_t valueSize,
                                             DictionaryAttr attributes,
                                             std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
@@ -207,7 +207,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, ValueR
     full_sizes = {segment_sizes.begin(), segment_sizes.end()};
   } else {
     if (full_keys.size() == 1) {
-      full_sizes.push_back(values.size());
+      full_sizes.push_back(valueSize);
     } else {
       LOG(FATAL) << "set attr: " << attr_name.str();
     }
@@ -228,7 +228,10 @@ template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSe
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
     Operation* op, std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-    llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes,
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes,
+    std::vector<std::string>& keys, std::vector<int32_t>& sizes);
+template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes,
     std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 
 template<template<typename T> class Trait>
@@ -249,12 +252,11 @@ ArgIds<Trait>::ArgIds(Operation* op) {
 }
 
 template<template<typename T> class Trait>
-ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, ValueRange operands,
-                      DictionaryAttr attributes) {
+ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  CHECK(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-            op_type_name, operands, attributes, keys, sizes)
+  CHECK(user_op::GetFilteredSegmentKeyAndSizes<Trait>(op_type_name, valueSize, attributes, keys,
+                                                      sizes)
             .succeeded());
   for (int i = 0; i < keys.size(); i += 1) {
     auto& key = keys[i];
@@ -268,7 +270,9 @@ ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, ValueRange operands,
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(Operation*);
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(Operation*);
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(
-    llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes);
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
+template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
 
 llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   const auto def_op = result.getDefiningOp();

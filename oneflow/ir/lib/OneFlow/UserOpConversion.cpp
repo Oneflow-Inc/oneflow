@@ -164,7 +164,7 @@ LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange o
     std::vector<std::string> keys{};
     std::vector<int32_t> sizes{};
     if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-            op_type_name, operands, attributes, keys, sizes))) {
+            op_type_name, operands.size(), attributes, keys, sizes))) {
       LOG(FATAL) << "fail to get filtered segment key and sizes";
       return failure();
     }
@@ -203,7 +203,7 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
   CHECK(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-            op_type_name, operands, attributes, keys, sizes)
+            op_type_name, operands.size(), attributes, keys, sizes)
             .succeeded());
   int32_t input_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {

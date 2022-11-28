@@ -27,7 +27,7 @@ template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
 template<template<typename T> class Trait>
-LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, ValueRange values,
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, size_t valueSize,
                                             DictionaryAttr attributes,
                                             std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
@@ -38,7 +38,7 @@ template<template<typename T> class Trait>
 class ArgIds {
  public:
   explicit ArgIds(Operation* op);
-  explicit ArgIds(llvm::StringRef op_type_name, ValueRange operands, DictionaryAttr attributes);
+  explicit ArgIds(llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
   std::vector<ArgID>::const_iterator begin() const { return ids_.begin(); }
   std::vector<ArgID>::const_iterator end() const { return ids_.end(); }
 
