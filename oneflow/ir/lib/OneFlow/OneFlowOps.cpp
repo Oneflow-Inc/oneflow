@@ -16,7 +16,6 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "OneFlow/Passes.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
 #include "llvm/ADT/StringRef.h"
