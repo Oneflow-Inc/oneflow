@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
 
@@ -90,6 +91,26 @@ __global__ void InitPtrAndApplyBias(Param<T> p, void** ptr_arr) {
   }
 }
 
+union CublasScalarParameter {
+  double d;
+  float s;
+  half h;
+};
+
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
+  CublasScalarParameter sp{};
+  if (compute_type == CUDA_R_64F) {
+    sp.d = scalar.Value<double>();
+  } else if (compute_type == CUDA_R_32F) {
+    sp.s = scalar.Value<float>();
+  } else if (compute_type == CUDA_R_16F) {
+    sp.h = static_cast<half>(scalar.Value<float>());
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sp;
+}
+
 template<typename T>
 void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_biases,
                 void* workspace, ep::Stream* stream) {
@@ -106,17 +127,25 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   cudaDataType_t compute_type{};
   if (std::is_same<T, half>::value) {
     data_type = CUDA_R_16F;
-    compute_type = CUDA_R_32F;
+    const static bool allow_half_accumulation =
+        ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+    if (allow_half_accumulation) {
+      compute_type = CUDA_R_16F;
+    } else {
+      compute_type = CUDA_R_32F;
+    }
   } else if (std::is_same<T, float>::value) {
     data_type = CUDA_R_32F;
     compute_type = CUDA_R_32F;
   } else {
     UNIMPLEMENTED();
   }
+  auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
+  auto sp_beta = GetCublasScalarParameter(beta, compute_type);
   OF_CUBLAS_CHECK(cublasGemmBatchedEx(
       stream->As<ep::CudaStream>()->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, problem.n, problem.m,
-      problem.k, &alpha, ptr_arr + kMaxProblemBatch, data_type, problem.k, ptr_arr, data_type,
-      problem.k, &beta, ptr_arr + 2 * kMaxProblemBatch, data_type, problem.n, params.n,
+      problem.k, &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, problem.k, ptr_arr, data_type,
+      problem.k, &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, problem.n, params.n,
       compute_type, CUBLAS_GEMM_DEFAULT));
 }
 

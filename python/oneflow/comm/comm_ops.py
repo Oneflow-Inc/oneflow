@@ -153,7 +153,7 @@ def broadcast(tensor, src):
     assert isinstance(src, int)
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
-    flow._C.broadcast(tensor, src_rank=src, inplace=True)
+    flow._C.comm_broadcast(tensor, src_rank=src, inplace=True)
 
 
 def scatter(tensor, scatter_list=None, src=0):

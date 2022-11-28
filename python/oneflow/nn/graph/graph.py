@@ -48,6 +48,7 @@ from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
     operators_repr,
+    GraphIR,
     seq_to_func_return,
     sys_exc_error_msg,
 )
@@ -129,15 +130,7 @@ class Graph(object):
         self._is_compiled = False
         # Default is local view
         self._is_global_view = False
-        # forward graph job proto
-        self._forward_job_proto = None
-        # forward, backward and optimized graph job proto
-        self._full_job_proto = None
-        # completed graph job proto
-        self._compiled_job_proto = None
-        self._job_id = None
-        self._args_repr = []
-        self._outs_repr = []
+
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
@@ -150,6 +143,17 @@ class Graph(object):
         # For graph level op rewrite
         self._unique_global_op_dict = dict()
         self._unique_identity_op_dict = dict()
+
+        # forward graph job proto
+        self._forward_job_proto = None
+        # forward, backward and optimized graph job proto
+        self._full_job_proto = None
+        # completed graph job proto
+        self._compiled_job_proto = None
+        self._job_id = None
+        self._args_repr = []
+        self._outs_repr = []
+        self._oneflow_internal_graph_ir__ = None
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
@@ -566,9 +570,11 @@ class Graph(object):
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
+            if self._oneflow_internal_graph_ir__ is None:
+                self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
             return operators_repr(
                 module_conf.ops,
-                self._compiled_graph_proto,
+                self._oneflow_internal_graph_ir__,
                 self._debug_op_repr_with_py_stack,
             )
 
