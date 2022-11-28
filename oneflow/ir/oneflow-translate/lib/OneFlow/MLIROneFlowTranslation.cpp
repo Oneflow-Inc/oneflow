@@ -184,7 +184,7 @@ Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   job_wrapper_.QueryLogicalBlob(
       lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
                               ::oneflow::DataType dt) {
-        if (auto t = getTypeFromOneFlowDataType(dt)) {
+        if (auto t = getTypeFromOneFlowDataType(GetMLIRContext(), dt)) {
           ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t);
         } else {
           llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
@@ -767,7 +767,7 @@ LogicalResult JobImporter::ConvertOutputOp(OutputOp op, ::oneflow::Job& job) {
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
   if (!blob_conf.has_data_type()) { return Type{}; }
   if (!blob_conf.has_shape()) { return Type{}; };
-  if (auto data_type = getTypeFromOneFlowDataType(blob_conf.data_type())) {
+  if (auto data_type = getTypeFromOneFlowDataType(GetMLIRContext(), blob_conf.data_type())) {
     return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
                                  data_type);
   } else {
