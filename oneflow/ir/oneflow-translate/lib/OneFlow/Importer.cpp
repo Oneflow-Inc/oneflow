@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/UserOpConversion.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
@@ -177,18 +178,6 @@ ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
 ArrayAttr Importer::GetAttrFromStride(const ::oneflow::Int64ListProto& stride) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
       stride.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
-}
-
-void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-}
-
-void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
 }
 
 LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
@@ -550,7 +539,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 
   if (auto shape_attr =
           op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
-    WriteAttrToShape(shape_attr, var_op_conf->mutable_shape());
+    *var_op_conf->mutable_shape() = user_op::getAttrAsShape(shape_attr);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
@@ -620,7 +609,7 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
 
   if (auto shape_attr =
           op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
-    WriteAttrToShape(shape_attr, input_op_conf->mutable_blob_conf()->mutable_shape());
+    *input_op_conf->mutable_blob_conf()->mutable_shape() = user_op::getAttrAsShape(shape_attr);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
@@ -666,7 +655,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
 
   if (auto shape_attr =
           op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
-    WriteAttrToShape(shape_attr, output_op_conf->mutable_blob_conf()->mutable_shape());
+    *output_op_conf->mutable_blob_conf()->mutable_shape() = user_op::getAttrAsShape(shape_attr);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {

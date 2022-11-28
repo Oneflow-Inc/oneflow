@@ -27,18 +27,6 @@ namespace user_op {
 
 namespace {
 
-void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-}
-
-void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-}
-
 const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
   const ::oneflow::user_op::OpRegistryResult* val =
       ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
@@ -122,9 +110,9 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
       } else if (attr_type == ::oneflow::kAtString) {
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
-        WriteAttrToShape(attr, user_attr.mutable_at_shape());
+        *user_attr.mutable_at_shape() = getAttrAsShape(attr);
       } else if (attr_type == ::oneflow::kAtStride) {
-        WriteAttrToStride(attr, user_attr.mutable_at_stride());
+        *user_attr.mutable_at_stride() = getAttrAsStride(attr);
       } else if (attr_type == ::oneflow::kAtDataType) {
         const auto dt = support::FromMLIRAttrToOFDataType(attr);
         if (succeeded(dt)) {
@@ -165,12 +153,12 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
       } else if (attr_type == ::oneflow::kAtListShape) {
         for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          WriteAttrToShape(shape_attr, shape_ptr);
+          *shape_ptr = getAttrAsShape(shape_attr);
         }
       } else if (attr_type == ::oneflow::kAtListStride) {
         for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
-          WriteAttrToStride(stride_attr, stride_ptr);
+          *stride_ptr = getAttrAsStride(stride_attr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
@@ -200,6 +188,22 @@ LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange o
   //     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
   //   }
   return doConvertUserOpAttributes(op_type_name, attributes, op_conf);
+}
+
+::oneflow::ShapeProto getAttrAsShape(mlir::Attribute& attr) {
+  ::oneflow::ShapeProto shape{};
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+  return shape;
+}
+
+::oneflow::Int64ListProto getAttrAsStride(mlir::Attribute& attr) {
+  ::oneflow::Int64ListProto stride{};
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    stride.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+  return stride;
 }
 
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
