@@ -118,7 +118,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
       }
     }
   }
-  return failure();
+  return success();
 }
 
 }  // namespace oneflow
