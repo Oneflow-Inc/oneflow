@@ -37,9 +37,30 @@ namespace functional {
 
 namespace impl {
 
+namespace {
+
+bool IsCPUScalarTensor(const std::shared_ptr<Tensor>& tensor) {
+  return tensor->shape()->NumAxes() == 0
+         && TensorDeviceToString(tensor).find("cpu") != std::string::npos;
+}
+
+}  // namespace
+
 std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor) {
   if (tensor->is_global()) { return CHECK_JUST(tensor->parallel_desc())->device_tag(); }
   return CHECK_JUST(tensor->device())->ToString();
+}
+
+Maybe<void> CastDeviceForCPUScalarTensor(std::shared_ptr<Tensor>& tensor,
+                                         std::shared_ptr<Tensor>& other, bool inplace) {
+  if (TensorDeviceToString(tensor) != TensorDeviceToString(other)) {
+    if (IsCPUScalarTensor(other)) {
+      other = JUST(functional::To(other, TensorDeviceToString(tensor)));
+    } else if (!inplace && IsCPUScalarTensor(tensor)) {
+      tensor = JUST(functional::To(tensor, TensorDeviceToString(other)));
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 class AddFunctor {
@@ -54,12 +75,6 @@ class AddFunctor {
                            const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
     auto input_tensor = input;
-    if (IsScalarTensor(input)) {
-      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-      // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceToString(other);
-      input_tensor = JUST(functional::To(input, device_str));
-    }
     if (IsIntegralDataType(input_tensor->dtype()->data_type())
         && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
       return Error::RuntimeError()
@@ -108,6 +123,7 @@ class AddFunctor {
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& input_cast = input_vec[0];
     const std::shared_ptr<one::Tensor>& other_cast = input_vec[1];
+    JUST(CastDeviceForCPUScalarTensor(input_vec[0], input_vec[1], inplace));
 
     if (*input_cast->shape() == *other_cast->shape()) {
       op = add_op_.get();
@@ -171,14 +187,10 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     auto tensor_x = x;
-    if (IsScalarTensor(x)) {
-      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-      // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceToString(y);
-      tensor_x = JUST(functional::To(x, device_str));
-    }
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
     return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
