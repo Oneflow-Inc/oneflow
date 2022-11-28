@@ -109,8 +109,6 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
   op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
-  auto op_attribute = std::make_shared<::oneflow::OpAttribute>();
-  LOG(ERROR) << op_attribute->DebugString();
   for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
     for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
       const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
