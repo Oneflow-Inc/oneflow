@@ -1866,6 +1866,7 @@ add_docstr(
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> input = flow.tensor([1, 2, 1])
         >>> flow.cummax(input, dim=0)
@@ -1898,6 +1899,7 @@ add_docstr(
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> input = flow.tensor([1, 2, 1])
         >>> y = flow.cummin(input, dim=0)
