@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/cuda/layer_norm.cuh"
 #include <cub/cub.cuh>
 #include <cutlass/fast_math.h>
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -76,6 +77,7 @@ struct AffineStore {
 
 template<typename SRC, typename DST, bool affine>
 struct ScaleLoad {
+  using LoadType = DST;
   ScaleLoad(const SRC* src, const SRC* gamma, int64_t row_size, int64_t channel_size,
             int64_t spatial_size)
       : src(src),
@@ -167,6 +169,7 @@ struct ChannelsLastStore {
 
 template<typename SRC, typename DST>
 struct ChannelsLastLoad {
+  using LoadType = DST;
   ChannelsLastLoad(const SRC* src, int64_t spatial_size, int64_t channel_size, int64_t num_groups)
       : src(src), spatial_size(spatial_size), c0(num_groups), c1(channel_size / num_groups) {}
   template<int N>
@@ -201,7 +204,7 @@ void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
                          user_op::Tensor* inv_variance, bool channels_first) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (channels_first) {
-    cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
+    cuda::layer_norm::DirectLoad<T, T> load(x_ptr, norm_size);
     AffineStore<ComputeType, T, activation, affine> store(y_ptr, norm_size, channel_size,
                                                           spatial_size, gamma_ptr, beta_ptr);
 
@@ -209,8 +212,8 @@ void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
         stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
         mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
   } else {
-    ChannelsLastLoad<T, ComputeType> load(x_ptr, spatial_size, channel_size,
-                                          channel_size / (norm_size / spatial_size));
+    ChannelsLastLoad<T, T> load(x_ptr, spatial_size, channel_size,
+                                channel_size / (norm_size / spatial_size));
     ChannelsLastStore<ComputeType, T, activation, affine> store(
         y_ptr, gamma_ptr, beta_ptr, spatial_size, channel_size,
         channel_size / (norm_size / spatial_size));
@@ -292,7 +295,7 @@ void LaunchGroupNormBackward(ep::Stream* stream, const int64_t num_instances,
 }  // namespace
 
 template<typename T>
-class GroupNormGpuKernel final : public user_op::OpKernel {
+class GroupNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GroupNormGpuKernel() = default;
   ~GroupNormGpuKernel() = default;

@@ -76,6 +76,7 @@ struct AffineStore {
 
 template<typename SRC, typename DST, bool do_scale>
 struct ScaleLoad {
+  using LoadType = DST;
   ScaleLoad(const SRC* src, const SRC* gamma, int64_t row_size)
       : src(src), gamma(gamma), row_size(row_size) {}
   template<int N>
