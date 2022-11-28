@@ -117,9 +117,9 @@ class FusedWeightedSumKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_FUSED_WEIGHT_SUM_KERNEL(data_type, cpp_type)         \
-  REGISTER_USER_KERNEL("fused_weighted_sum")                          \
-      .SetCreateFn<FusedWeightedSumKernel<cpp_type>>()                \
+#define REGISTER_FUSED_WEIGHT_SUM_KERNEL(data_type, cpp_type)          \
+  REGISTER_USER_KERNEL("fused_weighted_sum")                           \
+      .SetCreateFn<FusedWeightedSumKernel<cpp_type>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == data_type))
 

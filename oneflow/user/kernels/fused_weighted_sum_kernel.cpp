@@ -47,15 +47,13 @@ class FusedWeightedSumKernel final : public user_op::OpKernel {
     }
     T* out_ptr = out->mut_dptr<T>();
     auto* cpu_stream = ctx->stream()->As<ep::CpuStream>();
-    cpu_stream->ParallelFor(0, shape.elem_cnt(), [&](int64_t s, int64_t e){
-		    for(int64_t i = s; i < e; ++i) {
-		        T out = static_cast<T>(0.0);
-			for(int j = 0; j < arity; ++j) {
-			out += inputs[j][i] * static_cast<T>(weights[j]);
-			}
-			out_ptr[i] = out * static_cast<T>(alpha);
-		    }
-		    });
+    cpu_stream->ParallelFor(0, shape.elem_cnt(), [&](int64_t s, int64_t e) {
+      for (int64_t i = s; i < e; ++i) {
+        T out = static_cast<T>(0.0);
+        for (int j = 0; j < arity; ++j) { out += inputs[j][i] * static_cast<T>(weights[j]); }
+        out_ptr[i] = out * static_cast<T>(alpha);
+      }
+    });
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -63,9 +61,9 @@ class FusedWeightedSumKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_FUSED_WEIGHT_SUM_KERNEL(data_type, cpp_type)          \
-  REGISTER_USER_KERNEL("fused_weighted_sum")                           \
-      .SetCreateFn<FusedWeightedSumKernel<cpp_type>>()                 \
+#define REGISTER_FUSED_WEIGHT_SUM_KERNEL(data_type, cpp_type)         \
+  REGISTER_USER_KERNEL("fused_weighted_sum")                          \
+      .SetCreateFn<FusedWeightedSumKernel<cpp_type>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("out", 0) == data_type))
 
