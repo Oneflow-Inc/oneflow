@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.bias_add
+# CHECK-NOT: "oneflow.normalization_add_relu"
 
 import unittest
 import numpy as np
@@ -34,10 +34,15 @@ import oneflow.sysconfig
 
 
 def do_bias_add_gelu_graph(test_case, with_cuda):
-    def get_bn():
-        return flow.nn.FusedBatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to(
-            "cuda"
-        )
+    def get_bn(fused=True):
+        if fused:
+            return flow.nn.FusedBatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to(
+                "cuda"
+            )
+        else:
+            return flow.nn.BatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to(
+                "cuda"
+            )
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -47,12 +52,26 @@ def do_bias_add_gelu_graph(test_case, with_cuda):
         def build(self, x, addend):
             return self.m(x, addend=addend)
 
+    class GraphToRunWithOpt(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.m = get_bn(fused=False)
+
+        def build(self, x, addend):
+            return flow.relu(self.m(x) + addend)
+
     graph_to_run = GraphToRun()
+    graph_to_run_opt = GraphToRunWithOpt()
     x = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda")
     addend = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda")
-    eager_res = get_bn()(x, addend=addend)
+
+    eager_res = flow.relu(get_bn(fused=False)(x) + addend)
+    eager_res_fuse = get_bn()(x, addend=addend)
     lazy_res = graph_to_run(x, addend)
+    lazy_res_opt = graph_to_run_opt(x, addend)
+    test_case.assertTrue(np.array_equal(eager_res.numpy(), eager_res_fuse.numpy()))
     test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
+    test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res_opt.numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()
