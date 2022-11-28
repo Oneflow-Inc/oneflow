@@ -27,38 +27,38 @@ namespace oneflow {
 
 template<typename T>
 struct ZeroDist {
-  static inline T map(const T& diff, const T& p) { return diff == T(0) ? diff : T(1); }
-  static inline T reduce(const T& agg, const T& up) { return agg + up; }
-  static inline T finish(const T agg, const T p) { return agg; }
+  static inline T map(const T& diff, const double& p) { return diff == T(0) ? diff : T(1); }
+  static inline T reduce(const T& agg, const double& up) { return agg + up; }
+  static inline T finish(const T agg, const double p) { return agg; }
   // backward always return 0
 };
 
 template<typename T>
 struct OneDist {
-  static inline T map(const T& diff, const T& p) { return diff; }
-  static inline T reduce(const T& agg, const T& up) { return agg + up; }
-  static inline T finish(const T agg, const T p) { return agg; }
-  static inline T backward(const T& diff, const T grad, const T dist, const T& p) {
+  static inline T map(const T& diff, const double& p) { return diff; }
+  static inline T reduce(const T& agg, const double& up) { return agg + up; }
+  static inline T finish(const T agg, const double p) { return agg; }
+  static inline T backward(const T& diff, const T grad, const T dist, const double& p) {
     return grad * (diff > T(0) ? T(1) : T(-1));
   }
 };
 
 template<typename T>
 struct TwoDist {
-  static inline T map(const T& diff, const T& p) { return diff * diff; }
+  static inline T map(const T& diff, const double& p) { return diff * diff; }
   static inline T reduce(const T& agg, const T& up) { return agg + up; }
-  static inline T finish(const T agg, const T p) { return std::sqrt(agg); }
-  static inline T backward(const T& diff, const T grad, const T dist, const T& p) {
+  static inline T finish(const T agg, const double p) { return std::sqrt(agg); }
+  static inline T backward(const T& diff, const T grad, const T dist, const double& p) {
     return dist == 0.0 ? T(0) : grad * diff / dist;
   }
 };
 
 template<typename T>
 struct InfiDist {
-  static inline T map(const T& diff, const T& p) { return diff; }
+  static inline T map(const T& diff, const double& p) { return diff; }
   static inline T reduce(const T& agg, const T& up) { return std::max(agg, up); }
-  static inline T finish(const T agg, const T p) { return agg; }
-  static inline T backward(const T& diff, const T grad, const T dist, const T& p) {
+  static inline T finish(const T agg, const double p) { return agg; }
+  static inline T backward(const T& diff, const T grad, const T dist, const double& p) {
     return (T(1) - std::min(std::ceil(std::abs(std::abs(diff) - dist)), T(1))) * grad
            * (diff > T(0) ? T(1) : T(-1));
   }
@@ -66,10 +66,10 @@ struct InfiDist {
 
 template<typename T>
 struct PDist {
-  static inline T map(const T& diff, const T& p) { return std::pow(diff, p); }
+  static inline T map(const T& diff, const double& p) { return std::pow(diff, p); }
   static inline T reduce(const T& agg, const T& up) { return agg + up; }
-  static inline T finish(const T agg, const T p) { return std::pow(agg, 1.0 / p); }
-  static inline T backward(const T& diff, const T grad, const T dist, const T& p) {
+  static inline T finish(const T agg, const double p) { return std::pow(agg, 1.0 / p); }
+  static inline T backward(const T& diff, const T grad, const T dist, const double& p) {
     if (dist == 0.0) {
       return T(0);
     } else {

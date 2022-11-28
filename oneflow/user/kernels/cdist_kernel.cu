@@ -199,7 +199,7 @@ class CUDACDistKernel final : public user_op::OpKernel {
     const user_op::Tensor* x1 = ctx->Tensor4ArgNameAndIndex("x1", 0);
     const user_op::Tensor* x2 = ctx->Tensor4ArgNameAndIndex("x2", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    double p = ctx->Attr<double>("p");
+    const double p = ctx->Attr<double>("p");
     int64_t ndim = x1->shape_view().NumAxes();
     int64_t r1 = x1->shape_view().At(ndim - 2);
     int64_t r2 = x2->shape_view().At(ndim - 2);
