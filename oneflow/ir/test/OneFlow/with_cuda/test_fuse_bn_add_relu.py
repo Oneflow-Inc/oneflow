@@ -33,11 +33,11 @@ import oneflow.sysconfig
 def do_bias_add_gelu_graph(test_case, with_cuda):
     def get_bn(fused=True):
         if fused:
-            return flow.nn.FusedBatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to(
+            return flow.nn.FusedBatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(
                 "cuda"
             )
         else:
-            return flow.nn.BatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to(
+            return flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(
                 "cuda"
             )
 
@@ -59,8 +59,8 @@ def do_bias_add_gelu_graph(test_case, with_cuda):
 
     graph_to_run = GraphToRun()
     graph_to_run_opt = GraphToRunWithOpt()
-    x = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda")
-    addend = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda")
+    x = flow.Tensor(np.random.randn(4, 2, 8, 3)).to("cuda")
+    addend = flow.Tensor(np.random.randn(4, 2, 8, 3)).to("cuda")
 
     eager_res = flow.relu(get_bn(fused=False)(x) + addend)
     eager_res_fuse = get_bn()(x, addend=addend)
