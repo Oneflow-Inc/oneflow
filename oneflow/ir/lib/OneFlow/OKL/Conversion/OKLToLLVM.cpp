@@ -20,6 +20,7 @@ limitations under the License.
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -36,9 +37,6 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
-#include <string>
-#include <glog/logging.h>
-
 namespace mlir {
 namespace okl {
 
@@ -53,26 +51,13 @@ ModuleOp GetModuleOpFromJobBodyOp(T op) {
 LLVM::LLVMPointerType GetPtrType(::mlir::PatternRewriter& rewriter) {
   return LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
 }
-
 template<typename T>
 std::string FetchName() {
-  LOG(ERROR) << "Faile to get type name";
+  if (std::is_same<T, FetchKernelOp>::value) { return "oneflow_okl_fetch_kernel"; }
+  if (std::is_same<T, FetchRegContextOp>::value) { return "oneflow_okl_fetch_reg_ctx"; }
+  if (std::is_same<T, FetchRunContextOp>::value) { return "oneflow_okl_fetch_run_ctx"; }
+  llvm::errs() << "Faile to get type name";
   exit(1);
-}
-
-template<>
-std::string FetchName<FetchKernelOp>() {
-  return "oneflow_okl_fetch_kernel";
-}
-
-template<>
-std::string FetchName<FetchRegContextOp>() {
-  return "oneflow_okl_fetch_reg_ctx";
-}
-
-template<>
-std::string FetchName<FetchRunContextOp>() {
-  return "oneflow_okl_fetch_run_ctx";
 }
 
 template<typename T>
