@@ -53,19 +53,18 @@ __global__ void FusedGluForwardGpu(
     const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(
-        matmul_wx + (y_packed_row * packed_stride + y_packed_col) * pack_size);
-    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(
-        matmul_vx + (y_packed_row * packed_stride + y_packed_col) * pack_size);
-    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b + y_packed_col * pack_size);
-    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c + y_packed_col * pack_size);
+    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx) + (y_packed_row * packed_stride + y_packed_col);
+    const LoadPack* matmul_vx_load 
+      = reinterpret_cast<const LoadPack*>(matmul_vx) + (y_packed_row * packed_stride + y_packed_col);
+    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b) + y_packed_col;
+    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c) + y_packed_col;
 
     // init vectors
     LoadPack matmul_wx_vec = *matmul_wx_load;
     LoadPack matmul_vx_vec = *matmul_vx_load;
     LoadPack b_vec = *b_load;
     LoadPack c_vec = *c_load;
-    LoadPack y_store;
+    LoadPack y_vec;
 
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
@@ -77,9 +76,9 @@ __global__ void FusedGluForwardGpu(
       T act_gate = act(gate);
 
       // calculate element-wise product
-      y_store.elem[i] = hidden_state * act_gate;
+      y_vec.elem[i] = hidden_state * act_gate;
     }
-    *(reinterpret_cast<LoadPack*>(y + packed_index * pack_size)) = y_store;
+    *(reinterpret_cast<LoadPack*>(y + packed_index * pack_size)) = y_vec;
   }
 }
 
