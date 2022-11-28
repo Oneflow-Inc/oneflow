@@ -104,6 +104,40 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, bfloat16, bfloat16> 
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return std::trunc(src0 / src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const {
+    return std::trunc(src0 / src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, float16, float16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(std::trunc(static_cast<float>(src0) / static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::trunc(src0 / src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -227,6 +261,25 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst>
 };
 
 template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFastGeluBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    const Src one = static_cast<Src>(1);
+    const Src half = static_cast<Src>(0.5);
+    const Src pow3 = x * x * x;
+    const Src tanh_out = std::tanh(alpha * (x + beta * pow3));
+    const Src dtanh = alpha * (half * x + beta * static_cast<Src>(1.5) * pow3);
+    return dy * (half + half * tanh_out + dtanh * (one - tanh_out * tanh_out));
+  }
+
+ private:
+  static constexpr Src alpha = static_cast<Src>(0.7978845608028654);
+  static constexpr Src beta = static_cast<Src>(0.044714998453855515);
+};
+
+template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -300,12 +353,14 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst>
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, char);

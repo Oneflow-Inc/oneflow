@@ -119,13 +119,13 @@ class SbpNode final {
   // Compute the minimal available wait time for producers or upstream nodes
   void SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                            const std::vector<double>& acc_trunk_cost,
-                           const HashMap<std::string, SbpNode*>& op_name2sbp_node, double wait_time,
-                           double transfer_cost);
+                           const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                           double wait_time);
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
 
   // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector);
+  void InitializeCopyCost(bool use_sbp_collector);
 
  private:
   friend class SbpEdge;
@@ -185,7 +185,7 @@ class SbpNode final {
 
   // Evaluate summery of cost in 1-ring neighborhood.
   double EvalNbhCost() const;
-  // Drop down the maximum layer with the minimum layer form consumer
+  // Drop down the maximum layer with the minimum layer from consumer
   void DropMaxLayer(int32_t upper_bound);
   // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_trunk_cost);

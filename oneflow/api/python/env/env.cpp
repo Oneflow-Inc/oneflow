@@ -86,6 +86,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetLocalRank", &GetLocalRank);
   m.def("InitRDMA", &InitRDMA);
   m.def("RDMAIsInitialized", &RDMAIsInitialized);
+  m.def("DestoryRDMA", &DestoryRDMA);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
 #ifdef WITH_NPU
   m.def("NpuGetDeviceCount", &NpuGetDeviceCount);

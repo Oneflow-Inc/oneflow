@@ -34,6 +34,7 @@ enum class BinaryOp {
   kPow,
   kFmod,
   kFloorDiv,
+  kTruncDiv,
   kFloorMod,
   kScalarBasePowerGrad,
   kScalarExpPowerGrad,
@@ -44,6 +45,8 @@ enum class BinaryOp {
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
+  kIsClose,
+  kIsCloseEqualNan,
   // Logical
   kLogicalAnd,
   kLogicalOr,
@@ -94,6 +97,7 @@ enum class BinaryOp {
   kSqrtBackwardWithDyX,
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,
+  kFastGeluBackwardWithDyX,
 };
 
 }

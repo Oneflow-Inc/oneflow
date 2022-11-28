@@ -17,13 +17,16 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -44,6 +47,36 @@ bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
     return true;
   }
   return false;
+}
+
+static bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
+                                 const std::vector<int64_t>& strides) {
+  // reference: torch/csrc/autograd/FunctionsManual.cpp _maybe_overlapping_memory()
+  if (sizes.size() > 0) {
+    std::vector<std::size_t> argsort(sizes.size());
+    std::iota(argsort.begin(), argsort.end(), 0);
+    std::sort(argsort.begin(), argsort.end(),
+              [&](std::size_t i, std::size_t j) { return strides[i] < strides[j]; });
+    int64_t max_index_in_slice = 0;
+    for (auto i : argsort) {
+      auto stride_ = strides[i];
+      if (stride_ <= max_index_in_slice) { return true; }
+      max_index_in_slice += stride_ * (sizes[i] - 1);
+    }
+  }
+  return false;
+}
+
+static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
+                              const std::vector<int64_t>& strides, int64_t storage_offset) {
+  int64_t storage_size = storage_offset + 1;
+  int64_t ndim = sizes.size();
+  for (size_t i = 0; i < ndim; i++) {
+    auto size_i = sizes[i];
+    if (size_i == 0) { return storage_offset; }
+    storage_size += (size_i - 1) * strides[i];
+  }
+  return storage_size;
 }
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
@@ -365,12 +398,136 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   return output;
 }
 
-Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
-                        const std::vector<int32_t>& stride_vec, const int32_t& storage_offset) {
+Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
+                            const std::shared_ptr<one::Tensor>& input,
+                            const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                            const int64_t& storage_offset) {
+  CHECK_OR_RETURN(input->is_local()) << "input must be local tensor.";
+  // reference: torch/csrc/autograd/FunctionsManual.cpp
+  const size_t odim = dy->ndim();
+  std::vector<int64_t> out_sizes_, out_strides_;
+  out_sizes_.reserve(odim);
+  out_strides_.reserve(odim);
+  auto grad = dy;
+  for (int64_t i = odim - 1; i >= 0; i--) {
+    auto size_i = sizes[i];
+    auto stride_i = strides[i];
+    if (size_i == 0) {
+      return functional::Constant(*dy->shape(), 0, grad->dtype(), JUST(grad->device()));
+    } else if (size_i == 1) {
+      grad = JUST(functional::Squeeze(grad, std::vector<int32_t>{int(i)}));
+    } else if (stride_i == 0) {
+      grad = JUST(functional::ReduceSum(grad, std::vector<int32_t>{int(i)}, false));
+    } else {
+      out_sizes_.insert(out_sizes_.begin(), size_i);
+      out_strides_.insert(out_strides_.begin(), stride_i);
+    }
+  }
+
+  // Step (2)~(4) for the algorithm in NOTE [ Detecting Memory Overlap Within A
+  // Strided Tensor ]
+  //              on output geometry
+  const bool out_maybe_overlap = IsOverlappingMemorys(out_sizes_, out_strides_);
+
+  // For input geometry,
+  //   check for size 0 dimensions,
+  //   skip size 1 dimensions,
+  // Step (0)~(1) for the algorithm in NOTE [ Detecting Memory Overlap Within A
+  // Strided Tensor ]
+  //              on input geometry
+  auto idim = input->ndim();
+  std::vector<int64_t> inp_sizes(input->shape()->begin(), input->shape()->end());
+  std::vector<int64_t> inp_strides(JUST(input->stride())->begin(), JUST(input->stride())->end());
+  std::vector<int64_t> inp_sizes_, inp_strides_;
+  inp_sizes_.reserve(idim);
+  inp_strides_.reserve(idim);
+  for (int64_t i = idim - 1; i >= 0; i--) {
+    auto size_i = inp_sizes[i];
+    auto stride_i = inp_strides[i];
+    if (size_i == 0) {
+      return functional::Constant(*input->shape(), 0, grad->dtype(), JUST(grad->device()));
+    } else if (size_i != 1) {
+      inp_sizes_.insert(inp_sizes_.begin(), size_i);
+      inp_strides_.insert(inp_strides_.begin(), stride_i);
+    }
+  }
+  // Step (1)~(4) for the algorithm in NOTE [ Detecting Memory Overlap Within A
+  // Strided Tensor ]
+  //              on input geometry
+  const bool inp_maybe_overlap = IsOverlappingMemorys(inp_sizes_, inp_strides_);
+
+  // Rest of this function implements
+  // Step (1)~(4) for the algorithm in NOTE [ as_strided Backward and
+  // layout-aware/agnostic autograd ]
+  // TODO: Raise if not all output values are visible in input geometry.
+  //       Technically speaking, if you treat those values as constants, not
+  //       raising is fine, and mathematically correct. However, these values
+  //       really are contained in some base tensor, and by treating them as
+  //       constants we are ignoring this tight dependency. Therefore, it is
+  //       more sensible to raise here.
+
+  // Step (1): create underlying tensor as "storage"
+  auto input_storage_offset = JUST(input->storage_offset());
+  auto shared_offset = std::min(input_storage_offset, storage_offset);
+  auto inp_effective_offset = input_storage_offset - shared_offset;
+  auto out_effective_offset = storage_offset - shared_offset;
+  auto base_size = std::max(MinStorageSize(inp_sizes_, inp_strides_, inp_effective_offset),
+                            MinStorageSize(out_sizes_, out_strides_, out_effective_offset));
+  auto storage =
+      JUST(functional::Constant(Shape({base_size}), 0, grad->dtype(), JUST(grad->device())));
+
+  std::shared_ptr<Tensor> flatten_full_indices;
+  if (inp_maybe_overlap || out_maybe_overlap) {
+    flatten_full_indices = JUST(functional::Arange(Scalar(0), Scalar(base_size), Scalar(1),
+                                                   DType::Int64(), JUST(grad->device())));
+  }
+
+  // Step (2): use output geometry to scatter gradients into storage
+  if (out_maybe_overlap) {
+    auto out_indices = JUST(functional::AsStrided(flatten_full_indices, out_sizes_, out_strides_,
+                                                  out_effective_offset));
+    storage = JUST(functional::IndexAddInplace(
+        storage, 0,
+        JUST(functional::Reshape(out_indices, Shape({out_indices->shape()->elem_cnt()}))),
+        JUST(functional::Reshape(grad, Shape({grad->shape()->elem_cnt()}))), Scalar(1.0)));
+  } else {
+    // assume that new tensors have 0 storage offset
+    // torch impl: storage.as_strided(out_sizes_, out_strides_, out_effective_offset)
+    //     .copy_(grad);
+    // TODO(wangyinggang): use functional::copy_ replace this TensorSetItem
+    storage = JUST(functional::AsStrided(storage, out_sizes_, out_strides_, out_effective_offset));
+    functional::TensorIndex ellipsis_index;
+    ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
+    JUST(functional::TensorSetItem(storage, ellipsis_index, grad));
+  }
+
+  // Step (3): if input tensor has overlapping memory, divide scattered gradient
+  //           at storage[i] by the number of times i shows up in input geometry
+  if (inp_maybe_overlap) {
+    auto count =
+        JUST(functional::Constant(*storage->shape(), 0, storage->dtype(), JUST(storage->device())));
+    flatten_full_indices = JUST(functional::AsStrided(flatten_full_indices, inp_sizes_,
+                                                      inp_strides_, inp_effective_offset));
+    auto inp_indices = JUST(functional::Reshape(
+        flatten_full_indices, Shape({flatten_full_indices->shape()->elem_cnt()})));
+
+    auto ones = JUST(functional::Constant(Shape({1}), 0, grad->dtype(), JUST(grad->device())));
+    count = JUST(functional::IndexAddInplace(count, 0, inp_indices, ones, Scalar(1.0)));
+    count = JUST(functional::Expand(count, *inp_indices->shape()));
+    storage = JUST(functional::Div(storage, count));  // this will give nan outside visible range
+  }
+
+  // Step (4): return as_strided view of the storage tensor with input geometry
+  return functional::AsStrided(storage, inp_sizes, inp_strides, inp_effective_offset);
+}
+
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
+                        const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                        const int64_t& storage_offset) {
   DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), size.begin(), size.end());
+  dim_vec.insert(dim_vec.end(), sizes.begin(), sizes.end());
   Shape target_shape(dim_vec);
-  Stride stride(stride_vec.begin(), stride_vec.end());
+  Stride stride(strides.begin(), strides.end());
   auto output = JUST(view::BasicView(input, target_shape, stride, storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn = std::make_shared<BackwardFunction>();
@@ -379,11 +536,8 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
-      auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device()), /*pin_memory=*/false));
       in_grads->resize(1);
-      (*in_grads)[0] =
-          JUST(functional::AsStridedGrad(out_grads[0], like, size, stride_vec, storage_offset));
+      (*in_grads)[0] = JUST(AsStridedGrad(out_grads[0], input, sizes, strides, storage_offset));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };

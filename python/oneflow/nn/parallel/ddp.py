@@ -45,9 +45,9 @@ def DistributedDataParallel(
     with flow.no_grad():
         for x in module.parameters():
             requires_grad = x.requires_grad
-            flow._C.broadcast(x, inplace=True)
+            flow._C.comm_broadcast(x, inplace=True)
             # TODO: fix the bug that x's requires_grad is discarded
-            # after flow._C.broadcast
+            # after flow._C.comm_broadcast
             x.requires_grad_(requires_grad)
 
     ddp_state_for_reversed_params = OrderedDict(
@@ -134,6 +134,7 @@ def DistributedDataParallel(
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 buffers = list(module.buffers())
+                # flow._C.comm_broadcast(buffers, inplace=True)
                 if len(buffers) > 0:
                     flow._C.stream_touch(buffers)  # for reusing soft syncs
                 for x in buffers:

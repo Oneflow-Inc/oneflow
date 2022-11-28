@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from numbers import Number
 import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -172,11 +173,6 @@ def _scalar_int(self):
     return self.numpy().astype(np.int64).item()
 
 
-def _item(self):
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
-
-
 def _new_empty(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
@@ -220,10 +216,6 @@ def _mv(self, vec):
 
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
-
-
-def _split(self, split_size_or_sections=None, dim=0):
-    return flow._C.split(self, split_size_or_sections, dim)
 
 
 def _uniform(self, a=0, b=1):
@@ -292,13 +284,11 @@ def _fill(self, value):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    method_name = eager_local_tensor._get_copy_local_tensor_from_numpy_func_name()
-    copy_from_numpy = getattr(eager_local_tensor, method_name)
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
-    copy_from_numpy(np_arr)
+    eager_local_tensor._copy_from_numpy(np_arr)
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
@@ -346,10 +336,6 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             other = other.numpy()
 
         _copy_from_numpy_to_eager_local_tensor(self, other)
-
-
-def _flip(self, dims):
-    return flow.flip(self, dims)
 
 
 def _format(self, format_spec):
@@ -442,18 +428,17 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _is_floating_point(self):
-    return flow.is_floating_point(self)
-
-
 def _numpy(self):
     assert (
         not self.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
+    # TODO: support bfloat16 to numpy in C++
+    if self.dtype == flow.bfloat16:
+        self = self.to(flow.float32)
     if self.is_global:
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
@@ -480,6 +465,11 @@ def _is_consistent(self):
 
 def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
+
+
+def _item(self):
+    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return self.numpy().item()
 
 
 def _new_tensor(
@@ -531,16 +521,53 @@ def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+def _scatter(self, dim, index, src, *, reduce=""):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
-def _scatter_inplace(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
+def _scatter_inplace(self, dim, index, src, *, reduce=None):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
+
+
+def _scatter_add(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=False)
+
+
+def _scatter_add_inplace(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=True)
+
+
+def _contains(self, element):
+    r"""Check if `element` is present in tensor
+
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
+    if isinstance(element, (flow.Tensor, Number)):
+        # type hint doesn't understand the __contains__ result array
+        return (element == self).any().item()  # type: ignore[union-attr]
+
+    raise RuntimeError(
+        "Tensor.__contains__ only supports Tensor or scalar, but you passed in a %s."
+        % type(element)
+    )
+
+
+def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return flow._C.allclose(self, other, atol, rtol, equal_nan)
+
+
+def _index_add(self, dim, index, source, alpha=1):
+    return flow._C.index_add(self, dim, index, source, alpha)
+
+
+def _index_add_inplace(self, dim, index, source, alpha=1):
+    return flow._C.index_add_(self, dim, index, source, alpha)
+
+
+def _as_strided(self, size, stride, storage_offset=0):
+    return flow._C.as_strided(self, size, stride, storage_offset)
 
 
 def RegisterMethods():
@@ -553,6 +580,7 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__contains__ = _contains
     Tensor.__bool__ = is_nonzero
     Tensor.__iadd__ = _iadd
     Tensor.addmm = _addmm
@@ -578,7 +606,6 @@ def RegisterMethods():
     Tensor.add_npu = _add_npu
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.flip = _flip
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
@@ -589,7 +616,6 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
-    Tensor.split = _split
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.T = property(_T)
@@ -599,7 +625,6 @@ def RegisterMethods():
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
@@ -615,6 +640,12 @@ def RegisterMethods():
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
+    Tensor.scatter_add = _scatter_add
+    Tensor.scatter_add_ = _scatter_add_inplace
+    Tensor.allclose = _allclose
+    Tensor.index_add = _index_add
+    Tensor.index_add_ = _index_add_inplace
+    Tensor.as_strided = _as_strided
 
 
 def register_tensor_op(op_name):

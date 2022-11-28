@@ -39,6 +39,7 @@ message AdamModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = true];
   optional bool amsgrad = 5 [default = false];
+  optional bool smart_decay = 6 [default = false];
 }
 
 message LazyAdamModelUpdateConf {
@@ -167,7 +168,7 @@ message PredictConf {
 
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
-  optional bool use_mutual_exclusion_first_algo = 2 [default = true];
+  optional bool use_mutual_exclusion_first_algo = 2 [default = false];
   optional bool use_time_line_algo = 3 [default = false];
 }
 
@@ -202,6 +203,13 @@ message JobOutputDef {
 message JobSignatureDef {
   map<string, JobInputDef> inputs = 1;
   map<string, JobOutputDef> outputs = 2;
+}
+
+enum StraightenAlgorithmTag {
+  kDisable = 1;                  
+  kOverlap4Transfer = 2;  
+  kCompressMemory = 3;
+  kOverlap4CpuGpu = 4;            
 }
 
 message JobConfigProto {
@@ -254,16 +262,17 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
   optional DataType mixed_precision_data_type = 604 [default = kFloat16]; // kFloat16 or kBFloat16
+  optional bool enable_multi_tensor_update = 605 [default = false];
+  optional bool enable_fused_model_update_cast = 606 [default = false];
 
   optional bool enable_auto_parallel = 700 [default = false];
   optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
   optional double auto_parallel_wait_time = 702 [default = 1.65e4];
-  optional double auto_parallel_transfer_cost = 703 [default = 0.0];
-  optional bool enable_auto_parallel_mainstem_algo = 704 [default = true];
-  optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
-  optional bool enable_auto_parallel_ignore_user_sbp_config = 706 [default = false];
+  optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
+  optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
+  optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
   
-  optional bool enable_straighten_algorithm_in_task_graph = 800 [default = false];
+  optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
 
   optional int64 concurrency_width = 1000 [default = 128];
 

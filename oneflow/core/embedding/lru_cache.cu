@@ -542,6 +542,7 @@ class LruCache : public Cache {
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
+  using Cache::Get;
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
@@ -580,6 +581,11 @@ class LruCache : public Cache {
                              0),
         ctx_, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
         static_cast<Elem*>(values));
+  }
+
+  void ClearDirtyFlags() override {
+    // do nothing.
+    return;
   }
 
   void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }

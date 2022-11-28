@@ -151,6 +151,13 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     CHECK_EQ(b->shape_view().NumAxes(), 2);
     CHECK_EQ(b->data_type(), data_type);
+
+    const int32_t elem_cnt_a = a->shape_view().elem_cnt();
+    const int32_t elem_cnt_b = b->shape_view().elem_cnt();
+    CHECK_GE(elem_cnt_a, 0);
+    CHECK_GE(elem_cnt_b, 0);
+    if (elem_cnt_a == 0 || elem_cnt_b == 0) { return; }
+
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(out->shape_view().NumAxes(), 2);
     CHECK_EQ(out->data_type(), data_type);
@@ -262,8 +269,6 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     double alpha = ctx->Attr<double>("alpha");
-    bool transpose_a = ctx->Attr<bool>("transpose_a");
-    bool transpose_b = ctx->Attr<bool>("transpose_b");
 
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);

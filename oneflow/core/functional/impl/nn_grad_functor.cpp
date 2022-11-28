@@ -13,18 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
+#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
-#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/common/container_util.h"
 
@@ -162,6 +155,26 @@ class MaxPoolNdGradFunctor {
 
  protected:
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
+template<int N>
+class MaxUnpoolNdGradFunctor {
+ public:
+  MaxUnpoolNdGradFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(fmt::format("max_unpool_{}d_grad", N))
+                           .Input("dy")
+                           .Input("x")
+                           .Input("indices")
+                           .Output("dx")
+                           .Build())) {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& indice,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, indice});
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class AdaptiveMaxPoolNdGradFunctor {
@@ -1130,6 +1143,49 @@ class GroupNormParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSNormGradFunctor {
+ public:
+  RMSNormGradFunctor() {
+    grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                              .Input("dy")
+                              .Input("x")
+                              .Input("inv_rms")
+                              .Output("dx")
+                              .Build());
+    affine_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                                     .Input("dy")
+                                     .Input("x")
+                                     .Input("inv_rms")
+                                     .Input("weight")
+                                     .Output("dx")
+                                     .Build());
+    param_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_param_grad")
+                                    .Input("dy")
+                                    .Input("x")
+                                    .Input("inv_rms")
+                                    .Output("weight_grad")
+                                    .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& inv_rms,
+                           const Optional<one::Tensor>& weight, const bool param_grad) const {
+    if (param_grad) {
+      return OpInterpUtil::Dispatch<Tensor>(*param_grad_op_, {dy, x, inv_rms});
+    } else if (weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_grad_op_, {dy, x, inv_rms, JUST(weight)});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*grad_op_, {dy, x, inv_rms});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
+  std::shared_ptr<OpExpr> affine_grad_op_;
+  std::shared_ptr<OpExpr> param_grad_op_;
+};
+
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {
@@ -1609,6 +1665,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::MaxPoolNdGradFunctor>("MaxPoolNdGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<1>>("MaxUnpool1dGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<2>>("MaxUnpool2dGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<3>>("MaxUnpool3dGrad");
   m.add_functor<impl::AdaptiveMaxPoolNdGradFunctor>("AdaptiveMaxPoolNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolNdGradFunctor>("AvgPoolNdGrad");
@@ -1645,6 +1704,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
   m.add_functor<impl::DeformConv2dInputGradFunctor>("DeformConv2dInputGrad");
   m.add_functor<impl::DeformConv2dParamGradFunctor>("DeformConv2dParamGrad");
+  m.add_functor<impl::RMSNormGradFunctor>("RMSNormGrad");
 };
 
 }  // namespace functional

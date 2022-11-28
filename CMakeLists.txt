@@ -262,6 +262,22 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
 endif()
 
+if((ENABLE_ASAN OR ENABLE_UBSAN) AND ENABLE_TSAN)
+  message(FATAL_ERROR "Only ASAN and UBSAN can be enabled at the same time.")
+endif()
+if(ENABLE_ASAN)
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address -fno-omit-frame-pointer)
+endif()
+if(ENABLE_UBSAN)
+  add_compile_options(-fsanitize=undefined)
+  add_link_options(-fsanitize=undefined)
+endif()
+if(ENABLE_TSAN)
+  add_compile_options(-fsanitize=thread)
+  add_link_options(-fsanitize=thread)
+endif()
+
 if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
@@ -278,14 +294,19 @@ set(ROBIN_HOOD_HASHING_URL
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
-set(FMT_URL https://github.com/fmtlib/fmt/archive/e9ca7ea472a387639cef65a93037afcee26e4733.zip)
+set(FMT_URL https://github.com/fmtlib/fmt/archive/fc07217d85e6dcec52878807d6bbd89a9d9156a5.zip)
 use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
-set(FMT_MD5 f126df4cffec775e118837db0c64b920)
+set(FMT_MD5 7d9bb2ececc9ede29cd35bdc42a7e22c)
 
 set(KINETO_URL
     https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
+
+set(CUTLASS_URL
+    https://github.com/NVIDIA/cutlass/archive/20d90e0b7bcaeb168b0313bb08440cc6427fedee.zip)
+use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
+set(CUTLASS_MD5 8dbb42044031337fa302c2ab9d1875fa)
 
 include(cuda)
 add_subdirectory(external)
@@ -322,12 +343,11 @@ if(BUILD_CUDA)
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
     endif()
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)
-    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual)
-    else()
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-virtual)
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+      # NVIDIA H100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
     endif()
   endif()
 

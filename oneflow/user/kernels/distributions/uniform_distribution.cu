@@ -50,6 +50,18 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
   state[id] = localState;
 }
 
+// specialization for half
+template<>
+__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, half* dptr, const half low,
+                            const half high) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState localState = state[id];
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    dptr[i] = static_cast<half>(GenUniform<float>(&localState, low, high));
+  }
+  state[id] = localState;
+}
+
 }  // namespace
 
 template<typename T>
@@ -72,5 +84,6 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+INITIATE_CUDA_UNIFORM_DISTRIBUTION(half, DataType::kFloat16)
 
 }  // namespace oneflow

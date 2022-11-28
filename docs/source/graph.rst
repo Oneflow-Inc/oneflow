@@ -16,7 +16,7 @@ Generally speaking, dynamic graphs are easier to use and static graphs have more
 
 .. _dynamic graph:
 
-Eager Mode
+Eager Mode to Static Graph Mode
 ------------------------------------------------------------
 
 OneFlow runs in Eager mode by default.
@@ -74,9 +74,9 @@ Static Graph Mode
 ------------------------------------------------------------
 
 
-Constructing it
+Constructing a Graph
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+Base class for training or evaluating a neural network in static graph mode.
 
 .. currentmodule:: oneflow.nn.Graph
 
@@ -89,8 +89,9 @@ Constructing it
     add_optimizer
     set_grad_scaler
 
-Execute Graph
+Executing a Graph
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Call a nn.Graph instance to run a customized graph.
 
 .. currentmodule:: oneflow.nn.Graph
 
@@ -102,8 +103,10 @@ Execute Graph
 
 
 
-Graph Config option
+Config options on a Graph
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Optimization options of a nn.Graph.
+
 .. currentmodule:: oneflow.nn.graph.graph_config.GraphConfig
 
 .. autosummary::
@@ -117,11 +120,17 @@ Graph Config option
     allow_fuse_cast_scale
     set_gradient_accumulation_steps
     enable_cudnn_conv_heuristic_search_algo
+    enable_straighten_algorithm
     
 
-Block Config option
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. currentmodule:: oneflow.nn.graph.block_config.BlockConfig
+Config options on a GraphModule
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+GraphModule is the graph representation of a nn.Module in a nn.Graph.
+
+When an nn.Module is added into an nn.Graph, it is wrapped into a ProxyModule. The ProxyModule has a GraphModule inside it.
+You can get and set the GraphModule to enable graph optimization on the nn.Module.
+
+.. currentmodule:: oneflow.nn.graph.graph_block.GraphModule
 
 .. autosummary::
     :toctree: generated
@@ -130,7 +139,7 @@ Block Config option
     set_stage
     activation_checkpointing
 
-Save & Load Model
+Save & Load a Model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: oneflow.nn.Graph
@@ -143,16 +152,16 @@ Save & Load Model
     load_state_dict
 
 
-Debug
+Debug a Graph
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    name
-    debug
     __repr__
+    debug
+    name
 
 
 
