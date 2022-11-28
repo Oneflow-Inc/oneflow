@@ -27,25 +27,6 @@ namespace user_op {
 
 namespace {
 
-LogicalResult saveAttrToOpConf(DictionaryAttr attributes, ::oneflow::OperatorConf* op_conf) {
-  if (auto scope_symbol_id =
-          attributes.get(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())
-              .dyn_cast_or_null<IntegerAttr>()) {
-    op_conf->set_scope_symbol_id(scope_symbol_id.getInt());
-  }
-  if (auto op_name = attributes.get(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-                         .dyn_cast_or_null<StringAttr>()) {
-    op_conf->set_name(op_name.str());
-  }
-  auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
-                        .dyn_cast_or_null<StringAttr>();
-  CHECK(device_tag) << "attr absent: "
-                    << OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr().str();
-  op_conf->set_device_tag(device_tag.str());
-  ;
-  return success();
-}
-
 void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
     shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
@@ -73,11 +54,30 @@ const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
 
 }  // namespace
 
+LogicalResult saveAttrDictionaryToOpConf(DictionaryAttr attributes,
+                                         ::oneflow::OperatorConf* op_conf) {
+  if (auto scope_symbol_id =
+          attributes.get(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())
+              .dyn_cast_or_null<IntegerAttr>()) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.getInt());
+  }
+  if (auto op_name = attributes.get(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+                         .dyn_cast_or_null<StringAttr>()) {
+    op_conf->set_name(op_name.str());
+  }
+  auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                        .dyn_cast_or_null<StringAttr>();
+  CHECK(device_tag) << "attr absent: "
+                    << OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr().str();
+  op_conf->set_device_tag(device_tag.str());
+  return success();
+}
+
 LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, DictionaryAttr attributes,
                                         ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name.str());
-  CHECK(saveAttrToOpConf(attributes, &op_conf).succeeded());
+  CHECK(saveAttrDictionaryToOpConf(attributes, &op_conf).succeeded());
   for (auto id_attr : attributes) {
     auto id = id_attr.getName();
     // mlir only attrs
