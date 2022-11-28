@@ -53,10 +53,6 @@ Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt) {
   return Type();
 }
 
-Type getTypeFromOneFlowDataType(Builder& builder, ::oneflow::DataType dt) {
-  return getTypeFromOneFlowDataType(builder.getContext(), dt);
-}
-
 }  // namespace oneflow
 
 }  // namespace mlir
