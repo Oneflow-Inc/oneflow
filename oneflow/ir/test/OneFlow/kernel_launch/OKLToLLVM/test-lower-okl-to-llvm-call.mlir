@@ -3,21 +3,21 @@
 // RUN: | FileCheck %s
 
 // CHECK: module {
-// CHECK:   llvm.func @launch(!llvm.ptr<i8>, !llvm.ptr<i8>) attributes {llvm.emit_c_interface}
-// CHECK:   llvm.func @fetch_kernel(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
-// CHECK:   llvm.func @fetch_run_ctx(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
+// CHECK:   llvm.func @oneflow_okl_launch(!llvm.ptr<i8>, !llvm.ptr<i8>) attributes {llvm.emit_c_interface}
+// CHECK:   llvm.func @oneflow_okl_fetch_kernel(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
+// CHECK:   llvm.func @oneflow_okl_fetch_run_ctx(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
 // CHECK:   func.func @okl_compute(%[[ARG:[a-zA-Z0-9_]+]]: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
 // CHECK:     %[[ARG0:[a-zA-Z0-9_]+]] = builtin.unrealized_conversion_cast %[[ARG]] : !llvm.ptr<i8> to !okl.launcher_ctx
 // CHECK:     %[[ARG1:[a-zA-Z0-9_]+]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:     %[[ARG2:[a-zA-Z0-9_]+]] = llvm.call @fetch_run_ctx(%[[ARG]], %[[ARG1]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG2:[a-zA-Z0-9_]+]] = llvm.call @oneflow_okl_fetch_run_ctx(%[[ARG]], %[[ARG1]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
 // CHECK:     %[[ARG3:[a-zA-Z0-9_]+]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:     %[[ARG4:[a-zA-Z0-9_]+]] = llvm.call @fetch_run_ctx(%[[ARG]], %[[ARG3]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG4:[a-zA-Z0-9_]+]] = llvm.call @oneflow_okl_fetch_run_ctx(%[[ARG]], %[[ARG3]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
 // CHECK:     %[[ARG5:[a-zA-Z0-9_]+]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:     %[[ARG6:[a-zA-Z0-9_]+]] = llvm.call @fetch_kernel(%[[ARG]], %[[ARG5]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG6:[a-zA-Z0-9_]+]] = llvm.call @oneflow_okl_fetch_kernel(%[[ARG]], %[[ARG5]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
 // CHECK:     %[[ARG7:[a-zA-Z0-9_]+]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:     %[[ARG8:[a-zA-Z0-9_]+]] = llvm.call @fetch_kernel(%[[ARG]], %[[ARG7]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
-// CHECK:     llvm.call @launch(%[[ARG2]], %[[ARG6]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
-// CHECK:     llvm.call @launch(%[[ARG4]], %[[ARG8]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+// CHECK:     %[[ARG8:[a-zA-Z0-9_]+]] = llvm.call @oneflow_okl_fetch_kernel(%[[ARG]], %[[ARG7]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     llvm.call @oneflow_okl_launch(%[[ARG2]], %[[ARG6]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+// CHECK:     llvm.call @oneflow_okl_launch(%[[ARG4]], %[[ARG8]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
 // CHECK:     return
 // CHECK:   }
 // CHECK: }
