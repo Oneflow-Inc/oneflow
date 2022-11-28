@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/thread/thread_executor_factory.h"
 
 namespace oneflow {
 
@@ -26,6 +27,13 @@ CpuDevice* CpuStream::device() const { return device_; }
 Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 
 void CpuStream::RecordEvent(Event* /*event*/) {}
+
+Maybe<void> CpuStream::AdjustThreadExecutor() {
+  const auto thread_executor_type =
+      GetStringFromEnv("OF_THREADING_RUNTIME", thread::IsTbbEnabled() ? "TBB" : "SEQ");
+  thread_executor_ = *JUST(thread::ExecutorFactory::Create(thread_executor_type));
+  return Maybe<void>::Ok();
+}
 
 #ifdef WITH_ONEDNN
 

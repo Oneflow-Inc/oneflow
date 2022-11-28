@@ -1,4 +1,3 @@
-set(CPU_THREADING_RUNTIMES "TBB;OMP")
 foreach(threading_runtime_item ${CPU_THREADING_RUNTIMES})
   if(NOT ${threading_runtime_item} MATCHES "^(TBB|OMP)$")
     message(FATAL_ERROR "Unsupported cpu threading runtime: ${threading_runtime_item}")

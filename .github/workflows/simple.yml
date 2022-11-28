@@ -139,7 +139,6 @@ jobs:
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
           cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
           cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
-          cmake_flags+=" -DCPU_THREADING_RUNTIME=SEQ"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
       - name: Build (third party)
         if: matrix.cmake_generator != 'Ninja'

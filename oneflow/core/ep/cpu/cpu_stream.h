@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-#include "oneflow/core/thread/thread_executor.h"
+#include "oneflow/core/thread/thread_executor_factory.h"
 #include "oneflow/maybe/variant.h"
 
 #ifdef WITH_ONEDNN
@@ -64,7 +64,7 @@ class CpuStream : public Stream {
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
 
   explicit CpuStream(CpuDevice* device) : device_(device) {
-    // TODO: switch multi thread executor in rumtime
+    CHECK_JUST(AdjustThreadExecutor());
 #ifdef WITH_ONEDNN
     onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
@@ -84,7 +84,7 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
-    multi_thread_executor_.Visit([=](const auto& x) {
+    thread_executor_.Visit([=](const auto& x) {
       x->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
     });
   }
@@ -96,16 +96,10 @@ class CpuStream : public Stream {
  private:
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
-  maybe::Variant<std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorSeq>>,
-                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorOf>>,
-#ifdef WITH_TBB
-                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorTbb>>,
-#endif
-#ifdef WITH_OMP
-                 std::unique_ptr<MultiThreadExecutorBase<MultiThreadExecutorOmp>>>
-#endif
-      multi_thread_executor_ = std::make_unique<MultiThreadExecutorBase<MultiThreadExecutorTbb>>(
-          MultiThreadExecutorTbb());
+  thread::ExecutorFactory::ProductType thread_executor_;
+
+  Maybe<void> AdjustThreadExecutor();
+
 #ifdef WITH_ONEDNN
   std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;
 #endif
@@ -145,4 +139,4 @@ class OneDnnExecutor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#endif // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
