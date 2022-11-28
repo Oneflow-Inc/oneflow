@@ -352,4 +352,13 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   let dependentDialects = [];
 }
 
+def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {
+  let summary = "fuse forward ops";
+  let description = [{
+    fuse forward ops. Usually they are actions after an op.
+  }];
+  let constructor = "mlir::oneflow::createFuseNormalizationOps()";
+  let dependentDialects = [];
+}
+
 #endif // ONEFLOW_PASSES

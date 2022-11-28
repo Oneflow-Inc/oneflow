@@ -88,6 +88,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::oneflow::registerCSEPasses(global_cse_state);
   mlir::registerFuseForwardOpsPass();
   mlir::registerFuseIntoExistingOpPassPass();
+  mlir::registerFuseNormalizationOpsPass();
   mlir::registerGroupMatMulPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::sbp::SBPDialect>();

@@ -16,6 +16,8 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+#include "OneFlow/OneFlowPatternUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -192,6 +194,16 @@ class FuseForwardOpsPass : public FuseForwardOpsBase<FuseForwardOpsPass> {
   }
 };
 
+class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizationOpsPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateNormalizationOpPatterns(patterns);
+    rewrites::populateRewrites(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
@@ -213,6 +225,9 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
+std::unique_ptr<Pass> createFuseNormalizationOps() {
+  return std::make_unique<FuseNormalizationOpsPass>();
+}
 
 }  // namespace oneflow
 }  // namespace mlir

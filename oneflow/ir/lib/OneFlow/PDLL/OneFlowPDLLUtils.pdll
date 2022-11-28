@@ -1,0 +1,2 @@
+Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
+Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;

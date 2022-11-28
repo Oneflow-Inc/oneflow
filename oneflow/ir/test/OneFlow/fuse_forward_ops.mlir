@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -fuse-forward-only-ops -fuse-into-existing-op -canonicalize | FileCheck %s
+// RUN: -fuse-forward-only-ops -fuse-into-existing-op -fuse-normalization-ops -canonicalize | FileCheck %s
 
 module  {
   func.func @Cast_1__FUSE__ScalarMulByTensor_2(%685: tensor<2x64x64x320xf16>, %output_574: tensor<320xf16>, %output_573: tensor<320xf16>) -> tensor<2x64x64x320xf16> {
