@@ -63,7 +63,7 @@ std::string FetchName() {
 template<typename T>
 LLVM::LLVMFuncOp DeclareFetchPtr(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
   LLVM::LLVMFuncOp func;
-  auto func_name = FetchName<T>();
+  const auto func_name = FetchName<T>();
   if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
@@ -82,7 +82,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   // raw: create okl.launch(*run_ctx, *kernel) -> llvm_ptr<i8>
   // dst: llvm.call launch(run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
   static LLVM::LLVMFuncOp DeclareBuildLaunch(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
-    auto func_name = "oneflow_okl_launch";
+    const auto func_name = "oneflow_okl_launch";
     LLVM::LLVMFuncOp func;
     if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
       OpBuilder::InsertionGuard guard(rewriter);
