@@ -30,7 +30,7 @@ import oneflow.unittest
 import oneflow.sysconfig
 
 
-def do_bias_add_gelu_graph(test_case, with_cuda):
+def do_normalization_add_relu_graph(test_case, with_cuda):
     def get_bn(fused=True):
         if fused:
             return flow.nn.FusedBatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(
@@ -73,9 +73,9 @@ def do_bias_add_gelu_graph(test_case, with_cuda):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestBiasAddGelu(oneflow.unittest.TestCase):
-    def test_bias_add_gelu_graph(test_case):
-        do_bias_add_gelu_graph(test_case, True)
+class TestNormalizationAddRelu(oneflow.unittest.TestCase):
+    def test_normalization_add_relu_graph(test_case):
+        do_normalization_add_relu_graph(test_case, True)
 
 
 if __name__ == "__main__":
