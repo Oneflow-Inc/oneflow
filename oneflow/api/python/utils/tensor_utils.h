@@ -110,7 +110,7 @@ struct TensorTypeToPyType<bfloat16> final {
 
 template<typename T>
 inline static Maybe<PyObject*> EagerLocalTensorItem(const std::shared_ptr<Tensor>& tensor) {
-  OF_PROFILER_RANGE_GUARD("EagerLocalTensorItem");
+  // OF_PROFILER_RANGE_GUARD("EagerLocalTensorItem");
   T value = JUST(GetItemInScalarTensor<T>(tensor));
   return functional::CastToPyObject(static_cast<typename TensorTypeToPyType<T>::type>(value));
 }
