@@ -93,13 +93,13 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
           ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
     }
   }
-  auto op = CHECK_JUST(ConstructOp(op_conf, user_op::generateDeviceName(attributes)));
+  auto op = CHECK_JUST(ConstructOp(op_conf, user_op::getDeviceTypeFromAttrDictionary(attributes)));
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
     if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
     return it->second.get();
   };
-  ::oneflow::ParallelConf parallel_conf = user_op::generateParallelConf(attributes);
+  ::oneflow::ParallelConf parallel_conf = user_op::getParallelConfFromAttrDictionary(attributes);
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
   op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));

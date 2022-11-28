@@ -242,7 +242,7 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   return stride;
 }
 
-::oneflow::ParallelConf generateParallelConf(DictionaryAttr attributes) {
+::oneflow::ParallelConf getParallelConfFromAttrDictionary(DictionaryAttr attributes) {
   ::oneflow::ParallelConf parallel_conf{};
   auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
                         .dyn_cast_or_null<StringAttr>();
@@ -265,7 +265,7 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   return parallel_conf;
 }
 
-::oneflow::DeviceType generateDeviceName(DictionaryAttr attributes) {
+::oneflow::DeviceType getDeviceTypeFromAttrDictionary(DictionaryAttr attributes) {
   ::oneflow::ParallelConf parallel_conf{};
   auto device_tag = attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
                         .dyn_cast_or_null<StringAttr>();
