@@ -24,7 +24,7 @@ namespace mlir {
 namespace oneflow {
 
 Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt);
-llvm::Optional<Type> getTypeFromOneFlowDataType(Builder& builder, ::oneflow::DataType dt);
+Type getTypeFromOneFlowDataType(Builder& builder, ::oneflow::DataType dt);
 
 }  // namespace oneflow
 

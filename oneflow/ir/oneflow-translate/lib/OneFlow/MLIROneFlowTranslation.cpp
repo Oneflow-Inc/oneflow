@@ -179,12 +179,12 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 }
 
 Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
-  Type ret = this->GetBuilder().getNoneType();
+  Type ret{};
   job_wrapper_.QueryLogicalBlob(
       lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
                               ::oneflow::DataType dt) {
         if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
-          ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
+          ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t);
         } else {
           llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
         }
@@ -765,11 +765,13 @@ LogicalResult JobImporter::ConvertOutputOp(OutputOp op, ::oneflow::Job& job) {
 
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
   if (!blob_conf.has_data_type()) { return Type{}; }
-  if (!blob_conf.has_shape()) { return Type{}; }
-  auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type());
-  if (!data_type.hasValue()) { return Type{}; }
-  return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
-                               *data_type);
+  if (!blob_conf.has_shape()) { return Type{}; };
+  if (auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type())) {
+    return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
+                                 data_type);
+  } else {
+    return Type{};
+  }
 }
 
 void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,

@@ -332,7 +332,7 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
   return success();
 }
 
-llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
+Type Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
   return getTypeFromOneFlowDataType(GetBuilder(), dt);
 }
 
