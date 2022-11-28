@@ -19,17 +19,17 @@ model.load_state_dict(state_dict)
 model = model.to("npu")
 model.eval()
 
-inputs = flow.tensor(inp,dtype=flow.float32,requires_grad=False)
-inputs_n = inputs.to("npu")
+# inputs = flow.tensor(inp,dtype=flow.float32,requires_grad=False)
+# inputs_n = inputs.to("npu")
 
 
 # optimizer = flow.optim.TORCH_SGD(model.parameters(), lr = 0.01, momentum=0.9)
 # labels = flow.ones(4,dtype=flow.int32).to('npu')
-out = model(inputs_n)
+# out = model(inputs_n)
 # loss = cross_entropy(out, labels)
 # loss.backward()
 # optimizer.step()
-print("out.shape >>>>>>>>>> ", out)
+# print("out.shape >>>>>>>>>> ", out.shape)
 # flow.npu.synchronize()
 
 
