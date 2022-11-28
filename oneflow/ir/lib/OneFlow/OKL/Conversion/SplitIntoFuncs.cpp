@@ -42,10 +42,6 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
-#include <algorithm>
-#include <string>
-#include <vector>
-#include <glog/logging.h>
 
 namespace mlir {
 namespace okl {
