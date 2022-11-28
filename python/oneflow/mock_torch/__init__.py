@@ -47,6 +47,10 @@ class ModuleWrapper(ModuleType):
             return attr
 
 
+def _is_torch(s: str):
+    return s == "torch" or s.startswith("torch.")
+
+
 class OneflowImporter(MetaPathFinder, Loader):
     def __init__(self):
         # module_from_spec will try to call the loader's create_module, resulting in infinite recursion
@@ -57,7 +61,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         self.disable_mod_cache = {}
 
     def find_spec(self, fullname, path, target=None):
-        if fullname.startswith("torch"):  # don't touch modules other than torch
+        if _is_torch(fullname):  # don't touch modules other than torch
             # for first import of real torch, we use default meta path finders, not our own
             if not self.enable and self.disable_mod_cache.get(fullname) is None:
                 return None
@@ -114,7 +118,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         if self.enable:  # already enabled
             return
         for k, v in sys.modules.copy().items():
-            if k.startswith("torch"):
+            if _is_torch(k):
                 self.disable_mod_cache.update({k: v})
                 del sys.modules[k]
                 try:
@@ -130,7 +134,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         if not self.enable:  # already disabled
             return
         for k, v in sys.modules.copy().items():
-            if k.startswith("torch"):
+            if _is_torch(k):
                 self.enable_mod_cache.update({k: v})
                 del sys.modules[k]
                 try:
