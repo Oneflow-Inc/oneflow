@@ -3119,8 +3119,8 @@ class CDistFunctor {
              .AddInputs({x1_expand, x2_expand})
              .Apply());
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p", "mode");
-    attrs.SetAllAttrs(p, mode);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p");
+    attrs.SetAllAttrs(p);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x1, x2}, attrs);
   }
 
