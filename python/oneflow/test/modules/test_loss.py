@@ -399,7 +399,7 @@ class TestKLDivLossModule(flow.unittest.TestCase):
 
         m = torch.nn.KLDivLoss(
             reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
-            log_target=oneof(True, False),
+            log_target=oneof(True, False, nothing()),
         )
         m.train(random())
         m.to(device)
@@ -417,7 +417,7 @@ class TestKLDivLossModule(flow.unittest.TestCase):
             x,
             target,
             reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
-            log_target=oneof(True, False),
+            log_target=oneof(True, False, nothing()),
         )
         return y
 
