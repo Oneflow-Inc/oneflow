@@ -30,6 +30,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 #include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/OneFlowDataTypeConversion.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
@@ -332,30 +333,7 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
 }
 
 llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
-  {
-    if (dt == ::oneflow::DataType::kInvalidDataType) {
-      return InvalidElementType::get(GetMLIRContext());
-    }
-    if (dt == ::oneflow::DataType::kChar) { return CharElementType::get(GetMLIRContext()); }
-    if (dt == ::oneflow::DataType::kFloat) { return GetBuilder().getF32Type(); }
-    if (dt == ::oneflow::DataType::kDouble) { return GetBuilder().getF64Type(); }
-    if (dt == ::oneflow::DataType::kInt8) { return GetBuilder().getIntegerType(8, true); }
-    if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getIntegerType(32, true); }
-    if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getIntegerType(64, true); }
-    if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, true); }
-    if (dt == ::oneflow::DataType::kOFRecord) { return OFRecordElementType::get(GetMLIRContext()); }
-    if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
-    if (dt == ::oneflow::DataType::kTensorBuffer) {
-      return TensorBufferElementType::get(GetMLIRContext());
-    }
-    if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
-    if (dt == ::oneflow::DataType::kUInt16) { return GetBuilder().getIntegerType(16, false); }
-    if (dt == ::oneflow::DataType::kUInt32) { return GetBuilder().getIntegerType(32, false); }
-    if (dt == ::oneflow::DataType::kUInt64) { return GetBuilder().getIntegerType(64, false); }
-    if (dt == ::oneflow::DataType::kUInt128) { return GetBuilder().getIntegerType(128, false); }
-    llvm::errs() << "unsupported data type: " << dt << "\n";
-    return llvm::None;
-  }
+  return getTypeFromOneFlowDataType(GetBuilder(), dt);
 }
 
 LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,

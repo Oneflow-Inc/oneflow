@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/UserOpConversion.h"
 #include "OneFlow/UserOpReflection.h"
+#include "OneFlow/OneFlowDataTypeConversion.h"
 
 namespace mlir {
 
@@ -23,17 +24,26 @@ namespace oneflow {
 
 namespace {
 
-std::unique_ptr<::oneflow::BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
-  auto dtype = ::oneflow::kInvalidDataType;
-  if (tensor_type.getElementType().isF32()) {
-    dtype = ::oneflow::kFloat;
+std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor_type) {
+  auto data_type = mlir::oneflow::support::FromMLIRTypeToOFDataType(tensor_type.getElementType());
+  if (mlir::succeeded(data_type)) {
+    auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
+        {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
+    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.getValue());
   } else {
     tensor_type.dump();
     LOG(FATAL) << "fail to get BlobDesc from TensorType";
   }
-  auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
-      {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
-  return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, dtype);
+}
+
+TensorType getTensorTypeFromBlobDesc(MLIRContext* context, const ::oneflow::BlobDesc& blob_desc) {
+  if (auto type = getTypeFromOneFlowDataType(context, blob_desc.data_type())) {
+    return RankedTensorType::get(llvm::SmallVector<int64_t, 4>({blob_desc.shape().dim_vec().begin(),
+                                                                blob_desc.shape().dim_vec().end()}),
+                                 type);
+  } else {
+    LOG(FATAL) << "fail to get TensorType from BlobDesc";
+  }
 }
 
 static auto MagicalOpName = "INFER_MAGICAL";
@@ -71,7 +81,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     const auto& arg_name = std::get<0>(idOperand).first;
     const auto& arg_id = std::get<0>(idOperand).second;
     const auto operand = std::get<1>(idOperand);
-    auto blob_desc = GetBlobDescFromMlirTensorType(operand.getType().cast<TensorType>());
+    auto blob_desc = getBlobDescFromTensorType(operand.getType().cast<TensorType>());
     auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
@@ -98,6 +108,15 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
   op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
+  for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
+    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM; arg_id++) {
+      auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
+      auto desc = CHECK_JUST(op->GetLogicalBlobDesc4BnInOp(bn));
+      if (desc->data_type() != ::oneflow::kInvalidDataType) {
+        inferredReturnTypes.push_back(getTensorTypeFromBlobDesc(context, *desc));
+      }
+    }
+  }
   return failure();
 }
 

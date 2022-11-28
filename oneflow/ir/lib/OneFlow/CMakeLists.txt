@@ -29,6 +29,7 @@ oneflow_add_mlir_dialect_library(
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   OneFlowUtils.cpp
+  OneFlowDataTypeConversion.cpp
   UserOpReflection.cpp
   UserOpConversion.cpp
   OneFlowOpFolders.cpp
