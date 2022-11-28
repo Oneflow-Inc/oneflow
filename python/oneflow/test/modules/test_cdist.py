@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestCDist(flow.unittest.TestCase):
-    @autotest(n=1000, check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_cdist(test_case):
         device = random_device()
         dim0 = random()

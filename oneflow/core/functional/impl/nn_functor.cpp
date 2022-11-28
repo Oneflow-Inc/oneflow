@@ -3050,7 +3050,7 @@ class CDistFunctor {
   };
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x1, const std::shared_ptr<Tensor>& x2,
-                           const double& p, const std::string& compute_mode) const {
+                           const double& p, const Optional<std::string>& compute_mode) const {
     const int64_t x1_ndim = x1->ndim();
     const int64_t x2_ndim = x2->ndim();
     CHECK_OR_RETURN(x1_ndim >= 2) << "cdist only supports at least 2D tensors, X1 got: "
@@ -3062,15 +3062,10 @@ class CDistFunctor {
         << " X2: " << x2->dim(x2_ndim - 1);
     CHECK_OR_RETURN(p >= 0) << "cdist only supports non-negative p values, got " << p;
 
-    int32_t mode = 0;
-    if (compute_mode == "use_mm_for_euclid_dist_if_necessary") {
-      mode = 0;
-    } else if (compute_mode == "use_mm_for_euclid_dist") {
-      mode = 1;
-    } else if (compute_mode == "donot_use_mm_for_euclid_dist") {
-      mode = 2;
-    } else {
-      THROW(RuntimeError) << compute_mode << " is not a valid value for compute_mode";
+    if (compute_mode.has_value()) {
+      OF_LOG_ONCE(LOG(WARNING)
+                  << "'compute_mode' argument is not supported yet, cdist "
+                     "will not use matrix multiplication approach to calculate euclidean distance");
     }
 
     int64_t r1 = x1->dim(x1_ndim - 2);
