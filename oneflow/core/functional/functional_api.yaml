@@ -3022,3 +3022,7 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
 
+- name: "fused_weighted_sum"
+  signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
+  bind_python: True
+

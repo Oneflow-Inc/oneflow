@@ -3159,6 +3159,28 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class FusedWeightedSumFunctor {
+ public:
+  FusedWeightedSumFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < op_.size(); ++n) {
+      op_[n] =
+          CHECK_JUST(one::OpBuilder("fused_weighted_sum").Input("in", n).Output("out").Build());
+    }
+  }
+  Maybe<Tensor> operator()(const TensorTuple& in, const std::vector<float> weights,
+                           const float& alpha) const {
+    CHECK_GE_OR_RETURN(in.size(), 1);
+    CHECK_LT_OR_RETURN(in.size(), kMaxInputCount);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("weights", "alpha");
+    attrs.SetAllAttrs(weights, alpha);
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(in.size()), in, attrs));
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 class FusedCenterFunctor {
  public:
   FusedCenterFunctor() {
@@ -3582,6 +3604,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
   m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
