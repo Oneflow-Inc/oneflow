@@ -87,7 +87,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
   }
-  static auto MAX_OUTPUT_NUM_PER_BN = 10;
+  static auto MAX_OUTPUT_NUM_PER_BN = 1;
   for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
     for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
       auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
