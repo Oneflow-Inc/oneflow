@@ -30,6 +30,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 REGISTER_USER_OP("normalization_add_relu")
@@ -70,6 +71,7 @@ void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(
 const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 
 int32_t main(int32_t argc, char** argv) {
+  ::oneflow::Singleton<::oneflow::ProcessCtx>::New();
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerConvertToSignlessForTosaPassPass();
