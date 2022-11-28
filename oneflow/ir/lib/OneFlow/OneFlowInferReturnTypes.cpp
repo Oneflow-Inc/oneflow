@@ -36,11 +36,12 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
   }
 }
 
-TensorType getTensorTypeFromBlobDesc(MLIRContext* context, const ::oneflow::BlobDesc& blob_desc) {
-  if (auto type = getTypeFromOneFlowDataType(context, blob_desc.data_type())) {
-    return RankedTensorType::get(llvm::SmallVector<int64_t, 4>({blob_desc.shape().dim_vec().begin(),
-                                                                blob_desc.shape().dim_vec().end()}),
-                                 type);
+TensorType getTensorTypeFromBlobDesc(MLIRContext* context, const ::oneflow::BlobDesc* blob_desc) {
+  if (auto type = getTypeFromOneFlowDataType(context, blob_desc->data_type())) {
+    return RankedTensorType::get(
+        llvm::SmallVector<int64_t, 4>(
+            {blob_desc->shape().dim_vec().begin(), blob_desc->shape().dim_vec().end()}),
+        type);
   } else {
     LOG(FATAL) << "fail to get TensorType from BlobDesc";
   }
@@ -86,9 +87,9 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     operand_index += 1;
   }
-  static auto MAX_OUTPUT_NUM = 10;
+  static auto MAX_OUTPUT_NUM_PER_BN = 10;
   for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
-    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM; arg_id++) {
+    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
       auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
       auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
       lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
@@ -108,12 +109,14 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
   op->FillOpParallelDesc(parallel_desc);
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
+  auto op_attribute = std::make_shared<::oneflow::OpAttribute>();
+  LOG(ERROR) << op_attribute->DebugString();
   for (const auto& arg_name : support::GetOutputKeys(op_type_name)) {
-    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM; arg_id++) {
-      auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
-      auto desc = CHECK_JUST(op->GetLogicalBlobDesc4BnInOp(bn));
+    for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
+      const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
+      const auto* desc = lbi2logical_blob_desc_.at(bn).get();
       if (desc->data_type() != ::oneflow::kInvalidDataType) {
-        inferredReturnTypes.push_back(getTensorTypeFromBlobDesc(context, *desc));
+        inferredReturnTypes.push_back(getTensorTypeFromBlobDesc(context, desc));
       }
     }
   }
