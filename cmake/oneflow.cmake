@@ -339,10 +339,12 @@ if(BUILD_CUDA)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
-  if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
     set_property(
-      SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-      APPEND PROPERTY COMPILE_OPTIONS "--use_fast_math")
+      SOURCE
+        ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
+      APPEND
+      PROPERTY COMPILE_OPTIONS "--use_fast_math")
   endif()
 endif()
 
