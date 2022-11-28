@@ -291,7 +291,8 @@ RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
-  *name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  static std::atomic<int64_t> name_suffix(0);
+  *name = "out_ctrl_" + std::to_string(++name_suffix);
   CHECK(produced_regsts_.emplace(*name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
   return regst.get();

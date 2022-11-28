@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/copy_hd_type.pb.h"
 #include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/register/regst_desc_id_provider.h"
 
 namespace oneflow {
 
@@ -85,8 +86,15 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
                                          const TaskGraphRebuildCtx& ctx) override;
   void ToTransportTaskProto(TransportTaskProto*) const override;
 
+  int64_t candidate_in_regst_desc_id() const;
+
  private:
+  int64_t GetForceInRegstDescId() const;
+
+  void InitCandidateInRegstDescIdProvider();
+
   OperatorConf NewCopyOpConf() override;
+  LazyInitRegstDescIdProvider candidate_in_regst_desc_id_provider_;
 };
 
 }  // namespace oneflow

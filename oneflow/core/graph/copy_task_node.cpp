@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_stream_id.h"
 #include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/job/compile_mode.h"
 
 namespace oneflow {
 
@@ -106,6 +107,42 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_thrd_id(EncodeStreamIdToInt64(
       GenerateNamedTaskStreamId(machine_id, DeviceType::kCPU, 0, "COMM_NET")));
   set_lbi(lbi);
+  struct InitCandidateRegstDescId final : public CompileModeVisitor<InitCandidateRegstDescId> {
+    static void VisitNaive(CopyCommNetTaskNode* self) {
+      // Do nothing.
+    }
+    static void VisitRankPerIter(CopyCommNetTaskNode* self) {
+      self->InitCandidateInRegstDescIdProvider();
+    }
+    static void VisitRankPerThread(CopyCommNetTaskNode* self) {
+      self->InitCandidateInRegstDescIdProvider();
+    }
+  };
+  InitCandidateRegstDescId::Visit(CHECK_JUST(CurrentCompileMode()), this);
+}
+
+void CopyCommNetTaskNode::InitCandidateInRegstDescIdProvider() {
+  candidate_in_regst_desc_id_provider_.init_regst_desc_id(
+      Singleton<IDMgr>::Get()->NewRegstDescId());
+}
+
+int64_t CopyCommNetTaskNode::candidate_in_regst_desc_id() const {
+  struct GetRegstDescId final : public CompileModeVisitor<GetRegstDescId> {
+    static int64_t VisitNaive(const CopyCommNetTaskNode* self) {
+      UNIMPLEMENTED() << "No candidate input regst_desc_id set on copy_comm_net task nodes.";
+    }
+    static int64_t VisitRankPerIter(const CopyCommNetTaskNode* self) {
+      return self->GetForceInRegstDescId();
+    }
+    static int64_t VisitRankPerThread(const CopyCommNetTaskNode* self) {
+      return self->GetForceInRegstDescId();
+    }
+  };
+  return GetRegstDescId::Visit(CHECK_JUST(CurrentCompileMode()), this);
+}
+
+int64_t CopyCommNetTaskNode::GetForceInRegstDescId() const {
+  return candidate_in_regst_desc_id_provider_.regst_desc_id();
 }
 
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
@@ -134,12 +171,15 @@ Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
   CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
       << "not a serialized CopyCommNetTaskNode. debug string: "
       << transport_task_proto.DebugString();
+  candidate_in_regst_desc_id_provider_.init_regst_desc_id(
+      transport_task_proto.copy_comm_net_task().candidate_in_regst_desc_id());
   return Maybe<void>::Ok();
 }
 
 void CopyCommNetTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
   ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
-  transport_task_proto->mutable_copy_comm_net_task();
+  transport_task_proto->mutable_copy_comm_net_task()->set_candidate_in_regst_desc_id(
+      candidate_in_regst_desc_id_provider_.regst_desc_id());
 }
 
 }  // namespace oneflow

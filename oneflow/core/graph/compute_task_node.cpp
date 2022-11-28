@@ -69,6 +69,12 @@ std::shared_ptr<RegstDesc> NewFakeDataRegstDesc() {
   return regst_desc;
 }
 
+LazyInitRegstDescIdProvider* GetLazyInitRegstDescIdProvider(RegstDesc* regst_desc) {
+  auto* provider = regst_desc->mut_regst_desc_id_provider();
+  auto* regst_desc_id_provider = dynamic_cast<LazyInitRegstDescIdProvider*>(provider);
+  return CHECK_NOTNULL(regst_desc_id_provider);
+}
+
 }  // namespace
 
 void CompTaskNode::ConsumeFakeRegst(const std::string& regst_name) {
@@ -81,6 +87,7 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
   RegstDesc* data_regst_desc = nullptr;
   for (const auto& pair : consumed_regsts()) {
     for (const auto& regst_desc : pair.second) {
+      GetLazyInitRegstDescIdProvider(regst_desc.get())->init_regst_desc_id();
       if (regst_desc->regst_desc_type().has_data_regst_desc()) {
         CHECK(data_regst_desc == nullptr);
         data_regst_desc = CHECK_NOTNULL(regst_desc.get());

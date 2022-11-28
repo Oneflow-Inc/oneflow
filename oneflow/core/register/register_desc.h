@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
+#include "oneflow/core/register/regst_desc_id_provider.h"
 
 namespace oneflow {
 
@@ -34,7 +35,11 @@ class RegstDesc final {
   ~RegstDesc() = default;
 
   // regst_desc_id
-  int64_t regst_desc_id() const { return regst_desc_id_; }
+  int64_t regst_desc_id() const { return regst_desc_id_provider_->regst_desc_id(); }
+  bool has_regst_desc_id() const { return regst_desc_id_provider_->has_regst_desc_id(); }
+
+  const RegstDescIdProvider& regst_desc_id_provider() const { return *regst_desc_id_provider_; }
+  RegstDescIdProvider* mut_regst_desc_id_provider() { return regst_desc_id_provider_.get(); }
 
   // producer_, consumers_
   const TaskNode* producer() const { return producer_; }
@@ -105,7 +110,7 @@ class RegstDesc final {
   bool HasSameBlobDescs(const RegstDesc*);
 
  private:
-  int64_t regst_desc_id_;
+  std::unique_ptr<RegstDescIdProvider> regst_desc_id_provider_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> consumers_;
   int32_t min_register_num_;

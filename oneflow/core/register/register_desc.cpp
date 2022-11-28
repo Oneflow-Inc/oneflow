@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = Singleton<IDMgr>::Get()->NewRegstDescId();  // NOLINT
+  regst_desc_id_provider_ = NewRegstDescIdProvider();
   producer_ = nullptr;
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
@@ -121,7 +121,7 @@ void RegstDesc::EraseUninitializedShapeBlob() {
 }
 
 void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
-  regst_desc_id_ = proto.regst_desc_id();
+  regst_desc_id_provider_ = std::make_unique<ConstRegstDescIdProvider>(proto.regst_desc_id());
   CHECK_EQ(proto.producer_task_id(), producer_->task_id());
   regst_desc_type_ = proto.regst_desc_type();
   if (regst_desc_type_.has_data_regst_desc()) {
@@ -147,7 +147,7 @@ void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
-  ret->set_regst_desc_id(regst_desc_id_);
+  ret->set_regst_desc_id(regst_desc_id());
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
   *(ret->mutable_regst_desc_type()) = regst_desc_type_;

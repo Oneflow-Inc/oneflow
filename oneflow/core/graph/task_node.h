@@ -84,6 +84,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ConsumeAllRegsts() = 0;
   void PinConsumedRegst();
   void InferTimeShapeIfMeaningful();
+  template<typename DoEachT>
+  void ForEachProducedRegst(const DoEachT& Handler) {
+    for (auto& pair : produced_regsts_) { Handler(pair.first, pair.second.get()); }
+  }
   void ForEachProducedDataRegst(const std::function<void(const std::string&, RegstDesc*)>& Handler);
   void ForEachConsumedDataRegst(
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
@@ -189,6 +193,11 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
 
   void ToProto(TaskEdgeProto* proto) const;
+
+  template<typename DoEachT>
+  void ForEachRegstDesc(const DoEachT& DoEach) const {
+    for (const auto& pair : name_in_producer2regst_) { DoEach(pair.second.get()); }
+  }
 
  private:
   HashSet<LogicalBlobId> lbis_;

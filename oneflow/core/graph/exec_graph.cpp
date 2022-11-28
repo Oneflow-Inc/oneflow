@@ -66,6 +66,8 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
     CHECK(regst);
+    CHECK(regst->has_regst_desc_id())
+        << "task_node: " << regst->producer() << ", regst_desc: " << regst;
     PbMapPair<std::string, int64_t> pair{bn_in_op, regst->regst_desc_id()};
     CHECK(ret->mutable_bn_in_op2regst_desc_id()->insert(pair).second);
   }

@@ -1248,7 +1248,6 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
-  DecideExecutionOrder();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
   return Maybe<void>::Ok();
 }

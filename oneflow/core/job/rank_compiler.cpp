@@ -48,6 +48,46 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
+LazyInitRegstDescIdProvider* GetLazyInitRegstDescIdProvider(RegstDesc* regst_desc) {
+  auto* provider = regst_desc->mut_regst_desc_id_provider();
+  auto* regst_desc_id_provider = dynamic_cast<LazyInitRegstDescIdProvider*>(provider);
+  return CHECK_NOTNULL(regst_desc_id_provider);
+}
+
+void TryInitProducedRegstDescIdByNewRegstDescId(TaskNode* task_node) {
+  task_node->ForEachProducedRegst([&](const std::string& _, RegstDesc* regst_desc) {
+    auto* regst_desc_id_provider = GetLazyInitRegstDescIdProvider(regst_desc);
+    if (regst_desc_id_provider->has_regst_desc_id()) { return; }
+    regst_desc_id_provider->init_regst_desc_id();
+  });
+}
+
+void InitProducedRegstDescId(TaskNode* task_node) {
+  const HashMap<RegstDesc*, int64_t> regst_desc2predefined_regst_desc_id = [&] {
+    HashMap<RegstDesc*, int64_t> regst_desc2predefined_regst_desc_id;
+    for (const auto* edge : task_node->out_edges()) {
+      auto* comm_task_node = dynamic_cast<CopyCommNetTaskNode*>(edge->dst_node());
+      if (comm_task_node == nullptr) { continue; }
+      RegstDesc* sole_regst_desc = nullptr;
+      edge->ForEachRegstDesc([&](RegstDesc* regst_desc) {
+        CHECK(sole_regst_desc == nullptr);
+        sole_regst_desc = regst_desc;
+      });
+      auto* predefined = &regst_desc2predefined_regst_desc_id[sole_regst_desc];
+      *predefined = std::max(*predefined, comm_task_node->candidate_in_regst_desc_id());
+    }
+    return regst_desc2predefined_regst_desc_id;
+  }();
+  // Initialize RegstDesc.regst_desc_id() by predefined regst_desc_id.
+  for (const auto& pair : regst_desc2predefined_regst_desc_id) {
+    auto* regst_desc_id_provider = GetLazyInitRegstDescIdProvider(pair.first);
+    CHECK(!regst_desc_id_provider->has_regst_desc_id());
+    regst_desc_id_provider->init_regst_desc_id(pair.second);
+  }
+  // Initialize RegstDesc.regst_desc_id() by new regst_desc_id.
+  TryInitProducedRegstDescIdByNewRegstDescId(task_node);
+}
+
 }  // namespace
 
 Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
@@ -83,6 +123,8 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  // Initialize RegstDesc::regst_desc_id().
+  task_gph->ForEachNode(&InitProducedRegstDescId);
   task_gph->DecideExecutionOrder();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
@@ -99,6 +141,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
+    TryInitProducedRegstDescIdByNewRegstDescId(task_node);
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (comp_task_node != nullptr) {
       const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
