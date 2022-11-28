@@ -25,23 +25,6 @@ namespace oneflow {
 
 namespace user_op {
 
-namespace {
-
-const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const ::oneflow::user_op::OpRegistryResult* val =
-      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-  return val->op_def;
-}
-
-::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
-  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-  return op_def.GetAttrType(attr_name);
-}
-
-}  // namespace
-
 LogicalResult saveAttrDictionaryToOpConf(DictionaryAttr attributes,
                                          ::oneflow::OperatorConf* op_conf) {
   if (auto scope_symbol_id =
@@ -96,7 +79,7 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
       auto attr_name = id.str();
       Attribute attr = id_attr.getValue();
       auto user_attr = ::oneflow::AttrValue();
-      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name.str(), attr_name);
+      const ::oneflow::AttrType attr_type = queryAttrType(op_type_name.str(), attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {
@@ -296,6 +279,12 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     LOG(FATAL) << "unsupported device tag: " << device_tag.str();
     return ::oneflow::DeviceType::kInvalidDevice;
   }
+}
+
+::oneflow::AttrType queryAttrType(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(support::getUserOpDef(op_type_name));
+  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
+  return op_def.GetAttrType(attr_name);
 }
 
 }  // namespace user_op

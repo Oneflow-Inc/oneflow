@@ -110,19 +110,6 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
   }
 
-  AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
-    user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
-    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-    return op_def.GetAttrType(attr_name);
-  }
-
-  UserOpDef GetUserOpDef(const std::string& op_type_name) const {
-    const user_op::OpRegistryResult* val =
-        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-    CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-    return val->op_def;
-  }
-
   void QueryLogicalBlob(
       const std::string& lbn,
       std::function<void(const int64_t* shape_begin, const int64_t* shape_end, DataType dt)> cb)

@@ -74,19 +74,6 @@ using PbMessage = google::protobuf::Message;
 
 namespace {
 
-const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const ::oneflow::user_op::OpRegistryResult* val =
-      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-  return val->op_def;
-}
-
-::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
-  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-  return op_def.GetAttrType(attr_name);
-}
-
 using SizeVec = SmallVector<int32_t, 8>;
 
 SizeVec GetSizesFromArgs(UserOpArgs args, UserOpArgDefs arg_defs) {
@@ -127,7 +114,7 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
                                                      std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) return failure();
   const auto& user_conf = op.user_conf();
-  const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  const ::oneflow::UserOpDef& op_def = support::getUserOpDef(op.user_conf().op_type_name());
   const auto UserOpOperationName = OperationName(UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
@@ -398,7 +385,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
                                 GetBuilder().getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  const auto& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  const auto& op_def = support::getUserOpDef(op.user_conf().op_type_name());
   if (failed(ValidateUserOpConf(op, op.user_conf().input(), op_def.input()))) { return failure(); }
   if (failed(ValidateUserOpConf(op, op.user_conf().output(), op_def.output()))) {
     return failure();

@@ -34,6 +34,7 @@ namespace oneflow {
 
 namespace support {
 
+const ::oneflow::UserOpDef& getUserOpDef(const std::string& op_type_name);
 static const std::vector<std::string>* inputKeys() {
   static std::vector<std::string> val({"in"});
   return &val;

@@ -25,6 +25,7 @@ namespace user_op {
 
 ::oneflow::ShapeProto getAttrAsShape(mlir::Attribute& attr);
 ::oneflow::Int64ListProto getAttrAsStride(mlir::Attribute& attr);
+::oneflow::AttrType queryAttrType(const std::string& op_type_name, const std::string& attr_name);
 LogicalResult saveAttrDictionaryToOpConf(DictionaryAttr attributes,
                                          ::oneflow::OperatorConf* op_conf);
 LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
