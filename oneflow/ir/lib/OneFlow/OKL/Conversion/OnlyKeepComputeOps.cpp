@@ -42,7 +42,6 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
-
 namespace mlir {
 
 namespace okl {
