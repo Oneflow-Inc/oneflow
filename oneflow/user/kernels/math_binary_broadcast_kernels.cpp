@@ -87,7 +87,7 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
       primitive->Launch(ctx->stream(), num_src0_dims, src0_dims, x->dptr(), num_src1_dims,
                         src1_dims, y->dptr(), z->mut_dptr());
     } else {
-      // For 0-d Tensor
+      // For 0-size Tensor
       return;
     }
   }
