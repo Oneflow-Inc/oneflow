@@ -11,7 +11,7 @@ namespace {
 
 template<typename T>
 ExecutorFactory::ProductType CreateExecutor() {
-  return ExecutorFactory::ProductType(std::make_unique<thread::ExecutorBase<T>>(T()));
+  return ExecutorFactory::ProductType(std::make_shared<thread::ExecutorBase<T>>(T()));
 }
 
 }  // namespace

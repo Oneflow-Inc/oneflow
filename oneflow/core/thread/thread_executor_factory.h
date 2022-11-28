@@ -32,14 +32,14 @@ enum class ExecutorType {
 
 class ExecutorFactory {
  public:
-  using ProductType = maybe::Variant<std::unique_ptr<thread::ExecutorBase<thread::SeqExecutor>>,
+  using ProductType = maybe::Variant<std::shared_ptr<thread::ExecutorBase<thread::SeqExecutor>>,
 #ifdef WITH_TBB
-                                     std::unique_ptr<thread::ExecutorBase<thread::TbbExecutor>>,
+                                     std::shared_ptr<thread::ExecutorBase<thread::TbbExecutor>>,
 #endif
 #ifdef WITH_OMP
-                                     std::unique_ptr<thread::ExecutorBase<thread::OmpExecutor>>,
+                                     std::shared_ptr<thread::ExecutorBase<thread::OmpExecutor>>,
 #endif
-                                     std::unique_ptr<thread::ExecutorBase<thread::OfExecutor>>>;
+                                     std::shared_ptr<thread::ExecutorBase<thread::OfExecutor>>>;
 
   static Maybe<ProductType> Create(ExecutorType type);
   static Maybe<ProductType> Create(const std::string& type);
