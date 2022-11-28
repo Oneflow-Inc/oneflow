@@ -97,11 +97,9 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
           ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
     }
   }
-  LOG(ERROR) << op_conf.DebugString();
   auto op = CHECK_JUST(ConstructOp(op_conf, user_op::generateDeviceName(attributes)));
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
-    LOG(ERROR) << "find bn: " << bn;
     if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
     return it->second.get();
   };
