@@ -145,6 +145,15 @@ class TestBatchNormModule(flow.unittest.TestCase):
         input2 = torch.ones(2, 10, 5, 8, 4)
         out1=m1(input1)
         out2=m2(input2)
+
+    @profile(torch.nn.functional.batch_norm)
+    def profile_functional_batchnorm(test_case):
+        input = torch.ones(2, 10, 8, 3)
+        running_mean = torch.randn(10)
+        running_var = torch.randn(10)
+        weight = torch.randn(10)
+        bias = torch.randn(10)
+        out = torch.nn.functional.batch_norm(input)
     """
 
 
