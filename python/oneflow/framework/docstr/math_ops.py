@@ -1853,6 +1853,9 @@ add_docstr(
     Returns a tuple (values, indices) where values is the cumulative maximum of elements of input in the dimension dim.
     And indices is the index location of each maximum value found in the dimension dim.
 
+    .. math::
+        y_i = \max(x_1, x_2, x_3, ..., x_i)
+
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.cummax.html
 
@@ -1885,6 +1888,9 @@ add_docstr(
 
     Returns a tuple (values, indices) where values is the cumulative minimum of elements of input in the dimension dim.
     And indices is the index location of each minimum value found in the dimension dim.
+
+    .. math::
+        y_i = \min(x_1, x_2, x_3, ..., x_i)
 
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.cummin.html
