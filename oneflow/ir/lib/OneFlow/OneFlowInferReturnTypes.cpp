@@ -36,14 +36,14 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
   }
 }
 
-TensorType getTensorTypeFromBlobDesc(MLIRContext* context, const ::oneflow::BlobDesc* blob_desc) {
+Type getTensorTypeFromBlobDesc(MLIRContext* context, const ::oneflow::BlobDesc* blob_desc) {
   if (auto type = getTypeFromOneFlowDataType(context, blob_desc->data_type())) {
     return RankedTensorType::get(
         llvm::SmallVector<int64_t, 4>(
             {blob_desc->shape().dim_vec().begin(), blob_desc->shape().dim_vec().end()}),
         type);
   } else {
-    LOG(FATAL) << "fail to get TensorType from BlobDesc";
+    return Type{};
   }
 }
 
@@ -113,9 +113,7 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
     for (size_t arg_id = 0; arg_id < MAX_OUTPUT_NUM_PER_BN; arg_id++) {
       const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
       const auto* desc = lbi2logical_blob_desc_.at(bn).get();
-      if (desc->data_type() != ::oneflow::kInvalidDataType) {
-        inferredReturnTypes.push_back(getTensorTypeFromBlobDesc(context, desc));
-      }
+      if (auto t = getTensorTypeFromBlobDesc(context, desc)) { inferredReturnTypes.push_back(t); }
     }
   }
   return success();
