@@ -100,16 +100,21 @@ def _test_get_boundding_boxes_coord_impl(test_case, device, shape):
     compare(b2_x2, torch_b2_x2)
     compare(b2_y1, torch_b2_y1)
     compare(b2_y2, torch_b2_y2)
-    res = (b1_x1 + b1_x2 + b1_y1 + b1_y2 + b2_x1 + b2_x2 + b2_y1 + b2_y2).sum()
+    res = (
+        (b1_x1 + 2 * b1_x2 + b1_y1 + b1_y2 + b2_x1 + b2_x2 + b2_y1 + b2_y2) * 2
+    ).sum()
     torch_res = (
-        torch_b1_x1
-        + torch_b1_x2
-        + torch_b1_y1
-        + torch_b1_y2
-        + torch_b2_x1
-        + torch_b2_x2
-        + torch_b2_y1
-        + torch_b2_y2
+        (
+            torch_b1_x1
+            + 2 * torch_b1_x2
+            + torch_b1_y1
+            + torch_b1_y2
+            + torch_b2_x1
+            + torch_b2_x2
+            + torch_b2_y1
+            + torch_b2_y2
+        )
+        * 2
     ).sum()
     res.sum().backward()
     torch_res.sum().backward()
