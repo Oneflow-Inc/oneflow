@@ -23,17 +23,17 @@ limitations under the License.
 #include "OneFlow/kernel_launch/RunContext.h"
 
 extern "C" {
-void* fetch_run_ctx(void* launcher, int64_t index) {
+void* oneflow_okl_fetch_run_ctx(void* launcher, int64_t index) {
   return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
       ->FetchRunCtx(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
 }
 
-void* fetch_kernel(void* launcher, int64_t index) {
+void* oneflow_okl_fetch_kernel(void* launcher, int64_t index) {
   return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
       ->FetchKernel(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
 }
 
-void launch(void* run_ctx, void* kernel) {
+void oneflow_okl_launch(void* run_ctx, void* kernel) {
   const oneflow::user_op::OpKernel* engine =
       static_cast<typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>>(kernel);
 
