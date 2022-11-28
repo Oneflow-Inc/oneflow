@@ -332,10 +332,6 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
   return success();
 }
 
-Type Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
-  return getTypeFromOneFlowDataType(GetBuilder(), dt);
-}
-
 LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
                                  ::oneflow::NdSbp* nd_sbp) {
   for (const auto& sbp_attr : nd_sbp_attr) {

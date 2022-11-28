@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -183,7 +184,7 @@ Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   job_wrapper_.QueryLogicalBlob(
       lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
                               ::oneflow::DataType dt) {
-        if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
+        if (auto t = getTypeFromOneFlowDataType(dt)) {
           ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t);
         } else {
           llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
@@ -766,7 +767,7 @@ LogicalResult JobImporter::ConvertOutputOp(OutputOp op, ::oneflow::Job& job) {
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
   if (!blob_conf.has_data_type()) { return Type{}; }
   if (!blob_conf.has_shape()) { return Type{}; };
-  if (auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type())) {
+  if (auto data_type = getTypeFromOneFlowDataType(blob_conf.data_type())) {
     return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
                                  data_type);
   } else {
