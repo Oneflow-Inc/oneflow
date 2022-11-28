@@ -53,9 +53,10 @@ __global__ void FusedGluForwardGpu(
     const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx) + (y_packed_row * packed_stride + y_packed_col);
-    const LoadPack* matmul_vx_load 
-      = reinterpret_cast<const LoadPack*>(matmul_vx) + (y_packed_row * packed_stride + y_packed_col);
+    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx)
+                                     + (y_packed_row * packed_stride + y_packed_col);
+    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(matmul_vx)
+                                     + (y_packed_row * packed_stride + y_packed_col);
     const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b) + y_packed_col;
     const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c) + y_packed_col;
 
