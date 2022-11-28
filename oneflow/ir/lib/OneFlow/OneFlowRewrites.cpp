@@ -88,14 +88,14 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
                                                   operands, attributes);
 }
 
-static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value y, Value out, Value bias,
+static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Value weight, Value bias,
                                           Attribute padding_before, Attribute data_format,
                                           Operation* conv) {
   auto conv_op = llvm::dyn_cast<Conv2DOp>(conv);
   assert(conv_op);
   SmallVector<Value, 4> operands;
-  operands.push_back(y);
-  operands.push_back(out);
+  operands.push_back(x);
+  operands.push_back(weight);
   if (bias) { operands.push_back(bias); }
   NamedAttrList attributes = conv_op->getAttrs();
   llvm::SmallVector<int32_t> padding_before_array;
