@@ -55,10 +55,6 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
   CHECK(
       user_op::ConvertUserOpInputs(op_type_name, operands, attributes, op_conf.mutable_user_conf())
           .succeeded());
-  // if (!succeeded(ConvertUserOpOutputs(op, op_name, user_conf))) {
-  //   op->emitError("fail to convert user op outputs");
-  //   return failure();
-  // }
   if (!succeeded(user_op::ConvertUserOpAttributes(op_type_name, operands, attributes, op_conf))) {
     return failure();
   }
