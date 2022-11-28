@@ -88,9 +88,9 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
                                                   operands, attributes);
 }
 
-static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Value weight, Value bias,
-                                          Attribute padding_before, Attribute data_format,
-                                          Operation* conv) {
+static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Value weight,
+                                          Value bias, Attribute padding_before,
+                                          Attribute data_format, Operation* conv) {
   auto conv_op = llvm::dyn_cast<Conv2DOp>(conv);
   assert(conv_op);
   SmallVector<Value, 4> operands;
@@ -128,8 +128,9 @@ static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Va
 }
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
-                                                  Attribute padding_before, Attribute padding_after,
-                                                  Attribute data_format) {
+                                                         Attribute padding_before,
+                                                         Attribute padding_after,
+                                                         Attribute data_format) {
   if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
     if (padding_before.cast<ArrayAttr>().getValue().equals(
             padding_after.cast<ArrayAttr>().getValue())) {

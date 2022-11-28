@@ -30,7 +30,7 @@ void populateRewrites(RewritePatternSet& patterns);
 namespace constraintes {
 void populateConstraintes(RewritePatternSet& patterns);
 
-} // namespace constraintes
+}  // namespace constraintes
 
 }  // namespace oneflow
 
