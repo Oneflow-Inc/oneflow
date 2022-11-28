@@ -160,33 +160,17 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
 
 LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
                                       DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf) {
-  //   {
-  //     std::vector<std::string> keys{};
-  //     std::vector<int32_t> sizes{};
-  //     if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
-  //             op_type_name, operands, attributes, keys, sizes))) {
-  //       LOG(FATAL) << "fail to get filtered segment key and sizes";
-  //       return failure();
-  //     }
-  //     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-  //   }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+            op_type_name, operands, attributes, keys, sizes))) {
+      LOG(FATAL) << "fail to get filtered segment key and sizes";
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
   return doConvertUserOpAttributes(op_type_name, attributes, op_conf);
-}
-
-::oneflow::ShapeProto getAttrAsShape(mlir::Attribute& attr) {
-  ::oneflow::ShapeProto shape{};
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-  return shape;
-}
-
-::oneflow::Int64ListProto getAttrAsStride(mlir::Attribute& attr) {
-  ::oneflow::Int64ListProto stride{};
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    stride.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-  return stride;
 }
 
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
@@ -240,6 +224,22 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     }
   }
   return success();
+}
+
+::oneflow::ShapeProto getAttrAsShape(mlir::Attribute& attr) {
+  ::oneflow::ShapeProto shape{};
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+  return shape;
+}
+
+::oneflow::Int64ListProto getAttrAsStride(mlir::Attribute& attr) {
+  ::oneflow::Int64ListProto stride{};
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    stride.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+  return stride;
 }
 
 ::oneflow::ParallelConf generateParallelConf(DictionaryAttr attributes) {
