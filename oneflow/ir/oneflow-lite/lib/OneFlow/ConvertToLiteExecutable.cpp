@@ -30,13 +30,26 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#include "schemas/executable_generated.h"
+#pragma GCC diagnostic pop
+
 namespace mlir {
 namespace oneflow {
 
 namespace lite {
 
+static oneflow_lite_OpDef_ref_t createLiteOpDef(
+    FlatbufferBuilder& builder, Operation* op,
+    const llvm::DenseMap<StringAttr, int>& deviceOrdering) {
+  oneflow_lite_OpDef_start(builder);
+
+  return oneflow_lite_OpDef_end(builder);
+}
+
 LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, ConvertOptions options,
-                                      LiteExecutable* executable) {
+                                      llvm::SmallVector<uint8_t, 32>* executable) {
   mlir::PassManager pm(context);
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createLiteFoldVariablePass());
@@ -50,7 +63,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   }
 
   Operation* root = nullptr;
-  module.getOperation()->walk<WalkOrder::PreOrder>([&](oneflow::Job job) -> WalkResult {
+  module.getOperation()->walk([&](oneflow::Job job) -> WalkResult {
     root = job.getOperation();
     return WalkResult::interrupt();
   });
@@ -59,6 +72,39 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     return failure();
   }
   llvm::errs() << *module << "\n";
+  auto funcName = root->getAttrOfType<StringAttr>("sym_name");
+
+  const llvm::DenseMap<StringAttr, size_t>& deviceSegmentSize = getDeviceSegmentSize();
+  const llvm::DenseMap<Value, size_t>& valueSegmentOffset = getValueSegmentOffset();
+
+  FlatbufferBuilder builder;
+  oneflow_lite_ExecutableDef_start_as_root(builder);
+  oneflow_lite_ExecutableDef_version_add(builder, 0);
+  oneflow_lite_ExecutableDef_name_add(builder, builder.createString(funcName.getValue()));
+
+  llvm::DenseMap<StringAttr, int> deviceOrdering;
+  llvm::SmallVector<StringRef, 4> devices;
+  for (const auto& it : deviceSegmentSize) {
+    deviceOrdering[it.first] = deviceOrdering.size();
+    devices.push_back(it.first.getValue());
+  }
+  oneflow_lite_ExecutableDef_devices_add(builder, builder.createStringVec(devices));
+
+  llvm::SmallVector<oneflow_lite_OpDef_ref_t, 4> ops;
+  root->walk([&](Operation* op) {
+    if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<InputOp>(op)
+        || llvm::dyn_cast<OutputOp>(op)) {
+      return;
+    }
+    ops.push_back(createLiteOpDef(builder, op, deviceOrdering));
+  });
+  oneflow_lite_ExecutableDef_ops_add(builder, builder.createOffsetVecDestructive(ops));
+
+  oneflow_lite_ExecutableDef_end_as_root(builder);
+
+  size_t packedSize = flatcc_builder_get_buffer_size(builder);
+  executable->resize(packedSize);
+  flatcc_builder_copy_buffer(builder, executable->data(), packedSize);
   return success();
 }
 

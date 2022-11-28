@@ -30,6 +30,12 @@ namespace mlir {
 namespace oneflow {
 namespace lite {
 
+static llvm::DenseMap<StringAttr, size_t> deviceSegmentSize;
+static llvm::DenseMap<Value, size_t> valueSegmentOffset;
+
+const llvm::DenseMap<StringAttr, size_t>& getDeviceSegmentSize() { return deviceSegmentSize; }
+const llvm::DenseMap<Value, size_t>& getValueSegmentOffset() { return valueSegmentOffset; }
+
 class ValueLiveness {
  public:
   ValueLiveness() = default;
@@ -65,7 +71,7 @@ struct MemoryPlanningPass : public PassWrapper<MemoryPlanningPass, OperationPass
   void computeValueLiveness();
   void computeValueSizeAndSort();
   void doMemoryPlanning();
-  bool isLivenessOverlap(Value value, llvm::SmallVector<Value, 4> block);
+  bool canShareMemoryBlock(Value value, llvm::SmallVector<Value, 4> block);
 };
 
 void MemoryPlanningPass::computeValueLiveness() {
@@ -75,24 +81,17 @@ void MemoryPlanningPass::computeValueLiveness() {
 
   // Compute value liveness
   getOperation().walk([&](Operation* op) {
-    if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
-    opOrdering[op] = opOrdering.size() + 1;
+    if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<OutputOp>(op)) { return; }
+    opOrdering[op] = opOrdering.size();
     opList.push_back(op);
   });
-  size_t lastOrdering = opOrdering.size() + 1;
-  for (auto it = opList.rbegin(); it != opList.rend(); ++it) {
-    Operation* op = *it;
-    if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
+  for (Operation* op : llvm::reverse(opList)) {
     size_t ordering = opOrdering[op];
     for (Value operand : op->getOperands()) {
       if (liveEnds.find(operand) == liveEnds.end()) { liveEnds[operand] = ordering; }
     }
-    if (auto input_op = dyn_cast<InputOp>(op)) {
-      Value in = input_op.input();
-      valueLiveness.addValue(in, 0, liveEnds[in]);
-    }
     for (Value result : op->getResults()) {
-      size_t liveEnd = lastOrdering;
+      size_t liveEnd = opOrdering.size();
       const auto& it = liveEnds.find(result);
       if (it != liveEnds.end()) { liveEnd = it->second; }
       valueLiveness.addValue(result, ordering, liveEnd);
@@ -120,7 +119,10 @@ static size_t getTensorBitSize(TensorType value) {
 void MemoryPlanningPass::computeValueSizeAndSort() {
   llvm::SetVector<Value, llvm::SmallVector<Value, 4>> valueList;
   getOperation().walk([&](Operation* op) {
-    if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
+    if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<InputOp>(op)
+        || llvm::dyn_cast<OutputOp>(op)) {
+      return;
+    }
     valueList.insert(op->getOperands().begin(), op->getOperands().end());
     valueList.insert(op->getResults().begin(), op->getResults().end());
   });
@@ -133,12 +135,19 @@ void MemoryPlanningPass::computeValueSizeAndSort() {
   });
 }
 
-bool MemoryPlanningPass::isLivenessOverlap(Value value, llvm::SmallVector<Value, 4> block) {
-  if (isDynamicTensorType(value.getType().cast<TensorType>())) { return true; }
+bool MemoryPlanningPass::canShareMemoryBlock(Value value, llvm::SmallVector<Value, 4> block) {
+  if (isDynamicTensorType(value.getType().cast<TensorType>())) { return false; }
+  auto device = value.getDefiningOp()->getAttrOfType<StringAttr>(
+      OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
   for (auto v : block) {
-    if (valueLiveness.isLivenessOverlap(value, v)) { return true; }
+    if (device
+        != v.getDefiningOp()->getAttrOfType<StringAttr>(
+            OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
+      return false;
+    }
+    if (valueLiveness.isLivenessOverlap(value, v)) { return false; }
   }
-  return false;
+  return true;
 }
 
 void MemoryPlanningPass::doMemoryPlanning() {
@@ -147,17 +156,29 @@ void MemoryPlanningPass::doMemoryPlanning() {
   for (auto value : sortedValues) {
     bool newBlock = true;
     for (auto& block : blocks) {
-      if (!isLivenessOverlap(value, block)) {
+      if (canShareMemoryBlock(value, block)) {
         block.push_back(value);
         newBlock = false;
       }
     }
     if (newBlock) { blocks.push_back(llvm::SmallVector<Value, 4>{value}); }
   }
-  for (auto block : llvm::enumerate(blocks)) {
-    for (auto value : block.value()) {
-      // TODO
+
+  for (auto& block : blocks) {
+    auto device = block.front().getDefiningOp()->getAttrOfType<StringAttr>(
+        OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
+    size_t offset = 0;
+    auto it = deviceSegmentSize.find(device);
+    if (it != deviceSegmentSize.end()) { offset = it->second; }
+    size_t block_size = 0;
+    for (auto value : block) {
+      size_t bitsize = getTensorBitSize(value.getType().cast<TensorType>());
+      if (bitsize > block_size) { block_size = bitsize; }
+      valueSegmentOffset[value] = offset;
     }
+    block_size = (block_size + 7) / 8;      // bytesize
+    block_size = (block_size + 512) / 512;  // align as 512 bytes
+    deviceSegmentSize[device] = offset + block_size;
   }
 }
 

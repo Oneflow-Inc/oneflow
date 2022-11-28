@@ -24,6 +24,9 @@ namespace lite {
 
 std::unique_ptr<mlir::Pass> createLiteMemoryPlanningPass();
 
+const llvm::DenseMap<StringAttr, size_t>& getDeviceSegmentSize();
+const llvm::DenseMap<Value, size_t>& getValueSegmentOffset();
+
 }  // namespace lite
 }  // namespace oneflow
 }  // namespace mlir

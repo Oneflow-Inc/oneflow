@@ -22,30 +22,18 @@ limitations under the License.
 #include "mlir/Support/LLVM.h"
 
 #include "OneFlow/FlatbufferUtils.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#include "schemas/executable_generated.h"
-#pragma GCC diagnostic pop
 
 namespace mlir {
 namespace oneflow {
 
 namespace lite {
 
-class LiteExecutable {
- public:
-  LiteExecutable() = default;
-
- private:
-  FlatbufferBuilder builder_;
-};
-
 typedef struct ConvertOptions {
   llvm::SmallString<128> target;
 } ConvertOptions;
 
 LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, ConvertOptions options,
-                                      LiteExecutable* executable);
+                                      llvm::SmallVector<uint8_t, 32>* executable);
 
 }  // namespace lite
 

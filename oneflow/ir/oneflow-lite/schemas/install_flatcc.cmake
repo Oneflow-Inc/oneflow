@@ -69,7 +69,7 @@ function(FLATCC_GENERATE SRCS)
     list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}_generated.h")
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}_generated.h"
-      COMMAND ${FLATCC_EXE} ARGS
+      COMMAND ${FLATCC_EXE} ARGS --builder --verifier
               --outfile=${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}_generated.h -a ${ABS_FIL}
       DEPENDS ${ABS_FIL} ${FLATCC_EXE}
       COMMENT "Running flatcc compiler on ${FIL}"

@@ -47,7 +47,7 @@ table AttrDef {
   // Type should be one of the primary data type
   // i8,i16,i32,i64,u8,u16,u32,u64,f8,f16,bf16,f32,f64,bool,str,param,etc.
   // or a list of them i8s,i16s,i32s,i64s,u8s,u16s,u32s,u64s,
-  // f8s,f16s,bf16s,f32s,f64s,bools
+  // f8s,f16s,bf16s,f32s,f64s,bools,strs
   type:string;
   key:string;
   value:[byte];

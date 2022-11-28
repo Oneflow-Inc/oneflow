@@ -71,7 +71,7 @@ LogicalResult Compile(int argc, char** argv) {
   }
   llvm::errs() << "Enable compilation for target: " << options.target << "\n";
 
-  LiteExecutable executable;
+  llvm::SmallVector<uint8_t, 32> executable;
   return ConvertToLiteExecutable(&context, module.get(), options, &executable);
 }
 
