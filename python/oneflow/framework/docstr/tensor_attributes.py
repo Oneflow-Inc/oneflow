@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
-from oneflow.framework.docstr.utils import add_docstr
+from oneflow.framework.docstr.utils import add_docstr, reset_docstr
 
 oneflow.device.__doc__ = r"""
     A :class:`oneflow.device` is an object representing the device on which a :class:`oneflow.Tensor` is or will be allocated.
@@ -92,7 +92,7 @@ oneflow.placement.__doc__ = r"""
         
     """
 
-add_docstr(oneflow.placement.all, r"""
+reset_docstr(oneflow.placement.all, r"""
     oneflow.placement.all(device_type) -> oneflow.placement
 
     Returns a placement that contains all available devices.
