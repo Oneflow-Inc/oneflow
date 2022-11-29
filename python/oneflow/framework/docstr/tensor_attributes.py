@@ -92,7 +92,9 @@ oneflow.placement.__doc__ = r"""
         
     """
 
-reset_docstr(oneflow.placement.all, r"""
+reset_docstr(
+    oneflow.placement.all,
+    r"""
     oneflow.placement.all(device_type) -> oneflow.placement
 
     Returns a placement that contains all available devices.
@@ -110,7 +112,8 @@ reset_docstr(oneflow.placement.all, r"""
         p = flow.placement.all("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
         p = flow.placement.all("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
-    """)
+    """,
+)
 
 oneflow.sbp.sbp.__doc__ = r"""
     A ``oneflow.sbp`` is an object representing that how the data of the global tensor is distributed across the ranks of the ``Tensor`` placement.
