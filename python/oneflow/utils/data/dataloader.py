@@ -335,15 +335,20 @@ class DataLoader(Generic[T_co]):
         )
 
         if self.num_workers > 0:
-            assert not flow.env.rdma_is_initialized(), "RDMA is initialized! DataLoader could not create multi-process worker any more. "
+            assert (
+                not flow.env.rdma_is_initialized()
+            ), "RDMA is initialized! DataLoader could not create multi-process worker any more. "
             "Please make sure Dataloader is created before invoking oneflow.env.init_rdma() to avoid this error!"
             # NOTE: When num_workers > 0 and set env_use_rdma=True, it means RDMA will be initialized later,
             # and we need to start multi-processes DataLoader workers immediately by self._get_iterator()
             # to avoid conflict between RDMA and workers(fork process). see: https://www.rdmamojo.com/2012/05/24/ibv_fork_init
-            self._iterator = self._get_iterator() if self.env_use_rdma or flow.env.rdma_is_initialized() else None
+            self._iterator = (
+                self._get_iterator()
+                if self.env_use_rdma or flow.env.rdma_is_initialized()
+                else None
+            )
         else:
             self._iterator = None
-
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
@@ -386,7 +391,7 @@ class DataLoader(Generic[T_co]):
                 self._iterator = self._get_iterator()
             else:
                 self._iterator._reset(self)
-            
+
             return self._iterator
         else:
             return self._get_iterator()
@@ -903,7 +908,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     down.
 
     def __init__(self, loader):
-        super(_MultiProcessingDataLoaderIter, self).__init__(loader)    
+        super(_MultiProcessingDataLoaderIter, self).__init__(loader)
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
 
