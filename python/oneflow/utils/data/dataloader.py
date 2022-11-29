@@ -141,6 +141,8 @@ class DataLoader(Generic[T_co]):
         persistent_workers (bool, optional): If ``True``, the data loader will not shutdown
             the worker processes after a dataset has been consumed once. This allows to
             maintain the workers `Dataset` instances alive. (default: ``False``)
+        env_use_rdma (bool, optional): If ``True``, the data loader will initialize worker processes 
+            immediately. This allows to maintain the workers `Dataset` instances alive. (default: ``False``)
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
@@ -189,7 +191,8 @@ class DataLoader(Generic[T_co]):
         generator=flow.Generator("cpu"),
         *,
         prefetch_factor: int = 2,
-        persistent_workers: bool = False
+        persistent_workers: bool = False,
+        env_use_rdma: bool = False
     ):
 
         if num_workers < 0:
@@ -219,6 +222,7 @@ class DataLoader(Generic[T_co]):
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
+        self.env_use_rdma = env_use_rdma
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -330,7 +334,16 @@ class DataLoader(Generic[T_co]):
             None  # See NOTE [ IterableDataset and __len__ ]
         )
 
-        self._iterator = None
+        if self.num_workers > 0:
+            assert not flow.env.rdma_is_initialized(), "RDMA is initialized! DataLoader could not create multi-process worker any more. "
+            "Please make sure Dataloader is created before invoking oneflow.env.init_rdma() to avoid this error!"
+            # NOTE: When num_workers > 0 and set env_use_rdma=True, it means RDMA will be initialized later,
+            # and we need to start multi-processes DataLoader workers immediately by self._get_iterator()
+            # to avoid conflict between RDMA and workers(fork process). see: https://www.rdmamojo.com/2012/05/24/ibv_fork_init
+            self._iterator = self._get_iterator() if self.env_use_rdma or flow.env.rdma_is_initialized() else None
+        else:
+            self._iterator = None
+
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
@@ -358,6 +371,11 @@ class DataLoader(Generic[T_co]):
     # We quote '_BaseDataLoaderIter' since it isn't defined yet and the definition can't be moved up
     # since '_BaseDataLoaderIter' references 'DataLoader'.
     def __iter__(self) -> "_BaseDataLoaderIter":
+        # When self.env_use_rdma is True, means self._iterator already been created when DataLoader init
+        # so, just return it to avoid create it again.
+        if self.env_use_rdma:
+            return self._iterator
+
         # When using a single worker the returned iterator should be
         # created everytime to avoid reseting its state
         # However, in the case of a multiple workers iterator
@@ -368,6 +386,7 @@ class DataLoader(Generic[T_co]):
                 self._iterator = self._get_iterator()
             else:
                 self._iterator._reset(self)
+            
             return self._iterator
         else:
             return self._get_iterator()
@@ -884,13 +903,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     down.
 
     def __init__(self, loader):
-        super(_MultiProcessingDataLoaderIter, self).__init__(loader)
-        # NOTE: If RDMA is initialized! Could not create multiprocessing_context any more,
-        # so need to destory rdma first, and after worker processes been created, we will init_rdma again.
-        self._env_use_rdma = False
-        if flow.env.rdma_is_initialized():
-            self._env_use_rdma = True
-            flow.env.destory_rdma()
+        super(_MultiProcessingDataLoaderIter, self).__init__(loader)    
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
 
@@ -972,8 +985,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
         self._reset(loader, first_iter=True)
-        if self._env_use_rdma:
-            flow.env.init_rdma()
 
     def _reset(self, loader, first_iter=False):
         super()._reset(loader, first_iter)
