@@ -281,7 +281,7 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
     ]
   bind_python: True
@@ -2479,6 +2479,14 @@
 
 - name: "fused_get_ciou_diagonal_angle_grad"
   signature: "TensorTuple (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor v_diff, Float eps) => FusedGetCiouDiagonalAngleGrad"
+  bind_python: False
+
+- name: "fused_get_convex_diagonal_squared"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquared"
+  bind_python: True
+
+- name: "fused_get_convex_diagonal_squared_grad"
+  signature: "TensorTuple (Tensor c2_diff, Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquaredGrad"
   bind_python: False
 
 - name: "grouped_matmul_bias"
