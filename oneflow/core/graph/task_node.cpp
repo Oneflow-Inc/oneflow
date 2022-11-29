@@ -253,7 +253,7 @@ void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
-    pair.second->ToProto(&regst_desc_proto);
+    pair.second->ToProto(&regst_desc_proto, check);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
 
@@ -387,7 +387,8 @@ std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_produce
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
-  CHECK_EQ(name_in_producer2regst_.size(), 1);
+  CHECK_EQ(name_in_producer2regst_.size(), 1)
+      << "edge: " << this << ", src: " << src_node()->task_id();
   return name_in_producer2regst_.begin()->second;
 }
 

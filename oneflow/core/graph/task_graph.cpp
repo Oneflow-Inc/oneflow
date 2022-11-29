@@ -955,6 +955,7 @@ Maybe<void> BoxingTaskGraph::Init() {
     (this->*method)(op_edge, op_node2sorted_comp_tasks_.at(op_edge->src_node()),
                     op_node2sorted_comp_tasks_.at(op_edge->dst_node()));
   });
+  ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, std::placeholders::_1));
   return Maybe<void>::Ok();
 }
 
@@ -1219,12 +1220,19 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
+std::function<bool(TaskNode*)> MakePredicatorNodeSnapshotted(RankTaskGraph* graph) {
+  auto nodes = std::make_shared<HashSet<TaskNode*>>();
+  graph->ForEachNode([&](TaskNode* task_node) { nodes->insert(task_node); });
+  return [nodes](TaskNode* task_node) { return nodes->count(task_node) > 0; };
+}
+
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
+  const auto& IsTaskNodeBoxingRelated = MakePredicatorNodeSnapshotted(this);
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
@@ -1248,8 +1256,11 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
-  DecideExecutionOrder();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  ForEachNode([&](TaskNode* task_node) {
+    if (IsTaskNodeBoxingRelated(task_node)) { return; }
+    task_node->ProduceAllRegstsAndBindEdges();
+  });
   return Maybe<void>::Ok();
 }
 

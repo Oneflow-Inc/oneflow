@@ -61,7 +61,6 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
     return !task_gph->IsDutyRank(parallel_desc, comp_task_node->machine_id());
   };
-  task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (IsNotMyDuty(comp_task_node)) {
