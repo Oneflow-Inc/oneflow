@@ -34,25 +34,25 @@ namespace functional {
 
 PyObject* returned_structseq_repr(PyStructSequence* obj) {
   HANDLE_ERRORS
-  PyTypeObject* typ = Py_TYPE(obj);
-  PyObjectPtr tup((PyObject*)obj);
-  if (tup == nullptr) { return nullptr; }
+  PyTypeObject* tp = Py_TYPE(obj);
+  PyObjectPtr tuple((PyObject*)obj);
+  if (tuple == nullptr) { return nullptr; }
 
   std::stringstream ss;
-  ss << typ->tp_name << "(\n";
+  ss << tp->tp_name << "(\n";
   Py_ssize_t num_elements = Py_SIZE(obj);
 
   for (Py_ssize_t i = 0; i < num_elements; i++) {
-    const char* cname = typ->tp_members[i].name;
+    const char* cname = tp->tp_members[i].name;
     if (cname == nullptr) {
       PyErr_Format(PyExc_SystemError,
                    "In structseq_repr(), member %zd name is nullptr"
                    " for type %.500s",
-                   i, typ->tp_name);
+                   i, tp->tp_name);
       return nullptr;
     }
 
-    PyObject* val = PyTuple_GetItem(tup.get(), i);
+    PyObject* val = PyTuple_GetItem(tuple.get(), i);
     if (val == nullptr) { return nullptr; }
 
     auto repr = PyObjectPtr(PyObject_Repr(val));
