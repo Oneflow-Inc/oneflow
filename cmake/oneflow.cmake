@@ -339,13 +339,17 @@ if(BUILD_CUDA)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
-  set_property(
-    SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY COMPILE_OPTIONS "--use_fast_math")
   get_target_property(CUTLASS_DUAL_GEMM_INCLUDE_DIR cutlass_dual_gemm_headers INTERFACE_INCLUDE_DIRECTORIES)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_geglu_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    set_property(
+      SOURCE
+        ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
+      APPEND
+      PROPERTY COMPILE_OPTIONS "--use_fast_math")
+  endif()
 endif()
 
 # oneflow api common
