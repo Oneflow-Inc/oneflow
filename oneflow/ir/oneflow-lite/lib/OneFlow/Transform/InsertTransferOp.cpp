@@ -70,7 +70,8 @@ void InsertTransferOpPass::runOnOperation() {
 
         builder.setInsertionPointAfter(op);
         SmallVector<mlir::Value, 4> operands{result};
-        auto copy_op = builder.create<CopyOp>(op->getLoc(), op->getResultTypes(), operands, attrs);
+        auto copy_op =
+            builder.create<oneflow::CopyOp>(op->getLoc(), op->getResultTypes(), operands, attrs);
 
         for (OpOperand* operand : it.second) {
           operand->getOwner()->setOperand(operand->getOperandNumber(), copy_op.out());

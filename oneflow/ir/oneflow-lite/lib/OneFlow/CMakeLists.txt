@@ -14,6 +14,7 @@ oneflow_add_mlir_library(
   MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
+  MLIROneFlowExtension
   flatcc-runtime
   LINK_LIBS
   MLIRIR
@@ -25,6 +26,8 @@ oneflow_add_mlir_library(
   MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
+  MLIROneFlowExtension
   oneflow
+  $<TARGET_OBJECTS:of_op_schema>
   flatcc-runtime
 )
