@@ -250,6 +250,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<RpcManager>::Delete();
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
+  Singleton<dtr::Env>::Delete();
   ClearAllSymbol();
   ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {

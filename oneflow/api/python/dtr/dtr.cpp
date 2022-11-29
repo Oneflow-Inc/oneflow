@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/vm/dtr_env.h"
 
 namespace py = pybind11;
 
@@ -88,6 +89,11 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     JUST(t->eager_blob_object())->tensor_storage()->disable_eviction();
     return Maybe<void>::Ok();
   });
+  m.def("clear_compute_op", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
+    JUST(t->eager_blob_object())->tensor_storage()->clear_compute_op();
+    return Maybe<void>::Ok();
+  });
+  m.def("clear_time", []() { Singleton<dtr::Env>::Get()->clear_time(); });
 }
 
 }  // namespace oneflow

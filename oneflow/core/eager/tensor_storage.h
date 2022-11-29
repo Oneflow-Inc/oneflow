@@ -57,7 +57,7 @@ class TensorStorage {
   void set_compute_op(const OpCallInstructionPolicy& compute_op);
   void clear_compute_op();
   OpCallInstructionPolicy compute_op() const;
-  void Evict(bool eager_eviction) { return Release(); }
+  void Evict(bool eager_eviction);
   void Pin() { num_pinned_++; }
   void Unpin() { num_pinned_--; }
   void Access();

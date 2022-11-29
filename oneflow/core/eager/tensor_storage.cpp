@@ -43,6 +43,11 @@ TensorStorage::~TensorStorage() {
   VLOG(1) << "delete storage " << id_;
 }
 
+void TensorStorage::Evict(bool eager_eviction) {
+  Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
+  return Release();
+}
+
 OpCallInstructionPolicy TensorStorage::compute_op() const {
   CHECK_NOTNULL(compute_op_);
   return OpCallInstructionPolicy(*compute_op_);
@@ -79,7 +84,7 @@ void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->t
 Maybe<double> TensorStorage::cost(size_t override_size) const {
   const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
   size_t size = override_size == 0 ? blob_bytes_ : override_size;
-  return compute_time_ / (size * time_since_last_access);
+  return compute_time_ / time_since_last_access;
 }
 
 #if false

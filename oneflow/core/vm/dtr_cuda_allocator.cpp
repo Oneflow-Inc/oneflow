@@ -192,14 +192,14 @@ DtrEpAllocator::offset_t DtrEpAllocator::FindProperPositionInGroup(Piece* piece,
   const offset_t piece_right_bound = piece_left_bound + piece->size;
   const bool is_right =
       enable_left_and_right_ && (group_idx % 2 == 1) && group_idx != normal_group_num_;
-#define PNT(var) LOG(INFO) << OF_PP_STRINGIZE(var) << ": " << var << std::endl
-  PNT(group_idx);
-  PNT(grp_left_bound);
-  PNT(grp_right_bound);
-  PNT(piece_left_bound);
-  PNT(piece_right_bound);
-  PNT(is_right);
-  PNT(request_size);
+#define PNT3(var) VLOG(3) << OF_PP_STRINGIZE(var) << ": " << var << std::endl
+  PNT3(group_idx);
+  PNT3(grp_left_bound);
+  PNT3(grp_right_bound);
+  PNT3(piece_left_bound);
+  PNT3(piece_right_bound);
+  PNT3(is_right);
+  PNT3(request_size);
 
   if (is_right) {
     if (grp_right_bound < piece_right_bound) {
@@ -238,7 +238,7 @@ void DtrEpAllocator::InsertToFreeList(Piece* piece) {
 }
 
 void DtrEpAllocator::EraseFromFreeList(Piece* piece) {
-  LOG(INFO) << "erase " << get_offset(piece->ptr);
+  VLOG(3) << "erase " << get_offset(piece->ptr);
   // NOTE: very strange bug:
   // std::map::erase(Key) returns 2 instead of 0 or 1, which conflicts with documentation.
   for (auto& free_list : free_pieces_overlapping_with_group_) {
@@ -383,7 +383,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
   const bool is_high_op = [&]() {
     std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad", "conv_filter_grad",
                                                      "add_n",  "matmul",         "batch_matmul"};
-    PNT(current_op_type_name_);
+    PNT3(current_op_type_name_);
     if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(),
                   current_op_type_name_)
         != high_compute_cost_names.cend()) {
@@ -397,22 +397,22 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
     // if (after_eviction) { return true; }
     return group_index(is_high_op);
   }();
-  PNT(aligned_size);
+  PNT3(aligned_size);
   size_t iterate_num = 0;
   do {
     const auto& free_pieces = free_pieces_overlapping_with_group_[group_idx];
-    PNT(group_idx);
-    PNT(free_pieces.size());
+    PNT3(group_idx);
+    PNT3(free_pieces.size());
     for (auto it = free_pieces.begin(); it != free_pieces.end(); ++it) {
       Piece* piece = *it;
       CHECK_OR_RETURN(piece->is_free);
       CHECK_NOTNULL(piece->ptr);
       CHECK_OR_RETURN(IsAlignedSize(piece->size));
-      PNT(get_offset(piece->ptr));
-      PNT(piece->size);
+      PNT3(get_offset(piece->ptr));
+      PNT3(piece->size);
       if (piece->size >= aligned_size) {
         const offset_t offset_in_memory = FindProperPositionInGroup(piece, group_idx, aligned_size);
-        PNT(offset_in_memory);
+        PNT3(offset_in_memory);
         if (offset_in_memory != SIZE_MAX) {
           const offset_t offset_in_piece = offset_in_memory - get_offset(piece->ptr);
           return AllocateMemoryInPiece(piece, offset_in_piece, aligned_size);
@@ -521,9 +521,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
         continue;
       }
       total_size += end->second->size;
-      // end_tensor is fakely evicted, update_after_pesudo_evict
-      int coeff = -1;
-      auto cur_op_cost = get_cost(end_tensor, coeff);
+      auto cur_op_cost = get_cost(end_tensor);
       costs.push_back(cur_op_cost);
       cost_except_size += cur_op_cost;
       if (dtr::debug_level() >= 2) {
@@ -568,9 +566,8 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
   }
   if (dtr::is_enabled_and_debug()) {
     for (auto* piece : pieces_to_be_evicted) {
-      int coeff = -1;
       LOG(INFO) << "release dptr: " << get_offset(piece->ptr) << ", size: " << piece->size
-                << ", cost: " << get_cost(piece->tensor, coeff) << ", compute op: "
+                << ", cost: " << get_cost(piece->tensor) << ", compute op: "
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no")
                 << ", id: "
                 << (piece->tensor != nullptr ? std::to_string(piece->tensor->id()) : "no");

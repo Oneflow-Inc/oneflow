@@ -266,9 +266,14 @@ class TestDTR(flow.unittest.TestCase):
             x.grad = flow.zeros_like(x).to('cuda')
         optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
         x = flow.ones(4, 3, 224, 224).to('cuda')
-        for i in range(10):
+        cpu_mem = allocated_memory('cpu')
+        cuda_mem = allocated_memory('cuda')
+        for _ in range(10):
+            cpu_mem2 = allocated_memory('cpu')
+            cuda_mem2 = allocated_memory('cuda')
+            self.assertEqual(cpu_mem, cpu_mem2)
+            self.assertEqual(cuda_mem, cuda_mem2)
             loss = model(x).sum()
-            print(loss)
             loss.backward()
             del loss
             optimizer.step()

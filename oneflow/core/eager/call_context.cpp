@@ -7,8 +7,9 @@ vm::EagerBlobObjectList weak_to_shared(
     const small_vector<std::weak_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>& weak_list) {
   vm::EagerBlobObjectList ret;
   ret.reserve(weak_list.size());
-  for (const auto& weak : weak_list) {
-    CHECK(!weak.expired());
+  for (int i = 0; i < weak_list.size(); ++i) {
+    const auto& weak = weak_list[i];
+    CHECK(!weak.expired()) << "index: " << i;
     ret.emplace_back(CHECK_NOTNULL(weak.lock()));
   }
   return ret;

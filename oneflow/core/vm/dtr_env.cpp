@@ -41,24 +41,32 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     auto& op = ops[i];
     for (int j = 0; j < op->mut_inputs().size(); j++) {
       auto& x = op->mut_inputs()[j];
-      if (x == nullptr) { std::cout << "No." << j << " input of " << op->opkernel().op_type_name() << " is nullptr" << std::endl; continue; }
+      if (x == nullptr) {
+        std::cout << "No." << j << " input of " << op->opkernel().op_type_name() << " is nullptr"
+                  << std::endl;
+        continue;
+      }
       if (x->tensor_storage().get() == storage) {
         vm::EagerBlobObject* old_ptr = x.get();
         update(x);
         VLOG(1) << "update input of " << op->opkernel().op_type_name() << " from " << old_ptr
-                  << " (storage " << storage << ") to " << x.get() << " (storage "
-                  << new_storage.get() << "), op addr " << op << std::endl;
+                << " (storage " << storage << ") to " << x.get() << " (storage "
+                << new_storage.get() << "), op addr " << op << std::endl;
       }
     }
     for (int j = 0; j < op->mut_outputs().size(); j++) {
       auto& y = op->mut_outputs()[j];
-      if (y.lock() == nullptr) { std::cout << "No." << j << " output of " << op->opkernel().op_type_name() << " is nullptr" << std::endl; continue; }
+      if (y.lock() == nullptr) {
+        std::cout << "No." << j << " output of " << op->opkernel().op_type_name() << " is nullptr"
+                  << std::endl;
+        continue;
+      }
       if (CHECK_NOTNULL(y.lock())->tensor_storage().get() == storage) {
         vm::EagerBlobObject* old_ptr = y.lock().get();
         update_output(y);
         VLOG(1) << "update output of " << op->opkernel().op_type_name() << " from " << old_ptr
-                  << " (storage " << storage << ") to " << y.lock().get() << " (storage "
-                  << new_storage.get() << "), op addr " << op << std::endl;
+                << " (storage " << storage << ") to " << y.lock().get() << " (storage "
+                << new_storage.get() << "), op addr " << op << std::endl;
       }
     }
   }
@@ -69,7 +77,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
       vm::EagerBlobObject* old_ptr = x.get();
       update(x);
       VLOG(1) << "update input of " << new_compute_op.opkernel().op_type_name() << " from "
-                << old_ptr << " to " << x.get() << std::endl;
+              << old_ptr << " to " << x.get() << std::endl;
     }
   }
   // set compute_op_ and compute_time_
@@ -82,6 +90,21 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
   new_storage->Access();
   storage->clear_compute_op();
   return new_compute_op;
+}
+
+void Env::add_eviction_num(bool eager_eviction) {
+  if (eager_eviction) {
+    eager_eviction_num_++;
+  } else {
+    forced_eviction_num_++;
+  }
+}
+
+Env::~Env() {
+  LOG(INFO) << "forced eviction num: " << forced_eviction_num_;
+  LOG(INFO) << "eager eviction num: " << eager_eviction_num_;
+  LOG(INFO) << "recomputation num: " << recomputation_num_;
+  LOG(INFO) << "duration: " << time_now_;
 }
 
 }  // namespace dtr

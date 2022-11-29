@@ -57,6 +57,9 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first) {
+    if (!first) {
+      Singleton<dtr::Env>::Get()->add_recomputation_num();
+    }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input num " << op_call_instruction_policy->inputs().size() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
