@@ -90,9 +90,9 @@ struct OpCallInstructionUtil final {
   }
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
-                                    vm::Stream* vm_stream, bool first) {
+                                    vm::Stream* vm_stream, bool first, bool recompute) {
     if (first) { JUST(IncReferenceNumOfRecomputedTensor(*op_call_instruction_policy)); }
-    if (!first) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
+    if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input num " << op_call_instruction_policy->inputs().size() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
@@ -109,7 +109,7 @@ struct OpCallInstructionUtil final {
                 << x->tensor_storage()->compute_op_type_name();
         VLOG(2) << "storage id: " << x->tensor_storage()->id();
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
-        JUST(Compute(&tmp_op, vm_stream, false));
+        JUST(Compute(&tmp_op, vm_stream, false, true));
         JUST(vm_stream->mut_stream_policy()->stream()->Sync());
         CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
@@ -119,7 +119,7 @@ struct OpCallInstructionUtil final {
       for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
         const auto& y = op_call_instruction_policy->outputs().at(i);
         if (y->tensor_storage()->eviction_disabled()) { continue; }
-        if (storage_is_initialized[i] && first) {
+        if (storage_is_initialized[i] && !recompute) {
           VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
                   << y->tensor_storage()->compute_op_type_name() << std::endl;
           compute_op = std::make_unique<OpCallInstructionPolicy>(
@@ -133,7 +133,7 @@ struct OpCallInstructionUtil final {
       const auto& y = op_call_instruction_policy->outputs().at(i);
       y->tensor_storage()->Pin();
       y->tensor_storage()->Access();
-      if (first && !y->tensor_storage()->eviction_disabled()) {
+      if (!recompute && !y->tensor_storage()->eviction_disabled()) {
         y->tensor_storage()->set_compute_op(*compute_op);
       }
     }
@@ -340,7 +340,7 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true),
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true, false),
                  instruction->DebugName());
 }
 
@@ -350,7 +350,7 @@ std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instructio
 
 Maybe<void> Recompute(OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream) {
   VLOG(1) << "recompute " << op_call_instruction_policy->opkernel().op_type_name() << " manually";
-  return OpCallInstructionUtil::Compute(op_call_instruction_policy, vm_stream, false);
+  return OpCallInstructionUtil::Compute(op_call_instruction_policy, vm_stream, true, true);
 }
 
 }  // namespace vm
