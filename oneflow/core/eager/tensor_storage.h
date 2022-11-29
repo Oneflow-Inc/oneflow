@@ -71,7 +71,9 @@ class TensorStorage {
   Maybe<double> cost(size_t override_size) const;
   std::string compute_op_type_name() const;
   bool is_initialized() const { return is_initialized_; }
-  bool set_initialized() { return is_initialized_ = true; }
+  void set_initialized() { is_initialized_ = true; }
+  bool is_needed_by_backward() const { return is_needed_by_backward_; }
+  void set_needed_by_backward() { is_needed_by_backward_ = true; }
 
  private:
   bool is_initialized_ = false;
@@ -82,6 +84,7 @@ class TensorStorage {
   double last_access_time_;
   double compute_time_;
   std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
+  bool is_needed_by_backward_ = false;
 
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;

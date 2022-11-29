@@ -74,17 +74,15 @@ class TestDTRCorrectness(flow.unittest.TestCase):
         total_time = 0
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to(device)
-        cpu_mem = allocated_memory('cpu')
-        cuda_mem = allocated_memory('cuda')
+        initial_cpu_mem = allocated_memory('cpu')
+        initial_cuda_mem = allocated_memory('cuda')
         for iter in range(ALL_ITERS):
             print(f'iter {iter}')
             # flow._oneflow_internal.dtr.display(device)
-            cpu_mem2 = allocated_memory('cpu')
-            cuda_mem2 = allocated_memory('cuda')
-            print(f'cpu_mem2: {cpu_mem2}')
-            print(f'cuda_mem2: {cuda_mem2}')
-            # test_case.assertEqual(cpu_mem, cpu_mem2, iter)
-            # test_case.assertEqual(cuda_mem, cuda_mem2, iter)
+            cpu_mem = allocated_memory('cpu')
+            cuda_mem = allocated_memory('cuda')
+            test_case.assertEqual(initial_cpu_mem, cpu_mem, iter)
+            test_case.assertEqual(initial_cuda_mem, cuda_mem, iter)
             if iter >= WARMUP_ITERS:
                 start_time = time.time()
             logits = model(train_data)

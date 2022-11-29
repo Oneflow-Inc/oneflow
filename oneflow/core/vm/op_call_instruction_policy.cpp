@@ -45,6 +45,40 @@ static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
   return estimated_compute_time;
 }
 }  // namespace
+
+Maybe<void> _IncReferenceNumOfRecomputedTensor(
+    const OpCallInstructionPolicy& op_call_instruction_policy, int& pinned_num,
+    std::set<vm::TensorStorage*>& visited_storages) {
+  for (int i = 0; i < op_call_instruction_policy.inputs().size(); i++) {
+    const auto& input = op_call_instruction_policy.inputs().at(i);
+    input->tensor_storage()->Pin();
+    if (!input->tensor_storage()->is_in_memory()) {
+      OpCallInstructionPolicy tmp_op = input->tensor_storage()->compute_op();
+      if (!input->tensor_storage()->is_needed_by_backward()) {
+        Singleton<dtr::Env>::Get()->need_eager_eviction_storages.insert(
+            input->tensor_storage().get());
+      }
+
+      if (visited_storages.find(input->tensor_storage().get()) == visited_storages.end()) {
+        visited_storages.insert(input->tensor_storage().get());
+        JUST(_IncReferenceNumOfRecomputedTensor(tmp_op, pinned_num, visited_storages));
+      }
+    } else {
+      pinned_num++;
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<int> IncReferenceNumOfRecomputedTensor(
+    const OpCallInstructionPolicy& op_call_instruction_policy) {
+  int pinned_num = 0;
+  std::set<vm::TensorStorage*> visited_storages;
+  JUST(
+      _IncReferenceNumOfRecomputedTensor(op_call_instruction_policy, pinned_num, visited_storages));
+  return pinned_num;
+}
+
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
@@ -57,9 +91,8 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first) {
-    if (!first) {
-      Singleton<dtr::Env>::Get()->add_recomputation_num();
-    }
+    if (first) { JUST(IncReferenceNumOfRecomputedTensor(*op_call_instruction_policy)); }
+    if (!first) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input num " << op_call_instruction_policy->inputs().size() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
@@ -80,7 +113,6 @@ struct OpCallInstructionUtil final {
         JUST(vm_stream->mut_stream_policy()->stream()->Sync());
         CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
-      x->tensor_storage()->Pin();
     }
     const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
       auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
@@ -119,8 +151,16 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    for (const auto& x : op_call_instruction_policy->inputs()) { x->tensor_storage()->Unpin(); }
     for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
+    auto& need_eager_eviction_storages = Singleton<dtr::Env>::Get()->need_eager_eviction_storages;
+    for (const auto& x : op_call_instruction_policy->inputs()) {
+      x->tensor_storage()->Unpin();
+      if (x->tensor_storage()->num_pinned() == 0
+          && need_eager_eviction_storages.count(x->tensor_storage().get()) > 0) {
+        need_eager_eviction_storages.erase(x->tensor_storage().get());
+        x->tensor_storage()->Evict(true);
+      }
+    }
     for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
       x->tensor_storage()->disable_eviction();

@@ -336,7 +336,7 @@ size_t DtrEpAllocator::group_index(bool high) const {
 void DtrEpAllocator::InitMemory() {
   memory_size_ = dtr::memory_threshold();
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
-  std::cout << "memory_: " << (void*)memory_ << ", size: " << memory_size_ << std::endl;
+  LOG(INFO) << "memory_: " << (void*)memory_ << ", size: " << memory_size_;
   const size_t small_piece_area_size =
       EnvBool<ONEFLOW_DTR_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
   const size_t normal_area_size = memory_size_ - small_piece_area_size;

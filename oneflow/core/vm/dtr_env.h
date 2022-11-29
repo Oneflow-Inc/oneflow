@@ -32,6 +32,8 @@ class Env {
 
   void clear_time() { time_now_ = 0; }
 
+  std::set<vm::TensorStorage*> need_eager_eviction_storages;
+
  private:
   double time_now_ = 0;
 

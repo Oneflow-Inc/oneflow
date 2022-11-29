@@ -123,9 +123,18 @@ class DtrCallContext {
   friend class CallContext;
 
  private:
+  struct EBOInfo {
+    const std::shared_ptr<MemoryCase> mem_case;
+    const Symbol<one::LocalTensorMeta> local_tensor_meta;
+    const std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta;
+    const DataType data_type;
+  };
+  using EBOInfoList = small_vector<EBOInfo, vm::WeakEagerBlobObjectList::kInitialSize>;
+
   const ComposedAttrMap composed_attrs_;
   vm::EagerBlobObjectList inputs_;
   vm::WeakEagerBlobObjectList outputs_;
+  EBOInfoList ebo_infos_;
   const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;
