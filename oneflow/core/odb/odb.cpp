@@ -69,13 +69,19 @@ void ClearThreadTypeBreakpoint(ThreadType thread_type) {
 
 void InitThisThreadType(ThreadType thread_type) { *MutThreadLocalThreadType() = thread_type; }
 
-BreakpointRange::BreakpointRange() {
+namespace {
+
+void TryRunBreakpointAnchor() {
   if (BreakpointRangeModeGuard::Current() == kDisableBreakpointRange) { return; }
   if (!IsThreadTypeBreakpointEnabled(GetThreadLocalThreadType())) { return; }
   BreakpointAnchor();
 }
 
-BreakpointRange::~BreakpointRange() {}
+}  // namespace
+
+BreakpointRange::BreakpointRange() { TryRunBreakpointAnchor(); }
+
+BreakpointRange::~BreakpointRange() { TryRunBreakpointAnchor(); }
 
 namespace {
 
