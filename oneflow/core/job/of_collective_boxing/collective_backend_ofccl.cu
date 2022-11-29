@@ -233,7 +233,7 @@ struct CollectiveBackendOfccl::Impl {
 
   void Destroy() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
-      VLOG(1) << "before ofcclDestroy in rank " << device_id7ofcll_rank_ctx.first;
+      VLOG(2) << "before ofcclDestroy in rank " << device_id7ofcll_rank_ctx.first;
       ofcclDestroy(device_id7ofcll_rank_ctx.second);
     }
   }
@@ -270,7 +270,7 @@ void CollectiveBackendOfccl::InitJob(int64_t job_id) {
 
 void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {
   // 这个应该是最后退出执行要跑的，进行内存回收等等操作。
-  VLOG(1) << "before CollectiveBackendOfccl impl_->Destroy()";
+  VLOG(2) << "before CollectiveBackendOfccl impl_->Destroy()";
   impl_->Destroy();
 }
 
