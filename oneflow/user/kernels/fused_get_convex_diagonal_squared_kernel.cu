@@ -16,28 +16,11 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/math_util.h"
 
 namespace oneflow {
 
 namespace {
-
-template<typename T>
-OF_DEVICE_FUNC T DeviceMin(T a, T b) {
-#if defined(__CUDA_ARCH__)
-  return a < b ? a : b;
-#else
-  return std::min(a, b);
-#endif
-}
-
-template<typename T>
-OF_DEVICE_FUNC T DeviceMax(T a, T b) {
-#if defined(__CUDA_ARCH__)
-  return a > b ? a : b;
-#else
-  return std::max(a, b);
-#endif
-}
 
 template<typename T>
 __global__ void FusedGetConvexDiagonalSquaredForward(const int n, const T* b1_x1, const T* b1_x2,
@@ -58,18 +41,19 @@ __global__ void FusedGetConvexDiagonalSquaredBackward(
     T* b2_x1_diff, T* b2_x2_diff, T* b1_y1_diff, T* b1_y2_diff, T* b2_y1_diff, T* b2_y2_diff,
     const float eps) {
   CUDA_1D_KERNEL_LOOP(i, n) {
+    const T zero = static_cast<T>(0), one = static_cast<T>(1);
     const T cw = DeviceMax(b1_x2[i], b2_x2[i]) - DeviceMin(b1_x1[i], b2_x1[i]);
     const T ch = DeviceMax(b1_y2[i], b2_y2[i]) - DeviceMin(b1_y1[i], b2_y1[i]);
     const T c2_diff_cw = static_cast<T>(2) * cw * c2_diff[i];
     const T c2_diff_ch = static_cast<T>(2) * ch * c2_diff[i];
-    b1_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? static_cast<T>(0) : static_cast<T>(1));
-    b1_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? static_cast<T>(0) : static_cast<T>(1));
-    b1_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? static_cast<T>(0) : static_cast<T>(1));
-    b1_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? static_cast<T>(1) : static_cast<T>(0));
-    b2_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? static_cast<T>(0) : static_cast<T>(1));
+    b1_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? one : zero);
+    b2_x2_diff[i] = c2_diff_cw * (b1_x2[i] > b2_x2[i] ? zero : one);
+    b1_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? one : zero);
+    b2_x1_diff[i] = -c2_diff_cw * (b1_x1[i] < b2_x1[i] ? zero : one);
+    b1_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? one : zero);
+    b2_y2_diff[i] = c2_diff_ch * (b1_y2[i] > b2_y2[i] ? zero : one);
+    b1_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? one : zero);
+    b2_y1_diff[i] = -c2_diff_ch * (b1_y1[i] < b2_y1[i] ? zero : one);
   }
 }
 
@@ -94,7 +78,7 @@ class FusedGetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
     const user_op::Tensor* b2_y2 = ctx->Tensor4ArgNameAndIndex("b2_y2", 0);
 
     user_op::Tensor* c2 = ctx->Tensor4ArgNameAndIndex("c2", 0);
-    float eps = ctx->Attr<float>("eps");
+    const float eps = ctx->Attr<float>("eps");
 
     const int64_t elem_cnt = b1_x1->shape_view().elem_cnt();
 
@@ -144,7 +128,7 @@ class FusedGetConvexDiagonalSquaredGradKernel final : public user_op::OpKernel {
     user_op::Tensor* b2_y1_diff = ctx->Tensor4ArgNameAndIndex("b2_y1_diff", 0);
     user_op::Tensor* b2_y2_diff = ctx->Tensor4ArgNameAndIndex("b2_y2_diff", 0);
 
-    float eps = ctx->Attr<float>("eps");
+    const float eps = ctx->Attr<float>("eps");
     const int64_t elem_cnt = b1_x1_diff->shape_view().elem_cnt();
 
     RUN_CUDA_KERNEL((FusedGetConvexDiagonalSquaredBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
