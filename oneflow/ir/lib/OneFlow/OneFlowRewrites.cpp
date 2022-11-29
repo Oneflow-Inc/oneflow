@@ -128,8 +128,9 @@ static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Va
 }
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
-                                                  Attribute padding_before, Attribute padding_after,
-                                                  Attribute data_format) {
+                                                         Attribute padding_before,
+                                                         Attribute padding_after,
+                                                         Attribute data_format) {
   if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
     if (padding_before.cast<ArrayAttr>().getValue().equals(
             padding_after.cast<ArrayAttr>().getValue())) {
