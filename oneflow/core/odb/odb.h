@@ -26,6 +26,9 @@ enum ThreadType {
   kWorkerThreadType = 3,
 };
 
+void SetThreadTypeBreakpoint(ThreadType thread_type);
+void ClearThreadTypeBreakpoint(ThreadType thread_type);
+
 void InitThisThreadType(ThreadType thread_type);
 
 class BreakpointRange final {

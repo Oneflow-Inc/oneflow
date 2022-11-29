@@ -17,6 +17,7 @@ limitations under the License.
 #include <atomic>
 #include <thread>
 #include "oneflow/core/odb/odb.h"
+#include "oneflow/core/odb/breakpoint_anchor.h"
 
 namespace oneflow {
 namespace odb {
@@ -28,12 +29,9 @@ std::atomic<ThreadType>* MutBreakpointThreadType() {
   return &thread_type;
 }
 
-}
+}  // namespace
 
-void SetBreakpointThreadType(ThreadType thread_type) {
-  *MutBreakpointThreadType() = thread_type;
-}
-
+void SetBreakpointThreadType(ThreadType thread_type) { *MutBreakpointThreadType() = thread_type; }
 
 namespace {
 
@@ -44,16 +42,37 @@ ThreadType* MutThreadLocalThreadType() {
 
 ThreadType GetThreadLocalThreadType() { return *MutThreadLocalThreadType(); }
 
-void DoNothing() {}
+std::atomic<size_t>* MutBreakpointEnabledFlag() {
+  static std::atomic<size_t> flags(0);
+  return &flags;
+}
+
+bool IsThreadTypeBreakpointEnabled(ThreadType thread_type) {
+  size_t flags = *MutBreakpointEnabledFlag();
+  int shift = static_cast<int>(thread_type);
+  return flags & (static_cast<size_t>(1) << shift);
+}
 
 }  // namespace
+
+void SetThreadTypeBreakpoint(ThreadType thread_type) {
+  size_t flags = *MutBreakpointEnabledFlag();
+  int shift = static_cast<int>(thread_type);
+  *MutBreakpointEnabledFlag() = flags | (static_cast<size_t>(1) << shift);
+}
+
+void ClearThreadTypeBreakpoint(ThreadType thread_type) {
+  size_t flags = *MutBreakpointEnabledFlag();
+  int shift = static_cast<int>(thread_type);
+  *MutBreakpointEnabledFlag() = flags & ~(static_cast<size_t>(1) << shift);
+}
 
 void InitThisThreadType(ThreadType thread_type) { *MutThreadLocalThreadType() = thread_type; }
 
 BreakpointRange::BreakpointRange() {
   if (BreakpointRangeModeGuard::Current() == kDisableBreakpointRange) { return; }
-  ThreadType thread_type = GetThreadLocalThreadType();
-  DoNothing();
+  if (!IsThreadTypeBreakpointEnabled(GetThreadLocalThreadType())) { return; }
+  BreakpointAnchor();
 }
 
 BreakpointRange::~BreakpointRange() {}

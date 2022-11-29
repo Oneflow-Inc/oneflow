@@ -16,6 +16,16 @@ limitations under the License.
 
 import oneflow._oneflow_internal
 
+b_normal = oneflow._oneflow_internal.odb.SetNormalBreakpoint
+b_scheduler = oneflow._oneflow_internal.odb.SetSchedulerBreakpoint
+b_worker = oneflow._oneflow_internal.odb.SetWorkerBreakpoint
+b = oneflow._oneflow_internal.odb.SetAllBreakpoints
+
+d_normal = oneflow._oneflow_internal.odb.ClearNormalBreakpoint
+d_scheduler = oneflow._oneflow_internal.odb.ClearSchedulerBreakpoint
+d_worker = oneflow._oneflow_internal.odb.ClearWorkerBreakpoint
+d = oneflow._oneflow_internal.odb.ClearAllBreakpoints
+
 stop_vm_scheduler = oneflow._oneflow_internal.odb.StopVMScheduler
 restart_vm_scheduler = oneflow._oneflow_internal.odb.RestartVMScheduler
 

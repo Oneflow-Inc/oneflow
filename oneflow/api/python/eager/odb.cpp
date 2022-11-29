@@ -20,6 +20,27 @@ limitations under the License.
 ONEFLOW_API_PYBIND11_MODULE("odb", m) {
   using namespace oneflow;
   namespace py = pybind11;
+
+  m.def("SetNormalBreakpoint", []() { odb::SetThreadTypeBreakpoint(odb::kNormalThreadType); });
+  m.def("SetSchedulerBreakpoint",
+        []() { odb::SetThreadTypeBreakpoint(odb::kSchedulerThreadType); });
+  m.def("SetWorkerBreakpoint", []() { odb::SetThreadTypeBreakpoint(odb::kWorkerThreadType); });
+  m.def("SetAllBreakpoints", []() {
+    odb::SetThreadTypeBreakpoint(odb::kNormalThreadType);
+    odb::SetThreadTypeBreakpoint(odb::kSchedulerThreadType);
+    odb::SetThreadTypeBreakpoint(odb::kWorkerThreadType);
+  });
+
+  m.def("ClearNormalBreakpoint", []() { odb::ClearThreadTypeBreakpoint(odb::kNormalThreadType); });
+  m.def("ClearSchedulerBreakpoint",
+        []() { odb::ClearThreadTypeBreakpoint(odb::kSchedulerThreadType); });
+  m.def("ClearWorkerBreakpoint", []() { odb::ClearThreadTypeBreakpoint(odb::kWorkerThreadType); });
+  m.def("ClearAllBreakpoints", []() {
+    odb::ClearThreadTypeBreakpoint(odb::kNormalThreadType);
+    odb::ClearThreadTypeBreakpoint(odb::kSchedulerThreadType);
+    odb::ClearThreadTypeBreakpoint(odb::kWorkerThreadType);
+  });
+
   m.def("StopVMScheduler", []() { return odb::StopVMThread<odb::kSchedulerThreadType>(); });
   m.def("RestartVMScheduler", []() { return odb::RestartVMThread<odb::kSchedulerThreadType>(); });
   m.def("StopVMWorker", []() { return odb::StopVMThread<odb::kWorkerThreadType>(); });
