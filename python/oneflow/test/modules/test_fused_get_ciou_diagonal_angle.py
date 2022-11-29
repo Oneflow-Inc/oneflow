@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import math
 import numpy as np
 import torch
 from oneflow.test_utils.test_util import GenArgList
@@ -25,13 +26,13 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def torch_center(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2):
-    return (
-        (b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2
-    ) / 4
+def torch_get_ciou_diagonal_angle(w1, h1, w2, h2, eps=1e-8):
+    return (4 / math.pi ** 2) * torch.pow(
+        torch.atan(w2 / (h2 + eps)) - torch.atan(w1 / (h1 + eps)), 2
+    )
 
 
-def _test_fused_get_center_dist_impl(test_case, device, shape):
+def _test_fused_get_ciou_diagonal_angle_impl(test_case, device, shape):
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
@@ -42,7 +43,7 @@ def _test_fused_get_center_dist_impl(test_case, device, shape):
 
     x = []
     torch_x = []
-    for _ in range(8):
+    for _ in range(4):
         tmp = flow.tensor(
             np.random.randn(*shape),
             dtype=flow.float32,
@@ -58,67 +59,35 @@ def _test_fused_get_center_dist_impl(test_case, device, shape):
                 requires_grad=True,
             )
         )
-    b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2 = (
+    w1, h1, w2, h2 = (
         x[0],
         x[1],
         x[2],
         x[3],
-        x[4],
-        x[5],
-        x[6],
-        x[7],
     )
-    (
-        torch_b1_x1,
-        torch_b1_x2,
-        torch_b2_x1,
-        torch_b2_x2,
-        torch_b1_y1,
-        torch_b1_y2,
-        torch_b2_y1,
-        torch_b2_y2,
-    ) = (
+    (torch_w1, torch_h1, torch_w2, torch_h2,) = (
         torch_x[0],
         torch_x[1],
         torch_x[2],
         torch_x[3],
-        torch_x[4],
-        torch_x[5],
-        torch_x[6],
-        torch_x[7],
     )
-    rho2 = flow._C.fused_get_center_dist(
-        b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2
-    )
-    torch_rho2 = torch_center(
-        torch_b1_x1,
-        torch_b1_x2,
-        torch_b2_x1,
-        torch_b2_x2,
-        torch_b1_y1,
-        torch_b1_y2,
-        torch_b2_y1,
-        torch_b2_y2,
-    )
-    compare(rho2, torch_rho2)
+    v = flow._C.fused_get_ciou_diagonal_angle(w1, h1, w2, h2, eps=1e-8)
+    torch_v = torch_get_ciou_diagonal_angle(torch_w1, torch_h1, torch_w2, torch_h2,)
+    compare(v, torch_v)
 
-    rho2.sum().backward()
-    torch_rho2.sum().backward()
-    compare(b1_x1.grad, torch_b1_x1.grad)
-    compare(b1_x2.grad, torch_b1_x2.grad)
-    compare(b2_x1.grad, torch_b2_x1.grad)
-    compare(b2_x2.grad, torch_b2_x2.grad)
-    compare(b1_y1.grad, torch_b1_y1.grad)
-    compare(b1_y2.grad, torch_b1_y2.grad)
-    compare(b2_y1.grad, torch_b2_y1.grad)
-    compare(b2_y2.grad, torch_b2_y2.grad)
+    v.sum().backward()
+    torch_v.sum().backward()
+    compare(w1.grad, torch_w1.grad)
+    compare(h1.grad, torch_h1.grad)
+    compare(w2.grad, torch_w2.grad)
+    compare(h2.grad, torch_h2.grad)
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGetCenterDistModule(flow.unittest.TestCase):
-    def test_fused_get_center_dist(test_case):
+class TestGetCiouDiagonalAngle(flow.unittest.TestCase):
+    def test_fused_get_ciou_diagonal_angle(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_fused_get_center_dist_impl]
+        arg_dict["test_fun"] = [_test_fused_get_ciou_diagonal_angle_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(583, 1), (759, 1), (1234, 1)]
         for arg in GenArgList(arg_dict):
