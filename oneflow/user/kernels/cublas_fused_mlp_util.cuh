@@ -260,15 +260,15 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
   // Set epilogue
   SetCublasEpilogue(matmul_grad_cache, epilogue, d_bias_ptr, aux_ptr);
-  /*
-  Set AUX pointer LD
-  If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
-  If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
-  For more details you can refer to CUBLAS docs:
-  https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
-  `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
-  */
-  #if CUDA_VERSION >= 11060
+/*
+Set AUX pointer LD
+If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
+If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
+For more details you can refer to CUBLAS docs:
+https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
+`CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
+*/
+#if CUDA_VERSION >= 11060
   if (need_aux) {
     long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
@@ -280,7 +280,7 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
         matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
         &no_need_aligned_aux_ld, sizeof(no_need_aligned_aux_ld)));
   }
-  #endif  // CUDA_VERSION >= 11060
+#endif  // CUDA_VERSION >= 11060
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
