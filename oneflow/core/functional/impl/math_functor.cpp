@@ -3174,7 +3174,7 @@ class FusedWeightedSumFunctor {
     CHECK_LT_OR_RETURN(in.size(), kMaxInputCount);
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("weights", "alpha");
     attrs.SetAllAttrs(weights, alpha);
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(in.size()), in, attrs));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_[in.size()], in, attrs));
   }
 
  private:

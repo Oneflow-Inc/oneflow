@@ -19,6 +19,7 @@ import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 import math
 import random
+import os
 
 import oneflow as flow
 
@@ -46,6 +47,7 @@ def _test_fused_weighted_sum(test_case, shape, n, device, dtype):
     test_case.assertTrue(np.allclose(ref, out, atol=1e-5, rtol=1e-5))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestFusedWeightedSum(flow.unittest.TestCase):
     def test_fused_weighted_sum(test_case):
