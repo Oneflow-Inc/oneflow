@@ -324,6 +324,54 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector)
   }
 }
 
+// Assemble memory cost
+void SbpEdge::InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                               const std::vector<int32_t>& id2count,
+                               const std::vector<int64_t>& producer_nd_sbp_sig2memory) {
+  const auto& consumer_operator = end_node_->op_node_->op();
+  const auto& end_sbp_sig_list = end_node_->sbp_sig_list_;
+  std::vector<int64_t> consumer_nd_sbp_sig2memory(end_sbp_sig_list.size(), 0);
+  // Compute and store the memory for consumer
+  for (const auto& ibn : consumer_operator.input_bns()) {
+    // Match the ibn to find the hierarchy
+    const auto& lbi = consumer_operator.BnInOp2Lbi(ibn);
+    if (SearchLbi(lbi) && id2count.at(lbi2id.at(lbi)) > 0) {
+      const auto& consumer_hierarchy =
+          *CHECK_JUST(consumer_operator.GetParallelDesc4BnInOp(ibn))->hierarchy();
+      const auto& logical_blob_desc = start_node_->op_node_->LogicalBlobDesc4Lbi(lbi);
+      HashMap<NdSbp, int64_t> consumer_nd_sbp2memory;
+      for (int32_t sbp_sig_id = 0; sbp_sig_id < end_sbp_sig_list.size(); sbp_sig_id++) {
+        const NdSbp& nd_sbp = end_sbp_sig_list[sbp_sig_id].bn_in_op2nd_sbp().at(ibn);
+        auto it = consumer_nd_sbp2memory.find(nd_sbp);
+        if (it == consumer_nd_sbp2memory.end()) {
+          // This compute the memory at rank 0, the largest one.
+          // We could be faster if we just compute the average memory.
+          it = consumer_nd_sbp2memory
+                   .insert({nd_sbp,
+                            MaxByteSize4BlobDescSbp(logical_blob_desc, nd_sbp, consumer_hierarchy)})
+                   .first;
+        }
+        consumer_nd_sbp_sig2memory[sbp_sig_id] += it->second;
+      }
+    }
+  }
+  if (*std::max_element(consumer_nd_sbp_sig2memory.begin(), consumer_nd_sbp_sig2memory.end())
+      > *std::min_element(producer_nd_sbp_sig2memory.begin(), producer_nd_sbp_sig2memory.end())) {
+    in_memory_support_ = true;
+    memory_.resize(producer_nd_sbp_sig2memory.size());
+    int32_t consumer_sbp_sig_size = consumer_nd_sbp_sig2memory.size();
+    for (int32_t i = 0; i < producer_nd_sbp_sig2memory.size(); i++) {
+      auto& memory_i = memory_[i];
+      memory_i.resize(consumer_sbp_sig_size, 0);
+      for (int32_t j = 0; j < consumer_sbp_sig_size; j++) {
+        int64_t memory_difference = consumer_nd_sbp_sig2memory[j] - producer_nd_sbp_sig2memory[i];
+        // Only accept positive memory change
+        if (memory_difference > 0) { memory_i[j] = memory_difference; }
+      }
+    }
+  }
+}
+
 // Set the cut ratio
 double SbpEdge::GetCutRatio() const {
   int32_t num = 0;

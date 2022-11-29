@@ -40,11 +40,12 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
   if (enable_trunk_algo_) { JUST(ApplyTrunkAlgo()); }
-  // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo().
-  InitMemory(&sbp_graph_);
+  // Load logical blobs on all sbp edges.
+  LoadLbi2SbpEdge(op_graph);
+  // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
+  // LoadLbi2SbpEdge(op_graph).
+  if (GlobalProcessCtx::Rank() == 0) InitMemory(&sbp_graph_);
   if (use_sbp_collector_) {
-    // Load logical blobs on all sbp edges.
-    LoadLbi2SbpEdge(op_graph);
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);

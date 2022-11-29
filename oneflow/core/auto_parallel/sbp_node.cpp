@@ -661,6 +661,7 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
 void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
                                const std::vector<int32_t>& id2count) {
   const auto& curr_operator = op_node_->op();
+  HashMap<SbpEdge*, std::vector<int64_t>> sbp_edge2nd_sbp_sig2memory;
   for (const auto& obn : curr_operator.output_bns()) {
     const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
     // Fixed memory or in the support of the reusable memory
@@ -670,12 +671,33 @@ void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, in
       memory_.resize(sbp_sig_list_.size(), 0);
       const auto& logical_blob_desc = op_node_->LogicalBlobDesc4Lbi(lbi);
       const auto& hierarchy = *CHECK_JUST(curr_operator.GetParallelDesc4BnInOp(obn))->hierarchy();
-      for (int32_t sbp_sig_id = 0; sbp_sig_id < sbp_sig_list_.size(); sbp_sig_id++) {
-        // This compute the memory at rank 0, the largest one.
-        // We could be faster if we just compute the average memory.
-        memory_[sbp_sig_id] += MaxByteSize4BlobDescSbp(
-            logical_blob_desc, sbp_sig_list_[sbp_sig_id].bn_in_op2nd_sbp().at(obn), hierarchy);
+      HashMap<NdSbp, int64_t> nd_sbp2memory;
+      SbpEdge* edge_contain_lbi = nullptr;
+      for (const auto& edge_out : edges_out_) {
+        if (edge_out->SearchLbi(lbi)) { edge_contain_lbi = edge_out; }
       }
+      auto& nd_sbp_sig2memory = sbp_edge2nd_sbp_sig2memory[edge_contain_lbi];
+      nd_sbp_sig2memory.resize(sbp_sig_list_.size(), 0);
+      for (int32_t sbp_sig_id = 0; sbp_sig_id < sbp_sig_list_.size(); sbp_sig_id++) {
+        const NdSbp& nd_sbp = sbp_sig_list_[sbp_sig_id].bn_in_op2nd_sbp().at(obn);
+        auto it = nd_sbp2memory.find(nd_sbp);
+        if (it == nd_sbp2memory.end()) {
+          // This compute the memory at rank 0, the largest one.
+          // We could be faster if we just compute the average memory.
+          it = nd_sbp2memory
+                   .insert({nd_sbp, MaxByteSize4BlobDescSbp(logical_blob_desc, nd_sbp, hierarchy)})
+                   .first;
+        }
+        memory_[sbp_sig_id] += it->second;
+        nd_sbp_sig2memory[sbp_sig_id] += it->second;
+      }
+      std::cout << "lbi: " << lbi.op_name() << " to " << curr_operator.op_name() << std::endl;
+    }
+  }
+  // Init memory for each out-going edge
+  if (in_memory_support_ && is_reusable) {
+    for (auto& edge_out : edges_out_) {
+      edge_out->InitializeMemory(lbi2id, id2count, sbp_edge2nd_sbp_sig2memory[edge_out]);
     }
   }
 }

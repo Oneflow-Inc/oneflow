@@ -87,6 +87,10 @@ class SbpEdge final {
 
   // Assemble copy cost
   void InitializeCopyCost(const std::string& ibn, bool use_sbp_collector);
+  // Assemble memory cost
+  void InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                        const std::vector<int32_t>& id2count,
+                        const std::vector<int64_t>& producer_nd_sbp_sig2memory);
 
   // find the cut ratio
   // (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
