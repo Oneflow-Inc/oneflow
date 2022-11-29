@@ -30,11 +30,25 @@ namespace mlir {
 namespace oneflow {
 namespace lite {
 
-static llvm::DenseMap<StringAttr, size_t> deviceSegmentSize;
-static llvm::DenseMap<Value, size_t> valueSegmentOffset;
+int LiteBufferStrategy::getValueSegmentId(Value value) const {
+  auto it = valueSegmentInfos.find(value);
+  if (it == valueSegmentInfos.end()) { return -1; }
+  return it->second.segmentId;
+}
 
-const llvm::DenseMap<StringAttr, size_t>& getDeviceSegmentSize() { return deviceSegmentSize; }
-const llvm::DenseMap<Value, size_t>& getValueSegmentOffset() { return valueSegmentOffset; }
+size_t LiteBufferStrategy::getValueSegmentOffset(Value value) const {
+  auto it = valueSegmentInfos.find(value);
+  if (it == valueSegmentInfos.end()) { return -1; }
+  return it->second.segmentOffset;
+}
+
+LogicalResult LiteBufferStrategy::insertValue(Value value, int segmentId, size_t segmentOffset) {
+  if (segments.size() < segmentId) {
+    llvm::errs() << "segmentId is out of boundary.\n";
+    return failure();
+  }
+  valueSegmentInfos[value] = ValueSegmentInfo{segmentId, segmentOffset};
+}
 
 class ValueLiveness {
  public:
@@ -62,16 +76,20 @@ class ValueLiveness {
 struct MemoryPlanningPass : public PassWrapper<MemoryPlanningPass, OperationPass<ModuleOp>> {
   ValueLiveness valueLiveness;
   llvm::SmallVector<Value, 4> sortedValues;
+  LiteBufferStrategy* bufferStrategy;
+
+  explicit MemoryPlanningPass(LiteBufferStrategy* strategy) : bufferStrategy(strategy) {}
 
   void runOnOperation() override {
     computeValueLiveness();
     computeValueSizeAndSort();
+    doMemoryPlanning();
   }
 
   void computeValueLiveness();
   void computeValueSizeAndSort();
   void doMemoryPlanning();
-  bool canShareMemoryBlock(Value value, llvm::SmallVector<Value, 4> block);
+  bool canShareMemoryWithBlock(Value value, llvm::SmallVector<Value, 4> block);
 };
 
 void MemoryPlanningPass::computeValueLiveness() {
@@ -135,7 +153,7 @@ void MemoryPlanningPass::computeValueSizeAndSort() {
   });
 }
 
-bool MemoryPlanningPass::canShareMemoryBlock(Value value, llvm::SmallVector<Value, 4> block) {
+bool MemoryPlanningPass::canShareMemoryWithBlock(Value value, llvm::SmallVector<Value, 4> block) {
   if (isDynamicTensorType(value.getType().cast<TensorType>())) { return false; }
   auto device = value.getDefiningOp()->getAttrOfType<StringAttr>(
       OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
@@ -152,38 +170,39 @@ bool MemoryPlanningPass::canShareMemoryBlock(Value value, llvm::SmallVector<Valu
 
 void MemoryPlanningPass::doMemoryPlanning() {
   if (sortedValues.empty()) { return; }
-  llvm::SmallVector<llvm::SmallVector<Value, 4>, 4> blocks;
+  llvm::SmallVector<llvm::SmallVector<Value, 4>, 4> memoryBlocks;
   for (auto value : sortedValues) {
-    bool newBlock = true;
-    for (auto& block : blocks) {
-      if (canShareMemoryBlock(value, block)) {
+    bool shared = false;
+    for (auto& block : memoryBlocks) {
+      if (canShareMemoryWithBlock(value, block)) {
         block.push_back(value);
-        newBlock = false;
+        shared = true;
       }
     }
-    if (newBlock) { blocks.push_back(llvm::SmallVector<Value, 4>{value}); }
+    if (!shared) { memoryBlocks.push_back(llvm::SmallVector<Value, 4>{value}); }
   }
 
-  for (auto& block : blocks) {
+  llvm::SmallVector<LiteBufferSegment, 4>& segments = bufferStrategy->getSegments();
+  for (auto& block : memoryBlocks) {
+    int segmentId = segments.size();
     auto device = block.front().getDefiningOp()->getAttrOfType<StringAttr>(
         OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
-    size_t offset = 0;
-    auto it = deviceSegmentSize.find(device);
-    if (it != deviceSegmentSize.end()) { offset = it->second; }
-    size_t block_size = 0;
+    size_t blockSize = 0;
+    size_t alignment = 512;
     for (auto value : block) {
-      size_t bitsize = getTensorBitSize(value.getType().cast<TensorType>());
-      if (bitsize > block_size) { block_size = bitsize; }
-      valueSegmentOffset[value] = offset;
+      size_t valueSize = getTensorBitSize(value.getType().cast<TensorType>());
+      if (valueSize > blockSize) { blockSize = valueSize; }
     }
-    block_size = (block_size + 7) / 8;      // bytesize
-    block_size = (block_size + 512) / 512;  // align as 512 bytes
-    deviceSegmentSize[device] = offset + block_size;
+    blockSize = (blockSize + 7) / 8;                      // convert to bytes
+    blockSize = (blockSize + alignment - 1) / alignment;  // alignas 512 bytes
+    segments.push_back(LiteBufferSegment{device.getValue(), blockSize, alignment});
+
+    for (auto value : block) { bufferStrategy->insertValue(value, segmentId, /*segmentOffset*/ 0); }
   }
 }
 
-std::unique_ptr<mlir::Pass> createLiteMemoryPlanningPass() {
-  return std::unique_ptr<mlir::Pass>(new MemoryPlanningPass);
+std::unique_ptr<mlir::Pass> createLiteMemoryPlanningPass(LiteBufferStrategy* strategy) {
+  return std::unique_ptr<mlir::Pass>(new MemoryPlanningPass(strategy));
 }
 
 }  // namespace lite

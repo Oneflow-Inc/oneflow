@@ -22,10 +22,35 @@ namespace mlir {
 namespace oneflow {
 namespace lite {
 
-std::unique_ptr<mlir::Pass> createLiteMemoryPlanningPass();
+struct LiteBufferSegment {
+  StringRef device;
+  size_t size;
+  size_t alignment;
+};
 
-const llvm::DenseMap<StringAttr, size_t>& getDeviceSegmentSize();
-const llvm::DenseMap<Value, size_t>& getValueSegmentOffset();
+class LiteBufferStrategy {
+ public:
+  LiteBufferStrategy() = default;
+
+  const llvm::SmallVector<LiteBufferSegment, 4>& getSegments() const { return segments; }
+
+  llvm::SmallVector<LiteBufferSegment, 4>& getSegments() { return segments; }
+
+  int getValueSegmentId(Value value) const;
+  size_t getValueSegmentOffset(Value value) const;
+
+  LogicalResult insertValue(Value value, int segmentId, size_t segmentOffset);
+
+ private:
+  llvm::SmallVector<LiteBufferSegment, 4> segments;
+  struct ValueSegmentInfo {
+    int segmentId;
+    size_t segmentOffset;
+  };
+  llvm::DenseMap<Value, ValueSegmentInfo> valueSegmentInfos;
+};
+
+std::unique_ptr<mlir::Pass> createLiteMemoryPlanningPass(LiteBufferStrategy* strategy);
 
 }  // namespace lite
 }  // namespace oneflow

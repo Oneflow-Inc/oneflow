@@ -109,6 +109,15 @@ class FlatbufferBuilder {
     return flatbuffers_int32_vec_end(*this);
   }
 
+  // Creates an [int64] vec with the contents of the given range.
+  template<typename RangeTy>
+  flatbuffers_int64_vec_ref_t createInt64Vec(RangeTy&& Range) {
+    if (llvm::empty(Range)) return 0;
+    flatbuffers_int64_vec_start(*this);
+    for (int64_t v : Range) { flatbuffers_int64_vec_push_create(*this, v); }
+    return flatbuffers_int64_vec_end(*this);
+  }
+
   // Provides a raw_ostream that |fn| can use to directly stream into a [uint8]
   // in the FlatBuffer builder.
   //

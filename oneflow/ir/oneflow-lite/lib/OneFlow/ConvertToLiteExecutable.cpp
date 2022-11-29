@@ -41,11 +41,62 @@ namespace oneflow {
 namespace lite {
 
 static oneflow_lite_OpDef_ref_t createLiteOpDef(
-    FlatbufferBuilder& builder, Operation* op,
-    const llvm::DenseMap<StringAttr, int>& deviceOrdering) {
+    FlatbufferBuilder& builder, Operation* op, llvm::DenseMap<Value, int>& valueOrdering,
+    const llvm::DenseMap<StringRef, int>& deviceOrdering) {
+  llvm::SmallVector<size_t, 4> inputOrdering;
+  for (const auto& operand : op->getOperands()) {
+    auto it = valueOrdering.find(operand);
+    if (it == valueOrdering.end()) {
+      it = valueOrdering.try_emplace(operand, valueOrdering.size()).first;
+    }
+    inputOrdering.push_back(it->second);
+  }
+  llvm::SmallVector<size_t, 4> outputOrdering;
+  for (const auto& result : op->getResults()) {
+    auto it = valueOrdering.find(result);
+    if (it == valueOrdering.end()) {
+      it = valueOrdering.try_emplace(result, valueOrdering.size()).first;
+    }
+    outputOrdering.push_back(it->second);
+  }
   oneflow_lite_OpDef_start(builder);
+  oneflow_lite_OpDef_name_add(builder, builder.createString(op->getName().stripDialect()));
+  oneflow_lite_OpDef_inputs_add(builder, builder.createInt32Vec(inputOrdering));
+  oneflow_lite_OpDef_outputs_add(builder, builder.createInt32Vec(outputOrdering));
 
+  // TODO(): add attributes
+
+  auto device =
+      op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
+  auto it = deviceOrdering.find(device.getValue());
+  assert(it != deviceOrdering.end());
+  oneflow_lite_OpDef_device_add(builder, it->second);
   return oneflow_lite_OpDef_end(builder);
+}
+
+static oneflow_lite_TensorDef_ref_t createLiteTensorDef(FlatbufferBuilder& builder, Value value,
+                                                        int segmentId, size_t segmentOffset) {
+  oneflow_lite_TensorDef_start(builder);
+  oneflow_lite_TensorDef_type_add(builder, builder.createString("todo"));
+  oneflow_lite_TensorDef_layout_add(builder, builder.createString("default"));
+  oneflow_lite_TensorDef_sizes_add(builder, builder.createInt64Vec(llvm::SmallVector<size_t, 4>{}));
+  oneflow_lite_TensorDef_strides_add(builder,
+                                     builder.createInt64Vec(llvm::SmallVector<size_t, 4>{}));
+  oneflow_lite_TensorDef_segment_id_add(builder, segmentId);
+  oneflow_lite_TensorDef_segment_offset_add(builder, segmentOffset);
+  return oneflow_lite_TensorDef_end(builder);
+}
+
+static oneflow_lite_BufferSegmentDef_ref_t createLiteBufferSegmentDef(
+    FlatbufferBuilder& builder, const LiteBufferSegment& segment,
+    const llvm::DenseMap<StringRef, int>& deviceOrdering) {
+  auto it = deviceOrdering.find(segment.device);
+  assert(it != deviceOrdering.end());
+  oneflow_lite_BufferSegmentDef_start(builder);
+  oneflow_lite_BufferSegmentDef_size_add(builder, segment.size);
+  oneflow_lite_BufferSegmentDef_device_add(builder, it->second);
+  oneflow_lite_BufferSegmentDef_alignment_add(builder, static_cast<int>(segment.alignment));
+  return oneflow_lite_BufferSegmentDef_end(builder);
 }
 
 LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, ConvertOptions options,
@@ -56,7 +107,9 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   pm.addPass(createLiteInferPlacementPass(options.target));
   pm.addPass(createLiteInsertTransferOpPass());
   pm.addPass(createCanonicalizerPass());
-  pm.addPass(createLiteMemoryPlanningPass());
+
+  LiteBufferStrategy bufferStrategy;
+  pm.addPass(createLiteMemoryPlanningPass(&bufferStrategy));
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Failed to run oneflow lite compilation passes.\n";
     return failure();
@@ -72,33 +125,67 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     return failure();
   }
   llvm::errs() << *module << "\n";
+
   auto funcName = root->getAttrOfType<StringAttr>("sym_name");
-
-  const llvm::DenseMap<StringAttr, size_t>& deviceSegmentSize = getDeviceSegmentSize();
-  const llvm::DenseMap<Value, size_t>& valueSegmentOffset = getValueSegmentOffset();
-
+  llvm::SmallVector<StringRef, 4> devices;
+  llvm::DenseMap<StringRef, int> deviceOrdering;
+  for (const auto& segment : bufferStrategy.getSegments()) {
+    int ordering = deviceOrdering.size();
+    if (deviceOrdering.try_emplace(segment.device, ordering).second) {
+      devices.push_back(segment.device);
+    }
+  }
   FlatbufferBuilder builder;
   oneflow_lite_ExecutableDef_start_as_root(builder);
   oneflow_lite_ExecutableDef_version_add(builder, 0);
   oneflow_lite_ExecutableDef_name_add(builder, builder.createString(funcName.getValue()));
-
-  llvm::DenseMap<StringAttr, int> deviceOrdering;
-  llvm::SmallVector<StringRef, 4> devices;
-  for (const auto& it : deviceSegmentSize) {
-    deviceOrdering[it.first] = deviceOrdering.size();
-    devices.push_back(it.first.getValue());
-  }
   oneflow_lite_ExecutableDef_devices_add(builder, builder.createStringVec(devices));
 
-  llvm::SmallVector<oneflow_lite_OpDef_ref_t, 4> ops;
+  llvm::DenseMap<Value, int> valueOrdering;
+  llvm::SmallVector<int, 4> inputValueOrdering, outputValueOrdering;
+  llvm::SmallVector<StringRef, 4> inputValueNames, outputValueNames;
+  llvm::SmallVector<oneflow_lite_OpDef_ref_t, 4> opDefs;
+
   root->walk([&](Operation* op) {
-    if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<InputOp>(op)
-        || llvm::dyn_cast<OutputOp>(op)) {
-      return;
+    if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
+    if (auto inputOp = llvm::dyn_cast<InputOp>(op)) {
+      auto it = valueOrdering.try_emplace(inputOp.output(), valueOrdering.size()).first;
+      inputValueOrdering.push_back(it->second);
+      inputValueNames.push_back(
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue());
+    } else if (auto outputOp = llvm::dyn_cast<OutputOp>(op)) {
+      auto it = valueOrdering.try_emplace(outputOp.input(), valueOrdering.size()).first;
+      outputValueOrdering.push_back(it->second);
+      outputValueNames.push_back(
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue());
+    } else {
+      opDefs.push_back(createLiteOpDef(builder, op, valueOrdering, deviceOrdering));
     }
-    ops.push_back(createLiteOpDef(builder, op, deviceOrdering));
   });
-  oneflow_lite_ExecutableDef_ops_add(builder, builder.createOffsetVecDestructive(ops));
+  oneflow_lite_ExecutableDef_ops_add(builder, builder.createOffsetVecDestructive(opDefs));
+
+  llvm::SmallVector<Value, 4> orderedValues(valueOrdering.size());
+  for (auto it : valueOrdering) { orderedValues[it.second] = it.first; }
+  llvm::SmallVector<oneflow_lite_TensorDef_ref_t, 4> tensorDefs;
+  for (auto value : orderedValues) {
+    int segmentId = bufferStrategy.getValueSegmentId(value);
+    size_t segmentOffset = bufferStrategy.getValueSegmentOffset(value);
+    tensorDefs.push_back(createLiteTensorDef(builder, value, segmentId, segmentOffset));
+  }
+  oneflow_lite_ExecutableDef_operands_add(builder, builder.createOffsetVecDestructive(tensorDefs));
+
+  oneflow_lite_ExecutableDef_inputs_add(builder, builder.createInt32Vec(inputValueOrdering));
+  oneflow_lite_ExecutableDef_outputs_add(builder, builder.createInt32Vec(outputValueOrdering));
+  oneflow_lite_ExecutableDef_input_names_add(builder, builder.createStringVec(inputValueNames));
+  oneflow_lite_ExecutableDef_output_names_add(builder, builder.createStringVec(outputValueNames));
+
+  llvm::SmallVector<oneflow_lite_BufferSegmentDef_ref_t, 4> segmentDefs;
+  for (const auto& segment : bufferStrategy.getSegments()) {
+    segmentDefs.push_back(createLiteBufferSegmentDef(builder, segment, deviceOrdering));
+  }
+  oneflow_lite_ExecutableDef_segments_add(builder, builder.createOffsetVecDestructive(segmentDefs));
 
   oneflow_lite_ExecutableDef_end_as_root(builder);
 
