@@ -227,6 +227,7 @@ from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
+from oneflow._C import index_add, index_add_
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -405,6 +406,11 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
+from oneflow.nn.modules.broadcast_ops import (
+    broadcast_tensors,
+    broadcast_shapes,
+    broadcast_to,
+)
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
 # autocast
@@ -441,6 +447,7 @@ import oneflow.asyncs
 import oneflow.odb
 import oneflow.one_embedding
 import oneflow.profiler
+import oneflow.mock_torch
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

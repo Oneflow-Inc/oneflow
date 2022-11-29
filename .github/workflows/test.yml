@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@add-pdll-to-checksum
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -163,7 +163,7 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-cu118
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@add-pdll-to-checksum
         if: env.is_secrets_accessible == '1'
         timeout-minutes: 90
         continue-on-error: true
@@ -187,7 +187,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-pdll-to-checksum
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -236,7 +236,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-pdll-to-checksum
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -250,7 +250,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@support-cu118
+      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -272,7 +272,7 @@ jobs:
           python-versions: |
             3.7
             3.8
-      - uses: Oneflow-Inc/get-oneflow@support-cu118
+      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
         if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit }}
@@ -293,7 +293,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.8
-      - uses: Oneflow-Inc/get-oneflow@support-cu118
+      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -313,7 +313,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@support-cu118
+      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
@@ -352,7 +352,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-pdll-to-checksum
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -363,7 +363,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-pdll-to-checksum
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -388,7 +388,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-pdll-to-checksum
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -419,7 +419,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-pdll-to-checksum
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -495,7 +495,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-pdll-to-checksum
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -511,7 +511,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-pdll-to-checksum
         id: download-digest
         timeout-minutes: 10
         with:
@@ -521,7 +521,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@support-cu118
+        uses: Oneflow-Inc/get-oneflow/master-address@add-pdll-to-checksum
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -712,7 +712,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-pdll-to-checksum
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -728,7 +728,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-pdll-to-checksum
         id: download-digest
         timeout-minutes: 10
         with:
@@ -738,7 +738,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download ASAN and UBSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-pdll-to-checksum
         id: asan-ubsan-download-digest
         timeout-minutes: 10
         with:
@@ -748,7 +748,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download TSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cu118
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-pdll-to-checksum
         id: tsan-download-digest
         timeout-minutes: 10
         with:
@@ -1034,15 +1034,19 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Test mocking torch by script
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_script.sh
       - name: Test mocking torch by function
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_function.sh
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-cu118
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@add-pdll-to-checksum
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1104,7 +1108,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cu118
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-pdll-to-checksum
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
