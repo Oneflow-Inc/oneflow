@@ -337,7 +337,7 @@ class DataLoader(Generic[T_co]):
         if self.num_workers > 0:
             assert (
                 not flow.env.rdma_is_initialized()
-            ), "RDMA is initialized! DataLoader could not create multi-process worker any more. "
+            ), "RDMA is initialized before DataLoader __init__()."
             "Please make sure Dataloader is created before invoking oneflow.env.init_rdma() to avoid this error!"
             # NOTE: When num_workers > 0 and set env_use_rdma=True, it means RDMA will be initialized later,
             # and we need to start multi-processes DataLoader workers immediately by self._get_iterator()
@@ -911,6 +911,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
+        assert (
+                not flow.env.rdma_is_initialized()
+            ), "RDMA is initialized! DataLoader could not create multi-process worker any more. Please set DataLoader's env_use_rdma=True and make sure that Dataloader is created before invoking oneflow.env.init_rdma() to avoid this error!"
 
         if loader.multiprocessing_context is None:
             multiprocessing_context = multiprocessing
