@@ -172,6 +172,10 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
 }  // anonymous namespace
 
 void InitMemory(SbpGraph* sbp_graph) {
+  size_t free = 0;
+  size_t total = 0;
+  OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
+  std::cout << "Free: " << free << ", total: " << total << std::endl;
   // Generate topological data structure for each sbp node
   HashMap<SbpNode*, TopoStruct> sbp_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
