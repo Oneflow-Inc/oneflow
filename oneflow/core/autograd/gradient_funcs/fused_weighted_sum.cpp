@@ -34,9 +34,7 @@ class FusedWeightedSum : public OpExprGradFunction<FusedWeightedSumCaptureState>
     ctx->weights = JUST(attrs.GetAttr<std::vector<float>>("weights"));
     ctx->alpha = JUST(attrs.GetAttr<float>("alpha"));
     CHECK_EQ_OR_RETURN(ctx->weights.size(), inputs.size());
-    for (int i = 0; i < inputs.size(); ++i) {
-      ctx->requires_grad[i] = inputs[i]->requires_grad();
-    }
+    for (int i = 0; i < inputs.size(); ++i) { ctx->requires_grad[i] = inputs[i]->requires_grad(); }
     return Maybe<void>::Ok();
   }
 
