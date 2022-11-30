@@ -290,22 +290,36 @@ class MatMulFunctor {
                            const bool& transpose_b, const double& alpha) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
-
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor a's dim should >= 1";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
+    std::shared_ptr<one::Tensor> result;
+    if ((cast_a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
-    if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
-    if (a_num_axes == 2 && b_num_axes == 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
-    }
-    if (a_num_axes == b_num_axes) {
+    if (a_num_axes == 1 && b_num_axes == 2) {
+      result = JUST(VectorMatrixProduct(cast_a, cast_b));
+    } else if (a_num_axes == 2 && b_num_axes == 1) {
+      result = JUST(MatrixVectorProduct(cast_a, cast_b));
+    } else if (a_num_axes == 2 && b_num_axes == 2) {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {cast_a, cast_b}, attrs));
+    } else if (a_num_axes == b_num_axes) {
       bool if_batch_matmul = true;
       for (int i = 0; i < a_num_axes - 2; ++i) {
         if (a_shape->At(i) != b_shape->At(i)) {
@@ -314,10 +328,19 @@ class MatMulFunctor {
         }
       }
       if (if_batch_matmul) {
-        return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
+      } else {
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
       }
+    } else {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -352,7 +375,26 @@ class BatchMatMulFunctor {
         << matmul_dim_b << " of mat2, please check input!";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
+    if ((a->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -608,6 +650,79 @@ class FusedMLPFunctor {
 #endif
 };
 
+class FusedMatmulBiasFunctor {
+ public:
+  FusedMatmulBiasFunctor() {
+    _with_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                            .Input("x")
+                                            .Input("weight")
+                                            .Input("bias")
+                                            .Input("_add_to_output")
+                                            .Output("out")
+                                            .Build());
+    _without_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                               .Input("x")
+                                               .Input("weight")
+                                               .Input("bias")
+                                               .Output("out")
+                                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const Optional<one::Tensor>& _add_to_output) const {
+    /*
+    x: (m_i, ... m_0, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    const int64_t k = x_shape->At(x->shape()->NumAxes() - 1);
+
+    const auto& weight_shape = weight->shape();
+    const auto& bias_shape = bias->shape();
+
+    CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "Weight's dim size should == 2";
+    CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Bias's dim size should == 1";
+
+    const int64_t n = weight_shape->At(0);
+    CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
+        << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
+    CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+        << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
+
+#if CUDA_VERSION >= 10200
+    DeviceType device_type{};
+    if (x->is_global()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if (device_type == DeviceType::kCUDA) {
+      if (_add_to_output) {
+        return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
+                                              {x, weight, bias, JUST(_add_to_output)});
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
+    }
+#endif  // CUDA_VERSION >= 10200
+
+    auto matmul_bias = JUST(functional::BiasAdd(
+        JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
+    if (_add_to_output) {
+      return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+    }
+    return matmul_bias;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> _with_add_to_output_op;
+  std::shared_ptr<OpExpr> _without_add_to_output_op;
+};
+
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -800,6 +915,65 @@ class GroupNormFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> affine_op_;
+};
+
+bool CheckNormShape(const Shape& x_shape, const Shape& normalized_shape) {
+  if (x_shape.size() < normalized_shape.size()) { return false; }
+  size_t b_ndim = x_shape.size() - normalized_shape.size();
+  for (int i = 0; i < x_shape.size(); ++i) {
+    if (i >= b_ndim) {
+      if (x_shape[i] != normalized_shape[i - b_ndim]) { return false; }
+    }
+  }
+  return true;
+}
+
+class RMSNormFunctor {
+ public:
+  RMSNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("rms_norm").Input("x").Output("y").Output("inv_rms").Build());
+    op_affine_ = CHECK_JUST(one::OpBuilder("rms_norm")
+                                .Input("x")
+                                .Input("weight")
+                                .Output("y")
+                                .Output("inv_rms")
+                                .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Optional<one::Tensor>& weight,
+                           const Shape& normalized_shape, const float epsilon) const {
+    const Shape& x_shape = *x->shape();
+    if (weight) {
+      const Shape& w_shape = *JUST(weight)->shape();
+      CHECK_EQ_OR_RETURN(w_shape, normalized_shape)
+          << "Expected weight be the same shape with normalized_shape "
+          << normalized_shape.ToString() << ", but got " << w_shape.ToString();
+    }
+    if (!CheckNormShape(x_shape, normalized_shape)) {
+      auto shape_str_without_parentheses =
+          x_shape.ToString().substr(1, x_shape.ToString().size() - 2);
+      return Error::RuntimeError()
+             << "Given normalized_shape=" << normalized_shape.ToString()
+             << ", expected input with shape (*, " << shape_str_without_parentheses
+             << "), but got input of " << x_shape.ToString();
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized_shape", "epsilon");
+    attrs.SetAllAttrs(normalized_shape, epsilon);
+    if (weight) {
+      const DataType dtype = x->dtype()->data_type();
+      if (JUST(weight)->dtype()->data_type() != dtype) {
+        auto weight_cast = JUST(functional::Cast(JUST(weight), DType{dtype}, /*pin_memory=*/false));
+        return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {x, weight_cast}, attrs);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {x, JUST(weight)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_affine_;
 };
 
 class PixelShuffleFunctor {
@@ -2112,7 +2286,9 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << Error::RuntimeError()
-        << "Both moving_mean and moving_variance should be None or Tensor.";
+        << "Both running_mean and running_variance should be None or Tensor.";
+
+    const DataType dtype = x->dtype()->data_type();
 
     std::shared_ptr<one::Tensor> gamma_val;
     std::shared_ptr<one::Tensor> beta_val;
@@ -2128,21 +2304,28 @@ class NormalizationFunctor {
       beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }
 
-    if (gamma_val->dtype()->data_type() == DataType::kFloat16
-        || gamma_val->dtype()->data_type() == DataType::kBFloat16) {
-      gamma_val = JUST(functional::Cast(gamma_val, DType::Float(), /*pin_memory=*/false));
-      beta_val = JUST(functional::Cast(beta_val, DType::Float(), /*pin_memory=*/false));
+    const DataType gamma_dtype = gamma_val->dtype()->data_type();
+    const DataType beta_dtype = beta_val->dtype()->data_type();
+    CHECK_EQ_OR_RETURN(gamma_dtype, beta_dtype)
+        << Error::RuntimeError() << "gamma and beta have different data types.";
+    if (gamma_dtype != dtype) {
+      gamma_val = JUST(functional::Cast(gamma_val, DType{dtype}, /*pin_memory=*/false));
+      beta_val = JUST(functional::Cast(beta_val, DType{dtype}, /*pin_memory=*/false));
     }
 
     std::shared_ptr<one::Tensor> moving_mean_val;
     std::shared_ptr<one::Tensor> moving_variance_val;
+    bool need_cast_moving_stats = false;
     if (moving_mean) {
-      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
-          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+      const DataType moving_mean_dtype = JUST(moving_mean)->dtype()->data_type();
+      CHECK_EQ_OR_RETURN(JUST(moving_variance)->dtype()->data_type(), moving_mean_dtype)
+          << Error::RuntimeError() << "moving_mean and moving_variance have different data types.";
+      need_cast_moving_stats = (moving_mean_dtype != dtype);
+      if (need_cast_moving_stats) {
         moving_mean_val =
-            JUST(functional::Cast(JUST(moving_mean), DType::Float(), /*pin_memory=*/false));
+            JUST(functional::Cast(JUST(moving_mean), DType{dtype}, /*pin_memory=*/false));
         moving_variance_val =
-            JUST(functional::Cast(JUST(moving_variance), DType::Float(), /*pin_memory=*/false));
+            JUST(functional::Cast(JUST(moving_variance), DType{dtype}, /*pin_memory=*/false));
       } else {
         moving_mean_val = JUST(moving_mean);
         moving_variance_val = JUST(moving_variance);
@@ -2165,20 +2348,17 @@ class NormalizationFunctor {
                                                      {x, gamma_val, beta_val}, attrs));
     }
 
-    if (moving_mean) {
-      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
-          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
-        // For inplace update moving_mean and moving_variance
-        JUST(CheckInplaceValid(JUST(moving_mean)));
-        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-        outputs->at(0) = JUST(moving_mean);
-        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
-        attrs.SetAllAttrs(JUST(moving_mean)->dtype()->data_type(), false);
-        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_mean_val}, outputs.get(), attrs));
-        JUST(CheckInplaceValid(JUST(moving_variance)));
-        outputs->at(0) = JUST(moving_variance);
-        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_variance_val}, outputs.get(), attrs));
-      }
+    if (need_cast_moving_stats) {
+      // For inplace update moving_mean and moving_variance
+      JUST(CheckInplaceValid(JUST(moving_mean)));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = JUST(moving_mean);
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
+      attrs.SetAllAttrs(JUST(moving_mean)->dtype()->data_type(), false);
+      JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_mean_val}, outputs.get(), attrs));
+      JUST(CheckInplaceValid(JUST(moving_variance)));
+      outputs->at(0) = JUST(moving_variance);
+      JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_variance_val}, outputs.get(), attrs));
     }
 
     return res;
@@ -4177,7 +4357,6 @@ class RocAucScoreFunctor {
 class MultiTensorSgdUpdateFunctor {
  public:
   MultiTensorSgdUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
@@ -4207,10 +4386,48 @@ class MultiTensorSgdUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+class MultiTensorMomentumUpdateFunctor {
+ public:
+  MultiTensorMomentumUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_momentum_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("momentum_buf", n + 1)
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& momentum_buf, const double& scale,
+                         const float& weight_decay, const float& learning_rate_val,
+                         const float& momentum, const float& dampening, const bool& nesterov,
+                         const bool& maximize) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val",
+                                                 "momentum", "dampening", "nesterov", "maximize");
+    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum, dampening, nesterov,
+                      maximize);
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(3 * size);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size,
+                input.begin() + 2 * size);
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 class MultiTensorAdamUpdateFunctor {
  public:
   MultiTensorAdamUpdateFunctor() {
-    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
@@ -4617,6 +4834,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
+  m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
@@ -4711,6 +4929,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
+  m.add_functor<impl::MultiTensorMomentumUpdateFunctor>("MultiTensorMomentumUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
   m.add_functor<impl::DeformConv2dFunctor>("DeformConv2d");
   m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
@@ -4723,6 +4942,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
+  m.add_functor<impl::RMSNormFunctor>("RMSNorm");
 }
 
 }  // namespace functional

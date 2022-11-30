@@ -91,7 +91,7 @@ def _test_module_unpoolnd(test_case, n):
     m.to(device)
     y = m(x)
     pooling_results_dtype = random_util.choice(
-        [torch.int, torch.long, torch.half, torch.float, torch.double]
+        [torch.int, torch.long, torch.float, torch.double]
     )
     indices_dtype = random_util.choice([torch.int, torch.long])
     pooling_results = y[0].to(pooling_results_dtype)
@@ -144,7 +144,7 @@ def _test_functional_unpoolnd(test_case, n):
     m.to(device)
     y = m(x)
     pooling_results_dtype = random_util.choice(
-        [torch.int, torch.long, torch.half, torch.float, torch.double]
+        [torch.int, torch.long, torch.float, torch.double]
     )
     indices_dtype = random_util.choice([torch.int, torch.long])
     pooling_results = y[0].to(pooling_results_dtype)

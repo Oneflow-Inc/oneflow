@@ -205,7 +205,7 @@ class SbpNode final {
 
   // Evaluate summery of cost in 1-ring neighborhood.
   double EvalNbhCost() const;
-  // Drop down the maximum layer with the minimum layer form consumer
+  // Drop down the maximum layer with the minimum layer from consumer
   void DropMaxLayer(int32_t upper_bound);
   // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_trunk_cost);

@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -97,10 +98,13 @@ class ScalarMathBaseFunctor {
       }
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
-      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      // Promote type to Int64 when tensor is Bool type but scalar is int type.
+      // Promote type to Float32 when op is scalar_div.
       if (DType::priority_order[x->dtype()->data_type()]
           == DType::priority_order[DType::Bool()->data_type()]) {
         lowest_dtype = DType::Int64();
+      } else if (op_->op_type_name() == "scalar_div") {
+        lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
       }
@@ -1007,8 +1011,8 @@ class AsStridedFunctor {
     op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
-                           const int32_t& storage_offset) const {
+                           const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
+                           const int64_t& storage_offset) const {
     CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
     for (size_t i = 0; i < size.size(); i++) {
       CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
@@ -1036,8 +1040,11 @@ class AsStridedGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
-                           const int32_t& storage_offset) const {
+                           const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
+                           const int64_t& storage_offset) const {
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::AsStridedGrad(dy, input, size, stride, storage_offset));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size", "stride", "storage_offset");
     attrs.SetAllAttrs(size, stride, storage_offset);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
@@ -1845,9 +1852,9 @@ class SelectFunctor {
         << "], but got " << index << ")";
     int32_t pos_index = index >= 0 ? index : index + size;
 
-    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    std::vector<int64_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
     const auto& stride = *JUST(input->stride());
-    std::vector<int32_t> strides(stride.begin(), stride.end());
+    std::vector<int64_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
     sizes.erase(sizes.begin() + pos_dim);
@@ -1889,8 +1896,11 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
       return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
@@ -1917,8 +1927,11 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
       return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
@@ -3146,6 +3159,388 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class FusedCenterFunctor {
+ public:
+  FusedCenterFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist")
+                         .Input("b1_x1")
+                         .Input("b1_x2")
+                         .Input("b2_x1")
+                         .Input("b2_x2")
+                         .Input("b1_y1")
+                         .Input("b1_y2")
+                         .Input("b2_y1")
+                         .Input("b2_y2")
+                         .Output("rho2")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& b1_x1, const std::shared_ptr<one::Tensor>& b1_x2,
+      const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
+      const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
+      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedCenterGradFunctor {
+ public:
+  FusedCenterGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist_grad")
+                         .Input("b1_x1")
+                         .Input("b1_x2")
+                         .Input("b2_x1")
+                         .Input("b2_x2")
+                         .Input("b1_y1")
+                         .Input("b1_y2")
+                         .Input("b2_y1")
+                         .Input("b2_y2")
+                         .Input("rho2_diff")
+                         .Output("b1_x1_diff")
+                         .Output("b1_x2_diff")
+                         .Output("b2_x1_diff")
+                         .Output("b2_x2_diff")
+                         .Output("b1_y1_diff")
+                         .Output("b1_y2_diff")
+                         .Output("b2_y1_diff")
+                         .Output("b2_y2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& b1_x1, const std::shared_ptr<one::Tensor>& b1_x2,
+      const std::shared_ptr<one::Tensor>& b2_x1, const std::shared_ptr<one::Tensor>& b2_x2,
+      const std::shared_ptr<one::Tensor>& b1_y1, const std::shared_ptr<one::Tensor>& b1_y2,
+      const std::shared_ptr<one::Tensor>& b2_y1, const std::shared_ptr<one::Tensor>& b2_y2,
+      const std::shared_ptr<one::Tensor>& rho2_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, rho2_diff}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetBounddingBoxesCoordFunctor {
+ public:
+  FusedGetBounddingBoxesCoordFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord")
+                         .Input("x1")
+                         .Input("y1")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("x2")
+                         .Input("y2")
+                         .Input("w2")
+                         .Input("h2")
+                         .Output("b1_x1")
+                         .Output("b1_x2")
+                         .Output("b1_y1")
+                         .Output("b1_y2")
+                         .Output("b2_x1")
+                         .Output("b2_x2")
+                         .Output("b2_y1")
+                         .Output("b2_y2")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& x1, const std::shared_ptr<one::Tensor>& y1,
+      const std::shared_ptr<one::Tensor>& w1, const std::shared_ptr<one::Tensor>& h1,
+      const std::shared_ptr<one::Tensor>& x2, const std::shared_ptr<one::Tensor>& y2,
+      const std::shared_ptr<one::Tensor>& w2, const std::shared_ptr<one::Tensor>& h2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x1, y1, w1, h1, x2, y2, w2, h2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetBounddingBoxesCoordGradFunctor {
+ public:
+  FusedGetBounddingBoxesCoordGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord_grad")
+                         .Input("b1_x1_diff")
+                         .Input("b1_x2_diff")
+                         .Input("b1_y1_diff")
+                         .Input("b1_y2_diff")
+                         .Input("b2_x1_diff")
+                         .Input("b2_x2_diff")
+                         .Input("b2_y1_diff")
+                         .Input("b2_y2_diff")
+                         .Output("x1_diff")
+                         .Output("y1_diff")
+                         .Output("w1_diff")
+                         .Output("h1_diff")
+                         .Output("x2_diff")
+                         .Output("y2_diff")
+                         .Output("w2_diff")
+                         .Output("h2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& b1_x1_diff,
+                                const std::shared_ptr<one::Tensor>& b1_x2_diff,
+                                const std::shared_ptr<one::Tensor>& b1_y1_diff,
+                                const std::shared_ptr<one::Tensor>& b1_y2_diff,
+                                const std::shared_ptr<one::Tensor>& b2_x1_diff,
+                                const std::shared_ptr<one::Tensor>& b2_x2_diff,
+                                const std::shared_ptr<one::Tensor>& b2_y1_diff,
+                                const std::shared_ptr<one::Tensor>& b2_y2_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_,
+                                               {b1_x1_diff, b1_x2_diff, b1_y1_diff, b1_y2_diff,
+                                                b2_x1_diff, b2_x2_diff, b2_y1_diff, b2_y2_diff},
+                                               {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouDiagonalAngleFunctor {
+ public:
+  FusedGetCiouDiagonalAngleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Output("v")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& w1,
+                           const std::shared_ptr<one::Tensor>& h1,
+                           const std::shared_ptr<one::Tensor>& w2,
+                           const std::shared_ptr<one::Tensor>& h2, const float eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {w1, h1, w2, h2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouResultFunctor {
+ public:
+  FusedGetCiouResultFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result")
+                         .Input("v")
+                         .Input("iou")
+                         .Input("rho2")
+                         .Input("c2")
+                         .Output("y")
+                         .Output("alpha")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& v,
+                                const std::shared_ptr<one::Tensor>& iou,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {v, iou, rho2, c2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouDiagonalAngleGradFunctor {
+ public:
+  FusedGetCiouDiagonalAngleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle_grad")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Input("v_diff")
+                         .Output("w1_diff")
+                         .Output("h1_diff")
+                         .Output("w2_diff")
+                         .Output("h2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& w1,
+                                const std::shared_ptr<one::Tensor>& h1,
+                                const std::shared_ptr<one::Tensor>& w2,
+                                const std::shared_ptr<one::Tensor>& h2,
+                                const std::shared_ptr<one::Tensor>& v_diff, const float eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {w1, h1, w2, h2, v_diff}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetCiouResultGradFunctor {
+ public:
+  FusedGetCiouResultGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result_grad")
+                         .Input("dy")
+                         .Input("alpha")
+                         .Input("rho2")
+                         .Input("c2")
+                         .Output("dv")
+                         .Output("diou")
+                         .Output("drho2")
+                         .Output("dc2")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& alpha,
+                                const std::shared_ptr<one::Tensor>& rho2,
+                                const std::shared_ptr<one::Tensor>& c2) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, alpha, rho2, c2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetIouFunctor {
+ public:
+  FusedGetIouFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_iou")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Input("inter")
+                         .Output("iou")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& w1,
+                           const std::shared_ptr<one::Tensor>& h1,
+                           const std::shared_ptr<one::Tensor>& w2,
+                           const std::shared_ptr<one::Tensor>& h2,
+                           const std::shared_ptr<one::Tensor>& inter, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {w1, h1, w2, h2, inter}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetIouGradFunctor {
+ public:
+  FusedGetIouGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_iou_grad")
+                         .Input("diou")
+                         .Input("w1")
+                         .Input("h1")
+                         .Input("w2")
+                         .Input("h2")
+                         .Input("inter")
+                         .Output("dw1")
+                         .Output("dh1")
+                         .Output("dinter")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& diou,
+                                const std::shared_ptr<one::Tensor>& w1,
+                                const std::shared_ptr<one::Tensor>& h1,
+                                const std::shared_ptr<one::Tensor>& w2,
+                                const std::shared_ptr<one::Tensor>& h2,
+                                const std::shared_ptr<one::Tensor>& inter, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {diou, w1, h1, w2, h2, inter}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetConvexDiagonalSquaredFunctor {
+ public:
+  FusedGetConvexDiagonalSquaredFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_convex_diagonal_squared")
+                         .Input("b1_x1")
+                         .Input("b1_x2")
+                         .Input("b2_x1")
+                         .Input("b2_x2")
+                         .Input("b1_y1")
+                         .Input("b1_y2")
+                         .Input("b2_y1")
+                         .Input("b2_y2")
+                         .Output("c2")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& b1_x1,
+                           const std::shared_ptr<one::Tensor>& b1_x2,
+                           const std::shared_ptr<one::Tensor>& b2_x1,
+                           const std::shared_ptr<one::Tensor>& b2_x2,
+                           const std::shared_ptr<one::Tensor>& b1_y1,
+                           const std::shared_ptr<one::Tensor>& b1_y2,
+                           const std::shared_ptr<one::Tensor>& b2_y1,
+                           const std::shared_ptr<one::Tensor>& b2_y2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetConvexDiagonalSquaredGradFunctor {
+ public:
+  FusedGetConvexDiagonalSquaredGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_convex_diagonal_squared_grad")
+                         .Input("c2_diff")
+                         .Input("b1_x1")
+                         .Input("b1_x2")
+                         .Input("b2_x1")
+                         .Input("b2_x2")
+                         .Input("b1_y1")
+                         .Input("b1_y2")
+                         .Input("b2_y1")
+                         .Input("b2_y2")
+                         .Output("b1_x1_diff")
+                         .Output("b1_x2_diff")
+                         .Output("b2_x1_diff")
+                         .Output("b2_x2_diff")
+                         .Output("b1_y1_diff")
+                         .Output("b1_y2_diff")
+                         .Output("b2_y1_diff")
+                         .Output("b2_y2_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& c2_diff, const std::shared_ptr<one::Tensor>& b1_x1,
+      const std::shared_ptr<one::Tensor>& b1_x2, const std::shared_ptr<one::Tensor>& b2_x1,
+      const std::shared_ptr<one::Tensor>& b2_x2, const std::shared_ptr<one::Tensor>& b1_y1,
+      const std::shared_ptr<one::Tensor>& b1_y2, const std::shared_ptr<one::Tensor>& b2_y1,
+      const std::shared_ptr<one::Tensor>& b2_y2, const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps");
+    attrs.SetAllAttrs(eps);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {c2_diff, b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3261,6 +3656,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
+  m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
+  m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
+  m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
+  m.add_functor<impl::FusedGetCiouDiagonalAngleFunctor>("FusedGetCiouDiagonalAngle");
+  m.add_functor<impl::FusedGetCiouDiagonalAngleGradFunctor>("FusedGetCiouDiagonalAngleGrad");
+  m.add_functor<impl::FusedGetCiouResultFunctor>("FusedGetCiouResult");
+  m.add_functor<impl::FusedGetCiouResultGradFunctor>("FusedGetCiouResultGrad");
+  m.add_functor<impl::FusedGetIouFunctor>("FusedGetIou");
+  m.add_functor<impl::FusedGetIouGradFunctor>("FusedGetIouGrad");
+  m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
+  m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
+      "FusedGetConvexDiagonalSquaredGrad");
 };
 
 }  // namespace functional

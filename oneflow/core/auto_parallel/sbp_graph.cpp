@@ -570,7 +570,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     original_cost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
   }
   double min_cost = original_cost;
-  // Accumulate minimum cost form the current node to the end of the neighborhood node list.
+  // Accumulate minimum cost from the current node to the end of the neighborhood node list.
   // The accumulated cost include the current node.
   std::vector<double> order2acc_min_in_nbh_cost(num_nbh);
   order2acc_min_in_nbh_cost[num_nbh - 1] =
