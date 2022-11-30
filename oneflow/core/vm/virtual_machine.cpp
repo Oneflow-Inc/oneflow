@@ -305,10 +305,10 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer();
   MultiThreadScheduleCtx schedule_ctx{};
+  size_t kWorkingMicroseconds = ThreadLocalEnvInteger<ONEFLOW_VM_THREAD_MIN_ONLINE_MICROSECONDS>();
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
     auto start = std::chrono::steady_clock::now();
-    static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, engine_ is scheduled for about `kWorkingMicroseconds`.
     // The cost of os thread switching is about 5-10 microseconds. Doing more scheduling in
     // a single waiting up can reach higher performance.

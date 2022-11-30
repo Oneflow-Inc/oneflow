@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -28,7 +29,10 @@ TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_st
     : storage_(tensor_storage) {}
 
 TensorStorage::~TensorStorage() {
-  if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(storage_); }
+  if (!IsShuttingDown() && releaser_hook_) {
+    OF_PROFILER_RANGE_GUARD("~TensorStorage");
+    (*releaser_hook_)(storage_);
+  }
 }
 
 }  // namespace one

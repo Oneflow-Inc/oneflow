@@ -408,6 +408,7 @@ Maybe<void> InstructionsBuilder::Call(
 
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+  OF_PROFILER_RANGE_GUARD("ReleaseTensor");
   const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
   const auto& producer_stream = JUST(eager_blob_object->producer_stream());
   if (pthread_fork::IsForkedSubProcess()

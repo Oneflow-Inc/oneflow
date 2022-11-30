@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ODB_BREAKPOINT_ANCHOR_H_
-#define ONEFLOW_CORE_ODB_BREAKPOINT_ANCHOR_H_
+#include "oneflow/core/odb/breakpoint_anchor.h"
 
 namespace oneflow {
 namespace odb {
 
-void BreakpointAnchor();
-void NormalBreakpointAnchor();
-void SchedulerBreakpointAnchor();
-void WorkerBreakpointAnchor();
+namespace {
+
+void DoNothing() {}
+
+}  // namespace
+
+void WorkerBreakpointAnchor() { DoNothing(); }
 
 }  // namespace odb
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_ODB_BREAKPOINT_ANCHOR_H_

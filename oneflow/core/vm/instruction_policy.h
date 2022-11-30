@@ -48,10 +48,7 @@ class InstructionPolicy {
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual std::string DebugName(const Instruction&) const = 0;
 
-  Maybe<void> PrepareIf(Instruction* instruction) {
-    OF_PROFILER_RANGE_GUARD(std::string("Prepare:") + DebugName(*instruction));
-    return Prepare(instruction);
-  }
+  Maybe<void> PrepareIf(Instruction* instruction) { return Prepare(instruction); }
 
   void ComputeIf(Instruction* instruction) {
     OF_PROFILER_RANGE_GUARD(std::string("Compute:") + DebugName(*instruction));

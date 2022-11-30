@@ -1,7 +1,19 @@
 set breakpoint pending on
 
-define odb-b
+define odb-b-all
   odb-unique-profiler-breakpoint breakpoint_anchor.cpp:27
+end
+
+define odb-b-normal
+  odb-unique-profiler-breakpoint normal_breakpoint_anchor.cpp:27
+end
+
+define odb-b-scheduler
+  odb-unique-profiler-breakpoint scheduler_breakpoint_anchor.cpp:27
+end
+
+define odb-b-worker
+  odb-unique-profiler-breakpoint worker_breakpoint_anchor.cpp:27
 end
 
 define odb-unique-profiler-breakpoint
@@ -11,5 +23,3 @@ define odb-unique-profiler-breakpoint
     f 2
   end
 end
-
-odb-b

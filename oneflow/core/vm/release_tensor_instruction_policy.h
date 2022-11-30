@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -67,6 +68,7 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
 
  protected:
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
+    OF_PROFILER_RANGE_GUARD("Release");
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
 

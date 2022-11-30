@@ -42,30 +42,7 @@ ThreadType* MutThreadLocalThreadType() {
 
 ThreadType GetThreadLocalThreadType() { return *MutThreadLocalThreadType(); }
 
-std::atomic<size_t>* MutBreakpointEnabledFlag() {
-  static std::atomic<size_t> flags(0);
-  return &flags;
-}
-
-bool IsThreadTypeBreakpointEnabled(ThreadType thread_type) {
-  size_t flags = *MutBreakpointEnabledFlag();
-  int shift = static_cast<int>(thread_type);
-  return flags & (static_cast<size_t>(1) << shift);
-}
-
 }  // namespace
-
-void SetThreadTypeBreakpoint(ThreadType thread_type) {
-  size_t flags = *MutBreakpointEnabledFlag();
-  int shift = static_cast<int>(thread_type);
-  *MutBreakpointEnabledFlag() = flags | (static_cast<size_t>(1) << shift);
-}
-
-void ClearThreadTypeBreakpoint(ThreadType thread_type) {
-  size_t flags = *MutBreakpointEnabledFlag();
-  int shift = static_cast<int>(thread_type);
-  *MutBreakpointEnabledFlag() = flags & ~(static_cast<size_t>(1) << shift);
-}
 
 void InitThisThreadType(ThreadType thread_type) { *MutThreadLocalThreadType() = thread_type; }
 
@@ -73,15 +50,24 @@ namespace {
 
 void TryRunBreakpointAnchor() {
   if (BreakpointRangeModeGuard::Current() == kDisableBreakpointRange) { return; }
-  if (!IsThreadTypeBreakpointEnabled(GetThreadLocalThreadType())) { return; }
+  ThreadType thread_type = GetThreadLocalThreadType();
   BreakpointAnchor();
+  if (thread_type == kNormalThreadType) {
+    NormalBreakpointAnchor();
+  } else if (thread_type == kSchedulerThreadType) {
+    SchedulerBreakpointAnchor();
+  } else if (thread_type == kWorkerThreadType) {
+    WorkerBreakpointAnchor();
+  } else {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
 }
 
 }  // namespace
 
 BreakpointRange::BreakpointRange() { TryRunBreakpointAnchor(); }
 
-BreakpointRange::~BreakpointRange() { TryRunBreakpointAnchor(); }
+BreakpointRange::~BreakpointRange() {}
 
 namespace {
 
