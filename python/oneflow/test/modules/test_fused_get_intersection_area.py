@@ -116,7 +116,6 @@ class TestGetIntersectionAreaModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_fused_get_intersection_area_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(583, 1), (759, 1), (1234, 1)]
-        # arg_dict["shape"] = [(4, 1)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
