@@ -49,7 +49,7 @@ Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt) {
   if (dt == ::oneflow::DataType::kUInt128) {
     IntegerType::get(context, 128, IntegerType::Unsigned);
   }
-  llvm::errs() << "unsupported data type: " << dt << "\n";
+  llvm::errs() << "unsupported oneflow data type: " << dt << "\n";
   return Type();
 }
 
