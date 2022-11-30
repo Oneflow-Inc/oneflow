@@ -36,11 +36,13 @@ struct MinMaxDeltaFunctor<half> {
 };
 
 template<typename FUNCTOR, typename T>
-__global__ void FusedGetIntersectionAreaBackward(FUNCTOR functor, const int n, const T* b1_x1, const T* b1_x2,
-                                   const T* b2_x1, const T* b2_x2, const T* b1_y1, const T* b1_y2,
-                                   const T* b2_y1, const T* b2_y2, const T* inter_diff,
-                                   T* b1_x1_diff, T* b1_x2_diff, T* b2_x1_diff, T* b2_x2_diff, 
-                                   T* b1_y1_diff, T* b1_y2_diff, T* b2_y1_diff, T* b2_y2_diff) {
+__global__ void FusedGetIntersectionAreaBackward(FUNCTOR functor, const int n, const T* b1_x1,
+                                                 const T* b1_x2, const T* b2_x1, const T* b2_x2,
+                                                 const T* b1_y1, const T* b1_y2, const T* b2_y1,
+                                                 const T* b2_y2, const T* inter_diff, T* b1_x1_diff,
+                                                 T* b1_x2_diff, T* b2_x1_diff, T* b2_x2_diff,
+                                                 T* b1_y1_diff, T* b1_y2_diff, T* b2_y1_diff,
+                                                 T* b2_y2_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T inter_diff_i = inter_diff[i];
     const T b_x_min_max = functor.Compute(b1_x2[i], b2_x2[i], b1_x1[i], b2_x1[i]);
@@ -58,39 +60,24 @@ __global__ void FusedGetIntersectionAreaBackward(FUNCTOR functor, const int n, c
     b2_y2_diff[i] = static_cast<T>(0.0);
 
     if (b_x_min_max > static_cast<T>(0.0) && b_y_min_max > static_cast<T>(0.0)) {
-      if (b1_x1[i] >= b2_x1[i]) {
-        b1_x1_diff[i] = static_cast<T>(-1.0) * b_y_min_max_inter;
-      }
-      if (b1_x1[i] <= b2_x1[i]) {
-        b2_x1_diff[i] = static_cast<T>(-1.0) * b_y_min_max_inter;
-      }
-      if (b1_x2[i] <= b2_x2[i]) {
-        b1_x2_diff[i] = b_y_min_max_inter;
-      }
-      if (b1_x2[i] >= b2_x2[i]) {
-        b2_x2_diff[i] = b_y_min_max_inter;
-      }
+      if (b1_x1[i] >= b2_x1[i]) { b1_x1_diff[i] = static_cast<T>(-1.0) * b_y_min_max_inter; }
+      if (b1_x1[i] <= b2_x1[i]) { b2_x1_diff[i] = static_cast<T>(-1.0) * b_y_min_max_inter; }
+      if (b1_x2[i] <= b2_x2[i]) { b1_x2_diff[i] = b_y_min_max_inter; }
+      if (b1_x2[i] >= b2_x2[i]) { b2_x2_diff[i] = b_y_min_max_inter; }
 
-      if (b1_y1[i] >= b2_y1[i]) {
-        b1_y1_diff[i] = static_cast<T>(-1.0) * b_x_min_max_inter;
-      }
-      if (b1_y1[i] <= b2_y1[i]) {
-        b2_y1_diff[i] = static_cast<T>(-1.0) * b_x_min_max_inter;
-      }
-      if (b1_y2[i] <= b2_y2[i]) {
-        b1_y2_diff[i] = b_x_min_max_inter;
-      }
-      if (b1_y2[i] >= b2_y2[i]) {
-        b2_y2_diff[i] = b_x_min_max_inter;
-      }
+      if (b1_y1[i] >= b2_y1[i]) { b1_y1_diff[i] = static_cast<T>(-1.0) * b_x_min_max_inter; }
+      if (b1_y1[i] <= b2_y1[i]) { b2_y1_diff[i] = static_cast<T>(-1.0) * b_x_min_max_inter; }
+      if (b1_y2[i] <= b2_y2[i]) { b1_y2_diff[i] = b_x_min_max_inter; }
+      if (b1_y2[i] >= b2_y2[i]) { b2_y2_diff[i] = b_x_min_max_inter; }
     }
   }
 }
 
 template<typename FUNCTOR, typename T>
-__global__ void FusedGetIntersectionAreaForward(FUNCTOR functor, const int n, const T* b1_x1, const T* b1_x2,
-                                   const T* b2_x1, const T* b2_x2, const T* b1_y1, const T* b1_y2,
-                                   const T* b2_y1, const T* b2_y2, T* inter) {
+__global__ void FusedGetIntersectionAreaForward(FUNCTOR functor, const int n, const T* b1_x1,
+                                                const T* b1_x2, const T* b2_x1, const T* b2_x2,
+                                                const T* b1_y1, const T* b1_y2, const T* b2_y1,
+                                                const T* b2_y2, T* inter) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T b_x_min_max = functor.Compute(b1_x2[i], b2_x2[i], b1_x1[i], b2_x1[i]);
     const T b_y_min_max = functor.Compute(b1_y2[i], b2_y2[i], b1_y1[i], b2_y1[i]);
@@ -127,18 +114,17 @@ class FusedGetIntersectionAreaKernel final : public user_op::OpKernel {
 
     MinMaxDeltaFunctor<T> min_max_delta_functor{};
 
-    RUN_CUDA_KERNEL((FusedGetIntersectionAreaForward<decltype(min_max_delta_functor), T>), ctx->stream(), elem_cnt,
-                    min_max_delta_functor, elem_cnt, b1_x1->dptr<T>(), b1_x2->dptr<T>(), b2_x1->dptr<T>(), 
-                    b2_x2->dptr<T>(), b1_y1->dptr<T>(), b1_y2->dptr<T>(), 
-                    b2_y1->dptr<T>(), b2_y2->dptr<T>(), inter->mut_dptr<T>());
-
+    RUN_CUDA_KERNEL((FusedGetIntersectionAreaForward<decltype(min_max_delta_functor), T>),
+                    ctx->stream(), elem_cnt, min_max_delta_functor, elem_cnt, b1_x1->dptr<T>(),
+                    b1_x2->dptr<T>(), b2_x1->dptr<T>(), b2_x2->dptr<T>(), b1_y1->dptr<T>(),
+                    b1_y2->dptr<T>(), b2_y1->dptr<T>(), b2_y2->dptr<T>(), inter->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("fused_get_intersection_area")                \
-      .SetCreateFn<FusedGetIntersectionAreaKernel<dtype>>()           \
+#define REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(dtype)        \
+  REGISTER_USER_KERNEL("fused_get_intersection_area")                  \
+      .SetCreateFn<FusedGetIntersectionAreaKernel<dtype>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("inter", 0) == GetDataType<dtype>::value));
 
@@ -179,20 +165,20 @@ class FusedGetIntersectionAreaGradKernel final : public user_op::OpKernel {
 
     MinMaxDeltaFunctor<T> min_max_delta_functor{};
 
-    RUN_CUDA_KERNEL((FusedGetIntersectionAreaBackward<decltype(min_max_delta_functor), T>), ctx->stream(), elem_cnt, min_max_delta_functor, elem_cnt, b1_x1->dptr<T>(),
+    RUN_CUDA_KERNEL((FusedGetIntersectionAreaBackward<decltype(min_max_delta_functor), T>),
+                    ctx->stream(), elem_cnt, min_max_delta_functor, elem_cnt, b1_x1->dptr<T>(),
                     b1_x2->dptr<T>(), b2_x1->dptr<T>(), b2_x2->dptr<T>(), b1_y1->dptr<T>(),
                     b1_y2->dptr<T>(), b2_y1->dptr<T>(), b2_y2->dptr<T>(), inter_diff->dptr<T>(),
                     b1_x1_diff->mut_dptr<T>(), b1_x2_diff->mut_dptr<T>(), b2_x1_diff->mut_dptr<T>(),
                     b2_x2_diff->mut_dptr<T>(), b1_y1_diff->mut_dptr<T>(), b1_y2_diff->mut_dptr<T>(),
                     b2_y1_diff->mut_dptr<T>(), b2_y2_diff->mut_dptr<T>());
-
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("fused_get_intersection_area_grad")                \
-      .SetCreateFn<FusedGetIntersectionAreaGradKernel<dtype>>()           \
+#define REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(dtype)   \
+  REGISTER_USER_KERNEL("fused_get_intersection_area_grad")             \
+      .SetCreateFn<FusedGetIntersectionAreaGradKernel<dtype>>()        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1_diff", 0) == GetDataType<dtype>::value));
 
