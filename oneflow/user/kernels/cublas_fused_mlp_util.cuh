@@ -260,14 +260,14 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
   // Set epilogue
   SetCublasEpilogue(matmul_grad_cache, epilogue, d_bias_ptr, aux_ptr);
-  /*
-  Set AUX pointer LD
-  If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
-  If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
-  For more details you can refer to CUBLAS docs:
-  https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
-  `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
-  */
+/*
+Set AUX pointer LD
+If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
+If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
+For more details you can refer to CUBLAS docs:
+https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
+`CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
+*/
 #if CUDA_VERSION >= 11060
   if (need_aux) {
     long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
