@@ -2,6 +2,7 @@ oneflow_add_mlir_library(
   OneFlowLiteConversion
   ConvertToLiteExecutable.cpp
   FlatbufferUtils.cpp
+  OneFlowLiteUtils.cpp
   Transform/FoldVariable.cpp
   Transform/InferPlacement.cpp
   Transform/InsertTransferOp.cpp

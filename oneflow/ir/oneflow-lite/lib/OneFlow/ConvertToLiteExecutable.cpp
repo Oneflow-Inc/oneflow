@@ -15,14 +15,12 @@ limitations under the License.
 */
 #include "OneFlow/ConvertToLiteExecutable.h"
 
-#include "oneflow/core/framework/user_op_def.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
-
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/OneFlowLiteUtils.h"
 #include "OneFlow/Transform/FoldVariable.h"
 #include "OneFlow/Transform/InferPlacement.h"
 #include "OneFlow/Transform/InsertTransferOp.h"
@@ -43,40 +41,6 @@ namespace oneflow {
 
 namespace lite {
 
-static StringRef getLiteStringElementType(Type type) {
-  assert(type.isIntOrFloat());
-  if (type.isF16()) {
-    return "f16";
-  } else if (type.isBF16()) {
-    return "bf16";
-  } else if (type.isF32()) {
-    return "f32";
-  } else if (type.isF64()) {
-    return "f64";
-  } else if (type.isSignedInteger()) {
-    int bitwidth = type.getIntOrFloatBitWidth();
-    return "i" + llvm::Twine(bitwidth).str();
-  } else if (type.isUnsignedInteger()) {
-    int bitwidth = type.getIntOrFloatBitWidth();
-    return "u" + llvm::Twine(bitwidth).str();
-  } else {
-    llvm::errs() << "error type: " << type << "\n";
-    return "";
-  }
-}
-
-static Optional<::oneflow::AttrType> getUserOpAttrType(StringRef opName, StringRef attrName) {
-  const ::oneflow::user_op::OpRegistryResult* val =
-      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(opName.str());
-  if (!val) {
-    llvm::errs() << "unregistered user op: " << opName.str() << "\n";
-    exit(1);
-  }
-  ::oneflow::user_op::UserOpDefWrapper op_def(val->op_def);
-  if (!op_def.IsAttrName(attrName.str())) { return llvm::None; }
-  return op_def.GetAttrType(attrName.str());
-}
-
 static flatbuffers_vec_ref_t createLiteUserOpAttrs(FlatbufferBuilder& builder, Operation* op) {
   assert((llvm::dyn_cast<oneflow::UserOp>(op) || llvm::dyn_cast<UserOpCompatible>(op))
          && "the argument op is not a valid user op");
@@ -87,57 +51,57 @@ static flatbuffers_vec_ref_t createLiteUserOpAttrs(FlatbufferBuilder& builder, O
         getUserOpAttrType(GetOpTypeName(op), attrName.strref());
     if (!attrType) { continue; }
 
-    llvm::SmallVector<uint8_t, 4> packedAttrData;
-    StringRef strAttrType;
     auto attrValue = kv.getValue();
+    StringRef strAttrType;
+    FlatbufferBuilder attrBuilder;
     if (attrType.value() == ::oneflow::kAtInt32) {
       strAttrType = "i32";
-      packedAttrData.resize(4);
-      // memcpy();
+      serializeI32Attr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtInt64) {
       strAttrType = "i64";
-
+      serializeI64Attr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtBool) {
       strAttrType = "bool";
-
+      serializeBoolAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtFloat) {
       strAttrType = "f32";
-
+      serializeF32Attr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtDouble) {
       strAttrType = "f64";
-
+      serializeF64Attr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtString) {
       strAttrType = "str";
-
+      serializeStringAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtShape) {
       strAttrType = "shape";
-
+      serializeShapeAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtStride) {
       strAttrType = "stride";
-
+      serializeStrideAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtDataType) {
       strAttrType = "dtype";
-
+      serializeDataTypeAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListInt32) {
       strAttrType = "i32s";
-
+      serializeI32sAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListInt64) {
       strAttrType = "i64s";
-
+      serializeI64sAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListFloat) {
       strAttrType = "f32s";
-
+      serializeF32sAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListDataType) {
       strAttrType = "dtypes";
-
+      serializeDataTypesAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListShape) {
       strAttrType = "shapes";
-
+      serializeShapesAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListStride) {
       strAttrType = "strides";
-
+      serializeStridesAttr(attrBuilder, attrValue);
     } else if (attrType.value() == ::oneflow::kAtListString) {
       strAttrType = "strs";
+      serializeStringsAttr(attrBuilder, attrValue);
     } else {
       llvm::errs() << "error attribute type: " << attrType.value() << "\n";
       exit(1);
@@ -145,6 +109,10 @@ static flatbuffers_vec_ref_t createLiteUserOpAttrs(FlatbufferBuilder& builder, O
     oneflow_lite_AttrDef_start(builder);
     oneflow_lite_AttrDef_type_add(builder, builder.createString(strAttrType));
     oneflow_lite_AttrDef_key_add(builder, builder.createString(attrName.strref()));
+    oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
+      if (failed(attrBuilder.copyToStream(stream))) { return false; }
+      return true;
+    }));
     attrDefs.push_back(oneflow_lite_AttrDef_end(builder));
   }
   return builder.createOffsetVecDestructive(attrDefs);
@@ -177,8 +145,11 @@ static oneflow_lite_OpDef_ref_t createLiteOpDef(
     }
     outputOrdering.push_back(it->second);
   }
+  auto opName = GetOpTypeName(op);
+  if (opName == "variable") { opName = "constant"; }
+
   oneflow_lite_OpDef_start(builder);
-  oneflow_lite_OpDef_name_add(builder, builder.createString(GetOpTypeName(op)));
+  oneflow_lite_OpDef_name_add(builder, builder.createString(opName));
   oneflow_lite_OpDef_inputs_add(builder, builder.createInt32Vec(inputOrdering));
   oneflow_lite_OpDef_outputs_add(builder, builder.createInt32Vec(outputOrdering));
 
@@ -196,8 +167,12 @@ static oneflow_lite_TensorDef_ref_t createLiteTensorDef(FlatbufferBuilder& build
                                                         int segmentId, size_t segmentOffset) {
   TensorType type = value.getType().cast<TensorType>();
   oneflow_lite_TensorDef_start(builder);
-  oneflow_lite_TensorDef_type_add(
-      builder, builder.createString(getLiteStringElementType(type.getElementType())));
+  auto elemType = getLiteStringElementType(type.getElementType());
+  if (!elemType) {
+    llvm::errs() << "error tensor element type: " << type.getElementType() << "\n";
+    exit(1);
+  }
+  oneflow_lite_TensorDef_type_add(builder, builder.createString(elemType.value()));
   oneflow_lite_TensorDef_layout_add(builder, builder.createString("default"));
   oneflow_lite_TensorDef_sizes_add(builder, builder.createInt64Vec(type.getShape()));
   oneflow_lite_TensorDef_strides_add(builder,
