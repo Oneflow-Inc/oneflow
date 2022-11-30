@@ -35,7 +35,7 @@ class FusedWeightedSum : public OpExprGradFunction<FusedWeightedSumCaptureState>
     ctx->alpha = JUST(attrs.GetAttr<float>("alpha"));
     CHECK_EQ_OR_RETURN(ctx->weights.size(), inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      ctx->requires_grad[i] = inputs.at(i)->requires_grad();
+      ctx->requires_grad[i] = inputs[i]->requires_grad();
     }
     return Maybe<void>::Ok();
   }
@@ -45,9 +45,9 @@ class FusedWeightedSum : public OpExprGradFunction<FusedWeightedSumCaptureState>
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(ctx->requires_grad.size());
     for (int i = 0; i < ctx->requires_grad.size(); ++i) {
-      if (ctx->requires_grad.at(i)) {
-        in_grads->at(i) =
-            JUST(functional::ScalarMul(out_grads.at(0), ctx->weights[i] * ctx->alpha, false));
+      if (ctx->requires_grad[i]) {
+        in_grads[i] =
+            JUST(functional::ScalarMul(out_grads[0], ctx->weights[i] * ctx->alpha, false));
       }
     }
     return Maybe<void>::Ok();
