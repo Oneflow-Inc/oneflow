@@ -31,7 +31,9 @@ struct MinMaxDeltaFunctor {
 template<>
 struct MinMaxDeltaFunctor<half> {
   __device__ half Compute(half b1_x2_i, half b2_x2_i, half b1_x1_i, half b2_x1_i) const {
-    return __hmin(b1_x2_i, b2_x2_i) - __hmax(b1_x1_i, b2_x1_i);
+    const half b_x2_min = b1_x2_i < b2_x2_i ? b1_x2_i : b2_x2_i;
+    const half b_x1_max = b1_x1_i > b2_x1_i ? b1_x1_i : b2_x1_i;
+    return b_x2_min - b_x1_max;
   }
 };
 
