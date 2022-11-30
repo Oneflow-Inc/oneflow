@@ -7,6 +7,10 @@
 #include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
+namespace dtr {
+class DisjNode;
+}
+
 namespace vm {
 
 class OpCallInstructionPolicy;
@@ -69,11 +73,14 @@ class TensorStorage {
   bool eviction_disabled() const { return eviction_disabled_; }
   int64_t id() const { return id_; }
   Maybe<double> cost(size_t override_size) const;
+  double approx_neighbor_cost() const;
   std::string compute_op_type_name() const;
   bool is_initialized() const { return is_initialized_; }
   void set_initialized() { is_initialized_ = true; }
   bool is_needed_by_backward() const { return is_needed_by_backward_; }
   void set_needed_by_backward() { is_needed_by_backward_ = true; }
+  double compute_time() const { return compute_time_; }
+  std::shared_ptr<dtr::DisjNode> node;
 
  private:
   bool is_initialized_ = false;

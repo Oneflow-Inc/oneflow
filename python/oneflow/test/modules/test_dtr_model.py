@@ -90,7 +90,7 @@ class TestDTRCorrectness(flow.unittest.TestCase):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            # print(f"loss: {loss}")
+            print(f"loss: {loss}")
             # if iter == ALL_ITERS - 1:
             #     test_case.assertGreater(loss, 5.98)
             #     test_case.assertLess(loss, 6.01)

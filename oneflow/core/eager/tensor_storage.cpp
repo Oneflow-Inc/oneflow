@@ -1,5 +1,7 @@
 #include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
+#include "oneflow/core/vm/dtr_disjoint_set.h"
 #include "oneflow/core/vm/dtr_env.h"
 
 namespace oneflow {
@@ -26,7 +28,8 @@ static double GetEstimatedComputeTime(const OpCallInstructionPolicy& operand) {
 }  // namespace
 
 TensorStorage::TensorStorage()
-    : id_(unique_id_2()),
+    : node(std::make_shared<dtr::DisjNode>(0)),
+      id_(unique_id_2()),
       num_pinned_(0),
       blob_bytes_(0),
       last_access_time_(0),
@@ -45,6 +48,7 @@ TensorStorage::~TensorStorage() {
 
 void TensorStorage::Evict(bool eager_eviction) {
   Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
+  CHECK_JUST(dtr::DisjointSet::update_after_evict(this));
   return Release();
 }
 
@@ -84,7 +88,38 @@ void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->t
 Maybe<double> TensorStorage::cost(size_t override_size) const {
   const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
   size_t size = override_size == 0 ? blob_bytes_ : override_size;
-  return compute_time_ / time_since_last_access;
+  return (EnvBool<ONEFLOW_DTR_NEIGHBOR>() ? approx_neighbor_cost() : compute_time_)
+         / time_since_last_access;
+}
+
+double TensorStorage::approx_neighbor_cost() const {
+  double cost = 0;
+  auto compute_op = this->compute_op();
+  const auto& inputs = compute_op.inputs();
+  for (int i = 0; i < inputs.size(); ++i) {
+    const auto& tmp = inputs[i];
+    if (!tmp->tensor_storage()->is_in_memory()) {
+      double p_cost = dtr::DisjointSet::find_father(tmp->tensor_storage()->node)->compute_time();
+      if (p_cost < tmp->tensor_storage()->compute_time()) {
+        p_cost = tmp->tensor_storage()->compute_time();
+      }
+      cost += p_cost;
+    }
+  }
+
+  const auto& outputs = compute_op.outputs();
+  for (int i = 0; i < outputs.size(); ++i) {
+    const auto& tmp = outputs[i];
+    if (!tmp->tensor_storage()->is_in_memory()) {
+      double c_cost = dtr::DisjointSet::find_father(tmp->tensor_storage()->node)->compute_time();
+      if (c_cost < tmp->tensor_storage()->compute_time()) {
+        c_cost = tmp->tensor_storage()->compute_time();
+      }
+      cost += c_cost;
+    }
+  }
+
+  return cost + compute_time_;
 }
 
 #if false

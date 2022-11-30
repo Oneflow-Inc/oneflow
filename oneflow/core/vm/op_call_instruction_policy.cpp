@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
+#include "oneflow/core/vm/dtr_disjoint_set.h"
 #include "oneflow/core/vm/dtr_env.h"
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
@@ -91,6 +92,10 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first, bool recompute) {
+    Singleton<dtr::Env>::Get()->current_op_type_name =
+        op_call_instruction_policy->opkernel().op_type_name();
+    VLOG(2) << "set current op type name to "
+            << Singleton<dtr::Env>::Get()->current_op_type_name << std::endl;
     if (first) { JUST(IncReferenceNumOfRecomputedTensor(*op_call_instruction_policy)); }
     if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
@@ -113,6 +118,7 @@ struct OpCallInstructionUtil final {
         JUST(vm_stream->mut_stream_policy()->stream()->Sync());
         CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
+      x->tensor_storage()->Access();
     }
     const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
       auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
@@ -151,7 +157,10 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
+    for (const auto& y : op_call_instruction_policy->outputs()) {
+      y->tensor_storage()->Unpin();
+      dtr::DisjointSet::update_after_compute(y->tensor_storage().get());
+    }
     auto& need_eager_eviction_storages = Singleton<dtr::Env>::Get()->need_eager_eviction_storages;
     for (const auto& x : op_call_instruction_policy->inputs()) {
       x->tensor_storage()->Unpin();

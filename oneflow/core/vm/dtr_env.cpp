@@ -6,6 +6,7 @@ namespace dtr {
 
 vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     vm::TensorStorage* storage, vm::OpCallInstructionPolicy* current_compute_op) {
+  // FIXME: set disjnode properly
   auto new_storage = std::make_shared<vm::InsideVmTensorStorage>();
   std::unordered_map<vm::EagerBlobObject*, std::shared_ptr<vm::EagerBlobObject>> old2new;
   auto update = [&new_storage, &old2new](std::shared_ptr<vm::EagerBlobObject>& old) {

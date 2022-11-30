@@ -34,12 +34,15 @@ class Env {
 
   std::set<vm::TensorStorage*> need_eager_eviction_storages;
 
+  std::string current_op_type_name;
+
  private:
   double time_now_ = 0;
 
   int eager_eviction_num_ = 0;
   int forced_eviction_num_ = 0;
   int recomputation_num_ = 0;
+
 };
 }  // namespace dtr
 }  // namespace oneflow

@@ -56,9 +56,6 @@ class DtrEpAllocator final : public Allocator {
   const std::unique_ptr<Allocator> backend_;
   ReentrantThreadSafeLock thread_lock_;
 
-  std::string current_op_type_name_ = "undefined";
-  size_t num_forced_eviction_ = -9999;
-
   using offset_t = size_t;
 
   offset_t get_offset(const char* mem_ptr) const;

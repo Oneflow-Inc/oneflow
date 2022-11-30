@@ -380,12 +380,15 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
 
   if (memory_ == nullptr) { InitMemory(); }
 
+  // NOLINTNEXTLINE
   const bool is_high_op = [&]() {
     std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad", "conv_filter_grad",
                                                      "add_n",  "matmul",         "batch_matmul"};
-    PNT3(current_op_type_name_);
+    const auto& current_op_type_name = Singleton<dtr::Env>::Get()->current_op_type_name;
+    CHECK_NE(current_op_type_name, "");
+    PNT3(current_op_type_name);
     if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(),
-                  current_op_type_name_)
+                  current_op_type_name)
         != high_compute_cost_names.cend()) {
       return true;
     }
@@ -607,7 +610,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
       first_time = false;
     }
     const auto started_at = profiler::GetTimeNow();
-    const size_t evict_num1 = num_forced_eviction_;
+    const size_t evict_num1 = Singleton<dtr::Env>::Get()->forced_eviction_num();
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, true));
     } else if (EnvBool<ONEFLOW_DTR_DTR_NO_FREE>()) {
@@ -615,7 +618,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
     } else {
       piece = JUST(EvictAndFindPieceOnce(aligned_size));
     }
-    const size_t evict_num2 = num_forced_eviction_;
+    const size_t evict_num2 = Singleton<dtr::Env>::Get()->forced_eviction_num();
     const auto duration = profiler::GetTimeNow() - started_at;
     search_free_mem_cost_.emplace_back(size, evict_num2 - evict_num1, duration);
     if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
