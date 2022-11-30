@@ -26,9 +26,16 @@ limitations under the License.
 #include "OneFlow/Transform/InsertTransferOp.h"
 #include "OneFlow/Transform/MemoryPlanning.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/ToolOutputFile.h"
+
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Transforms/Passes.h"
 
 #pragma GCC diagnostic push
@@ -41,7 +48,7 @@ namespace oneflow {
 
 namespace lite {
 
-static flatbuffers_vec_ref_t createLiteUserOpAttrs(FlatbufferBuilder& builder, Operation* op) {
+static flatbuffers_vec_ref_t createLiteOpAttrs(FlatbufferBuilder& builder, Operation* op) {
   assert((llvm::dyn_cast<oneflow::UserOp>(op) || llvm::dyn_cast<UserOpCompatible>(op))
          && "the argument op is not a valid user op");
   llvm::SmallVector<oneflow_lite_AttrDef_ref_t, 4> attrDefs;
@@ -118,12 +125,72 @@ static flatbuffers_vec_ref_t createLiteUserOpAttrs(FlatbufferBuilder& builder, O
   return builder.createOffsetVecDestructive(attrDefs);
 }
 
-static flatbuffers_vec_ref_t createLiteOpAttrs(FlatbufferBuilder& builder, Operation* op) {
-  if (llvm::dyn_cast<VariableOp>(op)) {
-    llvm::SmallVector<oneflow_lite_AttrDef_ref_t, 4> attrDefs;
-    return builder.createOffsetVecDestructive(attrDefs);
+static flatbuffers_vec_ref_t createLiteVariableOpAttrs(FlatbufferBuilder& builder, VariableOp op,
+                                                       StringRef checkpointDir) {
+  llvm::SmallVector<oneflow_lite_AttrDef_ref_t, 4> attrDefs;
+  {
+    oneflow_lite_AttrDef_start(builder);
+    oneflow_lite_AttrDef_type_add(builder, builder.createString("dtype"));
+    oneflow_lite_AttrDef_key_add(builder, builder.createString("dtype"));
+    FlatbufferBuilder attrBuilder;
+    serializeDataTypeAttr(attrBuilder, op.data_typeAttr());
+    oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
+      if (failed(attrBuilder.copyToStream(stream))) { return false; }
+      return true;
+    }));
+    attrDefs.push_back(oneflow_lite_AttrDef_end(builder));
   }
-  return createLiteUserOpAttrs(builder, op);
+  {
+    oneflow_lite_AttrDef_start(builder);
+    oneflow_lite_AttrDef_type_add(builder, builder.createString("shape"));
+    oneflow_lite_AttrDef_key_add(builder, builder.createString("shape"));
+    FlatbufferBuilder attrBuilder;
+    serializeShapeAttr(attrBuilder, op.shapeAttr());
+    oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
+      if (failed(attrBuilder.copyToStream(stream))) { return false; }
+      return true;
+    }));
+    attrDefs.push_back(oneflow_lite_AttrDef_end(builder));
+  }
+  // serialize weight data
+  oneflow_lite_AttrDef_start(builder);
+  oneflow_lite_AttrDef_type_add(builder, builder.createString("u8"));
+  oneflow_lite_AttrDef_key_add(builder, builder.createString("value"));
+
+  llvm::SmallString<128> inputFilename;
+  llvm::sys::path::native(checkpointDir + "/" + op.op_name() + "/out", inputFilename);
+  std::string errorMessage;
+  auto input = mlir::openInputFile(inputFilename, &errorMessage);
+  if (!input) {
+    llvm::errs() << errorMessage << "\n";
+    exit(1);
+  }
+  oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
+    stream << input->getBuffer();
+    stream.flush();
+    return true;
+  }));
+  attrDefs.push_back(oneflow_lite_AttrDef_end(builder));
+  return builder.createOffsetVecDestructive(attrDefs);
+}
+
+static oneflow_lite_OpDef_ref_t createLiteVariableOpDef(
+    FlatbufferBuilder& builder, VariableOp op, llvm::DenseMap<Value, int>& valueOrdering,
+    const llvm::DenseMap<StringRef, int>& deviceOrdering, StringRef checkpointDir) {
+  oneflow_lite_OpDef_start(builder);
+  oneflow_lite_OpDef_name_add(builder, builder.createString("constant"));
+  oneflow_lite_OpDef_inputs_add(builder, 0);
+
+  auto index = valueOrdering.try_emplace(op.output(), valueOrdering.size()).first->second;
+  oneflow_lite_OpDef_outputs_add(builder,
+                                 builder.createInt32Vec(llvm::SmallVector<int32_t, 4>{index}));
+
+  oneflow_lite_OpDef_attrs_add(builder, createLiteVariableOpAttrs(builder, op, checkpointDir));
+
+  auto it = deviceOrdering.find(op.device_tag());
+  assert(it != deviceOrdering.end());
+  oneflow_lite_OpDef_device_add(builder, it->second);
+  return oneflow_lite_OpDef_end(builder);
 }
 
 static oneflow_lite_OpDef_ref_t createLiteOpDef(
@@ -145,11 +212,8 @@ static oneflow_lite_OpDef_ref_t createLiteOpDef(
     }
     outputOrdering.push_back(it->second);
   }
-  auto opName = GetOpTypeName(op);
-  if (opName == "variable") { opName = "constant"; }
-
   oneflow_lite_OpDef_start(builder);
-  oneflow_lite_OpDef_name_add(builder, builder.createString(opName));
+  oneflow_lite_OpDef_name_add(builder, builder.createString(GetOpTypeName(op)));
   oneflow_lite_OpDef_inputs_add(builder, builder.createInt32Vec(inputOrdering));
   oneflow_lite_OpDef_outputs_add(builder, builder.createInt32Vec(outputOrdering));
 
@@ -219,7 +283,6 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     llvm::errs() << "Job not found in module: " << *module;
     return failure();
   }
-  llvm::errs() << *module << "\n";
 
   auto funcName = root->getAttrOfType<StringAttr>("sym_name");
   llvm::SmallVector<StringRef, 4> devices;
@@ -255,6 +318,9 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
       outputValueNames.push_back(
           op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
               .getValue());
+    } else if (auto variableOp = llvm::dyn_cast<VariableOp>(op)) {
+      opDefs.push_back(createLiteVariableOpDef(builder, variableOp, valueOrdering, deviceOrdering,
+                                               options.checkpointDir));
     } else {
       opDefs.push_back(createLiteOpDef(builder, op, valueOrdering, deviceOrdering));
     }

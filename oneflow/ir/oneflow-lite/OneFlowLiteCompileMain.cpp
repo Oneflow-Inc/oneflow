@@ -17,12 +17,15 @@ limitations under the License.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "OneFlow/OneFlowDialect.h"
@@ -60,6 +63,7 @@ LogicalResult Compile(int argc, char** argv) {
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(inputFilename, &context);
 
   ConvertOptions options;
+  options.checkpointDir = inputFiledir;
   if (targets.empty()) {
     options.target = "host";
   } else {
@@ -72,7 +76,18 @@ LogicalResult Compile(int argc, char** argv) {
   llvm::errs() << "Enable compilation for target: " << options.target << "\n";
 
   llvm::SmallVector<uint8_t, 32> executable;
-  return ConvertToLiteExecutable(&context, module.get(), options, &executable);
+  if (failed(ConvertToLiteExecutable(&context, module.get(), options, &executable))) {
+    return failure();
+  }
+  std::string errorMessage;
+  auto output = mlir::openOutputFile(outputFilename, &errorMessage);
+  if (!output) {
+    llvm::errs() << errorMessage << "\n";
+    return failure();
+  }
+  output->os().write(reinterpret_cast<char*>(executable.data()), executable.size());
+  output->keep();
+  return success();
 }
 
 }  // namespace lite

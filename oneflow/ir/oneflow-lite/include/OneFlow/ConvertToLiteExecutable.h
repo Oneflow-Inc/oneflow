@@ -30,6 +30,7 @@ namespace lite {
 
 typedef struct ConvertOptions {
   llvm::SmallString<128> target;
+  llvm::SmallString<128> checkpointDir;
 } ConvertOptions;
 
 LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, ConvertOptions options,
