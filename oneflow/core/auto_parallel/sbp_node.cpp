@@ -661,6 +661,9 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
 void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
                                const std::vector<int32_t>& id2count) {
   const auto& curr_operator = op_node_->op();
+  // An edge should not be initialized twice
+  // During each initialization, we are computing sum(memory of consumer) - sum(memory of producer)
+  // This is why we need to pre-store memory of producer
   HashMap<SbpEdge*, std::vector<int64_t>> sbp_edge2nd_sbp_sig2memory;
   for (const auto& obn : curr_operator.output_bns()) {
     const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
@@ -671,11 +674,18 @@ void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, in
       memory_.resize(sbp_sig_list_.size(), 0);
       const auto& logical_blob_desc = op_node_->LogicalBlobDesc4Lbi(lbi);
       const auto& hierarchy = *CHECK_JUST(curr_operator.GetParallelDesc4BnInOp(obn))->hierarchy();
+      // There are some operators with a fixed sbp for some blobs, such as conv.
+      // {in: S0, kernel: B, out: S0}
+      // {in: B, kernel: B, out: B}
+      // The blob kernel have the same sbp for different signatures.
+      // We pre-store the results for the same sbp while accessing the same blobs.
       HashMap<NdSbp, int64_t> nd_sbp2memory;
       SbpEdge* edge_contain_lbi = nullptr;
       for (const auto& edge_out : edges_out_) {
         if (edge_out->SearchLbi(lbi)) { edge_contain_lbi = edge_out; }
       }
+      // There exist some lbi which does not have a consumer
+      // At this moment edge_contain_lbi == nullptr
       auto& nd_sbp_sig2memory = sbp_edge2nd_sbp_sig2memory[edge_contain_lbi];
       nd_sbp_sig2memory.resize(sbp_sig_list_.size(), 0);
       for (int32_t sbp_sig_id = 0; sbp_sig_id < sbp_sig_list_.size(); sbp_sig_id++) {
@@ -694,10 +704,11 @@ void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, in
       std::cout << "lbi: " << lbi.op_name() << " to " << curr_operator.op_name() << std::endl;
     }
   }
-  // Init memory for each out-going edge
+  // Even after the correction in the memory of edges, the relative error still have 0.73%.
   if (in_memory_support_ && is_reusable) {
-    for (auto& edge_out : edges_out_) {
-      edge_out->InitializeMemory(lbi2id, id2count, sbp_edge2nd_sbp_sig2memory[edge_out]);
+    for (const auto& pair : sbp_edge2nd_sbp_sig2memory) {
+      // Init memory for each out-going edge
+      pair.first->InitializeMemory(lbi2id, id2count, pair.second);
     }
   }
 }
