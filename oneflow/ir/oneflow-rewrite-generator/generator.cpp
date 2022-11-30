@@ -1,7 +1,8 @@
 #include "generator.h"
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/TargetSelect.h>
 #include <algorithm>
-
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -15,9 +16,6 @@
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetSelect.h"
-
 #include "OneFlow/OneFlowOps.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -26,8 +24,14 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
+#include "mlir/Dialect/PDL/IR/PDL.h"
+
 namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
+namespace pdl = ::mlir::pdl;
 namespace mlir {
 namespace oneflow {
 
@@ -65,17 +69,37 @@ void Generator::run() {
   // addop_attrs.set("y", r);
   NamedAttrList addop_attrs;
   auto result_type = rands[0].getType();
-  auto add01 = builder.create<BroadcastAddOp>(mop->getLoc(), result_type,
-                                              ValueRange{rands[0], rands[1]}, addop_attrs);
-  auto res1 = builder.create<BroadcastAddOp>(mop->getLoc(), result_type,
-                                             ValueRange{add01, rands[2]}, addop_attrs);
+  auto loc = mop->getLoc();
+  auto add01 =
+      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[0], rands[1]}, addop_attrs);
+  auto res1 =
+      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{add01, rands[2]}, addop_attrs);
 
-  auto add12 = builder.create<BroadcastAddOp>(mop->getLoc(), result_type,
-                                              ValueRange{rands[1], rands[2]}, addop_attrs);
-  auto res2 = builder.create<BroadcastAddOp>(mop->getLoc(), result_type,
-                                             ValueRange{rands[0], add12}, addop_attrs);
-  // how to evaluate res1 & res2?
+  auto add12 =
+      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[1], rands[2]}, addop_attrs);
+  auto res2 =
+      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[0], add12}, addop_attrs);
+  // TODO: how to evaluate res1 & res2?
+  // check their hash (and that the hashes are equal)
+
   // res1 and res2 equal, add to pdl
+  TypeAttr ta;
+  auto pdl_result_type = builder.create<pdl::TypeOp>(loc, result_type, ta);
+  auto pdl_op1 = builder.create<pdl::OperandOp>(loc);
+  auto pdl_op2 = builder.create<pdl::OperandOp>(loc);
+  auto pdl_op3 = builder.create<pdl::OperandOp>(loc);
+  auto pdl_of_add_op =
+      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op1, pdl_op2});
+  auto pdl_res1 =
+      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_of_add_op, pdl_op3});
+
+  auto pdl_of_add_op2 =
+      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op2, pdl_op3});
+  auto pdl_res2 =
+      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op1, pdl_of_add_op2});
+  auto rewrite = builder.create<pdl::RewriteOp>(loc, pdl_res1, nullptr, ValueRange());
+  // final replace op
+  builder.create<pdl::ReplaceOp>(rewrite->getLoc(), pdl_res1, pdl_res2, ValueRange());
   std::cout << "generator\n";
   return;
 }
@@ -86,6 +110,7 @@ int main(/* int argc, char** argv */) {
   mlir::DialectRegistry registry;
   mlir::registerAllTranslations();
   registry.insert<mlir::oneflow::OneFlowDialect>();
+  registry.insert<mlir::pdl::PDLDialect>();
   registry.getDialectAllocator("oneflow");
   // TODO: add pdl dialect
   mlir::MLIRContext context{registry};
