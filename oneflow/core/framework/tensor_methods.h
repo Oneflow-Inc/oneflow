@@ -33,6 +33,12 @@ bool IsEnvViewDisabled();
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
 
+static bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
+                                 const std::vector<int64_t>& strides);
+
+static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
+                              const std::vector<int64_t>& strides, int64_t storage_offset);
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset);
 
@@ -57,8 +63,14 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length);
 
-Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
-                        const std::vector<int32_t>& stride, const int32_t& storage_offset);
+Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
+                            const std::shared_ptr<one::Tensor>& input,
+                            const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                            const int64_t& storage_offset);
+
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
+                        const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                        const int64_t& storage_offset);
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 

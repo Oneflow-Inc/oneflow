@@ -259,7 +259,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     # pick a random valid indexer type
     def ri(indices):
-        choice = _randint(0, 2)
+        choice = _randint(0, 3)
         if choice == 0:
             return _cpu_global_tensor(flow.LongTensor(indices)).to_global(
                 placement, broadcast_for_placement

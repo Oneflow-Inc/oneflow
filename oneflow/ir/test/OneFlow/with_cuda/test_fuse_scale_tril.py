@@ -21,6 +21,8 @@ import unittest
 import numpy as np
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 import oneflow as flow
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict

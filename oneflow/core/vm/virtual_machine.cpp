@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include <thread>
+#include <chrono>
 #include "oneflow/core/vm/sync_vm_mode_guard.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/caching_allocator.h"
@@ -69,8 +71,13 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer(thread_ctx);
+  constexpr static size_t kExpireMicroseconds = 200;
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    while (thread_ctx->TryReceiveAndRun()) {}
+    std::chrono::time_point<std::chrono::steady_clock> start{};
+    do {
+      while (thread_ctx->TryReceiveAndRun()) { start = std::chrono::steady_clock::now(); }
+      std::this_thread::yield();
+    } while (MicrosecondsFrom(start) < kExpireMicroseconds);
   }
 }
 

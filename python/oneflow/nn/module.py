@@ -1239,6 +1239,12 @@ class Module(object):
 
         return self._apply(convert)
 
+    def to_local(self):
+        def convert(t):
+            return t.to_local()
+
+        return self._apply(convert)
+
     def cpu(self: T) -> T:
         r"""
         cpu()

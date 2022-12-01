@@ -80,6 +80,15 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   return Maybe<void>::Ok();
 }
 
+Maybe<Tensor> AutogradMeta::current_grad_value() const {
+  std::shared_ptr<Tensor> res = JUST(current_grad_->GetAccTensor());
+  for (const auto& hook : hooks_) {
+    const auto& new_tensor = hook(res);
+    if (new_tensor) { res = new_tensor; }
+  }
+  return res;
+}
+
 }  // namespace one
 
 }  // namespace oneflow
