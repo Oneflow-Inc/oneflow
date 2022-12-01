@@ -27,6 +27,15 @@ Convolution functions
     fold
     unfold
 
+BatchNorm functions
+--------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    batch_norm
+
 Pooling functions
 ----------------------------------
 
