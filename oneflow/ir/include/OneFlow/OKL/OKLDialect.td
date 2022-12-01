@@ -22,7 +22,7 @@ def OKL_Dialect : Dialect {
     let name = "okl";
     let summary = "OneFlow Kernel Launch Dialect.";
     let description = [{
-        This dialect is the IR of abstract represent of OneFlow kernel launch.
+        This dialect is the IR of abstract represent of OneFlow Kernel Launch Op.
     }];
     let cppNamespace = "::mlir::okl";
     let dependentDialects = [
