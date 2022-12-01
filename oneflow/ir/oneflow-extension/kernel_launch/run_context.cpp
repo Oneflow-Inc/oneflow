@@ -47,8 +47,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   auto op = reg_ctx_->GetOp();
   using namespace mlir::oneflow::user_op;
   auto source = GetOpSourceByName(op, arg_name);
-  // LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
-  //            << " offset: " << source.offset;
+
   if (source.type == Source::OUTPUT) {
     if (op->getNumResults() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getResult(index + source.offset);
@@ -59,7 +58,10 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
       }
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
-  } else if (source.type == Source::INPUT) {
+    exit(1);
+  }
+
+  if (source.type == Source::INPUT) {
     if (op->getNumOperands() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
@@ -76,10 +78,14 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           LOG(FATAL) << "Signature: " << arg_name << " Not supported";
           return nullptr;
         });
-  } else if (source.type == Source::BUFFER) {
+  }
+
+  if (source.type == Source::BUFFER) {
     auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
     return tmp_buffer_manager_->GetBufferTensor();
   }
+
+  op->emitError("Failed to check source type");
   exit(1);
 }
 
