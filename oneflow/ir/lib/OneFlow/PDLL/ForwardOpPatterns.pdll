@@ -47,7 +47,7 @@ Pattern {
   let conv = 
     op<oneflow.conv2d>(
       op<oneflow.pad>(x: Value){device_name = device_name, device_tag = device_tag, padding_before = padding_before, padding_after = padding_after}, weight: Value) 
-      {device_name = device_name, device_tag = device_tag, padding_before = padding_before, data_format = data_format};
+      {device_name = device_name, device_tag = device_tag, data_format = data_format};
   // IsPaddingCouldBeAssimilatedIntoConv(padding_before, padding_after, data_format);
   
   rewrite conv with{
