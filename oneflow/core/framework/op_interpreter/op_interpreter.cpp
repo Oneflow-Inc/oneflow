@@ -95,7 +95,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
   }
-  // std::cout<<"op_expr.op_type_name "<<op_expr.op_type_name()<<std::endl;
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
   if (requires_grad) {

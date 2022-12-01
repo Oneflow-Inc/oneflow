@@ -49,4 +49,3 @@ class ThreadLocalGuard {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_THREAD_LOCAL_GUARD_H_
-

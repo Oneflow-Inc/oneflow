@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 namespace one {
 
@@ -97,7 +96,6 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     if (ctx->is_training || !ctx->track_running_stats) {
       mean = ctx->SavedTensors().at(2);          // mean
       inv_variance = ctx->SavedTensors().at(3);  // inv_variance
-
     } else {
       const auto& moving_mean = ctx->SavedTensors().at(2);      // moving_mean
       const auto& moving_variance = ctx->SavedTensors().at(3);  // moving_variance
@@ -132,11 +130,13 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
         in_grads->at(2) = results->at(2);  // beta_diff
       }
     }
+
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     if (ctx->is_training) {
       in_grads->at(0) = results->at(0);
       return Maybe<void>::Ok();
     }
+
     Shape shape;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {

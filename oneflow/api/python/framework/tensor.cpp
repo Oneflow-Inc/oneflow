@@ -37,8 +37,6 @@ limitations under the License.
 #include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
-
-
 namespace py = pybind11;
 
 namespace oneflow {

@@ -97,7 +97,6 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
                                               /*inplace=*/autograd_meta->is_grad_acc_inplace()));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
-    // JUST(functional::Identity(current_grad));
     JUST(autograd_meta->set_acc_grad(current_grad));
   }
   for (const auto& hook : autograd_meta->post_grad_accumulation_hooks()) {

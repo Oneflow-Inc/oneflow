@@ -21,7 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-
 struct IsCommNetStream final : public StreamTypeVisitor<IsCommNetStream> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
@@ -31,7 +30,6 @@ struct IsCommNetStream final : public StreamTypeVisitor<IsCommNetStream> {
   static bool VisitCriticalSection() { return false; }
   static bool VisitLazyJobLauncher() { return false; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
-
 };
 
 }  // namespace oneflow

@@ -46,5 +46,4 @@ REGISTER_USER_KERNEL("zero_like").SetCreateFn<ZeroLikeKernel>().SetIsMatchedHob(
 
 }  // namespace
 
-
 }  // namespace oneflow

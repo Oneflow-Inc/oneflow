@@ -33,6 +33,7 @@ class DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
   virtual ~DeviceCtx() = default;
+
   virtual ep::Stream* stream() = 0;
 
   virtual vm::Allocator* mut_allocator() {

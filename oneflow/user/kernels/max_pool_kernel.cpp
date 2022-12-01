@@ -351,7 +351,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
-    
+
     const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();

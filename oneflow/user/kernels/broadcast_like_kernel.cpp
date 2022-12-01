@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
 namespace {

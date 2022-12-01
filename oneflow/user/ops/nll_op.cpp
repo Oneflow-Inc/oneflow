@@ -143,7 +143,6 @@ namespace oneflow {
       << ctx->op_name() << ": expected out_grad dynamic " << is_dynamic;
 
   const int64_t N = target_desc.shape().elem_cnt();
-
   CHECK_EQ_OR_RETURN(out_grad_desc.shape().elem_cnt(), N)
       << ctx->op_name() << ": expected out_grad size " << N << ", got "
       << out_grad_desc.shape().ToString();

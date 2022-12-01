@@ -103,7 +103,6 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
     const std::string& type_or_type_with_device_id) {
-
   return ThreadLocalGetOrNew(type_or_type_with_device_id);
 }
 
