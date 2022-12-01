@@ -42,20 +42,19 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
 
   size_t max_size = 0;
   for (auto& op : ops) {
-    if (llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) {
-      mlir::Operation* reg_op = nullptr;
-      for (auto& op_it : op.getRegion(0).front().getOperations()) {
-        if (op_it.getDialect()->getNamespace() == "oneflow") {
-          reg_op = &op_it;
-          break;
-        }
+    if (!llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) { break; }
+    mlir::Operation* reg_op = nullptr;
+    for (auto& op_it : op.getRegion(0).front().getOperations()) {
+      if (op_it.getDialect()->getNamespace() == "oneflow") {
+        reg_op = &op_it;
+        break;
       }
-      if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-
-      auto op_name = reg_op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-      auto size = RegContext(reg_op).GetTmpBufferSize();
-      max_size = std::max(max_size, size);
     }
+    if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+
+    auto op_name = reg_op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
+    auto size = RegContext(reg_op).GetTmpBufferSize();
+    max_size = std::max(max_size, size);
   }
   return max_size;
 }
