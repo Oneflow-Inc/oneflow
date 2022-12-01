@@ -95,7 +95,7 @@ class FusedWeightedSumKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t arity = ctx->input_size("in");
-    CHECK_GE(arity, 1);
+    CHECK_GE(arity, 1) << "input_size should be greater than 0.";
     const std::vector<float>& weights = ctx->Attr<std::vector<float>>("weights");
     CHECK_EQ(weights.size(), arity);
     const float alpha = ctx->Attr<float>("alpha");
