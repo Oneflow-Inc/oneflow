@@ -15,7 +15,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "")
 set(BUILD_HWLOC OFF CACHE BOOL "")
 # uncomment these when necessary, otherwise it is for the demonstration purpose
 
-set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda-11.8 CACHE STRING "")
+# set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda CACHE STRING "")
 # set(CUDNN_ROOT_DIR /usr/local/cudnn CACHE STRING "")
 
 # set(CMAKE_CUDA_HOST_COMPILER clang++ CACHE STRING "")
