@@ -516,7 +516,7 @@ class _BaseDataLoaderIter(object):
     def __iter__(self) -> "_BaseDataLoaderIter":
         return self
 
-    def _reset(self, loader, first_iter=False):            
+    def _reset(self, loader, first_iter=False):
         self._status_reset = True
         self._sampler_iter = iter(self._index_sampler)
         self._num_yielded = 0
@@ -546,7 +546,7 @@ class _BaseDataLoaderIter(object):
             if self._num_workers > 1:
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
-        
+
         return data
 
     next = __next__
