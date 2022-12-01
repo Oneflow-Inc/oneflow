@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/Transform/AggregateComputeOps.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -817,7 +818,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   }
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
-    pm.addPass(createKernelLaunchFunctionPass());
+    pm.addPass(createAggregateComputeOpsPass());
+    pm.addPass(createWrapOpsToKernelLaunchPass());
   }
   pm.addPass(createCanonicalizerPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {
