@@ -97,7 +97,7 @@ class KernelLaunchKernel final : public user_op::OpKernel {
 
 #define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchKernel<dtype>>()                                              \
+      .SetCreateFn<KernelLaunchKernel<dtype>>()                                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
@@ -116,7 +116,7 @@ REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
 
 #define REGISTER_KERNEL_LAUNCH_GPU_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchKernel<dtype>>()                                              \
+      .SetCreateFn<KernelLaunchKernel<dtype>>()                                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
