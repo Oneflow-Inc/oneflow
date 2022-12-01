@@ -908,14 +908,15 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     }
     new_block.clone(*op, mapping);
     for (auto ret : op->getResults()) {
+      auto find = false;
       for (auto use : ret.getUsers()) {
-        bool find = false;
         if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+          find = true;
           new_block.clone(*use, mapping);
           break;
         }
-        if (!find) { op->emitError("Fail to find result source"); }
       }
+      if (!find) { op->emitError("Fail to find result source"); }
     }
     rewriter.create<okl::ReturnOp>(loc);
 

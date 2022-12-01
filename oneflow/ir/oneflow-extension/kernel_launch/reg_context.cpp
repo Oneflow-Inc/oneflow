@@ -29,10 +29,6 @@ limitations under the License.
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace oneflow {
 namespace okl {
 

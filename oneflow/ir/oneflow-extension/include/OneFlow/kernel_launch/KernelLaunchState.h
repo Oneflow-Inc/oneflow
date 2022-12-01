@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_OP_KERNEL_STATE_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_OP_KERNEL_STATE_H_
 
-#include <memory>
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/DialectRegistry.h"
