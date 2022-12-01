@@ -3,42 +3,7 @@
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
-Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format: Attr) [{
-   if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
-    if (padding_before.cast<ArrayAttr>().getValue().equals(
-            padding_after.cast<ArrayAttr>().getValue())) {
-      if (data_format.cast<StringAttr>().str() == "channels_first") {
-        return success(padding_before.cast<ArrayAttr>()
-                               .getValue()[0]
-                               .cast<IntegerAttr>()
-                               .getValue()
-                               .getSExtValue()
-                           == 0
-                       && padding_before.cast<ArrayAttr>()
-                                  .getValue()[1]
-                                  .cast<IntegerAttr>()
-                                  .getValue()
-                                  .getSExtValue()
-                              == 0);
-      }
-      if (data_format.cast<StringAttr>().str() == "channels_last") {
-        return success(padding_before.cast<ArrayAttr>()
-                               .getValue()[0]
-                               .cast<IntegerAttr>()
-                               .getValue()
-                               .getSExtValue()
-                           == 0
-                       && padding_before.cast<ArrayAttr>()
-                                  .getValue()[3]
-                                  .cast<IntegerAttr>()
-                                  .getValue()
-                                  .getSExtValue()
-                              == 0);
-      }
-    }
-  }
-  return failure();
-}];
+Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
 Pattern {
   let rate: Attr;

@@ -131,6 +131,46 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
+static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
+                                                         Attribute padding_before,
+                                                         Attribute padding_after,
+                                                         Attribute data_format) {
+  if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
+    if (padding_before.cast<ArrayAttr>().getValue().equals(
+            padding_after.cast<ArrayAttr>().getValue())) {
+      if (data_format.cast<StringAttr>().str() == "channels_first") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[1]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+      if (data_format.cast<StringAttr>().str() == "channels_last") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[3]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+    }
+  }
+  return failure();
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -150,6 +190,14 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 
 }  // namespace rewrites
 
+namespace constraints {
+
+void populateConstraints(RewritePatternSet& patterns) {
+  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
+                                                       IsPaddingCouldBeAssimilatedIntoConv);
+}
+
+}  // namespace constraints
 }  // namespace oneflow
 
 }  // namespace mlir
