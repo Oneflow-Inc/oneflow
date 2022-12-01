@@ -186,6 +186,16 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+    if (GlobalMode::is_enabled()) {
+      auto parallel_desc = GlobalMode::parallel_desc();
+      if (device.has_value()) {
+        ParallelConf parallel_conf = parallel_desc->parallel_conf();
+        parallel_conf.set_device_tag(device.value_or(Symbol<Device>())->type());
+        parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      }
+      return JUST(functional::GlobalEmpty(shape, dtype, parallel_desc,
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");

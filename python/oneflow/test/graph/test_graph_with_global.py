@@ -225,11 +225,41 @@ def _test_linear_train_graph_with_ddp(test_case):
         )
 
 
+def _test_global_mode(test_case):
+    P = flow.placement("cuda", ranks=[0, 1])
+    B = flow.sbp.broadcast
+
+    class GlobalModeGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+
+        def build(self):
+            with global_mode.guard(True, placement=P, sbp=B):
+                randn_out = flow.randn((2, 2), device="cpu")
+                arange_out = flow.arange(10)
+                empty_out = flow.empty((1, 2), device="cuda")
+                tensor_out = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+
+            return {
+                "randn_out": randn_out,
+                "arange_out": arange_out,
+                "empty_out": empty_out,
+                "tensor_out": tensor_out,
+            }
+
+    global_graph = GlobalModeGraph()
+    out = global_graph()
+    print("global_graph out: \n", out)
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithDDP(oneflow.unittest.TestCase):
-    def test_linear_train_graph_with_ddp(test_case):
+    def _test_linear_train_graph_with_ddp(test_case):
         _test_linear_train_graph_with_ddp(test_case)
+
+    def test_global_mode(test_case):
+        _test_global_mode(test_case)
 
 
 if __name__ == "__main__":

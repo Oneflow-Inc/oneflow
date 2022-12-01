@@ -50,6 +50,16 @@ class TensorWithDataFunctor {
     //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    if (GlobalMode::is_enabled()) {
+      auto parallel_desc = GlobalMode::parallel_desc();
+      if (device.has_value()) {
+        ParallelConf parallel_conf = parallel_desc->parallel_conf();
+        parallel_conf.set_device_tag(device.value_or(Symbol<Device>())->type());
+        parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      }
+      return JUST(functional::GlobalTensorWithData(
+          data, dtype, parallel_desc, *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
+    }
 
     if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
