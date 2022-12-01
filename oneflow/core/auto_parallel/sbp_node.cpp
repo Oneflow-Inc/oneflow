@@ -632,8 +632,8 @@ void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
   }
 }
 
-// Assemble copy cost for all the incoming edges
-void SbpNode::InitializeCopyCost(bool use_sbp_collector, bool nccl_not_use_compute_stream) {
+// Assemble copy cost and partial memory cost for all the incoming edges
+void SbpNode::InitCopyMemoryCost(bool use_sbp_collector, bool nccl_not_use_compute_stream) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
     OpNode* producer = sbp_node_producer->op_node_;
@@ -643,7 +643,7 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector, bool nccl_not_use_compu
     // look through input blobs
     for (const std::string& ibn : op_node_->op().input_bns()) {
       if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, use_sbp_collector, nccl_not_use_compute_stream);
+        this_edge->InitCopyMemoryCost(ibn, use_sbp_collector, nccl_not_use_compute_stream);
       }
     }
     // Add Wait time

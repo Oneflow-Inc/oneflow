@@ -52,10 +52,11 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);
+    // TODO: Init memory cost for proxy
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
 
-  JUST(InitCopyCost(op_graph));
+  JUST(InitCopyMemoryCost(op_graph));
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
@@ -252,7 +253,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
 }
 
 // Init copy cost and memory for edges
-Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
+Maybe<void> SbpConstructor::InitCopyMemoryCost(const OpGraph& op_graph) {
   bool nccl_not_use_compute_stream = !nccl_use_compute_stream_;
   // Compute copy cost for sbp edges
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -277,7 +278,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(use_sbp_collector_, nccl_not_use_compute_stream);
+    sbp_node_consumer->InitCopyMemoryCost(use_sbp_collector_, nccl_not_use_compute_stream);
   });
   return Maybe<void>::Ok();
 }

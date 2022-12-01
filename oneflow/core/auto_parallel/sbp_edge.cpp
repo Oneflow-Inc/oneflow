@@ -266,7 +266,7 @@ double SbpEdge::GetMaxCost() const {
 }
 
 // Assemble copy cost
-void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector,
+void SbpEdge::InitCopyMemoryCost(const std::string& ibn, bool use_sbp_collector,
                                  bool nccl_not_use_compute_stream) {
   std::vector<int64_t> consumer_nd_sbp_sig2memory;
   if (nccl_not_use_compute_stream) {
