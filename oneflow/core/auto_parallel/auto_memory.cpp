@@ -171,7 +171,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
 
 }  // anonymous namespace
 
-void InitMemory(SbpGraph* sbp_graph) {
+void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   size_t free = 0;
   size_t total = 0;
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
@@ -365,7 +365,8 @@ void InitMemory(SbpGraph* sbp_graph) {
 
   // Initiailize memory for each sbp node
   for (auto& topo_struct : topo_structs) {
-    topo_struct->sbp_node->InitializeMemory(topo_struct->is_reusable, lbi2id, id2count);
+    topo_struct->sbp_node->InitializeMemory(topo_struct->is_reusable, lbi2id, id2count,
+                                            nccl_use_compute_stream);
   }
 }
 

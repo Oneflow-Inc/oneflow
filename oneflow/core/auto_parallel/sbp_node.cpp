@@ -35,7 +35,6 @@ namespace auto_parallel {
 
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
-
 SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   half_node_.resize(2);
   half_node_[0] = first;
@@ -634,7 +633,7 @@ void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
 }
 
 // Assemble copy cost for all the incoming edges
-void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
+void SbpNode::InitializeCopyCost(bool use_sbp_collector, bool nccl_not_use_compute_stream) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
     OpNode* producer = sbp_node_producer->op_node_;
@@ -644,7 +643,7 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
     // look through input blobs
     for (const std::string& ibn : op_node_->op().input_bns()) {
       if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, use_sbp_collector);
+        this_edge->InitializeCopyCost(ibn, use_sbp_collector, nccl_not_use_compute_stream);
       }
     }
     // Add Wait time
@@ -659,7 +658,7 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
 
 // Assemble memory cost
 void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
-                               const std::vector<int32_t>& id2count) {
+                               const std::vector<int32_t>& id2count, bool nccl_use_compute_stream) {
   const auto& curr_operator = op_node_->op();
   // An edge should not be initialized twice
   // During each initialization, we are computing sum(memory of consumer) - sum(memory of producer)
@@ -705,7 +704,7 @@ void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, in
     }
   }
   // Even after the correction in the memory of edges, the relative error still have 0.73%.
-  if (in_memory_support_ && is_reusable) {
+  if (nccl_use_compute_stream && in_memory_support_ && is_reusable) {
     for (const auto& pair : sbp_edge2nd_sbp_sig2memory) {
       // Init memory for each out-going edge
       pair.first->InitializeMemory(lbi2id, id2count, pair.second);

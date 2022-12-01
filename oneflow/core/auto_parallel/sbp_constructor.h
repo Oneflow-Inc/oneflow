@@ -75,6 +75,7 @@ class SbpConstructor final {
   SbpGraph sbp_graph_;
   const OpGraph* op_graph_;
   HashMap<std::string, SbpNode*> op_name2sbp_node_;
+  bool nccl_use_compute_stream_;
 };
 
 }  // namespace auto_parallel

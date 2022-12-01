@@ -86,7 +86,8 @@ class SbpEdge final {
   double GetMaxCost() const;
 
   // Assemble copy cost
-  void InitializeCopyCost(const std::string& ibn, bool use_sbp_collector);
+  void InitializeCopyCost(const std::string& ibn, bool use_sbp_collector,
+                          bool nccl_not_use_compute_stream);
   // Assemble memory cost
   void InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
                         const std::vector<int32_t>& id2count,

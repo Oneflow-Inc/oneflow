@@ -124,11 +124,11 @@ class SbpNode final {
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
 
-  // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool use_sbp_collector);
+  // Assemble copy cost and partial memory cost for all the incoming edges
+  void InitializeCopyCost(bool use_sbp_collector, bool nccl_not_use_compute_stream);
   // Assemble memory cost
   void InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
-                        const std::vector<int32_t>& id2count);
+                        const std::vector<int32_t>& id2count, bool nccl_use_compute_stream);
 
   // Constant getter
   int32_t GetMinLayer() const { return min_layer_; }

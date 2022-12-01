@@ -266,7 +266,35 @@ double SbpEdge::GetMaxCost() const {
 }
 
 // Assemble copy cost
-void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector) {
+void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector,
+                                 bool nccl_not_use_compute_stream) {
+  std::vector<int64_t> consumer_nd_sbp_sig2memory;
+  if (nccl_not_use_compute_stream) {
+    in_memory_support_ = true;
+    // Compute and store the memory for consumer
+    const auto& consumer_operator = end_node_->op_node_->op();
+    const auto& end_sbp_sig_list = end_node_->sbp_sig_list_;
+    consumer_nd_sbp_sig2memory.resize(end_sbp_sig_list.size(), 0);
+    const auto& lbi = consumer_operator.BnInOp2Lbi(ibn);
+    const auto& consumer_hierarchy =
+        *CHECK_JUST(consumer_operator.GetParallelDesc4BnInOp(ibn))->hierarchy();
+    const auto& logical_blob_desc = start_node_->op_node_->LogicalBlobDesc4Lbi(lbi);
+    HashMap<NdSbp, int64_t> consumer_nd_sbp2memory;
+    for (int32_t sbp_sig_id = 0; sbp_sig_id < end_sbp_sig_list.size(); sbp_sig_id++) {
+      const NdSbp& nd_sbp = end_sbp_sig_list[sbp_sig_id].bn_in_op2nd_sbp().at(ibn);
+      auto it = consumer_nd_sbp2memory.find(nd_sbp);
+      if (it == consumer_nd_sbp2memory.end()) {
+        // This compute the memory at rank 0, the largest one.
+        // We could be faster if we just compute the average memory.
+        it = consumer_nd_sbp2memory
+                 .insert({nd_sbp,
+                          MaxByteSize4BlobDescSbp(logical_blob_desc, nd_sbp, consumer_hierarchy)})
+                 .first;
+      }
+      consumer_nd_sbp_sig2memory[sbp_sig_id] += it->second;
+    }
+  }
+
   // In this part, we assemble the cost from nodes to nodes.
   if (start_node_->op_node_ && end_node_->op_node_) {
     OpNode* consumer = end_node_->op_node_;
@@ -301,6 +329,7 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector)
       const auto& producer_sbp_bn_in_op2sbp_parallel =
           start_node_->sbp_sig_list_[sbp_id_producer].bn_in_op2nd_sbp();
       const NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
+      auto& cost4sbp_id_producer = cost_[sbp_id_producer];
 
       // look through sbp signature in consumer
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
@@ -314,10 +343,15 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector)
             sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
             consumer_parallel_desc, require_same_sbp));
         if (curr_edge_cost < GetValidMaxCopyCost()) {
-          cost_[sbp_id_producer][sbp_id_consumer] +=
+          cost4sbp_id_producer[sbp_id_consumer] +=
               CHECK_JUST(producer->op().GetOpTimeShape())->elem_cnt() * curr_edge_cost;
         } else {
-          cost_[sbp_id_producer][sbp_id_consumer] = curr_edge_cost;
+          cost4sbp_id_producer[sbp_id_consumer] = curr_edge_cost;
+        }
+        // If enabling nccl_use_compute_stream and transfer occurs,
+        // the current code would create a non-reusable register to receive data.
+        if (nccl_not_use_compute_stream && curr_edge_cost > 0) {
+          memory_[sbp_id_producer][sbp_id_consumer] += consumer_nd_sbp_sig2memory[sbp_id_consumer];
         }
       }
     }
@@ -355,6 +389,9 @@ void SbpEdge::InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
       }
     }
   }
+  // Avoid negative value for memory
+  // For example, B -> S might reduce memory but we still consider 0 memory increment instead of
+  // negative memory increment.
   if (*std::max_element(consumer_nd_sbp_sig2memory.begin(), consumer_nd_sbp_sig2memory.end())
       > *std::min_element(producer_nd_sbp_sig2memory.begin(), producer_nd_sbp_sig2memory.end())) {
     in_memory_support_ = true;

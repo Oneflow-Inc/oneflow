@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace auto_parallel {
-void InitMemory(SbpGraph* sbp_graph);
+void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream);
 
 }  // namespace auto_parallel
 }  // namespace oneflow

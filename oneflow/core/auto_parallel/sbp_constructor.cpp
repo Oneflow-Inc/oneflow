@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -35,6 +36,8 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 }
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
+  // Update nccl_use_compute_stream
+  nccl_use_compute_stream_ = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
   // TODO: process local node
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
@@ -44,7 +47,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   LoadLbi2SbpEdge(op_graph);
   // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
   // LoadLbi2SbpEdge(op_graph).
-  if (GlobalProcessCtx::Rank() == 0) InitMemory(&sbp_graph_);
+  InitMemory(&sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
     SbpCollector sbp_collector;
@@ -248,7 +251,9 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
+// Init copy cost and memory for edges
 Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
+  bool nccl_not_use_compute_stream = !nccl_use_compute_stream_;
   // Compute copy cost for sbp edges
   op_graph.ForEachNode([&](OpNode* op_node) {
     // get corresponding sbp node consumer
@@ -260,15 +265,19 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
       // skip it if proxy
       if (!sbp_node_producer->op_node_) { continue; }
       sbp_edge->cost_.resize(sbp_node_producer->sbp_sig_list_.size());
+      if (nccl_not_use_compute_stream) {
+        sbp_edge->memory_.resize(sbp_node_producer->sbp_sig_list_.size());
+      }
       int32_t consumer_sbp_size = sbp_node_consumer->sbp_sig_list_.size();
       // look through sbp signature in producer
       for (int32_t i = 0; i < sbp_node_producer->sbp_sig_list_.size(); ++i) {
         sbp_edge->cost_[i].resize(consumer_sbp_size, 0);
+        if (nccl_not_use_compute_stream) { sbp_edge->memory_[i].resize(consumer_sbp_size, 0); }
       }
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(use_sbp_collector_);
+    sbp_node_consumer->InitializeCopyCost(use_sbp_collector_, nccl_not_use_compute_stream);
   });
   return Maybe<void>::Ok();
 }
@@ -387,6 +396,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
   std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
+  std::cout << "Total memory: " << sbp_graph_.GetMemory() << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
