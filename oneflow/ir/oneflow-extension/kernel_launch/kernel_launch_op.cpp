@@ -72,11 +72,12 @@ Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
 namespace {
 
 using namespace oneflow::okl;
+
 template<typename T>
-class KernelLaunchCpuKernel final : public user_op::OpKernel {
+class KernelLaunchKernel final : public user_op::OpKernel {
  public:
-  KernelLaunchCpuKernel() = default;
-  ~KernelLaunchCpuKernel() = default;
+  KernelLaunchKernel() = default;
+  ~KernelLaunchKernel() = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -96,7 +97,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchCpuKernel<dtype>>()                                              \
+      .SetCreateFn<KernelLaunchKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
@@ -113,31 +114,9 @@ REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int32_t)
 REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
 #undef REGISTER_KERNEL_LAUNCH_CPU_KERNEL
 
-template<typename T>
-class KernelLaunchGpuKernel final : public user_op::OpKernel {
- public:
-  KernelLaunchGpuKernel() = default;
-  ~KernelLaunchGpuKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    // use ctx to create module, reg_ctx and fn;
-    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
-    return res;
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    okl_state->DoCompute(ctx);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 #define REGISTER_KERNEL_LAUNCH_GPU_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchGpuKernel<dtype>>()                                              \
+      .SetCreateFn<KernelLaunchKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
