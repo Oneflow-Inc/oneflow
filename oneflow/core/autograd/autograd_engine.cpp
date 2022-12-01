@@ -86,18 +86,10 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   auto current_grad = JUST(autograd_meta->current_grad_value());
   if (!current_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
-    // Should not inplace accumulate grad. For example,
-    // >>> z = x + y
-    // >>> p = x / z
-    // >>> p.sum().backward()
-    //
-    // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
-    // for dy if dx is shared with dz.
-    const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1,
-                                              /*inplace=*/autograd_meta->is_grad_acc_inplace()));
-    JUST(autograd_meta->set_acc_grad(output));
+    JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1.0,
+                         /*inplace=*/true));
   } else {
-    JUST(autograd_meta->set_acc_grad(current_grad));
+    JUST(autograd_meta->set_acc_grad(JUST(functional::Identity(current_grad))));
   }
   for (const auto& hook : autograd_meta->post_grad_accumulation_hooks()) {
     auto new_grad = hook(autograd_meta->acc_grad());
@@ -148,9 +140,9 @@ Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
                                               create_graph);
 }
 
-Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
+Maybe<void> FunctionNode::AccGrad4RetainGradTensor(bool create_graph) {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
-    if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false)); }
+    if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), create_graph)); }
   }
   return Maybe<void>::Ok();
 }
@@ -160,7 +152,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
     auto& out = output_meta_data_[i];
 
     if (out->is_leaf() && out->requires_grad()) {
-      JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
+      JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/create_graph));
 
       // control acc_grad to do boxing conditionally
       const auto& acc_grad = out->acc_grad();
@@ -428,7 +420,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
       }
     }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
-    JUST(node->AccGrad4RetainGradTensor());
+    JUST(node->AccGrad4RetainGradTensor(create_graph_));
     node->ReleaseOutTensorArgs();
     if (!retain_graph_) { node->ReleaseData(); }
 
