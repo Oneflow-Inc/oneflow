@@ -69,9 +69,7 @@ def _test_roi_align(test_case, placement, rois_sbp):
     np_rois = _get_np_rois()
     of_rois = (
         flow.tensor(np_rois, dtype=flow.float)
-        .to_global(
-            placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,]
-        )
+        .to_global(placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,])
         .to_global(placement, rois_sbp)
     )
     torch_rois = pytorch.tensor(np_rois)

@@ -43,9 +43,9 @@ def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
     y = x.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
         placement=placement, sbp=in_sbp
     )
-    like = like.to_global(
-        flow.placement.all("cpu"), flow.sbp.broadcast
-    ).to_global(placement=placement, sbp=like_sbp)
+    like = like.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
+        placement=placement, sbp=like_sbp
+    )
     z = flow._C.reshape_like(y, like)
     local_z = z.to_global(
         placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]

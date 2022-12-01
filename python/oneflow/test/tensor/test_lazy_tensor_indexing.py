@@ -229,9 +229,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
         choice = _randint(0, 3)
         if choice == 0:
             return flow.LongTensor(
-                indices,
-                placement=flow.placement.all("cpu"),
-                sbp=flow.sbp.broadcast,
+                indices, placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast,
             ).to_global(placement, broadcast_for_placement)
         elif choice == 1:
             return list(indices)

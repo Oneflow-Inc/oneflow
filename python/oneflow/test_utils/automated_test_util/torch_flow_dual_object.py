@@ -963,8 +963,7 @@ class DualObject:
                             )
                 else:
                     oneflow = oneflow.to_global(
-                        placement=flow.placement.all("cpu"),
-                        sbp=[flow.sbp.broadcast,],
+                        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,],
                     )
             if testing:
                 dual_modules_to_test.append(self)

@@ -34,9 +34,7 @@ def _compare_torch_and_oneflow(
         new_dict[k] = v.detach().numpy()
     m_flow.load_state_dict(new_dict)
 
-    m_flow = m_flow.to_global(
-        flow.placement.all("cpu"), flow.sbp.broadcast
-    ).to_global(
+    m_flow = m_flow.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
         placement=placement, sbp=[module_sbp for _ in range(len(placement.ranks.shape))]
     )
 

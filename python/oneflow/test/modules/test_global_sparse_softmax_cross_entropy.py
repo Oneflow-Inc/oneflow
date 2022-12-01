@@ -63,9 +63,7 @@ def _compare_eager_global_with_torch(
         flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_logits_grad = of_logits_grad.to_local()
-    of_output = of_output.to_global(
-        flow.placement.all("cpu"), flow.sbp.broadcast
-    )
+    of_output = of_output.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
     of_output = of_output.to_local()
 
     if flow.env.get_rank() == 0:

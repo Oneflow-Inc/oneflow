@@ -113,9 +113,7 @@ def _test_one_embedding(
 
     def np_to_global(np):
         t = flow.from_numpy(np)
-        return t.to_global(
-            placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0)
-        )
+        return t.to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0))
 
     with tempfile.TemporaryDirectory() as persistent_path:
         size_factor = 3 if test_opt == "Adam" else 1
