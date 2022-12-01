@@ -58,6 +58,25 @@ class MultiClientSession(object):
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
 
+    def Reset(self):
+        if self.status_ == self.Status.CLOSED:
+            return
+
+        if self.status_ == self.Status.CREATED or self.status_ == self.Status.INITED:
+            self.config_proto_ = self._make_config_proto()
+            self.function_flag_name2default_val_ = {}
+            self._update_function_flag_name2defaultVal()
+            self.scope_attr_name2default_val_ = {}
+            self._update_scope_attr_name2defaultVal()
+
+            if self.status_ == self.Status.INITED:
+                # ensure all graphs using _session_ctx are finished
+                oneflow._oneflow_internal.eager.Sync()
+
+                self._session_ctx.try_close()
+                config_proto_str = text_format.MessageToString(self.config_proto)
+                self._session_ctx.try_init(config_proto_str)
+
     @property
     def status(self):
         return self.status_

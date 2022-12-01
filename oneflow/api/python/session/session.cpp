@@ -43,6 +43,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](MultiClientSessionContext& session, const std::string& config_proto_str) {
              return session.TryInit(config_proto_str).GetOrThrow();
            })
+      .def("try_close",
+           [](MultiClientSessionContext& session) { return session.TryClose().GetOrThrow(); })
       .def("update_resource",
            [](MultiClientSessionContext& session, const std::string& reso_proto_str) {
              return session.UpdateResource(reso_proto_str).GetOrThrow();
