@@ -136,7 +136,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   compile_tc->Count("[GraphCompile]" + job_name + " SystemOpFillJobNamePass", 1);
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));

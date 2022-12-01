@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace embedding {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 struct MockKeyValueStoreOptions {
   uint32_t key_size = 0;

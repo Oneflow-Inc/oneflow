@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
 #define ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include <string>
 #include <memory>

@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/common/data_type_converter_test_static.h"
 #ifdef __CUDA_ARCH__
 #include <cuda_runtime.h>
+#elif defined(__HIP_DEVICE_COMPILE__)
+#include <hip/hip_runtime.h>
 #else
 #include <cmath>
 #endif

@@ -64,7 +64,7 @@ nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
   j["input_shapes"] = GetFormatedInputShapes();
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
 #endif  // WITH_CUDA

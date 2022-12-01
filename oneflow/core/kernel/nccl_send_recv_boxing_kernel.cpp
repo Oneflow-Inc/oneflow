@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
 
 namespace oneflow {
 
@@ -85,7 +85,7 @@ class NcclSendRecvBoxingKernel final : public Kernel {
 void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* buf = ctx->BnInOp2Blob("buf");
   ncclComm_t comm = this->comm();
-  cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   const std::vector<int64_t>& send_elem_cnts = this->send_elem_cnts();
   const std::vector<int64_t>& recv_elem_cnts = this->recv_elem_cnts();
   const int64_t parallel_num = this->kernel_conf().parallel_ctx().parallel_num();

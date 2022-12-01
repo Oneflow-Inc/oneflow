@@ -1549,7 +1549,7 @@ class CopyFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory");
     attrs.SetAllAttrs(device_type, device_id, pin_memory);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);

@@ -24,7 +24,11 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/device/cuda_util.h"
 
+#ifdef WITH_ROCM
+#include <rccl.h>
+#else
 #include <nccl.h>
+#endif
 
 #include <memory>
 #include <utility>
@@ -95,7 +99,7 @@ __global__ void MultiCopyGpu(MultiCopyParams multi_params) {
   }
 }
 
-void MultiCopy(cudaStream_t stream, const MultiCopyParams& multi_params) {
+void MultiCopy(GPU(Stream_t) stream, const MultiCopyParams& multi_params) {
   if (multi_params.count <= 0) { return; }
   CHECK_LE(multi_params.count, kMultiCopyParamsMaxSize);
   int64_t max_count = multi_params.params[0].count;
@@ -183,7 +187,7 @@ class CommGroup final {
     for (int32_t local_rank = 0; local_rank < local_ranks.size(); ++local_rank) {
       const int32_t global_rank = local_ranks.at(local_rank);
       const int32_t device_id = device_set.device(global_rank).device_id();
-      OF_CUDA_CHECK(cudaSetDevice(device_id));
+      OF_CUDA_CHECK(GPU(SetDevice)(device_id));
       rank_vec_.emplace_back(device_id, global_rank, global_rank_count_, local_rank,
                              local_rank_count);
       rank_vec_.at(local_rank).InitRank(nccl_unique_id, global_rank_count_);
@@ -209,43 +213,43 @@ class StreamCtx {
       : device_id_(device_id), fusion_buffer_size_(fusion_buffer_size) {
     CudaCurrentDeviceGuard guard(device_id_);
     int priority;
-    OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &priority));
-    OF_CUDA_CHECK(cudaStreamCreateWithPriority(&stream_, cudaStreamNonBlocking, priority));
-    OF_CUDA_CHECK(cudaMalloc(&fusion_buffer_, fusion_buffer_size_));
+    OF_CUDA_CHECK(GPU(DeviceGetStreamPriorityRange)(nullptr, &priority));
+    OF_CUDA_CHECK(GPU(StreamCreateWithPriority)(&stream_, cudaStreamNonBlocking, priority));
+    OF_CUDA_CHECK(GPU(Malloc)(&fusion_buffer_, fusion_buffer_size_));
     cb_event_poller_ = std::thread(&StreamCtx::PollEvent, this);
   }
   ~StreamCtx() {
     cb_event_chan_.Close();
     cb_event_poller_.join();
     CudaCurrentDeviceGuard guard(device_id_);
-    OF_CUDA_CHECK(cudaStreamSynchronize(stream_));
-    OF_CUDA_CHECK(cudaStreamDestroy(stream_));
-    OF_CUDA_CHECK(cudaFree(fusion_buffer_));
+    OF_CUDA_CHECK(GPU(StreamSynchronize)(stream_));
+    OF_CUDA_CHECK(GPU(StreamDestroy)(stream_));
+    OF_CUDA_CHECK(GPU(Free)(fusion_buffer_));
   }
 
   void PollEvent() {
     CudaCurrentDeviceGuard guard(device_id_);
     while (true) {
-      std::pair<cudaEvent_t, std::function<void()>> cb_event;
+      std::pair<GPU(Event_t), std::function<void()>> cb_event;
       ChannelStatus status = cb_event_chan_.Receive(&cb_event);
       if (status == kChannelStatusErrorClosed) { break; }
       CHECK_EQ(status, kChannelStatusSuccess);
-      OF_CUDA_CHECK(cudaEventSynchronize(cb_event.first));
+      OF_CUDA_CHECK(GPU(EventSynchronize)(cb_event.first));
       cb_event.second();
-      OF_CUDA_CHECK(cudaEventDestroy(cb_event.first));
+      OF_CUDA_CHECK(GPU(EventDestroy)(cb_event.first));
     }
   }
 
   void AddCallback(const std::function<void()>& callback) {
-    cudaEvent_t event;
-    OF_CUDA_CHECK(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    OF_CUDA_CHECK(cudaEventRecord(event, stream_));
+    GPU(Event_t) event;
+    OF_CUDA_CHECK(GPU(EventCreateWithFlags)(&event, cudaEventDisableTiming));
+    OF_CUDA_CHECK(GPU(EventRecord)(event, stream_));
     CHECK_EQ(cb_event_chan_.Send(std::make_pair(event, callback)), kChannelStatusSuccess);
   }
 
   int32_t device_id() const { return device_id_; }
 
-  cudaStream_t stream() const { return stream_; }
+  GPU(Stream_t) stream() const { return stream_; }
 
   size_t fusion_buffer_size() const { return fusion_buffer_size_; }
 
@@ -253,10 +257,10 @@ class StreamCtx {
 
  private:
   int32_t device_id_;
-  cudaStream_t stream_ = nullptr;
+  GPU(Stream_t) stream_ = nullptr;
   size_t fusion_buffer_size_;
   char* fusion_buffer_ = nullptr;
-  Channel<std::pair<cudaEvent_t, std::function<void()>>> cb_event_chan_;
+  Channel<std::pair<GPU(Event_t), std::function<void()>>> cb_event_chan_;
   std::thread cb_event_poller_;
 };
 
@@ -292,7 +296,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
                              request_entry->GetRuntimeRequest(local_rank)->send_buff,
                              request_entry->size_in_bytes());
         });
-    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(GPU(SetDevice)(comm_rank.device_id()));
     MultiCopy(stream_ctx->stream(), copy_in_params);
   }
 
@@ -300,7 +304,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
   for (int32_t local_rank = 0; local_rank < comm_group.local_rank_count(); ++local_rank) {
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
-    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(GPU(SetDevice)(comm_rank.device_id()));
     OF_NCCL_CHECK(ncclAllReduce(stream_ctx->fusion_buffer(), stream_ctx->fusion_buffer(), elem_cnt,
                                 nccl_data_type, nccl_reduce_op, comm_rank.nccl_comm(),
                                 stream_ctx->stream()));
@@ -317,7 +321,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
                               stream_ctx->fusion_buffer() + offset_vec.at(i),
                               request_entry->size_in_bytes());
         });
-    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(GPU(SetDevice)(comm_rank.device_id()));
     MultiCopy(stream_ctx->stream(), copy_out_params);
   }
 }
@@ -331,7 +335,7 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
     const auto comm = comm_rank.nccl_comm();
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
-    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(GPU(SetDevice)(comm_rank.device_id()));
     request_store->ForEachMutRequestEntryForIdsInJob(
         request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
           const auto& op_desc = request_entry->desc().op_desc();
@@ -410,7 +414,7 @@ void AddCallbackAndResetRuntimeRequest(
           runtime_request_info_vec->emplace_back(
               std::move(saved_runtime_request_info.at(i).at(local_rank)));
         });
-    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(GPU(SetDevice)(comm_rank.device_id()));
     stream_ctx->AddCallback([runtime_request_info_vec]() {
       for (auto& runtime_request_info : *runtime_request_info_vec) {
         runtime_request_info->callback(Maybe<void>::Ok());
@@ -478,7 +482,7 @@ struct NcclExecutorBackend::Impl {
 
   void InitStreamCtx() {
     int32_t num_devices;
-    OF_CUDA_CHECK(cudaGetDeviceCount(&num_devices));
+    OF_CUDA_CHECK(GPU(GetDeviceCount)(&num_devices));
     stream_id2device_id2stream_ctx.resize(num_streams);
     for (int64_t stream_id = 0; stream_id < num_streams; ++stream_id) {
       stream_id2device_id2stream_ctx.at(stream_id).resize(num_devices);

@@ -576,6 +576,305 @@ void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t l
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+constexpr size_t kDefaultMaxQueryLength = 131072;
+
+constexpr int64_t kRingBufferSize = 8;
+
+struct IdStatistics {
+  IdStatistics() : final_num_unique(0), iter(-1) {}
+  uint32_t final_num_unique;
+  std::vector<uint32_t> num_unique_matrix;
+  int64_t iter;
+};
+
+class StaticTmpBufferAllocator final : public TmpBufferAllocator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(StaticTmpBufferAllocator);
+  StaticTmpBufferAllocator(void* ptr, size_t size) : ptr_(ptr), offset_(0), size_(size) {}
+  ~StaticTmpBufferAllocator() override = default;
+
+  void Allocate(void** ptr, size_t size) override {
+    CHECK(ptr_ != nullptr);
+    CHECK_GE(offset_, 0);
+    size_t aligned_size = GetCudaAlignedSize(size);
+    CHECK_LE(offset_ + aligned_size, size_);
+    *ptr = reinterpret_cast<char*>(ptr_) + offset_;
+    offset_ += aligned_size;
+  }
+
+  void Free(void* ptr) override {
+    // do nothing
+  }
+
+ private:
+  void* ptr_;
+  int64_t offset_;
+  size_t size_;
+};
+
+class StaticAllocationEmbeddingState final : public EmbeddingState {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(StaticAllocationEmbeddingState);
+  StaticAllocationEmbeddingState()
+      : lookup_unique_values_(nullptr),
+        lookup_embeddings_(nullptr),
+        has_lookup_embeddings_(false),
+        embedding_shuffle_cur_rank_embeddings_(nullptr),
+        embedding_update_unique_embeddings_(nullptr),
+        embedding_update_updated_unique_embeddings_(nullptr),
+        embedding_put_unique_embeddings_(nullptr),
+        embedding_fused_update_put_unique_embeddings_(nullptr) {
+    id_statistics_vec_.resize(kRingBufferSize);
+  }
+  ~StaticAllocationEmbeddingState() override = default;
+
+  std::unique_ptr<TmpBufferAllocator> NewTmpBufferAllocator(
+      user_op::KernelComputeContext* ctx) override {
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    return std::make_unique<StaticTmpBufferAllocator>(tmp_buffer->mut_dptr(),
+                                                      tmp_buffer->shape_view().elem_cnt());
+  }
+
+  void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
+    lookup_unique_values_ = unique_values->mut_dptr();
+    if (ctx->has_output("embeddings", 0)) {
+      user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+      has_lookup_embeddings_ = true;
+      lookup_embeddings_ = embeddings->mut_dptr();
+    }
+  }
+
+  void* LookupUniqueValues(int64_t iter) override { return lookup_unique_values_; }
+
+  void* LookupEmbeddings(int64_t iter) override {
+    CHECK(has_lookup_embeddings_);
+    return lookup_embeddings_;
+  }
+
+  void OnEmbeddingLookupEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    lookup_unique_values_ = nullptr;
+    lookup_embeddings_ = nullptr;
+    has_lookup_embeddings_ = false;
+  }
+
+  void OnEmbeddingGatherStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    embedding_gather_in_ = in->dptr();
+  }
+
+  const void* EmbeddingGatherIn(int64_t iter) override { return embedding_gather_in_; }
+
+  void OnEmbeddingGatherEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_gather_in_ = nullptr;
+  }
+
+  void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* cur_rank_embeddings =
+        ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
+    embedding_shuffle_cur_rank_embeddings_ = cur_rank_embeddings->dptr();
+  }
+
+  const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) override {
+    return embedding_shuffle_cur_rank_embeddings_;
+  }
+
+  void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_shuffle_cur_rank_embeddings_ = nullptr;
+  }
+
+  void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    user_op::Tensor* updated_unique_embeddings =
+        ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
+    embedding_update_unique_embeddings_ = unique_embeddings->dptr();
+    embedding_update_updated_unique_embeddings_ = updated_unique_embeddings->mut_dptr();
+  }
+
+  const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
+    return embedding_update_unique_embeddings_;
+  }
+
+  void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) override {
+    return embedding_update_updated_unique_embeddings_;
+  }
+
+  void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_update_unique_embeddings_ = nullptr;
+    embedding_update_updated_unique_embeddings_ = nullptr;
+  }
+
+  void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    embedding_put_unique_embeddings_ = unique_embeddings->dptr();
+  }
+
+  const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
+    return embedding_put_unique_embeddings_;
+  }
+
+  void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_put_unique_embeddings_ = nullptr;
+  }
+
+  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    embedding_fused_update_put_unique_embeddings_ = unique_embeddings->dptr();
+  }
+
+  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
+    return embedding_fused_update_put_unique_embeddings_;
+  }
+
+  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_fused_update_put_unique_embeddings_ = nullptr;
+  }
+
+  void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    id_statistics_vec_.at(index).final_num_unique = final_num_unique;
+    id_statistics_vec_.at(index).iter = iter;
+  }
+
+  void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    id_statistics_vec_.at(index).num_unique_matrix = num_unique_matrix;
+    id_statistics_vec_.at(index).iter = iter;
+  }
+
+  uint32_t GetIdNumUnique(int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.final_num_unique;
+  }
+
+  const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.num_unique_matrix;
+  }
+
+  void* lookup_unique_values_;
+  void* lookup_embeddings_;
+  bool has_lookup_embeddings_;
+  const void* embedding_gather_in_;
+  const void* embedding_shuffle_cur_rank_embeddings_;
+  const void* embedding_update_unique_embeddings_;
+  void* embedding_update_updated_unique_embeddings_;
+  const void* embedding_put_unique_embeddings_;
+  const void* embedding_fused_update_put_unique_embeddings_;
+  std::vector<IdStatistics> id_statistics_vec_;
+  std::mutex mutex_;
+};
+
+EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding_name,
+                                                    int64_t rank_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = embedding_state_map_.find(map_key);
+  // for id shuffle test, not need to create table
+  if (it == embedding_state_map_.end()) {
+    LOG(INFO) << "create embedding state: " << embedding_name << "-" << rank_id;
+    if (UseDynamicMemoryAllocation()) {
+      UNIMPLEMENTED();
+    } else {
+      it = embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+               .first;
+    }
+  }
+  return it->second.get();
+}
+
+KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
+                                                  int64_t rank_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = key_value_store_map_.find(map_key);
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
+  return it->second.get();
+}
+
+void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value_store_options,
+                                           int64_t local_rank_id, int64_t rank_id,
+                                           int64_t world_size) {
+  CudaCurrentDeviceGuard guard(local_rank_id);
+  const std::string& name = key_value_store_options.Name();
+  const uint32_t line_size = key_value_store_options.LineSize();
+  std::pair<std::string, int64_t> map_key = std::make_pair(name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  std::unique_ptr<KeyValueStore> store;
+  PersistentTableKeyValueStoreOptions options{};
+  const std::vector<std::string>& persistent_table_paths =
+      key_value_store_options.PersistentTablePaths();
+  CHECK_EQ(persistent_table_paths.size(), world_size);
+  options.table_options.path = persistent_table_paths.at(rank_id);
+  options.table_options.value_size = line_size * key_value_store_options.ValueTypeSize();
+  options.table_options.key_size = key_value_store_options.KeyTypeSize();
+  options.table_options.physical_block_size =
+      key_value_store_options.PersistentTablePhysicalBlockSize();
+  options.table_options.target_chunk_size_mb = 4 * 1024;
+  options.table_options.capacity_hint = key_value_store_options.PersistentTableCapacityHint();
+  store = NewPersistentTableKeyValueStore(options);
+  const std::vector<CacheOptions>& cache_options = key_value_store_options.GetCachesOptions();
+  for (int i = cache_options.size() - 1; i >= 0; --i) {
+    std::unique_ptr<Cache> cache = NewCache(cache_options.at(i));
+    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
+  }
+  store->ReserveQueryLength(kDefaultMaxQueryLength);
+  CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
+      << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+
+  if (UseDynamicMemoryAllocation()) {
+    UNIMPLEMENTED();
+  } else {
+    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+              .second)
+        << "Can't create an embedding state with same name of an existing embedding, the name: "
+        << name;
+  }
+}
+
+void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
+                                    int64_t rank_id, const std::string& snapshot_name) {
+  CudaCurrentDeviceGuard guard(local_rank_id);
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  auto it = key_value_store_map_.find(map_key);
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
+  it->second->SaveSnapshot(snapshot_name);
+}
+
+void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id,
+                                    int64_t rank_id, const std::string& snapshot_name) {
+  CudaCurrentDeviceGuard guard(local_rank_id);
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  auto it = key_value_store_map_.find(map_key);
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
+  if (it->second->SnapshotExists(snapshot_name)) {
+    it->second->LoadSnapshot(snapshot_name);
+  } else {
+    LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << rank_id
+               << " but no corresponding snapshot. ";
+  }
+}
+
+#endif
+
 }  // namespace embedding
 
 }  // namespace oneflow

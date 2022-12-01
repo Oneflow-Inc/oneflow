@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
+#ifdef WITH_CUDA
+
 namespace oneflow {
 
 namespace {
@@ -56,3 +58,50 @@ void RandomGenerator<DeviceType::kCUDA>::Uniform(const int64_t elem_cnt, T* dptr
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
+
+#endif // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+namespace oneflow {
+
+namespace {
+
+template<typename T>
+void RngUniformGpu(const hiprandGenerator_t& gen, int64_t n, T* ret);
+
+template<>
+void RngUniformGpu<float>(const hiprandGenerator_t& gen, int64_t n, float* ret) {
+  OF_CURAND_CHECK(hiprandGenerateUniform(gen, ret, n));
+}
+
+template<>
+void RngUniformGpu<double>(const hiprandGenerator_t& gen, int64_t n, double* ret) {
+  OF_CURAND_CHECK(hiprandGenerateUniformDouble(gen, ret, n));
+}
+
+}  // namespace
+
+RandomGenerator<DeviceType::kCUDA>::RandomGenerator(int64_t seed, ep::Stream* stream) {
+  OF_CURAND_CHECK(hiprandCreateGenerator(&curand_generator_, HIPRAND_RNG_PSEUDO_DEFAULT));
+  OF_CURAND_CHECK(hiprandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
+  OF_CURAND_CHECK(hiprandSetStream(curand_generator_, stream->As<ep::CudaStream>()->cuda_stream()));
+}
+
+RandomGenerator<DeviceType::kCUDA>::~RandomGenerator() {
+  OF_CURAND_CHECK(hiprandDestroyGenerator(curand_generator_));
+}
+
+template<typename T>
+void RandomGenerator<DeviceType::kCUDA>::Uniform(const int64_t elem_cnt, T* dptr) {
+  RngUniformGpu(curand_generator_, elem_cnt, dptr);
+}
+
+#define INITIATE_CUDA_RANDOM_GENERATOR_UNIFORM(T, typeproto) \
+  template void RandomGenerator<DeviceType::kCUDA>::Uniform<T>(const int64_t elem_cnt, T* dptr);
+
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
+
+}  // namespace oneflow
+
+#endif // WITH_ROCM

@@ -13,7 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 #include "oneflow/core/ndarray/binary_func.h"

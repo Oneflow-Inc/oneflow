@@ -32,7 +32,7 @@ limitations under the License.
 namespace oneflow {
 namespace detail {
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 #define OF_NUMERICS_FUNC static inline __host__ __device__
 #else
 #define OF_NUMERICS_FUNC static inline
@@ -116,7 +116,7 @@ struct numeric_limits<float> {
   OF_NUMERICS_FUNC float upper_bound() { return static_cast<float>(inf); }
 };
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 static __device__ unsigned short int HALF_LOWEST = 0xfbff;
 static __device__ unsigned short int HALF_MAX = 0x7bff;
 static __device__ unsigned short int HALF_LOWER_BOUND = 0xfc00;

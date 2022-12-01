@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "libkineto.h"

@@ -196,7 +196,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
        batch_start += global_n_warp * warp_size) {
     const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
     if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
-    __syncwarp();
+    SYNCWARP();
     const uint32_t key_offset = batch_start + lane_id;
     if (key_offset < n_keys) {
       const Key key = keys[batch_start + lane_id];
@@ -210,14 +210,14 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
         batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
       }
     }
-    __syncwarp();
+    SYNCWARP();
     const uint32_t batch_n_missing_t = batch_n_missing[warp_id];
     if (lane_id == 0) {
       const uint32_t old_n_missing =
           cuda::atomic::Add(n_missing, static_cast<uint32_t>(batch_n_missing_t));
       batch_n_missing[warp_id] = old_n_missing;
     }
-    __syncwarp();
+    SYNCWARP();
     if (lane_id < batch_n_missing_t) {
       missing_keys[batch_n_missing[warp_id] + lane_id] = batch_missing_keys[warp_id][lane_id];
       missing_indices[batch_n_missing[warp_id] + lane_id] = batch_missing_indices[warp_id][lane_id];
@@ -231,7 +231,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
             cache_values[(row - 1) * value_length + col];
       }
     }
-    __syncwarp();
+    SYNCWARP();
   }
 }
 
@@ -271,7 +271,7 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
       batch_row_ids[warp_id][lane_id] = row;
       mask[key_offset] = row > 0;
     }
-    __syncwarp();
+    SYNCWARP();
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
       const Index row = batch_row_ids[warp_id][i];
@@ -282,7 +282,7 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
             packed_cache_values[(row - 1) * packed_cols + col];
       }
     }
-    __syncwarp();
+    SYNCWARP();
   }
 }
 
@@ -333,7 +333,7 @@ __global__ typename std::enable_if<!std::is_same<Elem, float>::value, void>::typ
 FusedHalfUpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
                       const Index* context, const Elem* values, const half* update, const float* lr,
                       float scale) {
-  __trap();
+  TRAP();
 }
 
 template<typename Key, typename Elem, typename Index>
@@ -356,23 +356,27 @@ class OrdinalEncoder {
       : capacity_(capacity),
         table_capacity_(capacity / load_factor),
         if_dump_dirty_(if_dump_dirty) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(Index)));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
+    OF_CUDA_CHECK(GPU(Malloc)(&table_size_, sizeof(Index)));
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&table_size_host_), sizeof(Index)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
-    OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
-    OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
+#endif
+    OF_CUDA_CHECK(GPU(Malloc)(&table_keys_, table_capacity_ * sizeof(Key)));
+    OF_CUDA_CHECK(GPU(Malloc)(&table_indices_, table_capacity_ * sizeof(Index)));
     if (if_dump_dirty_) {
-      OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
+      OF_CUDA_CHECK(GPU(Malloc)(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
     }
     Clear();
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFree(table_size_));
-    OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
-    OF_CUDA_CHECK(cudaFree(table_keys_));
-    OF_CUDA_CHECK(cudaFree(table_indices_));
-    if (if_dump_dirty_) { OF_CUDA_CHECK(cudaFree(table_dirty_flags_)); }
+    OF_CUDA_CHECK(GPU(Free)(table_size_));
+    OF_CUDA_CHECK(GPU(FreeHost)(table_size_host_));
+    OF_CUDA_CHECK(GPU(Free)(table_keys_));
+    OF_CUDA_CHECK(GPU(Free)(table_indices_));
+    if (if_dump_dirty_) { OF_CUDA_CHECK(GPU(Free)(table_dirty_flags_)); }
   }
 
   template<bool insert, bool dump_dirty_only>
@@ -389,7 +393,7 @@ class OrdinalEncoder {
 
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, Key* keys, Index* context) {
-    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, false>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
@@ -398,7 +402,7 @@ class OrdinalEncoder {
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, Key* keys, Index* context) {
-    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, true>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
@@ -407,16 +411,16 @@ class OrdinalEncoder {
 
   void ClearDirtyFlags() {
     if (if_dump_dirty_) {
-      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+      OF_CUDA_CHECK(GPU(Memset)(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
     }
   }
 
   void Clear() {
-    OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(Index)));
-    OF_CUDA_CHECK(cudaMemset(table_keys_, 0, table_capacity_ * sizeof(Key)));
-    OF_CUDA_CHECK(cudaMemset(table_indices_, 0, table_capacity_ * sizeof(Index)));
+    OF_CUDA_CHECK(GPU(Memset)(table_size_, 0, sizeof(Index)));
+    OF_CUDA_CHECK(GPU(Memset)(table_keys_, 0, table_capacity_ * sizeof(Key)));
+    OF_CUDA_CHECK(GPU(Memset)(table_indices_, 0, table_capacity_ * sizeof(Index)));
     if (if_dump_dirty_) {
-      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+      OF_CUDA_CHECK(GPU(Memset)(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
     }
   }
 
@@ -448,13 +452,17 @@ class CacheImpl : public Cache {
         device_index_(-1),
         options_(options),
         max_query_length_(0) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     const uint64_t values_size = options.capacity * options.value_size;
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
-      OF_CUDA_CHECK(cudaMalloc(&values_, values_size));
+      OF_CUDA_CHECK(GPU(Malloc)(&values_, values_size));
     } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
-        OF_CUDA_CHECK(cudaMallocHost(&values_, values_size));
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&values_), values_size));
+#else
+    OF_CUDA_CHECK(cudaMallocHost(&values_, values_size));
+#endif
       } else {
         OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_),
                                               values_size));
@@ -467,13 +475,13 @@ class CacheImpl : public Cache {
   ~CacheImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
     if (options_.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
-      OF_CUDA_CHECK(cudaFree(values_));
+      OF_CUDA_CHECK(GPU(Free)(values_));
     } else if (options_.value_memory_kind == CacheOptions::MemoryKind::kHost) {
-      OF_CUDA_CHECK(cudaFreeHost(values_));
+      OF_CUDA_CHECK(GPU(FreeHost)(values_));
     } else {
       UNIMPLEMENTED();
     }
-    if (max_query_length_ > 0) { OF_CUDA_CHECK(cudaFree(encoding_buffer_)); }
+    if (max_query_length_ > 0) { OF_CUDA_CHECK(GPU(Free)(encoding_buffer_)); }
   }
 
   uint64_t Capacity() const override { return options_.capacity; }
@@ -489,8 +497,8 @@ class CacheImpl : public Cache {
   void ReserveQueryLength(uint32_t query_length) override {
     CudaCurrentDeviceGuard guard(device_index_);
     if (query_length <= max_query_length_) { return; }
-    if (max_query_length_ > 0) { OF_CUDA_CHECK(cudaFree(encoding_buffer_)); }
-    OF_CUDA_CHECK(cudaMalloc(&encoding_buffer_, query_length * sizeof(uint64_t)));
+    if (max_query_length_ > 0) { OF_CUDA_CHECK(GPU(Free)(encoding_buffer_)); }
+    OF_CUDA_CHECK(GPU(Malloc)(&encoding_buffer_, query_length * sizeof(uint64_t)));
     max_query_length_ = query_length;
   }
 
@@ -534,7 +542,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::Test(ep::Stream* stream, uint32_t n
                                                   const void* keys, uint32_t* n_missing,
                                                   void* missing_keys, uint32_t* missing_indices) {
   OF_CUDA_CHECK(
-      cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
+      GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
   if (if_dump_dirty_) {
@@ -557,7 +565,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
                                                  uint32_t* n_missing, void* missing_keys,
                                                  uint32_t* missing_indices) {
   OF_CUDA_CHECK(
-      cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
+      GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
   constexpr uint32_t block_size = 128;

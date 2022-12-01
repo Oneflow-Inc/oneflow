@@ -43,6 +43,11 @@ thread_local cudaEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
 #endif  // WITH_CUDA
 
+#if defined(WITH_ROCM)
+thread_local hipEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;
+thread_local hipEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
+#endif  // WITH_ROCM
+
 }  // namespace
 
 void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel* kernel) {
@@ -61,6 +66,22 @@ void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel*
   }
   if (profile_kernel_forward_range) { OF_PROFILER_RANGE_PUSH(kernel->op_conf().name()); }
 #endif  // WITH_CUDA
+#if defined(WITH_ROCM)
+  if (profile_cuda_memory_bandwidth) {
+    auto* actor_context_provider = dynamic_cast<ActorContextProvider*>(kernel_ctx);
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(kernel_ctx->stream());
+    if (cuda_stream != nullptr && actor_context_provider != nullptr) {
+      CHECK(cuda_memory_bandwidth_profile_start_event == nullptr);
+      CHECK(cuda_memory_bandwidth_profile_end_event == nullptr);
+      OF_CUDA_CHECK(hipEventCreate(&cuda_memory_bandwidth_profile_start_event));
+      OF_CUDA_CHECK(hipEventCreate(&cuda_memory_bandwidth_profile_end_event));
+      OF_CUDA_CHECK(
+          hipEventRecord(cuda_memory_bandwidth_profile_start_event, cuda_stream->cuda_stream()));
+    }
+  }
+  if (profile_kernel_forward_range) { OF_PROFILER_RANGE_PUSH(kernel->op_conf().name()); }
+
+#endif  // WITH_ROCM
 }
 
 void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* kernel) {
@@ -103,6 +124,45 @@ void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* k
     }
   }
 #endif  // WITH_CUDA
+#if defined(WITH_ROCM)
+  if (profile_kernel_forward_range) { OF_PROFILER_RANGE_POP(); }
+  // The memory bandwidth profiler only works in lazy mode.
+  if (profile_cuda_memory_bandwidth) {
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(kernel_ctx->stream());
+    auto* actor_context_provider = dynamic_cast<ActorContextProvider*>(kernel_ctx);
+    if (cuda_stream != nullptr && actor_context_provider != nullptr) {
+      hipEvent_t start_event = cuda_memory_bandwidth_profile_start_event;
+      hipEvent_t end_event = cuda_memory_bandwidth_profile_end_event;
+      cuda_memory_bandwidth_profile_start_event = nullptr;
+      cuda_memory_bandwidth_profile_end_event = nullptr;
+      CHECK_NOTNULL(start_event);
+      CHECK_NOTNULL(end_event);
+      OF_CUDA_CHECK(hipEventRecord(end_event, cuda_stream->cuda_stream()));
+      int64_t memory_size = 0;
+      for (const auto& bn : kernel->op_attribute().input_bns()) {
+        const Blob* blob = kernel_ctx->BnInOp2Blob(bn);
+        if (blob) { memory_size += blob->ByteSizeOfBlobBody(); }
+      }
+      for (const auto& bn : kernel->op_attribute().output_bns()) {
+        const Blob* blob = kernel_ctx->BnInOp2Blob(bn);
+        if (blob) { memory_size += blob->ByteSizeOfBlobBody(); }
+      }
+      const std::string op_name = kernel->op_conf().name();
+      actor_context_provider->GetActorContext()->AddCallback(
+          [start_event, end_event, memory_size, op_name]() {
+            float elapsed_ms = 0;
+            OF_CUDA_CHECK(hipEventElapsedTime(&elapsed_ms, start_event, end_event));
+            OF_CUDA_CHECK(hipEventDestroy(start_event));
+            OF_CUDA_CHECK(hipEventDestroy(end_event));
+            double bandwidth =
+                static_cast<double>(memory_size) / (1024.0 * 1024.0 * 1024.0) / (elapsed_ms / 1000);
+            LOG(INFO) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << op_name
+                      << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
+                      << " bandwidth(GB/s): " << bandwidth;
+          });
+    }
+  }
+#endif  // WITH_ROCM
 }
 
 }  // namespace profiler

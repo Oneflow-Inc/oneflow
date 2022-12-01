@@ -57,6 +57,9 @@ class RandomGenerator<DeviceType::kCUDA> final {
 #ifdef WITH_CUDA
   curandGenerator_t curand_generator_;
 #endif
+#ifdef WITH_ROCM
+  hiprandGenerator_t curand_generator_;
+#endif
 };
 
 }  // namespace oneflow

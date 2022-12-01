@@ -26,6 +26,13 @@ limitations under the License.
 #include <iostream>
 #include <cuda_profiler_api.h>
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#include <hip/hip_profile.h>
+#include <roctracer_roctx.h>
+#include <sys/syscall.h>
+#include <iostream>
+#endif //WITH_ROCM
 
 namespace oneflow {
 
@@ -41,17 +48,34 @@ void NameThisHostThread(const std::string& name) {
   const std::string name_with_prefix = *thread_name_prefix + name;
   nvtxNameOsThreadA(syscall(SYS_gettid), name_with_prefix.c_str());
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  static thread_local std::unique_ptr<std::string> thread_name_prefix;
+  if (!thread_name_prefix) {
+    thread_name_prefix.reset(
+        new std::string(GetStringFromEnv("ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX", "")));
+  }
+  const std::string name_with_prefix = *thread_name_prefix + name;
+  roctxMarkA(name_with_prefix.c_str());
+#endif //WITH_ROCM
 }
 
 void RangePush(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
+#ifdef WITH_ROCM
+  roctxRangePushA(name.c_str());
+#else
   nvtxRangePushA(name.c_str());
+#endif
 #endif  // OF_ENABLE_PROFILER
 }
 
 void RangePop() {
 #ifdef OF_ENABLE_PROFILER
+#ifdef WITH_ROCM
+  roctxRangePop();
+#else
   nvtxRangePop();
+#endif
 #endif  // OF_ENABLE_PROFILER
 }
 
@@ -82,13 +106,21 @@ void LogHostMemoryUsage(const std::string& name) {
 
 void ProfilerStart() {
 #ifdef OF_ENABLE_PROFILER
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK(hipProfilerStart());
+#else
   OF_CUDA_CHECK(cudaProfilerStart());
+#endif
 #endif  // OF_ENABLE_PROFILER
 }
 
 void ProfilerStop() {
 #ifdef OF_ENABLE_PROFILER
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK(hipProfilerStop());
+#else
   OF_CUDA_CHECK(cudaProfilerStop());
+#endif
 #endif  // OF_ENABLE_PROFILER
 }
 
@@ -105,6 +137,9 @@ Maybe<std::string> DisableProfilerAndReturnResult() {
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaDeviceSynchronize());
 #endif  // WITH_CUDA
+#if defined(WITH_ROCM)
+  OF_CUDA_CHECK(hipDeviceSynchronize());
+#endif  // WITH_ROCM
   auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
   Singleton<ProfileManager>::Delete();

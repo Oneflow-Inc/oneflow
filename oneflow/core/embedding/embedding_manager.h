@@ -112,7 +112,7 @@ inline bool UseEmbeddingGradientShuffleP2PKernel(DataType embedding_dtype, DataT
 #endif
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 class TmpBufferAllocator {
  public:

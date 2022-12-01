@@ -23,7 +23,7 @@ namespace oneflow {
 
 namespace embedding {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 std::unique_ptr<Cache> NewFullCache(const CacheOptions& options);
 

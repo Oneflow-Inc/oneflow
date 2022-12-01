@@ -676,7 +676,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                reduced_out_hierarchy.elem_cnt()));
   }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
@@ -852,7 +852,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
     }
   }
   if (requires_same_sbp) { return kUnsupportedBoxing; }
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
