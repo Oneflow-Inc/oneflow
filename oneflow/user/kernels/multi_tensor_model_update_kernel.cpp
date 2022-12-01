@@ -586,12 +586,14 @@ class MultiTensorWeightUpdateKernel final : public user_op::OpKernel,
     const int64_t n_tensor = ctx->input_size("model");
     const float d = ctx->Attr<float>("d");
 
-    TensorTupleParams<1> tensor_tuple_params{};
+    TensorTupleParams<2> tensor_tuple_params{};
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
       tensor_tuple_params.ptr[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
+      tensor_tuple_params.ptr[1][count] =
+          (ctx->Tensor4ArgNameAndIndex("model_update", tensor_idx))->mut_dptr();
       const int64_t tensor_elem_cnt =
           ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;

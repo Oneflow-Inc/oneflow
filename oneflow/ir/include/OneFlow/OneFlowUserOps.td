@@ -7290,9 +7290,10 @@ def OneFlow_MultiTensorAdamUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_adam_
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_MultiTensorWeightUpdateOp : OneFlow_BaseOp<"multi_tensor_weight_update", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MultiTensorWeightUpdateOp : OneFlow_BaseOp<"multi_tensor_weight_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<OneFlow_Tensor>:$model
+    Variadic<OneFlow_Tensor>:$model,
+    Variadic<OneFlow_Tensor>:$model_update
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$d

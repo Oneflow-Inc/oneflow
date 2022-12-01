@@ -4819,19 +4819,24 @@ class MultiTensorWeightUpdateFunctor {
   MultiTensorWeightUpdateFunctor() {
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
-      op_[n] =
-          CHECK_JUST(one::OpBuilder("multi_tensor_weight_update").Input("model", n + 1).Build());
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_weight_update")
+                              .Input("model", n + 1)
+                              .Input("model_update", n + 1)
+                              .Build());
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& model, const float& d) const {
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_update,
+                         const float& d) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("d");
     attrs.SetAllAttrs(d);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
-      TensorTuple input(size);
+      TensorTuple input(size * 2);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_update.begin() + i, model_update.begin() + i + size,
+                input.begin() + 1 * size);
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();

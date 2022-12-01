@@ -307,9 +307,12 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
 Maybe<void> InferWeightUpdateTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
   const user_op::TensorDesc& model_first = ctx->InputTensorDesc("model", 0);
-  for (int i = 1; i < weight_size; i++) {
+  for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model_i = ctx->InputTensorDesc("model", i);
+    const user_op::TensorDesc& model_update_i = ctx->InputTensorDesc("model_update", i);
     CHECK_EQ_OR_RETURN(model_i.shape(), model_first.shape()) << "All Model shape should be equal. ";
+    CHECK_EQ_OR_RETURN(model_update_i.shape(), model_first.shape())
+        << "All Model shape should be equal to model_update shape.";
   }
   return Maybe<void>::Ok();
 }
@@ -318,9 +321,12 @@ Maybe<void> InferWeightUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckLearningRateDataType(ctx));
   const user_op::TensorDesc& first_model_desc = ctx->InputTensorDesc("model", 0);
   const int64_t input_size = ctx->input_size("model");
-  for (int64_t i = 1; i < input_size; i++) {
+  for (int64_t i = 0; i < input_size; i++) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
+    const user_op::TensorDesc& model_update_i = ctx->InputTensorDesc("model_update", i);
     CHECK_EQ(model.data_type(), first_model_desc.data_type()) << "Model DataType should be equal. ";
+    CHECK_EQ(model_update_i.data_type(), first_model_desc.data_type())
+        << "Model DataType should be equal to model_update DataType.";
   }
   return Maybe<void>::Ok();
 }
@@ -329,6 +335,7 @@ Maybe<void> WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputA
                                    const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_update", i));
   }
   return Maybe<void>::Ok();
 }

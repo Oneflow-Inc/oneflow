@@ -2774,7 +2774,7 @@
   bind_python: True
 
 - name: "multi_tensor_yolov5_weight_update"
-  signature: "Void (TensorTuple model, Float d) => MultiTensorWeightUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_update, Float d) => MultiTensorWeightUpdate"
   bind_python: True
 
 - name: "multi_tensor_momentum_update"

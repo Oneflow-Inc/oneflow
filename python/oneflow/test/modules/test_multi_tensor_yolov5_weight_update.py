@@ -36,6 +36,8 @@ def _test_multi_tensor_weight_update_impl(test_case, device, shape, n, d):
 
     weight = []
     torch_weight = []
+    weight_update = []
+    torch_weight_update = []
     for _ in range(n):
         tmp = flow.tensor(
             np.random.randn(*shape),
@@ -52,12 +54,26 @@ def _test_multi_tensor_weight_update_impl(test_case, device, shape, n, d):
                 requires_grad=False,
             )
         )
+        tmp = flow.tensor(
+            np.random.randn(*shape),
+            dtype=flow.float32,
+            device=flow.device(device),
+            requires_grad=False,
+        )
+        weight_update.append(tmp)
+        torch_weight_update.append(
+            torch.tensor(
+                tmp.numpy(),
+                dtype=torch.float32,
+                device=torch.device(device),
+                requires_grad=False,
+            )
+        )
     for i, v in enumerate(torch_weight):
-        origin = v
         v = v * d
-        v = v + (1 - d) * origin
+        v = v + (1 - d) * torch_weight_update[i]
 
-    flow._C.multi_tensor_yolov5_weight_update(weight, d)
+    flow._C.multi_tensor_yolov5_weight_update(weight, weight_update, d)
     for i in range(n):
         compare(weight[i], torch_weight[i])
 

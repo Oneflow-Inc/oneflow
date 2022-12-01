@@ -92,7 +92,7 @@ struct MultiTensorAdamUpdateWithCastKernelUtil {
 template<DeviceType device_type, typename T>
 struct MultiTensorWeightUpdateKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
-                     TensorTupleParams<1> tensor_tuple_params);
+                     TensorTupleParams<2> tensor_tuple_params);
 };
 
 }  // namespace oneflow

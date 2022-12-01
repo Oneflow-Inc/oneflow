@@ -579,24 +579,28 @@ __global__ void MultiTensorYoloModelEmaUpdateGpu(int64_t num_tensor, const float
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
     T* model_ptr = (T*)tensor_tuple_params.ptr[0][tensor_idx];
+    T* model_update_ptr = (T*)tensor_tuple_params.ptr[1][tensor_idx];
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
       T model_val[kUnrollSize] = {0};
+      T model_update_val[kUnrollSize] = {0};
 
 #pragma unroll
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
-        if (actual_idx < tensor_elem_cnt) { model_val[ilp] = *(model_ptr + actual_idx); }
+        if (actual_idx < tensor_elem_cnt) {
+          model_val[ilp] = *(model_ptr + actual_idx);
+          model_update_val[ilp] = *(model_update_ptr + actual_idx);
+        }
       }
 
 #pragma unroll
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
         if (actual_idx < tensor_elem_cnt) {
-          T origin = model_val[ilp];
           model_val[ilp] *= d;
-          model_val[ilp] += (1 - d) * origin;
+          model_val[ilp] += (1 - d) * model_update_val[ilp];
         }
       }
       v_block_id -= tensor_tuple_params.block_offset[tensor_idx];
@@ -608,19 +612,19 @@ __global__ void MultiTensorYoloModelEmaUpdateGpu(int64_t num_tensor, const float
 template<typename T>
 struct MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
-                     TensorTupleParams<1> tensor_tuple_params);
+                     TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<>
 struct MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, half> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
-                     TensorTupleParams<1> tensor_tuple_params);
+                     TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<typename T>
 void MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
-    TensorTupleParams<1> tensor_tuple_params) {
+    TensorTupleParams<2> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
   for (int i = 0; i < n_tensor; i++) {
