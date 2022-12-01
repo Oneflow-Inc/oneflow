@@ -124,10 +124,18 @@ class TestBatchNormModule(flow.unittest.TestCase):
         running_var = torch.randn(128)
         weight = torch.randn(128)
         bias = torch.randn(128)
-        torch.nn.functional.batch_norm(input, running_mean, running_var, weight, bias, True)
-        torch.nn.functional.batch_norm(input, running_mean, running_var, weight, bias, False)
-        torch.nn.functional.batch_norm(input, running_mean, running_var, None, None, True)
-        torch.nn.functional.batch_norm(input, running_mean, running_var, None, None, False)
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, weight, bias, True
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, weight, bias, False
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, None, None, True
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, None, None, False
+        )
 
 
 if __name__ == "__main__":
