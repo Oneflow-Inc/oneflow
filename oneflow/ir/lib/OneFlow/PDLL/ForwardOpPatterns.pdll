@@ -3,8 +3,42 @@
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
-Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
-
+Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format: Attr) [{
+   if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
+    if (padding_before.cast<ArrayAttr>().getValue().equals(
+            padding_after.cast<ArrayAttr>().getValue())) {
+      if (data_format.cast<StringAttr>().str() == "channels_first") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[1]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+      if (data_format.cast<StringAttr>().str() == "channels_last") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[3]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+    }
+  }
+  return failure();
+}];
 
 Pattern {
   let rate: Attr;
@@ -48,7 +82,7 @@ Pattern {
     op<oneflow.conv2d>(
       op<oneflow.pad>(x: Value){device_name = device_name, device_tag = device_tag, padding_before = padding_before, padding_after = padding_after}, weight: Value) 
       {device_name = device_name, device_tag = device_tag, data_format = data_format};
-  // IsPaddingCouldBeAssimilatedIntoConv(padding_before, padding_after, data_format);
+  IsPaddingCouldBeAssimilatedIntoConv(padding_before, padding_after, data_format);
   
   rewrite conv with{
     let conv2d_and_erase_pad = CreateConv2dAndErasePad(x, weight, padding_before, data_format, conv);

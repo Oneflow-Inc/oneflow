@@ -96,7 +96,6 @@ static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Va
   SmallVector<Value, 4> operands;
   operands.push_back(x);
   operands.push_back(weight);
-  // if (bias) { operands.push_back(bias); }
   NamedAttrList attributes = conv_op->getAttrs();
   llvm::SmallVector<int32_t> padding_before_array;
 
@@ -127,46 +126,6 @@ static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Va
                                    attributes);
 }
 
-static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
-                                                         Attribute padding_before,
-                                                         Attribute padding_after,
-                                                         Attribute data_format) {
-  if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
-    if (padding_before.cast<ArrayAttr>().getValue().equals(
-            padding_after.cast<ArrayAttr>().getValue())) {
-      if (data_format.cast<StringAttr>().str() == "channels_first") {
-        return success(padding_before.cast<ArrayAttr>()
-                               .getValue()[0]
-                               .cast<IntegerAttr>()
-                               .getValue()
-                               .getSExtValue()
-                           == 0
-                       && padding_before.cast<ArrayAttr>()
-                                  .getValue()[1]
-                                  .cast<IntegerAttr>()
-                                  .getValue()
-                                  .getSExtValue()
-                              == 0);
-      }
-      if (data_format.cast<StringAttr>().str() == "channels_last") {
-        return success(padding_before.cast<ArrayAttr>()
-                               .getValue()[0]
-                               .cast<IntegerAttr>()
-                               .getValue()
-                               .getSExtValue()
-                           == 0
-                       && padding_before.cast<ArrayAttr>()
-                                  .getValue()[3]
-                                  .cast<IntegerAttr>()
-                                  .getValue()
-                                  .getSExtValue()
-                              == 0);
-      }
-    }
-  }
-  return failure();
-}
-
 IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
   return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                           APInt(64, value, /*isSigned=*/true));
@@ -190,15 +149,6 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 }
 
 }  // namespace rewrites
-
-namespace constraint {
-
-void populateConstraintes(RewritePatternSet& patterns) {
-  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
-                                                       IsPaddingCouldBeAssimilatedIntoConv);
-}
-
-}  // namespace constraint
 
 }  // namespace oneflow
 
