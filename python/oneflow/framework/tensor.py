@@ -442,7 +442,7 @@ def _numpy(self):
         self = (
             self.to_global(placement=self_cpu_placement)
             .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast
             )
             .to_local()
         )

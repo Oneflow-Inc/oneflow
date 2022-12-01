@@ -40,7 +40,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.tensor([1, 2, 3, 4])
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(1)
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.split(1)
             )
         test_case.assertTrue(
             "Split axis out of range (expected to be in range of [0, 1), but got 1!"
@@ -51,7 +51,7 @@ class TestModule(flow.unittest.TestCase):
     def test_global_to_global_with_invalid_split_axis(test_case):
         x = flow.tensor(
             [1, 2, 3, 4],
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
         with test_case.assertRaises(RuntimeError) as ctx:
@@ -79,7 +79,7 @@ class TestModule(flow.unittest.TestCase):
             x = flow.Tensor(4, 4)  # size(4, 4)
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0)
             )
         test_case.assertTrue(
             "Sizes of tensors in dimension 0 must be same or match balanced split distribution. "
@@ -89,7 +89,7 @@ class TestModule(flow.unittest.TestCase):
 
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(1)
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.split(1)
             )
         test_case.assertTrue(
             "Sizes of tensors must match except in dimension 1. Expected size 2 but got size 4 for tensor on rank 1!"

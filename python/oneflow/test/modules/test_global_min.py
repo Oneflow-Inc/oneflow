@@ -46,7 +46,7 @@ def _test_min(
         input_arr,
         dtype=flow.float32,
         requires_grad=True,
-        placement=flow.env.all_device_placement("cpu"),
+        placement=flow.placement.all("cpu"),
         sbp=flow.sbp.broadcast,
     )
     if dim is None:
@@ -76,7 +76,7 @@ class TestMinModule(flow.unittest.TestCase):
             np_out = (
                 flow.tensor(np_out)
                 .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
+                    placement=flow.placement.all("cpu"),
                     sbp=flow.sbp.broadcast,
                 )
                 .numpy()
@@ -84,7 +84,7 @@ class TestMinModule(flow.unittest.TestCase):
             np_out_grad = (
                 flow.tensor(np_out_grad)
                 .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
+                    placement=flow.placement.all("cpu"),
                     sbp=flow.sbp.broadcast,
                 )
                 .numpy()
@@ -92,7 +92,7 @@ class TestMinModule(flow.unittest.TestCase):
             input_arr = (
                 flow.tensor(input_arr)
                 .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
+                    placement=flow.placement.all("cpu"),
                     sbp=flow.sbp.broadcast,
                 )
                 .numpy()

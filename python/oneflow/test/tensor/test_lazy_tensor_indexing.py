@@ -51,7 +51,7 @@ def _randint(low, high):
 
 
 def _cpu_global_tensor(tensor):
-    return tensor.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    return tensor.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
 
 
 def _assert_tensor_equal(test_case, tensor1, tensor2, atol=0.0, rtol=0.0):
@@ -230,7 +230,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
         if choice == 0:
             return flow.LongTensor(
                 indices,
-                placement=flow.env.all_device_placement("cpu"),
+                placement=flow.placement.all("cpu"),
                 sbp=flow.sbp.broadcast,
             ).to_global(placement, broadcast_for_placement)
         elif choice == 1:

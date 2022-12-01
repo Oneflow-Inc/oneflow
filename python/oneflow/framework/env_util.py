@@ -32,6 +32,9 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
     Returns a placement that contains all available devices.
 
+    Note:
+        It is recommended to use `oneflow.placement.all` instead of this function.
+
     Args:
         device_type (str): cuda or cpu
 

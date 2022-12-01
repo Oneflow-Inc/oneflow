@@ -24,7 +24,7 @@ import oneflow.nn as nn
 def get_bn_graph():
     model = nn.BatchNorm1d(6)
     model.eval()
-    model.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    model.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
 
     class Testgraph(flow.nn.Graph):
         def __init__(self, model):
@@ -42,7 +42,7 @@ def get_bn_graph():
 class TestFreeTensorNotInJob(flow.unittest.TestCase):
     def test_free_tensor_not_in_job(test_case):
         x = flow.randn(1, 6, 2).to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
+            placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0)
         )
         y = get_bn_graph()(x)
         test_case.assertEqual(y.size(), (1, 6, 2))
