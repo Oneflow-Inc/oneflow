@@ -85,7 +85,7 @@ class TestMultiTensorWeightUpdateModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_multi_tensor_weight_update_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(20, 1), (30, 1), (55, 1)]
-        arg_dict["n"] = [5, 10]
+        arg_dict["n"] = [5, 10, 292]
         arg_dict["d"] = [0.22, 0.5]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

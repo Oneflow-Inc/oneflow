@@ -306,12 +306,10 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
 
 Maybe<void> InferWeightUpdateTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
-  const user_op::TensorDesc& model_first = ctx->InputTensorDesc("model", 0);
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model_i = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& model_update_i = ctx->InputTensorDesc("model_update", i);
-    CHECK_EQ_OR_RETURN(model_i.shape(), model_first.shape()) << "All Model shape should be equal. ";
-    CHECK_EQ_OR_RETURN(model_update_i.shape(), model_first.shape())
+    CHECK_EQ_OR_RETURN(model_update_i.shape(), model_i.shape())
         << "All Model shape should be equal to model_update shape.";
   }
   return Maybe<void>::Ok();
