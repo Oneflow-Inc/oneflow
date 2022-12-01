@@ -20,7 +20,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.graph import GraphModule
-import oneflow._oneflow_internal.global_mode as global_mode
+from oneflow.utils.global_view import global_mode
 
 
 def _test_linear_train_graph_with_ddp(test_case):
@@ -116,7 +116,7 @@ def _test_linear_train_graph_with_ddp(test_case):
             print("=====> cur global mode sbp", global_mode.sbp())
             x = flow.ones((6, 800), placement=PC, sbp=S0)
             print("==> x.device form a global tensor: ", x.device)
-            with global_mode.guard(False):
+            with flow.utils.global_view.global_mode.guard(False):
                 print("=====> cur global mode with false", global_mode.is_enabled())
                 # print("==> x.device form a global tensor: ", x.device)
             print("==> x.device form a global tensor: ", x.device)

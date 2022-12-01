@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow
 from oneflow.utils.global_view.to_global import to_global
 from oneflow.utils.global_view.to_local import to_local
+import oneflow._oneflow_internal.global_mode as global_mode
 
 __all__ = [
     "to_global",
     "to_local",
+    "global_mode",
 ]
