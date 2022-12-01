@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/eager/tensor_storage.h"

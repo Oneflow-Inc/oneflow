@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 
 namespace oneflow {
 

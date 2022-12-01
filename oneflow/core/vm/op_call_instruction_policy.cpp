@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/vm/dtr_disjoint_set.h"
 #include "oneflow/core/vm/dtr_env.h"

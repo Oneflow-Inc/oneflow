@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/eager/tensor_storage.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 
 namespace oneflow {
 

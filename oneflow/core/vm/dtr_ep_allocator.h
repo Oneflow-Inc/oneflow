@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_DTR_CUDA_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_DTR_CUDA_ALLOCATOR_H_
+#ifndef ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_
+#define ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_
 
 #include <cstdint>
 #include "oneflow/core/common/env_var/dtr.h"
@@ -156,4 +156,4 @@ class DtrEpAllocatorProxy final : public Allocator {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_DTR_CUDA_ALLOCATOR_H_
+#endif  // ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_

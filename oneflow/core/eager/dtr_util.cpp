@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/job/global_for.h"

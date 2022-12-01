@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/vm/dtr_env.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/thread_safe_guard.h"

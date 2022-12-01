@@ -38,9 +38,9 @@ def allocated_memory(device):
     return flow._oneflow_internal.dtr.allocated_memory(device)
 
 
-class TestDTRCorrectness(flow.unittest.TestCase):
+class TestDTRModelTraining(flow.unittest.TestCase):
 
-    def test_dtr_correctness(test_case):
+    def test_dtr_model_training(test_case):
         seed = 20
         flow.manual_seed(seed)
         np.random.seed(seed)
