@@ -184,16 +184,21 @@ void populateRewrites(RewritePatternSet& patterns) {
                                                     CreateConv2dAndErasePad);
 }
 
-void populateConstraintes(RewritePatternSet& patterns) {
-  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
-                                                       IsPaddingCouldBeAssimilatedIntoConv);
-}
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
 }  // namespace rewrites
+
+namespace constraint {
+
+void populateConstraintes(RewritePatternSet& patterns) {
+  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
+                                                       IsPaddingCouldBeAssimilatedIntoConv);
+}
+
+}  // namespace constraint
 
 }  // namespace oneflow
 
