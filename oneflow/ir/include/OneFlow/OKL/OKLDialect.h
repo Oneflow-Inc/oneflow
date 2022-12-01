@@ -27,6 +27,7 @@ namespace mlir {
 namespace okl {
 
 void registerOneFlowPasses();
+
 }  // namespace okl
 }  // namespace mlir
 
