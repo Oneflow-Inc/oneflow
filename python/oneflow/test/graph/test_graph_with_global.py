@@ -111,15 +111,7 @@ def _test_linear_train_graph_with_ddp(test_case):
         )
 
         with global_mode.guard(True, placement=PC, sbp=S0):
-            print("=====> cur global mode with true", global_mode.is_enabled())
-            print("=====> cur global mode placement", global_mode.placement())
-            print("=====> cur global mode sbp", global_mode.sbp())
             x = flow.ones((6, 800), placement=PC, sbp=S0)
-            print("==> x.device form a global tensor: ", x.device)
-            with flow.utils.global_view.global_mode.guard(False):
-                print("=====> cur global mode with false", global_mode.is_enabled())
-                # print("==> x.device form a global tensor: ", x.device)
-            print("==> x.device form a global tensor: ", x.device)
 
         class LinearTrainGraphWithDDP(flow.nn.Graph):
             def __init__(self):
@@ -235,10 +227,18 @@ def _test_global_mode(test_case):
 
         def build(self):
             with global_mode.guard(True, placement=P, sbp=B):
-                randn_out = flow.randn((2, 2), device="cpu")
+                # Test global mode meta data
+                test_case.assertTrue(global_mode.is_enabled())
+                test_case.assertEqual(global_mode.placement(), P)
+                test_case.assertEqual(global_mode.sbp()[0], B)
+
+                # Test global mode source op
+                randn_out = flow.randn((2, 2))
                 arange_out = flow.arange(10)
-                empty_out = flow.empty((1, 2), device="cuda")
+                empty_out = flow.empty((1, 2))
                 tensor_out = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+
+            test_case.assertTrue(not global_mode.is_enabled())
 
             return {
                 "randn_out": randn_out,
@@ -250,6 +250,10 @@ def _test_global_mode(test_case):
     global_graph = GlobalModeGraph()
     out = global_graph()
     print("global_graph out: \n", out)
+    for k, v in out.items():
+        test_case.assertEqual(v.is_global, True, k)
+        test_case.assertEqual(v.placement, P, k)
+        test_case.assertEqual(v.sbp[0], B, k)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
