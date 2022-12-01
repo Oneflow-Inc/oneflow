@@ -103,7 +103,9 @@ size_t getResultSize(DictionaryAttr attributes) {
   auto op = CHECK_JUST(ConstructOp(op_conf, user_op::getDeviceTypeFromAttrDictionary(attributes)));
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> ::oneflow::BlobDesc* {
     auto it = lbi2logical_blob_desc_.find(bn);
-    if (it == lbi2logical_blob_desc_.end()) { LOG(FATAL) << "fail to find bn: " << bn; }
+    if (it == lbi2logical_blob_desc_.end()) {
+      LOG(FATAL) << "fail to find blob name in op: " << bn;
+    }
     return it->second.get();
   };
   ::oneflow::ParallelConf parallel_conf = user_op::getParallelConfFromAttrDictionary(attributes);
