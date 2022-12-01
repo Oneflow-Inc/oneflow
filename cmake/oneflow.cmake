@@ -334,10 +334,21 @@ if(BUILD_CUDA)
 endif()
 
 if(BUILD_CUDA)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
+    add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)
+  endif()
+
   get_target_property(CUTLASS_FMHA_INCLUDE_DIR cutlass_fmha_headers INTERFACE_INCLUDE_DIRECTORIES)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    set_property(
+      SOURCE
+        ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
+      APPEND
+      PROPERTY COMPILE_OPTIONS "--use_fast_math")
+  endif()
 endif()
 
 # oneflow api common
