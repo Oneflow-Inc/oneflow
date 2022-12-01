@@ -255,7 +255,7 @@ def _test_global_mode(test_case):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithDDP(oneflow.unittest.TestCase):
-    def _test_linear_train_graph_with_ddp(test_case):
+    def test_linear_train_graph_with_ddp(test_case):
         _test_linear_train_graph_with_ddp(test_case)
 
     def test_global_mode(test_case):
