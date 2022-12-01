@@ -1060,6 +1060,16 @@ class ArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      auto parallel_desc = GlobalMode::parallel_desc();
+      if (device.has_value()) {
+        ParallelConf parallel_conf = parallel_desc->parallel_conf();
+        parallel_conf.set_device_tag(device.value_or(Symbol<Device>())->type());
+        parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      }
+      return JUST(functional::GlobalArange(start, limit, delta, dtype, parallel_desc,
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("integer_start", "integer_limit", "integer_delta",
                                        "float_start", "float_limit", "float_delta", "dtype");
