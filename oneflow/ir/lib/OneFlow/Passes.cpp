@@ -97,34 +97,6 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
-namespace {
-
-::oneflow::DataType GetDataTypeFromMLIRDataType(::mlir::oneflow::DataType dt) {
-  switch (dt) {
-    case ::mlir::oneflow::DataType::DT_InvalidDataType:
-      return ::oneflow::DataType::kInvalidDataType;
-#define DEFINE_ONE_CASE(datatype) \
-  case ::mlir::oneflow::DataType::DT_##datatype: return ::oneflow::DataType::k##datatype;
-      DEFINE_ONE_CASE(Char)
-      DEFINE_ONE_CASE(Float)
-      DEFINE_ONE_CASE(Double)
-      DEFINE_ONE_CASE(Int8)
-      DEFINE_ONE_CASE(Int32)
-      DEFINE_ONE_CASE(Int64)
-      DEFINE_ONE_CASE(UInt8)
-      DEFINE_ONE_CASE(OFRecord)
-      DEFINE_ONE_CASE(Float16)
-      DEFINE_ONE_CASE(TensorBuffer)
-      DEFINE_ONE_CASE(Bool)
-#undef DEFINE_ONE_CASE
-    default: {
-      llvm::errs() << "unsupported data type: " << ConvertToString(dt) << "\n";
-      exit(1);
-    }
-  }
-  return ::oneflow::DataType::kInvalidDataType;
-}
-}  // namespace
 
 template<typename T>
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {

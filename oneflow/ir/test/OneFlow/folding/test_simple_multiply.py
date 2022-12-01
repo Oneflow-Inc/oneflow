@@ -130,11 +130,6 @@ class TestFoldMultiply(oneflow.unittest.TestCase):
             test_case, MultiplyModelWithInput, True, a_fp16, b_fp16, dtype=flow.float16
         )
 
-    def test_fold_multiply_fp16(test_case):
-        _test_fold_multiply(
-            test_case, MultiplyModel, with_cuda=False, dtype=oneflow.float16
-        )
-
 
 if __name__ == "__main__":
     unittest.main()
