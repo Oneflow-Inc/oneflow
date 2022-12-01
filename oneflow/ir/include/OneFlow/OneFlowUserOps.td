@@ -7290,6 +7290,23 @@ def OneFlow_MultiTensorAdamUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_adam_
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_MultiTensorWeightUpdateOp : OneFlow_BaseOp<"multi_tensor_weight_update", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$model
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$d
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 #endif // GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
 // Group: PADDING

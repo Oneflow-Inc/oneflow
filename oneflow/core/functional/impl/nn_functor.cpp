@@ -4814,6 +4814,33 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
+class MultiTensorWeightUpdateFunctor {
+ public:
+  MultiTensorWeightUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] =
+          CHECK_JUST(one::OpBuilder("multi_tensor_weight_update").Input("model", n + 1).Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const float& d) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("d");
+    attrs.SetAllAttrs(d);
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(size);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4943,6 +4970,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::MultiTensorWeightUpdateFunctor>("MultiTensorWeightUpdate");
 }
 
 }  // namespace functional
