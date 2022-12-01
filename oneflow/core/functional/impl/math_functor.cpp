@@ -1068,7 +1068,7 @@ class ArangeFunctor {
         parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
       }
       return JUST(functional::GlobalArange(start, limit, delta, dtype, parallel_desc,
-                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+                                           *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("integer_start", "integer_limit", "integer_delta",
