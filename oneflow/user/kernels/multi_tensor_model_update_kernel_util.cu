@@ -573,8 +573,8 @@ template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float
 template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, int N>
-__global__ void MultiTensorWeightUpdateGpu(int64_t num_tensor, const float d,
-                                           TensorTupleParams<N> tensor_tuple_params) {
+__global__ void MultiTensorYoloModelEmaUpdateGpu(int64_t num_tensor, const float d,
+                                                 TensorTupleParams<N> tensor_tuple_params) {
   int64_t v_block_id = blockIdx.x;
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
@@ -629,7 +629,7 @@ void MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T>::Update(
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
         % grid_size;
   }
-  MultiTensorWeightUpdateGpu<T>
+  MultiTensorYoloModelEmaUpdateGpu<T>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, d, tensor_tuple_params);
 }
