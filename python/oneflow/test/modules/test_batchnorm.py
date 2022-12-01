@@ -80,6 +80,25 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(rtol=1e-3, atol=1e-3, check_grad_use_random_data=False)
+    def test_functional_batchnorm_with_random_data(test_case):
+        device = random_device()
+        channel = random(1, 4).to(int)
+        x = random_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
+        running_mean = random_tensor(ndim=1, dim0=channel, requires_grad=False)
+        running_var = random_tensor(ndim=1, dim0=channel, low=0.0, requires_grad=False)
+        weight = random_tensor(ndim=1, dim0=channel)
+        bias = random_tensor(ndim=1, dim0=channel)
+        result = torch.nn.functional.batch_norm(
+            input=x,
+            running_mean=running_mean,
+            running_var=running_var,
+            weight=weight,
+            bias=bias,
+            training=random_bool(),
+        )
+        return result
+
     @autotest(rtol=1e-3, atol=1e-3, auto_backward=False, check_graph=False)
     def test_batchnorm2d_module_with_half_random_data(test_case):
         device = random_device()
@@ -126,6 +145,15 @@ class TestBatchNormModule(flow.unittest.TestCase):
         input2 = torch.ones(2, 10, 5, 8, 4)
         out1=m1(input1)
         out2=m2(input2)
+
+    @profile(torch.nn.functional.batch_norm)
+    def profile_functional_batchnorm(test_case):
+        input = torch.ones(2, 10, 8, 3)
+        running_mean = torch.randn(10)
+        running_var = torch.randn(10)
+        weight = torch.randn(10)
+        bias = torch.randn(10)
+        out = torch.nn.functional.batch_norm(input)
     """
 
 

@@ -365,7 +365,7 @@ if(BUILD_CUDA)
       set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
       list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
     endif()
-
+    list(APPEND CUDA_NVCC_FLAGS "-Xcompiler=-fno-strict-aliasing")
     message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()

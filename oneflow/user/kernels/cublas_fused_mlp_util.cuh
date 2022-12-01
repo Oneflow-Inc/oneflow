@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11060
+#if CUDA_VERSION >= 11020
 
 namespace oneflow {
 
@@ -185,9 +185,16 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
   // Set epilogue
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
-  if (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
-      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD
-      || epilogue == CUBLASLT_EPILOGUE_BGRADB) {
+#if CUDA_VERSION >= 11060
+  const bool has_bias =
+      (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
+       || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD
+       || epilogue == CUBLASLT_EPILOGUE_BGRADB);
+#else
+  const bool has_bias =
+      (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS);
+#endif  // CUDA_VERSION >= 11060
+  if (has_bias) {
     // Set bias ptr
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
@@ -200,6 +207,7 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
                                                    sizeof(bias_ptr)));
   }
 
+#if CUDA_VERSION >= 11060
   if (epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD) {
     // Set aux ptr for backward.
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
@@ -212,6 +220,7 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
                                                    CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER,
                                                    &aux_ptr, sizeof(aux_ptr)));
   }
+#endif  // CUDA_VERSION >= 11060
 }
 
 void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
@@ -251,14 +260,15 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
   // Set epilogue
   SetCublasEpilogue(matmul_grad_cache, epilogue, d_bias_ptr, aux_ptr);
-  /*
-  Set AUX pointer LD
-  If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
-  If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
-  For more details you can refer to CUBLAS docs:
-  https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
-  `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
-  */
+/*
+Set AUX pointer LD
+If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
+If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
+For more details you can refer to CUBLAS docs:
+https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
+`CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
+*/
+#if CUDA_VERSION >= 11060
   if (need_aux) {
     long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
@@ -270,6 +280,7 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
         matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
         &no_need_aligned_aux_ld, sizeof(no_need_aligned_aux_ld)));
   }
+#endif  // CUDA_VERSION >= 11060
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
@@ -283,6 +294,6 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11060
+#endif  // CUDA_VERSION >= 11020
 
 #endif  // defined(__CUDACC__)
