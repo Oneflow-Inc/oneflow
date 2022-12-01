@@ -111,7 +111,7 @@ class Linear(Module):
             if bias
             else None
         )
-        self.use_fused_mlp = (
+        self.use_fused_matmul_bias = (
             self.bias is not None
             and os.getenv("ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR") == "1"
         )
@@ -125,12 +125,13 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if self.use_fused_mlp:
+        if self.use_fused_matmul_bias:
             return flow._C.fused_matmul_bias(x, self.weight, self.bias)
-        res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-        if self.bias is not None:
-            res += self.bias
-        return res
+        else:
+            res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
+            if self.bias is not None:
+                res += self.bias
+            return res
 
     def extra_repr(self) -> str:
         return "in_features={}, out_features={}, bias={}".format(
