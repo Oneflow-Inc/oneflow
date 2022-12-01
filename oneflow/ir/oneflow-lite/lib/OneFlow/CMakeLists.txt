@@ -27,8 +27,8 @@ oneflow_add_mlir_library(
   MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
-  MLIROneFlowExtension
   oneflow
   $<TARGET_OBJECTS:of_op_schema>
+  MLIROneFlowExtension
   flatcc-runtime
 )
