@@ -42,7 +42,7 @@ def OKL_TensorAttr: I32EnumAttr<"TensorType", "OKL Tensor Type enum",
 }
 
 def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
-  let summary = "get tensor:operands from context as arguments";
+  let summary = "get tensor operands from context as arguments";
   let description = [{
     get tensor value from launcher context as arguments.
   }];
