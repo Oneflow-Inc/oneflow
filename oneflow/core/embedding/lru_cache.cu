@@ -20,7 +20,11 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/embedding/hash_functions.cuh"
 #include <new>
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda.h>
+#endif
 
 #if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700))
 #include <cuda/std/semaphore>
@@ -69,11 +73,11 @@ class WarpMutexAtomicImpl {
         ;
     }
     __threadfence();
-    __syncwarp();
+    SYNCWARP();
   }
 
   __device__ void Unlock(const ThreadContext& thread_ctx) {
-    __syncwarp();
+    SYNCWARP();
     __threadfence();
     if (thread_ctx.lane_id == 0) { atomicExch(&flag_, 0); }
   }
@@ -92,11 +96,11 @@ class WarpMutexSemaphoreImpl {
 
   __device__ void Lock(const ThreadContext& thread_ctx) {
     if (thread_ctx.lane_id == 0) { semaphore_.acquire(); }
-    __syncwarp();
+    SYNCWARP();
   }
 
   __device__ void Unlock(const ThreadContext& thread_ctx) {
-    __syncwarp();
+    SYNCWARP();
     if (thread_ctx.lane_id == 0) { semaphore_.release(); }
   }
 
@@ -129,8 +133,8 @@ __global__ void InitCacheSetMutex(uint32_t n_set, void* mutex) {
 
 template<typename Key, typename Elem>
 void ClearLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
-  OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, ctx->n_set * kWarpSize * sizeof(Key)));
-  OF_CUDA_CHECK(cudaMemset(ctx->ages, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
+  OF_CUDA_CHECK(GPU(Memset)(ctx->keys, 0, ctx->n_set * kWarpSize * sizeof(Key)));
+  OF_CUDA_CHECK(GPU(Memset)(ctx->ages, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
   InitCacheSetMutex<<<(ctx->n_set - 1 + 256) / 256, 256>>>(ctx->n_set, ctx->mutex);
 }
 
@@ -141,9 +145,11 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   const size_t lines_size_per_set = kWarpSize * line_size * sizeof(Elem);
   const size_t ages_size_per_set = kWarpSize * sizeof(uint8_t);
   int device = 0;
-  OF_CUDA_CHECK(cudaGetDevice(&device));
+  OF_CUDA_CHECK(GPU(GetDevice)(&device));
   int major = 0;
+#ifdef WITH_CUDA
   OF_CUDA_CHECK(cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device));
+#endif
   size_t mutex_size_per_set = 0;
 #if CUDA_VERSION >= 11000
   if (major >= 7) {
@@ -163,13 +169,17 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   ctx->n_set = n_set;
   ctx->line_size = line_size;
   const size_t keys_size = n_set * keys_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
+  OF_CUDA_CHECK(GPU(Malloc)(&(ctx->keys), keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
   if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
-    OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
+    OF_CUDA_CHECK(GPU(Malloc)(&(ctx->lines), lines_size));
   } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
     if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
+#ifdef WITH_ROCM
+      OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&(ctx->lines)), lines_size));
+#else
       OF_CUDA_CHECK(cudaMallocHost(&(ctx->lines), lines_size));
+#endif
     } else {
       OF_CUDA_CHECK(
           NumaAwareCudaMallocHost(device, reinterpret_cast<void**>(&ctx->lines), lines_size));
@@ -179,25 +189,25 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   }
   ctx->value_memory_kind = options.value_memory_kind;
   const size_t ages_size = n_set * ages_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->ages), ages_size));
+  OF_CUDA_CHECK(GPU(Malloc)(&(ctx->ages), ages_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
+  OF_CUDA_CHECK(GPU(Malloc)(&(ctx->mutex), mutex_size));
 
   ClearLruCacheContext(ctx);
 }
 
 template<typename Key, typename Elem>
 void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
-  OF_CUDA_CHECK(cudaFree(ctx->keys));
+  OF_CUDA_CHECK(GPU(Free)(ctx->keys));
   if (ctx->value_memory_kind == CacheOptions::MemoryKind::kDevice) {
-    OF_CUDA_CHECK(cudaFree(ctx->lines));
+    OF_CUDA_CHECK(GPU(Free)(ctx->lines));
   } else if (ctx->value_memory_kind == CacheOptions::MemoryKind::kHost) {
-    OF_CUDA_CHECK(cudaFreeHost(ctx->lines));
+    OF_CUDA_CHECK(GPU(FreeHost)(ctx->lines));
   } else {
     UNIMPLEMENTED();
   }
-  OF_CUDA_CHECK(cudaFree(ctx->ages));
-  OF_CUDA_CHECK(cudaFree(ctx->mutex));
+  OF_CUDA_CHECK(GPU(Free)(ctx->ages));
+  OF_CUDA_CHECK(GPU(Free)(ctx->mutex));
 }
 
 template<typename Key, typename Elem>
@@ -241,13 +251,17 @@ struct SetContext {
     const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key && lane_age != 0);
     if (hit_mask != 0) {
       insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
+#ifdef WITH_ROCM
+      const int insert_way_age = __shfl(lane_age, insert_way);
+#else
       const int insert_way_age = __shfl_sync(kFullMask, lane_age, insert_way);
+#endif
       if (lane_age > insert_way_age) {
         lane_age -= 1;
       } else if (thread_ctx.lane_id == insert_way) {
         lane_age = kWarpSize;
       }
-      __syncwarp();
+      SYNCWARP();
     }
     if (insert_way == -1) {
       const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
@@ -259,7 +273,7 @@ struct SetContext {
           lane_age = kWarpSize;
           keys[insert_way] = key;
         }
-        __syncwarp();
+        SYNCWARP();
       }
     }
     if (insert_way != -1) { ages[thread_ctx.lane_id] = lane_age; }
@@ -271,14 +285,18 @@ struct SetContext {
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
     const int insert_way = __ffs(__ballot_sync(kFullMask, lane_age == 1)) - 1;
+#ifdef WITH_ROCM
+    *evicted_key = __shfl(lane_key, insert_way);
+#else
     *evicted_key = __shfl_sync(kFullMask, lane_key, insert_way);
+#endif
     if (thread_ctx.lane_id == insert_way) {
       keys[insert_way] = key;
       lane_age = kWarpSize;
     } else if (lane_age > 1) {
       lane_age -= 1;
     }
-    __syncwarp();
+    SYNCWARP();
     ages[thread_ctx.lane_id] = lane_age;
     *way = insert_way;
   }
@@ -318,7 +336,7 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    __syncwarp();
+    SYNCWARP();
     uint32_t n_warp_missing = 0;
     Key warp_missing_key = 0;
     uint32_t warp_missing_index = 0;
@@ -333,7 +351,7 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
           warp_missing_key = key;
           warp_missing_index = key_idx;
         }
-        __syncwarp();
+        SYNCWARP();
         n_warp_missing += 1;
       } else if (!test_only) {
         set_ctx.Read(cache_ctx, thread_ctx, way, values + key_idx * cache_ctx.line_size);
@@ -342,15 +360,19 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
     if (n_warp_missing > 0) {
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing_keys, n_warp_missing); }
-      __syncwarp();
+      SYNCWARP();
+#ifdef WITH_ROCM
+      base_missing_idx = __shfl(base_missing_idx, 0);
+#else
       base_missing_idx = __shfl_sync(kFullMask, base_missing_idx, 0);
+#endif
       if (thread_ctx.lane_id < n_warp_missing) {
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
       }
-      __syncwarp();
+      SYNCWARP();
     }
-    __syncwarp();
+    SYNCWARP();
   }
 }
 
@@ -371,7 +393,7 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    __syncwarp();
+    SYNCWARP();
     uint32_t n_warp_missing = 0;
     Key warp_missing_key = 0;
     uint32_t warp_missing_index = 0;
@@ -390,7 +412,7 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
           warp_missing_key = key;
           warp_missing_index = key_idx;
         }
-        __syncwarp();
+        SYNCWARP();
         n_warp_missing += 1;
       }
       set_ctx.Unlock(thread_ctx);
@@ -398,13 +420,17 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
     if (n_warp_missing > 0) {
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing, n_warp_missing); }
-      __syncwarp();
+      SYNCWARP();
+#ifdef WITH_ROCM
+      base_missing_idx = __shfl(base_missing_idx, 0);
+#else
       base_missing_idx = __shfl_sync(kFullMask, base_missing_idx, 0);
+#endif 
       if (thread_ctx.lane_id < n_warp_missing) {
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
       }
-      __syncwarp();
+      SYNCWARP();
     }
   }
 }
@@ -427,7 +453,7 @@ __global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* key
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    __syncwarp();
+    SYNCWARP();
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
@@ -438,7 +464,7 @@ __global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* key
       Key evicted_key = 0;
       set_ctx.Evict(cache_ctx, thread_ctx, key, &evicted_way, &evicted_key);
       if (thread_ctx.lane_id == 0) { evicted_keys[key_idx] = evicted_key; }
-      __syncwarp();
+      SYNCWARP();
       set_ctx.Read(cache_ctx, thread_ctx, evicted_way,
                    evicted_values + cache_ctx.line_size * key_idx);
       set_ctx.Write(cache_ctx, thread_ctx, evicted_way,
@@ -463,27 +489,31 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
       lane_key = cache_ctx.keys[warp_start_key_index + thread_ctx.lane_id];
       lane_age = cache_ctx.ages[warp_start_key_index + thread_ctx.lane_id];
     }
-    __syncwarp();
+    SYNCWARP();
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
     warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
     const int key_count = __popc(__ballot_sync(kFullMask, lane_age != 0));
     if (key_count == 0) { continue; }
     uint32_t offset = 0;
     if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }
+#ifdef WITH_ROCM
+    offset = __shfl(offset, 0);
+#else
     offset = __shfl_sync(kFullMask, offset, 0);
-    __syncwarp();
+#endif
+    SYNCWARP();
     for (uint32_t i = 0; i < kWarpSize; ++i) {
       const Key key = warp_keys[thread_ctx.warp_id_in_block][i];
       const Key age = warp_ages[thread_ctx.warp_id_in_block][i];
       if (age == 0) { continue; }
       if (thread_ctx.lane_id == 0) { keys[offset] = key; }
-      __syncwarp();
+      SYNCWARP();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
         values[offset * cache_ctx.line_size + j] =
             cache_ctx
                 .lines[static_cast<size_t>(warp_start_key_index + i) * cache_ctx.line_size + j];
       }
-      __syncwarp();
+      SYNCWARP();
       offset += 1;
     }
   }
@@ -499,14 +529,14 @@ class LruCache : public Cache {
         query_indices_buffer_(nullptr),
         query_keys_buffer_(nullptr),
         value_type_(options.value_type) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
   ~LruCache() override {
     CudaCurrentDeviceGuard guard(device_index_);
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFree(query_indices_buffer_));
-      OF_CUDA_CHECK(cudaFree(query_keys_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(query_indices_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(query_keys_buffer_));
     }
     DestroyLruCacheContext(&ctx_);
   }
@@ -521,11 +551,11 @@ class LruCache : public Cache {
     CudaCurrentDeviceGuard guard(device_index_);
     if (query_length < max_query_length_) { return; }
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFree(query_indices_buffer_));
-      OF_CUDA_CHECK(cudaFree(query_keys_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(query_indices_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(query_keys_buffer_));
     }
-    OF_CUDA_CHECK(cudaMalloc(&query_indices_buffer_, query_length * sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&query_keys_buffer_, query_length * sizeof(Key)));
+    OF_CUDA_CHECK(GPU(Malloc)(&query_indices_buffer_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(GPU(Malloc)(&query_keys_buffer_, query_length * sizeof(Key)));
     max_query_length_ = query_length;
   }
 
@@ -535,7 +565,7 @@ class LruCache : public Cache {
             void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
-    OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(GetKernel<Key, Elem, true>, GetLaunchConfig(n_keys), ctx_, n_keys,
                               static_cast<const Key*>(keys), nullptr, n_missing,
@@ -547,7 +577,7 @@ class LruCache : public Cache {
            void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
-    OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(GetKernel<Key, Elem, false>, GetLaunchConfig(n_keys), ctx_, n_keys,
                               static_cast<const Key*>(keys), static_cast<Elem*>(values), n_missing,
@@ -558,7 +588,7 @@ class LruCache : public Cache {
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override {
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
-    OF_CUDA_CHECK(cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(PutWithoutEvictingKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,
                               n_keys, static_cast<const Key*>(keys),
@@ -573,7 +603,7 @@ class LruCache : public Cache {
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override {
     auto cuda_stream = stream->As<ep::CudaStream>();
-    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_dumped, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     const uint64_t max_dump_keys = end_key_index - start_key_index;
     cuda_stream->LaunchKernel(
         DumpKernel<Key, Elem>,

@@ -62,6 +62,13 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #endif  // defined(WITH_CUDA)
 
+#if defined(WITH_ROCM)
+#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+// #if CUDA_VERSION >= 11000
+// #define NV_BFLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
+// #endif  // CUDA_VERSION >= 11000
+#endif
+
 #define IMAGE_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)

@@ -83,7 +83,7 @@ Maybe<Generator> MakeAutoGenerator();
 Maybe<Generator> DefaultCPUGenerator();
 Maybe<Generator> MakeCPUGenerator();
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
 Maybe<Generator> MakeCUDAGenerator();
 #endif  // WITH_CUDA

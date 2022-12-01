@@ -705,6 +705,26 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
+#ifdef WITH_ROCM_GRAPHS
+  bool current_scope_capturing = false;
+  if (cuda_graph_exec_) {
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    if (!cuda_stream->IsGraphCapturing()) {
+      if (cuda_graph_exec_->IsInstantiated() && (!updated)) {
+        cuda_stream->LaunchGraph(cuda_graph_exec_.get());
+        return;
+      }
+      const auto* cuda_graph_support =
+          CHECK_NOTNULL(dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get()));
+      if (cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state,
+                                                opkernel_cache_.get())) {
+        current_scope_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
+    }
+  }
+#endif  // WITH_ROCM_GRAPHS
+
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS
@@ -714,10 +734,18 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
     cuda_stream->LaunchGraph(cuda_graph_exec_.get());
   }
 #endif  // WITH_CUDA_GRAPHS
+#ifdef WITH_ROCM_GRAPHS
+  if (cuda_graph_exec_ && current_scope_capturing) {
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    cuda_stream->EndGraphCapture(cuda_graph_exec_.get());
+    cuda_stream->LaunchGraph(cuda_graph_exec_.get());
+  }
+#endif  // WITH_ROCM_GRAPHS
+
 }
 
 bool UserKernel::IsCudaGraphSupported() const {
-#ifdef WITH_CUDA_GRAPHS
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
   return cuda_graph_exec_.get() != nullptr;
 #else
   return false;
@@ -755,6 +783,25 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
     }
   }
 #endif  // WITH_CUDA_GRAPHS
+#ifdef WITH_ROCM_GRAPHS
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+    UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx->stream());
+    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+    if (cuda_stream != nullptr) {
+      if (cuda_graph_support != nullptr
+          && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
+        cuda_graph_exec_.reset(new ep::CudaGraphExecutable());
+        VLOG(3) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
+                << op_conf().user_conf().op_type_name() << ")";
+      } else {
+        VLOG(3) << "CUDA Graphs not supported: " << op_conf().name() << " ("
+                << op_conf().user_conf().op_type_name() << ")";
+      }
+    }
+  }
+#endif  // WITH_ROCM_GRAPHS
+
 }
 
 void UserKernel::ForwardDataContent(KernelContext* ctx) const {

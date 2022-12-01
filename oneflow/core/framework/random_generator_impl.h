@@ -31,6 +31,10 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#endif  // WITH_ROCM
 
 namespace oneflow {
 namespace one {
@@ -250,6 +254,49 @@ void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, cura
 
 }  // namespace detail
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+struct CUDAGeneratorState {
+  uint64_t dev_offset;
+  int32_t dev_counter;
+};
+
+class CUDAGeneratorImpl : public DeviceGeneratorImpl {
+ public:
+  explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
+  virtual ~CUDAGeneratorImpl();
+
+  int32_t max_block_num() const { return max_block_num_; }
+  int32_t max_thread_num() const { return max_thread_num_; }
+
+  hiprandState* curand_states() const { return curand_states_; }
+  CUDAGeneratorState* cuda_gen_state() const { return cuda_gen_state_; }
+
+  void set_current_seed(uint64_t seed) override;
+
+  Maybe<Symbol<Device>> device() const override { return Device::New("cuda", device_index()); }
+
+  Maybe<Tensor> GetState() const override;
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
+
+  uint64_t get_philox_offset(uint64_t increment);
+
+ private:
+  int32_t max_block_num_;
+  int32_t max_thread_num_;
+  hiprandState* curand_states_;
+  CUDAGeneratorState* cuda_gen_state_;
+  uint64_t philox_offset_per_thread_ = 0;
+
+};
+
+namespace detail {
+
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, hiprandState* states,
+                      CUDAGeneratorState* cuda_gen_state);
+
+}  // namespace detail
+#endif  // WITH_ROCM
 
 class AutoGeneratorImpl : public GeneratorImpl {
  public:

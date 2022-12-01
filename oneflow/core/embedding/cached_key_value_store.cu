@@ -45,22 +45,26 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   OF_DISALLOW_COPY_AND_MOVE(CacheKeyValueStoreImpl);
   CacheKeyValueStoreImpl(std::unique_ptr<KeyValueStore>&& store, std::unique_ptr<Cache>&& cache)
       : store_(std::move(store)), cache_(std::move(cache)), synced_(true), max_query_length_(0) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     CHECK_EQ(store_->KeySize(), cache_->KeySize());
     CHECK_EQ(store_->ValueSize(), cache_->ValueSize());
-    OF_CUDA_CHECK(cudaMalloc(&num_buffer_, sizeof(uint32_t)));
+    OF_CUDA_CHECK(GPU(Malloc)(&num_buffer_, sizeof(uint32_t)));
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_buffer_), sizeof(uint32_t)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_buffer_, sizeof(uint32_t)));
+#endif
     num_elems_per_value_ = store_->ValueSize() / sizeof(Elem);
   }
   ~CacheKeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFree(num_buffer_));
-    OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
+    OF_CUDA_CHECK(GPU(Free)(num_buffer_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_buffer_));
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFree(keys_buffer_));
-      OF_CUDA_CHECK(cudaFree(values_buffer_));
-      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
-      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+      OF_CUDA_CHECK(GPU(Free)(keys_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(values_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(indices_buffer0_));
+      OF_CUDA_CHECK(GPU(Free)(indices_buffer1_));
     }
     cache_.reset();
     store_.reset();
@@ -76,15 +80,15 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     if (query_length > cache_->MaxQueryLength()) { cache_->ReserveQueryLength(query_length); }
     if (query_length > store_->MaxQueryLength()) { store_->ReserveQueryLength(query_length); }
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFree(keys_buffer_));
-      OF_CUDA_CHECK(cudaFree(values_buffer_));
-      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
-      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+      OF_CUDA_CHECK(GPU(Free)(keys_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(values_buffer_));
+      OF_CUDA_CHECK(GPU(Free)(indices_buffer0_));
+      OF_CUDA_CHECK(GPU(Free)(indices_buffer1_));
     }
-    OF_CUDA_CHECK(cudaMalloc(&keys_buffer_, query_length * store_->KeySize()));
-    OF_CUDA_CHECK(cudaMalloc(&values_buffer_, query_length * store_->ValueSize()));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer0_, query_length * sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer1_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(GPU(Malloc)(&keys_buffer_, query_length * store_->KeySize()));
+    OF_CUDA_CHECK(GPU(Malloc)(&values_buffer_, query_length * store_->ValueSize()));
+    OF_CUDA_CHECK(GPU(Malloc)(&indices_buffer0_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(GPU(Malloc)(&indices_buffer1_, query_length * sizeof(uint32_t)));
     max_query_length_ = query_length;
   }
 
@@ -136,17 +140,17 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
   } else {
     cache_->Get(stream, num_keys, keys, values, num_buffer_, keys_buffer_, indices_buffer0_);
   }
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_buffer_, num_buffer_, sizeof(uint32_t), GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   const uint32_t num_cache_missing = *host_num_buffer_;
   if (num_cache_missing == 0) {
-    OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t),
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     return;
   }
   store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, indices_buffer1_);
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, n_missing, sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_buffer_, n_missing, sizeof(uint32_t), GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   const uint32_t num_store_missing = *host_num_buffer_;
@@ -174,11 +178,11 @@ void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_key
   synced_ = false;
   auto cuda_stream = stream->As<ep::CudaStream>();
   if (cache_->Policy() != CacheOptions::Policy::kFull) {
-    OF_CUDA_CHECK(cudaMemsetAsync(num_buffer_, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(num_buffer_, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
   }
   cache_->Put(stream, num_keys, keys, values, num_buffer_, keys_buffer_, values_buffer_);
   if (cache_->Policy() == CacheOptions::Policy::kFull) { return; }
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_buffer_, num_buffer_, sizeof(uint32_t), GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);
@@ -191,7 +195,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::FusedHalfUpdatePut(ep::Stream* stream, u
                                                            float scale) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (cache_->Policy() != CacheOptions::Policy::kFull) {
-    OF_CUDA_CHECK(cudaMemsetAsync(num_buffer_, 0, sizeof(uint32_t),
+    OF_CUDA_CHECK(GPU(MemsetAsync)(num_buffer_, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
   }
   if (cache_->Policy() != CacheOptions::Policy::kFull || cache_->ValueType() != DataType::kFloat) {
@@ -228,9 +232,9 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
       auto* cuda_stream = stream->As<ep::CudaStream>();
       while (true) {
         iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
-        OF_CUDA_CHECK(cudaDeviceSynchronize());
-        OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                      cudaMemcpyDefault, cuda_stream->cuda_stream()));
+        OF_CUDA_CHECK(GPU(DeviceSynchronize)());
+        OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                      GPU(MemcpyDefault), cuda_stream->cuda_stream()));
         CHECK_JUST(stream->Sync());
         if (*host_num_buffer_ == 0) { return; }
         cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
@@ -270,8 +274,8 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
     cache_->Dump(stream, start_key_index,
                  std::min(start_key_index + max_query_length_, dump_capacity), num_buffer_,
                  keys_buffer_, values_buffer_);
-    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                  cudaMemcpyDefault, cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                  GPU(MemcpyDefault), cuda_stream->cuda_stream()));
     CHECK_JUST(stream->Sync());
     if (*host_num_buffer_ == 0) { continue; }
     store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);

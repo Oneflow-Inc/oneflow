@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <mutex>
 #include "oneflow/core/control/global_process_ctx.h"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/device/cuda_util.h"
 #endif  // WITH_CUDA
 
@@ -35,7 +35,7 @@ Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_inde
   if (device == "cpu") {
     JUST(DefaultCPUGenerator())->set_current_seed(seed);
   }
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   else if (device == "cuda") {
     JUST(DefaultCUDAGenerator(device_index))->set_current_seed(seed);
   }
@@ -89,7 +89,7 @@ Maybe<Generator> DefaultCPUGenerator() {
   return default_cpu_generator;
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 Maybe<Generator> DefaultCUDAGenerator(int device_index) {
   static int device_count = GetCudaDeviceCount();
   static std::vector<std::once_flag> init_flags(device_count);
@@ -114,7 +114,7 @@ Maybe<Generator> MakeCPUGenerator() {
   return std::make_shared<Generator>(std::make_shared<CPUGeneratorImpl>(default_rng_seed_val));
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
   if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
@@ -125,7 +125,7 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
 #endif  // WITH_CUDA
 
 Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   static int device_count = GetCudaDeviceCount();
   FOR_RANGE(int, device_id, 0, device_count) {
     const auto& cuda_gen = JUST(DefaultCUDAGenerator(device_id));
@@ -139,7 +139,7 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
     return MakeCPUGenerator();
   }
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   else if (device == "cuda") {
     return MakeCUDAGenerator(device_index);
   }
@@ -157,7 +157,7 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
     return DefaultCPUGenerator();
   }
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   else if (device == "cuda") {
     return DefaultCUDAGenerator(device_index);
   }

@@ -33,7 +33,7 @@ namespace oneflow {
 
 inline std::string PrintAvailableDevices() {
   std::string str("cpu");
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   str += ", cuda";
 #endif
   return str;
@@ -41,14 +41,14 @@ inline std::string PrintAvailableDevices() {
 
 inline std::string PrintGeneratorAvailableDevices() {
   std::string str("cpu");
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   str += ", cuda";
 #endif
   str += ", auto";  // "auto" is a fake device type for random generator.
   return str;
 }
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)

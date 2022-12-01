@@ -76,13 +76,19 @@ void StreamWaitInstructionPolicy::Compute(vm::Instruction* instruction) {
     CHECK_EQ(ep_event->mut_device(), to_ep_stream->device())
         << "only support waiting events from same device";
     ep_event->mut_device()->SetAsActiveDevice();
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA)
 
     auto* ep_cuda_event = CHECK_NOTNULL(dynamic_cast<ep::CudaEvent*>(ep_event->mut_event()));
     auto* ep_cuda_stream = CHECK_NOTNULL(dynamic_cast<ep::CudaStream*>(to_ep_stream));
 
     OF_CUDA_CHECK(
         cudaStreamWaitEvent(ep_cuda_stream->cuda_stream(), ep_cuda_event->cuda_event(), 0));
+#elif defined(WITH_ROCM)
+    auto* ep_cuda_event = CHECK_NOTNULL(dynamic_cast<ep::CudaEvent*>(ep_event->mut_event()));
+    auto* ep_cuda_stream = CHECK_NOTNULL(dynamic_cast<ep::CudaStream*>(to_ep_stream));
+
+    OF_CUDA_CHECK(
+        hipStreamWaitEvent(ep_cuda_stream->cuda_stream(), ep_cuda_event->cuda_event(), 0));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA

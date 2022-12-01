@@ -172,7 +172,7 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
-#elif defined(__CUDACC__)
+#elif defined(__CUDACC__) || defined(__HIPCC__)
 #define ALWAYS_INLINE __forceinline__
 #else
 #define ALWAYS_INLINE inline

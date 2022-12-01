@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
@@ -68,7 +68,7 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelInitAndCacheContext> cache_ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
-#ifdef WITH_CUDA_GRAPHS
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
   std::unique_ptr<ep::CudaGraphExecutable> cuda_graph_exec_;
 #endif  // WITH_CUDA_GRAPHS
 };

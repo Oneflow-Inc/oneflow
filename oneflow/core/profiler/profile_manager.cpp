@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/profile_manager.h"
 #include "oneflow/core/profiler/event.h"
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include <libkineto.h>
 #endif  // WITH_CUDA
 
@@ -48,7 +48,7 @@ std::string ProfileManager::DumpResultsJson() {
 }
 
 std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   auto trace = StopTrace();
   const auto& kineto_events = *(trace.get()->activities());
   std::set<std::shared_ptr<IEvent>> custom_events;
@@ -77,7 +77,7 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
   while (!events_.empty()) {
     auto evt = events_.front();
     events_.pop();
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     auto evt_kernel = std::dynamic_pointer_cast<KernelEvent>(evt);
     if (evt_kernel) {
       std::set<int64_t> current_corr_ids;

@@ -16,6 +16,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#endif  // WITH_ROCM
 #include <thread>
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -180,7 +183,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<ep::DeviceManagerRegistry>::New();
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
   Singleton<CudnnHandlePool>::New();
@@ -228,7 +231,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<EpollCommNet>::Delete();
 #endif  // __linux__
   Singleton<vm::VirtualMachineScope>::Delete();
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();

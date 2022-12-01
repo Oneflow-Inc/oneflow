@@ -30,8 +30,10 @@ template<>
 __device__ bool IsNotFinite<half>(half x) {
 #if __CUDA_ARCH__ >= 530
   return (__hisinf(x) || __hisnan(x));
+#elif defined(__HIP_DEVICE_COMPILE__)
+  return (__hisinf(x) || __hisnan(x));
 #else
-  __trap();
+  TRAP();
   return true;
 #endif
 }
@@ -50,14 +52,14 @@ __global__ void HasNotFiniteGpuKernel(const int64_t n, const T* x, volatile bool
 template<typename T>
 bool HasNotFinite(ep::Stream* stream, const int64_t elem_cnt, const T* data_ptr,
                   bool* has_not_finite_host, bool* has_not_finite_device) {
-  OF_CUDA_CHECK(cudaMemsetAsync(has_not_finite_device, 0, sizeof(bool),
+  OF_CUDA_CHECK(GPU(MemsetAsync)(has_not_finite_device, 0, sizeof(bool),
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   HasNotFiniteGpuKernel<T>
       <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
          stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, data_ptr, has_not_finite_device);
-  OF_CUDA_CHECK(cudaMemcpyAsync(has_not_finite_host, has_not_finite_device, sizeof(bool),
-                                cudaMemcpyDefault, stream->As<ep::CudaStream>()->cuda_stream()));
-  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(has_not_finite_host, has_not_finite_device, sizeof(bool),
+                                GPU(MemcpyDefault), stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(GPU(StreamSynchronize)(stream->As<ep::CudaStream>()->cuda_stream()));
   return *has_not_finite_host;
 }
 
@@ -91,8 +93,8 @@ void DumpBlob(KernelContext* ctx, const std::string& bn) {
   if (blob != nullptr) {
     std::vector<char> buffer(blob->ByteSizeOfBlobBody());
     OF_CUDA_CHECK(
-        cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
+        GPU(Memcpy)(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), GPU(MemcpyDefault)));
+    OF_CUDA_CHECK(GPU(DeviceSynchronize)());
     std::ofstream ofs(bn);
     ofs.write(buffer.data(), blob->ByteSizeOfBlobBody());
   }
@@ -107,15 +109,15 @@ void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
 
 CudaCheckNumericsKernelObserver::CudaCheckNumericsKernelObserver()
     : has_not_finite_host_(nullptr), has_not_finite_device_(nullptr) {
-  OF_CUDA_CHECK(cudaGetDevice(&device_id_));
-  OF_CUDA_CHECK(cudaMallocHost(&has_not_finite_host_, sizeof(bool)));
-  OF_CUDA_CHECK(cudaMalloc(&has_not_finite_device_, sizeof(bool)));
+  OF_CUDA_CHECK(GPU(GetDevice)(&device_id_));
+  OF_CUDA_CHECK(GPU(MallocHost)(&has_not_finite_host_, sizeof(bool)));
+  OF_CUDA_CHECK(GPU(Malloc)(&has_not_finite_device_, sizeof(bool)));
 }
 
 CudaCheckNumericsKernelObserver::~CudaCheckNumericsKernelObserver() {
   CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaFreeHost(has_not_finite_host_));
-  OF_CUDA_CHECK(cudaFree(has_not_finite_device_));
+  OF_CUDA_CHECK(GPU(FreeHost)(has_not_finite_host_));
+  OF_CUDA_CHECK(GPU(Free)(has_not_finite_device_));
 }
 
 void CudaCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,

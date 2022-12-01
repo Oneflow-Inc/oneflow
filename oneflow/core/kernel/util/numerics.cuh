@@ -225,6 +225,13 @@ struct numerics<half> {
 };
 #endif
 
+#if defined(__HIPCC__)
+template<>
+struct numerics<half> {
+  OF_NUMERICS_FUNC bool isnan(half a) { return ::isnan(__half2float(a)); }
+};
+#endif
+
 template<>
 struct numerics<double> {
   OF_NUMERICS_FUNC double min() { return detail::numeric_limits<double>::lowest(); }

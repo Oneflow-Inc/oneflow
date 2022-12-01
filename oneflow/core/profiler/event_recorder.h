@@ -45,7 +45,7 @@ class EventRecorder {
 
   static Maybe<EventRecorder> CreateKernelEventRecorder(
       const std::string& name,
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
       const std::function<int64_t()>& memory_size_getter,
 #endif
       const ShapeGetterFuncType& shape_getter);

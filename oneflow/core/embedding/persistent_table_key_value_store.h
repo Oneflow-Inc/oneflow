@@ -23,7 +23,7 @@ namespace oneflow {
 
 namespace embedding {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 struct PersistentTableKeyValueStoreOptions {
   PersistentTableOptions table_options{};

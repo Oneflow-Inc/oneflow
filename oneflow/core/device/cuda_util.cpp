@@ -32,6 +32,12 @@ limitations under the License.
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+#include <hip/hip_runtime.h>
+
+#endif  // WITH_ROCM
+
 namespace oneflow {
 
 #ifdef WITH_CUDA
@@ -271,5 +277,163 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
 }
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+const char* CublasGetErrorString(hipblasStatus_t error) {
+  switch (error) {
+    case HIPBLAS_STATUS_SUCCESS: return "HIPBLAS_STATUS_SUCCESS";
+    case HIPBLAS_STATUS_NOT_INITIALIZED: return "HIPBLAS_STATUS_NOT_INITIALIZED";
+    case HIPBLAS_STATUS_ALLOC_FAILED: return "HIPBLAS_STATUS_ALLOC_FAILED";
+    case HIPBLAS_STATUS_INVALID_VALUE: return "HIPBLAS_STATUS_INVALID_VALUE";
+    case HIPBLAS_STATUS_ARCH_MISMATCH: return "HIPBLAS_STATUS_ARCH_MISMATCH";
+    case HIPBLAS_STATUS_MAPPING_ERROR: return "HIPBLAS_STATUS_MAPPING_ERROR";
+    case HIPBLAS_STATUS_EXECUTION_FAILED: return "HIPBLAS_STATUS_EXECUTION_FAILED";
+    case HIPBLAS_STATUS_INTERNAL_ERROR: return "HIPBLAS_STATUS_INTERNAL_ERROR";
+    case HIPBLAS_STATUS_NOT_SUPPORTED: return "HIPBLAS_STATUS_NOT_SUPPORTED";
+    default: return "Unknown cublas status";
+  }
+}
+
+const char* CurandGetErrorString(hiprandStatus_t error) {
+  switch (error) {
+    case HIPRAND_STATUS_SUCCESS: return "HIPRAND_STATUS_SUCCESS";
+    case HIPRAND_STATUS_VERSION_MISMATCH: return "HIPRAND_STATUS_VERSION_MISMATCH";
+    case HIPRAND_STATUS_NOT_INITIALIZED: return "HIPRAND_STATUS_NOT_INITIALIZED";
+    case HIPRAND_STATUS_ALLOCATION_FAILED: return "HIPRAND_STATUS_ALLOCATION_FAILED";
+    case HIPRAND_STATUS_TYPE_ERROR: return "HIPRAND_STATUS_TYPE_ERROR";
+    case HIPRAND_STATUS_OUT_OF_RANGE: return "HIPRAND_STATUS_OUT_OF_RANGE";
+    case HIPRAND_STATUS_LENGTH_NOT_MULTIPLE: return "HIPRAND_STATUS_LENGTH_NOT_MULTIPLE";
+    case HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED: return "HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED";
+    case HIPRAND_STATUS_LAUNCH_FAILURE: return "HIPRAND_STATUS_LAUNCH_FAILURE";
+    case HIPRAND_STATUS_PREEXISTING_FAILURE: return "HIPRAND_STATUS_PREEXISTING_FAILURE";
+    case HIPRAND_STATUS_INITIALIZATION_FAILED: return "HIPRAND_STATUS_INITIALIZATION_FAILED";
+    case HIPRAND_STATUS_ARCH_MISMATCH: return "HIPRAND_STATUS_ARCH_MISMATCH";
+    case HIPRAND_STATUS_INTERNAL_ERROR: return "HIPRAND_STATUS_INTERNAL_ERROR";
+    default: return "Unknown hiprand status";
+  }
+}
+
+size_t GetAvailableGpuMemSize(int dev_id) {
+  hipDeviceProp_t prop{};
+  hipGetDeviceProperties(&prop, dev_id);
+  return prop.totalGlobalMem;
+}
+
+namespace {
+
+std::function<hipError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
+  auto default_fn = [](void** ptr, size_t size) { return hipMallocHost(ptr, size); };
+  auto manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
+  if (manager == nullptr) { return default_fn; }
+  auto node_desc = manager->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
+      node_desc->GetDevice(hardware::kCudaDeviceDescriptorClassName, dev));
+  if (!cuda_device) { return default_fn; }
+  auto saved_affinity = node_desc->Topology()->GetMemoryAffinity();
+  if (!saved_affinity) { return default_fn; }
+  auto device_affinity =
+      node_desc->Topology()->GetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
+  if (!device_affinity) { return default_fn; }
+  return [device_affinity, saved_affinity, node_desc, default_fn](void** ptr, size_t size) {
+    node_desc->Topology()->SetMemoryAffinity(device_affinity);
+    hipError_t err = default_fn(ptr, size);
+    node_desc->Topology()->SetMemoryAffinity(saved_affinity);
+    return err;
+  };
+}
+
+}  // namespace
+
+hipError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+  auto fn = GetCudaMallocHostFn(dev);
+  return fn(ptr, size);
+}
+
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+  OF_CUDA_CHECK(hipGetDevice(&saved_dev_id_));
+  OF_CUDA_CHECK(hipSetDevice(dev_id));
+}
+
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(hipGetDevice(&saved_dev_id_)); }
+
+CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(hipSetDevice(saved_dev_id_)); }
+
+void CudaSynchronize(int device_id) {
+  CudaCurrentDeviceGuard dev_guard(device_id);
+  OF_CUDA_CHECK(hipDeviceSynchronize());
+}
+
+void SetCudaDeviceIndex(int device_id) { OF_CUDA_CHECK(hipSetDevice(device_id)); }
+
+int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
+
+int GetCudaDeviceCount() {
+  /* static */ int cuda_device_count = 0;
+  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
+  OF_CUDA_CHECK(hipGetDeviceCount(&cuda_device_count));
+  return cuda_device_count;
+}
+
+// NOTE(lixiang): Get the memory of the current device.
+Maybe<double> GetCUDAMemoryUsed() {
+  JUST(vm::CurrentRankSync());
+
+  int deviceCount = 0;
+  hipError_t error_id = hipGetDeviceCount(&deviceCount);
+  if (error_id != hipSuccess) {
+    return Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :"
+                                 << hipGetErrorString(error_id);
+  }
+
+  CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
+
+  size_t gpu_total_size;
+  size_t gpu_free_size;
+
+  hipError_t cuda_status = hipMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+  CHECK_OR_RETURN(hipSuccess == cuda_status)
+      << "Error: GetCUDAMemoryUsed fails :" << hipGetErrorString(cuda_status);
+
+  double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+  double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+  return (total_memory - free_memory);
+}
+
+static std::once_flag prop_init_flag;
+static std::vector<hipDeviceProp> device_props;
+
+void InitDevicePropVectorSize() {
+  int device_count = GetCudaDeviceCount();
+  device_props.resize(device_count);
+}
+
+void InitDeviceProperties(int device_id) {
+  std::call_once(prop_init_flag, InitDevicePropVectorSize);
+  hipDeviceProp prop{};
+  OF_CUDA_CHECK(hipGetDeviceProperties(&prop, device_id));
+  device_props[device_id] = prop;
+}
+
+hipDeviceProp* GetDeviceProperties(int device_id) {
+  InitCudaContextOnce(device_id);
+  return &device_props[device_id];
+}
+
+void InitCudaContextOnce(int device_id) {
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
+  if (LazyMode::is_enabled()) { return; }
+  if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
+  std::call_once(init_flags[device_id], [&]() {
+    OF_CUDA_CHECK(hipSetDevice(device_id));
+    OF_CUDA_CHECK(hipDeviceSynchronize());
+    InitDeviceProperties(device_id);
+  });
+}
+
+#endif  // WITH_ROCM
 
 }  // namespace oneflow

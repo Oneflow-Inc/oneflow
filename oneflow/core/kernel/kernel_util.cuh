@@ -31,7 +31,7 @@ OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
   return x;
 }
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 __device__ __forceinline__ half MaxWithLogThreshold(half x) {
   half threshold = hexp2(__float2half(-14.0));
   if (__hgt(x, threshold)) { return x; }
@@ -44,7 +44,7 @@ OF_DEVICE_FUNC T SafeLog(T x) {
   return logf(MaxWithLogThreshold(x));
 }
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 __device__ __forceinline__ half SafeLog(half x) { return hlog(MaxWithLogThreshold(x)); }
 #endif
 

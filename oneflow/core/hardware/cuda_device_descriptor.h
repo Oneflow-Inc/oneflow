@@ -21,7 +21,7 @@ limitations under the License.
 #include <string>
 #include <memory>
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 namespace oneflow {
 

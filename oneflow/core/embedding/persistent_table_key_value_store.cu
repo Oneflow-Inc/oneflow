@@ -49,14 +49,14 @@ class IteratorImpl : public KVIterator {
     auto cuda_stream = stream->As<ep::CudaStream>();
     CHECK_JUST(cuda_stream->Sync());
     base_iter_->Next(n_request, host_num_buffer_, host_keys_buffer_, host_values_buffer_);
-    OF_CUDA_CHECK(cudaMemcpyAsync(n_result, host_num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(n_result, host_num_buffer_, sizeof(uint32_t), GPU(MemcpyDefault),
                                   cuda_stream->cuda_stream()));
     const uint32_t num_keys = *host_num_buffer_;
     if (num_keys != 0) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, num_keys * key_size_,
-                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
-      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_, num_keys * value_size_,
-                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+      OF_CUDA_CHECK(GPU(MemcpyAsync)(keys, host_keys_buffer_, num_keys * key_size_,
+                                    GPU(MemcpyDefault), cuda_stream->cuda_stream()));
+      OF_CUDA_CHECK(GPU(MemcpyAsync)(values, host_values_buffer_, num_keys * value_size_,
+                                    GPU(MemcpyDefault), cuda_stream->cuda_stream()));
     }
   }
 
@@ -78,7 +78,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreImpl);
   explicit KeyValueStoreImpl(const PersistentTableKeyValueStoreOptions& options)
       : device_index_(-1), max_query_length_(0) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     key_size_ = options.table_options.key_size;
     value_size_ = options.table_options.value_size;
     table_ = NewPersistentTable(options.table_options);
@@ -96,11 +96,11 @@ class KeyValueStoreImpl : public KeyValueStore {
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
-      OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
-      OF_CUDA_CHECK(cudaFreeHost(host_missing_indices_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_query_keys_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_query_values_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_missing_indices_));
     }
-    OF_CUDA_CHECK(cudaFreeHost(host_n_missing_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_n_missing_));
   }
 
   uint32_t KeySize() const override { return key_size_; }
@@ -113,9 +113,9 @@ class KeyValueStoreImpl : public KeyValueStore {
     CudaCurrentDeviceGuard guard(device_index_);
     if (query_length <= max_query_length_) { return; }
     if (max_query_length_ != 0) {
-      OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
-      OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
-      OF_CUDA_CHECK(cudaFreeHost(host_missing_indices_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_query_keys_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_query_values_));
+      OF_CUDA_CHECK(GPU(FreeHost)(host_missing_indices_));
     }
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(
         device_index_, reinterpret_cast<void**>(&host_query_keys_), key_size_ * query_length));
@@ -158,23 +158,23 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
   if (num_keys == 0) {
-    OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t),
+    OF_CUDA_CHECK(GPU(MemsetAsync)(n_missing, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     return;
   }
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_query_keys_, keys, key_size_ * num_keys, cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_query_keys_, keys, key_size_ * num_keys, GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
 
   table_->Get(num_keys, host_query_keys_, host_query_values_, host_n_missing_,
               host_missing_indices_);
 
-  OF_CUDA_CHECK(cudaMemcpyAsync(values, host_query_values_, num_keys * value_size_,
-                                cudaMemcpyDefault, cuda_stream->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(n_missing, host_n_missing_, sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(values, host_query_values_, num_keys * value_size_,
+                                GPU(MemcpyDefault), cuda_stream->cuda_stream()));
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(n_missing, host_n_missing_, sizeof(uint32_t), GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(missing_indices, host_missing_indices_,
-                                (*host_n_missing_) * sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(missing_indices, host_missing_indices_,
+                                (*host_n_missing_) * sizeof(uint32_t), GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
 }
 
@@ -185,10 +185,10 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
   if (num_keys == 0) { return; }
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_query_keys_, keys, key_size_ * num_keys, cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_query_keys_, keys, key_size_ * num_keys, GPU(MemcpyDefault),
                                 cuda_stream->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_query_values_, values, value_size_ * num_keys,
-                                cudaMemcpyDefault, cuda_stream->cuda_stream()));
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_query_values_, values, value_size_ * num_keys,
+                                GPU(MemcpyDefault), cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   table_->Put(num_keys, host_query_keys_, host_query_values_);
 }
