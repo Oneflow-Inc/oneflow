@@ -2773,7 +2773,7 @@
   signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
-- name: "multi_tensor_weight_update"
+- name: "multi_tensor_yolov5_weight_update"
   signature: "Void (TensorTuple model, Float d) => MultiTensorWeightUpdate"
   bind_python: True
 

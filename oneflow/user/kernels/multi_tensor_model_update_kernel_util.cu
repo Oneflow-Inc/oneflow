@@ -594,10 +594,9 @@ __global__ void MultiTensorYoloModelEmaUpdateGpu(int64_t num_tensor, const float
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
         if (actual_idx < tensor_elem_cnt) {
-          T v = model_val[ilp];
-          v = v * d;
-          v = v + (1 - d) * model_val[ilp];
-          model_val[ilp] = v;
+          T origin = model_val[ilp];
+          model_val[ilp] *= d;
+          model_val[ilp] += (1 - d) * origin;
         }
       }
       v_block_id -= tensor_tuple_params.block_offset[tensor_idx];
