@@ -3172,7 +3172,7 @@ class FusedWeightedSumFunctor {
           CHECK_JUST(one::OpBuilder("fused_weighted_sum").Input("in", n).Output("out").Build());
     }
   }
-  Maybe<Tensor> operator()(const TensorTuple& in, const std::vector<float> weights,
+  Maybe<Tensor> operator()(const TensorTuple& in, const std::vector<float>& weights,
                            const float& alpha) const {
     CHECK_GE_OR_RETURN(in.size(), 1);
     CHECK_LT_OR_RETURN(in.size(), kMaxInputCount);

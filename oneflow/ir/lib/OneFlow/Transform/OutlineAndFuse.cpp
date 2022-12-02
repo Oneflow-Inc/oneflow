@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -40,25 +43,58 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class ConvertOFKLCalleeToLLVMPass
-    : public ConvertOFKLCalleeToLLVMPassBase<ConvertOFKLCalleeToLLVMPass> {
+class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
+    registry.insert<okl::OKLDialect>();
   }
 
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateConvertOFKLCalleeToLLVMPasses(patterns);
+    populateLowerToOKLPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
-class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateKernelWrapperPasses(patterns);
+    populateWrapOpsToKernelLaunchPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class ExtractKernelLaunchTensorPass
+    : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateExtractKernelLaunchTensorPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class TrimReturnAsVoidPass : public TrimReturnAsVoidPassBase<TrimReturnAsVoidPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateTrimReturnAsVoidPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -198,13 +234,19 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
 }
 
-std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
-  return std::make_unique<KernelLaunchFunctionPass>();
+std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
+  return std::make_unique<WrapOpsToKernelLaunchPass>();
 }
 
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
-  return std::make_unique<ConvertOFKLCalleeToLLVMPass>();
+std::unique_ptr<Pass> createExtractKernelLaunchTensorPass() {
+  return std::make_unique<ExtractKernelLaunchTensorPass>();
 }
+
+std::unique_ptr<Pass> createTrimReturnAsVoidPass() {
+  return std::make_unique<TrimReturnAsVoidPass>();
+}
+
+std::unique_ptr<mlir::Pass> createLowerToOKLPass() { return std::make_unique<LowerToOKLPass>(); }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
   return std::make_unique<FuseIntoExistingOpPass>();
