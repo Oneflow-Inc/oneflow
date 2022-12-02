@@ -22,10 +22,8 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetDefaultSessionId", []() -> int64_t { return GetDefaultSessionId().GetOrThrow(); });
-  m.def("RegsterSessionId",
-        [](int64_t session_id) -> bool { return RegsterSessionId(session_id).GetOrThrow(); });
-  m.def("ClearSessionId",
-        [](int64_t session_id) -> bool { return ClearSessionId(session_id).GetOrThrow(); });
+  m.def("RegsterSessionId", &RegsterSessionId);
+  m.def("ClearSessionId", &ClearSessionId);
 }
 
 }  // namespace oneflow
