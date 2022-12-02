@@ -99,7 +99,7 @@ void SbpEdge::SummarizeCost() {
           }
 
           // Compare and look for the minimum cost
-          weighted_sum = copy_cost + kMemoryRatio * memory_cost;
+          weighted_sum = copy_cost + kMemoryRatioDp * memory_cost;
           if (sbp_mid == 0 || weighted_sum < min_weighted_sum) {
             min_copy_cost = copy_cost;
             min_memory_cost = memory_cost;

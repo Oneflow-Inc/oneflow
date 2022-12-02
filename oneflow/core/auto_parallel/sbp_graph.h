@@ -107,6 +107,11 @@ class SbpGraph final {
   int32_t threshold_ = 100;
   // Overlayable wait time for copy cost, which occurs before communication between devices.
   double wait_time_ = 16500.0;
+  // In searching strategy, we can not minimize a vector (copy cost, memory cost)
+  // Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
+  // Memory ratio for searching strategy only, we have different memory ratio for dynamic
+  // programming
+  double memory_ratio_search_ = 1.0;
 
   // Remove a node from the node list
   void RemoveFromNodeList(SbpNode* this_node);

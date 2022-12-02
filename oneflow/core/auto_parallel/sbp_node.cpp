@@ -204,7 +204,7 @@ void SbpNode::SummarizeCost() {
           memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
                         + child_node->GetMemory(sbp_child);
         }
-        weighted_sum = curr_cost + kMemoryRatio * memory_cost;
+        weighted_sum = curr_cost + kMemoryRatioDp * memory_cost;
         // update min_cost with fixed SbpSignature for this node and child node
         if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
           min_cost = curr_cost;
