@@ -610,19 +610,19 @@ __global__ void MultiTensorYoloModelEmaUpdateGpu(int64_t num_tensor, const float
 }
 
 template<typename T>
-struct MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T> {
+struct MultiTensorYoloV5WeightUpdateKernelUtil<DeviceType::kCUDA, T> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
                      TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<>
-struct MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, half> {
+struct MultiTensorYoloV5WeightUpdateKernelUtil<DeviceType::kCUDA, half> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
                      TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<typename T>
-void MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T>::Update(
+void MultiTensorYoloV5WeightUpdateKernelUtil<DeviceType::kCUDA, T>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
     TensorTupleParams<2> tensor_tuple_params) {
   const unsigned int grid_size =
@@ -637,6 +637,6 @@ void MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, T>::Update(
           n_tensor, d, tensor_tuple_params);
 }
 
-template struct MultiTensorWeightUpdateKernelUtil<DeviceType::kCUDA, float>;
+template struct MultiTensorYoloV5WeightUpdateKernelUtil<DeviceType::kCUDA, float>;
 
 }  // namespace oneflow

@@ -574,11 +574,11 @@ REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, flo
 #endif
 
 template<DeviceType device_type, typename T>
-class MultiTensorWeightUpdateKernel final : public user_op::OpKernel,
-                                            public user_op::CudaGraphSupport {
+class MultiTensorYoloV5WeightUpdateKernel final : public user_op::OpKernel,
+                                                  public user_op::CudaGraphSupport {
  public:
-  MultiTensorWeightUpdateKernel() = default;
-  ~MultiTensorWeightUpdateKernel() override = default;
+  MultiTensorYoloV5WeightUpdateKernel() = default;
+  ~MultiTensorYoloV5WeightUpdateKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -601,8 +601,8 @@ class MultiTensorWeightUpdateKernel final : public user_op::OpKernel,
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
-        MultiTensorWeightUpdateKernelUtil<device_type, T>::Update(ctx->stream(), total_elem_cnt,
-                                                                  count, d, tensor_tuple_params);
+        MultiTensorYoloV5WeightUpdateKernelUtil<device_type, T>::Update(
+            ctx->stream(), total_elem_cnt, count, d, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
       }
@@ -611,14 +611,14 @@ class MultiTensorWeightUpdateKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_WEIGHT_UPDATE_KERNEL(device, dtype)  \
-  REGISTER_USER_KERNEL("multi_tensor_weight_update")               \
-      .SetCreateFn<MultiTensorWeightUpdateKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
+#define REGISTER_MULTI_TENSOR_YOLOV5_WEIGHT_UPDATE_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("multi_tensor_yolov5_weight_update")              \
+      .SetCreateFn<MultiTensorYoloV5WeightUpdateKernel<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)              \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA
-REGISTER_MULTI_TENSOR_WEIGHT_UPDATE_KERNEL(DeviceType::kCUDA, float);
+REGISTER_MULTI_TENSOR_YOLOV5_WEIGHT_UPDATE_KERNEL(DeviceType::kCUDA, float);
 #endif
 
 }  // namespace

@@ -4814,12 +4814,12 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
-class MultiTensorWeightUpdateFunctor {
+class MultiTensorYoloV5WeightUpdateFunctor {
  public:
-  MultiTensorWeightUpdateFunctor() {
+  MultiTensorYoloV5WeightUpdateFunctor() {
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 0; n < op_.size(); ++n) {
-      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_weight_update")
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_yolov5_weight_update")
                               .Input("model", n + 1)
                               .Input("model_update", n + 1)
                               .Build());
@@ -4975,7 +4975,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
-  m.add_functor<impl::MultiTensorWeightUpdateFunctor>("MultiTensorWeightUpdate");
+  m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 
 }  // namespace functional

@@ -485,27 +485,28 @@ Maybe<void> WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputA
   return InferAdamUpdateDataType(ctx);
 }
 
-/* static */ Maybe<void> MultiTensorWeightUpdateOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferWeightUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorWeightUpdateOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> MultiTensorWeightUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MultiTensorWeightUpdateOp::ModifyInputArg(
+/* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return WeightInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
-/* static */ Maybe<void> MultiTensorWeightUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferDataType(
+    user_op::InferContext* ctx) {
   return InferWeightUpdateDataType(ctx);
 }
 
