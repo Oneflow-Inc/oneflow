@@ -234,17 +234,25 @@ def _test_global_mode(test_case):
 
                 # Test global mode source op
                 randn_out = flow.randn((2, 2))
+                rand_out = flow.rand((2, 2))
+                randint_out = flow.randint(-100, 100, (2, 2))
+                randperm_out = flow.randperm(5)
                 arange_out = flow.arange(10)
                 empty_out = flow.empty((1, 2))
                 tensor_out = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+                hann_window_out = flow.hann_window(8, dtype=flow.float)
 
             test_case.assertTrue(not global_mode.is_enabled())
 
             return {
                 "randn_out": randn_out,
+                "rand_out": rand_out,
+                "randint_out": randint_out,
+                "randperm_out": randperm_out,
                 "arange_out": arange_out,
                 "empty_out": empty_out,
-                "tensor_out": tensor_out,
+                "tensor_out": tensor_out, 
+                "hann_window_out": hann_window_out
             }
 
     global_graph = GlobalModeGraph()

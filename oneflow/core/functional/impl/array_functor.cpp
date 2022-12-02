@@ -163,6 +163,10 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalConstant(shape, value, dtype, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value");
     if (IsIntegralDataType(dtype->data_type())) {
@@ -188,13 +192,7 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     if (GlobalMode::is_enabled()) {
-      auto parallel_desc = GlobalMode::parallel_desc();
-      if (device.has_value()) {
-        ParallelConf parallel_conf = parallel_desc->parallel_conf();
-        parallel_conf.set_device_tag(device.value_or(Symbol<Device>())->type());
-        parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-      }
-      return JUST(functional::GlobalEmpty(shape, dtype, parallel_desc,
+      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                           *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));

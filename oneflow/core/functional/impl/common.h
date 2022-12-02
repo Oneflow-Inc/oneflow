@@ -47,6 +47,8 @@ Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithI
 
 Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
 
+Symbol<ParallelDesc> GetGlobalParallelDescFromDevice(const Optional<Symbol<Device>>& device);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
