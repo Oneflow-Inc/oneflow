@@ -5104,8 +5104,8 @@ def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_line
     Optional<OneFlow_Tensor>:$matmul_vx
   );
   let attrs = (ins
-    DefaultValuedAttr<StrAttr, "\"none\"">:$activation
-    DefaultValuedAttr<SI64Attr, "0">:$output_stride,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation,
+    DefaultValuedAttr<SI64Attr, "0">:$output_stride
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
