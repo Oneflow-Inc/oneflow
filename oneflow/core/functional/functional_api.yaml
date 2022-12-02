@@ -664,6 +664,10 @@
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
 
+- name: "fused_glu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
