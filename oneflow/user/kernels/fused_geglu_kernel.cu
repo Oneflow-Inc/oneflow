@@ -300,10 +300,11 @@ class GpuFusedGegluKernel final : public user_op::OpKernel, public user_op::Cuda
     const int64_t out_size = out->shape_view().At(1);
     const int64_t num_samples = in->shape_view().At(0);
 
-    if (ParseBooleanFromEnv("ONEFLOW_KERNEL_EANBLE_DUAL_GEMM_GLU", false)) {
-      DualGemmGeglu<half>(ctx->stream()->As<ep::CudaStream>(), num_samples, out_size, in_size,
-                          in->dptr<half>(), w->dptr<half>(), b->dptr<half>(),
-                          out->mut_dptr<half>());
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    if (ParseBooleanFromEnv("ONEFLOW_KERNEL_EANBLE_DUAL_GEMM_GLU", false)
+        && cuda_stream->cuda_arch() == 800) {
+      DualGemmGeglu<half>(cuda_stream, num_samples, out_size, in_size, in->dptr<half>(),
+                          w->dptr<half>(), b->dptr<half>(), out->mut_dptr<half>());
       return;
     }
 
