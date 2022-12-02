@@ -399,7 +399,7 @@ void SbpConstructor::InitAvailableMemory() {
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
   // The estimated memory differs from the lower bound of the peak memory by the first ratio.
   // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
-  // It varies from -0.5% to -0.00313% if enabling nccl_use_compute_stream.
+  // It varies from 0.00313% to 0.5% if enabling nccl_use_compute_stream.
   double first_ratio = 1.0;
   if (nccl_use_compute_stream_) {
     first_ratio = 1.01;
