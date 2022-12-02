@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
+// #include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/cuda/elementwise.cuh"
+// #include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
@@ -62,7 +62,7 @@ template<UnaryOp unary_op, typename Src, typename Dst>
 struct UnaryScalarFunctor {
   __host__ __device__ explicit UnaryScalarFunctor(Src scalar) : scalar(scalar) {}
   __device__ Dst operator()() const {
-    return UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>()(scalar);
+    return UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>()(scalar);
   }
   const Src scalar;
 };
@@ -89,7 +89,7 @@ __global__ void BroadcastElementwiseUnaryGpu(
   IndexType src_index[max_dims];
   IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
-  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(params.attr0, params.attr1);
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Dst, Src>(params.attr0, params.attr1);
 
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
     params.dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
@@ -234,7 +234,7 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack, bool tail>
-__global__ void LaunchFillKernel(UnaryFunctor<DeviceType::kCUDA, op, Src, Dst> functor, Dst* dst,
+__global__ void LaunchFillKernel(UnaryFunctor<DeviceType::kCUDA, op, Dst, Src> functor, Dst* dst,
                                  const Src* src, size_t pack_count, size_t count, size_t tail_count,
                                  Dst* tail_dst) {
   using StorePack = cuda::elementwise::Packed<Dst, pack>;
@@ -256,7 +256,7 @@ typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stre
   const size_t pack_count = count / pack;
   const size_t tail_offset = pack_count * pack;
   const size_t tail_count = count - tail_offset;
-  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Dst, Src>(attr0, attr1);
   if (tail_count > 0) {
     LaunchFillKernel<op, Src, Dst, pack, true>
         <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
@@ -344,7 +344,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
-      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
+      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
     } else {
@@ -385,18 +385,37 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)                   \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
-                                OF_PP_PAIR_FIRST(dtype_pair)>},
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
+
+#define MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_type_pair, dst_dtype_pair)  \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_type_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)), \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_type_pair),                                  \
+                       OF_PP_PAIR_FIRST(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
 
+            //TODO: support for logical&util op, reference to elementwise_unary.cu
+            // For Utils OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_UTILS_OP_SEQ, UTIL_OPS_DATA_TYPE_SEQ,
+                                             CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
+
+            // For Int Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_INT_MATH_OP_SEQ, CUDA_PRIMITIVE_INT_TYPE_SEQ)};
+
+#undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =
