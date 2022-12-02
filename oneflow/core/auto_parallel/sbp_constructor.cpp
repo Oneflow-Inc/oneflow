@@ -397,13 +397,27 @@ void SbpConstructor::InitAvailableMemory() {
   size_t free = 0;
   size_t total = 0;
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
-  // The occupied memory at this moment would be at around 1114MB to 1240MB.
-  // When it get to the training process, the occupied memory would drop 161MB to 162MB.
-  // But the key question is, we start to allocate memory before the training process.
-  // Thus, this 161MB would not be added to the free memory.
-  // We still use available "memory = free" in stead of "free + 161MB".
-  available_memory_ = free;
-  std::cout << "Free memory: " << free << ", total memory: " << total << std::endl;
+  // The estimated memory differs from the lower bound of the peak memory by the first ratio.
+  // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
+  // It varies from -0.5% to -0.00313% if enabling nccl_use_compute_stream.
+  double first_ratio = 1.0;
+  if (nccl_use_compute_stream_) {
+    first_ratio = 1.01;
+  } else {
+    first_ratio = 1.04;
+  }
+  // The lower bound of the peak memory differs from the allocated memory by the second ratio.
+  // The second ratio varies from 0 to 2.65% if not using pipeline parallelism.
+  // It varies from 0 to 5.23% if using pipeline parallelism.
+  double second_ratio = 1.06;
+  // The occupied memory at this moment would be around 1114MB to 1240MB.
+  // When it gets to the training process, the occupied memory would drop from 161MB to 162MB.
+  // But the key is that we start to allocate memory before the training process.
+  // Thus, this 161MB should not be added to the free memory.
+  // We still use "available memory = free / ratio" instead of "free / ratio + 161MB".
+  available_memory_ = int64_t(free / (first_ratio * second_ratio));
+  std::cout << "Free memory: " << free << ", total memory: " << total
+            << ", available memory: " << available_memory_ << std::endl;
 }
 
 // Print the graph with SBP in order
