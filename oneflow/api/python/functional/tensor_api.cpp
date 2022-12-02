@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 
 #include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/dlpack/converter.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
@@ -236,6 +237,29 @@ static std::vector<int64_t> get_shape_or_stride_from_numpy(size_t ndim, npy_intp
   return result;
 }
 
+class LocalTensorSharedDlPackDataFunctor {
+ public:
+  LocalTensorSharedDlPackDataFunctor() {}
+  Maybe<Tensor> operator()(PyObject* obj) const {
+    DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(obj, "dltensor");
+    CHECK_NOTNULL_OR_RETURN(dlMTensor)
+        << "from_dlpack received an invalid capsule. "
+           "Note that DLTensor capsules can be consumed only once, "
+           "so you might have already constructed a tensor from it once.";
+
+    // atensor steals the ownership of the underlying storage. It also passes a
+    // destructor function that will be called when the underlying storage goes
+    // out of scope. When the destructor is called, the dlMTensor is destructed
+    // too.
+    auto tensor = fromDLPack(dlMTensor);
+
+    // Make sure this capsule will never be used again.
+    PyCapsule_SetName(obj, "used_dltensor");
+
+    return tensor;
+  }
+};
+
 class LocalTensorSharedNumpyDataFunctor {
  public:
   LocalTensorSharedNumpyDataFunctor() {}
@@ -331,6 +355,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GlobalTensorWithShapeCtorFunctor>("GlobalTensorWithShapeCtor");
   m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
+  m.add_functor<impl::LocalTensorSharedDlPackDataFunctor>("LocalTensorSharedDlPackData");
 }
 
 }  // namespace functional
