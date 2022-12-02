@@ -2777,6 +2777,10 @@
   signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
+- name: "multi_tensor_yolov5_weight_update"
+  signature: "Void (TensorTuple model, TensorTuple model_update, Float d) => MultiTensorYoloV5WeightUpdate"
+  bind_python: True
+
 - name: "multi_tensor_momentum_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum, Float dampening, Bool nesterov, Bool maximize) => MultiTensorMomentumUpdate"
   bind_python: True
