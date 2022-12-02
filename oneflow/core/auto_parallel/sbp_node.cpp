@@ -700,7 +700,6 @@ void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, in
         memory_[sbp_sig_id] += it->second;
         nd_sbp_sig2memory[sbp_sig_id] += it->second;
       }
-      std::cout << "lbi: " << lbi.op_name() << " to " << curr_operator.op_name() << std::endl;
     }
   }
   // Even after the correction in the memory of edges, the relative error still have 0.73%.

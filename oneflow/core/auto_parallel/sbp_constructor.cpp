@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -47,6 +48,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   LoadLbi2SbpEdge(op_graph);
   // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
   // LoadLbi2SbpEdge(op_graph).
+  InitAvailableMemory();
   InitMemory(&sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
@@ -389,6 +391,19 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
     }
   }
   return filter_op_ctrl_deps;
+}
+
+void SbpConstructor::InitAvailableMemory() {
+  size_t free = 0;
+  size_t total = 0;
+  OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
+  // The occupied memory at this moment would be at around 1114MB to 1240MB.
+  // When it get to the training process, the occupied memory would drop 161MB to 162MB.
+  // But the key question is, we start to allocate memory before the training process.
+  // Thus, this 161MB would not be added to the free memory.
+  // We still use available "memory = free" in stead of "free + 161MB".
+  available_memory_ = free;
+  std::cout << "Free memory: " << free << ", total memory: " << total << std::endl;
 }
 
 // Print the graph with SBP in order

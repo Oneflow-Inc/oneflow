@@ -66,6 +66,7 @@ class SbpConstructor final {
   Maybe<void> InitCopyMemoryCost(const OpGraph& op_graph);
   Maybe<void> ApplyTrunkAlgo();
   Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
+  void InitAvailableMemory();
   // Load logical blob ids onto sbp edges
   void LoadLbi2SbpEdge(const OpGraph& op_graph);
 
@@ -76,6 +77,7 @@ class SbpConstructor final {
   const OpGraph* op_graph_;
   HashMap<std::string, SbpNode*> op_name2sbp_node_;
   bool nccl_use_compute_stream_;
+  int64_t available_memory_;
 };
 
 }  // namespace auto_parallel
