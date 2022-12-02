@@ -82,6 +82,28 @@ class TestFromDlPack(flow.unittest.TestCase):
             test_case.assertTrue(np.array_equal(flow_tensor.numpy(), torch_tensor.cpu().numpy()))
 
 
+    def test_lifecycle(test_case):
+        for device in test_devices:
+            torch_tensor = torch.randn(2, 3, 4, 5).to(device)
+            flow_tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
+            value = flow_tensor.numpy()
+            del torch_tensor
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+                # actually release the cuda memory
+                torch.cuda.empty_cache()
+            test_case.assertTrue(np.array_equal(flow_tensor.numpy(), value))
+
+            torch_tensor = torch.randn(2, 3, 4, 5).to(device)
+            flow_tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
+            value = flow_tensor.numpy()
+            del flow_tensor
+            if device.type == "cuda":
+                flow.cuda.synchronize()
+                flow.cuda.empty_cache()
+            test_case.assertTrue(np.array_equal(torch_tensor.cpu().numpy(), value))
+
+
 if __name__ == "__main__":
     unittest.main()
 
