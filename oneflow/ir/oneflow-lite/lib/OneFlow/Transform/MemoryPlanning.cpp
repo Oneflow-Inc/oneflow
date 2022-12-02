@@ -48,6 +48,7 @@ LogicalResult LiteBufferStrategy::insertValue(Value value, int segmentId, size_t
     return failure();
   }
   valueSegmentInfos[value] = ValueSegmentInfo{segmentId, segmentOffset};
+  return success();
 }
 
 class ValueLiveness {
@@ -193,11 +194,14 @@ void MemoryPlanningPass::doMemoryPlanning() {
       size_t valueSize = getTensorBitSize(value.getType().cast<TensorType>());
       if (valueSize > blockSize) { blockSize = valueSize; }
     }
-    blockSize = (blockSize + 7) / 8;                      // convert to bytes
-    blockSize = (blockSize + alignment - 1) / alignment;  // alignas 512 bytes
+    blockSize = (blockSize + 7) / 8;                                  // convert to bytes
+    blockSize = (blockSize + alignment - 1) / alignment * alignment;  // alignas 512 bytes
     segments.push_back(LiteBufferSegment{device.getValue(), blockSize, alignment});
 
-    for (auto value : block) { bufferStrategy->insertValue(value, segmentId, /*segmentOffset*/ 0); }
+    for (auto value : block) {
+      auto result = bufferStrategy->insertValue(value, segmentId, /*segmentOffset*/ 0);
+      assert(succeeded(result) && "failed to insert value to buffer strategy");
+    }
   }
 }
 
