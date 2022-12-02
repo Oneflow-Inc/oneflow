@@ -27,6 +27,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#endif  // WITH_ROCM
 
 namespace py = pybind11;
 
@@ -55,6 +58,30 @@ void RegisterCudaDeviceProperties(py::module& m) {
 }
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+void RegisterCudaDeviceProperties(py::module& m) {
+  py::class_<hipDeviceProp>(m, "_CudaDeviceProperties", py::module_local())
+      .def(py::init<>())
+      .def_readonly("name", &hipDeviceProp::name)
+      .def_readonly("major", &hipDeviceProp::major)
+      .def_readonly("minor", &hipDeviceProp::minor)
+      .def_readonly("is_multi_gpu_board", &hipDeviceProp::isMultiGpuBoard)
+      .def_readonly("is_integrated", &hipDeviceProp::integrated)
+      .def_readonly("multi_processor_count", &hipDeviceProp::multiProcessorCount)
+      .def_readonly("total_memory", &hipDeviceProp::totalGlobalMem)
+      .def("__repr__", [](const hipDeviceProp& prop) {
+        std::ostringstream stream;
+        stream << "_CudaDeviceProperties(name='" << prop.name << "', major=" << prop.major
+               << ", minor=" << prop.minor
+               << ", total_memory=" << prop.totalGlobalMem / (1024 * 1024)
+               << "MB, multi_processor_count=" << prop.multiProcessorCount << ")";
+        return stream.str();
+      });
+}
+
+#endif  // WITH_ROCM
 
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
@@ -99,6 +126,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
       py::return_value_policy::reference);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  RegisterCudaDeviceProperties(m);
+  m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
+  m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
+  m.def("CudaSynchronize", &CudaSynchronize);
+  m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+  m.def(
+      "_get_device_properties",
+      [](int device) -> hipDeviceProp* { return GetDeviceProperties(device); },
+      py::return_value_policy::reference);
+#endif  // WITH_ROCM
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);

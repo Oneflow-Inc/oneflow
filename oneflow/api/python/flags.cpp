@@ -17,12 +17,15 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#endif
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("flags", m) {
   m.def("with_cuda", []() {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     return true;
 #else
     return false;

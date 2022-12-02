@@ -22,7 +22,7 @@ namespace embedding {
 std::string CreateKeyValueStore(const std::string& key_value_store_options, int64_t local_rank_id,
                                 int64_t rank_id, int64_t world_size) {
   oneflow::embedding::KeyValueStoreOptions options(key_value_store_options);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   oneflow::Singleton<oneflow::embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
       options, local_rank_id, rank_id, world_size);
   return options.Name();
@@ -34,7 +34,7 @@ std::string CreateKeyValueStore(const std::string& key_value_store_options, int6
 
 void LoadSnapshot(const std::string& snapshot_name, const std::string& embedding_name,
                   int64_t local_rank_id, int64_t rank_id) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   oneflow::Singleton<oneflow::embedding::EmbeddingManager>::Get()->LoadSnapshot(
       embedding_name, local_rank_id, rank_id, snapshot_name);
 #else

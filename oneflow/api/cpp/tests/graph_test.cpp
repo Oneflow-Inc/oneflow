@@ -64,7 +64,7 @@ TEST(Api, graph_cpu_test) {
   Forward(graph, device, 1);
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 TEST(Api, graph_gpu_test) {
   EnvScope scope;
   Device device("cuda", 0);
@@ -92,7 +92,7 @@ TEST(Api, graph_cpu_batching_test) {
   Forward(graph, device, 10);
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 TEST(Api, graph_gpu_batching_test) {
   EnvScope scope;
   Device device("cuda", 0);
