@@ -44,4 +44,22 @@ Maybe<int64_t> GetDefaultSessionId() {
   return regsitered_ids.back();
 }
 
+Maybe<bool> RegsterSessionId(int64_t session_id) {
+  std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
+  auto* regsitered_ids = RegsiteredSessionIds();
+  auto itor = std::find(regsitered_ids->begin(), regsitered_ids->end(), session_id);
+  if (itor != regsitered_ids->end()) { return false; }
+  regsitered_ids->push_back(session_id);
+  return true;
+}
+
+Maybe<bool> ClearSessionId(int64_t session_id) {
+  std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
+  auto* regsitered_ids = RegsiteredSessionIds();
+  auto itor = std::find(regsitered_ids->begin(), regsitered_ids->end(), session_id);
+  if (itor == regsitered_ids->end()) { return false; }
+  regsitered_ids->erase(itor);
+  return true;
+}
+
 }  // namespace oneflow

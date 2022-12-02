@@ -44,6 +44,12 @@ class MultiClientSession(object):
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
 
+    def __del__(self):
+        if self._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow
+            return
+        self._TryClose()
+
     def TryInit(self):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
@@ -138,9 +144,3 @@ class MultiClientSession(object):
         self._check_status(self.Status.INITED)
         config_proto_str = text_format.MessageToString(resource_config)
         self._session_ctx.update_resource(config_proto_str)
-
-    def __del__(self):
-        if self._env.is_shutting_down():
-            # After python shutting down, it's not safe to call oneflow
-            return
-        self._TryClose()

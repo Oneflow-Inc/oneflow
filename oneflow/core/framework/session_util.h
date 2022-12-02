@@ -21,6 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<int64_t> GetDefaultSessionId();
+Maybe<bool> RegsterSessionId(int64_t session_id);
+Maybe<bool> ClearSessionId(int64_t session_id);
 
 }  // namespace oneflow
 
