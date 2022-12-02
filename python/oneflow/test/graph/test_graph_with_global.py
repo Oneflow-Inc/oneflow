@@ -20,6 +20,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.graph import GraphModule
+import oneflow.utils.global_view as global_view 
 from oneflow.utils.global_view import global_mode
 
 
@@ -110,7 +111,7 @@ def _test_linear_train_graph_with_ddp(test_case):
             [{"params": linear_dp.parameters()}], lr=0.001, momentum=0.9,
         )
 
-        with global_mode.guard(True, placement=PC, sbp=S0):
+        with global_mode(True, placement=PC, sbp=S0):
             x = flow.ones((6, 800), placement=PC, sbp=S0)
 
         class LinearTrainGraphWithDDP(flow.nn.Graph):
@@ -130,7 +131,7 @@ def _test_linear_train_graph_with_ddp(test_case):
                 # This is not ok
                 # x = x.to(device)
 
-                with global_mode.guard(True, placement=P, sbp=B):
+                with global_mode(True, placement=P, sbp=B):
                     # Test global tensor to device
                     device = self.linear_dp.weight.device
 
@@ -153,7 +154,7 @@ def _test_linear_train_graph_with_ddp(test_case):
                 self.linear_dp = linear_dp
 
             def build(self, x):
-                with global_mode.guard(True, placement=P, sbp=B):
+                with global_mode(True, placement=P, sbp=B):
                     device = self.linear_dp.weight.device
 
                     x = x.to(device)
@@ -226,11 +227,11 @@ def _test_global_mode(test_case):
             super().__init__()
 
         def build(self):
-            with global_mode.guard(True, placement=P, sbp=B):
+            with global_mode(True, placement=P, sbp=B):
                 # Test global mode meta data
-                test_case.assertTrue(global_mode.is_enabled())
-                test_case.assertEqual(global_mode.placement(), P)
-                test_case.assertEqual(global_mode.sbp()[0], B)
+                test_case.assertTrue(global_view.current_is_enabled())
+                test_case.assertEqual(global_view.current_placement(), P)
+                test_case.assertEqual(global_view.current_sbp()[0], B)
 
                 # Test global mode source op
                 randn_out = flow.randn((2, 2))
@@ -238,7 +239,7 @@ def _test_global_mode(test_case):
                 empty_out = flow.empty((1, 2))
                 tensor_out = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
 
-            test_case.assertTrue(not global_mode.is_enabled())
+            test_case.assertTrue(not global_view.current_is_enabled())
 
             return {
                 "randn_out": randn_out,

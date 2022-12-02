@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 

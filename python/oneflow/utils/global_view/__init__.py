@@ -16,10 +16,13 @@ limitations under the License.
 import oneflow
 from oneflow.utils.global_view.to_global import to_global
 from oneflow.utils.global_view.to_local import to_local
-import oneflow._oneflow_internal.global_mode as global_mode
+from oneflow._oneflow_internal.global_view import global_mode, current_is_enabled, current_sbp, current_placement
 
 __all__ = [
     "to_global",
     "to_local",
     "global_mode",
+    "current_is_enabled",
+    "current_sbp",
+    "current_placement",
 ]

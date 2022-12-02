@@ -20,11 +20,9 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
-class NdSbp;
-class ParallelDesc;
-
 class GlobalMode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalMode);
