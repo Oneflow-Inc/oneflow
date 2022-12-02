@@ -668,6 +668,10 @@
   signature: "Tensor (Tensor in, Tensor w, Tensor b) => FusedGeglu"
   bind_python: True
 
+- name: "fused_glu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -2775,6 +2779,10 @@
 
 - name: "multi_tensor_sgd_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
+  bind_python: True
+
+- name: "multi_tensor_yolov5_weight_update"
+  signature: "Void (TensorTuple model, TensorTuple model_update, Float d) => MultiTensorYoloV5WeightUpdate"
   bind_python: True
 
 - name: "multi_tensor_momentum_update"
