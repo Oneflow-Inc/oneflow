@@ -35,8 +35,6 @@ class MultiClientSession(object):
         self._id = sess_id
         self._env = env
         assert self._env is not None
-        # TODO(strint): Remove old session.
-        self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
         # New a MultiClientSessionContext
         self._session_ctx = oneflow._oneflow_internal.SessionContext(self._env._env_cxt)
         self.config_proto_ = self._make_config_proto()
@@ -55,7 +53,8 @@ class MultiClientSession(object):
 
     def _TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            oneflow._oneflow_internal.ClearSessionById(self.id)
+            oneflow._oneflow_internal.eager.Sync()
+            self._session_ctx.try_close()
         self.status_ = self.Status.CLOSED
 
     def Reset(self):
