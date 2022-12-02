@@ -25,7 +25,7 @@ TEST(Api, device) {
   auto device = Device("cpu");
   ASSERT_EQ(device.type(), "cpu");
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   device = Device("cuda:0");
   ASSERT_EQ(device.type(), "cuda");
   ASSERT_EQ(device.device_id(), 0);

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow_api {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 TEST(Api, embedding_test) {
   EnvScope scope;
   Device device("cuda");
