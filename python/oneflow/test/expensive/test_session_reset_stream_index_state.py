@@ -36,7 +36,7 @@ class TestSessionResetStreamIndexStateMock1(flow.unittest.TestCase):
         x = random_tensor().to(device)
         return torch.nn.functional.relu(x)
 
-    def tearDown(self):
+    def setUp(self):
         session_ctx.GetDefaultSession().Reset()
 
 
@@ -53,7 +53,7 @@ class TestSessionResetStreamIndexStateMock2(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    def tearDown(self):
+    def setUp(self):
         # If not reset session, will raise
         # F20221201 13:55:30.758263 2023961 stream_id.h:33] Check failed: stream_index <= kMaxStreamIndex (4096 vs. 4095)
         session_ctx.GetDefaultSession().Reset()
