@@ -27,6 +27,17 @@ template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
 
+struct Source {
+  enum {
+    INPUT,
+    OUTPUT,
+    BUFFER,
+    INVALID,
+  } type;
+  int offset;
+};
+Source GetOpSourceByName(Operation* op, const std::string& to_find);
+
 using ArgID = std::pair<std::string, int32_t>;
 
 template<template<typename T> class Trait>
