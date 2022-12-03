@@ -15,6 +15,7 @@ limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.bias_add
+# CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:5 = "oneflow.grouped_matmul_bias"
 
 import unittest
 import numpy as np
@@ -24,8 +25,7 @@ import os
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
-os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+os.environ["ONEFLOW_MLIR_CSE"] = "0"
 
 import oneflow as flow
 import oneflow.unittest
