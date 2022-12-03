@@ -2,6 +2,7 @@
 
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
+Rewrite GetNumHeadsFromTranpose(transpose: Op) -> Attr;
 
 Pattern {
   let rate: Attr;
@@ -63,7 +64,7 @@ Pattern {
       causal = attr<"false : bool">,
       key_hidden_slice_end = attr<"-1 : si64">,
       key_hidden_slice_start = attr<"0 : si64">,
-      num_heads = attr<"8 : si64">,
+      num_heads = GetNumHeadsFromTranpose(query_transpose),
       query_hidden_slice_end = attr<"-1 : si64">,
       query_hidden_slice_start = attr<"0 : si64">,
       value_hidden_slice_end = attr<"-1 : si64">,

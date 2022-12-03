@@ -93,6 +93,13 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
+static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* transpose) {
+  auto transpose_op = llvm::dyn_cast<TransposeOp>(transpose);
+  CHECK(transpose_op);
+  return getSI64IntegerAttr(rewriter,
+                            transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -101,6 +108,8 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
+  patterns.getPDLPatterns().registerRewriteFunction("GetNumHeadsFromTranpose",
+                                                    GetNumHeadsFromTranpose);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
