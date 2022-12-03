@@ -3561,13 +3561,10 @@ class BaddBmmFunctor {
     CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
         << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
         << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
-    const int32_t input_dim = input->ndim();
-    std::shared_ptr<Tensor> broadcast_input = input;
-    Shape shape_to_broadcast({batch1->dim(0), batch1->dim(1), batch2->dim(2)});
-    if (input_dim < 3) { broadcast_input = JUST(functional::Expand(input, shape_to_broadcast)); }
+
     // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
     return JUST(functional::Add(
-        JUST(functional::ScalarMul(beta, broadcast_input)),
+        JUST(functional::ScalarMul(beta, input)),
         JUST(functional::ScalarMul(
             alpha, JUST(functional::BatchMatMul(batch1, batch2, false, false, 1.0)))),
         /*alpha=*/1.0, /*inplace=*/false));
