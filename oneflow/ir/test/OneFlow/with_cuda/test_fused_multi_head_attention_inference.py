@@ -71,7 +71,7 @@ class GraphToRun(flow.nn.Graph):
 
     def build(self, query, key, value):
         f = _fused_mha(query, key, value, self.num_heads, self.causal)
-        return _ref(query, key, value, self.num_heads, self.causal) + f - f
+        return _ref(query, key, value, self.num_heads, self.causal)
 
 
 def _test_fused_multi_head_attention_inference(
