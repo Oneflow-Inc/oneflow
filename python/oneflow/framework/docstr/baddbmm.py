@@ -60,7 +60,7 @@ add_docstr(
         >>> input = flow.randn(10, 3, 5)
         >>> batch1 = flow.randn(10, 3, 4)
         >>> batch2 = flow.randn(10, 4, 5)
-        >>> of_out = flow.bmm(input, batch1, batch2)
+        >>> of_out = flow.baddbmm(input, batch1, batch2)
         >>> of_out.shape
         oneflow.Size([10, 3, 5])
     """,
