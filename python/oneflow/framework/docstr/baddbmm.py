@@ -19,7 +19,9 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.baddbmm,
     r"""
-    addbmm(input, batch1, batch2, *, beta=1, alpha=1, out=None) -> Tensor
+    baddbmm(input, batch1, batch2, *, beta=1, alpha=1, out=None) -> Tensor
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.baddbmm.html.
 
     Performs a batch matrix-matrix product of matrices in :attr:`batch1` and :attr:`batch2`.
     :attr:`input` is added to the final result.
@@ -34,10 +36,9 @@ add_docstr(
     :math:`(b \times n \times p)` tensor.
 
     .. math::
-    \text{out}_i = \beta\ \text{input}_i + \alpha\ (\text{batch1}_i \mathbin{@} \text{batch2}_i)
+        \text{out}_i = \beta\ \text{input}_i + \alpha\ (\text{batch1}_i \mathbin{@} \text{batch2}_i)
 
-    If :attr:`beta` is 0, then :attr:`input` will be ignored, and `nan` and `inf` in
-    it will not be propagated.
+    If :attr:`beta` is 0, then :attr:`input` will be ignored, and `nan` and `inf` in it will not be propagated.
 
     For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
     :attr:`alpha` must be real numbers, otherwise they should be integers.
