@@ -10,7 +10,9 @@ namespace oneflow {
 Maybe<Symbol<Device>> ToOneFlowDevice(const DLDevice& ctx) {
   switch (ctx.device_type) {
     case DLDeviceType::kDLCPU: return JUST(Device::New("cpu"));
+#ifdef WITH_CUDA
     case DLDeviceType::kDLCUDA: return JUST(Device::New("cuda", ctx.device_id));
+#endif
     default: UNIMPLEMENTED_THEN_RETURN() << "Unsupported device type: " << ctx.device_type;
   }
 }
