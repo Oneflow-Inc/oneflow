@@ -71,7 +71,7 @@ def do_fused_matmul_bias_graph(test_case, dev):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestBiasAddDropout(oneflow.unittest.TestCase):
+class TestGroupMatMulBias(oneflow.unittest.TestCase):
     def test_fused_matmul_bias_graph(test_case):
         do_fused_matmul_bias_graph(test_case, "cuda")
 
