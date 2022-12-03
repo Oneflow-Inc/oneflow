@@ -103,7 +103,6 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.head_dim_value = params.value_head_size;
   p.num_queries = params.query_seq_len;
   p.num_keys = params.kv_seq_len;
-  p.causal = false;
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
@@ -224,6 +223,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const int64_t kv_seq_len = key->shape_view().At(1);
     CHECK_EQ(value->shape_view().At(1), kv_seq_len);
     const int64_t num_heads = ctx->Attr<int64_t>("num_heads");
+    const bool causal = ctx->Attr<bool>("causal");
 
     const auto ParseHiddenDim = [&](const std::string& tag, const ShapeView& shape,
                                     int64_t* hidden_slice_start, int64_t* hidden_size) {
@@ -263,9 +263,10 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
         query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
         && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
         && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
+    const bool is_trt_supported_arch = (arch == 80 || arch == 86 || arch == 89);
     if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
         && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
-        && (query_hidden_size / num_heads == 40) && (arch == 80 || arch == 86 || arch == 89)) {
+        && (query_hidden_size / num_heads == 40) && is_trt_supported_arch && (!causal)) {
       // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
       // implementation at:
       // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
@@ -309,7 +310,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
     params.workspace = tmp->mut_dptr<char>();
     params.workspace_size = tmp_buffer_size;
-    params.causal = ctx->Attr<bool>("causal");
+    params.causal = causal;
     DispatchCutlassFmha(params, cuda_stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
