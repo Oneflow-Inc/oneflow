@@ -22,10 +22,11 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS"] = "1"
-os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+
 import oneflow as flow
 import oneflow.unittest
 import oneflow.sysconfig
@@ -37,7 +38,7 @@ def _matmul_bias(x, weight, bias):
     )
 
 
-def _matmul_bias2(x, w, bias):
+def _matmul_bias1(x, w, bias):
     return flow._C.fused_matmul_bias(x, w, bias)
 
 
@@ -45,17 +46,21 @@ def do_fused_matmul_bias_graph(test_case, dev):
     x = np.random.uniform(low=-1, high=1, size=(8, 9))
     w = np.random.uniform(low=-1, high=1, size=(10, 9))
     bias = np.random.uniform(low=-1, high=1, size=(10))
-    x = flow.from_numpy(x).to(dev)
-    w = flow.from_numpy(w).to(dev)
-    bias = flow.from_numpy(bias).to(dev)
-    eager_res = _matmul_bias(x, w, bias)
+    x = flow.from_numpy(x).to(dev).to(flow.float32)
+    w = flow.from_numpy(w).to(dev).to(flow.float32)
+    bias = flow.from_numpy(bias).to(dev).to(flow.float32)
+    eager_res = _matmul_bias(x, w, bias) * 3
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
         def build(self, x, w, bias):
-            return _matmul_bias2(x, w, bias)
+            return (
+                _matmul_bias1(x, w, bias)
+                + _matmul_bias(x, w, bias)
+                + _matmul_bias1(x, w, bias)
+            )
 
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x, w, bias)
