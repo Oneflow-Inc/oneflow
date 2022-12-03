@@ -70,9 +70,9 @@ def _test_multi_tensor_weight_update_impl(test_case, device, shape, n, d):
             )
         )
     for i, v in enumerate(torch_weight):
-        v *= d
-        v += (1 - d) * torch_weight_update[i]
-        torch_weight_update[i] = v
+        v = v * d
+        v = v + (1 - d) * torch_weight_update[i]
+        torch_weight[i] = v
 
     flow._C.multi_tensor_yolov5_weight_update(weight, weight_update, d)
     for i in range(n):
