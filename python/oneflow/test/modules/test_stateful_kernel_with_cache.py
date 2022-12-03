@@ -27,7 +27,7 @@ import oneflow.unittest
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     def test_stateful_kernel_with_inpersistent_state(test_case):
         x = flow.arange(4).reshape(2, 2)
-        x = x.to_global(flow.env.all_device_placement("cuda"), flow.sbp.split(0))
+        x = x.to_global(flow.placement.all("cuda"), flow.sbp.split(0))
         y = x[0:3, 0:1]
         y_np = np.array([[0], [2], [0]])
         test_case.assertTrue(
