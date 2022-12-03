@@ -104,7 +104,7 @@ class ScalarMathBaseFunctor {
           == DType::priority_order[DType::Bool()->data_type()]) {
         lowest_dtype = DType::Int64();
       } else if (op_->op_type_name() == "scalar_div") {
-        lowest_dtype = DType::Float();
+        lowest_dtype = x->dtype() == DType::Float16() ? DType::Float16() : DType::Float();
       } else {
         lowest_dtype = x->dtype();
       }
