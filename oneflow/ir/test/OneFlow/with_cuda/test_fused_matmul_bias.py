@@ -32,7 +32,7 @@ import oneflow.unittest
 import oneflow.sysconfig
 
 
-def _matmul_bias(x, weight, bias):
+def _matmul_bias0(x, weight, bias):
     return flow._C.bias_add(
         flow._C.matmul(x, weight, transpose_b=True), bias, axis=len(x.shape) - 1
     )
@@ -49,7 +49,7 @@ def do_fused_matmul_bias_graph(test_case, dev):
     x = flow.from_numpy(x).to(dev).to(flow.float32)
     w = flow.from_numpy(w).to(dev).to(flow.float32)
     bias = flow.from_numpy(bias).to(dev).to(flow.float32)
-    eager_res = _matmul_bias(x, w, bias) * 3
+    eager_res = _matmul_bias0(x, w, bias) * 5
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -57,9 +57,11 @@ def do_fused_matmul_bias_graph(test_case, dev):
 
         def build(self, x, w, bias):
             return (
-                _matmul_bias1(x, w, bias)
-                + _matmul_bias(x, w, bias)
+                _matmul_bias0(x, w, bias)
                 + _matmul_bias1(x, w, bias)
+                + _matmul_bias0(x, w, bias)
+                + _matmul_bias1(x, w, bias)
+                + _matmul_bias0(x, w, bias)
             )
 
     graph_to_run = GraphToRun()
