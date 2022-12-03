@@ -52,6 +52,20 @@ mlir_tablegen(SBPAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(SBPAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRSBPIncGen)
 
+set(LLVM_TARGET_DEFINITIONS OKL/OKLOps.td)
+mlir_tablegen(OKLDialect.h.inc -gen-dialect-decls -dialect=okl)
+mlir_tablegen(OKLDialect.cpp.inc -gen-dialect-defs -dialect=okl)
+mlir_tablegen(OKLOps.h.inc -gen-op-decls)
+mlir_tablegen(OKLOps.cpp.inc -gen-op-defs)
+mlir_tablegen(OKLTypes.h.inc -gen-typedef-decls)
+mlir_tablegen(OKLTypes.cpp.inc -gen-typedef-defs)
+mlir_tablegen(OKLPasses.h.inc -gen-pass-decls)
+mlir_tablegen(OKLEnums.h.inc -gen-enum-decls)
+mlir_tablegen(OKLEnums.cpp.inc -gen-enum-defs)
+mlir_tablegen(OKLAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(OKLAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIROKLIncGen)
+
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
   OneFlowOps
