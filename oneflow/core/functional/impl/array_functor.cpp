@@ -3563,11 +3563,10 @@ class BaddBmmFunctor {
         << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
 
     // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    return JUST(functional::Add(
-        JUST(functional::ScalarMul(beta, input)),
-        JUST(functional::ScalarMul(
-            alpha, JUST(functional::BatchMatMul(batch1, batch2, false, false, 1.0)))),
-        /*alpha=*/1.0, /*inplace=*/false));
+    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+    return JUST(functional::Add(JUST(functional::ScalarMul(beta, input)),
+                                JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                                /*alpha=*/1.0, /*inplace=*/false));
   }
 };
 
