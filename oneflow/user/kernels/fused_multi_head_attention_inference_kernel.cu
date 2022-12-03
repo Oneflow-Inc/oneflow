@@ -22,12 +22,41 @@ limitations under the License.
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/fmha_flash_attention/fmha.h"
+#include "oneflow/user/kernels/fmha_flash_attention/include/fmha_flash_attention.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
+
+template<typename T, int pack_size>
+struct alignas(pack_size * sizeof(T)) Pack {
+  T elem[pack_size];
+};
+
+template<typename T>
+__global__ void PackQkv(int b, int s, int nh, int d, const T* q, const T* k, const T* v, T* o,
+                        int32_t* seq_len) {
+  int count = b * s * nh * d * 3;
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < count; i += blockDim.x * gridDim.x) {
+    int row = i / (d * 3);
+    int out_col = i - row * (d * 3);
+    T out;
+    if (out_col < d) {
+      out = q[row * d + out_col];
+    } else if (out_col < 2 * d) {
+      out = k[row * d + out_col - d];
+    } else {
+      out = v[row * d + out_col - d * 2];
+    }
+    o[i] = out;
+  }
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < b + 1; i += blockDim.x * gridDim.x) {
+    seq_len[i] = i * s;
+  }
+}
 
 struct Params {
   DataType data_type;
@@ -224,6 +253,44 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
     CHECK_EQ(out->shape_view().At(2), value_hidden_size);
 
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+
+    const static bool enable_trt_flash_attn =
+        ParseBooleanFromEnv("ONEFLOW_KERENL_ENABLE_TRT_FLASH_ATTN_IMPL", false)
+        && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+    const int arch = cuda_stream->cuda_arch() / 10;
+    const bool inputs_contiguous =
+        query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
+        && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
+        && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
+    if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
+        && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
+        && (query_hidden_size / num_heads == 40) && (arch == 80 || arch == 86 || arch == 89)) {
+      // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
+      // implementation at:
+      // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
+      int32_t cu_seqlens_d_size = (batch_size + 1) * sizeof(int32_t);
+      int32_t* cu_seqlens_d = reinterpret_cast<int32_t*>(tmp->mut_dptr());
+      half* packed_qkv =
+          reinterpret_cast<half*>(tmp->mut_dptr<char>() + GetCudaAlignedSize(cu_seqlens_d_size));
+      constexpr int pack_size = 4;
+      using PackType = Pack<half, pack_size>;
+      int count = batch_size * query_seq_len * query_hidden_size * 3 / pack_size;
+      PackQkv<PackType><<<(count - 1 + 256) / 256, 256, 0, cuda_stream->cuda_stream()>>>(
+          batch_size, query_seq_len, num_heads, query_hidden_size / num_heads / pack_size,
+          reinterpret_cast<const PackType*>(query->dptr()),
+          reinterpret_cast<const PackType*>(key->dptr()),
+          reinterpret_cast<const PackType*>(value->dptr()), reinterpret_cast<PackType*>(packed_qkv),
+          cu_seqlens_d);
+
+      nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
+          nvinfer1::plugin::getFMHACubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
+      run_fmha_v2_api(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
+                      kernels, batch_size, num_heads, query_hidden_size / num_heads, query_seq_len,
+                      cuda_stream->cuda_stream());
+      return;
+    }
+
     Params params{};
     params.data_type = data_type;
     params.num_batches = batch_size;
@@ -243,7 +310,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     params.workspace = tmp->mut_dptr<char>();
     params.workspace_size = tmp_buffer_size;
     params.causal = ctx->Attr<bool>("causal");
-    DispatchCutlassFmha(params, ctx->stream()->As<ep::CudaStream>());
+    DispatchCutlassFmha(params, cuda_stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -253,6 +320,10 @@ size_t InferTmpBufferSize(InferContext* ctx) {
   size_t buffer_size = 0;
   buffer_size +=
       GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat));
+  buffer_size +=
+      GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(out_desc.data_type())) * 3;
+  buffer_size +=
+      GetCudaAlignedSize((out_desc.shape().At(0) + 1) * GetSizeOfDataType(DataType::kInt32));
   return buffer_size;
 }
 

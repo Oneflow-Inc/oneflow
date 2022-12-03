@@ -3369,7 +3369,8 @@ class FusedGegluFunctor {
                            const std::shared_ptr<one::Tensor>& w,
                            const std::shared_ptr<one::Tensor>& b) const {
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, w, b});
- }
+  }
+
  private:
   std::shared_ptr<OpExpr> op_;
 };
