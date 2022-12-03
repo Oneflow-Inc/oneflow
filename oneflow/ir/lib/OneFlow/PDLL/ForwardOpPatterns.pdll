@@ -36,7 +36,7 @@ Pattern {
 
 Pattern {
   let device_name: Attr;
-  let device_tag: Attr;
+  let device_tag = attr<"\"cuda\"">;
   let shape: Attr;
   let scalar_div_operand: Attr;
   let out_shape: Attr;
