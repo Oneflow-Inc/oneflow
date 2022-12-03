@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.bias_add
-# CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:5 = "oneflow.grouped_matmul_bias"
+# CHECK-NOT: oneflow.softmax
+# CHECK-NOT: oneflow.batch_matmul
+
 
 import unittest
 import numpy as np
@@ -117,6 +118,40 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
         # test_case,batch_size, num_heads,query_seq_len, kv_seq_len,query_head_size,value_head_size,dtype
         _test_fused_multi_head_attention_inference(
             test_case, 2, 8, 4096, 4096, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float16
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float16
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float16
+        )
+
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float
         )
 
 
