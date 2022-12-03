@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/framework/framework.h"
@@ -34,14 +35,15 @@ auto CopyNdPrimitiveExists() {
 template<typename T>
 struct PxyForwardFunctor {
   __device__ T Compute(T pxy) const {
-    return static_cast<T>(1.0) / (static_cast<T>(1.0) + ExpFunctor<T>::Forward(pxy));
+    const T pxy_sigmoid = static_cast<T>(1.0) / (static_cast<T>(1.0) + ExpFunctor<T>::Forward(static_cast<T>(-1.0) * pxy));
+    return pxy_sigmoid * static_cast<T>(2.0) - static_cast<T>(0.5);
   }
 };
 
 template<typename T>
 struct PwhForwardFunctor {
   __device__ T Compute(T pwh, T anchors) const {
-    const T pwh_sigmoid = static_cast<T>(1.0) / (static_cast<T>(1.0) + ExpFunctor<T>::Forward(pwh));
+    const T pwh_sigmoid = static_cast<T>(1.0) / (static_cast<T>(1.0) + ExpFunctor<T>::Forward(static_cast<T>(-1.0) * pwh));
     return static_cast<T>(4.0) * pwh_sigmoid * pwh_sigmoid * anchors;
   }
 };
@@ -76,6 +78,37 @@ struct AnchorsBackwardFunctor {
   }
 };
 
+template<typename FUNCTOR, typename T>
+__global__ void FusedGetPboxForwardPxy(FUNCTOR pxy_functor, const int n, const T* pxy,
+                                       T* tmp_buffer) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    tmp_buffer[i] = pxy_functor.Compute(pxy[i]);
+  }
+}
+
+template<typename FUNCTOR, typename T>
+__global__ void FusedGetPboxForwardPwhAnchors(FUNCTOR pwh_functor, const int n, const T* pwh,
+                                              const T* anchors, T* tmp_buffer) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    tmp_buffer[i] = pwh_functor.Compute(pwh[i], anchors[i]);
+  }
+}
+
+template<typename FUNCTOR_PXY, typename FUNCTOR_PWH, typename FUNCTOR_ANCHORS, typename T>
+__global__ void FusedGetPboxBackward(FUNCTOR_PXY pxy_functor,
+                                     FUNCTOR_PWH pwh_functor,
+                                     FUNCTOR_ANCHORS anchors_functor, const int n, const T* pxy,
+                                     const T* pwh, const T* anchors, const T* pbox_diff,
+                                     T* pxy_diff, T* pwh_diff, T* anchors_diff) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const T minus_pwh_exp = ExpFunctor<T>::Forward(static_cast<T>(-1.0) * pwh[i]);
+    const T minus_pwh_exp_1 = minus_pwh_exp + static_cast<T>(1.0);
+    pxy_diff[i] = pxy_functor.Compute(pxy[i]) * pbox_diff[i];
+    pwh_diff[i] = pwh_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i];
+    anchors_diff[i] = anchors_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i];
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -101,32 +134,34 @@ class FusedGetPboxKernel final : public user_op::OpKernel {
 
     const ShapeView& pxy_shape = pxy->shape_view();
     const int64_t elem_cnt = pxy_shape.elem_cnt();
-    const int64_t batch_size = pxy_shape.At(0);
-    const int64_t cols = pxy_shape.At(pxy_shape.NumAxes() - 1);
-    const int64_t rows = pxy_shape.Count(0, pxy_shape.NumAxes() - 1);
+    const int64_t rows = pxy_shape.At(0);
+    const int64_t cols = pxy_shape.At(1);
 
     PxyForwardFunctor<T> pxy_functor{};
     PwhForwardFunctor<T> pwh_functor{};
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      tmp_buffer_ptr[i] = pxy_functor.Compute(pxy_ptr[i]);
-    }
+
+    // FusedGetPboxForwardPxy
+    RUN_CUDA_KERNEL((FusedGetPboxForwardPxy<decltype(pxy_functor), T>),
+                    ctx->stream(), elem_cnt, pxy_functor,
+                    elem_cnt, pxy_ptr, tmp_buffer_ptr);
 
     // concat
     auto primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
 
-    DimVector dst_shape = {batch_size, 2 * cols};
+    DimVector dst_shape = {rows, 2 * cols};
     DimVector dst_pos_vec = {0, 0};
-    DimVector src_shape = {batch_size, cols};
+    DimVector src_shape = {rows, cols};
     DimVector src_pos_vec = {0, 0};
-    DimVector extent_vec = {batch_size, cols};
+    DimVector extent_vec = {rows, cols};
     primitive->Launch(ctx->stream(), tmp_buffer->data_type(), 2, pbox_ptr, dst_shape.data(),
                       dst_pos_vec.data(), tmp_buffer_ptr, src_shape.data(), src_pos_vec.data(),
                       extent_vec.data());
 
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      tmp_buffer_ptr[i] = pwh_functor.Compute(pwh_ptr[i], anchors_ptr[i]);
-    }
+    // FusedGetPboxForwardPwhAnchors
+    RUN_CUDA_KERNEL((FusedGetPboxForwardPwhAnchors<decltype(pwh_functor), T>),
+                    ctx->stream(), elem_cnt, pwh_functor,
+                    elem_cnt, pwh_ptr, anchors_ptr, tmp_buffer_ptr);
 
     // concat
     DimVector dst_pos_vec2 = {0, cols};
@@ -164,31 +199,20 @@ class FusedGetPboxGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* pwh = ctx->Tensor4ArgNameAndIndex("pwh", 0);
     const user_op::Tensor* anchors = ctx->Tensor4ArgNameAndIndex("anchors", 0);
     const user_op::Tensor* pbox_diff = ctx->Tensor4ArgNameAndIndex("pbox_diff", 0);
-    const T* pxy_ptr = pxy->dptr<T>();
-    const T* pwh_ptr = pwh->dptr<T>();
-    const T* anchors_ptr = anchors->dptr<T>();
-    const T* pbox_diff_ptr = pbox_diff->dptr<T>();
 
     user_op::Tensor* pxy_diff = ctx->Tensor4ArgNameAndIndex("pxy_diff", 0);
     user_op::Tensor* pwh_diff = ctx->Tensor4ArgNameAndIndex("pwh_diff", 0);
     user_op::Tensor* anchors_diff = ctx->Tensor4ArgNameAndIndex("anchors_diff", 0);
-    T* pxy_diff_ptr = pxy_diff->mut_dptr<T>();
-    T* pwh_diff_ptr = pwh_diff->mut_dptr<T>();
-    T* anchors_diff_ptr = anchors_diff->mut_dptr<T>();
 
     PxyBackwardFunctor<T> pxy_functor{};
     PwhBackwardFunctor<T> pwh_functor{};
     AnchorsBackwardFunctor<T> anchors_functor{};
     const int64_t elem_cnt = pxy->shape_view().elem_cnt();
 
-    // pxy
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const T minus_pwh_exp = ExpFunctor<T>::Forward(static_cast<T>(-1.0) * pwh_ptr[i]);
-      const T minus_pwh_exp_1 = minus_pwh_exp + static_cast<T>(1.0);
-      pxy_diff_ptr[i] = pxy_functor.Compute(pxy_ptr[i]);
-      pwh_diff_ptr[i] = pwh_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors_ptr[i]);
-      anchors_diff_ptr[i] = anchors_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors_ptr[i]);
-    }
+    RUN_CUDA_KERNEL((FusedGetPboxBackward<decltype(pxy_functor), decltype(pwh_functor), decltype(anchors_functor), T>),
+                    ctx->stream(), elem_cnt, pxy_functor, pwh_functor, anchors_functor,
+                    elem_cnt, pxy->dptr<T>(), pwh->dptr<T>(), anchors->dptr<T>(), pbox_diff->dptr<T>(),
+                    pxy_diff->mut_dptr<T>(), pwh_diff->mut_dptr<T>(), anchors_diff->mut_dptr<T>());
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
