@@ -3566,6 +3566,7 @@ class BaddBmmFunctor {
     std::shared_ptr<Tensor> broadcast_input = input;
     Shape shape_to_broadcast({batch1->dim(0), batch1->dim(1), batch2->dim(2)});
     if (input_dim < 3) { broadcast_input = JUST(functional::Expand(input, shape_to_broadcast)); }
+    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
     return JUST(functional::Add(
         JUST(functional::ScalarMul(beta, broadcast_input)),
         JUST(functional::ScalarMul(

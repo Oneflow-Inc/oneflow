@@ -17,27 +17,49 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.bmm,
-    """
-    Performs a batch matrix-matrix product of matrices stored in input and mat2.
+    oneflow.baddbmm,
+    r"""
+    addbmm(input, batch1, batch2, *, beta=1, alpha=1, out=None) -> Tensor
 
-    `input` and `mat2` must be 3-D tensors each containing the same number of matrices.
+    Performs a batch matrix-matrix product of matrices in :attr:`batch1` and :attr:`batch2`.
+    :attr:`input` is added to the final result.
 
-    If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
+    :attr:`batch1` and :attr:`batch2` must be 3-D tensors each containing the same
+    number of matrices.
+
+    If :attr:`batch1` is a :math:`(b \times n \times m)` tensor, :attr:`batch2` is a
+    :math:`(b \times m \times p)` tensor, then :attr:`input` must be
+    :ref:`broadcastable <broadcasting-semantics>` with a
+    :math:`(b \times n \times p)` tensor and :attr:`out` will be a
+    :math:`(b \times n \times p)` tensor.
+
+    .. math::
+    \text{out}_i = \beta\ \text{input}_i + \alpha\ (\text{batch1}_i \mathbin{@} \text{batch2}_i)
+
+    If :attr:`beta` is 0, then :attr:`input` will be ignored, and `nan` and `inf` in
+    it will not be propagated.
+
+    For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
+    :attr:`alpha` must be real numbers, otherwise they should be integers.
 
     Args:
-        input(oneflow.Tensor):  the first batch of matrices to be multiplied
-        mat2(oneflow.Tensor): the second batch of matrices to be multiplied
+    input (Tensor): the tensor to be added
+    batch1 (Tensor): the first batch of matrices to be multiplied
+    batch2 (Tensor): the second batch of matrices to be multiplied
+
+    Keyword args:
+        beta (Number, optional): multiplier for :attr:`input` (:math:`\beta`)
+        alpha (Number, optional): multiplier for :math:`\text{{batch1}} \mathbin{{@}} \text{{batch2}}` (:math:`\alpha`)
 
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> input1 = flow.randn(10, 3, 4)
-        >>> input2 = flow.randn(10, 4, 5)
-        >>> of_out = flow.bmm(input1, input2)
+        >>> input = flow.randn(10, 3, 5)
+        >>> batch1 = flow.randn(10, 3, 4)
+        >>> batch2 = flow.randn(10, 4, 5)
+        >>> of_out = flow.bmm(input, batch1, batch2)
         >>> of_out.shape
         oneflow.Size([10, 3, 5])
     """,
