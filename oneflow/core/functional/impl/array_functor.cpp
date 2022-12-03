@@ -3550,7 +3550,8 @@ class BaddBmmFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& batch1,
-                           const std::shared_ptr<one::Tensor>& batch2) const {
+                           const std::shared_ptr<one::Tensor>& batch2, const Optional<Scalar>& beta,
+                           const Optional<Scalar>& alpha) const {
     const int32_t batch1_ndim = batch1->ndim();
     const int32_t batch2_ndim = batch2->ndim();
     CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
@@ -3565,10 +3566,11 @@ class BaddBmmFunctor {
     std::shared_ptr<Tensor> broadcast_input = input;
     Shape shape_to_broadcast({batch1->dim(0), batch1->dim(1), batch2->dim(2)});
     if (input_dim < 3) { broadcast_input = JUST(functional::Expand(input, shape_to_broadcast)); }
-    return JUST(functional::Add(broadcast_input,
-                                JUST(functional::BatchMatMul(batch1, batch2, false, false, 1.0)),
-                                /*alpha=*/1.0, /*inplace=*/false));
-    ;
+    return JUST(functional::Add(
+        JUST(functional::ScalarMul(beta.value_or(1.0), broadcast_input)),
+        JUST(functional::ScalarMul(
+            alpha.value_or(1.0), JUST(functional::BatchMatMul(batch1, batch2, false, false, 1.0)))),
+        /*alpha=*/1.0, /*inplace=*/false));
   }
 };
 

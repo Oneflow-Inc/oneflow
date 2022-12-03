@@ -33,7 +33,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         input = random_tensor(ndim=3, dim0=2, dim1=4, dim2=4).to(device)
         batch1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
         batch2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
-        y = torch.baddbmm(input, batch1, batch2)
+        y = torch.baddbmm(input, batch1, batch2, beta=2.0, alpha=1.2)
         return y
 
     @autotest()
@@ -42,7 +42,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         input = random_tensor(ndim=1, dim0=4).to(device)
         batch1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
         batch2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
-        y = torch.baddbmm(input, batch1, batch2)
+        y = torch.baddbmm(input, batch1, batch2, beta=-1.98, alpha=1.34)
         return y
 
     @profile(torch.baddbmm)
@@ -50,7 +50,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         input = torch.ones(10, 100, 100)
         batch1 = torch.ones(10, 100, 100)
         batch2 = torch.ones(10, 100, 100)
-        torch.bmm(input, batch1, batch2)
+        torch.bmm(input, batch1, batch2, beta=-1.98, alpha=1.34)
 
 
 if __name__ == "__main__":

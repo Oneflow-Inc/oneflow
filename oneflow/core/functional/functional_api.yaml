@@ -1121,7 +1121,7 @@
 
 - name: "baddbmm"
   signature:
-    "Tensor (Tensor input, Tensor batch1, Tensor batch2) => BaddBmm"
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BaddBmm"
   bind_python: True
 
 - name: "matrix_vector_product"
