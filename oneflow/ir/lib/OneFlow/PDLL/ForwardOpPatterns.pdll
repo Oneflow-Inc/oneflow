@@ -38,7 +38,6 @@ Pattern {
 Pattern {
   let device_name: Attr;
   let device_tag = attr<"\"cuda\"">;
-  let shape: Attr;
   let scalar_div_operand: Attr;
   let out_shape: Attr;
 
@@ -46,9 +45,9 @@ Pattern {
   let key: Value;
   let value: Value;
 
-  let query_reshape = op<oneflow.reshape>(query) {device_name = device_name, device_tag = device_tag, shape = shape};
-  let key_reshape = op<oneflow.reshape>(key) {device_name = device_name, device_tag = device_tag, shape = shape};
-  let value_reshape = op<oneflow.reshape>(value) {device_name = device_name, device_tag = device_tag, shape = shape};
+  let query_reshape = op<oneflow.reshape>(query) {device_name = device_name, device_tag = device_tag};
+  let key_reshape = op<oneflow.reshape>(key) {device_name = device_name, device_tag = device_tag};
+  let value_reshape = op<oneflow.reshape>(value) {device_name = device_name, device_tag = device_tag};
   let query_transpose = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let key_transpose = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 3 : si32, 1 : si32]">};
   let value_transpose = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
