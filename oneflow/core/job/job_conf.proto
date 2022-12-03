@@ -273,6 +273,7 @@ message JobConfigProto {
   optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
   
   optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
+  optional bool enable_compress_memory = 801 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 
