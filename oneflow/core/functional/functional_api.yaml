@@ -1119,6 +1119,11 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "baddbmm"
+  signature:
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2) => BaddBmm"
+  bind_python: True
+
 - name: "matrix_vector_product"
   signature: "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
   bind_python: True
