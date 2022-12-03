@@ -133,28 +133,29 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
     }
     llvm::SmallVector<MatMulCompatible, 4> all_matmuls{};
     llvm::SmallVector<BiasAddCompatible, 4> all_bias_adds{};
-    for (auto u : op.matMulGetX().getUsers()) {
-      if (auto another_matmul = dyn_cast<MatMulCompatible>(u)) {
-        if (!another_matmul.isLinear()) { continue; }
-        bool has_another_bias_add = false;
-        // there is bias add op
-        for (auto u : another_matmul.matMulGetY().getUsers()) {
-          if (auto another_bias_add = dyn_cast<BiasAddCompatible>(u)) {
+    for (auto xUser : op.matMulGetX().getUsers()) {
+      if (auto matmul = dyn_cast<MatMulCompatible>(xUser)) {
+        if (!matmul.isLinear()) { continue; }
+        bool has_bias_add = false;
+        for (auto another_matmul_user : matmul.matMulGetY().getUsers()) {
+          // there is bias add op
+          if (auto another_bias_add = dyn_cast<BiasAddCompatible>(another_matmul_user)) {
             if (!another_bias_add.isLastDim()) { continue; }
             all_bias_adds.push_back(another_bias_add);
-            has_another_bias_add = true;
+            has_bias_add = true;
             break;
           }
         }
         // matmul itself is also bias add op
-        if (!has_another_bias_add) {
-          if (auto self_bias_op = dyn_cast<BiasAddCompatible>(u)) {
-            if (!self_bias_op.isLastDim()) { continue; }
-            all_bias_adds.push_back(self_bias_op);
-            has_another_bias_add = true;
+        if (!has_bias_add) {
+          if (auto self_bias_op = dyn_cast<BiasAddCompatible>(xUser)) {
+            if (self_bias_op.isLastDim()) {
+              all_bias_adds.push_back(self_bias_op);
+              has_bias_add = true;
+            }
           }
         }
-        if (!!bias_add == has_another_bias_add) { all_matmuls.push_back(another_matmul); }
+        if (!!bias_add == has_bias_add) { all_matmuls.push_back(matmul); }
       }
     }
     // all_matmuls has only self, means no other matmul can be grouped
