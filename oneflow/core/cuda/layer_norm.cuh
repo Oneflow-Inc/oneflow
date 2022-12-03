@@ -339,9 +339,9 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
         const int pack_offset = pack_id * pack_size;
         LoadType pack[pack_size];
         load.template load<pack_size>(pack, row + row_id, col);
-        for (int i = 0; i < pack_size; ++i) { *(row_buf + pack_offset + i) = pack[i]; }
 #pragma unroll
         for (int i = 0; i < pack_size; ++i) {
+          row_buf[pack_offset + i] = static_cast<ComputeType>(pack[i]);
           WelfordCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
                          thread_count + row_id);
         }
@@ -352,9 +352,9 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
         if (!padding || col < cols) {
           LoadType pack[pack_size];
           load.template load<pack_size>(pack, row + row_id, col);
-          for (int i = 0; i < pack_size; ++i) { *(row_buf + pack_offset + i) = pack[i]; }
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
+            row_buf[pack_offset + i] = static_cast<ComputeType>(pack[i]);
             WelfordCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
                            thread_count + row_id);
           }
@@ -574,12 +574,12 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     ComputeType thread_m2 = 0;
     ComputeType thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      LoadType pack[pack_size];
-      load.template load<pack_size>(pack, row, pack_id * pack_size);
+      const int pack_offset = pack_id * pack_size;
+      load.template load<pack_size>(buf + pack_offset, row, pack_offset);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        buf[i * num_packs + pack_id] = pack[i];
-        WelfordCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2, &thread_count);
+        WelfordCombine(static_cast<ComputeType>(buf[pack_offset + i]), &thread_mean, &thread_m2,
+                       &thread_count);
       }
     }
     ComputeType row_mean = 0;
@@ -595,11 +595,12 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     }
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
+      const int pack_offset = pack_id * pack_size;
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        pack[i] = (static_cast<ComputeType>(buf[i * num_packs + pack_id]) - row_mean) * row_inv_var;
+        pack[i] = (static_cast<ComputeType>(buf[pack_offset + i]) - row_mean) * row_inv_var;
       }
-      store.template store<pack_size>(pack, row, pack_id * pack_size);
+      store.template store<pack_size>(pack, row, pack_offset);
     }
   }
 }
@@ -644,9 +645,16 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
   constexpr int block_size_conf_4 = 1024;
+
   int dev = 0;
   {
     cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
+
+  int sm_count = 0;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
     if (err != cudaSuccess) { return err; }
   }
 
@@ -670,16 +678,15 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         max_smem_size);
+
     return true;
   }();
-  int sm_count = 0;
-  {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
-  }
-  const size_t smem = cols * sizeof(typename LOAD::LoadType);
-  int max_active_blocks_conf_1;
 
+  if (!max_smem_configed) { return cudaErrorInvalidValue; }
+
+  const size_t smem = cols * sizeof(typename LOAD::LoadType);
+
+  int max_active_blocks_conf_1;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks_conf_1,
@@ -691,6 +698,7 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     *success = false;
     return cudaSuccess;
   }
+
   int max_active_blocks_conf_4;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -706,6 +714,7 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
   }
+
   int max_active_blocks_conf_3;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -714,13 +723,13 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         block_size_conf_3, smem);
     if (err != cudaSuccess) { return err; }
   }
-
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1
       || (max_active_blocks_conf_3 > 0 && rows <= sm_count)) {
     *success = true;
     return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
   }
+
   int max_active_blocks_conf_2;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -729,13 +738,13 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
         block_size_conf_2, smem);
     if (err != cudaSuccess) { return err; }
   }
-
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1
       || (max_active_blocks_conf_2 > 0 && rows <= sm_count)) {
     *success = true;
     return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
   }
+
   *success = true;
   return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>(
       stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
@@ -906,6 +915,8 @@ template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename Comp
 __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
                                       const ComputeType* mean, const ComputeType* inv_variance,
                                       const int64_t rows, const int64_t cols) {
+  using LoadTypeX = typename LOAD_X::LoadType;
+  using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
   static_assert(max_cols_per_thread % pack_size == 0, "");
   static_assert(min_cols_per_thread % pack_size == 0, "");
   constexpr int max_num_packs = max_cols_per_thread / pack_size;
@@ -937,14 +948,17 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
       for (int pack_id = 0; pack_id < min_num_packs; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         const int pack_offset = pack_id * pack_size;
-        load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
-        load_scaled_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
+        LoadTypeX pack_x[pack_size];
+        LoadTypeDy pack_dy[pack_size];
+        load_x.template load<pack_size>(pack_x, global_row_id, col);
+        load_scaled_dy.template load<pack_size>(pack_dy, global_row_id, col);
 #pragma unroll
         for (int i = 0; i < pack_size; ++i) {
           const int col_id = pack_offset + i;
           // row_normalized_buf store x
           row_normalized_buf[col_id] =
-              (row_normalized_buf[col_id] - mean_val) * inv_variance_buf[row_id];
+              (static_cast<ComputeType>(pack_x[i]) - mean_val) * inv_variance_buf[row_id];
+          row_dy_buf[col_id] = static_cast<ComputeType>(pack_dy[i]);
           sum_stats1[row_id] += row_dy_buf[col_id];
           sum_stats2[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
         }
@@ -954,14 +968,17 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         const int pack_offset = pack_id * pack_size;
         if (col < cols) {
-          load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
-          load_scaled_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
+          LoadTypeX pack_x[pack_size];
+          LoadTypeDy pack_dy[pack_size];
+          load_x.template load<pack_size>(pack_x, global_row_id, col);
+          load_scaled_dy.template load<pack_size>(pack_dy, global_row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_offset + i;
             // row_normalized_buf store x
             row_normalized_buf[col_id] =
-                (row_normalized_buf[col_id] - mean_val) * inv_variance_buf[row_id];
+                (static_cast<ComputeType>(pack_x[i]) - mean_val) * inv_variance_buf[row_id];
+            row_dy_buf[col_id] = static_cast<ComputeType>(pack_dy[i]);
             sum_stats1[row_id] += row_dy_buf[col_id];
             sum_stats2[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
           }
@@ -986,25 +1003,27 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
 #pragma unroll
       for (int pack_id = 0; pack_id < min_num_packs; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
+        const int pack_offset = pack_id * pack_size;
         for (int i = 0; i < pack_size; ++i) {
-          const int col_id = pack_id * pack_size + i;
+          const int col_id = pack_offset + i;
           row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
                                 - row_normalized_buf[col_id] * warp_sum_stats2[row_id])
                                * inv_variance_over_cols;
         }
-        store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
+        store.template store<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
       }
 #pragma unroll
       for (int pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (col < cols) {
+          const int pack_offset = pack_id * pack_size;
           for (int i = 0; i < pack_size; ++i) {
-            const int col_id = pack_id * pack_size + i;
+            const int col_id = pack_offset + i;
             row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
                                   - row_normalized_buf[col_id] * warp_sum_stats2[row_id])
                                  * inv_variance_over_cols;
           }
-          store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
+          store.template store<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
         }
       }
     }
@@ -1136,9 +1155,11 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
                                            STORE store, const ComputeType* mean,
                                            const ComputeType* inv_variance, const int64_t rows,
                                            const int64_t cols) {
+  using LoadTypeX = typename LOAD_X::LoadType;
+  using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
   extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
-  auto* normalized_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
-  auto* dy_buf = normalized_buf + cols;
+  auto* normalized_buf = reinterpret_cast<LoadTypeX*>(grad_shared_buf);
+  auto* dy_buf = reinterpret_cast<LoadTypeDy*>(normalized_buf + cols);
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
@@ -1150,32 +1171,32 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
     const ComputeType inv_variance_val = inv_variance[row];
     const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      ComputeType x_pack[pack_size];
-      ComputeType dy_pack[pack_size];
-      load_x.template load<pack_size>(x_pack, row, pack_id * pack_size);
-      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
+      const int pack_offset = pack_id * pack_size;
+      load_x.template load<pack_size>(normalized_buf + pack_offset, row, pack_offset);
+      load_scaled_dy.template load<pack_size>(dy_buf + pack_offset, row, pack_offset);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int buf_offset = i * num_packs + pack_id;
-        ComputeType normalized = (x_pack[i] - mean_val) * inv_variance_val;
-        normalized_buf[buf_offset] = normalized;
-        dy_buf[buf_offset] = dy_pack[i];
-        sum_stats1 += dy_pack[i];
-        sum_stats2 += dy_pack[i] * normalized;
+        const int buf_offset = pack_offset + i;
+        ComputeType normalized =
+            (static_cast<ComputeType>(normalized_buf[buf_offset]) - mean_val) * inv_variance_val;
+        normalized_buf[buf_offset] = static_cast<LoadTypeX>(normalized);
+        sum_stats1 += static_cast<ComputeType>(dy_buf[buf_offset]);
+        sum_stats2 += static_cast<ComputeType>(dy_buf[buf_offset]) * normalized;
       }
     }
     const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
     const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
+      const int pack_offset = pack_id * pack_size;
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int buf_offset = i * num_packs + pack_id;
-        pack[i] = (cols * dy_buf[buf_offset] - row_sum_stats1
-                   - normalized_buf[buf_offset] * row_sum_stats2)
+        const int buf_offset = pack_offset + i;
+        pack[i] = (cols * static_cast<ComputeType>(dy_buf[buf_offset]) - row_sum_stats1
+                   - static_cast<ComputeType>(normalized_buf[buf_offset]) * row_sum_stats2)
                   * inv_variance_over_cols;
       }
-      store.template store<pack_size>(pack, row, pack_id * pack_size);
+      store.template store<pack_size>(pack, row, pack_offset);
     }
   }
 }
@@ -1211,15 +1232,53 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
   constexpr int block_size_conf_4 = 1024;
-  int sm_count = 0;
+
+  int dev = 0;
   {
-    int dev;
     cudaError_t err = cudaGetDevice(&dev);
     if (err != cudaSuccess) { return err; }
-    err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+  }
+
+  int sm_count = 0;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
     if (err != cudaSuccess) { return err; }
   }
-  const size_t smem = cols * sizeof(ComputeType) * 2;
+
+  static const bool max_smem_configed = [&]() {
+    int max_smem_size = 0;
+    {
+      cudaError_t err =
+          cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
+      if (err != cudaSuccess) { return false; }
+    }
+
+    MaximizeDynamicSharedMemorySize(
+        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                   block_size_conf_1>,
+        max_smem_size);
+    MaximizeDynamicSharedMemorySize(
+        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                   block_size_conf_2>,
+        max_smem_size);
+    MaximizeDynamicSharedMemorySize(
+        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                   block_size_conf_3>,
+        max_smem_size);
+    MaximizeDynamicSharedMemorySize(
+        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                   block_size_conf_4>,
+        max_smem_size);
+
+    return true;
+  }();
+
+  if (!max_smem_configed) { return cudaErrorInvalidValue; }
+
+  using LoadTypeX = typename LOAD_X::LoadType;
+  using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
+  const size_t smem = cols * (sizeof(LoadTypeX) + sizeof(LoadTypeDy));
+
   int max_active_blocks_conf_1;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -1233,6 +1292,7 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
     *success = false;
     return cudaSuccess;
   }
+
   int max_active_blocks_conf_4;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -1249,6 +1309,7 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
                                             block_size_conf_4>(
         stream, load_x, load_scaled_dy, store, mean, inv_variance, smem, rows, cols);
   }
+
   int max_active_blocks_conf_3;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -1265,6 +1326,7 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
                                             block_size_conf_3>(
         stream, load_x, load_scaled_dy, store, mean, inv_variance, smem, rows, cols);
   }
+
   int max_active_blocks_conf_2;
   {
     cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -1281,6 +1343,7 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
                                             block_size_conf_2>(
         stream, load_x, load_scaled_dy, store, mean, inv_variance, smem, rows, cols);
   }
+
   *success = true;
   return LaunchLayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                           block_size_conf_1>(stream, load_x, load_scaled_dy, store,
@@ -1323,6 +1386,8 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
                                                STORE store, const ComputeType* mean,
                                                const ComputeType* inv_variance, const int64_t rows,
                                                const int64_t cols) {
+  using LoadTypeX = typename LOAD_X::LoadType;
+  using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
@@ -1334,31 +1399,35 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
     ComputeType sum_stats1 = 0;
     ComputeType sum_stats2 = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      ComputeType x_pack[pack_size];
-      ComputeType dy_pack[pack_size];
-      load_x.template load<pack_size>(x_pack, row, pack_id * pack_size);
-      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
-
+      const int pack_offset = pack_id * pack_size;
+      LoadTypeX x_pack[pack_size];
+      LoadTypeDy dy_pack[pack_size];
+      load_x.template load<pack_size>(x_pack, row, pack_offset);
+      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_offset);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        sum_stats1 += dy_pack[i];
-        sum_stats2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
+        sum_stats1 += static_cast<ComputeType>(dy_pack[i]);
+        sum_stats2 += static_cast<ComputeType>(dy_pack[i])
+                      * (static_cast<ComputeType>(x_pack[i]) - mean_val) * inv_variance_val;
       }
     }
     const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
     const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      ComputeType x_pack[pack_size];
-      ComputeType dy_pack[pack_size];
-      load_x.template load<pack_size>(x_pack, row, pack_id * pack_size);
-      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
+      const int pack_offset = pack_id * pack_size;
+      LoadTypeX x_pack[pack_size];
+      LoadTypeDy dy_pack[pack_size];
+      ComputeType dx_pack[pack_size];
+      load_x.template load<pack_size>(x_pack, row, pack_offset);
+      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_offset);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        dy_pack[i] = (cols * dy_pack[i] - row_sum_stats1
-                      - (x_pack[i] - mean_val) * inv_variance_val * row_sum_stats2)
-                     * inv_variance_over_cols;
+        dx_pack[i] =
+            (cols * static_cast<ComputeType>(dy_pack[i]) - row_sum_stats1
+             - (static_cast<ComputeType>(x_pack[i]) - mean_val) * inv_variance_val * row_sum_stats2)
+            * inv_variance_over_cols;
       }
-      store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
+      store.template store<pack_size>(dx_pack, row, pack_offset);
     }
   }
 }
