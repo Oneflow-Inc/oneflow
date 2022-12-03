@@ -2663,7 +2663,7 @@ def _test_eager_boxing_b_to_s(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2704,7 +2704,7 @@ def _test_eager_boxing_s_to_b(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2730,7 +2730,7 @@ def _test_eager_boxing_p_to_s(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2772,7 +2772,7 @@ def _test_eager_boxing_p_to_b(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2801,7 +2801,7 @@ def _test_eager_naive_boxing_s_to_s(
     out_split_axis,
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
-    placement_with_all_cuda_device = flow.env.all_device_placement(device_type)
+    placement_with_all_cuda_device = flow.placement.all(device_type)
 
     x = flow.tensor(np_arr, device=device_type, dtype=flow.float32)
 
