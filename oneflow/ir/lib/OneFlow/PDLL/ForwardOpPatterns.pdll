@@ -59,7 +59,7 @@ Pattern {
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
 
   rewrite out_reshape with{
-    replace out_reshape with CopyUserOpAttrs(out_reshape, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
+    replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
       key_hidden_slice_end = attr<"-1 : si64">,
       key_hidden_slice_start = attr<"0 : si64">,
