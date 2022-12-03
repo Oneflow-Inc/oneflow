@@ -112,8 +112,8 @@ namespace {
 
 BiasAddCompatible getBiasAddCompatibleOp(MatMulCompatible op) {
   BiasAddCompatible bias_add;
-  if (auto self_bias_op =
-          dyn_cast<BiasAddCompatible>(op.getOperation())) /* matmul itself is also bias add op */ {
+  auto self_bias_op = dyn_cast<BiasAddCompatible>(op.getOperation());
+  if (self_bias_op) /* matmul itself is also bias add op */ {
     bias_add = self_bias_op;
   } else /* there is bias add op */ {
     for (auto u : op.matMulGetY().getUsers()) {
