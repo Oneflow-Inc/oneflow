@@ -72,4 +72,12 @@ module  {
     // CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:3 = "oneflow.grouped_matmul_bias"(%[[X]], %[[X]], %[[X]], %[[WEIGHT3]], %[[WEIGHT2]], %[[WEIGHT1]])
     // CHECK: return %[[OUT0]]#2, %[[OUT0]]#1, %[[OUT0]]#0
   }
+
+  func.func @test_fused_matmul_bias_graph(%x: tensor<8x9xf64>, %w: tensor<10x9xf64>, %bias: tensor<10xf64>) -> (tensor<8x10xf64>, tensor<8x10xf64>) {
+    %y0 = "oneflow.fused_matmul_bias"(%x, %w, %bias) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "fused_matmul_bias-0", scope_symbol_id = 12 : i64} : (tensor<8x9xf64>, tensor<10x9xf64>, tensor<10xf64>) -> tensor<8x10xf64>
+    %y1 = "oneflow.fused_matmul_bias"(%x, %w, %bias) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "fused_matmul_bias-0", scope_symbol_id = 12 : i64} : (tensor<8x9xf64>, tensor<10x9xf64>, tensor<10xf64>) -> tensor<8x10xf64>
+    return %y0, %y1 : tensor<8x10xf64>, tensor<8x10xf64>
+    // CHECK: @test_fused_matmul_bias_graph(%[[X:[a-zA-Z0-9_]+]]: tensor<8x9xf64>, %[[W:[a-zA-Z0-9_]+]]: tensor<10x9xf64>, %[[BIAS:[a-zA-Z0-9_]+]]: tensor<10xf64>)
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:2 = "oneflow.grouped_matmul_bias"(%[[X]], %[[X]], %[[W]], %[[W]], %[[BIAS]], %[[BIAS]])
+  }
 }
