@@ -123,7 +123,11 @@ BiasAddCompatible getBiasAddCompatibleOp(MatMulCompatible op) {
       }
     }
   }
-  return bias_add;
+  if (bias_add && bias_add.isLastDim()) {
+    return bias_add;
+  } else {
+    return BiasAddCompatible{};
+  }
 }
 
 }  // namespace
@@ -134,9 +138,6 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
                                       mlir::PatternRewriter& rewriter) const override {
     if (!op.isLinear()) { return failure(); }
     auto bias_add = getBiasAddCompatibleOp(op);
-    if (bias_add) {
-      if (!bias_add.isLastDim()) { return failure(); }
-    }
     llvm::SmallVector<MatMulCompatible, 4> all_matmuls{};
     llvm::SmallVector<BiasAddCompatible, 4> all_bias_adds{};
     for (auto xUser : op.matMulGetX().getUsers()) {
