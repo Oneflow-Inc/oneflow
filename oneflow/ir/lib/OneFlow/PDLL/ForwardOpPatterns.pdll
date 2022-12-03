@@ -48,14 +48,14 @@ Pattern {
   let query_reshape = op<oneflow.reshape>(query) {device_name = device_name, device_tag = device_tag, shape = shape};
   let key_reshape = op<oneflow.reshape>(key) {device_name = device_name, device_tag = device_tag, shape = shape};
   let value_reshape = op<oneflow.reshape>(value) {device_name = device_name, device_tag = device_tag, shape = shape};
-  let query_transpose = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag,  perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
-  let key_transpose = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag,  perm = attr<"[0 : si32, 2 : si32, 3 : si32, 1 : si32]">};
-  let value_transpose = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag,  perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
-  let scores = op<oneflow.batch_matmul>(query_transpose.0, key_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag,   transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let query_transpose = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let key_transpose = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 3 : si32, 1 : si32]">};
+  let value_transpose = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let scores = op<oneflow.batch_matmul>(query_transpose.0, key_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
   let scores_scaled = op<oneflow.scalar_div>(scores.0) {device_name = device_name, device_tag = device_tag, float_operand = scalar_div_operand, has_float_operand = attr<"true : bool">};
   let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
   let out = op<oneflow.batch_matmul>(attn.0, value_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
-  let out_transpose = op<oneflow.transpose>(out.0) {device_name = device_name, device_tag = device_tag,  perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let out_transpose = op<oneflow.transpose>(out.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
 
   rewrite out_reshape with{
