@@ -246,7 +246,6 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["check_allclose"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
-            break
 
     def test_rmsprop_clip_grad(test_case):
         arg_dict = OrderedDict()
