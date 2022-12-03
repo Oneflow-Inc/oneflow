@@ -108,26 +108,32 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   }
 };
 
-struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompatible> {
-  explicit GroupMatMulPattern(mlir::MLIRContext* context)
-      : OpInterfaceRewritePattern<MatMulCompatible>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(MatMulCompatible op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    if (!op.isLinear()) { return failure(); }
-    BiasAddCompatible bias_add;
-    // there is bias add op
+namespace {
+
+BiasAddCompatible getBiasAddCompatibleOp(MatMulCompatible op) {
+  BiasAddCompatible bias_add;
+  if (auto self_bias_op =
+          dyn_cast<BiasAddCompatible>(op.getOperation())) /* matmul itself is also bias add op */ {
+    bias_add = self_bias_op;
+  } else /* there is bias add op */ {
     for (auto u : op.matMulGetY().getUsers()) {
       if (auto b = dyn_cast<BiasAddCompatible>(u)) {
         bias_add = b;
         break;
       }
     }
-    // matmul itself is also bias add op
-    if (!bias_add) {
-      if (auto self_bias_op = dyn_cast<BiasAddCompatible>(op.getOperation())) {
-        bias_add = self_bias_op;
-      }
-    }
+  }
+  return bias_add;
+}
+
+}  // namespace
+struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompatible> {
+  explicit GroupMatMulPattern(mlir::MLIRContext* context)
+      : OpInterfaceRewritePattern<MatMulCompatible>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(MatMulCompatible op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (!op.isLinear()) { return failure(); }
+    auto bias_add = getBiasAddCompatibleOp(op);
     if (bias_add) {
       if (!bias_add.isLastDim()) { return failure(); }
     }
@@ -136,26 +142,9 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
     for (auto xUser : op.matMulGetX().getUsers()) {
       if (auto matmul = dyn_cast<MatMulCompatible>(xUser)) {
         if (!matmul.isLinear()) { continue; }
-        bool has_bias_add = false;
-        for (auto another_matmul_user : matmul.matMulGetY().getUsers()) {
-          // there is bias add op
-          if (auto another_bias_add = dyn_cast<BiasAddCompatible>(another_matmul_user)) {
-            if (!another_bias_add.isLastDim()) { continue; }
-            all_bias_adds.push_back(another_bias_add);
-            has_bias_add = true;
-            break;
-          }
-        }
-        // matmul itself is also bias add op
-        if (!has_bias_add) {
-          if (auto self_bias_op = dyn_cast<BiasAddCompatible>(xUser)) {
-            if (self_bias_op.isLastDim()) {
-              all_bias_adds.push_back(self_bias_op);
-              has_bias_add = true;
-            }
-          }
-        }
-        if (!!bias_add == has_bias_add) { all_matmuls.push_back(matmul); }
+        auto each_bias_add = getBiasAddCompatibleOp(matmul);
+        if (each_bias_add) { all_bias_adds.push_back(each_bias_add); }
+        if (!!bias_add == !!each_bias_add) { all_matmuls.push_back(matmul); }
       }
     }
     // all_matmuls has only self, means no other matmul can be grouped
