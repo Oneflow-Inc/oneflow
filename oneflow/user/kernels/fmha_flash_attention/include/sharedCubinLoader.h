@@ -18,6 +18,7 @@
 #pragma once
 #ifndef _SHARED_CUBIN_LOADER_
 #define _SHARED_CUBIN_LOADER_
+#ifdef WITH_CUDA
 #include "../cudaDriverWrapper.h"
 #include "commonDatatype.h"
 #include "cuda_runtime_api.h"
@@ -216,4 +217,5 @@ private:
 
 } // namespace plugin
 } // namespace nvinfer1
+#endif
 #endif // _SHARED_CUBIN_LOADER_

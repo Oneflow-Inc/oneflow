@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef WITH_CUDA
 #define CUDA_LIB_NAME "cuda"
 
 #if defined(_WIN32)
@@ -137,3 +138,5 @@ CUresult CUDADriverWrapper::cuLaunchKernel(CUfunction f, uint32_t gridDimX, uint
     return (*_cuLaunchKernel)(
         f, gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, sharedMemBytes, hStream, kernelParams, extra);
 }
+
+#endif 

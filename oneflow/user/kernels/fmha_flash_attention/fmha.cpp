@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef WITH_CUDA
 
 #include "fmha.h"
 #include <cuda_runtime.h>
@@ -164,3 +165,5 @@ int run_fmha_v2_api(void* qkv_packed_d, void* cu_seqlens_d, void* o_packed_d, si
 }
 } // namespace plugin
 } // namespace nvinfer1
+
+#endif

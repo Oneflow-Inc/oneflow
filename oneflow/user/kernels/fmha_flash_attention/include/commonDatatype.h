@@ -19,6 +19,8 @@
 #ifndef _COMMON_DATATYPE_FLASH
 #define _COMMON_DATATYPE_FLASH
 
+#ifdef WITH_CUDA
+
 namespace nvinfer1
 {
 namespace plugin
@@ -38,5 +40,7 @@ enum Data_type
 
 } // namespace plugin
 } // namespace nvinfer1
+
+#endif
 
 #endif

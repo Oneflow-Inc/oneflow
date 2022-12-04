@@ -19,6 +19,8 @@
 #ifndef _FMHA_FLASH_ATTENTION
 #define _FMHA_FLASH_ATTENTION
 
+#ifdef WITH_CUDA
+
 #include "commonDatatype.h"
 #include "sharedCubinLoader.h"
 
@@ -309,5 +311,7 @@ inline FusedMultiHeadFlashAttentionKernel const* getFMHACubinKernels(Data_type t
 
 } // namespace plugin
 } // namespace nvinfer1
+
+#endif
 
 #endif
