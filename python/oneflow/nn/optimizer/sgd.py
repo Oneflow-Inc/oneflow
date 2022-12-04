@@ -48,6 +48,9 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         fused (bool, optional): whether to divide all the parameters into several groups, then
             update each group of parameters with the fused kernel. (default: False)
 
@@ -240,6 +243,8 @@ class SGD(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]

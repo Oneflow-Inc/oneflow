@@ -79,6 +79,9 @@ class RMSprop(Optimizer):
         centered (bool, optional) : if ``True``, compute the centered RMSProp,
             the gradient is normalized by an estimation of its variance
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
 
     For example: 
 
@@ -218,6 +221,8 @@ class RMSprop(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

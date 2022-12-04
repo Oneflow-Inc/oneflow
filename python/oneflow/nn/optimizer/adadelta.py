@@ -44,6 +44,9 @@ class Adadelta(Optimizer):
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
             weight_decay (float, optional): The weight decay. Defaults to 0.
             maximize (bool, optional): maximize the params based on the objective, instead of minimizing. Defaults False.
+            contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+                which puts all parameters of the same type, device and group into the
+                same tensor and update them together. (default: False)
         
         For example: 
 
@@ -169,6 +172,8 @@ class Adadelta(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

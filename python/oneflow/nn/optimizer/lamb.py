@@ -53,7 +53,10 @@ class LAMB(Optimizer):
             decoupled weight decay (also known as AdamW) (default: True)
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. 
-        NOT SUPPORTED now! (default: False)
+            NOT SUPPORTED now! (default: False)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         
     .. _Large Batch Optimization for Deep Learning\\: Training BERT in 76 minutes:
         https://arxiv.org/abs/1904.00962
@@ -213,6 +216,8 @@ class LAMB(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

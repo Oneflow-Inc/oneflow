@@ -57,6 +57,9 @@ class AdamW(Optimizer):
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         fused (bool, optional): whether to divide all the parameters into several groups, then
             update each group of parameters with the fused kernel. (default: False)
 
@@ -290,6 +293,8 @@ class AdamW(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]

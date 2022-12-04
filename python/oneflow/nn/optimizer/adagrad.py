@@ -43,6 +43,9 @@ class Adagrad(Optimizer):
             weight_decay (float, optional): The weight decay. Defaults to 0.
             initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
+            contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+                which puts all parameters of the same type, device and group into the
+                same tensor and update them together. (default: False)
         
         For example: 
 
@@ -165,6 +168,8 @@ class Adagrad(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
