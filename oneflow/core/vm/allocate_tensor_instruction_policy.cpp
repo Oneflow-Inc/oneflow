@@ -36,12 +36,12 @@ void AllocateTensorInstructionPolicy::Compute(Instruction* instruction) {
   for (const auto& eager_blob_object : eager_blob_objects_) {
     CHECK_JUST(eager_blob_object->TryAllocateBlobBodyMemory(allocator));
     if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-      LOG(ERROR) << "AllocateTensorInstructionPolicy TryAllocateBlobBodyMemory ["
-                 << DebugName(*instruction)
-                 << "] stream=" << StreamType_Name(instruction->stream().stream_type())
-                 << ", shape=" << eager_blob_object->shape().ToString()
-                 << ", size=" << eager_blob_object->tensor_storage()->blob_bytes()
-                 << ", ptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
+      VLOG(3) << "AllocateTensorInstructionPolicy TryAllocateBlobBodyMemory ["
+              << DebugName(*instruction)
+              << "] stream=" << StreamType_Name(instruction->stream().stream_type())
+              << ", shape=" << eager_blob_object->shape().ToString()
+              << ", size=" << eager_blob_object->tensor_storage()->blob_bytes()
+              << ", ptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
     }
   }
 }

@@ -204,8 +204,6 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
     }
   }
 
-  LOG(INFO) << "BroadcastMatmul::Capture requires_grad_a=" << ctx->requires_grad_a
-            << ", requires_grad_b=" << ctx->requires_grad_b;
   return Maybe<void>::Ok();
 }
 

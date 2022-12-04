@@ -69,12 +69,12 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                Instruction* instruction, bool is_prepare = false) const {
     if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-      LOG(ERROR) << "ReleaseTensorInstructionPolicy::Release [" << this->DebugName(*instruction)
-                 << "] stream=" << StreamType_Name(instruction->stream().stream_type())
-                 << ", blob=" << (void*)eager_blob_object.get()
-                 << ", shape=" << eager_blob_object->shape().ToString()
-                 << ", is_prepare=" << is_prepare
-                 << ", dptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
+      VLOG(3) << "ReleaseTensorInstructionPolicy::Release [" << this->DebugName(*instruction)
+              << "] stream=" << StreamType_Name(instruction->stream().stream_type())
+              << ", blob=" << (void*)eager_blob_object.get()
+              << ", shape=" << eager_blob_object->shape().ToString()
+              << ", is_prepare=" << is_prepare
+              << ", dptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
     }
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
