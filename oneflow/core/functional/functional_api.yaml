@@ -668,6 +668,10 @@
   signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
+- name: "fused_glu_without_linear_grad"
+  signature: "TensorTuple (Tensor dy, Tensor matmul_wx, Tensor matmul_vx=None, String activation=\"none\") => FusedGluWithoutLinearGrad"
+  bind_python: False
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True

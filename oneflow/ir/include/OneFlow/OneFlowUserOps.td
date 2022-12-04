@@ -5343,7 +5343,6 @@ def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOpe
   let has_data_type_infer_fn = 1;
 }
 
-<<<<<<< HEAD
 def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_linear_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
@@ -5351,8 +5350,7 @@ def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_line
     Optional<OneFlow_Tensor>:$matmul_vx
   );
   let attrs = (ins
-    DefaultValuedAttr<StrAttr, "\"none\"">:$activation,
-    DefaultValuedAttr<SI64Attr, "0">:$output_stride
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5367,8 +5365,6 @@ def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_line
   let has_data_type_infer_fn = 1;
 }
 
-=======
->>>>>>> master
 def OneFlow_GroupedMatmulBiasOp : OneFlow_BaseOp<"grouped_matmul_bias", [NoSideEffect, AttrSizedOperandSegments,  DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$xs,

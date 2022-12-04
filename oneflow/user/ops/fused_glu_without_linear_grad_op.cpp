@@ -33,6 +33,14 @@ namespace oneflow {
       << ")";
 
     // check input shapes of dy and matmul_wx
+    for(uint64_t i=0; i<dy_num_axes-1; i++){
+      size_t dy_size = dy_shape.At(i);
+      size_t matmul_wx_size = matmul_wx_shape.At(i);
+      CHECK_EQ_OR_RETURN(dy_size, matmul_wx_size)
+        << "dimension " << i << "of \'dy\'(" << dy_size
+        << ") and \'matmul_wx\'(" << matmul_wx_size 
+        << ") is not consistent";
+    }
     if(is_split_mode){
         CHECK_EQ_OR_RETURN(2*dy_shape.At(dy_num_axes-1), matmul_wx_shape.At(matmul_wx_num_axes-1))
           << "two times of the last dimension of \'dy\'(" << 2*dy_shape.At(dy_num_axes-1)
@@ -47,18 +55,31 @@ namespace oneflow {
     
     // check both dimensions and input shapes of matmul_vx (optional)
     if (is_split_mode) {
-        const Shape& matmul_vx_shape = ctx->InputShape("matmul_vx", 0);
-        size_t matmul_vx_num_axes = matmul_vx_shape.NumAxes();
-        CHECK_GE_OR_RETURN(matmul_vx_num_axes, 2)
-          << "number of axes of \'matmul_vx\' should have be greater than 1, yet get " << matmul_vx_num_axes;
-        CHECK_EQ_OR_RETURN(matmul_vx_num_axes, dy_num_axes)
-          << "number of axes of \'dy\'(" << dy_num_axes
-          << ") is not consistant with the one of \'matmul_vx\'(" << matmul_vx_num_axes
-          << ")";
-        CHECK_EQ_OR_RETURN(matmul_vx_shape.At(matmul_vx_num_axes-1), dy_shape.At(dy_num_axes-1))
-          << "the last dimension of \'dy\'(" << dy_shape.At(dy_num_axes-1)
-          << ") is not consistant with the last dimension of \'matmul_vx\'(" 
-          << matmul_vx_shape.At(matmul_vx_num_axes-1) << ")";
+      // obtain input shape
+      const Shape& matmul_vx_shape = ctx->InputShape("matmul_vx", 0);
+
+      // check dimensions of matmul_vx
+      size_t matmul_vx_num_axes = matmul_vx_shape.NumAxes();
+      CHECK_GE_OR_RETURN(matmul_vx_num_axes, 2)
+        << "number of axes of \'matmul_vx\' should have be greater than 1, yet get " << matmul_vx_num_axes;
+      CHECK_EQ_OR_RETURN(matmul_vx_num_axes, dy_num_axes)
+        << "number of axes of \'dy\'(" << dy_num_axes
+        << ") is not consistant with the one of \'matmul_vx\'(" << matmul_vx_num_axes
+        << ")";
+      
+      // check input shapes of dy and matmul_vx
+      for(uint64_t i=0; i<dy_num_axes-1; i++){
+        size_t dy_size = dy_shape.At(i);
+        size_t matmul_vx_size = matmul_vx_shape.At(i);
+        CHECK_EQ_OR_RETURN(dy_size, matmul_vx_size)
+          << "dimension " << i << "of \'dy\'(" << dy_size
+          << ") and \'matmul_vx\'(" << matmul_vx_size 
+          << ") is not consistent";
+      }
+      CHECK_EQ_OR_RETURN(matmul_vx_shape.At(matmul_vx_num_axes-1), dy_shape.At(dy_num_axes-1))
+        << "the last dimension of \'dy\'(" << dy_shape.At(dy_num_axes-1)
+        << ") is not consistant with the last dimension of \'matmul_vx\'(" 
+        << matmul_vx_shape.At(matmul_vx_num_axes-1) << ")";
     }
 
     // set shape of the output tensor d_matmul_wx
