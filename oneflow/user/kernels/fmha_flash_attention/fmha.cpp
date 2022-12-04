@@ -71,11 +71,7 @@ void set_params(Fused_multihead_attention_params_v2& params,
     bool interleaved, bool ignore_b1opt, bool force_unroll, bool use_int8_scale_max)
 {
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-    memset(&params, 0, sizeof(params)); // NOLINT
-#pragma GCC diagnostic pop
-
+    params.clear();
     // Set the pointers.
     params.qkv_ptr = qkv_packed_d;
     params.qkv_stride_in_bytes = get_size_in_bytes(h * 3 * d, data_type);
