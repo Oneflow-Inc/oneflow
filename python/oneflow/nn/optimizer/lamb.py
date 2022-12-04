@@ -216,7 +216,9 @@ class LAMB(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            assert param_group["contiguous_params"] != True, "contiguous_params cannot be used in graph"
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
 
             optimizer_conf = train_conf.optimizer_conf.add()
 
