@@ -3331,10 +3331,10 @@ class FusedGetPboxGradFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
+  Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& pxy, const std::shared_ptr<one::Tensor>& pwh,
       const std::shared_ptr<one::Tensor>& anchors, const std::shared_ptr<one::Tensor>& pbox_diff) const {
-    return OpInterpUtil::Dispatch<Tensor>(
+    return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {pxy, pwh, anchors, pbox_diff}, {});
   }
 
@@ -3774,8 +3774,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
-  m.add_functor<impl::FusedGetPboxFunctor>("FusedGetPbox");
-  m.add_functor<impl::FusedGetPboxGradFunctor>("FusedGetPboxGrad");
   m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
   m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
   m.add_functor<impl::FusedGetCiouDiagonalAngleFunctor>("FusedGetCiouDiagonalAngle");
@@ -3789,6 +3787,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
   m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
       "FusedGetConvexDiagonalSquaredGrad");
+  m.add_functor<impl::FusedGetPboxFunctor>("FusedGetPbox");
+  m.add_functor<impl::FusedGetPboxGradFunctor>("FusedGetPboxGrad");
 };
 
 }  // namespace functional

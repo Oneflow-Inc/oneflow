@@ -30,7 +30,7 @@ def torch_get_pbox(pxy, pwh, anchors_i):
     return torch.cat([pxy, pwh], dim=1)
 
 
-def _test_fused_get_intersection_area_impl(test_case, device, shape):
+def _test_fused_get_pbox_impl(test_case, device, shape):
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
@@ -74,10 +74,9 @@ def _test_fused_get_intersection_area_impl(test_case, device, shape):
 class TestGetIntersectionAreaModule(flow.unittest.TestCase):
     def test_fused_get_inter_intersection_area(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_fused_get_intersection_area_impl]
+        arg_dict["test_fun"] = [_test_fused_get_pbox_impl]
         arg_dict["device"] = ["cuda"]
-        # arg_dict["shape"] = [(583, 1), (759, 1), (1234, 1)]
-        arg_dict["shape"] = [(1, 4)]
+        arg_dict["shape"] = [(4, 1234), (24, 583), (128, 73)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

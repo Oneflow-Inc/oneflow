@@ -11,7 +11,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
@@ -19,17 +18,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-template<typename Context>
-std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-  return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
-}
-
-auto CopyNdPrimitiveExists() {
-  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewCopyNdPrimitive(&ctx).operator bool();
-  });
-}
 
 template<typename T>
 struct PxyForwardFunctor {
@@ -59,14 +47,14 @@ struct PxyBackwardFunctor {
 template<typename T>
 struct PwhBackwardFunctor {
   __device__ T Compute(T minus_pwh_exp, T minus_pwh_exp_1, T anchors) const {
-    return static_cast<T>(8.0) * minus_pwh_exp / pow(minus_pwh_exp_1, 3);
+    return static_cast<T>(8.0) * anchors * minus_pwh_exp / pow(minus_pwh_exp_1, 3);
   }
 };
 
 template<>
 struct PwhBackwardFunctor<half> {
   __device__ half Compute(half minus_pwh_exp, half minus_pwh_exp_1, half anchors) const {
-    return static_cast<half>(8.0) * minus_pwh_exp / (minus_pwh_exp_1 * minus_pwh_exp_1 *minus_pwh_exp_1);
+    return static_cast<half>(8.0) * anchors * minus_pwh_exp / (minus_pwh_exp_1 * minus_pwh_exp_1 *minus_pwh_exp_1);
   }
 };
 
@@ -79,10 +67,12 @@ struct AnchorsBackwardFunctor {
 
 template<typename FUNCTOR_PXY, typename FUNCTOR_PWH, typename T>
 __global__ void FusedGetPboxForward(FUNCTOR_PXY pxy_functor, FUNCTOR_PWH pwh_functor, const int n, const T* pxy,
-                                    const T* pwh, const T* anchors, T* tmp_buffer_pxy, T* tmp_buffer_pwh) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    tmp_buffer_pxy[i] = pxy_functor.Compute(pxy[i]);
-    tmp_buffer_pwh[i] = pwh_functor.Compute(pwh[i], anchors[i]);
+                                    const T* pwh, const T* anchors, T* pbox, const int64_t rows, const int64_t cols) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
+    const int64_t extra_cols = i - (i % cols);
+    const int64_t rest_cols = (rows - 1) * cols - extra_cols;
+    pbox[i+extra_cols] = pxy_functor.Compute(pxy[i]);
+    pbox[i+n-rest_cols] = pwh_functor.Compute(pwh[i], anchors[i]);
   }
 }
 
@@ -96,8 +86,9 @@ __global__ void FusedGetPboxBackward(FUNCTOR_PXY pxy_functor,
     const T minus_pwh_exp = ExpFunctor<T>::Forward(static_cast<T>(-1.0) * pwh[i]);
     const T minus_pwh_exp_1 = minus_pwh_exp + static_cast<T>(1.0);
     pxy_diff[i] = pxy_functor.Compute(pxy[i]) * pbox_diff[i];
-    pwh_diff[i] = pwh_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i];
-    anchors_diff[i] = anchors_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i];
+
+    pwh_diff[i] = pwh_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i+n];
+    anchors_diff[i] = anchors_functor.Compute(minus_pwh_exp, minus_pwh_exp_1, anchors[i]) * pbox_diff[i+n];
   }
 }
 
@@ -117,12 +108,6 @@ class FusedGetPboxKernel final : public user_op::OpKernel {
     const user_op::Tensor* anchors = ctx->Tensor4ArgNameAndIndex("anchors", 0);
 
     user_op::Tensor* pbox = ctx->Tensor4ArgNameAndIndex("pbox", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* pbox_ptr = pbox->mut_dptr<T>();
-    // T* tmp_buffer_ptr = tmp_buffer->mut_dptr<T>();
-    T* tmp_buffer_pxy_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
-    T* tmp_buffer_pwh_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + pxy->shape_view().elem_cnt() * sizeof(T));
-
     const ShapeView& pxy_shape = pxy->shape_view();
     const int64_t elem_cnt = pxy_shape.elem_cnt();
     const int64_t rows = pxy_shape.At(0);
@@ -131,26 +116,9 @@ class FusedGetPboxKernel final : public user_op::OpKernel {
     PxyForwardFunctor<T> pxy_functor{};
     PwhForwardFunctor<T> pwh_functor{};
 
-    // FusedGetPboxForward
     RUN_CUDA_KERNEL((FusedGetPboxForward<decltype(pxy_functor), decltype(pwh_functor), T>),
                     ctx->stream(), elem_cnt, pxy_functor, pwh_functor, elem_cnt, 
-                    pxy->dptr<T>(), pwh->dptr<T>(), anchors->dptr<T>(), tmp_buffer_pxy_ptr, tmp_buffer_pwh_ptr);
-
-    // concat
-    auto primitive = NewCopyNdPrimitive(ctx);
-    CHECK(primitive);
-    DimVector dst_shape = {rows, 2 * cols};
-    DimVector dst_pos_vec = {0, 0};
-    DimVector src_shape = {rows, cols};
-    DimVector src_pos_vec = {0, 0};
-    DimVector extent_vec = {rows, cols};
-    primitive->Launch(ctx->stream(), tmp_buffer->data_type(), 2, pbox_ptr, dst_shape.data(),
-                      dst_pos_vec.data(), tmp_buffer_pxy_ptr, src_shape.data(), src_pos_vec.data(),
-                      extent_vec.data());
-    DimVector dst_pos_vec2 = {0, cols};
-    primitive->Launch(ctx->stream(), tmp_buffer->data_type(), 2, pbox_ptr, dst_shape.data(),
-                      dst_pos_vec2.data(), tmp_buffer_pwh_ptr, src_shape.data(), src_pos_vec.data(),
-                      extent_vec.data());
+                    pxy->dptr<T>(), pwh->dptr<T>(), anchors->dptr<T>(), pbox->mut_dptr<T>(), rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -158,12 +126,7 @@ class FusedGetPboxKernel final : public user_op::OpKernel {
 #define REGISTER_FUSED_GET_PBOX_KERNEL(dtype)                         \
   REGISTER_USER_KERNEL("fused_get_pbox")                              \
       .SetCreateFn<FusedGetPboxKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDataType("pbox", 0) == GetDataType<dtype>::value) && CopyNdPrimitiveExists() == true) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {   \
-        const Shape& shape = ctx->InputShape("pxy", 0);               \
-        size_t tmp_buffer_size = shape.elem_cnt() * sizeof(dtype);    \
-        return tmp_buffer_size * 2;                                   \
-      });
+      .SetIsMatchedHob((user_op::HobDataType("pbox", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_GET_PBOX_KERNEL(float)
 REGISTER_FUSED_GET_PBOX_KERNEL(double)
