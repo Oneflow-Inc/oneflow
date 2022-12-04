@@ -127,15 +127,17 @@ Maybe<void> FusedGetPboxGradOp::InferDataType(user_op::InferContext* ctx) {
 Maybe<void> FusedGetPboxGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& pxy = ctx->LogicalTensorDesc4InputArgNameAndIndex("pxy", 0);
   FOR_RANGE(int64_t, i, 0, pxy.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("pxy", 0), i)
-        .Split(user_op::OpArg("pwh", 0), i)
-        .Split(user_op::OpArg("anchors", 0), i)
-        .Split(user_op::OpArg("pbox_diff", 0), i)
-        .Split(user_op::OpArg("pxy_diff", 0), i)
-        .Split(user_op::OpArg("pwh_diff", 0), i)
-        .Split(user_op::OpArg("anchors_diff", 0), i)
-        .Build();
+    if (i != 1) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("pxy", 0), i)
+          .Split(user_op::OpArg("pwh", 0), i)
+          .Split(user_op::OpArg("anchors", 0), i)
+          .Split(user_op::OpArg("pbox_diff", 0), i)
+          .Split(user_op::OpArg("pxy_diff", 0), i)
+          .Split(user_op::OpArg("pwh_diff", 0), i)
+          .Split(user_op::OpArg("anchors_diff", 0), i)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }
