@@ -31,7 +31,7 @@ add_docstr(
 
     If :attr:`batch1` is a :math:`(b \times n \times m)` tensor, :attr:`batch2` is a
     :math:`(b \times m \times p)` tensor, then :attr:`input` must be
-    :ref:`broadcastable <broadcasting-semantics>` with a
+    broadcastable with a
     :math:`(b \times n \times p)` tensor and :attr:`out` will be a
     :math:`(b \times n \times p)` tensor.
 
