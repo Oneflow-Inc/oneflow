@@ -7,6 +7,7 @@ oneflow_add_mlir_library(
   Transform/InferPlacement.cpp
   Transform/InsertTransferOp.cpp
   Transform/MemoryPlanning.cpp
+  Transform/PartitionLaunchJob.cpp
   DEPENDS
   MLIRIR
   MLIRParser

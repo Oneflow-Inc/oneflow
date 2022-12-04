@@ -28,6 +28,9 @@ namespace oneflow {
 
 namespace lite {
 
+Operation* getEntryJobOp(ModuleOp module);
+Operation* getEntryJobOp(Operation* op);
+
 Optional<StringRef> getLiteStringElementType(Type type);
 Optional<StringRef> getLiteStringElementType(::mlir::oneflow::DataType type);
 

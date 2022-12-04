@@ -25,6 +25,7 @@ limitations under the License.
 #include "OneFlow/Transform/InferPlacement.h"
 #include "OneFlow/Transform/InsertTransferOp.h"
 #include "OneFlow/Transform/MemoryPlanning.h"
+#include "OneFlow/Transform/PartitionLaunchJob.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -265,6 +266,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   pm.addPass(createLiteFoldVariablePass());
   pm.addPass(createLiteInferPlacementPass(options.target));
   pm.addPass(createLiteInsertTransferOpPass());
+  pm.addPass(createLitePartitionLaunchJobPass());
   pm.addPass(createCanonicalizerPass());
 
   LiteBufferStrategy bufferStrategy;
@@ -274,17 +276,13 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     return failure();
   }
 
-  Operation* root = nullptr;
-  module.getOperation()->walk([&](oneflow::Job job) -> WalkResult {
-    root = job.getOperation();
-    return WalkResult::interrupt();
-  });
-  if (!root) {
+  Operation* entryJobOp = getEntryJobOp(module);
+  if (!entryJobOp) {
     llvm::errs() << "Job not found in module: " << *module;
     return failure();
   }
 
-  auto funcName = root->getAttrOfType<StringAttr>("sym_name");
+  auto funcName = entryJobOp->getAttrOfType<StringAttr>("sym_name");
   llvm::SmallVector<StringRef, 4> devices;
   llvm::DenseMap<StringRef, int> deviceOrdering;
   for (const auto& segment : bufferStrategy.getSegments()) {
@@ -304,7 +302,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   llvm::SmallVector<StringRef, 4> inputValueNames, outputValueNames;
   llvm::SmallVector<oneflow_lite_OpDef_ref_t, 4> opDefs;
 
-  root->walk([&](Operation* op) {
+  entryJobOp->walk([&](Operation* op) {
     if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
     if (auto inputOp = llvm::dyn_cast<InputOp>(op)) {
       auto it = valueOrdering.try_emplace(inputOp.output(), valueOrdering.size()).first;

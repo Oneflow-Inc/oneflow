@@ -20,6 +20,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpTraits.h"
+#include "OneFlow/OneFlowLiteUtils.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
@@ -75,6 +76,7 @@ class ValueLiveness {
 };
 
 struct MemoryPlanningPass : public PassWrapper<MemoryPlanningPass, OperationPass<ModuleOp>> {
+  Operation* entryJobOp;
   ValueLiveness valueLiveness;
   llvm::SmallVector<Value, 4> sortedValues;
   LiteBufferStrategy* bufferStrategy;
@@ -82,6 +84,11 @@ struct MemoryPlanningPass : public PassWrapper<MemoryPlanningPass, OperationPass
   explicit MemoryPlanningPass(LiteBufferStrategy* strategy) : bufferStrategy(strategy) {}
 
   void runOnOperation() override {
+    entryJobOp = getEntryJobOp(getOperation());
+    if (!entryJobOp) {
+      llvm::errs() << "Job not found in module: " << *getOperation();
+      exit(1);
+    }
     computeValueLiveness();
     computeValueSizeAndSort();
     doMemoryPlanning();
@@ -99,7 +106,7 @@ void MemoryPlanningPass::computeValueLiveness() {
   llvm::DenseMap<Value, size_t> liveEnds;
 
   // Compute value liveness
-  getOperation().walk([&](Operation* op) {
+  entryJobOp->walk([&](Operation* op) {
     if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<OutputOp>(op)) { return; }
     opOrdering[op] = opOrdering.size();
     opList.push_back(op);
@@ -137,7 +144,7 @@ static size_t getTensorBitSize(TensorType value) {
 
 void MemoryPlanningPass::computeValueSizeAndSort() {
   llvm::SetVector<Value, llvm::SmallVector<Value, 4>> valueList;
-  getOperation().walk([&](Operation* op) {
+  entryJobOp->walk([&](Operation* op) {
     if (!op->hasTrait<OpTrait::IsOpConfCompatible>() || llvm::dyn_cast<InputOp>(op)
         || llvm::dyn_cast<OutputOp>(op)) {
       return;

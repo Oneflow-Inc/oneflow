@@ -48,6 +48,17 @@ namespace oneflow {
 
 namespace lite {
 
+Operation* getEntryJobOp(ModuleOp module) { return getEntryJobOp(module.getOperation()); }
+
+Operation* getEntryJobOp(Operation* op) {
+  Operation* entry = nullptr;
+  op->walk([&](oneflow::Job job) -> WalkResult {
+    entry = job.getOperation();
+    return WalkResult::advance();
+  });
+  return entry;
+}
+
 Optional<StringRef> getLiteStringElementType(Type type) {
   assert(type.isIntOrFloat());
   if (type.isF16()) {
