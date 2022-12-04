@@ -23,12 +23,6 @@ import oneflow.unittest
 import torch
 
 
-def _get_norm_dims(shape, normalized_shape):
-    lpad = len(shape) - len(normalized_shape)
-    assert lpad >= 0
-    return tuple(range(lpad, len(shape)))
-
-
 def _layer_norm(x, normalized_shape, weight=None, bias=None, eps=1e-6):
     begin_norm_axis = len(x.shape) - len(normalized_shape)
     begin_params_axis = len(x.shape) - len(normalized_shape)
