@@ -278,7 +278,6 @@ class TestFusedGlu(flow.unittest.TestCase):
             # for functionality test
             arg_dict["test_fun"] = [
                 _test_fused_glu,
-                _test_fused_glu_split,
             ]
 
         # set up profiling functions
@@ -294,26 +293,9 @@ class TestFusedGlu(flow.unittest.TestCase):
             # for functionality test
             arg_dict["params"] = [
                 # m=256, k=1280, n=5120
-                {"m": 256, "k": 1280, "n": 5120, "act": "none"},
-                {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
-                {"m": 256, "k": 1280, "n": 5120, "act": "relu"},
-                {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
                 {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
-                {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
-                # m=1024, k=640, n=2560
-                {"m": 1024, "k": 640, "n": 2560, "act": "none"},
-                {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
-                {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
-                {"m": 1024, "k": 640, "n": 2560, "act": "gelu"},
                 {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
-                {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
-                # m=4096, k=320, n=1280
-                {"m": 4096, "k": 320, "n": 1280, "act": "none"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
                 {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
             ]
 
         for arg in GenArgList(arg_dict):
