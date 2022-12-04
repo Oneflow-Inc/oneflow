@@ -574,12 +574,12 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     ComputeType thread_m2 = 0;
     ComputeType thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      const int pack_offset = pack_id * pack_size;
-      load.template load<pack_size>(buf + pack_offset, row, pack_offset);
+      LoadType pack[pack_size];
+      load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        WelfordCombine(static_cast<ComputeType>(buf[pack_offset + i]), &thread_mean, &thread_m2,
-                       &thread_count);
+        buf[i * num_packs + pack_id] = pack[i];
+        WelfordCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2, &thread_count);
       }
     }
     ComputeType row_mean = 0;
@@ -595,12 +595,11 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     }
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
-      const int pack_offset = pack_id * pack_size;
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        pack[i] = (static_cast<ComputeType>(buf[pack_offset + i]) - row_mean) * row_inv_var;
+        pack[i] = (static_cast<ComputeType>(buf[i * num_packs + pack_id]) - row_mean) * row_inv_var;
       }
-      store.template store<pack_size>(pack, row, pack_offset);
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
   }
 }
@@ -1171,32 +1170,33 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
     const ComputeType inv_variance_val = inv_variance[row];
     const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
-      const int pack_offset = pack_id * pack_size;
-      load_x.template load<pack_size>(normalized_buf + pack_offset, row, pack_offset);
-      load_scaled_dy.template load<pack_size>(dy_buf + pack_offset, row, pack_offset);
+      LoadTypeX x_pack[pack_size];
+      LoadTypeDy dy_pack[pack_size];
+      load_x.template load<pack_size>(x_pack, row, pack_id * pack_size);
+      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int buf_offset = pack_offset + i;
+        const int buf_offset = i * num_packs + pack_id;
         ComputeType normalized =
-            (static_cast<ComputeType>(normalized_buf[buf_offset]) - mean_val) * inv_variance_val;
+            (static_cast<ComputeType>(x_pack[i]) - mean_val) * inv_variance_val;
         normalized_buf[buf_offset] = static_cast<LoadTypeX>(normalized);
-        sum_stats1 += static_cast<ComputeType>(dy_buf[buf_offset]);
-        sum_stats2 += static_cast<ComputeType>(dy_buf[buf_offset]) * normalized;
+        dy_buf[buf_offset] = dy_pack[i];
+        sum_stats1 += static_cast<ComputeType>(dy_pack[i]);
+        sum_stats2 += static_cast<ComputeType>(dy_pack[i]) * normalized;
       }
     }
     const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
     const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
-      const int pack_offset = pack_id * pack_size;
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int buf_offset = pack_offset + i;
+        const int buf_offset = i * num_packs + pack_id;
         pack[i] = (cols * static_cast<ComputeType>(dy_buf[buf_offset]) - row_sum_stats1
                    - static_cast<ComputeType>(normalized_buf[buf_offset]) * row_sum_stats2)
                   * inv_variance_over_cols;
       }
-      store.template store<pack_size>(pack, row, pack_offset);
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
   }
 }
