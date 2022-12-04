@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
