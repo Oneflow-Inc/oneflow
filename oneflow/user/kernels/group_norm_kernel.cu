@@ -267,9 +267,8 @@ void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
                           const T* x_ptr, const user_op::Tensor* mean,
                           const user_op::Tensor* inv_variance, const T* gamma_ptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x_ptr, norm_size);
-  ScaleLoad<T, ComputeType, affine> load_scaled_dy(dy_ptr, gamma_ptr, norm_size, channel_size,
-                                                   spatial_size);
+  cuda::layer_norm::DirectLoad<T, T> load_x(x_ptr, norm_size);
+  ScaleLoad<T, T, affine> load_scaled_dy(dy_ptr, gamma_ptr, norm_size, channel_size, spatial_size);
   cuda::layer_norm::DirectStore<ComputeType, T> store(dx_ptr, norm_size);
   OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
                                                          decltype(store), ComputeType>(
@@ -358,7 +357,7 @@ REGISTER_GROUP_NORM_CUDA_KERNEL(nv_bfloat16)
 #endif
 
 template<typename T>
-class GroupNormGradGpuKernel final : public user_op::OpKernel {
+class GroupNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GroupNormGradGpuKernel() = default;
   ~GroupNormGradGpuKernel() = default;
@@ -604,7 +603,8 @@ void DispatchGroupNormParamGradKernel(ep::Stream* stream, const T* dy, const T* 
 }
 
 template<typename T>
-class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
+class GroupNormParamGradGpuKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   GroupNormParamGradGpuKernel() = default;
   ~GroupNormParamGradGpuKernel() = default;
