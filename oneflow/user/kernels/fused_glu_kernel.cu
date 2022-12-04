@@ -275,7 +275,6 @@ bool TryDispatchDualGemmImplArchTag(ep::CudaStream* stream, const std::string& a
 }
 
 #endif  // !defined(__clang__)
-
 template<typename T>
 bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activation, int32_t m,
                              int32_t n, int32_t k, const T* x, const T* w, const T* v, const T* b,
