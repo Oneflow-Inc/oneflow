@@ -24,15 +24,17 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
+#if !defined(__clang__)
+
 #include "device/dual_gemm.h"
 #include "thread/left_silu_and_mul.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace cutlass {
 namespace epilogue {
@@ -97,9 +99,13 @@ class RightFastGeluAndMul {
 }  // namespace epilogue
 }  // namespace cutlass
 
+#endif  // !defined(__clang__)
+
 namespace oneflow {
 
 namespace {
+
+#if !defined(__clang__)
 
 template<typename T>
 struct GetCutlassType {
@@ -268,10 +274,13 @@ bool TryDispatchDualGemmImplArchTag(ep::CudaStream* stream, const std::string& a
   }
 }
 
+#endif  // !defined(__clang__)
+
 template<typename T>
 bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activation, int32_t m,
                              int32_t n, int32_t k, const T* x, const T* w, const T* v, const T* b,
                              const T* c, T* wx, int32_t wx_stride, T* vx, int32_t vx_stride, T* y) {
+#if !defined(__clang__)
   const static bool enabled =
       ParseBooleanFromEnv("ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL", false);
   if (enabled) {
@@ -280,6 +289,9 @@ bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activati
   } else {
     return false;
   }
+#else
+  return false;
+#endif  // !defined(__clang__)
 }
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
@@ -481,7 +493,7 @@ void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n
 }
 
 template<typename T>
-class GpuFusedGluKernel final : public user_op::OpKernel {
+class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuFusedGluKernel() = default;
   ~GpuFusedGluKernel() override = default;
