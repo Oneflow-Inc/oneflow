@@ -25,19 +25,11 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-from oneflow.nn.graph.block_graph import (
-    BlockGraphType,
-    BlockGraph,
-    ModuleGraph,
-    TensorGraph,
-=======
 from oneflow.nn.graph.graph_block import (
     GraphBlockType,
     GraphBlock,
     GraphModule,
     GraphTensor,
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 )
 from oneflow.nn.graph.util import (
     add_indent,
@@ -65,39 +57,22 @@ def get_proxy_cls(item):
         raise NotImplementedError()
 
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-class Block(object):
-    def __init__(self):
-        """ A block of code in nn.Graph, serves as an execution proxy of nn.Module or Tensor.
-
-        A block contains the original data(nn.Module or Tensor) and a graph representation of the original data.
-=======
 class Proxy(object):
     def __init__(self):
         """ An ecution proxy of nn.Module or Tensor.
 
         A proxy contains the original data(nn.Module or Tensor) and a graph representation of the original data.
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         """
         # The original data
         self._oneflow_internal_origin__ = None
         # The graph representation of the original data
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self._oneflow_internal_blockgraph__ = None
-=======
         self._oneflow_internal_graphblock__ = None
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
     def to(self, *args, **kwargs):
         """
         """
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if len(args) == 1 and issubclass(args[0], BlockGraph):
-            return self._oneflow_internal_blockgraph__
-=======
         if len(args) == 1 and issubclass(args[0], GraphBlock):
             return self._oneflow_internal_graphblock__
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         elif len(args) == 1 and (args[0] is Module or args[0] is Tensor):
             return self._oneflow_internal_origin__
         else:
@@ -112,30 +87,18 @@ class ProxyModule(Proxy):
         origin: Module = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        assert not isinstance(origin, Block)
-        super().__init__()
-        self._oneflow_internal_blockgraph__ = ModuleGraph(prefix, name, belonged_graph)
-=======
         assert not isinstance(origin, Proxy)
         super().__init__()
         self._oneflow_internal_graphblock__ = GraphModule(
             prefix, name, belonged_graph, weakref.proxy(self)
         )
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         self._modules = OrderedDict()
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self._oneflow_internal_blockgraph__set_origin(origin)
-
-    def _oneflow_internal_blockgraph__set_origin(self, origin):
-=======
         self._oneflow_internal_graphblock__set_origin(origin)
 
     def _oneflow_internal_graphblock__set_origin(self, origin):
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         self._oneflow_internal_origin__ = origin
         if origin is None:
             return
@@ -143,13 +106,6 @@ class ProxyModule(Proxy):
         for (n, m) in list(origin.named_children()):
             self.__setattr__(
                 n,
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                get_block_cls(m)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
-                    n,
-                    m,
-                    self.to(BlockGraph)._belonged_graph,
-=======
                 get_proxy_cls(m)(
                     self.to(GraphModule)._name_prefix
                     + self.to(GraphModule)._name
@@ -157,21 +113,15 @@ class ProxyModule(Proxy):
                     n,
                     m,
                     self.to(GraphModule)._belonged_graph,
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
                 n,
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                get_block_cls(p)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
-=======
                 get_proxy_cls(p)(
                     self.to(GraphTensor)._name_prefix
                     + self.to(GraphTensor)._name
                     + ".",
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                     n,
                     p,
                 ),
@@ -179,88 +129,26 @@ class ProxyModule(Proxy):
         for (n, b) in list(origin.named_buffers("", False)):
             self.__setattr__(
                 n,
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                get_block_cls(b)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
-=======
                 get_proxy_cls(b)(
                     self.to(GraphTensor)._name_prefix
                     + self.to(GraphTensor)._name
                     + ".",
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                     n,
                     b,
                 ),
             )
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-    def _oneflow_internal_blockgraph__debug(
-        self,
-        v_level: int = 0,
-        *,
-        ranks: Optional[Union[int, List[int]]] = None,
-        max_py_stack_depth: int = 2,
-        only_user_py_stack=True,
-        op_repr_with_py_stack=False,
-    ) -> None:
-        assert isinstance(v_level, int)
-        assert isinstance(max_py_stack_depth, int)
-        assert isinstance(only_user_py_stack, bool)
-        assert isinstance(op_repr_with_py_stack, bool)
-
-        if ranks is None:
-            rank_list = [0]
-        elif isinstance(ranks, int):
-            rank_list = [ranks]
-        elif isinstance(ranks, list):
-            rank_list = ranks
-        else:
-            raise ValueError("ranks must be int or List[int].")
-
-        my_rank = get_rank()
-        if -1 in rank_list or my_rank in rank_list:
-            self.to(BlockGraph)._debug = v_level >= 0
-            if self.to(BlockGraph)._debug:
-                self.to(BlockGraph)._debug_min_s_level = 0
-                self.to(BlockGraph)._debug_max_v_level = max(0, v_level)
-
-            self.to(BlockGraph)._debug_max_py_stack_depth = max_py_stack_depth
-            self.to(BlockGraph)._debug_only_user_py_stack = only_user_py_stack
-            self.to(BlockGraph)._debug_op_repr_with_py_stack = op_repr_with_py_stack
-
-            if self.to(BlockGraph)._type == BlockGraphType.MODULE:
-
-                def _set_child(d):
-                    for (_, n) in d.items():
-                        n._oneflow_internal_blockgraph__debug(
-                            v_level,
-                            ranks=ranks,
-                            max_py_stack_depth=max_py_stack_depth,
-                            only_user_py_stack=only_user_py_stack,
-                            op_repr_with_py_stack=op_repr_with_py_stack,
-                        )
-
-                _set_child(self._modules)
-
-    def __call__(self, *args, **kwargs):
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-=======
     def __call__(self, *args, **kwargs):
         assert self.to(GraphModule)._type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         self.__print(0, 1, self._shallow_repr())
 
         args_tree = ArgsTree(
             (args, kwargs),
             True,
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_input",
-=======
             "_"
             + self.to(GraphModule).name_prefix
             + self.to(GraphModule).name
             + "_input",
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             None,
         )
 
@@ -275,11 +163,7 @@ class ProxyModule(Proxy):
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                self.to(BlockGraph)._args_repr.append(in_str)
-=======
                 self.to(GraphModule)._args_repr.append(in_str)
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 self.__print(0, 1, in_str)
 
         def _print_state(d):
@@ -293,19 +177,11 @@ class ProxyModule(Proxy):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         with graph_build_util.DebugScopeContext(
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            self.to(BlockGraph)._debug_min_s_level,
-            self.to(BlockGraph)._debug_max_v_level,
-            self.to(BlockGraph)._debug,
-            self.to(BlockGraph)._debug_max_py_stack_depth,
-            self.to(BlockGraph)._debug_only_user_py_stack,
-=======
             self.to(GraphModule)._debug_min_s_level,
             self.to(GraphModule)._debug_max_v_level,
             self.to(GraphModule)._debug,
             self.to(GraphModule)._debug_max_py_stack_depth,
             self.to(GraphModule)._debug_only_user_py_stack,
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -319,13 +195,8 @@ class ProxyModule(Proxy):
             (outputs, {}),
             True,
             "_"
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            + self.to(BlockGraph).name_prefix
-            + self.to(BlockGraph).name
-=======
             + self.to(GraphModule).name_prefix
             + self.to(GraphModule).name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             + "_output",
             None,
         )
@@ -341,36 +212,22 @@ class ProxyModule(Proxy):
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                self.to(BlockGraph)._outs_repr.append(out_str)
-=======
                 self.to(GraphModule)._outs_repr.append(out_str)
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 self.__print(0, 1, out_str)
 
         return result
 
     def __block_forward(self, *args, **kwargs):
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._is_executing_forward = True
-        args, kwargs = self.__pre_forward_map(*args, **kwargs)
-        with self.to(BlockGraph).scope_context():
-=======
         self.to(GraphModule)._is_executing_forward = True
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.to(GraphModule).scope_context():
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             # "Instance method __func__ is the function object", "when an instance method object is called,
             # the underlying function __func__ is called, inserting the class instance __self__ in front of
             # the argument list."
             # Reference: https://docs.python.org/3/reference/datamodel.html
             unbound_forward_of_module_instance = self.to(Module).forward.__func__
             result = unbound_forward_of_module_instance(self, *args, **kwargs)
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._is_executing_forward = False
-=======
         self.to(GraphModule)._is_executing_forward = False
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         return result
 
     def __pre_forward_map(self, *args, **kwargs):
@@ -378,35 +235,21 @@ class ProxyModule(Proxy):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if self.to(BlockGraph)._stage_placement is not None:
-=======
         if self.to(GraphModule)._stage_placement is not None:
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
                 return self.__get_or_create_global(
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                    t, self.to(BlockGraph)._stage_placement
-=======
                     t, self.to(GraphModule)._stage_placement
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 )
 
             args, kwargs = self.__map_io(
                 "input", insert_to_global, "insert_to_global", *args, **kwargs
             )
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if self.to(BlockGraph).activation_checkpointing or (
-            self.to(BlockGraph).stage_id is not None
-            and self.to(BlockGraph).stage_id >= 0
-=======
         if self.to(GraphModule).activation_checkpointing or (
             self.to(GraphModule).stage_id is not None
             and self.to(GraphModule).stage_id >= 0
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         ):
 
             def insert_identity(t):
@@ -425,24 +268,14 @@ class ProxyModule(Proxy):
         key = str(id(input_tensor)) + str(placement)
 
         # input_tensor + placement -> unique_global_tensor
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if key not in self.to(BlockGraph)._belonged_graph._unique_global_op_dict:
-            # store input tensor to avoid tensor id recycle
-            self.to(BlockGraph)._belonged_graph._unique_global_op_dict[key] = (
-=======
         if key not in self.to(GraphModule)._belonged_graph._unique_global_op_dict:
             # store input tensor to avoid tensor id recycle
             self.to(GraphModule)._belonged_graph._unique_global_op_dict[key] = (
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 input_tensor.to_global(placement=placement),
                 input_tensor,
             )
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        return self.to(BlockGraph)._belonged_graph._unique_global_op_dict[key][0]
-=======
         return self.to(GraphModule)._belonged_graph._unique_global_op_dict[key][0]
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
     def __get_or_create_identity(self, input_tensor: Tensor = None):
         assert input_tensor is not None
@@ -451,37 +284,6 @@ class ProxyModule(Proxy):
         # input_tensor(with placement) -> unique_identity_tensor
         # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
         # key can use only input tensor.
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if key not in self.to(BlockGraph)._belonged_graph._unique_identity_op_dict:
-            # Reuse current module name for indentity op
-            ident_name_scope = graph_build_util.make_new_name_scope(
-                self.to(BlockGraph).prev_scope,
-                self.to(BlockGraph).name_prefix + self.to(BlockGraph).name,
-            )
-            with graph_build_util.BlockScopeContext(
-                self.to(BlockGraph).prev_scope, ident_name_scope
-            ):
-                # store input tensor to avoid tensor id recycle
-                self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[
-                    key
-                ] = oneflow._C.identity(input_tensor)
-
-        return self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[key]
-
-    def add_module(self, name: str, module: Optional[Module]) -> None:
-        if isinstance(module, Module):
-            self.__setattr__(
-                name,
-                get_block_cls(module)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
-                    name,
-                    module,
-                    self.to(BlockGraph)._belonged_graph,
-                ),
-            )
-        elif isinstance(module, Block):
-            self.__setattr__(name, module)
-=======
         if key not in self.to(GraphModule)._belonged_graph._unique_identity_op_dict:
             # Reuse current module name for indentity op
             ident_name_scope = graph_build_util.make_new_name_scope(
@@ -508,30 +310,19 @@ class ProxyModule(Proxy):
                 self.to(GraphModule)._belonged_graph,
             ),
         )
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
             name,
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            get_block_cls(param)(
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
-=======
             get_proxy_cls(param)(
                 self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 name,
                 param,
             ),
         )
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-=======
     def modules(self, memo: Optional[Set["Proxy"]] = None) -> Iterator["Proxy"]:
         assert self.to(GraphModule)._type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         if memo is None:
             memo = set()
         if self not in memo:
@@ -556,13 +347,8 @@ class ProxyModule(Proxy):
             (args, kwargs),
             True,
             "_"
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            + self.to(BlockGraph).name_prefix
-            + self.to(BlockGraph).name
-=======
             + self.to(GraphModule).name_prefix
             + self.to(GraphModule).name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             + "_"
             + io_type,
             None,
@@ -611,13 +397,8 @@ class ProxyModule(Proxy):
             )
             return False, repr_str
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-    def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-=======
     def __members(self, get_members_fn, recurse=True) -> Iterator["Proxy"]:
         assert self.to(GraphModule)._type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         memo = set()
         modules = self.modules() if recurse else [self]
         for module in modules:
@@ -628,24 +409,14 @@ class ProxyModule(Proxy):
                 memo.add(v)
                 yield v
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-=======
     def parameters(self, recurse: bool = True) -> Iterator["Proxy"]:
         assert self.to(GraphModule)._type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-=======
     def buffers(self, recurse: bool = True) -> Iterator["Proxy"]:
         assert self.to(GraphModule)._type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
@@ -664,16 +435,6 @@ class ProxyModule(Proxy):
                 if name in d:
                     raise AttributeError(
                         "'{}' object has duplicated attribute named '{}'".format(
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                            self.to(BlockGraph)._name, name
-                        )
-                    )
-            if value.to(BlockGraph).type == BlockGraphType.MODULE:
-                self._modules[name] = value
-            elif value.to(BlockGraph).type == BlockGraphType.PARAMETER:
-                self._parameters[name] = value
-            elif value.to(BlockGraph).type == BlockGraphType.BUFFER:
-=======
                             self.to(GraphModule)._name, name
                         )
                     )
@@ -682,7 +443,6 @@ class ProxyModule(Proxy):
             elif value.to(GraphTensor).type == GraphBlockType.PARAMETER:
                 self._parameters[name] = value
             elif value.to(GraphTensor).type == GraphBlockType.BUFFER:
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 self._buffers[name] = value
             else:
                 raise AttributeError(
@@ -725,15 +485,9 @@ class ProxyModule(Proxy):
             return attr
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-                self.to(BlockGraph)._type,
-                type(self).__name__,
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph).name,
-=======
                 self.to(GraphModule)._type,
                 type(self).__name__,
                 self.to(GraphModule)._name_prefix + self.to(GraphModule).name,
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 name,
             )
         )
@@ -751,11 +505,7 @@ class ProxyModule(Proxy):
             _s_block.try_build()
             return _s_block.lazy_origin
         elif (not graph_build_util.lazy_mode.is_enabled()) and self.to(
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            BlockGraph
-=======
             GraphModule
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         )._is_executing_forward:
             # eager and inside nn.Graph.build()
             return _s_block.to(Tensor)
@@ -767,13 +517,8 @@ class ProxyModule(Proxy):
     def __repr__(self):
         lines = None
         child_lines = []
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if len(self.to(BlockGraph)._args_repr) > 0:
-            for in_str in self.to(BlockGraph)._args_repr:
-=======
         if len(self.to(GraphModule)._args_repr) > 0:
             for in_str in self.to(GraphModule)._args_repr:
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 input_str = add_indent(in_str, 2)
                 child_lines.append(input_str)
 
@@ -787,21 +532,12 @@ class ProxyModule(Proxy):
         _append_child(self._buffers)
         _append_child(self._modules)
 
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if len(self.to(BlockGraph)._outs_repr) > 0:
-            for out_str in self.to(BlockGraph)._outs_repr:
-                output_str = add_indent(out_str, 2)
-                child_lines.append(output_str)
-
-        child_lines.append(add_indent(repr(self.to(BlockGraph)), 2))
-=======
         if len(self.to(GraphModule)._outs_repr) > 0:
             for out_str in self.to(GraphModule)._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
 
         child_lines.append(add_indent(repr(self.to(GraphModule)), 2))
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
         if len(child_lines) > 0:
             lines = child_lines
@@ -815,17 +551,10 @@ class ProxyModule(Proxy):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            + self.to(BlockGraph)._type
-            + ":"
-            + self.to(BlockGraph)._name_prefix
-            + self.to(BlockGraph)._name
-=======
             + self.to(GraphModule)._type
             + ":"
             + self.to(GraphModule)._name_prefix
             + self.to(GraphModule)._name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             + ":"
             + self._oneflow_internal_origin__._shallow_repr()
             + ")"
@@ -838,15 +567,9 @@ class ProxyModule(Proxy):
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if s_level >= self.to(BlockGraph)._debug_min_s_level:
-            if (s_level > 0) or (
-                s_level == 0 and v_level <= self.to(BlockGraph)._debug_max_v_level
-=======
         if s_level >= self.to(GraphModule)._debug_min_s_level:
             if (s_level > 0) or (
                 s_level == 0 and v_level <= self.to(GraphModule)._debug_max_v_level
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             ):
                 print(msg, flush=True)
 
@@ -863,11 +586,7 @@ class LazyBuilder(object):
             assert self.name is not None
             assert self.method is not None
             assert self.result is None
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            with block.to(BlockGraph).scope_context():
-=======
             with block.to(GraphTensor).scope_context():
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
                 self.result = self.method()
             self.finished = True
 
@@ -880,16 +599,6 @@ class ProxyTensor(Proxy):
         origin: Union[Parameter, Tensor] = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        assert not isinstance(origin, Block)
-        if isinstance(origin, Parameter):
-            self._oneflow_internal_blockgraph__ = TensorGraph(
-                prefix, name, belonged_graph, BlockGraphType.PARAMETER
-            )
-        elif isinstance(origin, Tensor):
-            self._oneflow_internal_blockgraph__ = TensorGraph(
-                prefix, name, belonged_graph, BlockGraphType.BUFFER
-=======
         assert not isinstance(origin, Proxy)
         if isinstance(origin, Parameter):
             self._oneflow_internal_graphblock__ = GraphTensor(
@@ -902,61 +611,36 @@ class ProxyTensor(Proxy):
         elif isinstance(origin, Tensor):
             self._oneflow_internal_graphblock__ = GraphTensor(
                 prefix, name, belonged_graph, weakref.proxy(self), GraphBlockType.BUFFER
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             )
         else:
             raise NotImplementedError()
         self._lazy_origin_builder = LazyBuilder()
         self.build_finished = False
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self._oneflow_internal_blockgraph__set_origin(origin)
-
-    def _oneflow_internal_blockgraph__set_origin(self, origin):
-=======
         self._oneflow_internal_graphblock__set_origin(origin)
 
     def _oneflow_internal_graphblock__set_origin(self, origin):
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         self._oneflow_internal_origin__ = origin
 
     @property
     def lazy_origin(self):
         assert (
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin"
-=======
             self.to(GraphTensor)._type == GraphBlockType.PARAMETER
             or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin"
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
-=======
             self.to(GraphTensor)._type == GraphBlockType.PARAMETER
             or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
-=======
             self.to(GraphTensor)._type == GraphBlockType.PARAMETER
             or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
         self._lazy_origin_builder = builder
 
     def try_build(self):
@@ -975,17 +659,10 @@ class ProxyTensor(Proxy):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-            + self.to(BlockGraph)._type
-            + ":"
-            + self.to(BlockGraph)._name_prefix
-            + self.to(BlockGraph)._name
-=======
             + self.to(GraphTensor)._type
             + ":"
             + self.to(GraphTensor)._name_prefix
             + self.to(GraphTensor)._name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
             + ":"
             + self._oneflow_internal_origin__._meta_repr()
             + ")"
@@ -1002,18 +679,11 @@ class ProxySequential(get_seq(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-=======
         self.to(GraphModule)._name_prefix = prefix
         self.to(GraphModule)._name = name
         self.to(GraphModule)._belonged_graph = belonged_graph
         self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
 
 class ProxyModuleList(get_list(ProxyModule)):
@@ -1024,29 +694,6 @@ class ProxyModuleList(get_list(ProxyModule)):
         origin: ModuleList = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        if isinstance(prefix, str):
-            super().__init__()
-            self.to(BlockGraph)._name_prefix = prefix
-            self.to(BlockGraph)._name = name
-            self.to(BlockGraph)._belonged_graph = belonged_graph
-            self._oneflow_internal_blockgraph__set_origin(origin)
-            # MoudleList is a container without forward() method,
-        elif isinstance(prefix, list):
-            super().__init__(prefix)
-            if len(prefix) > 0:
-                first = prefix[0]
-                new_name = "_idx"
-                new_list = []
-                for item in prefix:
-                    new_name += "-" + item.to(BlockGraph).name
-                    new_list.append(item.to(Module))
-                new_module_list = ModuleList(new_list)
-                self.to(BlockGraph)._name_prefix = first.to(BlockGraph).name_prefix + first.to(BlockGraph).name
-                self.to(BlockGraph)._name = new_name
-                self.to(BlockGraph)._belonged_graph = first.to(BlockGraph)._belonged_graph
-                self._oneflow_internal_origin__ = new_module_list
-=======
         super().__init__()
         self.to(GraphModule)._name_prefix = prefix
         self.to(GraphModule)._name = name
@@ -1054,7 +701,6 @@ class ProxyModuleList(get_list(ProxyModule)):
         self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
         # MoudleList is a container without forward() method,
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
 
 class ProxyModuleDict(get_dict(ProxyModule)):
@@ -1066,18 +712,11 @@ class ProxyModuleDict(get_dict(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-=======
         self.to(GraphModule)._name_prefix = prefix
         self.to(GraphModule)._name = name
         self.to(GraphModule)._belonged_graph = belonged_graph
         self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
 
 class ProxyParameterList(get_para_list(ProxyModule)):
@@ -1089,20 +728,12 @@ class ProxyParameterList(get_para_list(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-        self.to(BlockGraph)._is_executing_forward = True
-=======
         self.to(GraphModule)._name_prefix = prefix
         self.to(GraphModule)._name = name
         self.to(GraphModule)._belonged_graph = belonged_graph
         self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
         self.to(GraphModule)._is_executing_forward = True
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
     def __getitem__(self, idx):
         assert isinstance(idx, int)
@@ -1124,20 +755,12 @@ class ProxyParameterDict(get_para_dict(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-<<<<<<< HEAD:python/oneflow/nn/graph/block.py
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-        self.to(BlockGraph)._is_executing_forward = True
-=======
         self.to(GraphModule)._name_prefix = prefix
         self.to(GraphModule)._name = name
         self.to(GraphModule)._belonged_graph = belonged_graph
         self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
         self.to(GraphModule)._is_executing_forward = True
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83:python/oneflow/nn/graph/proxy.py
 
     def __getitem__(self, key: str):
         p_state = self._get_from_states(key, "_parameters")

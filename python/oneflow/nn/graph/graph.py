@@ -35,9 +35,6 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-<<<<<<< HEAD
-from oneflow.nn.graph.block import Block, BlockGraphType, get_block_cls, BlockGraph
-=======
 from oneflow.nn.graph.proxy import (
     Proxy,
     GraphBlockType,
@@ -45,7 +42,6 @@ from oneflow.nn.graph.proxy import (
     GraphModule,
     GraphTensor,
 )
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -115,11 +111,7 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
-<<<<<<< HEAD
-            >>> class BlockGraphType(flow.nn.Graph):
-=======
             >>> class CustomGraph(flow.nn.Graph):
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             ...     def __init__(self):
             ...         super().__init__() # MUST be called
             ...         # Then define the graph attributes
@@ -364,11 +356,7 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
-<<<<<<< HEAD
-            assert block.to(BlockGraph).type == BlockGraphType.MODULE
-=======
             assert block.to(GraphModule).type == GraphBlockType.MODULE
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
             module = block.to(Module)
@@ -514,13 +502,8 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
-<<<<<<< HEAD
-                assert block.to(BlockGraph).type == BlockGraphType.MODULE
-                block._oneflow_internal_blockgraph__debug(
-=======
                 assert block.to(GraphModule).type == GraphBlockType.MODULE
                 block.to(GraphModule).debug(
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
@@ -693,22 +676,14 @@ class Graph(object):
             if state_tensor in state_tensor_set:
                 continue
             op_name = (
-<<<<<<< HEAD
-                state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
-=======
                 state_block.to(GraphTensor).name_prefix
                 + state_block.to(GraphTensor).name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
 
-<<<<<<< HEAD
-            if state_block.to(BlockGraph).type == BlockGraphType.PARAMETER:
-=======
             if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
@@ -732,23 +707,15 @@ class Graph(object):
         for state_block in self._state():
             state_tensor = state_block.to(Tensor)
             op_name = (
-<<<<<<< HEAD
-                state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
-=======
                 state_block.to(GraphTensor).name_prefix
                 + state_block.to(GraphTensor).name
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
             else:
-<<<<<<< HEAD
-                if state_block.to(BlockGraph).type == BlockGraphType.PARAMETER:
-=======
                 if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
@@ -769,11 +736,7 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
-<<<<<<< HEAD
-                state_block.to(BlockGraph).type == BlockGraphType.PARAMETER
-=======
                 state_block.to(GraphTensor).type == GraphBlockType.PARAMETER
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 and state_block.to(Tensor).grad is not None
                 and state_block.to(Tensor).grad.is_lazy
             ):

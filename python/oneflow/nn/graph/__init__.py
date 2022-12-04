@@ -14,13 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from .graph import Graph
-<<<<<<< HEAD
-from .block import Block
-from .block_graph import BlockGraph
-from .block_graph import ModuleGraph
-from .block_graph import TensorGraph
-=======
 from .proxy import Proxy
 from .graph_block import GraphModule
 from .graph_block import GraphTensor
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83

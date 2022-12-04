@@ -28,11 +28,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.graph.util import ArgsTree
-<<<<<<< HEAD
-from oneflow.nn.graph import ModuleGraph
-=======
 from oneflow.nn.graph import GraphModule
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
 
 class BaseOutput(OrderedDict):
@@ -201,11 +197,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModuleIOCheck()
-<<<<<<< HEAD
-                self.m.to(ModuleGraph).activation_checkpointing = True
-=======
                 self.m.to(GraphModule).activation_checkpointing = True
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
             def build(self, t, lt, n, **kwargs):
                 rt, rlt, n, ri, rs, dic = self.m(t, lt, n, 1, "2", **kwargs)

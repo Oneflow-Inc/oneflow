@@ -25,11 +25,7 @@ import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.unittest
-<<<<<<< HEAD
-from oneflow.nn.graph import ModuleGraph
-=======
 from oneflow.nn.graph import GraphModule
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -76,13 +72,8 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 self.loss_fn = loss_fn
                 # Add an optimizer
                 self.add_optimizer(optimizer)
-<<<<<<< HEAD
-                self.model.to(ModuleGraph).activation_checkpointing = True
-                self.model1.to(ModuleGraph).activation_checkpointing = True
-=======
                 self.model.to(GraphModule).activation_checkpointing = True
                 self.model1.to(GraphModule).activation_checkpointing = True
->>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
             def build(self, x, y):
                 y_pred = self.model(x)
