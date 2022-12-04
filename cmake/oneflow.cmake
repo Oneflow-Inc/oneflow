@@ -341,12 +341,9 @@ if(BUILD_CUDA)
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
   get_target_property(CUTLASS_DUAL_GEMM_INCLUDE_DIR cutlass_dual_gemm_headers INTERFACE_INCLUDE_DIRECTORIES)
   set_property(
-<<<<<<< HEAD
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_geglu_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
   set_property(
-=======
->>>>>>> dev_glu_dual_gemm
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
