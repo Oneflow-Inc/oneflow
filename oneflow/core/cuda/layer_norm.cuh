@@ -680,8 +680,6 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     return true;
   }();
 
-  if (!max_smem_configed) { return cudaErrorInvalidValue; }
-
   const size_t smem = cols * sizeof(typename LOAD::LoadType);
 
   int max_active_blocks_conf_1;
@@ -1273,8 +1271,6 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
     return true;
   }();
-
-  if (!max_smem_configed) { return cudaErrorInvalidValue; }
 
   using LoadTypeX = typename LOAD_X::LoadType;
   using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
