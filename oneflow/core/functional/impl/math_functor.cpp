@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -100,9 +101,13 @@ class ScalarMathBaseFunctor {
       attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
       // Promote type to Int64 when tensor is Bool type but scalar is int type.
       // Promote type to Float32 when op is scalar_div.
+      // Promote type to Float16 when tensor is Float16.
       if (DType::priority_order[x->dtype()->data_type()]
           == DType::priority_order[DType::Bool()->data_type()]) {
         lowest_dtype = DType::Int64();
+      } else if (DType::priority_order[x->dtype()->data_type()]
+          == DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float16();
       } else if (op_->op_type_name() == "scalar_div") {
         lowest_dtype = DType::Float();
       } else {
