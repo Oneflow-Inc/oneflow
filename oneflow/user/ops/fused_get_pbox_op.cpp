@@ -78,7 +78,7 @@ Maybe<void> FusedGetPboxGradOp::InferLogicalTensorDesc(user_op::InferContext* ct
   CHECK_EQ_OR_RETURN(pxy.shape(), pwh.shape());
   CHECK_EQ_OR_RETURN(pxy.shape(), pwh.shape());
   CHECK_EQ_OR_RETURN(pxy.shape().At(0), pbox_diff.shape().At(0));
-  // CHECK_EQ_OR_RETURN(pxy.shape().At(1) * 2, pbox_diff.shape().At(1));
+  CHECK_EQ_OR_RETURN(pxy.shape().At(1) * 2, pbox_diff.shape().At(1));
 
   user_op::TensorDesc* pxy_diff = ctx->MutOutputTensorDesc("pxy_diff", 0);
   pxy_diff->set_is_dynamic(pxy.is_dynamic());
