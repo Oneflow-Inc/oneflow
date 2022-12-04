@@ -58,11 +58,11 @@ Maybe<void> FusedGetPboxOp::GetSbp(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, pxy.shape().NumAxes()) {
     if (i != 1) {
       ctx->NewBuilder()
-        .Split(user_op::OpArg("pxy", 0), i)
-        .Split(user_op::OpArg("pwh", 0), i)
-        .Split(user_op::OpArg("anchors", 0), i)
-        .Split(user_op::OpArg("pbox", 0), i)
-        .Build();
+          .Split(user_op::OpArg("pxy", 0), i)
+          .Split(user_op::OpArg("pwh", 0), i)
+          .Split(user_op::OpArg("anchors", 0), i)
+          .Split(user_op::OpArg("pbox", 0), i)
+          .Build();
     }
   }
   return Maybe<void>::Ok();

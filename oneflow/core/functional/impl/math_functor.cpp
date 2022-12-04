@@ -3306,11 +3306,10 @@ class FusedGetPboxFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& pxy, const std::shared_ptr<one::Tensor>& pwh,
-      const std::shared_ptr<one::Tensor>& anchors) const {
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {pxy, pwh, anchors}, {});
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& pxy,
+                           const std::shared_ptr<one::Tensor>& pwh,
+                           const std::shared_ptr<one::Tensor>& anchors) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {pxy, pwh, anchors}, {});
   }
 
  private:
@@ -3331,11 +3330,11 @@ class FusedGetPboxGradFunctor {
                          .Build());
   }
 
-  Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& pxy, const std::shared_ptr<one::Tensor>& pwh,
-      const std::shared_ptr<one::Tensor>& anchors, const std::shared_ptr<one::Tensor>& pbox_diff) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {pxy, pwh, anchors, pbox_diff}, {});
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& pxy,
+                                const std::shared_ptr<one::Tensor>& pwh,
+                                const std::shared_ptr<one::Tensor>& anchors,
+                                const std::shared_ptr<one::Tensor>& pbox_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {pxy, pwh, anchors, pbox_diff}, {});
   }
 
  private:
