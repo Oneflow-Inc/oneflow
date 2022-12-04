@@ -35,7 +35,9 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "tf_prelu_grad",
                                "cublas_fused_mlp",
                                "cublas_fused_mlp_grad",
+                               "fused_matmul_bias",
                                "cublas_bias_add_relu_matmul_grad",
+                               "fused_glu",
                                "fused_matmul_bias_add_relu_dropout",
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",
@@ -47,7 +49,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
                                "fused_cross_feature_interaction_v2_grad",
-                               "fused_multi_head_attention_inference"};
+                               "fused_multi_head_attention_inference",
+                               "grouped_matmul_bias"};
   return white_list;
 }
 
@@ -91,6 +94,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "layer_norm_param_grad",
                               "layer_norm_grad",
+                              "rms_norm",
+                              "rms_norm_grad",
+                              "rms_norm_param_grad",
                               "dropout",
                               "dropout_grad",
                               "softmax",
@@ -99,6 +105,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "log_softmax_grad",
                               "gelu",
                               "gelu_grad",
+                              "fast_gelu",
+                              "fast_gelu_grad",
                               "normalization",
                               "normalization_grad",
                               "normalization_add_relu",
@@ -113,9 +121,12 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_scale_mask_softmax_dropout_grad",
                               "fused_scale_mask_softmax",
                               "fused_scale_mask_softmax_grad",
+                              "fused_bias_add_scale_mask_softmax_dropout",
                               "fused_bias_add_gelu",
                               "fused_bias_add_gelu_grad",
                               "fused_bias_add_mask_scale",
+                              "fused_fast_gelu_mul",
+                              "fused_fast_gelu_mul_grad",
                               "acc",
                               "reciprocal",
                               "reciprocal_no_nan",
@@ -123,7 +134,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "group_norm_param_grad",
                               "group_norm_grad",
                               "silu",
-                              "silu_grad"};
+                              "silu_grad",
+                              "fused_weighted_sum"};
   return gray_list;
 }
 

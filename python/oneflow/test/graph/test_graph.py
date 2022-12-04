@@ -22,7 +22,11 @@ import numpy as np
 
 import oneflow
 import oneflow as flow
+<<<<<<< HEAD
 from oneflow.nn.graph import ModuleGraph, TensorGraph, BlockGraph
+=======
+from oneflow.nn.graph import GraphModule, GraphTensor
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.unittest
@@ -72,6 +76,7 @@ class TestGraph(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphNestedModule()
+<<<<<<< HEAD
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         test_case.assertEqual(g.m.to(BlockGraph).type, "MODULE")
         test_case.assertEqual(g.m.to(BlockGraph).name, "m")
@@ -85,6 +90,21 @@ class TestGraph(flow.unittest.TestCase):
         g.m.layer.conv1.to(BlockGraph)._is_executing_forward = True
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
         g.m.layer.conv1.to(BlockGraph)._is_executing_forward = False
+=======
+        test_case.assertTrue(isinstance(g.m, flow.nn.graph.Proxy))
+        test_case.assertEqual(g.m.to(GraphModule).type, "MODULE")
+        test_case.assertEqual(g.m.to(GraphModule).name, "m")
+        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Proxy))
+        test_case.assertEqual(g.m.dummy_buff.to(GraphTensor).type, "BUFFER")
+        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Proxy))
+        test_case.assertEqual(g.m.layer.conv1.to(GraphModule).name, "conv1")
+        test_case.assertEqual(g.m.layer.conv1.to(GraphModule).name_prefix, "m.layer.")
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Proxy))
+        test_case.assertEqual(g.m.layer.conv1.weight.to(GraphTensor).type, "PARAMETER")
+        g.m.layer.conv1.to(GraphModule)._is_executing_forward = True
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
+        g.m.layer.conv1.to(GraphModule)._is_executing_forward = False
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
         test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
         z = g.build(x)
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
@@ -193,7 +213,11 @@ class TestGraph(flow.unittest.TestCase):
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(
                     scope_proto.parent_scope_symbol_id,
+<<<<<<< HEAD
                     self.to(flow.nn.graph.BlockGraph).prev_scope.symbol_id,
+=======
+                    self.to(flow.nn.graph.GraphModule).prev_scope.symbol_id,
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 )
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"]
                 test_case.assertEqual(ck_bool.WhichOneof("value"), None)
@@ -202,8 +226,13 @@ class TestGraph(flow.unittest.TestCase):
                 ].at_int64
                 test_case.assertEqual(stage_int, 1)
                 name = (
+<<<<<<< HEAD
                     self.to(flow.nn.graph.BlockGraph).name_prefix
                     + self.to(flow.nn.graph.BlockGraph).name
+=======
+                    self.to(flow.nn.graph.GraphModule).name_prefix
+                    + self.to(flow.nn.graph.GraphModule).name
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 )
                 prefixes = []
                 for prefix in scope_proto.scope_op_name_prefixes:
@@ -212,7 +241,11 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(name, name_in_scope)
                 b = self.dummy_buff
                 dummy_buff_scope_proto = graph_build_util.scope_to_proto(
+<<<<<<< HEAD
                     self._buffers["dummy_buff"].to(flow.nn.graph.BlockGraph).scope
+=======
+                    self._buffers["dummy_buff"].to(flow.nn.graph.GraphTensor).scope
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 )
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
@@ -241,9 +274,15 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = m
+<<<<<<< HEAD
                 self.m.layer0.to(ModuleGraph).set_stage(stage_id=0)
                 self.m.layer0.to(ModuleGraph).activation_checkpointing = True
                 self.m.layer1.to(ModuleGraph).set_stage(stage_id=1)
+=======
+                self.m.layer0.to(GraphModule).set_stage(stage_id=0)
+                self.m.layer0.to(GraphModule).activation_checkpointing = True
+                self.m.layer1.to(GraphModule).set_stage(stage_id=1)
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
             def build(self, x, y):
                 return self.m(x, y)
@@ -267,7 +306,7 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                # creat optimizer in nn.Graph and add parameter from ModuleBlock
+                # creat optimizer in nn.Graph and add parameter from ProxyModule
                 self.add_optimizer(
                     flow.optim.SGD(self.linear.parameters(), lr=0.001, momentum=0.9)
                 )

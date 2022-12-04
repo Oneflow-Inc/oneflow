@@ -303,9 +303,9 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/NVIDIA/cutlass/archive/4db6a6140e45c4ffe6339c55b43b159602fa1f35.zip)
+    https://github.com/NVIDIA/cutlass/archive/20d90e0b7bcaeb168b0313bb08440cc6427fedee.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 132bc2d7b635e33666dd6fab1a9ab340)
+set(CUTLASS_MD5 8dbb42044031337fa302c2ab9d1875fa)
 
 include(cuda)
 add_subdirectory(external)
@@ -355,7 +355,7 @@ if(BUILD_CUDA)
       set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
       list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
     endif()
-
+    list(APPEND CUDA_NVCC_FLAGS "-Xcompiler=-fno-strict-aliasing")
     message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()

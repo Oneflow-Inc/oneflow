@@ -18,10 +18,10 @@ import os
 import sys
 import time
 import inspect
+import weakref
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List, Callable
-import weakref
 from google.protobuf import text_format
 
 import oneflow
@@ -35,13 +35,24 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+<<<<<<< HEAD
 from oneflow.nn.graph.block import Block, BlockGraphType, get_block_cls, BlockGraph
+=======
+from oneflow.nn.graph.proxy import (
+    Proxy,
+    GraphBlockType,
+    get_proxy_cls,
+    GraphModule,
+    GraphTensor,
+)
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
     operators_repr,
+    GraphIR,
     seq_to_func_return,
     sys_exc_error_msg,
 )
@@ -104,7 +115,11 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+<<<<<<< HEAD
             >>> class BlockGraphType(flow.nn.Graph):
+=======
+            >>> class CustomGraph(flow.nn.Graph):
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             ...     def __init__(self):
             ...         super().__init__() # MUST be called
             ...         # Then define the graph attributes
@@ -123,15 +138,7 @@ class Graph(object):
         self._is_compiled = False
         # Default is local view
         self._is_global_view = False
-        # forward graph job proto
-        self._forward_job_proto = None
-        # forward, backward and optimized graph job proto
-        self._full_job_proto = None
-        # completed graph job proto
-        self._compiled_job_proto = None
-        self._job_id = None
-        self._args_repr = []
-        self._outs_repr = []
+
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
@@ -144,6 +151,17 @@ class Graph(object):
         # For graph level op rewrite
         self._unique_global_op_dict = dict()
         self._unique_identity_op_dict = dict()
+
+        # forward graph job proto
+        self._forward_job_proto = None
+        # forward, backward and optimized graph job proto
+        self._full_job_proto = None
+        # completed graph job proto
+        self._compiled_job_proto = None
+        self._job_id = None
+        self._args_repr = []
+        self._outs_repr = []
+        self._oneflow_internal_graph_ir__ = None
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
@@ -346,7 +364,11 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
+<<<<<<< HEAD
             assert block.to(BlockGraph).type == BlockGraphType.MODULE
+=======
+            assert block.to(GraphModule).type == GraphBlockType.MODULE
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
             module = block.to(Module)
@@ -492,8 +514,13 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
+<<<<<<< HEAD
                 assert block.to(BlockGraph).type == BlockGraphType.MODULE
                 block._oneflow_internal_blockgraph__debug(
+=======
+                assert block.to(GraphModule).type == GraphBlockType.MODULE
+                block.to(GraphModule).debug(
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
@@ -560,9 +587,11 @@ class Graph(object):
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
+            if self._oneflow_internal_graph_ir__ is None:
+                self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
             return operators_repr(
                 module_conf.ops,
-                self._compiled_graph_proto,
+                self._oneflow_internal_graph_ir__,
                 self._debug_op_repr_with_py_stack,
             )
 
@@ -664,13 +693,22 @@ class Graph(object):
             if state_tensor in state_tensor_set:
                 continue
             op_name = (
+<<<<<<< HEAD
                 state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+=======
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
 
+<<<<<<< HEAD
             if state_block.to(BlockGraph).type == BlockGraphType.PARAMETER:
+=======
+            if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
@@ -694,14 +732,23 @@ class Graph(object):
         for state_block in self._state():
             state_tensor = state_block.to(Tensor)
             op_name = (
+<<<<<<< HEAD
                 state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+=======
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
             else:
+<<<<<<< HEAD
                 if state_block.to(BlockGraph).type == BlockGraphType.PARAMETER:
+=======
+                if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
@@ -722,7 +769,11 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
+<<<<<<< HEAD
                 state_block.to(BlockGraph).type == BlockGraphType.PARAMETER
+=======
+                state_block.to(GraphTensor).type == GraphBlockType.PARAMETER
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 and state_block.to(Tensor).grad is not None
                 and state_block.to(Tensor).grad.is_lazy
             ):
@@ -1320,7 +1371,7 @@ class Graph(object):
 
         return self.__map_io(io_type, func, *args, **kwargs)
 
-    def _add_block(self, name: str, module: Module = None) -> None:
+    def _add_module(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
         be called in nn.Graph.build.
 
@@ -1328,8 +1379,8 @@ class Graph(object):
             name (str): name of the child block. The child block can be accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
 
-        Just assign nn.Module in nn.Graph, _add_block will be called to add the
-        module as a Block:
+        Just assign nn.Module in nn.Graph, _add_module will be called to add the
+        module as a ProxyModule:
 
         For example:
 
@@ -1348,9 +1399,10 @@ class Graph(object):
 
         The block can be accessed as an attribute using the given name.
             >>> g = LinearGraph()
-            >>> print(repr(g.linear))
+            >>> print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
+              (GraphModule:linear()): ()
             )
         """
         if "_name" not in self.__dict__:
@@ -1370,13 +1422,13 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
 
-        self._blocks[name] = get_block_cls(module)(
+        self._blocks[name] = get_proxy_cls(module)(
             "", name, module, weakref.proxy(self)
         )
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
-            self._add_block(name, value)
+            self._add_module(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
                 "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "

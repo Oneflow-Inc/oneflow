@@ -139,7 +139,7 @@ def FusedPadConv2DPattern : Pat<
     ),
     $weight,
     $bias,
-    $bias_multiplier,
+    $_add_to_output,
     $conv2d_op_name,
     $conv2d_device_tag,
     $conv2d_device_name,
@@ -160,57 +160,7 @@ def FusedPadConv2DPattern : Pat<
   ]
 >;
 
-def GetDefaultSeed :
-  NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
-
-def FusedBiasAddMaskScale :
-  NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
-
 def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
-
-def FusedBiasAddDropoutPattern : Pattern<
-  (
-    OneFlow_DropoutOp: $dropout_res
-    (
-      OneFlow_BiasAddOp: $bias_add_res
-        $a,
-        $b,
-        $bias_add_op_name,
-        $bias_add_device_tag,
-        $bias_add_device_name,
-        $bias_add_scope_symbol_id,
-        $bias_add_hierarchy,
-        $bias_add_op_axis
-    ),
-    $_add_to_output,
-    $dropout_op_name,
-    $dropout_device_tag,
-    $dropout_device_name,
-    $dropout_scope_symbol_id,
-    $dropout_hierarchy,
-    $dropout_op_rate
-  ),
-  [
-    (
-      FusedBiasAddMaskScale
-      $dropout_res__0,
-      $bias_add_res,
-      (
-        OneFlow_RandomMaskLikeOp : $mask
-          $a,
-          $bias_add_op_name,
-          $dropout_device_tag,
-          $dropout_device_name,
-          $dropout_scope_symbol_id,
-          $dropout_hierarchy,
-          $dropout_op_rate,
-          (GetDefaultSeed)
-      )
-    ),
-    (replaceWithValue $mask)
-  ],
-  [(IsAddToOutputNone $_add_to_output)]
->;
 
 // TODO: use either to merge two patterns
 def FusedScaleTrilPattern2 : Pat<
@@ -257,37 +207,6 @@ def FusedScaleTrilPattern2 : Pat<
     (IsGPU $tril_device_tag),
     (IsGPU $scale_device_tag)
   ]
->;
-
-def FusedBiasAddGeluPattern : Pat<
-  (
-    OneFlow_GeluOp : $gelu_op
-    (
-      OneFlow_BiasAddOp
-        $a,
-        $b,
-        $bias_add_op_name,
-        $bias_add_device_tag,
-        $bias_add_device_name,
-        $bias_add_scope_symbol_id,
-        $bias_add_hierarchy,
-        $axis
-    ),
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy
-  ),
-  (OneFlow_FusedBiasAddGeluOp $a, $b,
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy,
-    $axis
-  ),
-  []
 >;
 
 def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
@@ -387,7 +306,7 @@ def FuseConv2DBatchNormPattern : Pat<
               $v_nd_sbp
           ),
           $bias,
-          $bias_multiplier,
+          $_add_to_output,
           $conv2d_op_name,
           $conv2d_device_tag,
           $conv2d_device_name,

@@ -326,9 +326,9 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
-                if isinstance(self.test_module.to(Module), flow.nn.LSTMCell):
+                if isinstance(self.test_module.to(flow.nn.Module), flow.nn.LSTMCell):
                     res = res[0] + res[1]
-                elif isinstance(self.test_module.to(Module), flow.nn.LSTM):
+                elif isinstance(self.test_module.to(flow.nn.Module), flow.nn.LSTM):
                     res = res[0].sum() + res[1][0].sum() + res[1][1].sum()
                 elif isinstance(res, (tuple, list)):
                     res = res[0]
@@ -963,8 +963,7 @@ class DualObject:
                             )
                 else:
                     oneflow = oneflow.to_global(
-                        placement=flow.env.all_device_placement("cpu"),
-                        sbp=[flow.sbp.broadcast,],
+                        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,],
                     )
             if testing:
                 dual_modules_to_test.append(self)
@@ -1328,7 +1327,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:
@@ -1359,7 +1358,7 @@ def choice_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:

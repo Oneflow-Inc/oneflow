@@ -20,7 +20,11 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+<<<<<<< HEAD
 from oneflow.nn.graph import ModuleGraph
+=======
+from oneflow.nn.graph import GraphModule
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
 
 rank = flow.env.get_rank()
@@ -141,10 +145,17 @@ def _train_with_graph(iter_num=3):
             self.train_data_loader = train_data_loader
             self.pp_m = pp_m
             # Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
+<<<<<<< HEAD
             self.pp_m.stage_0_m.to(ModuleGraph).set_stage(0)
             self.pp_m.stage_1_m.to(ModuleGraph).set_stage(1)
             self.pp_m.stage_2_m.to(ModuleGraph).set_stage(2)
             self.pp_m.stage_3_m.to(ModuleGraph).set_stage(3)
+=======
+            self.pp_m.stage_0_m.to(GraphModule).set_stage(0)
+            self.pp_m.stage_1_m.to(GraphModule).set_stage(1)
+            self.pp_m.stage_2_m.to(GraphModule).set_stage(2)
+            self.pp_m.stage_3_m.to(GraphModule).set_stage(3)
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             self.mseloss = flow.nn.MSELoss("sum")
             self.add_optimizer(sgd)
             # Let graph to do gradient accumulatioin, pipline execution depends on gradient accumulatioin.

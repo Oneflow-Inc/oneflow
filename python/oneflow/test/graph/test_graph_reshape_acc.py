@@ -19,7 +19,11 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+<<<<<<< HEAD
 from oneflow.nn.graph import ModuleGraph
+=======
+from oneflow.nn.graph import GraphModule
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
 
 
 def _test_graph_reshape_acc(test_case):
@@ -70,8 +74,13 @@ def _test_graph_reshape_acc(test_case):
         def __init__(self):
             super().__init__()
             self.pp_m = pp_m
+<<<<<<< HEAD
             self.pp_m.layer_0.to(ModuleGraph).set_stage(0)
             self.pp_m.layer_1.to(ModuleGraph).set_stage(1)
+=======
+            self.pp_m.layer_0.to(GraphModule).set_stage(0)
+            self.pp_m.layer_1.to(GraphModule).set_stage(1)
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
             self.loss_fn = flow.nn.CrossEntropyLoss()
             self.config.set_gradient_accumulation_steps(2)
             self.add_optimizer(sgd)

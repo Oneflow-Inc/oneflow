@@ -19,6 +19,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
@@ -164,9 +165,15 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
             def __init__(self):
                 super().__init__()
                 self.mixed_linear0 = mixed_linear0
+<<<<<<< HEAD
                 self.mixed_linear0.to(ModuleGraph).activation_checkpointing = True
                 self.mixed_linear1 = mixed_linear1
                 self.mixed_linear1.to(ModuleGraph).activation_checkpointing = True
+=======
+                self.mixed_linear0.to(GraphModule).activation_checkpointing = True
+                self.mixed_linear1 = mixed_linear1
+                self.mixed_linear1.to(GraphModule).activation_checkpointing = True
+>>>>>>> 46061810ae922daabe71c6a270a6553787249f83
                 self.add_optimizer(of_sgd)
 
                 self.config.enable_amp(True)

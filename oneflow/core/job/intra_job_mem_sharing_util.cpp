@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -632,7 +633,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
 
     // Update the offset with a smaller total memory size if the current size is greater than the
     // lower bound
-    {
+    if (GlobalJobDesc().job_conf().enable_compress_memory()) {
       MemoryShareStrategy mss;
       mss.AdaptivelyUpdateOffset(mem_reused_regst2size, mem_chain2regst2lifetime.at(pair.first),
                                  mem_chain2peak_memory[pair.first], &best_result->mem_block_size,

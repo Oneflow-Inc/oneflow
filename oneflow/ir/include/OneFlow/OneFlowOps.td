@@ -244,7 +244,7 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 #define ONEFLOW_PASSES
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
-  let summary = "";
+  let summary = "lower oneflow dialect to tosa dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
   let options = [
@@ -270,19 +270,35 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
-def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
-  let summary = "wrap user ops with kernel launch ops in callee";
-  let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
+def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
+  let summary = "aggregate compute ops together";
+  let constructor = "mlir::oneflow::createAggregateComputeOpsPass()";
 }
 
-def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"> {
-  let summary = "convert oneflow kernel launch callee to llvm ir";
-  let constructor = "mlir::oneflow::createConvertOFKLCalleeToLLVMPass()";
+def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
+  let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
+  let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
+}
+
+def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
+  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
+  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
+}
+
+def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
+  let summary = "trim return types to void type";
+  let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
+}
+
+def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
+  let summary = "lower oneflow dialect ops to okl dialect";
+  let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
@@ -313,6 +329,42 @@ def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleO
   }];
   let constructor = "mlir::oneflow::createConvertToSignlessForTosaPass()";
   let dependentDialects = ["func::FuncDialect"];
+}
+
+def CSEWithAttributesIgnored : Pass<"cse-with-attributes-ignored", "ModuleOp"> {
+  let summary = "ignore oneflow attributes to have cse work";
+  let description = [{
+    cse and ignore oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEWithAttributesIgnored()";
+  let dependentDialects = [];
+}
+
+def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
+  let summary = "cse and ignore oneflow attributes";
+  let description = [{
+    put back oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEPutAttributes()";
+  let dependentDialects = [];
+}
+
+def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
+  let summary = "group matmul together";
+  let description = [{
+    group matmul ops together and use cudnn batched matmul
+  }];
+  let constructor = "mlir::oneflow::createGroupMatMul()";
+  let dependentDialects = [];
+}
+
+def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
+  let summary = "fuse forward ops";
+  let description = [{
+    fuse forward ops. Usually they are actions after an op.
+  }];
+  let constructor = "mlir::oneflow::createFuseForwardOps()";
+  let dependentDialects = [];
 }
 
 #endif // ONEFLOW_PASSES
