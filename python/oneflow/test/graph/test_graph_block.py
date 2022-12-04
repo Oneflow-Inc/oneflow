@@ -239,29 +239,27 @@ class TestGraphBlock(flow.unittest.TestCase):
 
     def test_module_list_slice(test_case):
         class ModuleListSlice(nn.Module):
-            def __init__(
-                self,
-            ):
+            def __init__(self,):
                 super().__init__()
                 linear1 = nn.Linear(5, 5, bias=False)
                 linear2 = nn.Linear(5, 5, bias=False)
                 linear3 = nn.Linear(5, 5, bias=False)
                 self.modulelist = nn.ModuleList([linear1, linear2, linear3])
-        
+
             def forward(self, x):
                 sliced_m = self.modulelist[1:]
                 test_case.assertEqual(len(sliced_m), 2)
                 y = sliced_m[1](x)
                 return y
-        
+
         class GraphModuleListSlice(nn.Graph):
             def __init__(self, m):
                 super().__init__()
                 self.m = m
-        
+
             def build(self, x):
                 return self.m(x)
-        
+
         in_tensor = flow.randn(5, 5)
 
         m = ModuleListSlice()

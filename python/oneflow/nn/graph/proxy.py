@@ -305,7 +305,9 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 name,
                 get_block_cls(module)(
-                    self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
+                    self.to(GraphModule)._name_prefix
+                    + self.to(GraphModule)._name
+                    + ".",
                     name,
                     module,
                     self.to(GraphModule)._belonged_graph,
@@ -714,9 +716,13 @@ class ProxyModuleList(get_list(ProxyModule)):
                     new_name += "-" + item.to(GraphModule).name
                     new_list.append(item.to(Module))
                 new_module_list = ModuleList(new_list)
-                self.to(GraphModule)._name_prefix = first.to(GraphModule).name_prefix + first.to(GraphModule).name
+                self.to(GraphModule)._name_prefix = (
+                    first.to(GraphModule).name_prefix + first.to(GraphModule).name
+                )
                 self.to(GraphModule)._name = new_name
-                self.to(GraphModule)._belonged_graph = first.to(GraphModule)._belonged_graph
+                self.to(GraphModule)._belonged_graph = first.to(
+                    GraphModule
+                )._belonged_graph
                 self._oneflow_internal_origin__ = new_module_list
 
 
