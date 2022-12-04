@@ -203,7 +203,6 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
       ctx->b_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // input b
     }
   }
-
   return Maybe<void>::Ok();
 }
 

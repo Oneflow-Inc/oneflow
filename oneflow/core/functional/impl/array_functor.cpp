@@ -1396,10 +1396,6 @@ class InplaceToContiguousFunctor {
                                                 JUST(blob_object->compute_local_dep_object())));
     JUST(JUST(input->AsLocalTensor())->set_impl(final_tensor_impl));
 
-    // LOG(ERROR) << "InplaceToContiguousFunctor, input_impl="
-    //            << (void*)JUST(input->mut_eager_local_tensor_impl())
-    //            << ", final_tensor_impl=" << (void*)final_tensor_impl.get();
-
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;

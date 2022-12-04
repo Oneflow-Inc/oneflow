@@ -137,15 +137,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
        << (void*)output_eager_blob_objects.at(i).get() << "} ";
   }
   VLOG(3) << ss.str();
-  // if (user_op_expr.op_type_name() == "broadcast_matmul") {
-  //   std::ostringstream ss;
-  //   ss << "Call op " << user_op_expr.op_type_name();
-  //   for (int i = 0; i < inputs.size(); i++) {
-  //     ss << ", input " << i << ", shape=" << inputs[i]->shape()->ToString()
-  //        << ", requires_grad=" << inputs[i]->requires_grad();
-  //   }
-  //   LOG(INFO) << ss.str();
-  // }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
