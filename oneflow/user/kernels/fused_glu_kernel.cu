@@ -24,15 +24,274 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
+#if !defined(__clang__)
+
+#include "device/dual_gemm.h"
+#include "thread/left_silu_and_mul.h"
+
+namespace cutlass {
+namespace epilogue {
+namespace thread {
+
+template<typename ElementOutput_, int Count, typename ElementAccumulator_ = ElementOutput_,
+         typename ElementCompute_ = ElementOutput_,
+         FloatRoundStyle Round = FloatRoundStyle::round_to_nearest>
+class RightFastGeluAndMul {
+ public:
+  using ElementOutput = ElementOutput_;
+  using ElementAccumulator = ElementAccumulator_;
+  using ElementCompute = ElementCompute_;
+
+  static int const kCount = Count;
+  using FragmentOutput = Array<ElementOutput, kCount>;
+  using FragmentAccumulator = Array<ElementAccumulator, kCount>;
+  using ComputeFragment = Array<ElementCompute, kCount>;
+
+  static FloatRoundStyle const kRound = Round;
+
+  struct Params {};
+
+ private:
+  ElementCompute alpha_;
+  ElementCompute beta_;
+
+ public:
+  CUTLASS_HOST_DEVICE
+  RightFastGeluAndMul(Params const& /*params*/) {}
+
+  CUTLASS_HOST_DEVICE
+  bool is_source_needed() const { return true; }
+
+  CUTLASS_HOST_DEVICE
+  void set_k_partition(int k_partition, int k_partition_count) { assert(false); }
+
+  CUTLASS_HOST_DEVICE
+  FragmentOutput operator()(FragmentAccumulator const& lhs, FragmentAccumulator const& rhs) const {
+    NumericArrayConverter<ElementOutput, ElementAccumulator, kCount, Round> accumulator_to_output;
+
+    FragmentOutput converted_lhs = accumulator_to_output(lhs);
+    FragmentOutput converted_rhs = accumulator_to_output(rhs);
+
+    cutlass::epilogue::thread::GELU_taylor<FragmentOutput> fast_gelu;
+    cutlass::multiplies<FragmentOutput> mul;
+    auto fast_gelu_rhs = fast_gelu(converted_rhs);
+    return mul(fast_gelu_rhs, converted_lhs);
+  }
+
+  CUTLASS_HOST_DEVICE
+  ElementOutput operator()(ElementAccumulator const& lhs, ElementAccumulator const& rhs) const {
+    ElementOutput convert_lhs(lhs);
+    ElementOutput convert_rhs(rhs);
+    cutlass::epilogue::thread::GELU_taylor<ElementOutput> fast_gelu;
+    cutlass::multiplies<ElementOutput> mul;
+    auto fast_gelu_lhs = fast_gelu(convert_lhs);
+    return mul(fast_gelu_lhs, convert_rhs);
+  }
+};
+}  // namespace thread
+}  // namespace epilogue
+}  // namespace cutlass
+
+#endif  // !defined(__clang__)
+
 namespace oneflow {
 
 namespace {
+
+#if !defined(__clang__)
+
+template<typename T>
+struct GetCutlassType {
+  using type = T;
+};
+
+template<>
+struct GetCutlassType<half> {
+  using type = cutlass::half_t;
+};
+
+#if CUDA_VERSION >= 11000
+
+template<>
+struct GetCutlassType<nv_bfloat16> {
+  using type = cutlass::bfloat16_t;
+};
+
+#endif
+
+template<typename Acc, typename Arch>
+void DualGemmGegluHalf(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, const void* x,
+                       const void* w, const void* v, const void* b, const void* c, void* wx,
+                       int32_t wx_stride, void* vx, int32_t vx_stride, void* y) {
+  constexpr int kStages = 5;
+  constexpr bool kSplitKSerial = false;
+  constexpr bool kUseBias = true;
+  using ElementOperandA = cutlass::half_t;
+  using ElementOperandB = cutlass::half_t;
+  using ElementOutput = cutlass::half_t;
+  using ElementAccumulator = Acc;
+  using ElementCompute = Acc;
+  using ThreadblockShape = cutlass::gemm::GemmShape<128, 64, 32>;
+  using WarpShape = cutlass::gemm::GemmShape<64, 32, 32>;
+  using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;
+
+  constexpr auto kScaleType =
+      kUseBias ? cutlass::epilogue::thread::ScaleType::NoBetaScaling
+               : (
+                   // No bias
+                   kSplitKSerial ? cutlass::epilogue::thread::ScaleType::Default
+                                 : cutlass::epilogue::thread::ScaleType::Nothing);
+  using EpilogueOutputOp0 =
+      cutlass::epilogue::thread::LinearCombination<ElementOutput,
+                                                   128 / cutlass::sizeof_bits<ElementOutput>::value,
+                                                   ElementAccumulator, ElementCompute, kScaleType>;
+  using EpilogueOutputOp1 =
+      cutlass::epilogue::thread::LinearCombination<ElementOutput,
+                                                   128 / cutlass::sizeof_bits<ElementOutput>::value,
+                                                   ElementAccumulator, ElementCompute, kScaleType>;
+  using EpilogueOutputOp2 = cutlass::epilogue::thread::RightFastGeluAndMul<
+      ElementOutput, 128 / cutlass::sizeof_bits<ElementOutput>::value, ElementOutput,
+      ElementCompute>;
+
+  const ElementCompute alpha0 = ElementCompute(1);
+  const ElementCompute beta0 = ElementCompute(kUseBias ? 1 : 0);
+  const ElementCompute alpha1 = ElementCompute(1);
+  const ElementCompute beta1 = ElementCompute(kUseBias ? 1 : 0);
+
+  // Optionally, we might not need intermediate GEMM outputs
+  constexpr bool kStoreD0 = true;
+  constexpr bool kStoreD1 = true;
+  using DualGemm = cutlass::gemm::device::DualGemm<
+      ElementOperandA, cutlass::layout::RowMajor, ElementOperandB, cutlass::layout::ColumnMajor,
+      ElementOutput, cutlass::layout::RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp,
+      Arch, ThreadblockShape, WarpShape, InstructionShape, EpilogueOutputOp0, EpilogueOutputOp1,
+      EpilogueOutputOp2, cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<1>, kStages,
+      kStoreD0, kStoreD1, kSplitKSerial>;
+
+  int split_k_slices = DualGemm::kSplitKSerial ? 2 : 1;
+
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_a0(
+      reinterpret_cast<const cutlass::half_t*>(x), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::ColumnMajor> tensor_b0(
+      reinterpret_cast<const cutlass::half_t*>(w), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::ColumnMajor> tensor_b1(
+      reinterpret_cast<const cutlass::half_t*>(v), k);
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_bias0(
+      reinterpret_cast<const cutlass::half_t*>(b), {0});
+  typename cutlass::TensorRef<const ElementOperandA, cutlass::layout::RowMajor> tensor_bias1(
+      reinterpret_cast<const cutlass::half_t*>(c), {0});
+  typename cutlass::TensorRef<typename DualGemm::ElementC, typename DualGemm::LayoutC> tensor_d0(
+      reinterpret_cast<cutlass::half_t*>(wx), wx_stride);
+  typename cutlass::TensorRef<typename DualGemm::ElementC, typename DualGemm::LayoutC> tensor_d1(
+      reinterpret_cast<cutlass::half_t*>(vx), vx_stride);
+  typename cutlass::TensorRef<ElementOperandA, cutlass::layout::RowMajor> tensor_out(
+      reinterpret_cast<cutlass::half_t*>(y), n);
+
+  cutlass::gemm::GemmCoord problem_size(m, n, k);
+  typename DualGemm::Arguments arguments{
+      problem_size,    tensor_a0,    tensor_b0,     tensor_bias0, tensor_d0,
+      tensor_b1,       tensor_bias1, tensor_d1,     tensor_out,   {alpha0, beta0},
+      {alpha1, beta1}, {},           split_k_slices};
+
+  DualGemm dual_gemm_op;
+  dual_gemm_op.initialize(arguments, stream->cublas_workspace(), stream->cuda_stream());
+  dual_gemm_op(stream->cuda_stream());
+}
+
+template<typename Acc, typename Arch>
+bool TryDispatchDualGemmImplActivation(ep::CudaStream* stream, const std::string& activation,
+                                       int32_t m, int32_t n, int32_t k, const void* x,
+                                       const void* w, const void* v, const void* b, const void* c,
+                                       void* wx, int32_t wx_stride, void* vx, int32_t vx_stride,
+                                       void* y) {
+  if (activation == "fast_gelu") {
+    DualGemmGegluHalf<Acc, Arch>(stream, m, n, k, x, w, v, b, c, wx, wx_stride, vx, vx_stride, y);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T, typename Arch>
+bool TryDispatchDualGemmImplAccType(ep::CudaStream* stream, const std::string& activation,
+                                    int32_t m, int32_t n, int32_t k, const T* x, const T* w,
+                                    const T* v, const T* b, const T* c, T* wx, int32_t wx_stride,
+                                    T* vx, int32_t vx_stride, T* y) {
+  const static bool allow_half_precision =
+      ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+  if (std::is_same<T, half>::value) {
+    if (allow_half_precision) {
+      return TryDispatchDualGemmImplActivation<cutlass::half_t, Arch>(
+          stream, activation, m, n, k, x, w, v, b, c, wx, wx_stride, vx, vx_stride, y);
+    } else {
+      return TryDispatchDualGemmImplActivation<float, Arch>(stream, activation, m, n, k, x, w, v, b,
+                                                            c, wx, wx_stride, vx, vx_stride, y);
+    }
+  } else {
+    return false;
+  }
+}
+
+template<typename T, typename Arch>
+bool TryDispatchDualGemmImplAlignment(ep::CudaStream* stream, const std::string& activation,
+                                      int32_t m, int32_t n, int32_t k, const T* x, const T* w,
+                                      const T* v, const T* b, const T* c, T* wx, int32_t wx_stride,
+                                      T* vx, int32_t vx_stride, T* y) {
+  if (m % 8 == 0 && n % 8 == 0 && k % 8 == 0
+      && reinterpret_cast<uintptr_t>(x) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(w) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(v) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(b) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(c) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(wx) % (8 * sizeof(T)) == 0 && wx_stride % 8 == 0
+      && reinterpret_cast<uintptr_t>(vx) % (8 * sizeof(T)) == 0
+      && reinterpret_cast<uintptr_t>(y) % (8 * sizeof(T)) == 0 && vx_stride % 8 == 0) {
+    return TryDispatchDualGemmImplAccType<T, Arch>(stream, activation, m, n, k, x, w, v, b, c, wx,
+                                                   wx_stride, vx, vx_stride, y);
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
+bool TryDispatchDualGemmImplArchTag(ep::CudaStream* stream, const std::string& activation,
+                                    int32_t m, int32_t n, int32_t k, const T* x, const T* w,
+                                    const T* v, const T* b, const T* c, T* wx, int32_t wx_stride,
+                                    T* vx, int32_t vx_stride, T* y) {
+  const int arch = stream->cuda_arch();
+  if (arch == 800) {
+    return TryDispatchDualGemmImplAlignment<T, cutlass::arch ::Sm80>(
+        stream, activation, m, n, k, x, w, v, b, c, wx, wx_stride, vx, vx_stride, y);
+  } else {
+    return false;
+  }
+}
+
+#endif  // !defined(__clang__)
+template<typename T>
+bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activation, int32_t m,
+                             int32_t n, int32_t k, const T* x, const T* w, const T* v, const T* b,
+                             const T* c, T* wx, int32_t wx_stride, T* vx, int32_t vx_stride, T* y) {
+#if !defined(__clang__)
+  const static bool enabled =
+      ParseBooleanFromEnv("ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL", false);
+  if (enabled) {
+    return TryDispatchDualGemmImplArchTag<T>(stream, activation, m, n, k, x, w, v, b, c, wx,
+                                             wx_stride, vx, vx_stride, y);
+  } else {
+    return false;
+  }
+#else
+  return false;
+#endif  // !defined(__clang__)
+}
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 __global__ void FusedGluForwardGpu(
@@ -233,7 +492,7 @@ void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n
 }
 
 template<typename T>
-class GpuFusedGluKernel final : public user_op::OpKernel {
+class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuFusedGluKernel() = default;
   ~GpuFusedGluKernel() override = default;
@@ -307,6 +566,19 @@ class GpuFusedGluKernel final : public user_op::OpKernel {
     const int64_t m = x_shape.Count(0, x_num_axes - 1);
     const int64_t n = y_shape.At(x_num_axes - 1);
     const int64_t k = x_shape.At(x_num_axes - 1);
+
+    if (TryDispatchDualGemmImpl(
+            ctx->stream()->As<ep::CudaStream>(), ctx->Attr<std::string>("activation"), m, n, k,
+            input_tensor_x->dptr<T>(), input_tensor_w->dptr<T>(),
+            is_split_mode ? input_tensor_v->dptr<T>() : input_tensor_w->dptr<T>() + n * k,
+            input_tensor_b->dptr<T>(),
+            is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
+            out_tensor_matmul_wx->mut_dptr<T>(), is_split_mode ? n : 2 * n,
+            is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>()
+                          : out_tensor_matmul_wx->mut_dptr<T>() + n,
+            is_split_mode ? n : 2 * n, out_tensor_y->mut_dptr<T>())) {
+      return;
+    }
 
     // calculate matmul_wx (and matmul_vx) through primitive
     auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
