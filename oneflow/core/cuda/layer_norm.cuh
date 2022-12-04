@@ -624,16 +624,13 @@ inline cudaError_t LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, 
 }
 
 template<typename Func>
-cudaError_t MaximizeDynamicSharedMemorySize(Func func, int max_smem_size) {
+cudaError_t MaximizeDynamicSharedMemorySize(Func func, const int max_smem_size) {
   cudaFuncAttributes attr{};
-  {
-    cudaError_t err = cudaFuncGetAttributes(&attr, func);
-    if (err != cudaSuccess) { return err; }
-  }
-
+  cudaError_t err = cudaFuncGetAttributes(&attr, func);
+  if (err != cudaSuccess) { return err; }
+  constexpr int reserved_smem = 1024;  // 1K
   return cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize,
-                              max_smem_size - attr.sharedSizeBytes);
-  return cudaSuccess;
+                              max_smem_size - attr.sharedSizeBytes - reserved_smem);
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
@@ -657,26 +654,28 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
     if (err != cudaSuccess) { return err; }
   }
 
-  static const bool max_smem_configed = [&]() {
+  static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
-    {
-      cudaError_t err =
-          cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
-      if (err != cudaSuccess) { return false; }
-    }
+    cudaError_t err =
+        cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
+    if (err != cudaSuccess) { return false; }
 
-    MaximizeDynamicSharedMemorySize(
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         max_smem_size);
+    if (err != cudaSuccess) { return false; }
 
     return true;
   }();
@@ -1245,30 +1244,32 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
     if (err != cudaSuccess) { return err; }
   }
 
-  static const bool max_smem_configed = [&]() {
+  static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
-    {
-      cudaError_t err =
-          cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
-      if (err != cudaSuccess) { return false; }
-    }
+    cudaError_t err =
+        cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
+    if (err != cudaSuccess) { return false; }
 
-    MaximizeDynamicSharedMemorySize(
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_1>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_2>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_3>,
         max_smem_size);
-    MaximizeDynamicSharedMemorySize(
+    if (err != cudaSuccess) { return false; }
+    err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_4>,
         max_smem_size);
+    if (err != cudaSuccess) { return false; }
 
     return true;
   }();
