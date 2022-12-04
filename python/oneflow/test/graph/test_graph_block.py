@@ -24,7 +24,6 @@ import oneflow.nn as nn
 import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
-from oneflow.nn.graph import ModuleGraph
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
