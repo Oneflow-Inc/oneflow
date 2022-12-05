@@ -286,7 +286,7 @@ __inline__ __device__ void WelfordBlockAllReduce(T thread_mean, T thread_m2, T t
       warp_m2 = static_cast<T>(0);
       warp_count = static_cast<T>(0);
     }
-    __syncwarp();
+    SYNCWARP();
     T block_mean = 0;
     T block_m2 = 0;
     T block_count = 0;
