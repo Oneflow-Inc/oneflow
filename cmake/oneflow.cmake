@@ -336,14 +336,11 @@ if(BUILD_CUDA)
     add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)
   endif()
 
-  get_target_property(CUTLASS_FMHA_INCLUDE_DIR cutlass_fmha_headers INTERFACE_INCLUDE_DIRECTORIES)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
-  get_target_property(CUTLASS_DUAL_GEMM_INCLUDE_DIR cutlass_dual_gemm_headers
-                      INTERFACE_INCLUDE_DIRECTORIES)
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/41_fused_multi_head_attention)
   set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
-               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
+              PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/45_dual_gemm)
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
     set_property(
       SOURCE
