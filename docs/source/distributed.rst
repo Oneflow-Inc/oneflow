@@ -203,6 +203,7 @@ Communication collectives
 
         all_reduce
         all_gather
+        all_gather_into_tensor
         all_to_all
         broadcast
         barrier

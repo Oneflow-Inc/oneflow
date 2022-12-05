@@ -192,7 +192,10 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("output_shape"));
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("output_dtype"));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EagerCclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {
