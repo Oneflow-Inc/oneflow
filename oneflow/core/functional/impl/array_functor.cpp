@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -190,7 +191,12 @@ class EmptyFunctor {
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -3544,6 +3550,31 @@ class BinCountFunctor {
   std::shared_ptr<OpExpr> weight_op_;
 };
 
+class BaddBmmFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& batch1,
+                           const std::shared_ptr<one::Tensor>& batch2, const double& beta,
+                           const double& alpha) const {
+    const int32_t batch1_ndim = batch1->ndim();
+    const int32_t batch2_ndim = batch2->ndim();
+    CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch2_ndim, 3) << Error::RuntimeError() << "batch2 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch1->dim(0), batch2->dim(0))
+        << Error::RuntimeError() << "batch1 and batch2 must have same number of batches, got ,"
+        << batch1->dim(0) << " and " << batch2->dim(0);
+    CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
+        << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
+        << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
+
+    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+    return JUST(functional::Add(JUST(functional::ScalarMul(beta, input)),
+                                JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                                /*alpha=*/1.0, /*inplace=*/false));
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3691,6 +3722,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BinCountFunctor>("BinCount");
   m.add_functor<impl::IndexAddFunctor>("IndexAdd");
   m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
+  m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
 };
 
 }  // namespace functional

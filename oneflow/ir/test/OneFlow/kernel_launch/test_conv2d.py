@@ -13,53 +13,54 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s
-import unittest
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s
+
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
+
+import unittest
+import numpy as np
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
+import oneflow.nn as nn
 
 
-def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):
+def _test_okl_conv2d(test_case):
+    x = flow.randn(2, 3, 224, 224)
+    x = x.cuda()
+    conv = nn.Conv2d(3, 2, kernel_size=7, stride=2, padding=3, bias=False).to("cuda")
+
+    eager_res = conv(x)
+
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, x):
-            return flow.relu(x)
-
-    x = flow.Tensor([1, -1])
-    graph_to_run = GraphToRun()
-    lazy_relu = graph_to_run(x)
-    test_case.assertTrue(flow.all(flow.equal(flow.Tensor([1, 0]), lazy_relu)))
-
-
-def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
-    class GraphToRun(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
+            self.net = conv
 
         def build(self, x):
-            return flow.relu(x)
+            return self.net(x)
 
-    x = flow.Tensor([1, -1]).cuda()
     graph_to_run = GraphToRun()
-    lazy_relu = graph_to_run(x)
-    test_case.assertTrue(flow.all(flow.equal(flow.Tensor([1, 0]).cuda(), lazy_relu)))
+    lazy_res = graph_to_run(x)
+    test_case.assertTrue(
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-4)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestOKLRelu(flow.unittest.TestCase):
-    def test_okl_relu_with_cpu(test_case):
-        _test_okl_relu_with_cpu(test_case)
-
+class TestOKLResNet(flow.unittest.TestCase):
     @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    def test_okl_relu_with_cuda(test_case):
-        _test_okl_relu_with_cuda(test_case)
+    def test_okl_conv2d(test_case):
+        _test_okl_conv2d(test_case)
 
 
 if __name__ == "__main__":
