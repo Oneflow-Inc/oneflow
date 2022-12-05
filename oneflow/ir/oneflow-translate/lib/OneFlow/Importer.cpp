@@ -512,7 +512,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
   return success();
 }
 
-
 LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::DataType& data_type) {
   switch (data_type_mlir) {
     case oneflow::DataType::DT_InvalidDataType:
