@@ -162,6 +162,18 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
   }
 }
 
+void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+}
+
+void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+}
+
 ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
       shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
@@ -582,7 +594,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       auto attr_name = id.str();
       Attribute attr = id_attr.getValue();
       auto user_attr = ::oneflow::AttrValue();
-      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
+      const ::oneflow::AttrType attr_type = user_op::queryAttrType(op_type_name, attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {
