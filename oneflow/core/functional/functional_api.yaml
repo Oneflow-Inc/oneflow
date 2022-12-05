@@ -281,7 +281,7 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
     ]
   bind_python: True
@@ -403,11 +403,11 @@
   bind_python: True
 
 - name: "as_strided"
-  signature: "Tensor (Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStrided"
+  signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStrided"
   bind_python: True
 
 - name: "as_strided_grad"
-  signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
+  signature: "Tensor (Tensor dy, Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStridedGrad"
   bind_python: False
 
 - name: "select"
@@ -662,6 +662,10 @@
 
 - name: "glu"
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
+  bind_python: True
+
+- name: "fused_glu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
 - name: "sigmoid"
@@ -1081,6 +1085,10 @@
   signature: "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
   bind_python: True
 
+- name: "fused_matmul_bias"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None) => FusedMatmulBias"
+  bind_python: True
+
 - name: "fused_mlp_grad"
   signature: "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden, FloatList alpha_list) => FusedMLPGrad"
   bind_python: False
@@ -1109,6 +1117,11 @@
   signature:
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => BatchMatMul"
+  bind_python: True
+
+- name: "baddbmm"
+  signature:
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BaddBmm"
   bind_python: True
 
 - name: "matrix_vector_product"
@@ -1152,7 +1165,7 @@
   bind_python: True
 
 - name: "kl_div_loss"
-  signature: 'Tensor(Tensor input, Tensor target, Bool log_target, String reduction="mean") => KLDivLoss'
+  signature: 'Tensor(Tensor input, Tensor target, Bool log_target=False, String reduction="mean") => KLDivLoss'
   bind_python: True
 
 - name: "kl_div_loss_grad"
@@ -1655,6 +1668,22 @@
 
 - name: "fused_get_boundding_boxes_coord_grad"
   signature: "TensorTuple (Tensor b1_x1_diff, Tensor b1_x2_diff, Tensor b1_y1_diff, Tensor b1_y2_diff, Tensor b2_x1_diff, Tensor b2_x2_diff, Tensor b2_y1_diff, Tensor b2_y2_diff) => FusedGetBounddingBoxesCoordGrad"
+  bind_python: False
+
+- name: "fused_get_ciou_result"
+  signature: "TensorTuple (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResult"
+  bind_python: True
+
+- name: "fused_get_ciou_result_grad"
+  signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
+  bind_python: False
+
+- name: "fused_get_iou"
+  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIou"
+  bind_python: True
+
+- name: "fused_get_iou_grad"
+  signature: "TensorTuple (Tensor diou, Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIouGrad"
   bind_python: False
 
 - name: "abs"
@@ -2490,7 +2519,31 @@
   bind_python: True
 
 - name: "fused_get_center_dist_grad"
-  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenterGrad"
+  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor rho2_diff) => FusedCenterGrad"
+  bind_python: False
+
+- name: "fused_get_intersection_area"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedGetIntersectionArea"
+  bind_python: True
+
+- name: "fused_get_intersection_area_grad"
+  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor inter_diff) => FusedGetIntersectionAreaGrad"
+  bind_python: False
+
+- name: "fused_get_ciou_diagonal_angle"
+  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Float eps) => FusedGetCiouDiagonalAngle"
+  bind_python: True
+
+- name: "fused_get_ciou_diagonal_angle_grad"
+  signature: "TensorTuple (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor v_diff, Float eps) => FusedGetCiouDiagonalAngleGrad"
+  bind_python: False
+
+- name: "fused_get_convex_diagonal_squared"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquared"
+  bind_python: True
+
+- name: "fused_get_convex_diagonal_squared_grad"
+  signature: "TensorTuple (Tensor c2_diff, Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquaredGrad"
   bind_python: False
 
 - name: "grouped_matmul_bias"
@@ -2769,6 +2822,10 @@
   signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
+- name: "multi_tensor_yolov5_weight_update"
+  signature: "Void (TensorTuple model, TensorTuple model_update, Float d) => MultiTensorYoloV5WeightUpdate"
+  bind_python: True
+
 - name: "multi_tensor_momentum_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum, Float dampening, Bool nesterov, Bool maximize) => MultiTensorMomentumUpdate"
   bind_python: True
@@ -3037,4 +3094,8 @@
 - name: "fused_fast_gelu_mul_grad"
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
+
+- name: "fused_weighted_sum"
+  signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
+  bind_python: True
 
