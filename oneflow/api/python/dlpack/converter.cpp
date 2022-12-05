@@ -107,8 +107,7 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
   JUST(eager_blob_object->init_producer_stream(stream));
   eager_blob_object->set_last_used_stream(stream);
-  std::shared_ptr<Tensor> out(new LocalTensor(tensor_impl));
-  return out;
+  return std::static_pointer_cast<Tensor>(std::make_shared<LocalTensor>(tensor_impl));
 }
 
 }  // namespace oneflow

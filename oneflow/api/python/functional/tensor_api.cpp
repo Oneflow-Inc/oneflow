@@ -247,7 +247,7 @@ class LocalTensorSharedDlPackDataFunctor {
            "Note that DLTensor capsules can be consumed only once, "
            "so you might have already constructed a tensor from it once.";
 
-    // atensor steals the ownership of the underlying storage. It also passes a
+    // `tensor` steals the ownership of the underlying storage. It also passes a
     // destructor function that will be called when the underlying storage goes
     // out of scope. When the destructor is called, the dlMTensor is destructed
     // too.
