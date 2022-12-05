@@ -162,18 +162,6 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
   }
 }
 
-void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-}
-
-void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
-  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
-  }
-}
-
 ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
       shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
@@ -564,6 +552,18 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
     }
   }
 
+  auto writeAttrToShape = [](mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+    for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+      shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+    }
+  };
+
+  auto writeAttrToStride = [](mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
+    for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+      stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+    }
+  };
+
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.getName();
     // mlir only attrs
@@ -608,9 +608,9 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       } else if (attr_type == ::oneflow::kAtString) {
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
-        WriteAttrToShape(attr, user_attr.mutable_at_shape());
+        writeAttrToShape(attr, user_attr.mutable_at_shape());
       } else if (attr_type == ::oneflow::kAtStride) {
-        WriteAttrToStride(attr, user_attr.mutable_at_stride());
+        writeAttrToStride(attr, user_attr.mutable_at_stride());
       } else if (attr_type == ::oneflow::kAtDataType) {
         const auto dt = support::FromMLIRAttrToOFDataType(attr);
         if (succeeded(dt)) {
@@ -651,12 +651,12 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       } else if (attr_type == ::oneflow::kAtListShape) {
         for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          WriteAttrToShape(shape_attr, shape_ptr);
+          writeAttrToShape(shape_attr, shape_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListStride) {
         for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
-          WriteAttrToStride(stride_attr, stride_ptr);
+          writeAttrToStride(stride_attr, stride_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
