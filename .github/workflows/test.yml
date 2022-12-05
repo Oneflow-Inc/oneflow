@@ -68,13 +68,13 @@ jobs:
       - name: Check license
         id: license_check
         run: |
-          python3 ci/check/run_license_format.py -i oneflow -c
+          python3 ci/check/run_license_format.py -i oneflow -c --exclude="oneflow/user/kernels/fmha_flash_attention"
           python3 ci/check/run_license_format.py -i python -c
       - name: Add license
         id: license_fmt
         if: ${{ failure() }}
         run: |
-          python3 ci/check/run_license_format.py -i oneflow --fix
+          python3 ci/check/run_license_format.py -i oneflow --fix --exclude="oneflow/user/kernels/fmha_flash_attention"
           python3 ci/check/run_license_format.py -i python --fix
       - name: Check C++/CUDA format
         id: cpp_check
