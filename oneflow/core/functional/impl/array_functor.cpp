@@ -3567,11 +3567,17 @@ class BaddBmmFunctor {
         << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
         << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
 
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    return JUST(functional::Add(JUST(functional::ScalarMul(beta, input)),
-                                JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
-                                /*alpha=*/1.0, /*inplace=*/false));
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
+    }
   }
 };
 
