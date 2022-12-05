@@ -40,7 +40,7 @@ LogicalConfigProtoContext::LogicalConfigProtoContext(const std::string& config_p
 
 LogicalConfigProtoContext::~LogicalConfigProtoContext() {
   config_proto_ctx_.reset();
-  // TODO(hanbinbin): destory ConfigProtoContext of worker machines
+  // TODO(hanbinbin): destroy ConfigProtoContext of worker machines
 }
 
 }  // namespace oneflow
