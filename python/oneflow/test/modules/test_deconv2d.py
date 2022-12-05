@@ -914,7 +914,7 @@ class TestDeconv2d(flow.unittest.TestCase):
     @unittest.skip(
         "Likely to fail the test. This case should run on cpu when the problem is solved."
     )
-    @autotest(n=30)
+    @autotest(n=30, auto_backward=True, check_graph=False, rtol=1e-2, atol=1e-4)
     def test_deconv2d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.ConvTranspose2d(
