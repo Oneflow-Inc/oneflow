@@ -229,9 +229,10 @@ def _test_global_mode(test_case):
         def build(self):
             with global_mode(True, placement=P, sbp=B):
                 # Test global mode meta data
-                test_case.assertTrue(global_view.current_is_enabled())
-                test_case.assertEqual(global_view.current_placement(), P)
-                test_case.assertEqual(global_view.current_sbp()[0], B)
+                cur_global_mode = global_view.current_global_mode
+                test_case.assertTrue(cur_global_mode.is_enabled)
+                test_case.assertEqual(cur_global_mode.placement, P)
+                test_case.assertEqual(cur_global_mode.sbp[0], B)
 
                 # Test global mode source op
                 randn_out = flow.randn((2, 2))
@@ -239,7 +240,7 @@ def _test_global_mode(test_case):
                 empty_out = flow.empty((1, 2))
                 tensor_out = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
 
-            test_case.assertTrue(not global_view.current_is_enabled())
+            test_case.assertTrue(not global_view.current_global_mode.is_enabled)
 
             return {
                 "randn_out": randn_out,
@@ -250,7 +251,6 @@ def _test_global_mode(test_case):
 
     global_graph = GlobalModeGraph()
     out = global_graph()
-    print("global_graph out: \n", out)
     for k, v in out.items():
         test_case.assertEqual(v.is_global, True, k)
         test_case.assertEqual(v.placement, P, k)

@@ -26,8 +26,8 @@ namespace oneflow {
 class GlobalMode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalMode);
-  GlobalMode() = delete;
-  ~GlobalMode() = delete;
+  GlobalMode() = default;
+  ~GlobalMode() = default;
 
   static bool is_enabled();
   static Symbol<NdSbp> nd_sbp();
