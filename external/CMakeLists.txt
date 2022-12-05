@@ -16,7 +16,8 @@ list(APPEND EXTERNAL_TARGETS kineto)
 
 if(BUILD_CUDA)
   add_subdirectory(cutlass)
-  list(APPEND EXTERNAL_TARGETS cutlass_headers)
+  list(APPEND EXTERNAL_TARGETS CUTLASS cutlass_headers)
+  #list(APPEND EXTERNAL_TARGETS cutlass cutlass_headers NvidiaCutlass)
 endif()
 
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
