@@ -18,4 +18,10 @@ set_property(TARGET cutlass_fmha_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
   $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/41_fused_multi_head_attention>
   $<INSTALL_INTERFACE:include>
 )
-install(TARGETS cutlass_headers;cutlass_fmha_headers EXPORT oneflow DESTINATION include)
+add_library(cutlass_dual_gemm_headers INTERFACE)
+set_property(TARGET cutlass_dual_gemm_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+  $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/45_dual_gemm>
+  $<INSTALL_INTERFACE:include>
+)
+
+install(TARGETS cutlass_headers;cutlass_fmha_headers;cutlass_dual_gemm_headers EXPORT oneflow DESTINATION include)

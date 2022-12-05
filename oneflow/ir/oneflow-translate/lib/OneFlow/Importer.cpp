@@ -110,6 +110,11 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
 
 }  // namespace
 
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  return success(op_def.IsAttrName(attr_name));
+}
+
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) return failure();
@@ -502,6 +507,198 @@ LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
       *(out_s_ptr) = op_name.str() + "/" + name + "_" + std::to_string(i);
+    }
+  }
+  return success();
+}
+
+
+LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::DataType& data_type) {
+  switch (data_type_mlir) {
+    case oneflow::DataType::DT_InvalidDataType:
+      data_type = ::oneflow::DataType::kInvalidDataType;
+      break;
+#define DEFINE_ONE_CASE(datatype) \
+  case oneflow::DataType::DT_##datatype: data_type = ::oneflow::DataType::k##datatype; break;
+      DEFINE_ONE_CASE(Char)
+      DEFINE_ONE_CASE(Float)
+      DEFINE_ONE_CASE(Double)
+      DEFINE_ONE_CASE(Int8)
+      DEFINE_ONE_CASE(Int32)
+      DEFINE_ONE_CASE(Int64)
+      DEFINE_ONE_CASE(UInt8)
+      DEFINE_ONE_CASE(OFRecord)
+      DEFINE_ONE_CASE(Float16)
+      DEFINE_ONE_CASE(TensorBuffer)
+      DEFINE_ONE_CASE(Bool)
+#undef DEFINE_ONE_CASE
+    default: return failure();
+  }
+  return success();
+}
+
+LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) {
+  auto dt_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
+  return ConvertDT(dt_attr.getValue(), data_type);
+}
+
+LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
+                                      bool is_mapping_size) {
+  auto user_conf = op_conf.mutable_user_conf();
+  std::string op_type_name = GetOpTypeName(op);
+  op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    if (OpTrait::IsOpConfCompatible<void>::dump_attr(op, &op_conf).failed()) {
+      return op->emitError("fail to save attr to op_conf");
+    }
+  }
+
+  for (auto id_attr : op->getAttrDictionary()) {
+    auto id = id_attr.getName();
+    // mlir only attrs
+    // TODO: prefix special attributes with "oneflow.". For example: `oneflow.op_type_name = "add"`
+    if (id.strref().equals("callee")
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
+        || id.strref().equals(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())
+        || id.strref().equals(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr())) {
+      continue;
+    } else if (id.strref().equals("input_sizes") || id.strref().equals("output_sizes")) {
+      continue;
+    }
+    // convert op conf attributes
+    else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
+      continue;
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
+      continue;
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
+      continue;
+    }
+    // convert user conf attributes
+    else {
+      auto attr_name = id.str();
+      Attribute attr = id_attr.getValue();
+      auto user_attr = ::oneflow::AttrValue();
+      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
+      if (attr_type == ::oneflow::kAtInt32) {
+        user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
+      } else if (attr_type == ::oneflow::kAtInt64) {
+        user_attr.set_at_int64(attr.dyn_cast<IntegerAttr>().getSInt());
+      } else if (attr_type == ::oneflow::kAtBool) {
+        user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
+      } else if (attr_type == ::oneflow::kAtFloat) {
+        user_attr.set_at_float(attr.dyn_cast<FloatAttr>().getValue().convertToFloat());
+      } else if (attr_type == ::oneflow::kAtDouble) {
+        user_attr.set_at_double(attr.dyn_cast<FloatAttr>().getValue().convertToDouble());
+      } else if (attr_type == ::oneflow::kAtString) {
+        user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
+      } else if (attr_type == ::oneflow::kAtShape) {
+        WriteAttrToShape(attr, user_attr.mutable_at_shape());
+      } else if (attr_type == ::oneflow::kAtStride) {
+        WriteAttrToStride(attr, user_attr.mutable_at_stride());
+      } else if (attr_type == ::oneflow::kAtDataType) {
+        const auto dt = support::FromMLIRAttrToOFDataType(attr);
+        if (succeeded(dt)) {
+          user_attr.set_at_data_type(dt.getValue());
+        } else {
+          op->emitError() << "fail to convert op attr to data type, key: " + id.str();
+          return failure();
+        }
+      } else if (attr_type == ::oneflow::kAtListInt32) {
+        user_attr.mutable_at_list_int32();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_int32()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
+        }
+      } else if (attr_type == ::oneflow::kAtListInt64) {
+        user_attr.mutable_at_list_int64();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_int64()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
+        }
+      } else if (attr_type == ::oneflow::kAtListFloat) {
+        user_attr.mutable_at_list_float();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_float()->add_val(
+              v.dyn_cast<FloatAttr>().getValue().convertToFloat());
+        }
+      } else if (attr_type == ::oneflow::kAtListDataType) {
+        for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+          const auto dt = support::FromMLIRAttrToOFDataType(attr);
+          if (succeeded(dt)) {
+            user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
+          } else {
+            op->emitError() << "fail to convert op attr to data type, key: " + id.str();
+            return failure();
+          }
+        }
+      } else if (attr_type == ::oneflow::kAtListShape) {
+        for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
+          ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
+          WriteAttrToShape(shape_attr, shape_ptr);
+        }
+      } else if (attr_type == ::oneflow::kAtListStride) {
+        for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
+          ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
+          WriteAttrToStride(stride_attr, stride_ptr);
+        }
+      } else if (attr_type == ::oneflow::kAtListString) {
+        // attr like nd_sbp requires the existence of list even it is empty
+        user_attr.mutable_at_list_string();
+        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+          user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
+        }
+      } else {
+        op->emitError() << "fail to convert op attr of name: " + attr_name;
+        return failure();
+      }
+      (*user_conf->mutable_attr())[id.str()] = user_attr;
+    }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys,
+                                                                                         sizes))) {
+      op->emitError("fail to convert user op input order");
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_input();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys,
+                                                                                        sizes))) {
+      op->emitError("fail to convert user op output order");
+      return failure();
+    }
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_output();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
     }
   }
   return success();

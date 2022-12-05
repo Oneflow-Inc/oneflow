@@ -19,24 +19,27 @@ limitations under the License.
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "OneFlow/kernel_launch/LauncherContext.h"
 
 namespace oneflow {
-using TypeKernelLaunchArgs =
-    std::tuple<oneflow::user_op::KernelComputeContext*, const oneflow::user_op::OpKernel*>;
-}  // namespace oneflow
+namespace okl {
 
-class JIT_Engine {
+using FetchArgs = std::tuple<LauncherContext*, int>;
+using LaunchArgs = std::tuple<RunContext*, const oneflow::user_op::OpKernel*>;
+
+class JITEngine {
  public:
-  explicit JIT_Engine(mlir::ModuleOp module);
-  template<typename ArgsT, class... Args>
-  void Run(const std::string& name, Args... args) const {
-    using Tuple = std::tuple<Args...>;
-    static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
-    auto error = engine_->invoke(name, args...);
+  explicit JITEngine(mlir::ModuleOp module);
+  void Run(const std::string& name, LauncherContext* launcher) const {
+    auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
 
  private:
   std::unique_ptr<mlir::ExecutionEngine> engine_;
 };
+
+}  // namespace okl
+}  // namespace oneflow
+
 #endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITENGINE_H_

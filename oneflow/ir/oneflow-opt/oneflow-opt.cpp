@@ -31,6 +31,9 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/passes.h"
 
 namespace mlir {
 struct TestOneFlowTraitFolder
@@ -50,6 +53,7 @@ const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 
 int32_t main(int32_t argc, char** argv) {
   ::oneflow::Singleton<::oneflow::ProcessCtx>::New();
+  mlir::okl::registerPasses();
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerConvertToSignlessForTosaPassPass();
@@ -60,8 +64,7 @@ int32_t main(int32_t argc, char** argv) {
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
-  mlir::registerKernelLaunchFunctionPassPass();
-  mlir::registerConvertOFKLCalleeToLLVMPassPass();
+  mlir::okl::registerOneFlowPasses();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::oneflow::registerCSEPasses(global_cse_state);
   mlir::registerFuseForwardOpsPass();
@@ -69,6 +72,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerFuseNormalizationOpsPass();
   mlir::registerGroupMatMulPass();
   mlir::DialectRegistry registry;
+  registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::func::FuncDialect>();
