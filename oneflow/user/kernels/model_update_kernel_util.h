@@ -22,6 +22,15 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename T>
+OF_DEVICE_FUNC T DeviceMax(T a, T b) {
+#if defined(__CUDA_ARCH__)
+  return a > b ? a : b;
+#else
+  return std::max(a, b);
+#endif
+}
+
 template<typename T, typename G>
 struct CastScaleRegularizeGradientFunctor {
   OF_DEVICE_FUNC
@@ -419,6 +428,33 @@ struct LarsUpdateKernelUtil {
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
                      T* data_tmp, T* model_diff_tmp);
+};
+
+template<typename T, typename G>
+struct AdamaxUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const G* model_diff, T* model, T* m, T* norm, T scale, float l1, float l2,
+                  float beta1, float beta2, float bias_correction1, float epsilon,
+                  float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+
+    const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
+    *m = next_m;
+    const T next_norm = DeviceMax(beta2 * *norm, abs(model_diff_t) + epsilon);
+    *norm = next_norm;
+    *model = model_val - learning_rate * next_m / (bias_correction1 * next_norm);
+  }
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct AdamaxUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, const float* bias_correction1_ptr, float bias_correction1_val,
+                     float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
+                     const float* learning_rate_ptr, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* momentum, T* norm);
 };
 
 #endif

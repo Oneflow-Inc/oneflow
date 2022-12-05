@@ -336,6 +336,37 @@ Maybe<void> InferAdadeltaUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferAdamaxUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckShapeLike(&m, &model));
+  const user_op::TensorDesc& norm = ctx->InputTensorDesc("norm", 0);
+  JUST(CheckShapeLike(&norm, &model));
+  JUST(CheckLearningRateShape(ctx));
+  if (ctx->has_input("scale_by_tensor", 0)) {
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferAdamaxUpdateDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckDataTypeLike(&m, &model));
+  const user_op::TensorDesc& norm = ctx->InputTensorDesc("norm", 0);
+  JUST(CheckDataTypeLike(&norm, &model));
+  JUST(CheckLearningRateDataType(ctx));
+  if (ctx->has_input("scale_by_tensor", 0)) {
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -434,6 +465,14 @@ Maybe<void> AdadeltaInputArgModifyFn(const user_op::GetInputArgModifier& GetInpu
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "square_avgs", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "acc_deltas", 0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AdamaxInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                   const user_op::UserOpConfWrapper& conf) {
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "norm", 0));
   return Maybe<void>::Ok();
 }
 
@@ -937,6 +976,37 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> AdadeltaUpdateOp::InferDataType(user_op::InferContext* ctx) {
   return InferAdadeltaUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> AdamaxUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdamaxInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> AdamaxUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferAdamaxUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdamaxUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdamaxUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("m", 0), axis)
+        .Split(user_op::OpArg("norm", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdamaxUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferAdamaxUpdateDataType(ctx);
 }
 
 }  // namespace oneflow
