@@ -5192,8 +5192,7 @@ def OneFlow_CublasFusedMLPOp : OneFlow_BaseOp<"cublas_fused_mlp", [NoSideEffect,
   let input = (ins
     OneFlow_Tensor:$x,
     Variadic<OneFlow_Tensor>:$weights,
-    Variadic<OneFlow_Tensor>:$biases,
-    Optional<OneFlow_Tensor>:$_add_to_output
+    Variadic<OneFlow_Tensor>:$biases
   );
   let output = (outs
     OneFlow_Tensor:$out,
@@ -9785,22 +9784,6 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let output = (outs
     OneFlow_Tensor:$out
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-def OneFlow_FusedGegluOp : OneFlow_BaseOp<"fused_geglu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$bias
-  );
-  let output = (outs
-    OneFlow_Tensor:$out,
-    OneFlow_Tensor:$matmul_out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -22,7 +22,6 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "batch_matmul",
                                "conv2d",
                                "conv_data_grad",
-                               "fused_geglu",
                                "conv_filter_grad",
                                "conv_bias_grad",
                                "amp_white_identity",

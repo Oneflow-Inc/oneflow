@@ -46,8 +46,9 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   B: (n, k) need transpose
   C: (m, n)
   */
-  int64_t n = 0, k = 0, cublas_aux_ld = 0;
-  k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
+  int64_t m = 0, n = 0, k = 0, cublas_aux_ld = 0;
+  m = x_desc.shape().At(0);
+  k = x_desc.shape().At(1);
 
   for (int32_t idx = 0; idx < weight_size; idx++) {
     // skip first input weight.
@@ -64,17 +65,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    DimVector dim_vec = x_desc.shape().dim_vec();
-    dim_vec.back() = aux_size;
-    ctx->SetOutputShape("cublas_aux", idx, Shape(dim_vec));
-    dim_vec.back() = n;
-    ctx->SetOutputShape("hidden", idx, Shape(dim_vec));
+    ctx->SetOutputShape("cublas_aux", idx, Shape({m, aux_size}));
+    ctx->SetOutputShape("hidden", idx, Shape({m, n}));
     // Set for next layer.
     k = n;
   }
-  DimVector out_dim_vec = x_desc.shape().dim_vec();
-  out_dim_vec.back() = n;
-  ctx->SetOutputShape("out", 0, Shape({out_dim_vec}));
+  ctx->SetOutputShape("out", 0, Shape({m, n}));
   return Maybe<void>::Ok();
 }
 
@@ -130,10 +126,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   for (int i = 0; i < ctx->user_op_conf().output_size("hidden"); ++i) {
     builder.Split(user_op::OpArg("hidden", i), 0);
   }
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-    builder.Split(user_op::OpArg("_add_to_output", 0), 0);
-  }
-
   builder.Split(user_op::OpArg("out", 0), 0);
   builder.Build();
   return Maybe<void>::Ok();

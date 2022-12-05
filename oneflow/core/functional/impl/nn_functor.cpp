@@ -585,14 +585,14 @@ class FusedMLPFunctor {
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    k = x_shape->At(x_shape->NumAxes() - 1);
+    k = x_shape->At(1);
     for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
       const auto& bias_shape = biases[i]->shape();
 
       // TODO(): Support Fused batch/broadcast matmul.
-      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2)
-          << Error::RuntimeError() << "Weight's dim size should >= 2";
+      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "Weight's dim size should == 2";
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
           << Error::RuntimeError() << "Bias's dim size should == 1";
 
@@ -632,7 +632,7 @@ class FusedMLPFunctor {
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
-                              biases[layer_idx], x->shape()->NumAxes() - 1));
+                              biases[layer_idx], 1));
       if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
         /*
         When it is not last dense layer, or it is last dense layer and skip_final_activate=False,
@@ -3353,28 +3353,6 @@ class FusedBiasAddDropoutFunctor {
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
 };
 
-class FusedGegluFunctor {
- public:
-  FusedGegluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_geglu")
-                         .Input("in")
-                         .Input("weight")
-                         .Input("bias")
-                         .Output("out")
-                         .Output("matmul_out")
-                         .Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::shared_ptr<one::Tensor>& w,
-                           const std::shared_ptr<one::Tensor>& b) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, w, b});
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class FusedGluFunctor {
  public:
   FusedGluFunctor() {
@@ -5048,7 +5026,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
-  m.add_functor<impl::FusedGegluFunctor>("FusedGeglu");
   m.add_functor<impl::FusedGluFunctor>("FusedGlu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
