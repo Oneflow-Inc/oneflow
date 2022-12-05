@@ -3630,6 +3630,31 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGetTargetOffsetsFunctor {
+ public:
+  FusedGetTargetOffsetsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_target_offsets")
+                         .Input("gxy")
+                         .Input("gxi")
+                         .Output("j")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& gxy,
+                           const std::shared_ptr<one::Tensor>& gxi,
+                           const float g) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("g");
+    attrs.SetAllAttrs(g);
+    auto shape = gxy->shape();
+    CHECK_EQ_OR_RETURN(shape->NumAxes(), 2);
+    CHECK_EQ_OR_RETURN(shape->At(1), 2);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {gxy, gxi}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3761,6 +3786,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
   m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
       "FusedGetConvexDiagonalSquaredGrad");
+  m.add_functor<FusedGetTargetOffsetsFunctor>("FusedGetTargetOffsets");
 };
 
 }  // namespace functional

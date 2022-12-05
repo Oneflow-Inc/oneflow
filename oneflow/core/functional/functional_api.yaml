@@ -2506,6 +2506,10 @@
   signature: "TensorTuple (Tensor c2_diff, Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquaredGrad"
   bind_python: False
 
+- name: "fused_get_target_offsets"
+  signature: "Tensor (Tensor gxy, Tensor gxi, Float g) => FusedGetTargetOffsets"
+  bind_python: True
+
 - name: "grouped_matmul_bias"
   signature: "TensorTuple (TensorTuple xs, TensorTuple weights, TensorTuple biases) => GroupedMatmulBias"
   bind_python: True
