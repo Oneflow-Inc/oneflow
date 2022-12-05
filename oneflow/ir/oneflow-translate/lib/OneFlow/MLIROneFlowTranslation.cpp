@@ -67,44 +67,6 @@ namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
 
-class JobImporter : Importer {
- public:
-  JobImporter(RoundTripOneFlowJobWrapperInterface& job_wrapper, MLIRContext* context,
-              ModuleOp module)
-      : Importer(context, module), job_(job_wrapper.job()), job_wrapper_(job_wrapper) {}
-  virtual ~JobImporter() = default;
-  LogicalResult AppendDataInOperand(const std::string& lbn,
-                                    std::vector<::mlir::Value>& operand_vec) override;
-  LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
-                                    std::vector<::mlir::Value>& operand_vec) override;
-  LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
-                              std::vector<NamedAttribute>& attr_vec) override;
-  LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
-
-  LogicalResult ProcessJob();
-  LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
-  LogicalResult ProcessVariableOp(const ::oneflow::OperatorConf& op);
-  LogicalResult ProcessInputOp(const ::oneflow::OperatorConf& op_conf, Block* entry_block,
-                               size_t& input_count);
-  LogicalResult ProcessOutputOp(const ::oneflow::OperatorConf& op_conf);
-
-  LogicalResult TryToUpdateJob();
-  LogicalResult ConvertUserOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult ConvertSystemOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult ConvertVariableOp(VariableOp op, ::oneflow::Job& job);
-  LogicalResult ConvertInputOp(InputOp op, ::oneflow::Job& job);
-  LogicalResult ConvertOutputOp(OutputOp op, ::oneflow::Job& job);
-
-  Type GetTensorTypeOfLbn(const std::string& lbn) override;
-  Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
-
- private:
-  std::unordered_map<std::string, mlir::OpResult> lbn2result_;
-  std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
-  const ::oneflow::Job* job_;
-  RoundTripOneFlowJobWrapperInterface& job_wrapper_;
-};
-
 LogicalResult JobImporter::AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                                std::vector<::mlir::Value>& operand_vec) {
   for (auto& ctrl_in_op_name : op.ctrl_in_op_name()) {

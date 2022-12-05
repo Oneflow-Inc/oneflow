@@ -13,6 +13,6 @@ set_target_properties(
 llvm_update_compile_flags(oneflow-rewrite-generator)
 
 target_link_libraries(oneflow-rewrite-generator PRIVATE ${dialect_libs} ${translation_libs}
-                      PUBLIC MLIRTranslateLib)
+                      PUBLIC MLIRTranslateLib MLIROneFlowExtension)
 
 mlir_check_link_libraries(oneflow-rewrite-generator)
