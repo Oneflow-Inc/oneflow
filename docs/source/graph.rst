@@ -121,6 +121,7 @@ Optimization options of a nn.Graph.
     set_gradient_accumulation_steps
     enable_cudnn_conv_heuristic_search_algo
     enable_straighten_algorithm
+    enable_compress_memory
     
 
 Config options on a GraphModule

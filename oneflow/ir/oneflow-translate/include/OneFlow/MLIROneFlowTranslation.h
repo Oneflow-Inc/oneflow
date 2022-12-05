@@ -40,10 +40,17 @@ namespace oneflow {
 
 // TODO: wrap in a helper namespace
 
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name);
+
 LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
                                    ::oneflow::UserOpConf* user_conf);
+LogicalResult ConvertUserOpAttributes(
+    Operation* op, ::oneflow::OperatorConf& op_conf,
+    bool is_mapping_size /* the input and output size should be mapped after building kernel and
+                            offer information for the next query*/
+    = false);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 llvm::Optional<std::string> GetOutputLbn(OpResult result);
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
@@ -113,7 +120,6 @@ class Importer {
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
-  LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
   void SetOpStateLoc(const ::oneflow::OperatorConf&, OperationState&);
 
  private:

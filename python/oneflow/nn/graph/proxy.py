@@ -301,15 +301,20 @@ class ProxyModule(Proxy):
         return self.to(GraphModule)._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
-        self.__setattr__(
-            name,
-            get_proxy_cls(module)(
-                self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
+        if isinstance(module, Module):
+            self.__setattr__(
                 name,
-                module,
-                self.to(GraphModule)._belonged_graph,
-            ),
-        )
+                get_block_cls(module)(
+                    self.to(GraphModule)._name_prefix
+                    + self.to(GraphModule)._name
+                    + ".",
+                    name,
+                    module,
+                    self.to(GraphModule)._belonged_graph,
+                ),
+            )
+        elif isinstance(module, Proxy):
+            self.__setattr__(name, module)
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
@@ -694,13 +699,31 @@ class ProxyModuleList(get_list(ProxyModule)):
         origin: ModuleList = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        super().__init__()
-        self.to(GraphModule)._name_prefix = prefix
-        self.to(GraphModule)._name = name
-        self.to(GraphModule)._belonged_graph = belonged_graph
-        self.to(GraphModule)._belonged_block = weakref.proxy(self)
-        self._oneflow_internal_graphblock__set_origin(origin)
-        # MoudleList is a container without forward() method,
+        if isinstance(prefix, str):
+            super().__init__()
+            self.to(GraphModule)._name_prefix = prefix
+            self.to(GraphModule)._name = name
+            self.to(GraphModule)._belonged_graph = belonged_graph
+            self._oneflow_internal_graphblock__set_origin(origin)
+            # MoudleList is a container without forward() method,
+        elif isinstance(prefix, list):
+            super().__init__(prefix)
+            if len(prefix) > 0:
+                first = prefix[0]
+                new_name = "_idx"
+                new_list = []
+                for item in prefix:
+                    new_name += "-" + item.to(GraphModule).name
+                    new_list.append(item.to(Module))
+                new_module_list = ModuleList(new_list)
+                self.to(GraphModule)._name_prefix = (
+                    first.to(GraphModule).name_prefix + first.to(GraphModule).name
+                )
+                self.to(GraphModule)._name = new_name
+                self.to(GraphModule)._belonged_graph = first.to(
+                    GraphModule
+                )._belonged_graph
+                self._oneflow_internal_origin__ = new_module_list
 
 
 class ProxyModuleDict(get_dict(ProxyModule)):
