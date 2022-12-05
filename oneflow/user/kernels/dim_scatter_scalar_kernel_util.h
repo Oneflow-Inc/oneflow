@@ -135,7 +135,7 @@ OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_
     IDX_T idx_elem = index[idx_offset];
     if (idx_elem >= upper_bound) {
 #if __CUDA_ARCH__
-      __trap();
+      TRAP();
 #else
       UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension "
                       << dim << " with size " << upper_bound << ".";

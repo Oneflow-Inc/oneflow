@@ -77,7 +77,7 @@ __global__ void HashTableUniqueAndPartitionPairs(
         pos += 1;
         counter += 1;
         if (pos >= table_capacity) { pos -= table_capacity; }
-        if (counter >= table_capacity) { __trap(); }
+        if (counter >= table_capacity) { TRAP(); }
       }
     }
     reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
@@ -175,7 +175,7 @@ __global__ void HashTableUniquePairs(const uint32_t table_capacity, const uint32
           pos += 1;
           counter += 1;
           if (pos >= table_capacity) { pos -= table_capacity; }
-          if (counter >= table_capacity) { __trap(); }
+          if (counter >= table_capacity) { TRAP(); }
         }
       }
       reverse_index[rank_index + index_offset] = r_index_plus_one - 1;

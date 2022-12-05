@@ -254,12 +254,12 @@ class Wmma<float, AccType, m, n, k, ALayout, BLayout> {
   }
   __device__ void InitAcc() { nvcuda::wmma::fill_fragment(acc_, 0.0f); }
 #else
-  __device__ void LoadA(const float* ptr, int ldm) { __trap(); }
-  __device__ void LoadB(const float* ptr, int ldm) { __trap(); }
-  __device__ void Mma() { __trap(); }
+  __device__ void LoadA(const float* ptr, int ldm) { TRAP(); }
+  __device__ void LoadB(const float* ptr, int ldm) { TRAP(); }
+  __device__ void Mma() { TRAP(); }
   __device__ __forceinline__ float Convert(float src) { return src; }
-  __device__ void Store(AccType* ptr, int ldm) { __trap(); }
-  __device__ void InitAcc() { __trap(); }
+  __device__ void Store(AccType* ptr, int ldm) { TRAP(); }
+  __device__ void InitAcc() { TRAP(); }
 #endif
 
  private:
@@ -393,7 +393,7 @@ __global__ void DotFeatureInteractionWmmaImpl(
     batch_out[out_num_cols - 1 - i] = 0;
   }
 #else
-  __trap();
+  TRAP();
 #endif  // __CUDA_ARCH__ >= 700
 }
 
@@ -680,7 +680,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
   }
 
 #else
-  __trap();
+  TRAP();
 #endif  // __CUDA_ARCH__ >= 700
 }
 

@@ -52,8 +52,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const TARGET* targets_ptr,
   const int32_t tid = threadIdx.x;
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
     if (tid == 0) {
-      if (input_lengths_ptr[b] > max_input_length) __trap();
-      if (target_lengths_ptr[b] > max_target_length) __trap();
+      if (input_lengths_ptr[b] > max_input_length) TRAP();
+      if (target_lengths_ptr[b] > max_target_length) TRAP();
     }
   }
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
