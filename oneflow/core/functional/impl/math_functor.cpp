@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -3308,6 +3309,8 @@ class FusedGetPboxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& pxy,
                            const std::shared_ptr<one::Tensor>& pwh,
                            const std::shared_ptr<one::Tensor>& anchors) const {
+    int64_t num_axes = pxy->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(num_axes, 2);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {pxy, pwh, anchors}, {});
   }
 

@@ -71,8 +71,8 @@ def _test_fused_get_pbox_impl(test_case, device, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGetIntersectionAreaModule(flow.unittest.TestCase):
-    def test_fused_get_inter_intersection_area(test_case):
+class TestGetPboxModule(flow.unittest.TestCase):
+    def test_fused_get_pbox(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_get_pbox_impl]
         arg_dict["device"] = ["cuda"]
