@@ -111,7 +111,7 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
 }  // namespace
 
 LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name) {
-  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  ::oneflow::user_op::UserOpDefWrapper op_def(support::getUserOpDef(op_type_name));
   return success(op_def.IsAttrName(attr_name));
 }
 
