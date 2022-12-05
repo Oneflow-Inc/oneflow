@@ -172,7 +172,7 @@ class LRScaleTest(flow.unittest.TestCase):
             is_global = arg.pop("is_global", True)
             if is_global:
                 device_type = arg.pop("device_type", "cuda")
-                arg["placement"] = flow.env.all_device_placement(device_type)
+                arg["placement"] = flow.placement.all(device_type)
 
             # arg["verbose"] = True
             _test_lrs(self, **arg)
@@ -192,7 +192,7 @@ class LRScaleParallelTest(flow.unittest.TestCase):
 
         for arg in GenArgDict(arg_dict):
             device_type = arg.pop("device_type", "cuda")
-            arg["placement"] = flow.env.all_device_placement(device_type)
+            arg["placement"] = flow.placement.all(device_type)
             # arg["verbose"] = True
             _test_lrs(self, **arg)
 
