@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
@@ -49,7 +49,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 void Compiler::Compile(Job* job, Plan* plan) const {
   const auto& job_name = job->job_conf().job_name();
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();

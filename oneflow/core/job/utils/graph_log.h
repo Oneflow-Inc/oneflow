@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+Maybe<void> LogProgress();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_UTILS_GRAPH_LOG_H_

@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 
 namespace oneflow {
 
@@ -109,7 +109,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   const auto& job_name = job->job_conf().job_name();
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   if (!Singleton<ResourceDesc, ForSession>::Get()
            ->resource()
            .disable_group_boxing_by_dst_parallel()) {

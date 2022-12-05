@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -302,7 +302,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   CHECK_OR_RETURN(!runtime_inited_)
       << Error::RuntimeError() << "nn.Graph runtime is already initialized";
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
@@ -326,7 +326,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
-    auto sub_compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+    auto sub_compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {

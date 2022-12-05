@@ -53,12 +53,12 @@ DEFINE_DURATION_TRAIT(hours)
 #undef DEFINE_DURATION_TRAIT
 
 template<class Resolution = std::chrono::seconds>
-class TimeCounter final {
+class CostCounter final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TimeCounter);
-  explicit TimeCounter(bool with_log = true, bool with_mem = false)
+  OF_DISALLOW_COPY_AND_MOVE(CostCounter);
+  explicit CostCounter(bool with_log = true, bool with_mem = false)
       : with_log_(with_log), with_mem_(with_mem) {}
-  ~TimeCounter() = default;
+  ~CostCounter() = default;
 
   void Count(const std::string& log_prefix = "", int v_log_level = 0);
 
@@ -72,7 +72,7 @@ class TimeCounter final {
 };
 
 template<class Resolution>
-void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
+void CostCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
   const auto end = Clock::now();
   if (FLAGS_minloglevel <= 0 && VLOG_IS_ON(v_log_level) && with_log_ && v_log_level >= 0) {
     // only do time/mem count and log when glog level is INFO and VLOG level is matched.
@@ -87,7 +87,6 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
       double vm = 0, rss = 0;
       ProcessMemUsage(&vm, &rss);
       json_log["mem_rss"] = std::to_string(rss) + " MB";
-      json_log["mem_vm"] = std::to_string(vm) + " MB";
 #endif  // __linux__
     }
 
