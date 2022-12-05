@@ -123,11 +123,11 @@ class GraphConfig(object):
         if not mode:
             self.proto.optimizer_placement_optimization_mode = "none"
             return
-        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range from 1 to 3."
         assert (
             shard_min_size > 0
         ), "ZeRO min size of a sharded optimizer state must > 0."
-        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range from 1 to 3."
         if stage >= 1:
             self.proto.optimizer_placement_optimization_mode = "distributed_split"
             self.proto.optimizer_placement_optimization_threshold = shard_min_size
@@ -327,6 +327,17 @@ class GraphConfig(object):
             self.proto.straighten_algorithm_tag_in_task_graph = 3
         else:
             self.proto.straighten_algorithm_tag_in_task_graph = 4
+
+    def enable_compress_memory(self, mode: bool = True):
+        """If true, then the graph will try its best to find the minimum memory allocation strategy.
+        This process might take several minutes for a small graph and half an hour for a large one.
+        The compressed memory would be closed to the lower bound of the peak memory.
+        It benefits a lot if you need to train a lot of batches.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_compress_memory = mode
 
     def enable_auto_parallel(self, mode: bool = True):
         """If true, then graph will use the auto parallel algorithm to select a parallelism strategy.

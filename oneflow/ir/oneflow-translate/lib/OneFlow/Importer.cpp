@@ -121,6 +121,11 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
 
 }  // namespace
 
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  return success(op_def.IsAttrName(attr_name));
+}
+
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) return failure();
@@ -590,7 +595,37 @@ LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
   return success();
 }
 
-LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
+LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::DataType& data_type) {
+  switch (data_type_mlir) {
+    case oneflow::DataType::DT_InvalidDataType:
+      data_type = ::oneflow::DataType::kInvalidDataType;
+      break;
+#define DEFINE_ONE_CASE(datatype) \
+  case oneflow::DataType::DT_##datatype: data_type = ::oneflow::DataType::k##datatype; break;
+      DEFINE_ONE_CASE(Char)
+      DEFINE_ONE_CASE(Float)
+      DEFINE_ONE_CASE(Double)
+      DEFINE_ONE_CASE(Int8)
+      DEFINE_ONE_CASE(Int32)
+      DEFINE_ONE_CASE(Int64)
+      DEFINE_ONE_CASE(UInt8)
+      DEFINE_ONE_CASE(OFRecord)
+      DEFINE_ONE_CASE(Float16)
+      DEFINE_ONE_CASE(TensorBuffer)
+      DEFINE_ONE_CASE(Bool)
+#undef DEFINE_ONE_CASE
+    default: return failure();
+  }
+  return success();
+}
+
+LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) {
+  auto dt_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
+  return ConvertDT(dt_attr.getValue(), data_type);
+}
+
+LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
+                                      bool is_mapping_size) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
@@ -716,6 +751,17 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_input();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   {
     std::vector<std::string> keys{};
@@ -726,6 +772,16 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_output();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   return success();
 }

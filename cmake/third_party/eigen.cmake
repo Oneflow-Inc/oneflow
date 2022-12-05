@@ -7,12 +7,9 @@ set(EIGEN_URL https://github.com/Oneflow-Inc/eigen-git-mirror/archive/refs/tags/
 set(EIGEN_MD5 a23cb70e12d1bf9b09cb28af51bc26ae)
 use_mirror(VARIABLE EIGEN_URL URL ${EIGEN_URL})
 
-add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING)
 if(BUILD_CUDA)
   add_definitions(-DEIGEN_USE_GPU)
 endif()
-add_definitions(-DEIGEN_NO_MALLOC)
-#add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 
 if(THIRD_PARTY)
 
