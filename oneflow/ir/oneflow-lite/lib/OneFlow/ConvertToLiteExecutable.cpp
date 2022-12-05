@@ -278,7 +278,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     return failure();
   }
 
-  llvm::errs() << *module << "\n";
+  // llvm::errs() << *module << "\n";
 
   Operation* entryJobOp = getEntryJobOp(module);
   if (!entryJobOp) {
