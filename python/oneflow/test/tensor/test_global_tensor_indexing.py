@@ -33,7 +33,7 @@ def _randint(low, high):
 
 
 def _cpu_global_tensor(tensor):
-    return tensor.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    return tensor.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
 
 
 def _assert_tensor_equal(test_case, tensor1, tensor2, atol=0.0, rtol=0.0):

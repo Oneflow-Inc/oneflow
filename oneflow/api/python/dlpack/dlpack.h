@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file dlpack.h
@@ -215,13 +230,13 @@ typedef struct DLManagedTensor {
   /*! \brief the context of the original host framework of DLManagedTensor in
    *   which DLManagedTensor is used in the framework. It can also be NULL.
    */
-  void * manager_ctx;
+  void* manager_ctx;
   /*! \brief Destructor signature void (*)(void*) - this should be called
    *   to destruct manager_ctx which holds the DLManagedTensor. It can be NULL
    *   if there is no way for the caller to provide a reasonable destructor.
    *   The destructors deletes the argument self as well.
    */
-  void (*deleter)(struct DLManagedTensor * self);
+  void (*deleter)(struct DLManagedTensor* self);
 } DLManagedTensor;
 #ifdef __cplusplus
 }  // DLPACK_EXTERN_C

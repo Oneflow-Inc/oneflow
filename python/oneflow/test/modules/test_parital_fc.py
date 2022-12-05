@@ -25,7 +25,7 @@ import oneflow.unittest
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestParitalFC(flow.unittest.TestCase):
     def test_parital_fc(test_case):
-        p = flow.env.all_device_placement("cuda")
+        p = flow.placement.all("cuda")
         w = flow.randn(
             50000, 128, placement=p, sbp=flow.sbp.broadcast, requires_grad=True
         )

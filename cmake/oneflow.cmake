@@ -136,6 +136,7 @@ add_custom_target(
   of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+          --exclude="oneflow/user/kernels/fmha_flash_attention"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${ONEFLOW_PYTHON_DIR} --fix --exclude="oneflow/include" --exclude="oneflow/core"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir
@@ -339,6 +340,10 @@ if(BUILD_CUDA)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
     APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
+  get_target_property(CUTLASS_DUAL_GEMM_INCLUDE_DIR cutlass_dual_gemm_headers
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
+               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
     set_property(
       SOURCE
