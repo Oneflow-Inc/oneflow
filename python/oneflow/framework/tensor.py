@@ -441,9 +441,7 @@ def _numpy(self):
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
             self.to_global(placement=self_cpu_placement)
-            .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-            )
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
             .to_local()
         )
     assert self.is_local
