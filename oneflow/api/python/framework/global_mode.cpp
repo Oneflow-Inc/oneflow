@@ -56,20 +56,22 @@ ONEFLOW_API_PYBIND11_MODULE("global_view", m) {
       .def("__exit__", [](const GlobalMode::Guard& guard_obj, const py::object& type,
                           const py::object& value, const py::object& traceback) {});
 
-    py::class_<GlobalMode, std::shared_ptr<GlobalMode>>(m, "current_global_mode")
-      .def(py::init([]() {return std::make_shared<GlobalMode>(); }))
+  py::class_<GlobalMode, std::shared_ptr<GlobalMode>>(m, "current_global_mode")
+      .def(py::init([]() { return std::make_shared<GlobalMode>(); }))
       .def_property_readonly("is_enabled", [](const GlobalMode& gm) { return gm.is_enabled(); })
-      .def_property_readonly("sbp", [](const GlobalMode& gm) {
-        if (!gm.is_enabled()) {
-          THROW(RuntimeError) << "Current global mode is disabled, there is no sbp.";
-        }
-        const auto& nd_sbp = gm.nd_sbp();
-        auto tuple = py::tuple(nd_sbp->sbp_parallel_size());
-        for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
-          tuple[i] = SymbolOf(nd_sbp->sbp_parallel(i));
-        }
-        return tuple;
-      })
+      .def_property_readonly("sbp",
+                             [](const GlobalMode& gm) {
+                               if (!gm.is_enabled()) {
+                                 THROW(RuntimeError)
+                                     << "Current global mode is disabled, there is no sbp.";
+                               }
+                               const auto& nd_sbp = gm.nd_sbp();
+                               auto tuple = py::tuple(nd_sbp->sbp_parallel_size());
+                               for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+                                 tuple[i] = SymbolOf(nd_sbp->sbp_parallel(i));
+                               }
+                               return tuple;
+                             })
       .def_property_readonly("placement", [](const GlobalMode& gm) {
         if (!gm.is_enabled()) {
           THROW(RuntimeError) << "Current global mode is disabled, there is no placement.";
