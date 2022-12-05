@@ -18,6 +18,8 @@
 #ifndef CUDA_DRIVER_WRAPPER_H
 #define CUDA_DRIVER_WRAPPER_H
 
+#ifdef WITH_CUDA
+
 #include <cstdint>
 #include <cstdio>
 #include <cuda.h>
@@ -110,5 +112,7 @@ inline void cuErrCheck_(CUresult stat, const CUDADriverWrapper& wrap, const char
 }
 
 } // namespace nvinfer1
+
+#endif 
 
 #endif // CUDA_DRIVER_WRAPPER_H

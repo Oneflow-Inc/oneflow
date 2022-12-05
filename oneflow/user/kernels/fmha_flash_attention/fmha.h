@@ -19,6 +19,8 @@
 #ifndef _FMHA_
 #define _FMHA_
 
+#ifdef WITH_CUDA
+
 #include "include/fmha_flash_attention.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,5 +36,7 @@ int run_fmha_v2_api(void* qkv_packed_d, void* cu_seqlens_d, void* o_packed_d, si
 
 }
 } // namespace nvinfer1
+
+#endif
 
 #endif
