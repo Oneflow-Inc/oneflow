@@ -23,10 +23,10 @@ import torch
 
 
 def torch_device_to_flow(device):
-    if device.type == 'cpu':
-        return flow.device('cpu')
-    elif device.type == 'cuda':
-        return flow.device('cuda', device.index)
+    if device.type == "cpu":
+        return flow.device("cpu")
+    elif device.type == "cuda":
+        return flow.device("cuda", device.index)
     else:
         raise NotImplementedError("Unsupported device type: {}".format(device.type))
 
@@ -88,22 +88,18 @@ class TestFromTroch(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_from_torch_gpu(test_case):
-        for device in [torch.device('cuda', 0), torch.device('cuda', 1)]:
+        for device in [torch.device("cuda", 0), torch.device("cuda", 1)]:
             torch_t = torch.tensor([1, 2]).to(device)
 
             flow_t = flow.utils.tensor.from_torch(torch_t)
 
-            test_case.assertTrue(
-                np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
-            )
+            test_case.assertTrue(np.array_equal(torch_t.cpu().numpy(), flow_t.numpy()))
             test_case.assertEqual(torch_t.cpu().numpy().dtype, flow_t.numpy().dtype)
             test_case.assertEqual(torch_device_to_flow(torch_t.device), flow_t.device)
 
             # Test oneflow tensor and pytorch tensor share the data
             torch_t[0] = 5
-            test_case.assertTrue(
-                np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
-            )
+            test_case.assertTrue(np.array_equal(torch_t.cpu().numpy(), flow_t.numpy()))
 
 
 if __name__ == "__main__":

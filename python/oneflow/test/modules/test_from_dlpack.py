@@ -25,14 +25,18 @@ import oneflow as flow
 import oneflow.unittest
 
 
-test_devices = [torch.device('cpu')] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else [torch.device('cpu'), torch.device('cuda', 0), torch.device('cuda', 1)]
+test_devices = (
+    [torch.device("cpu")]
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    else [torch.device("cpu"), torch.device("cuda", 0), torch.device("cuda", 1)]
+)
 
 
 def torch_device_to_flow(device):
-    if device.type == 'cpu':
-        return flow.device('cpu')
-    elif device.type == 'cuda':
-        return flow.device('cuda', device.index)
+    if device.type == "cpu":
+        return flow.device("cpu")
+    elif device.type == "cuda":
+        return flow.device("cuda", device.index)
     else:
         raise NotImplementedError("Unsupported device type: {}".format(device.type))
 
@@ -43,14 +47,18 @@ class TestFromDlPack(flow.unittest.TestCase):
         for device in test_devices:
             torch_tensor = torch.randn(3, 4, 5, device=device)
             tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+            test_case.assertTrue(
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
+            )
             test_case.assertEqual(tensor.size(), (3, 4, 5))
             test_case.assertEqual(tensor.stride(), (20, 5, 1))
             test_case.assertEqual(tensor.storage_offset(), 0)
             test_case.assertEqual(tensor.device, torch_device_to_flow(device))
 
             tensor[1:2, 2:3, 3:4] = random.random()
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+            test_case.assertTrue(
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
+            )
 
     def test_use_ops(test_case):
         for device in test_devices:
@@ -77,8 +85,9 @@ class TestFromDlPack(flow.unittest.TestCase):
                 tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
                 test_case.assertEqual(tensor.dtype, flow_dtype)
                 test_case.assertEqual(tensor.device, torch_device_to_flow(device))
-                test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
-
+                test_case.assertTrue(
+                    np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
+                )
 
     def test_non_contiguous_input(test_case):
         for device in test_devices:
@@ -87,10 +96,10 @@ class TestFromDlPack(flow.unittest.TestCase):
             test_case.assertEqual(tensor.device, torch_device_to_flow(device))
             test_case.assertTrue(tensor.shape == torch_tensor.shape)
             test_case.assertTrue(tensor.stride() == torch_tensor.stride())
+            test_case.assertTrue(tensor.is_contiguous() == torch_tensor.is_contiguous())
             test_case.assertTrue(
-                tensor.is_contiguous() == torch_tensor.is_contiguous()
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
             )
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
 
     def test_scalar_tensor(test_case):
         for device in test_devices:
@@ -99,10 +108,10 @@ class TestFromDlPack(flow.unittest.TestCase):
             test_case.assertEqual(tensor.device, torch_device_to_flow(device))
             test_case.assertTrue(tensor.shape == torch_tensor.shape)
             test_case.assertTrue(tensor.stride() == torch_tensor.stride())
+            test_case.assertTrue(tensor.is_contiguous() == torch_tensor.is_contiguous())
             test_case.assertTrue(
-                tensor.is_contiguous() == torch_tensor.is_contiguous()
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
             )
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
 
     def test_0_size_tensor(test_case):
         for device in test_devices:
@@ -111,10 +120,10 @@ class TestFromDlPack(flow.unittest.TestCase):
             test_case.assertEqual(tensor.device, torch_device_to_flow(device))
             test_case.assertTrue(tensor.shape == torch_tensor.shape)
             test_case.assertTrue(tensor.stride() == torch_tensor.stride())
+            test_case.assertTrue(tensor.is_contiguous() == torch_tensor.is_contiguous())
             test_case.assertTrue(
-                tensor.is_contiguous() == torch_tensor.is_contiguous()
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
             )
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
 
     def test_lifecycle(test_case):
         for device in test_devices:
@@ -142,14 +151,17 @@ class TestFromDlPack(flow.unittest.TestCase):
             torch_tensor = torch.randn(3, 4, 5, device=device)
             torch_tensor = torch_tensor[1:, :, ::2]
             tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+            test_case.assertTrue(
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
+            )
             test_case.assertEqual(tensor.storage_offset(), 0)
             test_case.assertEqual(tensor.stride(), torch_tensor.stride())
 
             tensor[1:2, ::2, 3:4] = random.random()
-            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+            test_case.assertTrue(
+                np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy())
+            )
 
 
 if __name__ == "__main__":
     unittest.main()
-
