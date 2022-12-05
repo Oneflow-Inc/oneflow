@@ -268,7 +268,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   pm.addPass(createLiteInferPlacementPass(options.target));
   pm.addPass(createLiteInsertTransferOpPass());
   pm.addPass(createLitePartitionLaunchJobPass());
-  pm.addPass(createLiteLoweringLaunchJobPass());
+  pm.addPass(createLiteLoweringLaunchJobPass(options.checkpointDir));
   pm.addPass(createCanonicalizerPass());
 
   LiteBufferStrategy bufferStrategy;

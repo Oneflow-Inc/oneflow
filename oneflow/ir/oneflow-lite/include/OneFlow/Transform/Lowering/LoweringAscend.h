@@ -29,7 +29,7 @@ namespace mlir {
 namespace oneflow {
 namespace lite {
 
-LogicalResult loweringAscend(OpBuilder& builder, Operation* callee,
+LogicalResult loweringAscend(OpBuilder& builder, Operation* callee, StringRef checkpointDir,
                              llvm::SmallVector<uint8_t, 4>* loweringData);
 
 }  // namespace lite

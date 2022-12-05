@@ -22,7 +22,7 @@ namespace mlir {
 namespace oneflow {
 namespace lite {
 
-std::unique_ptr<mlir::Pass> createLiteLoweringLaunchJobPass();
+std::unique_ptr<mlir::Pass> createLiteLoweringLaunchJobPass(StringRef checkpointDir);
 
 }  // namespace lite
 }  // namespace oneflow

@@ -11,11 +11,7 @@ if(ENABLE_LOWERING_ASCEND)
   list(APPEND LITE_LOWERING_SRCS
     Transform/Lowering/LoweringAscend.cpp
   )
-  list(APPEND LITE_LOWERING_LIBS
-    "-Wl,--start-group"
-    ${ASCEND_LIBRARIES}
-    "-Wl,--end-group -Wl,-exclude-libs,ALL -Wl,--gc-sections -Wl,--strip-all"
-  )
+  list(APPEND LITE_LOWERING_LIBS ${ASCEND_LIBRARIES})
 endif()
 
 oneflow_add_mlir_library(

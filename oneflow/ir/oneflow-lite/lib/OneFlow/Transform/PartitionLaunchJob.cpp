@@ -53,9 +53,9 @@ oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRe
   Block::iterator insertPt(parentFuncOp->getNextNode());
   builder.setInsertionPointToStart(parentModuleOp.getBody());
 
-  auto func_type = builder.getFunctionType(operand_types, result_types);
-  auto job_op = builder.create<oneflow::Job>(block[0]->getLoc(), callee_name, func_type);
-  auto* entryBlock = job_op.addEntryBlock();
+  auto funcType = builder.getFunctionType(operand_types, result_types);
+  auto jobOp = builder.create<oneflow::Job>(block[0]->getLoc(), callee_name, funcType);
+  auto* entryBlock = jobOp.addEntryBlock();
 
   BlockAndValueMapping mapping;
   for (auto operand : llvm::enumerate(operands)) {
@@ -72,7 +72,7 @@ oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRe
   llvm::SmallVector<Value, 4> mappingResults;
   for (auto result : results) { mappingResults.push_back(mapping.lookup(result)); }
   builder.create<mlir::oneflow::ReturnOp>(block[0]->getLoc(), mappingResults);
-  return job_op;
+  return jobOp;
 }
 
 void PartitionLaunchJobPass::runOnOperation() {

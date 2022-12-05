@@ -33,6 +33,10 @@ namespace oneflow {
 namespace lite {
 
 struct LoweringLaunchJobPass : public PassWrapper<LoweringLaunchJobPass, OperationPass<ModuleOp>> {
+  StringRef checkpointDir;
+
+  explicit LoweringLaunchJobPass(StringRef checkpointDir) : checkpointDir(checkpointDir) {}
+
   void runOnOperation() override;
 
   LogicalResult loweringLaunchJob(OpBuilder& builder, Operation* callee, StringRef backend,
@@ -44,7 +48,7 @@ LogicalResult LoweringLaunchJobPass::loweringLaunchJob(
     llvm::SmallVector<uint8_t, 4>* loweringData) {
   if (backend == "ascend") {
 #ifdef ENABLE_LOWERING_ASCEND
-    return loweringAscend(builder, callee, loweringData);
+    return loweringAscend(builder, callee, checkpointDir, loweringData);
 #else
     llvm::errs() << "please recompile with ENABLE_LOWERING_ASCEND=ON\n";
     return failure();
@@ -84,8 +88,8 @@ void LoweringLaunchJobPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<mlir::Pass> createLiteLoweringLaunchJobPass() {
-  return std::unique_ptr<mlir::Pass>(new LoweringLaunchJobPass());
+std::unique_ptr<mlir::Pass> createLiteLoweringLaunchJobPass(StringRef checkpointDir) {
+  return std::unique_ptr<mlir::Pass>(new LoweringLaunchJobPass(checkpointDir));
 }
 
 }  // namespace lite
