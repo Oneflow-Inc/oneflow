@@ -35,11 +35,13 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         batch2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
         y = torch.baddbmm(input, batch1, batch2, beta=2.0, alpha=1.2)
         return y
-    
+
     @autotest(n=5)
     def test_baddbmm_in_sd2_with_torch(test_case):
         device = random_device()
-        input = random_tensor(ndim=3, dim0=2, dim1=2, dim2=2, requires_grad=False).to(device)
+        input = random_tensor(ndim=3, dim0=2, dim1=2, dim2=2, requires_grad=False).to(
+            device
+        )
         batch1 = random_tensor(ndim=3, dim0=2, dim1=2, dim2=2).to(device)
         batch2 = random_tensor(ndim=3, dim0=2, dim1=2, dim2=2).to(device)
         y = torch.baddbmm(input, batch1, batch2, beta=0.0, alpha=1.2)
