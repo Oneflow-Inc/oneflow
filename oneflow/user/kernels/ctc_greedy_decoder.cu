@@ -35,7 +35,7 @@ __global__ void CtcGreedyDecodeGpuMultiThread(int64_t* decoded_ptr, T* neg_sum_l
 
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
     if (tid == 0) {
-      if (input_lengths_ptr[b] > max_input_length) __trap();
+      if (input_lengths_ptr[b] > max_input_length) TRAP();
     }
   }
 
@@ -82,7 +82,7 @@ __global__ void CtcGreedyDecodeGpu(int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                                    const bool merge_repeated, const int64_t max_input_length,
                                    const int64_t batch_size, const int64_t num_labels) {
   for (int64_t b = 0; b < batch_size; b++) {
-    if (input_lengths_ptr[b] > max_input_length) __trap();
+    if (input_lengths_ptr[b] > max_input_length) TRAP();
   }
   NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
 

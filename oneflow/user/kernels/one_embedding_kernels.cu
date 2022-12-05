@@ -326,7 +326,7 @@ __global__ void InitValueKernel(uint64_t seed, const int32_t line_size,
     } else if (initializer.type == InitializerType::kConstant) {
       value = initializer.constant_param.value;
     } else {
-      __trap();
+      TRAP();
     }
     values[offset] = value;
   }
@@ -416,7 +416,7 @@ __global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed, const 
         } else if (initializer.type == InitializerType::kConstant) {
           value = initializer.constant_param.value;
         } else {
-          __trap();
+          TRAP();
         }
         value_i.elem[k] = value;
       }

@@ -91,7 +91,7 @@ __global__ void HashTableUniqueAndPartitionPairs(
           pos += 1;
           counter += 1;
           if (pos >= table_capacity) { pos -= table_capacity; }
-          if (counter >= table_capacity) { __trap(); }
+          if (counter >= table_capacity) { TRAP(); }
         }
       }
       reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;

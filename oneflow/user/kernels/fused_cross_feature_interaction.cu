@@ -110,7 +110,7 @@ __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const 
         out_store.elem[i] = (in_vec.elem[i] + bias_vec.elem[i]) * x0_vec.elem[i] + x_vec.elem[i];
       }
     } else {
-      __trap();
+      TRAP();
     }
     *(reinterpret_cast<LoadPack*>(out + linear_index)) = out_store;
   }
