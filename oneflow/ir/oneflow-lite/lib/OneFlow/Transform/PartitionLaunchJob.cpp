@@ -49,7 +49,6 @@ oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRe
 
   auto parentFuncOp = block[0]->getParentOfType<oneflow::Job>();
   auto parentModuleOp = parentFuncOp->getParentOfType<ModuleOp>();
-  SymbolTable symbolTable(parentModuleOp);
 
   Block::iterator insertPt(parentFuncOp->getNextNode());
   builder.setInsertionPointToStart(parentModuleOp.getBody());

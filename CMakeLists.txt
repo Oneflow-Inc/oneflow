@@ -30,6 +30,7 @@ option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 option(OF_LAYER_NORM_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
 option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
+option(ENABLE_LOWERING_ASCEND "" OFF)
 
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
@@ -39,6 +40,10 @@ set(ONEFLOW_CURRENT_VERSION 0.8.1.dev CACHE STRING "")
 
 if(BUILD_FOR_CI)
   set(ONEFLOW_CURRENT_VERSION ci)
+endif()
+
+if(ENABLE_LOWERING_ASCEND)
+  set(WITH_MLIR ON)
 endif()
 
 set(LLVM_PROVIDER "in-tree" CACHE STRING "in-tree, install")

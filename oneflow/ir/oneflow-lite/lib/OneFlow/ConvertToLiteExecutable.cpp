@@ -24,6 +24,7 @@ limitations under the License.
 #include "OneFlow/Transform/FoldVariable.h"
 #include "OneFlow/Transform/InferPlacement.h"
 #include "OneFlow/Transform/InsertTransferOp.h"
+#include "OneFlow/Transform/LoweringLaunchJob.h"
 #include "OneFlow/Transform/MemoryPlanning.h"
 #include "OneFlow/Transform/PartitionLaunchJob.h"
 
@@ -267,6 +268,7 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   pm.addPass(createLiteInferPlacementPass(options.target));
   pm.addPass(createLiteInsertTransferOpPass());
   pm.addPass(createLitePartitionLaunchJobPass());
+  pm.addPass(createLiteLoweringLaunchJobPass());
   pm.addPass(createCanonicalizerPass());
 
   LiteBufferStrategy bufferStrategy;
@@ -275,6 +277,8 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
     llvm::errs() << "Failed to run oneflow lite compilation passes.\n";
     return failure();
   }
+
+  llvm::errs() << *module << "\n";
 
   Operation* entryJobOp = getEntryJobOp(module);
   if (!entryJobOp) {
