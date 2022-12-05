@@ -137,6 +137,18 @@ class TestFromDlPack(flow.unittest.TestCase):
                 flow.cuda.empty_cache()
             test_case.assertTrue(np.array_equal(torch_tensor.cpu().numpy(), value))
 
+    def test_subview(test_case):
+        for device in test_devices:
+            torch_tensor = torch.randn(3, 4, 5, device=device)
+            torch_tensor = torch_tensor[1:, :, ::2]
+            tensor = flow.from_dlpack(torch.to_dlpack(torch_tensor))
+            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+            test_case.assertEqual(tensor.storage_offset(), 0)
+            test_case.assertEqual(tensor.stride(), torch_tensor.stride())
+
+            tensor[1:2, ::2, 3:4] = random.random()
+            test_case.assertTrue(np.array_equal(tensor.numpy(), torch_tensor.cpu().numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()
