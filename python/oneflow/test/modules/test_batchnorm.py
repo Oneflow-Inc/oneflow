@@ -117,44 +117,25 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    """
-    @profile(torch.nn.BatchNorm1d) 
-    def profile_BatchNorm1d(test_case):
-        m1 = torch.nn.BatchNorm1d(100)
-        m2 = torch.nn.BatchNorm1d(100, affine=False)
-        input1 = torch.ones(20, 100)
-        input2 = torch.ones(20, 100)
-        out1=m1(input1)
-        out2=m2(input2)
-
-    @profile(torch.nn.BatchNorm2d) 
-    def profile_BatchNorm2d(test_case):
-        m1 = torch.nn.BatchNorm2d(10)
-        m2 = torch.nn.BatchNorm2d(10, affine=False)
-        print(type(m1),type(m2))
-        input1 = torch.ones(2, 10, 8, 3)
-        input2 = torch.ones(2, 10, 8, 3)
-        out1=m1(input1)
-        out2=m2(input2)
-
-    @profile(torch.nn.BatchNorm3d) 
-    def profile_BatchNorm3d(test_case):
-        m1 = torch.nn.BatchNorm3d(10)
-        m2 = torch.nn.BatchNorm3d(10, affine=False)
-        input1 = torch.ones(2, 10, 5, 8, 4)
-        input2 = torch.ones(2, 10, 5, 8, 4)
-        out1=m1(input1)
-        out2=m2(input2)
-
     @profile(torch.nn.functional.batch_norm)
-    def profile_functional_batchnorm(test_case):
-        input = torch.ones(2, 10, 8, 3)
-        running_mean = torch.randn(10)
-        running_var = torch.randn(10)
-        weight = torch.randn(10)
-        bias = torch.randn(10)
-        out = torch.nn.functional.batch_norm(input)
-    """
+    def profile_batchnorm(test_case):
+        input = torch.ones(16, 128, 28, 28)
+        running_mean = torch.randn(128)
+        running_var = torch.randn(128)
+        weight = torch.randn(128)
+        bias = torch.randn(128)
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, weight, bias, True
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, weight, bias, False
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, None, None, True
+        )
+        torch.nn.functional.batch_norm(
+            input, running_mean, running_var, None, None, False
+        )
 
 
 if __name__ == "__main__":
