@@ -203,8 +203,8 @@ class RandFunctor {
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
       return JUST(functional::GlobalRand(shape, GetGlobalParallelDescFromDevice(device),
-                                         *JUST(GetSbpList(GlobalMode::nd_sbp())),
-                                         dtype, generator, requires_grad));
+                                         *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                         requires_grad));
     }
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
@@ -514,9 +514,9 @@ class RandIntFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalRandInt(low, high, shape, GetGlobalParallelDescFromDevice(device),
-                                         *JUST(GetSbpList(GlobalMode::nd_sbp())),
-                                         dtype, generator, requires_grad));
+      return JUST(functional::GlobalRandInt(
+          low, high, shape, GetGlobalParallelDescFromDevice(device),
+          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
     }
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
@@ -667,8 +667,8 @@ class RandPermFunctor {
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
       return JUST(functional::GlobalRandPerm(n, GetGlobalParallelDescFromDevice(device),
-                                         *JUST(GetSbpList(GlobalMode::nd_sbp())),
-                                         generator, dtype, requires_grad));
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp())), generator,
+                                             dtype, requires_grad));
     }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed");

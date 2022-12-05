@@ -164,8 +164,9 @@ class ConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalConstant(shape, value, dtype, GetGlobalParallelDescFromDevice(device),
-                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+      return JUST(functional::GlobalConstant(shape, value, dtype,
+                                             GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value");

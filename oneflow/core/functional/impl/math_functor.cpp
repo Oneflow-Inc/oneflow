@@ -1061,7 +1061,8 @@ class ArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalArange(start, limit, delta, dtype, GetGlobalParallelDescFromDevice(device),
+      return JUST(functional::GlobalArange(start, limit, delta, dtype,
+                                           GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
     auto& attrs =
@@ -1164,9 +1165,9 @@ class HannWindowFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalHannWindow(window_length, periodic, GetGlobalParallelDescFromDevice(device),
-                                         *JUST(GetSbpList(GlobalMode::nd_sbp())),
-                                         dtype, requires_grad));
+      return JUST(functional::GlobalHannWindow(
+          window_length, periodic, GetGlobalParallelDescFromDevice(device),
+          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, requires_grad));
     }
     autograd::AutoGradMode mode(false);
     if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
