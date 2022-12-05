@@ -190,7 +190,7 @@ void SbpEdge::FinalizeSbp() {
   for (const auto& this_edge : edge_list_) { this_edge->FinalizeSbp(); }
 }
 
-double SbpEdge::GreedyStrategy() {
+double SbpEdge::GreedyStrategy(double memory_ratio_search) {
   // Sbp combination of the minimum cost
   int32_t min_sbp_start = start_node_->final_sbp_sig_id_,
           min_sbp_end = end_node_->final_sbp_sig_id_;
@@ -201,13 +201,15 @@ double SbpEdge::GreedyStrategy() {
   std::vector<double> end_node_out_cost(end_node_->cost_.size());
   for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
     end_node_->final_sbp_sig_id_ = sbp_end;
-    end_node_out_cost[sbp_end] = end_node_->EvalOutNbhCost(node_list_id2nbh_id);
+    end_node_out_cost[sbp_end] =
+        end_node_->EvalOutNbhCost(node_list_id2nbh_id, memory_ratio_search);
   }
   // pre-compute and store the current cost between start_node_ and outside.
   std::vector<double> start_node_out_cost(start_node_->cost_.size());
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     start_node_->final_sbp_sig_id_ = sbp_start;
-    start_node_out_cost[sbp_start] = start_node_->EvalOutNbhCost(node_list_id2nbh_id);
+    start_node_out_cost[sbp_start] =
+        start_node_->EvalOutNbhCost(node_list_id2nbh_id, memory_ratio_search);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
   double curr_cost = 0.0;

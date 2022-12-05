@@ -279,7 +279,7 @@ double SbpGraph::GreedyStrategy(bool for_node) const {
       } else {
         // GreedyStrategy on Edges.
         for (SbpEdge* this_edge : this_node->edges_out_) {
-          double second_rdc = this_edge->GreedyStrategy();
+          double second_rdc = this_edge->GreedyStrategy(memory_ratio_search_);
           cost_reduction += second_rdc;
         }
       }
@@ -416,11 +416,12 @@ void SbpGraph::DfsAddNbhCost(std::vector<int32_t>& nbh_id2node_list_id,
   SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
   for (int32_t sbp_id : nbh_id2order2sbp_id[nbh_id]) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
-    DfsAddNbhCost(nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,
-                  order2acc_min_in_nbh_cost, out_nbh_costs, nbh_id2order2sbp_id, min_sbp_sig_id,
-                  min_cost, order + 1,
-                  curr_cost + out_nbh_costs[nbh_id][sbp_id]
-                      + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order));
+    DfsAddNbhCost(
+        nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,
+        order2acc_min_in_nbh_cost, out_nbh_costs, nbh_id2order2sbp_id, min_sbp_sig_id, min_cost,
+        order + 1,
+        curr_cost + out_nbh_costs[nbh_id][sbp_id]
+            + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order, memory_ratio_search_));
   }
 }
 
@@ -434,7 +435,8 @@ bool SbpGraph::DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
   for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
-    if (sbp_node->cost_[sbp_id] + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order)
+    if (sbp_node->cost_[sbp_id]
+            + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order, memory_ratio_search_)
         < GetValidMaxCopyCost()) {
       if (DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order,
                                 nbh_id + 1)) {
@@ -533,7 +535,8 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     out_nbh_costs[nbh_id].resize(sbp_node->cost_.size());
     for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
       sbp_node->final_sbp_sig_id_ = sbp_id;
-      out_nbh_costs[nbh_id][sbp_id] = sbp_node->EvalOutNbhCost(node_list_id2nbh_id);
+      out_nbh_costs[nbh_id][sbp_id] =
+          sbp_node->EvalOutNbhCost(node_list_id2nbh_id, memory_ratio_search_);
     }
   }
   // pre-compute and store the order of the out_nbh_costs
@@ -567,7 +570,8 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
     original_cost += out_nbh_costs[nbh_id][min_sbp_sig_id[nbh_id]];
-    original_cost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
+    original_cost +=
+        sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order, memory_ratio_search_);
   }
   double min_cost = original_cost;
   // Accumulate minimum cost from the current node to the end of the neighborhood node list.

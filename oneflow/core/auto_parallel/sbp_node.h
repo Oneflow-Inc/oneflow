@@ -71,11 +71,12 @@ class SbpNode final {
   // node You should have an initial strategy before running this
   double GreedyStrategy();
   // Evaluate summery of cost between neighborhood and outside nodes
-  double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
+  double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+                        double memory_ratio_search) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the edge cost with a lower order.
   double EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                       const std::vector<int32_t>& nbh_id2order) const;
+                       const std::vector<int32_t>& nbh_id2order, double memory_ratio_search) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
   double EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
@@ -138,6 +139,9 @@ class SbpNode final {
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
   int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
   int64_t GetMemory() const { return GetMemory(final_sbp_sig_id_); }
+  double GetWeightedCost(int32_t i, double memory_ratio_search) const {
+    return cost_[i] + memory_ratio_search * GetMemory(i);
+  }
 
   // Setter
   void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }

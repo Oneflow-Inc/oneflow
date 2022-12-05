@@ -66,7 +66,7 @@ class SbpEdge final {
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
   // edge. You should have an initial strategy before running this. And the
   // graph should be fully eliminated.
-  double GreedyStrategy();
+  double GreedyStrategy(double memory_ratio_search);
 
   // load a logical blob
   void LoadLbi(const LogicalBlobId& lbi);
@@ -105,6 +105,9 @@ class SbpEdge final {
   int64_t GetMemory(int32_t i, int32_t j) const { return in_memory_support_ ? memory_[i][j] : 0; }
   int64_t GetMemory() const {
     return GetMemory(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
+  }
+  double GetWeightedCost(int32_t i, int32_t j, double memory_ratio_search) const {
+    return cost_[i][j] + memory_ratio_search * GetMemory(i, j);
   }
 
  private:
