@@ -34,7 +34,10 @@ void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
                       // device pointers
                       void* q_ptr, void* k_ptr, void* v_ptr, void* cu_seqlens_q_d,
                       void* cu_seqlens_k_d, void* o_packed_d, void* o_tmp_d, void* s_d,
-                      void* softmax_lse_d, float p_dropout, float softmax_scale, bool is_causal) {
+                      void* softmax_lse_d, float p_dropout, float softmax_scale, bool is_causal,
+                      // add attn mask&bias
+                      void* attn_mask, void* attn_bias, int bias_mod_size, int mask_head_mod_size,
+                      int mask_seq_mod_size) {
   Data_type data_type = DATA_TYPE_FP16;
   // Reset the parameters
   // memset(&params, 0, sizeof(params));
@@ -74,6 +77,13 @@ void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
   params.seqlen_k = seqlen_k;
   params.d = head_size;
 
+  // attn mask & bias
+  params.attn_mask_ptr = attn_mask;
+  params.attn_bias_ptr = attn_bias;
+  params.bias_mod_size = bias_mod_size;
+  params.mask_head_mod_size = mask_head_mod_size;
+  params.mask_seq_mod_size = mask_seq_mod_size;
+
   // Set the different scale values.
   // const float scale_bmm1 = 1.f / sqrtf(d);
   const float scale_bmm1 = softmax_scale;
@@ -106,12 +116,16 @@ void set_params_dgrad(FMHA_dgrad_params& params, bool is_bf16,
                       void* q_ptr, void* k_ptr, void* v_ptr, void* dq_ptr, void* dk_ptr,
                       void* dv_ptr, void* cu_seqlens_q_d, void* cu_seqlens_k_d, void* o_packed_d,
                       void* dq_tmp_d, void* do_packed_d, void* softmax_lse_d, void* dsoftmax_sum_d,
-                      float p_dropout, float softmax_scale, bool is_causal) {
+                      float p_dropout, float softmax_scale, bool is_causal,
+                      // add attn mask&bias
+                      void* attn_mask, void* attn_bias, void* attn_ds, int bias_mod_size,
+                      int mask_head_mod_size, int mask_seq_mod_size) {
   set_params_fprop(params, is_bf16, b, seqlen_q, seqlen_k, num_head, head_size, q_row_stride,
                    k_row_stride, v_row_stride, q_head_stride, k_head_stride, v_head_stride, q_ptr,
                    k_ptr, v_ptr, cu_seqlens_q_d, cu_seqlens_k_d, o_packed_d,
                    dq_tmp_d,  // Reusing the o_tmp_ptr variable to store dq_tmp
-                   nullptr, softmax_lse_d, p_dropout, softmax_scale, is_causal);
+                   nullptr, softmax_lse_d, p_dropout, softmax_scale, is_causal, attn_mask,
+                   attn_bias, bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
   // Set the pointers and strides.
   params.dq_ptr = dq_ptr;
@@ -127,6 +141,7 @@ void set_params_dgrad(FMHA_dgrad_params& params, bool is_bf16,
 
   // Softmax sum
   params.dsoftmax_sum = dsoftmax_sum_d;
+  params.attn_ds_ptr = attn_ds;
 }
 
 class FlashAttentionKernelState : public user_op::OpKernelState {
@@ -171,6 +186,8 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* softmax_lse = ctx->Tensor4ArgNameAndIndex("softmax_lse", 0);
+    int max_seqlen_q = ctx->Attr<int>("max_seqlen_q");
+    int max_seqlen_k = ctx->Attr<int>("max_seqlen_k");
     // Note: deafult should be 1.f / sqrtf(head_size)
     const float softmax_scale = ctx->Attr<float>("softmax_scale");
     const bool is_causal = ctx->Attr<bool>("causal");
@@ -180,11 +197,13 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     const cudaDeviceProp& device_props = ctx->stream()->As<ep::CudaStream>()->device_properties();
     Launch_params<FMHA_fprop_params> launch_params(&device_props, stream, is_dropout,
                                                    /*return_softmax*/ false);
-    const int64_t batch_size = query->shape_view().At(0);
-    const int64_t origin_max_seqlen_q = query->shape_view().At(1);
-    const int64_t origin_max_seqlen_k = key->shape_view().At(1);
-    const int64_t num_head = query->shape_view().At(2);
-    const int64_t head_size = query->shape_view().At(3);
+    const int64_t q_axes = query->shape_view().NumAxes();
+    const int64_t batch_size =
+        (q_axes == 4) ? query->shape_view().At(0) : (cu_seqlens_k->shape_view().elem_cnt() - 1);
+    const int64_t origin_max_seqlen_q = (q_axes == 4) ? query->shape_view().At(1) : max_seqlen_q;
+    const int64_t origin_max_seqlen_k = (q_axes == 4) ? key->shape_view().At(1) : max_seqlen_k;
+    const int64_t num_head = query->shape_view().At(q_axes - 2);
+    const int64_t head_size = query->shape_view().At(q_axes - 1);
     const size_t row_stride =
         num_head * head_size;  // if qkv packed, row_stride should be 3 * num_head * head_size
     const size_t head_stride = head_size;
@@ -197,14 +216,35 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                           ? 128
                           : 256;
     // Need to round max_seqlen_k to multiples of blocksize_c
-    int max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
+    max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
     if (origin_max_seqlen_k <= 128) {
       max_seqlen_k = 128;
     } else if (origin_max_seqlen_k <= 256) {
       max_seqlen_k = 256;
     }
-    int max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
+    max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
     bool loop = max_seqlen_k > blocksize_c;
+
+    int bias_mod_size = 0;
+    if (ctx->has_input("bias", 0)) {
+      const user_op::Tensor* attn_bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      const auto bias_shape = attn_bias->shape_view();
+      // last two dimension
+      bias_mod_size = bias_shape.At(0);
+      CHECK(bias_shape.At(1) == num_head);
+    }
+
+    int mask_head_mod_size = 0;
+    int mask_seq_mod_size = 0;
+    if (ctx->has_input("mask", 0)) {
+      const user_op::Tensor* attn_mask = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      const auto mask_shape = attn_mask->shape_view();
+      // last two dimension
+      mask_head_mod_size = mask_shape.At(1);
+      mask_seq_mod_size = mask_shape.At(2);
+      CHECK(mask_head_mod_size == 1 || mask_head_mod_size == num_head);
+      CHECK(mask_seq_mod_size == 1 || mask_seq_mod_size == max_seqlen_q);
+    }
 
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
     set_params_fprop(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k,
@@ -215,7 +255,14 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                      const_cast<void*>(cu_seqlens_k->dptr()), out->mut_dptr(),
                      loop ? tmp_buffer->mut_dptr() : nullptr,
                      /*not return softmax*/ nullptr, softmax_lse->mut_dptr(), dropout_rate,
-                     softmax_scale, is_causal);
+                     softmax_scale, is_causal,
+                     ctx->has_input("mask", 0)
+                         ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr())
+                         : nullptr,
+                     ctx->has_input("bias", 0)
+                         ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
+                         : nullptr,
+                     bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
     run_fmha_fp16_sm80(launch_params, /*configure=*/true);
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state
@@ -278,6 +325,8 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     user_op::Tensor* key_grad = ctx->Tensor4ArgNameAndIndex("key_grad", 0);
     user_op::Tensor* value_grad = ctx->Tensor4ArgNameAndIndex("value_grad", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    int max_seqlen_q = ctx->Attr<int>("max_seqlen_q");
+    int max_seqlen_k = ctx->Attr<int>("max_seqlen_k");
     // Note: deafult should be 1.f / sqrtf(head_size)
     const float softmax_scale = ctx->Attr<float>("softmax_scale");
     const bool is_causal = ctx->Attr<bool>("causal");
@@ -287,11 +336,13 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     const cudaDeviceProp& device_props = ctx->stream()->As<ep::CudaStream>()->device_properties();
     Launch_params<FMHA_dgrad_params> launch_params(&device_props, stream, is_dropout,
                                                    /*return_softmax*/ false);
-    const int64_t batch_size = query->shape_view().At(0);
-    const int64_t origin_max_seqlen_q = query->shape_view().At(1);
-    const int64_t origin_max_seqlen_k = key->shape_view().At(1);
-    const int64_t num_head = query->shape_view().At(2);
-    const int64_t head_size = query->shape_view().At(3);
+    const int64_t q_axes = query->shape_view().NumAxes();
+    const int64_t batch_size =
+        (q_axes == 4) ? query->shape_view().At(0) : (cu_seqlens_k->shape_view().elem_cnt() - 1);
+    const int64_t origin_max_seqlen_q = (q_axes == 4) ? query->shape_view().At(1) : max_seqlen_q;
+    const int64_t origin_max_seqlen_k = (q_axes == 4) ? key->shape_view().At(1) : max_seqlen_k;
+    const int64_t num_head = query->shape_view().At(q_axes - 2);
+    const int64_t head_size = query->shape_view().At(q_axes - 1);
     const size_t row_stride = num_head * head_size;
     const size_t head_stride = head_size;
 
@@ -302,13 +353,13 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                           ? 128
                           : 256;
     // Need to round max_seqlen_k to multiples of blocksize_c
-    int max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
+    max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
     if (origin_max_seqlen_k <= 128) {
       max_seqlen_k = 128;
     } else if (origin_max_seqlen_k <= 256) {
       max_seqlen_k = 256;
     }
-    int max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
+    max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
     bool loop = max_seqlen_k > blocksize_c;
     void* query_grad_tmp_ptr = tmp_buffer->mut_dptr();
     DataType tmp_buf_type = softmax_lse->data_type();
@@ -317,6 +368,30 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     // why dsoftmax_sum?
     void* dsoftmax_sum_ptr =
         reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + query_grad_tmp_bytes);
+
+    int bias_mod_size = 0;
+    if (ctx->has_input("bias", 0)) {
+      const user_op::Tensor* attn_bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      const auto bias_shape = attn_bias->shape_view();
+      // last two dimension
+      bias_mod_size = bias_shape.At(0);
+      CHECK(bias_shape.At(1) == num_head);
+    }
+
+    int mask_head_mod_size = 0;
+    int mask_seq_mod_size = 0;
+    if (ctx->has_input("mask", 0)) {
+      const user_op::Tensor* attn_mask = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      const auto mask_shape = attn_mask->shape_view();
+      // last two dimension
+      mask_head_mod_size = mask_shape.At(1);
+      mask_seq_mod_size = mask_shape.At(2);
+      CHECK(mask_head_mod_size == 1 || mask_head_mod_size == num_head);
+      CHECK(mask_seq_mod_size == 1 || mask_seq_mod_size == max_seqlen_q);
+    }
+
+    user_op::Tensor* bias_grad = nullptr;
+    if (ctx->has_input("bias", 0)) { bias_grad = ctx->Tensor4ArgNameAndIndex("bias_grad", 0); }
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
     set_params_dgrad(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k,
                      num_head, head_size, row_stride, row_stride, row_stride, head_stride,
@@ -327,7 +402,15 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                      const_cast<void*>(cu_seqlens_k->dptr()), const_cast<void*>(out->dptr()),
                      loop ? query_grad_tmp_ptr : nullptr, const_cast<void*>(out_grad->dptr()),
                      const_cast<void*>(softmax_lse->dptr()), dsoftmax_sum_ptr, dropout_rate,
-                     softmax_scale, is_causal);
+                     softmax_scale, is_causal,
+                     ctx->has_input("mask", 0)
+                         ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr())
+                         : nullptr,
+                     ctx->has_input("bias", 0)
+                         ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
+                         : nullptr,
+                     ctx->has_input("bias", 0) ? const_cast<void*>(bias_grad->dptr()) : nullptr,
+                     bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state

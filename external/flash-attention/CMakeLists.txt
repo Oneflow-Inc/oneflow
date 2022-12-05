@@ -1,4 +1,6 @@
 include(FetchContent)
+FetchContent_GetProperties(cutlass)
+if(NOT cutlass_POPULATED)
 FetchContent_Declare(
         cutlass
         URL ${CUTLASS_URL}
@@ -8,6 +10,8 @@ FetchContent_Populate(cutlass)
 
 add_library(cutlass_headers INTERFACE)
 set_target_properties(cutlass_headers PROPERTIES  INTERFACE_INCLUDE_DIRECTORIES ${cutlass_SOURCE_DIR}/include)
+endif(not cutlass_POPULATED)
+
 
 FetchContent_Declare(
         flash-attention

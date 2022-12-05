@@ -26,26 +26,40 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   const Shape& v_shape = ctx->InputShape("value", 0);
   const Shape& cu_seqlens_q_shape = ctx->InputShape("cu_seqlens_q", 0);
   const Shape& cu_seqlens_k_shape = ctx->InputShape("cu_seqlens_k", 0);
-  CHECK_EQ_OR_RETURN(q_shape.NumAxes(), 4)
-      << "query shape num_axes should be 4, but got " << q_shape.NumAxes();
-  const int64_t batch_size = q_shape.At(0);
-  const int64_t num_head = q_shape.At(2);
-  const int64_t head_size = q_shape.At(3);
+  const int64_t q_axes = q_shape.NumAxes();
+  bool has_mask = ctx->has_input("mask", 0);
+  bool has_bias = ctx->has_input("bias", 0);
+  CHECK_OR_RETURN((q_axes == 3) || (q_axes == 4))
+      << "query shape num_axes should be 3[total_q x num_heads x head_size] or 4[batch_size x "
+         "seqlen_q x num_heads x head_size], but got "
+      << q_axes;
+  const int64_t num_head = q_shape.At(q_axes - 2);
+  const int64_t head_size = q_shape.At(q_axes - 1);
   CHECK_OR_RETURN(head_size == 16 || head_size == 32 || head_size == 64 || head_size == 128)
       << "flash-attention only support head_size in (16, 32, 64, 128).";
-  CHECK_EQ_OR_RETURN(k_shape.NumAxes(), 4)
-      << "key shape num_axes should be 4, but got " << k_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 4)
-      << "key shape num_axes should be 4, but got " << v_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0));
-  CHECK_EQ_OR_RETURN(batch_size, v_shape.At(0));
-  CHECK_EQ_OR_RETURN(k_shape.At(1), v_shape.At(1));
-  CHECK_EQ_OR_RETURN(num_head, k_shape.At(2));
-  CHECK_EQ_OR_RETURN(num_head, v_shape.At(2));
-  CHECK_EQ_OR_RETURN(head_size, k_shape.At(3));
-  CHECK_EQ_OR_RETURN(head_size, v_shape.At(3));
-  CHECK_EQ_OR_RETURN(cu_seqlens_q_shape.At(0), batch_size + 1);
-  CHECK_EQ_OR_RETURN(cu_seqlens_k_shape.At(0), batch_size + 1);
+  const int64_t k_axes = k_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(k_axes, q_axes)
+      << "key shape num_axes should be" << q_axes << "(query shape num_axes), but got " << k_axes;
+  CHECK_OR_RETURN((k_axes == 3) || (k_axes == 4))
+      << "key shape num_axes should be 3[total_k x num_heads x head_size] or 4[batch_size x "
+         "seqlen_k x num_heads x head_size], but got "
+      << k_axes;
+  CHECK_EQ_OR_RETURN(v_shape.NumAxes(), k_axes)
+      << "value shape num_axes should be" << k_axes << "(key shape num_axes), but got "
+      << v_shape.NumAxes();
+  if (q_axes == 4) {
+    const int64_t batch_size = q_shape.At(0);  // cu_seqlens_q.numel() - 1
+    CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0));
+    CHECK_EQ_OR_RETURN(batch_size, v_shape.At(0));
+    CHECK_EQ_OR_RETURN(k_shape.At(1), v_shape.At(1));
+    CHECK_EQ_OR_RETURN(cu_seqlens_q_shape.At(0), batch_size + 1);
+    CHECK_EQ_OR_RETURN(cu_seqlens_k_shape.At(0), batch_size + 1);
+  }
+  CHECK_EQ_OR_RETURN(num_head, k_shape.At(k_axes - 2));
+  CHECK_EQ_OR_RETURN(num_head, v_shape.At(k_axes - 2));
+  CHECK_EQ_OR_RETURN(head_size, k_shape.At(k_axes - 1));
+  CHECK_EQ_OR_RETURN(head_size, v_shape.At(k_axes - 1));
+
   return Maybe<void>::Ok();
 }
 
@@ -54,11 +68,20 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FlashAttentionOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckInShape(ctx));
   const Shape& q_shape = ctx->InputShape("query", 0);
-  const int64_t batch_size = q_shape.At(0);
-  const int64_t seq_len_q = q_shape.At(1);
-  const int64_t num_head = q_shape.At(2);
-  ctx->SetOutputShape("out", 0, q_shape);
-  ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_head, seq_len_q}));
+  const int64_t q_axes = q_shape.NumAxes();
+  if (q_axes == 4) {
+    const int64_t batch_size = q_shape.At(0);
+    const int64_t seq_len_q = q_shape.At(1);
+    const int64_t num_head = q_shape.At(2);
+    ctx->SetOutputShape("out", 0, q_shape);
+    ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_head, seq_len_q}));
+  } else {
+    const int64_t total_q = q_shape.At(0);
+    const int64_t num_head = q_shape.At(1);
+    ctx->SetOutputShape("out", 0, q_shape);
+    ctx->SetOutputShape("softmax_lse", 0, Shape({total_q, num_head}));
+  }
+
   return Maybe<void>::Ok();
 }
 

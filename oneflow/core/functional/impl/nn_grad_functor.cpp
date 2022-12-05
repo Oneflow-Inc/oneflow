@@ -1068,6 +1068,49 @@ class GroupNormParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSNormGradFunctor {
+ public:
+  RMSNormGradFunctor() {
+    grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                              .Input("dy")
+                              .Input("x")
+                              .Input("inv_rms")
+                              .Output("dx")
+                              .Build());
+    affine_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                                     .Input("dy")
+                                     .Input("x")
+                                     .Input("inv_rms")
+                                     .Input("weight")
+                                     .Output("dx")
+                                     .Build());
+    param_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_param_grad")
+                                    .Input("dy")
+                                    .Input("x")
+                                    .Input("inv_rms")
+                                    .Output("weight_grad")
+                                    .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& inv_rms,
+                           const Optional<one::Tensor>& weight, const bool param_grad) const {
+    if (param_grad) {
+      return OpInterpUtil::Dispatch<Tensor>(*param_grad_op_, {dy, x, inv_rms});
+    } else if (weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_grad_op_, {dy, x, inv_rms, JUST(weight)});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*grad_op_, {dy, x, inv_rms});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
+  std::shared_ptr<OpExpr> affine_grad_op_;
+  std::shared_ptr<OpExpr> param_grad_op_;
+};
+
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {
@@ -1172,22 +1215,96 @@ class FlashAttentionGradFunctor {
                          .Output("key_grad")
                          .Output("value_grad")
                          .Build());
+    op_with_mask_ = CHECK_JUST(one::OpBuilder("flash_attention_grad")
+                                   .Input("out_grad")
+                                   .Input("out")
+                                   .Input("softmax_lse")
+                                   .Input("query")
+                                   .Input("key")
+                                   .Input("value")
+                                   .Input("cu_seqlens_q")
+                                   .Input("cu_seqlens_k")
+                                   .Input("mask")
+                                   .Output("query_grad")
+                                   .Output("key_grad")
+                                   .Output("value_grad")
+                                   .Build());
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("flash_attention_grad")
+                                   .Input("out_grad")
+                                   .Input("out")
+                                   .Input("softmax_lse")
+                                   .Input("query")
+                                   .Input("key")
+                                   .Input("value")
+                                   .Input("cu_seqlens_q")
+                                   .Input("cu_seqlens_k")
+                                   .Input("bias")
+                                   .Output("query_grad")
+                                   .Output("key_grad")
+                                   .Output("value_grad")
+                                   .Output("bias_grad")
+                                   .Build());
+    op_with_mask_and_bias_ = CHECK_JUST(one::OpBuilder("flash_attention_grad")
+                                            .Input("out_grad")
+                                            .Input("out")
+                                            .Input("softmax_lse")
+                                            .Input("query")
+                                            .Input("key")
+                                            .Input("value")
+                                            .Input("cu_seqlens_q")
+                                            .Input("cu_seqlens_k")
+                                            .Input("mask")
+                                            .Input("bias")
+                                            .Output("query_grad")
+                                            .Output("key_grad")
+                                            .Output("value_grad")
+                                            .Output("bias_grad")
+                                            .Build());
   }
+  
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& out,
       const std::shared_ptr<one::Tensor>& softmax_lse, const std::shared_ptr<one::Tensor>& query,
       const std::shared_ptr<one::Tensor>& key, const std::shared_ptr<one::Tensor>& value,
       const std::shared_ptr<one::Tensor>& cu_seqlens_q,
-      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const float softmax_scale,
-      const bool causal, const float dropout_rate) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("softmax_scale", "causal", "dropout_rate");
-    attrs.SetAllAttrs(softmax_scale, causal, dropout_rate);
+      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const Optional<one::Tensor>& mask,
+      const Optional<one::Tensor>& bias, const int32_t max_seqlen_q, const int32_t max_seqlen_k,
+      const float softmax_scale, const bool causal, const float dropout_rate,
+      const int32_t bias_mod_size, const int32_t mask_head_mod_size,
+      const int32_t mask_seq_mod_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale",
+                                                 "causal", "dropout_rate", "bias_mod_size",
+                                                 "mask_head_mod_size", "mask_seq_mod_size");
+    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate,
+                      bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
+    if (mask) {
+      if (bias) {
+        return OpInterpUtil::Dispatch<TensorTuple>(
+            *op_with_mask_and_bias_,
+            {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(mask),
+             JUST(bias)},
+            attrs);
+      }
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_mask_,
+          {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(mask)},
+          attrs);
+    }
+    if (bias) {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_bias_,
+          {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(bias)},
+          attrs);
+    }
     return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_mask_;
+  std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_with_mask_and_bias_;
 };
 
 class CublasBiasAddReluMatmulGradFunctor {
@@ -1619,6 +1736,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
   m.add_functor<impl::DeformConv2dInputGradFunctor>("DeformConv2dInputGrad");
   m.add_functor<impl::DeformConv2dParamGradFunctor>("DeformConv2dParamGrad");
+  m.add_functor<impl::RMSNormGradFunctor>("RMSNormGrad");
 };
 
 }  // namespace functional
