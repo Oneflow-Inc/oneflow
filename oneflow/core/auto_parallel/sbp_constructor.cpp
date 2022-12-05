@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/auto_parallel/sbp_collector.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -396,6 +397,7 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
 void SbpConstructor::InitAvailableMemory() {
   size_t free = 0;
   size_t total = 0;
+  CudaCurrentDeviceGuard guard(GlobalProcessCtx::Rank());
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
   // The estimated memory differs from the lower bound of the peak memory by the first ratio.
   // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
