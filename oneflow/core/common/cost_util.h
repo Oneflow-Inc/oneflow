@@ -24,6 +24,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/mem_util.h"
+#include "oneflow/core/job/utils/progress_bar.h"
 
 namespace oneflow {
 
@@ -60,7 +61,7 @@ class CostCounter final {
       : with_log_(with_log), with_mem_(with_mem) {}
   ~CostCounter() = default;
 
-  void Count(const std::string& log_prefix = "", int v_log_level = 0);
+  void Count(const std::string& log_prefix = "", int v_log_level = 0, bool log_progress = false);
 
  private:
   using Clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
@@ -72,7 +73,10 @@ class CostCounter final {
 };
 
 template<class Resolution>
-void CostCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
+void CostCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level,
+                                    bool log_progress) {
+  if (log_progress) { CHECK_JUST(LogProgress(log_prefix)); }
+
   const auto end = Clock::now();
   if (FLAGS_minloglevel <= 0 && VLOG_IS_ON(v_log_level) && with_log_ && v_log_level >= 0) {
     // only do time/mem count and log when glog level is INFO and VLOG level is matched.

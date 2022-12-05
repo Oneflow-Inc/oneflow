@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/job/utils/graph_log.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -963,9 +962,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     VLOG(1) << job_name << " finish compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
-    pass_tc->Count("[GraphCompile]" + job_name + " " + pass_name, 1);
+    pass_tc->Count("[GraphCompile]" + job_name + " " + pass_name, 1, true);
     ++pass_cnt;
-    JUST(LogProgress());
     return Maybe<void>::Ok();
   };
 

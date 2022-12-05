@@ -76,7 +76,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  compile_tc->Count("[GraphCompile]" + job_name + " BuildTaskGraph", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " BuildTaskGraph", 1, true);
 
   // Step3: put infomation from task_gph into plan.
   const int64_t node_num = task_gph->node_num();
@@ -105,7 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   counter.WaitForeverUntilCntEqualZero();
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
-  compile_tc->Count("[GraphCompile]" + job_name + " AddTaskToPlan", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " AddTaskToPlan", 1, true);
 
   // Step4: post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
@@ -116,7 +116,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
-  compile_tc->Count("[GraphCompile]" + job_name + " InferMemShare", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " InferMemShare", 1, true);
   Singleton<OpGraph>::Delete();
 }
 

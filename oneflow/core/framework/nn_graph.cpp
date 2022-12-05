@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/utils/progress_bar.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -328,24 +329,24 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     Compiler().Compile(&job_, &plan_);
     auto sub_compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1, true);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1, true);
     PlanUtil::GenRegisterHint(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1, true);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1, true);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1, true);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1, true);
   }
   compile_tc->Count("[GraphCompile]" + name_ + " CompilePlan", 0);
   if (GlobalProcessCtx::WorldSize() > 1) {
@@ -363,7 +364,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
   }
-  compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0);
+  compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0, true);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
@@ -377,7 +378,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
-  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
+  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0, true);
+  JUST(LogProgress("[GraphCompile]" + name_ + " Done", true));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
