@@ -1,4 +1,6 @@
 #include "generator.h"
+#include "mlir/IR/Visitors.h"
+#include "wrapper.h"
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
@@ -24,6 +26,7 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
@@ -32,6 +35,8 @@
 namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
 namespace pdl = ::mlir::pdl;
+
+namespace llvm {}
 namespace mlir {
 namespace oneflow {
 
@@ -55,7 +60,7 @@ auto Generator::get_random_tensor() {
   attrs.set("value", dense);
 
   auto frozen =
-      builder.create<FrozenVariableOp>(mop->getLoc(), dense.getType(), ValueRange(), attrs);
+      builder.create<FrozenVariableOp>(graph->getLoc(), dense.getType(), ValueRange(), attrs);
 
   return frozen;
 }
@@ -69,39 +74,101 @@ void Generator::run() {
   // addop_attrs.set("y", r);
   NamedAttrList addop_attrs;
   auto result_type = rands[0].getType();
-  auto loc = mop->getLoc();
+  auto loc = graph->getLoc();
   auto add01 =
       builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[0], rands[1]}, addop_attrs);
-  auto res1 =
-      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{add01, rands[2]}, addop_attrs);
+  auto res1 = builder.create<BroadcastAddOp>(add01->getLoc(), result_type,
+                                             ValueRange{add01, rands[2]}, addop_attrs);
 
-  auto add12 =
-      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[1], rands[2]}, addop_attrs);
-  auto res2 =
-      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[0], add12}, addop_attrs);
+  auto add12 = builder.create<BroadcastAddOp>(res1->getLoc(), result_type,
+                                              ValueRange{rands[1], rands[2]}, addop_attrs);
+  auto res2 = builder.create<BroadcastAddOp>(add12->getLoc(), result_type,
+                                             ValueRange{rands[0], add12}, addop_attrs);
   // TODO: how to evaluate res1 & res2?
+  // I have a job, but the job is constituted of multiple OPs
+  of::Job job;
+  of::RoundTripOneFlowJobWrapper<of::kBeforeAD> job_wrapper(&job);
+  JobImporter importer(job_wrapper, context, graph);
+  if (importer.TryToUpdateJob().succeeded())
+    std::cout << "yeah!\n";
+  else
+    std::cout << "no~~\n";
+  auto opconf = job.net().op(1);
+  for (auto& op : job.net().op()) {
+    auto& user_op_conf = op.user_conf();
+    user_op_conf.input();
+  }
+  // LoadJobFromIR()
   // check their hash (and that the hashes are equal)
 
   // res1 and res2 equal, add to pdl
   TypeAttr ta;
-  auto pdl_result_type = builder.create<pdl::TypeOp>(loc, result_type, ta);
-  auto pdl_op1 = builder.create<pdl::OperandOp>(loc);
-  auto pdl_op2 = builder.create<pdl::OperandOp>(loc);
-  auto pdl_op3 = builder.create<pdl::OperandOp>(loc);
-  auto pdl_of_add_op =
-      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op1, pdl_op2});
-  auto pdl_res1 =
-      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_of_add_op, pdl_op3});
+  auto pdl_result_type = builder.create<pdl::TypeOp>(pdl.getModule().getLoc(), result_type, ta);
+  auto pdl_op1 = builder.create<pdl::OperandOp>(pdl_result_type.getLoc());
+  auto pdl_op2 = builder.create<pdl::OperandOp>(pdl_op1.getLoc());
+  auto pdl_op3 = builder.create<pdl::OperandOp>(pdl_op2.getLoc());
+  auto pdl_of_add_op = builder.create<pdl::OperationOp>(pdl_op3->getLoc(), res1.op_name(),
+                                                        ValueRange{pdl_op1, pdl_op2});
+  auto pdl_res1 = builder.create<pdl::OperationOp>(pdl_of_add_op->getLoc(), res1.op_name(),
+                                                   ValueRange{pdl_of_add_op, pdl_op3});
 
-  auto pdl_of_add_op2 =
-      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op2, pdl_op3});
-  auto pdl_res2 =
-      builder.create<pdl::OperationOp>(loc, res1.op_name(), ValueRange{pdl_op1, pdl_of_add_op2});
-  auto rewrite = builder.create<pdl::RewriteOp>(loc, pdl_res1, nullptr, ValueRange());
+  auto pdl_of_add_op2 = builder.create<pdl::OperationOp>(pdl_res1->getLoc(), res1.op_name(),
+                                                         ValueRange{pdl_op2, pdl_op3});
+  auto pdl_res2 = builder.create<pdl::OperationOp>(pdl_of_add_op2->getLoc(), res1.op_name(),
+                                                   ValueRange{pdl_op1, pdl_of_add_op2});
+  auto rewrite =
+      builder.create<pdl::RewriteOp>(pdl_res2->getLoc(), pdl_res1, nullptr, ValueRange());
   // final replace op
   builder.create<pdl::ReplaceOp>(rewrite->getLoc(), pdl_res1, pdl_res2, ValueRange());
-  std::cout << "generator\n";
-  return;
+}
+
+void Generator::dfs(int depth, SmallVector<Value*>& input) {
+  auto res = graph.walk([](Operation* op) {
+    // add op to some set, check existence
+    op->print(llvm::outs());
+    return WalkResult::advance();
+  });
+  if (res.wasInterrupted())  // contains duplicate operations
+    return;
+  if (depth > 3) return;
+  dfs_broadcast_binary_ops<
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
+      >(depth, input);
+  // how to check validity of Operation?
+  // use verifier, is that enough?
+}
+
+template<typename... Args>
+void Generator::dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& input) {
+  /**
+   * for i ∈ input and i is a valid input to op do
+   * Add operator op into graph G.
+   * Add the output tensors of op into I.
+   */
+  (void)std::initializer_list<int>{0, (dfs_broadcast_binary_op<Args>(depth + 1, input), 0)...};
+  // taken from Dialect::addOperations
+}
+
+template<typename T>
+void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value*>& input) {
+  input.reserve(input.size() + 1);
+  for (auto it1 = input.begin(); it1 != input.end(); ++it1) {
+    for (auto it2 = it1; it2 != input.end(); ++it2) {
+      auto op = builder.create<T>(graph->getLoc(), TypeRange((*it1)->getType()),
+                                  ValueRange({**it1, **it2}));
+      if (op.verifyInvariants().succeeded()) {
+        for (OpResult out : op->getOpResults()) { input.push_back(&out); }
+        // go down one level
+        dfs(depth + 1, input);
+        // remove op results from input
+        input.pop_back_n(op->getOpResults().size());
+        // delete op from graph, how to delete??
+      } else {
+        return;
+      }
+    }
+  }
 }
 }  // namespace oneflow
 }  // namespace mlir
