@@ -39,7 +39,7 @@ module  {
     // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.variable"() 
     // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.input"(%[[A]]) 
     // CHECK-NOT: oneflow.pad
-    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.conv2d" 
+    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.conv2d"(%[[OUT0]], %[[OUT]])
     // CHECK: %[[OUT2:[a-zA-Z0-9_]+]] = "oneflow.output"
     return %output_1 : tensor<2x3x5x6xf32>
     }
