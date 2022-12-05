@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef WITH_CUDA
 
 #include "fmha.h"
 #include <cuda_runtime.h>
@@ -70,11 +71,7 @@ void set_params(Fused_multihead_attention_params_v2& params,
     bool interleaved, bool ignore_b1opt, bool force_unroll, bool use_int8_scale_max)
 {
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-    memset(&params, 0, sizeof(params)); // NOLINT
-#pragma GCC diagnostic pop
-
+    params.clear();
     // Set the pointers.
     params.qkv_ptr = qkv_packed_d;
     params.qkv_stride_in_bytes = get_size_in_bytes(h * 3 * d, data_type);
@@ -164,3 +161,5 @@ int run_fmha_v2_api(void* qkv_packed_d, void* cu_seqlens_d, void* o_packed_d, si
 }
 } // namespace plugin
 } // namespace nvinfer1
+
+#endif
