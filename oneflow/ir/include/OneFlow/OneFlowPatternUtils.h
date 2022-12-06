@@ -27,11 +27,6 @@ void populateRewrites(RewritePatternSet& patterns);
 
 }  // namespace rewrites
 
-namespace constraints {
-
-void populateConstraints(RewritePatternSet& patterns);
-
-}  // namespace constraints
 }  // namespace oneflow
 
 }  // namespace mlir

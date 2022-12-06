@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -257,8 +256,7 @@ REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(float)
 REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(double)
 
 template<typename T>
-class UpsampleNearest2DGPUKernel final : public user_op::OpKernel,
-                                         public user_op::CudaGraphSupport {
+class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
  public:
   UpsampleNearest2DGPUKernel() = default;
   ~UpsampleNearest2DGPUKernel() = default;
