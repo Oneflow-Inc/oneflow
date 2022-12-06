@@ -18,7 +18,7 @@ import oneflow as flow
 
 def equal_op(a, b):
     res = flow._C.equal(a, b)
-    return all(res)
+    return res.to(flow.int32).sum().item() == res.numel()
 
 if __name__ == "__main__":
     import doctest
