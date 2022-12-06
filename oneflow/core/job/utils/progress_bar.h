@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/PatternMatch.h"
+#ifndef ONEFLOW_CORE_JOB_UTILS_PROGRESS_BAR_H_
+#define ONEFLOW_CORE_JOB_UTILS_PROGRESS_BAR_H_
 
-namespace mlir {
+#include <string>
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-namespace rewrites {
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_NNGRAPH_ENABLE_PROGRESS_BAR, false);
 
-mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
-void populateRewrites(RewritePatternSet& patterns);
+Maybe<void> LogProgress(const std::string& task_name = "", bool is_end = false);
 
-}  // namespace rewrites
-
-namespace constraints {
-
-void populateConstraints(RewritePatternSet& patterns);
-
-}  // namespace constraints
 }  // namespace oneflow
 
-}  // namespace mlir
+#endif  // ONEFLOW_CORE_JOB_UTILS_PROGRESS_BAR_H_
