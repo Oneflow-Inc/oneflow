@@ -162,6 +162,7 @@ if(BUILD_CUDA)
        ${NCCL_INCLUDE_DIR})
 
   list(APPEND oneflow_third_party_dependencies cutlass)
+  list(APPEND oneflow_third_party_dependencies cutlass_copy_examples_to_destination)
   list(APPEND oneflow_third_party_libs ${CUTLASS_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUTLASS_INCLUDE_DIR})
 endif()

@@ -32,6 +32,7 @@ if(THIRD_PARTY)
       -DCMAKE_INSTALL_MESSAGE:STRING=${CMAKE_INSTALL_MESSAGE}
       -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
       -DCUTLASS_LIBRARY_OPERATIONS:STRING=conv2d
+      -DCUTLASS_LIBRARY_KERNELS:STRING=fprop
       -DCUTLASS_ENABLE_EXAMPLES:BOOL=OFF
       -DCUTLASS_ENABLE_PROFILER:BOOL=OFF
       -DCUTLASS_ENABLE_LIBRARY:BOOL=ON
@@ -39,10 +40,11 @@ if(THIRD_PARTY)
       -DCUTLASS_ENABLE_TESTS:BOOL=OFF
       )
 
+add_custom_target(cutlass_copy_examples_to_destination DEPENDS cutlass)
 set(CUTLASS_SOURCE_EXAMPLES_DIR ${CUTLASS_SOUREC_DIR}/examples)
 file(GLOB_RECURSE examples_files RELATIVE ${CUTLASS_SOURCE_EXAMPLES_DIR} ${CUTLASS_SOURCE_EXAMPLES_DIR}/*)
 foreach(filename ${examples_files} )
-    add_custom_command(TARGET cutlass POST_BUILD
+    add_custom_command(TARGET cutlass_copy_examples_to_destination
 	    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CUTLASS_SOURCE_EXAMPLES_DIR}/${filename} ${CUTLASS_INSTALL_DIR}/examples/${filename})
 endforeach()
 
