@@ -77,6 +77,14 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
         cutlass::library::NumericTypeID::kF16, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kF32, cutlass::library::NumericTypeID::kF32);
 
+    const static bool allow_half_accumulation =
+        ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+
+    if (allow_half_accumulation) {
+      key.element_accumulator = cutlass::library::NumericTypeID::kF16;
+      key.element_compute = cutlass::library::NumericTypeID::kF16;
+    }
+
     cutlass::conv::Conv2dProblemSize problem_size(
         n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
         strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
@@ -100,8 +108,21 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     }
     arguments.D = out->mut_dptr();
 
-    float alpha = 1;
-    float beta = 0;
+    union SP {
+      float f;
+      half h;
+    };
+
+    SP alpha;
+    SP beta;
+
+    if (allow_half_accumulation) {
+      alpha.h = 1;
+      beta.h = 0;
+    } else {
+      alpha.f = 1;
+      beta.f = 0;
+    }
     arguments.alpha = &alpha;
     arguments.beta = &beta;
     arguments.pointer_mode = cutlass::library::ScalarPointerMode::kHost;
