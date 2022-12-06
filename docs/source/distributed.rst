@@ -210,6 +210,7 @@ Communication collectives
         gather
         reduce
         reduce_scatter
+        reduce_scatter_tensor
         recv
         scatter
         send

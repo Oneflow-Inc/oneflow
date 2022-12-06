@@ -2132,6 +2132,8 @@ def OneFlow_EagerCclReduceScatterOp : OneFlow_BaseOp<"eager_ccl_reduce_scatter",
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
+    ShapeAttr:$output_shape,
+    OneFlow_DataType:$output_dtype,
     DefaultValuedAttr<StrAttr, "\"sum\"">:$op_type
   );
   let has_logical_tensor_desc_infer_fn = 1;
