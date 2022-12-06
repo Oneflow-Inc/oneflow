@@ -133,6 +133,7 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_y, y)
         compare_result(test_case, fused_w_grad, w_grad)
         compare_result(test_case, fused_b_grad, b_grad)
+    print(str(dtype) + ", " + params["act"] + " passed!" )
 
 def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     flow_module = Glu()
@@ -171,7 +172,7 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_b_grad, b_grad)
         compare_result(test_case, fused_v_grad, v_grad)
         compare_result(test_case, fused_c_grad, c_grad)
-    print(params["act"] + " passed!" )
+    print(str(dtype) + ", " + params["act"] + " passed!" )
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
@@ -180,7 +181,7 @@ class TestFusedGlu(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         # set up test functions
         arg_dict["test_fun"] = [
-            # _test_fused_glu,
+            _test_fused_glu,
             _test_fused_glu_split,
         ]
 
