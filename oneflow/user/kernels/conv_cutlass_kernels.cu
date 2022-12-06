@@ -84,16 +84,20 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     cutlass::library::Conv2dConfiguration configuraion;
     configuraion.split_k_mode = cutlass::conv::SplitKMode::kNone;
     configuraion.problem_size = problem_size;
-    configuraion.stride_a = {h * w * c, w * c, c, 1};
-    configuraion.stride_b = {r * s * c, s * c, c, 1};
-    // configuraion.stride_c = {0, 0, 0, 1};
-    configuraion.stride_c = {p * q * k, q * k, k, 1};
+    configuraion.stride_a = {c, w * c, h * w * c};
+    configuraion.stride_b = {c, s * c, k * s * c};
+    configuraion.stride_c = {0, 0, 0};
+    // configuraion.stride_c = {k, q * k, p * q * k};
 
     cutlass::library::ConvArguments arguments;
     arguments.A = in->dptr();
     arguments.B = weight->dptr();
     arguments.reordered_B = nullptr;
-    arguments.C = nullptr;
+    if (bias == nullptr) {
+      arguments.C = nullptr;
+    } else {
+      arguments.C = bias->dptr();
+    }
     arguments.D = out->mut_dptr();
 
     float alpha = 1;
