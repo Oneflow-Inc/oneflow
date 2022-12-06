@@ -33,6 +33,7 @@ import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
 from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
+from oneflow.nn.graph.util import ArgsTree
 import pickle
 from oneflow.nn.graph import GraphTensor
 
@@ -303,10 +304,32 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         map_location = None
 
 
+def _load_from_pytorch_file(path: Union[str, Path], map_location: Optional[Union[str, flow.device]] = None,):
+    with flow.mock_torch.disable():
+        import torch
+        if map_location is None:
+            map_location = "cpu"
+        if isinstance(map_location, flow.device):
+            if map_location.type == 'cpu':
+                map_location = torch.device(map_location.type)
+            else:
+                map_location = torch.device(map_location.type, map_location.index)
+        torch_obj = torch.load(path, map_location=map_location)
+        def torch_tensor_to_flow(x):
+            if isinstance(x, torch.Tensor):
+                return flow.from_torch(x)
+            else:
+                return x
+        flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
+        return flow_obj
+
+
 def load(
     path: str,
     global_src_rank: Optional[int] = None,
     map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+    *,
+    support_pytorch: Optional[bool] = None,
 ) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
@@ -326,7 +349,13 @@ def load(
     """
     path: Path = Path(path)
     rank = flow.env.get_rank()
+    if support_pytorch is None:
+        support_pytorch = (global_src_rank is None)
+    assert not (global_src_rank is not None and support_pytorch), "PyTorch support is not compatible with global_src_rank"
     if global_src_rank is None or global_src_rank == rank:
+        if path.is_file() and support_pytorch:
+            assert global_src_rank is None
+            return _load_from_pytorch_file(path, map_location)
         assert path.is_dir(), "Directory {} doesn't exist!".format(path)
         pickle_path = path / PICKLE_FILENAME
         is_legacy = not pickle_path.exists()

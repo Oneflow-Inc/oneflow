@@ -142,14 +142,6 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                     flow._oneflow_internal.cpu_broadcast(None, src_rank)
                 )
 
-    is_tensor_transform_list = False
-    if isinstance(input, Tensor):
-        input = [input]
-        is_tensor_transform_list = True
-
-    if input is None:
-        input = [None]
-
     if isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
@@ -171,8 +163,6 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                 return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
-        if is_tensor_transform_list:
-            return mapped_input[0]
         return mapped_input
 
     else:
