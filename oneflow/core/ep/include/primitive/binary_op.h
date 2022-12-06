@@ -52,6 +52,7 @@ enum class BinaryOp {
   kLogicalOr,
   kLogicalXor,
   // Unary Backward
+  kIdentityBackwardWithDyX,
   kEluBackwardWithDyX,
   kCeluBackwardWithDyX,
   kGeluBackwardWithDyX,

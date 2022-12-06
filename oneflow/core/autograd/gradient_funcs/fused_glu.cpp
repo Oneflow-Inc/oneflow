@@ -93,14 +93,20 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
     const auto& matmul_vx = ctx->SavedTensors()[2];
 
     // calculate the intermediate gradient using fused kernel
+    // 统一判断
     const auto& middle_results =
         JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, matmul_vx, ctx->activation));
     const auto& d_matmul_wx = (*middle_results)[0];
     const auto& d_matmul_vx = (*middle_results)[1];
 
     // calculate the final result
+    // 版本限制!
     const auto& wb_results = JUST(functional::CublasMatmulBiasAddGrad(d_matmul_wx, x));
     const auto& vc_results = JUST(functional::CublasMatmulBiasAddGrad(d_matmul_vx, x));
+    
+    // Matmul、boradcast (yanzhuo)
+    // TDO
+    
     const auto& w_grad = (*wb_results)[0];
     const auto& b_grad = (*wb_results)[1];
     const auto& v_grad = (*vc_results)[0];
