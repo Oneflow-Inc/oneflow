@@ -198,7 +198,7 @@
 
 - name: "pow_y_grad"
   signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowYGrad"
-  bind_python: FalseScalar
+  bind_python: False
 
 - name: "searchsorted"
   signature:
