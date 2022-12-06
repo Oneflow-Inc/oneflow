@@ -973,7 +973,7 @@ class QuantileFunctor {
     // TODO(Liang Depeng): refine the implementaion of quantile to have the full funcitonality later.
     CHECK_EQ_OR_RETURN(x->ndim(), 2)
         << "for now oneflow.quantile only support `input` tensor with 2 dims.";
-    double qf;
+    double qf = 0;
     if (q.IsIntegral()) {
       qf = static_cast<double>(q.As<int64_t>());
     } else {
