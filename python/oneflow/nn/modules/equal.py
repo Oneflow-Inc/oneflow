@@ -20,6 +20,7 @@ def equal_op(a, b):
     res = flow._C.equal(a, b)
     return all(res)
 
+
 if __name__ == "__main__":
     import doctest
 
