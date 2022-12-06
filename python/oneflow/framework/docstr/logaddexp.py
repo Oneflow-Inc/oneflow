@@ -21,6 +21,8 @@ add_docstr(
     """
     logaddexp(input, other, *, out=None) -> Tensor
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.logaddexp.html.
+
     Logarithm of the sum of exponentiations of the inputs.
 
     Calculates pointwise :math:`\log\left(e^x + e^y\right)`. This function is useful

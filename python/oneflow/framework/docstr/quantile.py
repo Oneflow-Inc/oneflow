@@ -20,7 +20,9 @@ add_docstr(
     oneflow.quantile,
     """
     quantile(input, q, dim=None, keepdim=False, *, interpolation='linear', out=None) -> Tensor
-    
+
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.quantile.html.
+
     Computes the q-th quantiles of each row of the :attr:`input` tensor along the dimension :attr:`dim`.
 
     To compute the quantile, we map q in [0, 1] to the range of indices [0, n] to find the location
