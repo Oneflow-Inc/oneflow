@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/cost_util.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
@@ -49,7 +49,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 void Compiler::Compile(Job* job, Plan* plan) const {
   const auto& job_name = job->job_conf().job_name();
-  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
@@ -76,7 +76,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  compile_tc->Count("[GraphCompile]" + job_name + " BuildTaskGraph", 1, true);
+  compile_tc->Count("[GraphCompile]" + job_name + " BuildTaskGraph", 1);
 
   // Step3: put infomation from task_gph into plan.
   const int64_t node_num = task_gph->node_num();
@@ -105,7 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   counter.WaitForeverUntilCntEqualZero();
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
-  compile_tc->Count("[GraphCompile]" + job_name + " AddTaskToPlan", 1, true);
+  compile_tc->Count("[GraphCompile]" + job_name + " AddTaskToPlan", 1);
 
   // Step4: post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
@@ -116,7 +116,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
-  compile_tc->Count("[GraphCompile]" + job_name + " InferMemShare", 1, true);
+  compile_tc->Count("[GraphCompile]" + job_name + " InferMemShare", 1);
   Singleton<OpGraph>::Delete();
 }
 
