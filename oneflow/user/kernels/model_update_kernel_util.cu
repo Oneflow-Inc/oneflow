@@ -970,7 +970,8 @@ struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, G> {
                      float beta2, const float* bias_correction1_ptr, float bias_correction1,
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction);
+                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction,
+                     bool maximize);
 };
 
 template<typename T, typename G>
@@ -979,7 +980,7 @@ void AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     const float* bias_correction1_ptr, float bias_correction1_val, float epsilon,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-    T* norm, bool do_bias_correction) {
+    T* norm, bool do_bias_correction, bool maximize) {
   AdamaxUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, bias_correction1_ptr, bias_correction1_val, epsilon,
@@ -994,7 +995,7 @@ struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
                      const float16* model_diff, T* model, T* momentum, T* norm,
-                     bool do_bias_correction);
+                     bool do_bias_correction, bool maximize);
 };
 
 template<typename T>
@@ -1003,11 +1004,12 @@ void AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     const float* bias_correction1_ptr, float bias_correction1, float epsilon, float weight_decay,
     float learning_rate_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum, T* norm,
-    bool do_bias_correction) {
+    bool do_bias_correction, bool maximize) {
   AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, beta1, beta2, bias_correction1_ptr, bias_correction1, epsilon,
       weight_decay, learning_rate_val, lr_scale, learning_rate, scale_by_ptr, skip_if,
-      reinterpret_cast<const half*>(model_diff), model, momentum, norm, do_bias_correction);
+      reinterpret_cast<const half*>(model_diff), model, momentum, norm, do_bias_correction,
+      maximize);
 }
 
 template struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, float, float>;

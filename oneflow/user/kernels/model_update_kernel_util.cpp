@@ -490,7 +490,8 @@ struct AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G> {
                      float beta2, const float* bias_correction1_ptr, float bias_correction1,
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction);
+                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction,
+                     bool maximize);
 };
 
 template<typename T, typename G>
@@ -499,7 +500,7 @@ void AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     const float* bias_correction1_ptr, float bias_correction1_val, float epsilon,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-    T* norm, bool do_bias_correction) {
+    T* norm, bool do_bias_correction, bool maximize) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }

@@ -1160,6 +1160,7 @@ class AdamaxUpdateKernel final : public user_op::OpKernel, public user_op::CudaG
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const bool maximize = ctx->Attr<bool>("maximize");
     const float epsilon = ctx->Attr<float>("epsilon");
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
@@ -1193,7 +1194,7 @@ class AdamaxUpdateKernel final : public user_op::OpKernel, public user_op::CudaG
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         bias_correction1_ptr, bias_correction1_val, epsilon, weight_decay, learning_rate_val,
         lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), norm->mut_dptr<T>(), do_bias_correction);
+        model->mut_dptr<T>(), m->mut_dptr<T>(), norm->mut_dptr<T>(), do_bias_correction, maximize);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

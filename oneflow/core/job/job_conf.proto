@@ -77,6 +77,14 @@ message AdadeltaModelUpdateConf {
   required bool maximize = 3 [default = false];
 }
 
+message AdamaxModelUpdateConf {
+  required float beta1 = 1 [default = 0.9];
+  required float beta2 = 2 [default = 0.999];
+  required float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = true];
+  required bool maximize = 5 [default = false];
+}
+
 message ClipByGlobalNormConf {
   optional float max_norm = 1 [default = 1.0];
   optional double norm_type = 2 [default = 2.0];
@@ -120,6 +128,7 @@ message OptimizerConf {
     AdagradModelUpdateConf adagrad_conf = 1007;
     FtrlModelUpdateConf ftrl_conf = 1008;
     AdadeltaModelUpdateConf adadelta_conf = 1009; 
+    AdamaxModelUpdateConf adamax_conf = 1010; 
   }
 }
 

@@ -455,7 +455,8 @@ struct AdamaxUpdateKernelUtil {
                      float beta2, const float* bias_correction1_ptr, float bias_correction1_val,
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate_ptr, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction);
+                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction,
+                     bool maximize);
 };
 
 #endif

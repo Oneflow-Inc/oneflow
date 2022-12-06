@@ -274,18 +274,6 @@ def compare_with_numpy_adamax_clip_grad(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        # def np_train_one_iter(step, grad):
-        #     grad = grad + weight_decay * x
-        #     bias_correction1 = 1.0
-
-        #     if do_bias_correction:
-        #         bias_correction1 = 1.0 - np.power(beta1, step)
-
-        #     m = beta1 * mt + (1 - beta1) * grad
-        #     norm = np.maximum(beta2 * normt, abs(grad) + eps)
-        #     param = x - learning_rate * m / (bias_correction1 * norm)
-        #     return (param, m, norm)
-
         def train_one_iter(step, grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
