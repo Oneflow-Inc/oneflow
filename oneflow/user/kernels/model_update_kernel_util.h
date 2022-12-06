@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_MODEL_UPDATE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_MODEL_UPDATE_KERNEL_UTIL_H_
 
+#include <cmath>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
@@ -435,7 +436,7 @@ struct AdamaxUpdateFunctor {
   OF_DEVICE_FUNC
   void operator()(const G* model_diff, T* model, T* m, T* norm, T scale, float l1, float l2,
                   float beta1, float beta2, float bias_correction1, float epsilon,
-                  float weight_decay, float learning_rate) {
+                  float weight_decay, float learning_rate, bool do_bias_correction) {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
@@ -454,7 +455,7 @@ struct AdamaxUpdateKernelUtil {
                      float beta2, const float* bias_correction1_ptr, float bias_correction1_val,
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate_ptr, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* norm);
+                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction);
 };
 
 #endif

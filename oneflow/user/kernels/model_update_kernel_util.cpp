@@ -490,7 +490,7 @@ struct AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G> {
                      float beta2, const float* bias_correction1_ptr, float bias_correction1,
                      float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* norm);
+                     const G* model_diff, T* model, T* momentum, T* norm, bool do_bias_correction);
 };
 
 template<typename T, typename G>
@@ -499,7 +499,7 @@ void AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     const float* bias_correction1_ptr, float bias_correction1_val, float epsilon,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-    T* norm) {
+    T* norm, bool do_bias_correction) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -507,9 +507,9 @@ void AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 
   learning_rate_val *= lr_scale;
   for (int64_t i = 0; i != n; ++i) {
-    AdamaxUpdateFunctor<T, G>()(model_diff + i, model + i, momentum, norm, scale, l1, l2, beta1,
-                                beta2, bias_correction1_val, epsilon, weight_decay,
-                                learning_rate_val);
+    AdamaxUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, norm + i, scale, l1, l2,
+                                beta1, beta2, bias_correction1_val, epsilon, weight_decay,
+                                learning_rate_val, do_bias_correction);
   }
   return;
 };
