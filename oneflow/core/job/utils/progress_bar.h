@@ -18,8 +18,11 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_NNGRAPH_ENABLE_PROGRESS_BAR, false);
 
 Maybe<void> LogProgress(const std::string& task_name = "", bool is_end = false);
 

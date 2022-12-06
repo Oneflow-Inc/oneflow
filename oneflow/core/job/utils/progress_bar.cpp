@@ -22,8 +22,11 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> LogProgress(const std::string& task_name, bool is_end) {
-  const bool debug_mode = GetGraphDebugMode();
-  if (!debug_mode || OF_PREDICT_FALSE(GlobalProcessCtx::Rank() != 0)) { return Maybe<void>::Ok(); }
+  const bool log_progress =
+      GetGraphDebugMode() || ThreadLocalEnvBool<ONEFLOW_NNGRAPH_ENABLE_PROGRESS_BAR>();
+  if (!log_progress || OF_PREDICT_FALSE(GlobalProcessCtx::Rank() != 0)) {
+    return Maybe<void>::Ok();
+  }
 
   const static thread_local uint64_t progress_total_num = 60;
   static thread_local uint64_t progress_cnt = 1;
