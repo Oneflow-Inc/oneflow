@@ -3,8 +3,8 @@ set(LITE_LOWERING_LIBS "")
 
 if(ENABLE_LOWERING_ASCEND)
   include(cmake/FindAscendSdk.cmake)
-  include_directories(${ASCEND_ATC_INCLUDE_DIR})
-  include_directories(${ASCEND_ATC_INCLUDE_DIR}/../../opp)
+  include_directories(${ASCEND_INCLUDE_DIR})
+  include_directories(${ASCEND_INCLUDE_DIR}/../../opp)
 
   add_definitions(-DENABLE_LOWERING_ASCEND=1)
 
