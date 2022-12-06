@@ -78,11 +78,11 @@ message AdadeltaModelUpdateConf {
 }
 
 message AdamaxModelUpdateConf {
-  required float beta1 = 1 [default = 0.9];
-  required float beta2 = 2 [default = 0.999];
-  required float epsilon = 3 [default = 1e-8];
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = true];
-  required bool maximize = 5 [default = false];
+  optional bool maximize = 5 [default = false];
 }
 
 message ClipByGlobalNormConf {

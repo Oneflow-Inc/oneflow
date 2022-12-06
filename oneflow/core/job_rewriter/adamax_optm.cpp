@@ -116,7 +116,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
   const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
 
-  adamax_update_op_builder.OpTypeName("adam_update")
+  adamax_update_op_builder.OpTypeName("adamax_update")
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
       .Input("learning_rate", learning_rate_lbn)
@@ -130,7 +130,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Attr<bool>("maximize", maximize)
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   if (do_bias_correction) {
-    const std::string& job_pass_state_key = "adamax_bias_correction_factor";
+    const std::string& job_pass_state_key = "adam_bias_correction_factor";
     const bool has_state = CHECK_JUST(ctx->HasState<BiasCorrectionFactorState>(job_pass_state_key));
     if (!has_state) {
       CHECK_JUST(
@@ -151,7 +151,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                                                const std::string& op_name) -> std::string {
       user_op::UserOpConfWrapperBuilder op_builder(var_op->op_name() + op_name);
       const auto adamax_bias_correction_factor_op =
-          op_builder.OpTypeName("adamax_bias_correction_factor")
+          op_builder.OpTypeName("adam_bias_correction_factor")
               .Input("train_step", train_step_lbn)
               .Attr<float>("beta", beta_val)
               .Output("out")
