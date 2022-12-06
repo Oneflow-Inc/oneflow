@@ -565,8 +565,10 @@ def _index_add_inplace(self, dim, index, source, alpha=1):
 def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
+
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
+
 
 def RegisterMethods():
     Tensor.ndim = property(_ndim)

@@ -308,7 +308,7 @@ from oneflow.framework.dtype import (
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
-from oneflow._C import from_numpy
+from oneflow._C import from_numpy, from_dlpack
 
 from oneflow.autograd import (
     enable_grad,

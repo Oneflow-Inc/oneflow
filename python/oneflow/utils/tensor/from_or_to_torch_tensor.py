@@ -64,12 +64,7 @@ def from_torch(torch_tensor):
     except:
         print_error_msg()
     assert isinstance(torch_tensor, torch.Tensor)
-    device = torch_tensor.device.__str__()
-    assert (
-        device == "cpu"
-    ), "Only supports conversion of torch tensor whose device is cpu, need to call torch_tensor.cpu() first"
-    np_data = torch_tensor.cpu().detach().numpy()
-    return flow_from_numpy(np_data)
+    return flow.from_dlpack(torch.to_dlpack(torch_tensor))
 
 
 def to_torch(flow_tensor):

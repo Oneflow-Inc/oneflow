@@ -23,12 +23,14 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+
 @autotest(n=3, check_graph=True)
 def _test_quantile(test_cast, q):
     device = random_device()
     a = random_tensor(2, random(1, 5), random(1, 5)).to(device)
-    out = torch.quantile(a, q, dim=1, interpolation='linear')
+    out = torch.quantile(a, q, dim=1, interpolation="linear")
     return out
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestQuantile(flow.unittest.TestCase):
@@ -38,6 +40,7 @@ class TestQuantile(flow.unittest.TestCase):
         for i in range(10):
             for arg in GenArgList(arg_dict):
                 _test_quantile(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
