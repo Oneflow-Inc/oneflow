@@ -41,3 +41,7 @@
 - name: "from_numpy"
   signature: "Tensor (PyObject* obj) => LocalTensorSharedNumpyData"
   bind_python: True
+
+- name: "from_dlpack"
+  signature: "Tensor (PyObject* obj) => LocalTensorSharedDlPackData"
+  bind_python: True
