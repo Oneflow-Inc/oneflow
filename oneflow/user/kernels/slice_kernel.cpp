@@ -279,7 +279,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
