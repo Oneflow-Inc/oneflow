@@ -169,6 +169,8 @@ def all_gather_into_tensor(output_tensor, input_tensor):
                 [ 7,  8,  9, 10, 11, 12]], device='cuda:1', dtype=oneflow.int64)
 
     """
+    assert output_tensor.is_local
+    assert input_tensor.is_local
     flow._C.local_all_gather(output_tensor, input_tensor)
 
 
