@@ -359,20 +359,20 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isinf(__bfloat162float(src)); }
 };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isnan(__bfloat162float(src)); }
 };
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isfinite(__bfloat162float(src)); }
 };

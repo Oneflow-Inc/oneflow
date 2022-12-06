@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
+// #include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
@@ -43,7 +43,7 @@ bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) 
 template<UnaryOp unary_op, typename Src, typename Dst>
 void LaunchScalarFill(CpuStream* stream, Dst* dst, const Src* src, size_t count, size_t stride,
                       Scalar attr0, Scalar attr1) {
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   Dst scalar_value = functor(*src);
   stream->ParallelFor(0, count, [dst, stride, scalar_value](int64_t begin, int64_t end) {
     for (int64_t i = begin; i < end; i++) { dst[i * stride] = scalar_value; }
@@ -53,7 +53,7 @@ void LaunchScalarFill(CpuStream* stream, Dst* dst, const Src* src, size_t count,
 template<UnaryOp unary_op, typename Src, typename Dst>
 void LaunchTensorFill(CpuStream* stream, Dst* dst, const Src* src, size_t count, size_t dst_stride,
                       size_t src_stride, Scalar attr0, Scalar attr1) {
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   stream->ParallelFor(0, count,
                       [functor, src, dst, src_stride, dst_stride](int64_t begin, int64_t end) {
                         for (int64_t i = begin; i < end; i++) {
@@ -68,7 +68,7 @@ void LaunchGeneral(CpuStream* stream, Dst* dst, const Src* src, size_t num_dims,
                    const int64_t* src_stride, Scalar attr0, Scalar attr1) {
   bool contiguous_output = IsContiguous(num_dims, dst_dims, dst_stride);
   const int64_t elem_cnt = GetElementCount(num_dims, dst_dims);
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   stream->ParallelFor(
       0, elem_cnt,
       [functor, src, dst, num_dims, src_dims, dst_dims, src_stride, dst_stride, contiguous_output](
@@ -198,18 +198,31 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)                   \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
-                                OF_PP_PAIR_FIRST(dtype_pair)>},
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
+
+#define MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_type_pair, dst_dtype_pair)  \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_type_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)), \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_type_pair),                                  \
+                       OF_PP_PAIR_FIRST(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_BROADCAST_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
 
+            // For Int Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_INT_MATH_OP_SEQ, CPU_PRIMITIVE_INT_TYPE_SEQ)};
+
+#undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =
