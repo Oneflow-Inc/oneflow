@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -51,20 +56,32 @@ __inline__ __device__ bool IsFinite<half>(half x) {
 
 template<typename T>
 __global__ void CountNotFiniteGpu(const int64_t n, const T* x, int64_t* y) {
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
+#endif 
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   int64_t thread_count = 0;
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (!IsFinite(x[i])) { thread_count += 1; }
   }
   __syncthreads();
+#ifdef WITH_ROCM
+  int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, hipcub::Sum());
+#else
   int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, cub::Sum());
+#endif
   if (threadIdx.x == 0) { AtomicAdd(y, block_count_sum); }
 }
 
 template<typename T, int32_t N>
 __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   int64_t thread_count = 0;
   for (int32_t k = 0; k < param.num_x; ++k) {
@@ -73,7 +90,11 @@ __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
     }
   }
   __syncthreads();
+#ifdef WITH_ROCM
+  int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, hipcub::Sum());
+#else
   int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, cub::Sum());
+#endif
   if (threadIdx.x == 0) { AtomicAdd(param.y, block_count_sum); }
 }
 

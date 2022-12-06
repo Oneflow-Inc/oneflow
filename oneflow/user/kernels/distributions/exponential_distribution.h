@@ -22,6 +22,10 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 #endif
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#endif  // WITH_ROCM
 
 namespace oneflow {
 
@@ -42,7 +46,7 @@ class ExponentialDistribution<DeviceType::kCPU, T> final {
   const T lambd_;
 };
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 template<typename T>
 class ExponentialDistribution<DeviceType::kCUDA, T> final {
  public:

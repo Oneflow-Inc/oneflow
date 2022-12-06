@@ -164,3 +164,151 @@ REGISTER_DECONV_KERNEL(deconv3d, double, 3);
 }  // namespace oneflow
 
 #endif
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+namespace oneflow {
+namespace {
+
+template<typename PerfT>
+struct CudnnDeConvArgsAndAlgo final {
+  using AlgoT = decltype(std::declval<PerfT>().algo);
+
+  CudnnConvArgs args;
+  PerfT algo_perf;
+
+  // CudnnDeConvArgsAndAlgo
+  CudnnDeConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y, 
+                        //  user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
+                         AllocatedCudnnConvResource& res, const user_op::KernelComputeContext* ctx,  
+                         ep::Stream* stream, bool has_forced_algo, int32_t forced_algo)
+      : args(*ctx, x->data_type(), x->shape_view(), w->data_type(), w->shape_view(), y->data_type(),
+            //  y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
+             y->shape_view(), ctx->Attr<std::string>("data_format"), 0,
+             Singleton<ResourceDesc, ForSession>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_heuristic_search_algo(),
+             Singleton<ResourceDesc, ForSession>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_use_deterministic_algo_only(),
+             Singleton<ResourceDesc, ForSession>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_enable_pseudo_half()) {
+
+    if (has_forced_algo) {
+      algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
+          &args, &res, static_cast<AlgoT>(forced_algo));
+    } else {
+      algo_perf = FindCudnnConvAlgorithmWithResource<PerfT>(&args, &res);
+    }
+    CHECK_EQ(algo_perf.status, HIPDNN_STATUS_SUCCESS)
+        << "op (" << ctx->op_name()
+        << ") find algorithm perference failed. algo: " << algo_perf.algo;
+  
+  }
+  CudnnDeConvArgsAndAlgo() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(CudnnDeConvArgsAndAlgo);
+};
+
+template<typename PerfT>
+size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::TensorDesc* w,
+                             const user_op::TensorDesc* y, const user_op::InferContext& ctx,
+                             bool has_forced_algo, int32_t forced_algo) {
+  using AlgoT = decltype(std::declval<PerfT>().algo);
+  const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
+  size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
+  if (!x->is_dynamic()) {
+    CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
+                       ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
+                       ctx.Attr<std::string>("data_format"), workspace_size,
+                       cudnn_conf.cudnn_conv_heuristic_search_algo(),
+                       cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
+                       cudnn_conf.cudnn_conv_enable_pseudo_half());
+    PerfT algo_perf;
+    if (has_forced_algo) {
+      algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
+    } else {
+      ManagedCudnnConvResource res(args);
+      OF_CUDNN_CHECK(GetCudnnConvWorkspaceSize(args, &res, algo_perf.algo, &workspace_size));
+      args.params.max_ws_size = workspace_size;
+      algo_perf = FindCudnnConvAlgorithm<PerfT>(&args);
+    }
+    CHECK_EQ(algo_perf.status, HIPDNN_STATUS_SUCCESS)
+        << "op (" << ctx.op_name()
+        << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    CHECK_LE(algo_perf.memory, workspace_size)
+        << "op (" << ctx.op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
+        << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
+    workspace_size = algo_perf.memory;
+  }
+  workspace_size = std::max(size_t(1), workspace_size);
+  return workspace_size;
+}
+
+}  // namespace
+
+template<typename T, size_t NDims>
+class DeConvGpuKernel final : public user_op::OpKernel {
+ public:
+  DeConvGpuKernel() = default;
+  ~DeConvGpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+    // user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (in->shape_view().elem_cnt() == 0) return;
+    const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
+
+    AllocatedCudnnConvResource res(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+                                   const_cast<void*>(out->dptr()), const_cast<void*>(weight->dptr()),
+                                   const_cast<void*>(in->dptr()), nullptr, 0);
+
+    CudnnDeConvArgsAndAlgo<hipdnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
+        // out, weight, in, buf, ctx, ctx->stream(), 0,
+        out, weight, in, res, ctx, ctx->stream(), 0,
+        cudnn_conf.cudnn_conv_force_bwd_data_algo());
+    const CudnnConvArgs& args = args_and_algo.args;
+    const hipdnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+
+    OF_CUDNN_CHECK(hipdnnConvolutionBackwardData(
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(),
+        weight->dptr(), args.ydesc.Get(), in->dptr(), args.cdesc.Get(), algo_perf.algo,
+        // buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(),
+        res.ws_dptr(), args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(),
+        out->mut_dptr()));
+  }
+};
+
+#define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                   \
+  REGISTER_USER_KERNEL(#op_name)                                                        \
+      .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+
+REGISTER_DECONV_KERNEL(deconv1d, float, 1);
+REGISTER_DECONV_KERNEL(deconv2d, float, 2);
+REGISTER_DECONV_KERNEL(deconv3d, float, 3);
+REGISTER_DECONV_KERNEL(deconv1d, double, 1);
+REGISTER_DECONV_KERNEL(deconv2d, double, 2);
+REGISTER_DECONV_KERNEL(deconv3d, double, 3);
+
+}  // namespace oneflow
+
+
+#endif
+

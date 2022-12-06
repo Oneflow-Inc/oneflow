@@ -137,7 +137,7 @@ class AffineGridKernel final : public user_op::OpKernel {
 
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, float);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, double);
 #endif
@@ -210,7 +210,7 @@ class AffineGridGradKernel final : public user_op::OpKernel {
 
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, double);
 #endif

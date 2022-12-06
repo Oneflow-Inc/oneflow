@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/kernel/util/numeric_limits.cuh"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 
@@ -43,7 +43,7 @@ OF_DEVICE_FUNC T XPU_INT_MAX(T a, T b) {
 template<typename T>
 struct XPUAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, *x);
 #else
     *y += *x;
@@ -402,7 +402,7 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
   }
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 template<DeviceType device_type, typename IDX>
 struct AvgPoolKernelUtil<device_type, half, IDX> {
   static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,

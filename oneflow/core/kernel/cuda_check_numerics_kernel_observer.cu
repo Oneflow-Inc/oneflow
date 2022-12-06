@@ -110,7 +110,11 @@ void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
 CudaCheckNumericsKernelObserver::CudaCheckNumericsKernelObserver()
     : has_not_finite_host_(nullptr), has_not_finite_device_(nullptr) {
   OF_CUDA_CHECK(GPU(GetDevice)(&device_id_));
-  OF_CUDA_CHECK(GPU(MallocHost)(&has_not_finite_host_, sizeof(bool)));
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&has_not_finite_host_), sizeof(bool)));
+#else
+  OF_CUDA_CHECK(cudaMallocHost(&has_not_finite_host_, sizeof(bool)));
+#endif
   OF_CUDA_CHECK(GPU(Malloc)(&has_not_finite_device_, sizeof(bool)));
 }
 

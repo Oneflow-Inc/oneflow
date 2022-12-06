@@ -19,6 +19,11 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cuda_fp16.h>
 #endif  // WITH_CUDA
+#if defined(WITH_ROCM)
+#include <hip/hip_runtime.h>
+#include "oneflow/core/cuda/atomic.cuh"
+#include <hip/hip_fp16.h>
+#endif
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -38,7 +43,7 @@ constexpr int kDimGatherMaxDimCount = 8;
 template<typename T>
 struct AddScalarFunctor {
   OF_DEVICE_FUNC static void apply(const T x, T* y) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, x);
 #else
     *y += x;
@@ -46,11 +51,11 @@ struct AddScalarFunctor {
   }
 };
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 template<>
 struct AddScalarFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half x, half* y) {
-#if __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     *y = __float2half(__half2float(*y) + __half2float(x));
 #else
     NO_HALF_UTIL_FOUND;
@@ -134,7 +139,7 @@ OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_
     idx_nd_helper.OffsetToNdIndex(idx_offset, coordinate, ndim);  // idx_offset -> ijk
     IDX_T idx_elem = index[idx_offset];
     if (idx_elem >= upper_bound) {
-#if __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
       TRAP();
 #else
       UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension "

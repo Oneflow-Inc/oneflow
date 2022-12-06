@@ -13,7 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include <type_traits>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -22,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/binary_func.h"
 
 namespace oneflow {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 namespace {
 
 template<typename T>
@@ -46,9 +51,15 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const size_t dim_size = in_shape.At(dim);
   if (in_shape.elem_cnt() == dim_size) {
     size_t temp_storage_bytes = 0;
+#ifdef WITH_ROCM
+OF_CUDA_CHECK(hipcub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
+                                                 static_cast<T*>(nullptr), static_cast<T*>(nullptr),
+                                                 BinaryFunc<T>(), dim_size));
+#else
     OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
                                                  static_cast<T*>(nullptr), static_cast<T*>(nullptr),
                                                  BinaryFunc<T>(), dim_size));
+#endif
     return GetCudaAlignedSize(temp_storage_bytes);
   }
   return 0;
@@ -186,9 +197,15 @@ void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
                       const ep::CudaStream* cuda_stream) {
   auto* temp_storage = temp_buffer->mut_dptr<T>();
   size_t temp_storage_bytes = temp_buffer->shape_view().elem_cnt();
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK(hipcub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
+                                               BinaryFunc<T>(), elem_cnt,
+                                               cuda_stream->cuda_stream()));
+#else
   OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
                                                BinaryFunc<T>(), elem_cnt,
                                                cuda_stream->cuda_stream()));
+#endif
 }
 }  // namespace
 

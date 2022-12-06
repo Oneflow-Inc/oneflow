@@ -19,7 +19,7 @@ limitations under the License.
 // Modified from
 // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Normalization.cuh
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 
 constexpr int ELEMENTS_PER_ITER = 4;  // enables concurrency within each thread to hide latency
 constexpr int ELEMENTS_PER_THREAD = 16;

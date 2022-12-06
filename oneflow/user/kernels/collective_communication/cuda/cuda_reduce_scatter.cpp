@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/user/kernels/collective_communication/include/reduce_scatter.h"
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"

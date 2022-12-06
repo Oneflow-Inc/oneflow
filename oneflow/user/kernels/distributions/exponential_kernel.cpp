@@ -27,7 +27,7 @@ namespace {
 
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, float)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, double)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, float)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA

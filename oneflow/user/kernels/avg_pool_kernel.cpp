@@ -394,7 +394,7 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
 
 REGISTER_AVG_POOL_WITH_DEVICE(DeviceType::kCPU)
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_AVG_POOL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_AVG_POOL_KERNELS(DeviceType::kCUDA, half)
 #endif

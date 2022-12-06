@@ -101,12 +101,19 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
       : device_index_(-1),
         stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_keys_), sizeof(IDX)));
+    OF_CUDA_CHECK(hipMallocHost(
+        reinterpret_cast<void **>(&host_num_unique_matrix_),
+        parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
@@ -114,7 +121,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   }
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_unique_matrix_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_unique_matrix_));
   }
 
   ncclComm_t comm() { return GetOrCreate().comm; }
@@ -197,7 +204,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = ids->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     IdShuffleTmpBufferManager<K, U, IDX> buffer_manager(
         tmp_buffer->mut_dptr(), num_ids, parallel_num, need_gen_table_ids, need_process_table_ids);
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
@@ -324,26 +331,26 @@ __inline__ __device__ T WarpMaxAllReduce(T val) {
   return val;
 }
 
-inline cudaError_t GetWarpImplNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
+inline GPU(Error_t) GetWarpImplNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
                                         int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPU(DevAttrMaxThreadsPerMultiProcessor), dev);
+    if (err != GPU(Success)) { return err; }
   }
   *num_blocks =
       std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
-  return cudaSuccess;
+  return GPU(Success);
 }
 
 template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
@@ -420,7 +427,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
 
 template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access, bool padding>
-inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int8_t* dst,
+inline GPU(Error_t) LaunchQuantizeWarpImpl(GPU(Stream_t) stream, const T* src, int8_t* dst,
                                           T* quantize_factor, const int64_t rows,
                                           const int64_t cols) {
   constexpr int block_size = 128;
@@ -432,18 +439,18 @@ inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int
       (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x = 0;
 
-  cudaError_t err = GetWarpImplNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
-  if (err != cudaSuccess) { return err; }
+  GPU(Error_t) err = GetWarpImplNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+  if (err != GPU(Success)) { return err; }
 
   QuantizeWarpImplKernel<T, ComputeType, pack_size, cols_per_thread, thread_group_width,
                          rows_per_access, padding>
       <<<grid_dim_x, block_dim, 0, stream>>>(src, dst, quantize_factor, rows, cols);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access>
-inline cudaError_t DispatchQuantizeWarpImplPadding(cudaStream_t stream, const T* src, int8_t* dst,
+inline GPU(Error_t) DispatchQuantizeWarpImplPadding(GPU(Stream_t) stream, const T* src, int8_t* dst,
                                                    T* quantize_factor, const int64_t rows,
                                                    const int64_t cols) {
   if (cols == cols_per_thread * thread_group_width) {
@@ -458,10 +465,10 @@ inline cudaError_t DispatchQuantizeWarpImplPadding(cudaStream_t stream, const T*
 }
 
 template<typename T, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchQuantizeWarpImplCols(
-    cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
+typename std::enable_if<pack_size == 1, GPU(Error_t)>::type DispatchQuantizeWarpImplCols(
+    GPU(Stream_t) stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
     const int64_t cols) {
-  if (cols <= 0) { return cudaErrorInvalidValue; }
+  if (cols <= 0) { return GPU(ErrorInvalidValue); }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                       \
   else if (cols <= (thread_group_width)*pack_size) {                                              \
     if (rows % 2 == 0) {                                                                          \
@@ -519,15 +526,15 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchQuantizeWarpI
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    return cudaErrorInvalidValue;
+    return GPU(ErrorInvalidValue);
   }
 }
 
 template<typename T, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchQuantizeWarpImplCols(
-    cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
+typename std::enable_if<pack_size == 2, GPU(Error_t)>::type DispatchQuantizeWarpImplCols(
+    GPU(Stream_t) stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
     const int64_t cols) {
-  if (cols <= 0) { return cudaErrorInvalidValue; }
+  if (cols <= 0) { return GPU(ErrorInvalidValue); }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                       \
   else if (cols <= (thread_group_width)*pack_size) {                                              \
     if (rows % 2 == 0) {                                                                          \
@@ -569,13 +576,13 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchQuantizeWarpI
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    return cudaErrorInvalidValue;
+    return GPU(ErrorInvalidValue);
   }
 }
 
 template<typename T, typename ComputeType>
 struct DispatchQuantizeWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, const T* src, int8_t* dst, T* quantize_factor,
                          const int64_t rows, const int64_t cols) {
     if (cols % 2 == 0) {
       return DispatchQuantizeWarpImplCols<T, ComputeType, 2>(stream, src, dst, quantize_factor,
@@ -618,44 +625,44 @@ __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, ID
 }
 
 template<typename T, typename ComputeType, typename IDX, int pack_size>
-cudaError_t DispatchDequantizeKernelPackSize(cudaStream_t stream, const int8_t* src,
+GPU(Error_t) DispatchDequantizeKernelPackSize(GPU(Stream_t) stream, const int8_t* src,
                                              T* quantize_factor, T* dst, const int64_t col_size,
                                              const int64_t elem_cnt) {
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size = 0;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
-  if (err != cudaSuccess) { return err; }
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  if (err != GPU(Success)) { return err; }
   DequantizeKernel<T, ComputeType, IDX, pack_size>
       <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(src, quantize_factor, dst, col_size,
                                                                 elem_cnt);
-  return cudaSuccess;
+  return GPU(Success);
 }
 
 template<typename T, typename ComputeType, typename IDX>
-inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src,
+inline GPU(Error_t) LaunchDequantizeKernel(GPU(Stream_t) stream, const int8_t* src,
                                           T* quantize_factor, T* dst, const int64_t col_size,
                                           const int64_t elem_cnt) {
   constexpr int quantized_src_pack_size = cuda::elementwise::PackSize<int8_t>();
   constexpr int dst_pack_size = cuda::elementwise::PackSize<T>();
   int launch_pack_size = std::min(quantized_src_pack_size, dst_pack_size);
   if (launch_pack_size == 8 && col_size % 8 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 8>(
+    GPU(Error_t) err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 8>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   } else if (launch_pack_size == 4 && col_size % 4 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 4>(
+    GPU(Error_t) err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 4>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   } else if (launch_pack_size == 2 && col_size % 2 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 2>(
+    GPU(Error_t) err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 2>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   } else {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 1>(
+    GPU(Error_t) err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 1>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename T>
@@ -712,7 +719,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       LOG(WARNING) << "Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and "
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
@@ -966,7 +973,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
     const bool skip_first_scatter = ctx->Attr<bool>("skip_first_scatter");
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
@@ -1174,8 +1181,12 @@ class EmbeddingUniqueKeyValuePairKernelState final : public user_op::OpKernelSta
  public:
   explicit EmbeddingUniqueKeyValuePairKernelState(user_op::KernelInitContext* ctx)
       : device_index_(-1) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_keys_), sizeof(IDX)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
@@ -1183,7 +1194,7 @@ class EmbeddingUniqueKeyValuePairKernelState final : public user_op::OpKernelSta
   }
   ~EmbeddingUniqueKeyValuePairKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_keys_));
   }
 
   embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
@@ -1231,7 +1242,7 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
     const size_t workspace_bytes =
         GetCudaAlignedSize(hash_capacity * sizeof(data_shuffle::TableEntry<K>));
     CHECK_LE(values_buffer_bytes + workspace_bytes, tmp_buffer->shape_view().elem_cnt());
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const V* values_ptr;
     if (has_values) {
       const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
@@ -1256,8 +1267,8 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
         need_process_table_ids, has_padding_idx, padding_idx);
 
     IDX* host_num_keys = kernel_state->HostNumKeys();
-    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique->mut_dptr(), sizeof(IDX),
-                                  cudaMemcpyDefault, cuda_stream));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_keys, num_unique->mut_dptr(), sizeof(IDX),
+                                  GPU(MemcpyDefault), cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_unique_ids = *host_num_keys;
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();

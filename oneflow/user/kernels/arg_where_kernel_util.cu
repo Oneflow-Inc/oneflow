@@ -19,7 +19,12 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 
 namespace oneflow {
 
@@ -70,14 +75,21 @@ struct IsTrue {
 };
 
 template<typename IN_T, typename OUT_T, typename OUT_ITER>
-cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
+GPU(Error_t) SelectTrue(GPU(Stream_t) stream, int num_items, void* temp_storage,
                        size_t& temp_storage_bytes, const IN_T* input, OUT_ITER output_iter,
                        OUT_T* num_selected) {
   IsTrue<IN_T> is_true;
+#ifdef WITH_ROCM
+  hipcub::TransformInputIterator<bool, IsTrue<IN_T>, const IN_T*> flag_iter(input, is_true);
+  hipcub::CountingInputIterator<OUT_T> offset_counter(0);
+  return hipcub::DeviceSelect::Flagged(temp_storage, temp_storage_bytes, offset_counter, flag_iter,
+                                    output_iter, num_selected, num_items, stream, false);
+#else
   cub::TransformInputIterator<bool, IsTrue<IN_T>, const IN_T*> flag_iter(input, is_true);
   cub::CountingInputIterator<OUT_T> offset_counter(0);
   return cub::DeviceSelect::Flagged(temp_storage, temp_storage_bytes, offset_counter, flag_iter,
                                     output_iter, num_selected, num_items, stream, false);
+#endif
 }
 
 template<typename IN_T, typename OUT_T>
@@ -130,7 +142,7 @@ struct ArgWhereKernelUtil<DeviceType::kCUDA, IN_T, OUT_T, NDIM> {
   }
 
   static size_t GetWorkspaceBytesSize(ep::Stream* stream, int64_t elem_cnt) {
-    cudaStream_t cuda_stream = stream ? stream->As<ep::CudaStream>()->cuda_stream() : 0;
+    GPU(Stream_t) cuda_stream = stream ? stream->As<ep::CudaStream>()->cuda_stream() : 0;
     size_t workspace = 0;
     if (NDIM == 1) {
       OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(cuda_stream, elem_cnt, nullptr, workspace,

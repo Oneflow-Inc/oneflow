@@ -95,7 +95,7 @@ class FoldKernel final : public OpKernel {
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_FOLD_KERNEL(DeviceType::kCUDA, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA

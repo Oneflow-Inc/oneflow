@@ -16,7 +16,12 @@ limitations under the License.
 #include "oneflow/user/kernels/binary_cross_entropy_with_logits_mean_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -69,7 +74,11 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* inpu
                                                                   const int32_t reduce_elem_cnt) {
   ComputeType zero = static_cast<ComputeType>(0.0);
   ComputeType one = static_cast<ComputeType>(1.0);
+#ifdef WITH_ROCM
+  using BlockReduce = hipcub::BlockReduce<ComputeType, kBlockSize>;
+#else
   using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   ComputeType reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, local_elem_cnt) {
@@ -87,7 +96,11 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* inpu
 
 template<typename Out, typename ComputeType>
 __global__ void ReduceLocalSumKernel(ComputeType* block_local_sum_buf, Out* out, int64_t elem_cnt) {
+#ifdef WITH_ROCM
+  using BlockReduce = hipcub::BlockReduce<ComputeType, kReduceLocalSumBlockSize>;
+#else
   using BlockReduce = cub::BlockReduce<ComputeType, kReduceLocalSumBlockSize>;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   ComputeType reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { reduce_sum += block_local_sum_buf[i]; }
@@ -141,7 +154,11 @@ __global__ void FusedBCEReduceMeanFwBwKernel(const In* input, const In* target, 
   ComputeType one = static_cast<ComputeType>(1.0);
   BinaryCrossEntropyWithLogitsReduceMeanGradFunctor<In, ComputeType> grad_functor(
       elem_cnt_reciprocal, constant_output_grad);
+#ifdef WITH_ROCM
+  using BlockReduce = hipcub::BlockReduce<ComputeType, kBlockSize>;
+#else
   using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   ComputeType reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, local_elem_cnt) {

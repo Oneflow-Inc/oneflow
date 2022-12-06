@@ -30,7 +30,7 @@ REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, uint8_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int64_t)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, uint8_t)

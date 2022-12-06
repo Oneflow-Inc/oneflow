@@ -127,7 +127,7 @@ class ArangeKernel final : public OpKernel {
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 REGISTER_ARANGE_KERNELS_WITH_CUDA_HALF(DeviceType::kCUDA);
 #endif

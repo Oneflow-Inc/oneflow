@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 namespace oneflow {
 

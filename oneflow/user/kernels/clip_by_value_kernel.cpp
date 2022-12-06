@@ -18,6 +18,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
 #endif
+#ifdef WITH_ROCM
+#include <hip/hip_fp16.h>
+#endif
 
 namespace oneflow {
 

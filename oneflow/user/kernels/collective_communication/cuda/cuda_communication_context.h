@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/device/cuda_util.h"
 

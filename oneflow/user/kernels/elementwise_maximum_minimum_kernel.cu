@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"

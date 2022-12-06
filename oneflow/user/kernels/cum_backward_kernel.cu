@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 namespace {
 template<typename T>
 __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* input_ptr,

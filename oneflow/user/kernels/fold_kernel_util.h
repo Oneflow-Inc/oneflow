@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/ndarray/xpu_util.h"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 
@@ -34,7 +34,7 @@ namespace {
 template<typename T>
 struct XPUAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, *x);
 #else
     *y += *x;

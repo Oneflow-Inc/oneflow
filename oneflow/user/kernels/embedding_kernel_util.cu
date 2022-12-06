@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/embedding_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -96,8 +101,11 @@ __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* in
     for (int64_t i = tid; i < emb_dim; i += blockDim.x) {
       v += pow(abs(static_cast<AccumType>(in_buf[base_index + i])), norm_type);
     }
-
+#ifdef WITH_ROCM
+    using BlockReduce = hipcub::BlockReduce<AccumType, kCudaThreadsNumPerBlock>;
+#else
     using BlockReduce = cub::BlockReduce<AccumType, kCudaThreadsNumPerBlock>;
+#endif
     __shared__ typename BlockReduce::TempStorage temp_storage;
     __shared__ AccumType norm;
     v = BlockReduce(temp_storage).Sum(v);

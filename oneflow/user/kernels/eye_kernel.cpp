@@ -58,7 +58,7 @@ class EyeKernel final : public OpKernel {
 REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register CUDA version
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
 #undef REGISTER_EYE_KERNELS_WITH_DEVICE

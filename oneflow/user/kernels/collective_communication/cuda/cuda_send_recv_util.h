@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_SEND_RECV_UTIL_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_SEND_RECV_UTIL_H_
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {

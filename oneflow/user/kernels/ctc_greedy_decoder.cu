@@ -120,7 +120,7 @@ struct CTCGreedyDecoderFunctor<DeviceType::kCUDA, T> final {
     int64_t shared_mem_size = max_input_length * sizeof(int64_t);
 
     int max_active_blocks;
-    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    OF_CUDA_CHECK(GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks, CtcGreedyDecodeGpu<T>, kCudaThreadsNumPerBlock, shared_mem_size));
     if (max_active_blocks > 0) {
       CtcGreedyDecodeGpuMultiThread<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock,

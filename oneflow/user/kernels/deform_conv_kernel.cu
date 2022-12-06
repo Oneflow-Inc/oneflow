@@ -27,7 +27,7 @@ namespace {
 __device__ __forceinline__ float Add(float* address, float val) { return atomicAdd(address, val); }
 
 __device__ __forceinline__ double Add(double* address, double val) {
-#if __CUDA_ARCH__ >= 600
+#if (__CUDA_ARCH__ >= 600) || defined(WITH_ROCM)
   return atomicAdd(address, val);
 #else
   auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);

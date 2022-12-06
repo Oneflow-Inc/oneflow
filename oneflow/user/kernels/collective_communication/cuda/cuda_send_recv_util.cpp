@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_send_recv_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/common/decorator.h"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 namespace oneflow {
