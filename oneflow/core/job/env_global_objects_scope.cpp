@@ -54,6 +54,7 @@ limitations under the License.
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -72,7 +73,9 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  if (!FLAGS_logtostderr || IsInDebugMode()) {
+    LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  }
 }
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
