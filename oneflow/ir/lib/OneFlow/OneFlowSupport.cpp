@@ -160,8 +160,6 @@ void __DenseElementsAttrToTensor(const mlir::DenseElementsAttr dense_attr,
   const auto& callback =
       [=](::oneflow::ep::Stream* stream,
           const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
-        OF_CUDA_CHECK(
-            cudaStreamSynchronize(stream->As<::oneflow::ep::CudaStream>()->cuda_stream()));
         ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), dptr, tensor_size,
                               eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
       };
