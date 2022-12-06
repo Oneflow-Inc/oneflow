@@ -86,7 +86,7 @@ def _test_fused_get_intersection_area_impl(test_case, device, shape):
         torch_x[6],
         torch_x[7],
     )
-    inter = flow._C.fused_get_intersection_area(
+    inter = flow._C.fused_yolov5_get_intersection_area(
         b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2
     )
     torch_inter = torch_get_intersection_area(

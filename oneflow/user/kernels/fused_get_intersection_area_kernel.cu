@@ -125,7 +125,7 @@ class FusedGetIntersectionAreaKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("fused_get_intersection_area")                  \
+  REGISTER_USER_KERNEL("fused_yolov5_get_intersection_area")                  \
       .SetCreateFn<FusedGetIntersectionAreaKernel<dtype>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("inter", 0) == GetDataType<dtype>::value));
@@ -179,7 +179,7 @@ class FusedGetIntersectionAreaGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_get_intersection_area_grad")             \
+  REGISTER_USER_KERNEL("fused_yolov5_get_intersection_area_grad")             \
       .SetCreateFn<FusedGetIntersectionAreaGradKernel<dtype>>()        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1_diff", 0) == GetDataType<dtype>::value));

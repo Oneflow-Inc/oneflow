@@ -78,7 +78,7 @@ class FusedGetConvexDiagonalSquaredGrad
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_convex_diagonal_squared",
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_convex_diagonal_squared",
                                FusedGetConvexDiagonalSquaredGrad);
 
 }  // namespace one

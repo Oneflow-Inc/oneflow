@@ -3184,7 +3184,7 @@ class FusedWeightedSumFunctor {
 class FusedCenterFunctor {
  public:
   FusedCenterFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_center_dist")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3213,7 +3213,7 @@ class FusedCenterFunctor {
 class FusedCenterGradFunctor {
  public:
   FusedCenterGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_center_dist_grad")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3251,7 +3251,7 @@ class FusedCenterGradFunctor {
 class FusedGetIntersectionAreaFunctor {
  public:
   FusedGetIntersectionAreaFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_intersection_area")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_intersection_area")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3280,7 +3280,7 @@ class FusedGetIntersectionAreaFunctor {
 class FusedGetIntersectionAreaGradFunctor {
  public:
   FusedGetIntersectionAreaGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_intersection_area_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_intersection_area_grad")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3318,7 +3318,7 @@ class FusedGetIntersectionAreaGradFunctor {
 class FusedGetBounddingBoxesCoordFunctor {
  public:
   FusedGetBounddingBoxesCoordFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_boundding_boxes_coord")
                          .Input("x1")
                          .Input("y1")
                          .Input("w1")
@@ -3353,7 +3353,7 @@ class FusedGetBounddingBoxesCoordFunctor {
 class FusedGetBounddingBoxesCoordGradFunctor {
  public:
   FusedGetBounddingBoxesCoordGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_boundding_boxes_coord_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_boundding_boxes_coord_grad")
                          .Input("b1_x1_diff")
                          .Input("b1_x2_diff")
                          .Input("b1_y1_diff")
@@ -3394,7 +3394,7 @@ class FusedGetBounddingBoxesCoordGradFunctor {
 class FusedGetCiouDiagonalAngleFunctor {
  public:
   FusedGetCiouDiagonalAngleFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_diagonal_angle")
                          .Input("w1")
                          .Input("h1")
                          .Input("w2")
@@ -3419,7 +3419,7 @@ class FusedGetCiouDiagonalAngleFunctor {
 class FusedGetCiouResultFunctor {
  public:
   FusedGetCiouResultFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_result")
                          .Input("v")
                          .Input("iou")
                          .Input("rho2")
@@ -3445,7 +3445,7 @@ class FusedGetCiouResultFunctor {
 class FusedGetCiouDiagonalAngleGradFunctor {
  public:
   FusedGetCiouDiagonalAngleGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_diagonal_angle_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_diagonal_angle_grad")
                          .Input("w1")
                          .Input("h1")
                          .Input("w2")
@@ -3475,7 +3475,7 @@ class FusedGetCiouDiagonalAngleGradFunctor {
 class FusedGetCiouResultGradFunctor {
  public:
   FusedGetCiouResultGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_ciou_result_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_result_grad")
                          .Input("dy")
                          .Input("alpha")
                          .Input("rho2")
@@ -3501,7 +3501,7 @@ class FusedGetCiouResultGradFunctor {
 class FusedGetIouFunctor {
  public:
   FusedGetIouFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_iou")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_iou")
                          .Input("w1")
                          .Input("h1")
                          .Input("w2")
@@ -3528,7 +3528,7 @@ class FusedGetIouFunctor {
 class FusedGetIouGradFunctor {
  public:
   FusedGetIouGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_iou_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_iou_grad")
                          .Input("diou")
                          .Input("w1")
                          .Input("h1")
@@ -3559,7 +3559,7 @@ class FusedGetIouGradFunctor {
 class FusedGetConvexDiagonalSquaredFunctor {
  public:
   FusedGetConvexDiagonalSquaredFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_convex_diagonal_squared")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_convex_diagonal_squared")
                          .Input("b1_x1")
                          .Input("b1_x2")
                          .Input("b2_x1")
@@ -3593,7 +3593,7 @@ class FusedGetConvexDiagonalSquaredFunctor {
 class FusedGetConvexDiagonalSquaredGradFunctor {
  public:
   FusedGetConvexDiagonalSquaredGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_convex_diagonal_squared_grad")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_convex_diagonal_squared_grad")
                          .Input("c2_diff")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3633,7 +3633,7 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
 class FusedGetTargetOffsetsFunctor {
  public:
   FusedGetTargetOffsetsFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_get_target_offsets")
+    op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_target_offsets")
                          .Input("gxy")
                          .Input("gxi")
                          .Output("j")

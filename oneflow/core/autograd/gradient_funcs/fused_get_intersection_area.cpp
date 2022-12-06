@@ -67,7 +67,7 @@ class FusedGetIntersectionAreaGrad
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_intersection_area", FusedGetIntersectionAreaGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_intersection_area", FusedGetIntersectionAreaGrad);
 
 }  // namespace one
 }  // namespace oneflow

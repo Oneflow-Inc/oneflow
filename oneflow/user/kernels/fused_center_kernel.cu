@@ -106,7 +106,7 @@ class FusedCenterKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("fused_get_center_dist")                        \
+  REGISTER_USER_KERNEL("fused_yolov5_get_center_dist")                        \
       .SetCreateFn<FusedCenterKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("rho2", 0) == GetDataType<dtype>::value));
@@ -156,7 +156,7 @@ class FusedCenterGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)         \
-  REGISTER_USER_KERNEL("fused_get_center_dist_grad")                   \
+  REGISTER_USER_KERNEL("fused_yolov5_get_center_dist_grad")                   \
       .SetCreateFn<FusedCenterGradKernel<dtype>>()                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));

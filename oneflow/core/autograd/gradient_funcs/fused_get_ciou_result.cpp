@@ -76,7 +76,7 @@ class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradC
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_ciou_result", FusedGetCiouResultGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_ciou_result", FusedGetCiouResultGrad);
 
 }  // namespace one
 }  // namespace oneflow

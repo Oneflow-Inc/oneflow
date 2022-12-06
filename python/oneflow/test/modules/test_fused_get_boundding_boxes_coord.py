@@ -54,7 +54,7 @@ def _test_get_boundding_boxes_coord_impl(test_case, device, shape):
         b2_x2,
         b2_y1,
         b2_y2,
-    ) = flow._C.fused_get_boundding_boxes_coord(x1, y1, w1, h1, x2, y2, w2, h2)
+    ) = flow._C.fused_yolov5_get_boundding_boxes_coord(x1, y1, w1, h1, x2, y2, w2, h2)
     torch_x1, torch_y1, torch_w1, torch_h1, torch_x2, torch_y2, torch_w2, torch_h2 = (
         torch_x[0],
         torch_x[1],

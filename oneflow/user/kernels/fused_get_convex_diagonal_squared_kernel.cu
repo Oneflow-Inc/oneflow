@@ -91,7 +91,7 @@ class FusedGetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_get_convex_diagonal_squared")            \
+  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared")            \
       .SetCreateFn<FusedGetConvexDiagonalSquaredKernel<dtype>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
@@ -143,7 +143,7 @@ class FusedGetConvexDiagonalSquaredGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_get_convex_diagonal_squared_grad")          \
+  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared_grad")          \
       .SetCreateFn<FusedGetConvexDiagonalSquaredGradKernel<dtype>>()      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));

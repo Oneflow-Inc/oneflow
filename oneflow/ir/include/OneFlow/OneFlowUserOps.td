@@ -2264,7 +2264,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad, fused_get_ciou_result, fused_get_ciou_result_grad, fused_get_ciou_diagonal_angle, fused_get_ciou_diagonal_angle_grad, fused_get_intersection_area, fused_get_intersection_area_grad, fused_get_target_offsets
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_yolov5_get_boundding_boxes_coord, fused_yolov5_get_boundding_boxes_coord_grad, fused_yolov5_get_center_dist, fused_yolov5_get_center_dist_grad, fused_yolov5_get_ciou_result, fused_yolov5_get_ciou_result_grad, fused_yolov5_get_ciou_diagonal_angle, fused_yolov5_get_ciou_diagonal_angle_grad, fused_yolov5_get_intersection_area, fused_yolov5_get_intersection_area_grad, fused_yolov5_get_target_offsets
 // Total: 45
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
@@ -2880,7 +2880,7 @@ def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", 
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetBounddingBoxesCoordOp : OneFlow_BaseOp<"fused_get_boundding_boxes_coord", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetBounddingBoxesCoordOp : OneFlow_BaseOp<"fused_yolov5_get_boundding_boxes_coord", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x1,
     OneFlow_Tensor:$y1,
@@ -2907,7 +2907,7 @@ def OneFlow_FusedGetBounddingBoxesCoordOp : OneFlow_BaseOp<"fused_get_boundding_
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetBounddingBoxesCoordGradOp : OneFlow_BaseOp<"fused_get_boundding_boxes_coord_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetBounddingBoxesCoordGradOp : OneFlow_BaseOp<"fused_yolov5_get_boundding_boxes_coord_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1_diff,
     OneFlow_Tensor:$b1_x2_diff,
@@ -2934,7 +2934,7 @@ def OneFlow_FusedGetBounddingBoxesCoordGradOp : OneFlow_BaseOp<"fused_get_boundd
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_yolov5_get_ciou_result", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$v,
     OneFlow_Tensor:$iou,
@@ -2954,7 +2954,7 @@ def OneFlow_FusedGetCiouResultOp : OneFlow_BaseOp<"fused_get_ciou_result", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_yolov5_get_ciou_result_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$alpha,
@@ -2973,7 +2973,7 @@ def OneFlow_FusedGetCiouResultGradOp : OneFlow_BaseOp<"fused_get_ciou_result_gra
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetIouOp : OneFlow_BaseOp<"fused_get_iou", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetIouOp : OneFlow_BaseOp<"fused_yolov5_get_iou", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$w1,
     OneFlow_Tensor:$h1,
@@ -2993,7 +2993,7 @@ def OneFlow_FusedGetIouOp : OneFlow_BaseOp<"fused_get_iou", [NoSideEffect, Decla
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetIouGradOp : OneFlow_BaseOp<"fused_get_iou_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetIouGradOp : OneFlow_BaseOp<"fused_yolov5_get_iou_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$diou,
     OneFlow_Tensor:$w1,
@@ -3019,7 +3019,7 @@ def OneFlow_FusedGetIouGradOp : OneFlow_BaseOp<"fused_get_iou_grad", [NoSideEffe
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedCenterOp : OneFlow_BaseOp<"fused_get_center_dist", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedCenterOp : OneFlow_BaseOp<"fused_yolov5_get_center_dist", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
     OneFlow_Tensor:$b1_x2,
@@ -3039,7 +3039,7 @@ def OneFlow_FusedCenterOp : OneFlow_BaseOp<"fused_get_center_dist", [NoSideEffec
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_get_center_dist_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_yolov5_get_center_dist_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
     OneFlow_Tensor:$b1_x2,
@@ -3067,7 +3067,7 @@ def OneFlow_FusedCenterGradOp : OneFlow_BaseOp<"fused_get_center_dist_grad", [No
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetCiouDiagonalAngleOp : OneFlow_BaseOp<"fused_get_ciou_diagonal_angle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetCiouDiagonalAngleOp : OneFlow_BaseOp<"fused_yolov5_get_ciou_diagonal_angle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$w1,
     OneFlow_Tensor:$h1,
@@ -3086,7 +3086,7 @@ def OneFlow_FusedGetCiouDiagonalAngleOp : OneFlow_BaseOp<"fused_get_ciou_diagona
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetCiouDiagonalAngleGradOp : OneFlow_BaseOp<"fused_get_ciou_diagonal_angle_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetCiouDiagonalAngleGradOp : OneFlow_BaseOp<"fused_yolov5_get_ciou_diagonal_angle_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$w1,
     OneFlow_Tensor:$h1,
@@ -3109,7 +3109,7 @@ def OneFlow_FusedGetCiouDiagonalAngleGradOp : OneFlow_BaseOp<"fused_get_ciou_dia
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetIntersectionAreaOp : OneFlow_BaseOp<"fused_get_intersection_area", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetIntersectionAreaOp : OneFlow_BaseOp<"fused_yolov5_get_intersection_area", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
     OneFlow_Tensor:$b1_x2,
@@ -3129,7 +3129,7 @@ def OneFlow_FusedGetIntersectionAreaOp : OneFlow_BaseOp<"fused_get_intersection_
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetIntersectionAreaGradOp : OneFlow_BaseOp<"fused_get_intersection_area_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetIntersectionAreaGradOp : OneFlow_BaseOp<"fused_yolov5_get_intersection_area_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
     OneFlow_Tensor:$b1_x2,
@@ -3157,7 +3157,7 @@ def OneFlow_FusedGetIntersectionAreaGradOp : OneFlow_BaseOp<"fused_get_intersect
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetConvexDiagonalSquaredOp : OneFlow_BaseOp<"fused_get_convex_diagonal_squared", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetConvexDiagonalSquaredOp : OneFlow_BaseOp<"fused_yolov5_get_convex_diagonal_squared", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
     OneFlow_Tensor:$b1_x2,
@@ -3180,7 +3180,7 @@ def OneFlow_FusedGetConvexDiagonalSquaredOp : OneFlow_BaseOp<"fused_get_convex_d
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_convex_diagonal_squared_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_yolov5_get_convex_diagonal_squared_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$c2_diff,
     OneFlow_Tensor:$b1_x1,
@@ -3211,7 +3211,7 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedGetTargetOffsetsOp : OneFlow_BaseOp<"fused_get_target_offsets", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedGetTargetOffsetsOp : OneFlow_BaseOp<"fused_yolov5_get_target_offsets", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$gxy,
     OneFlow_Tensor:$gxi

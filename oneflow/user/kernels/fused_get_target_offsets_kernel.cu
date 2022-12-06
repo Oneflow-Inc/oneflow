@@ -102,7 +102,7 @@ class FusedGetTargetOffsetsKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("fused_get_target_offsets")                          \
+  REGISTER_USER_KERNEL("fused_yolov5_get_target_offsets")                          \
       .SetCreateFn<FusedGetTargetOffsetsKernel<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
                        && (user_op::HobDataType("j", 0) == DataType::kBool) \

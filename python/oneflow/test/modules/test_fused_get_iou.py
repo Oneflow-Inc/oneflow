@@ -46,7 +46,7 @@ def _test_get_iou_impl(test_case, device, shape):
             )
         )
     w1, h1, w2, h2, inter = x[0], x[1], x[2], x[3], x[4]
-    iou = flow._C.fused_get_iou(w1, h1, w2, h2, inter, eps)
+    iou = flow._C.fused_yolov5_get_iou(w1, h1, w2, h2, inter, eps)
     torch_w1, torch_h1, torch_w2, torch_h2, torch_inter = (
         torch_x[0],
         torch_x[1],

@@ -51,7 +51,7 @@ def _test_fused_get_target_offsets_impl(test_case, device, shape, g):
         )
     gxy, gxi = x[0] + x[1], x[0] + x[2]
     torch_gxy, torch_gxi = torch_x[0] + torch_x[1], torch_x[0] + torch_x[2]
-    j = flow._C.fused_get_target_offsets(gxy, gxi, g)
+    j = flow._C.fused_yolov5_get_target_offsets(gxy, gxi, g)
     torch_j = torch_get_target_offsets(torch_gxy, torch_gxi, g)
     test_case.assertTrue((j.cpu().numpy() == torch_j.cpu().numpy()).any())
 

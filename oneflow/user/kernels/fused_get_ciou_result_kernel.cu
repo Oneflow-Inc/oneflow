@@ -73,7 +73,7 @@ class FusedGetCiouResultGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CIOU_RESULT_CUDA_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("fused_get_ciou_result")                        \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_result")                        \
       .SetCreateFn<FusedGetCiouResultGpuKernel<dtype>>()               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("v", 0) == GetDataType<dtype>::value));
@@ -111,7 +111,7 @@ class FusedGetCiouResultGradGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CIOU_RESULT_GRAD_CUDA_KERNEL(dtype)         \
-  REGISTER_USER_KERNEL("fused_get_ciou_result_grad")                   \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_result_grad")                   \
       .SetCreateFn<FusedGetCiouResultGradGpuKernel<dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));

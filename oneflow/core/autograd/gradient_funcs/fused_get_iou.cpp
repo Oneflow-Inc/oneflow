@@ -81,7 +81,7 @@ class FusedGetIouGrad : public OpExprGradFunction<FusedGetIouGradCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_iou", FusedGetIouGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_iou", FusedGetIouGrad);
 
 }  // namespace one
 }  // namespace oneflow

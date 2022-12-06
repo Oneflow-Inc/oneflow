@@ -67,7 +67,7 @@ class FusedGetCiouDiagonalAngleGrad : public OpExprGradFunction<FusedCiouAngleCa
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_ciou_diagonal_angle", FusedGetCiouDiagonalAngleGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_ciou_diagonal_angle", FusedGetCiouDiagonalAngleGrad);
 
 }  // namespace one
 }  // namespace oneflow

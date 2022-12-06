@@ -91,7 +91,7 @@ def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
         torch_x[6],
         torch_x[7],
     )
-    c2 = flow._C.fused_get_convex_diagonal_squared(
+    c2 = flow._C.fused_yolov5_get_convex_diagonal_squared(
         b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, eps
     )
     torch_c2 = torch_fused_get_convex_diagonal_squared(

@@ -107,7 +107,7 @@ class FusedGetBounddingBoxesCoordGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(dtype)    \
-  REGISTER_USER_KERNEL("fused_get_boundding_boxes_coord")              \
+  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord")              \
       .SetCreateFn<FusedGetBounddingBoxesCoordGpuKernel<dtype>>()      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
@@ -156,7 +156,7 @@ class FusedGetBounddingBoxesCoordGradGpuKernel final : public user_op::OpKernel 
 };
 
 #define REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_get_boundding_boxes_coord_grad")           \
+  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord_grad")           \
       .SetCreateFn<FusedGetBounddingBoxesCoordGradGpuKernel<dtype>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)   \
                        && (user_op::HobDataType("b1_x1_diff", 0) == GetDataType<dtype>::value));
