@@ -71,7 +71,7 @@ Pattern {
       value_hidden_slice_end = attr<"-1 : si64">,
       value_hidden_slice_start = attr<"0 : si64">
     } -> (out_t));
-  }
+  };
 }
 
 Pattern {
