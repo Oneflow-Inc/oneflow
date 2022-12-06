@@ -253,10 +253,6 @@
   signature: "TensorTuple (Tensor start, Tensor end, Tensor weight, Tensor out_diff) => LerpGrad"
   bind_python: False
 
-- name: "quantile"
-  signature: "Tensor (Tensor input, Tensor q, Int64 dim=None, Bool keepdim=False, String interpolation="linear") => Quantile"
-  bind_python: True
-
 - name: "trunc_divide"
   signature:
     [

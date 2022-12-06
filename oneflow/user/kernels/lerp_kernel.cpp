@@ -52,11 +52,10 @@ class CpuLerpKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_LERP_KERNEL(dtype)                               \
-  REGISTER_USER_KERNEL("lerp")                                        \
-      .SetCreateFn<CpuLerpKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_LERP_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("lerp").SetCreateFn<CpuLerpKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_LERP_KERNEL(float)
 REGISTER_CPU_LERP_KERNEL(double)
@@ -104,10 +103,10 @@ class CpuLerpGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_LERP_GRAD_KERNEL(dtype)                               \
-  REGISTER_USER_KERNEL("lerp_grad")                                        \
-      .SetCreateFn<CpuLerpGradKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)      \
+#define REGISTER_CPU_LERP_GRAD_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("lerp_grad")                                   \
+      .SetCreateFn<CpuLerpGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("start_diff", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_LERP_GRAD_KERNEL(float)

@@ -386,7 +386,7 @@ class LerpFunctor {
       const int64_t dim = start->shape()->NumAxes();
       bool broadcast_start_status = false;
       bool broadcast_end_status = false;
-      
+
       for (int64_t i = 0; i < dim; i++) {
         int64_t start_shape_i = start->shape()->At(i);
         int64_t end_shape_i = end->shape()->At(i);
@@ -406,11 +406,14 @@ class LerpFunctor {
       }
     }
 
-    CHECK_EQ_OR_RETURN(broadcast_start->dtype()->data_type(), weight->dtype()->data_type()) << Error::RuntimeError() << "expected dtype float for `weights` but got dtype " << weight->dtype()->name();
+    CHECK_EQ_OR_RETURN(broadcast_start->dtype()->data_type(), weight->dtype()->data_type())
+        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
+        << weight->dtype()->name();
 
     if (weight_elem_cnt == 1) {
       auto broadcast_weight = JUST(functional::Expand(weight, *broadcast_start->shape()));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, broadcast_weight}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_,
+                                            {broadcast_start, broadcast_end, broadcast_weight}, {});
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, weight}, {});
   }
@@ -442,77 +445,6 @@ class LerpGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-};
-
-class QuantileFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, 
-                           const std::shared_ptr<one::Tensor>& q,
-                           const Optional<int64_t>& dim, bool keepdim,
-                           const std::string& interpolation) const {
-    // get wrapped dim
-    int64_t num_axes = input->ndim();
-    const auto get_dim = [num_axes]() -> int64_t {
-      const int64_t ndim = num_axes;
-      if (ndim == 0 || ndim == 1 || ndim == 3) {
-        return 0;
-      } else {
-        return 1;
-      }
-    };
-    int64_t wrapped_dim = dim ? JUST(dim) : get_dim();
-    wrapped_dim = JUST(maybe_wrap_dim(wrapped_dim, num_axes));
-
-    // get output's shape
-    DimVector out_shape;
-    if (dim && num_axes > 0) {
-      out_shape = input->shape()->dim_vec();
-      if (keepdim) {
-        out_shape[wrapped_dim] = 1;
-      } else {
-        out_shape.erase(out_shape.begin() + wrapped_dim);
-      }
-    } else if (keepdim) {
-      // out_shape = std::vector<int64_t>(input->ndim(), 1);
-      out_shape = DimVector(num_axes, 1);
-    }
-    if (q->ndim() > 0) {
-      out_shape.insert(out_shape.begin(), q->nelement());
-    }
-
-    // compute quantile output
-    // Flatten input if no dim provided else move dim to reduce as last dimension.
-    // Sort to efficiently query kth values.
-    std::shared_ptr<one::Tensor> sorted;
-    if (!dim) {
-      // sorted = std::get<0>(self.flatten().sort());
-    } else if (wrapped_dim == num_axes - 1) {
-      // sorted = std::get<0>(self.sort());
-    } else {
-      // sorted = std::get<0>(self.unsqueeze(-1).transpose(wrapped_dim, -1).sort());
-    }
-
-    // Treat q as a 1D tensor for the following computations
-    if (q->ndim() == 0) {
-      out_shape.insert(out_shape.begin(), q->nelement());
-    }
-
-    // View input as reduced_size + size of dim to reduce
-    DimVector input_shape(out_shape.size());
-    std::copy(out_shape.begin() + 1, out_shape.end(), input_shape.begin());
-    input_shape[input_shape.size() - 1] = sorted->shape()->dim_vec()[-1];
-    sorted = JUST(functional::View(sorted, Shape(input_shape)));
-
-    // // Ensure converting from int64_t to double won't overflow
-    // TORCH_CHECK(
-    //     sorted.size(-1) <= std::pow(2, 24),
-    //     "quantile() input tensor is too large");
-
-    // Convert q in [0, 1] to ranks in [0, reduction_size)
-    
-
-    return ;
-  }
 };
 
 class BroadcastFModFunctor : public BinaryFunctor {

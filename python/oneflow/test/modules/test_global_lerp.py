@@ -25,21 +25,9 @@ def _test_lerp(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim - 2)]
     square_dim = 8
     dim_list.extend([square_dim] * 2)
-    start = (
-        random_tensor(ndim, *dim_list)
-        .to(torch.double)
-        .to_global(placement, sbp)
-    )
-    end = (
-        random_tensor(ndim, *dim_list)
-        .to(torch.double)
-        .to_global(placement, sbp)
-    )
-    weight = (
-        random_tensor(ndim, *dim_list)
-        .to(torch.double)
-        .to_global(placement, sbp)
-    )
+    start = random_tensor(ndim, *dim_list).to(torch.double).to_global(placement, sbp)
+    end = random_tensor(ndim, *dim_list).to(torch.double).to_global(placement, sbp)
+    weight = random_tensor(ndim, *dim_list).to(torch.double).to_global(placement, sbp)
     return torch.lerp(start, end, weight)
 
 

@@ -21,14 +21,14 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-__global__ void LerpForwardGpu(const int n, const T* start, const T* end, const T* weight, T*out) {
+__global__ void LerpForwardGpu(const int n, const T* start, const T* end, const T* weight, T* out) {
   CUDA_1D_KERNEL_LOOP(i, n) { out[i] = start[i] + weight[i] * (end[i] - start[i]); }
 }
 
 template<typename T>
-__global__ void LerpBackwardGpu(const int n, const T* start, const T* end, const T* weight, const T*out_diff,
-                                T* start_diff, T* end_diff, T* weight_diff) {
-  CUDA_1D_KERNEL_LOOP(i, n) { 
+__global__ void LerpBackwardGpu(const int n, const T* start, const T* end, const T* weight,
+                                const T* out_diff, T* start_diff, T* end_diff, T* weight_diff) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
     start_diff[i] = (static_cast<T>(1.0) - weight[i]) * out_diff[i];
     end_diff[i] = weight[i] * out_diff[i];
     weight_diff[i] = (end[i] - start[i]) * out_diff[i];
@@ -62,16 +62,16 @@ class CudaLerpKernel final : public user_op::OpKernel {
     const T* weight_ptr = weight->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    RUN_CUDA_KERNEL((LerpForwardGpu<T>), ctx->stream(), start_elem_cnt, start_elem_cnt, start_ptr, end_ptr, weight_ptr, out_ptr);
+    RUN_CUDA_KERNEL((LerpForwardGpu<T>), ctx->stream(), start_elem_cnt, start_elem_cnt, start_ptr,
+                    end_ptr, weight_ptr, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_LERP_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("lerp")                                         \
-      .SetCreateFn<CudaLerpKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_LERP_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("lerp").SetCreateFn<CudaLerpKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_LERP_KERNEL(float)
 REGISTER_GPU_LERP_KERNEL(double)
@@ -112,17 +112,17 @@ class CudaLerpGradKernel final : public user_op::OpKernel {
     T* end_diff_ptr = end_diff->mut_dptr<T>();
     T* weight_diff_ptr = weight_diff->mut_dptr<T>();
 
-    RUN_CUDA_KERNEL((LerpBackwardGpu<T>), ctx->stream(), start_elem_cnt, 
-                    start_elem_cnt, start_ptr, end_ptr, weight_ptr, out_diff_ptr, 
-                    start_diff_ptr, end_diff_ptr, weight_diff_ptr);
+    RUN_CUDA_KERNEL((LerpBackwardGpu<T>), ctx->stream(), start_elem_cnt, start_elem_cnt, start_ptr,
+                    end_ptr, weight_ptr, out_diff_ptr, start_diff_ptr, end_diff_ptr,
+                    weight_diff_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_LERP_GRAD_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("lerp_grad")                                         \
-      .SetCreateFn<CudaLerpGradKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
+#define REGISTER_GPU_LERP_GRAD_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("lerp_grad")                                    \
+      .SetCreateFn<CudaLerpGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("start_diff", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_LERP_GRAD_KERNEL(float)
