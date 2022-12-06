@@ -192,6 +192,16 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  const auto& input_shape = ctx->InputShape("in", 0);
+  const auto& shape = ctx->Attr<Shape>("output_shape");
+  Symbol<ParallelDesc> parallel_desc =
+      JUST(TxtStringToPlacement(ctx->Attr<std::string>("parallel_conf")));
+  CHECK_EQ_OR_RETURN(input_shape.elem_cnt() * parallel_desc->parallel_num(), shape.elem_cnt())
+      << Error::RuntimeError()
+      << "output tensor size must be equal to world_size times input tensor size";
+  CHECK_EQ_OR_RETURN(ctx->InputDType("in", 0), ctx->Attr<DataType>("output_dtype"))
+      << Error::RuntimeError() << Error::RuntimeError()
+      << "output tensor must have the same type as input tensor";
   ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("output_shape"));
   ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("output_dtype"));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
