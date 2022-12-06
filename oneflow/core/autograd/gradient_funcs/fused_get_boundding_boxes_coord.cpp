@@ -65,7 +65,8 @@ class FusedGetBounddingBoxesCoordGrad
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_boundding_boxes_coord", FusedGetBounddingBoxesCoordGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_boundding_boxes_coord",
+                               FusedGetBounddingBoxesCoordGrad);
 
 }  // namespace one
 }  // namespace oneflow

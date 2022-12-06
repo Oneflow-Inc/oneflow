@@ -26,9 +26,7 @@ namespace {
 
 template<typename T>
 struct ModFunctor {
-  __device__ T Compute(T input_tensor) const {
-    return fmod(input_tensor, static_cast<T>(1.0));
-  }
+  __device__ T Compute(T input_tensor) const { return fmod(input_tensor, static_cast<T>(1.0)); }
 };
 
 template<>
@@ -47,11 +45,10 @@ struct GetStatsFunctor {
 };
 
 template<typename MOD_FUNCTOR, typename GET_STATUS_FUNCTOR, typename T>
-__global__ void FusedGetTargetOffsetsForward(MOD_FUNCTOR mod_functor, 
-                                             GET_STATUS_FUNCTOR get_stats_functor, 
-                                             const int n, const T* gxy, const T* gxi, 
-                                             const float g, bool* output_tensor, 
-                                             const int64_t rows) {
+__global__ void FusedGetTargetOffsetsForward(MOD_FUNCTOR mod_functor,
+                                             GET_STATUS_FUNCTOR get_stats_functor, const int n,
+                                             const T* gxy, const T* gxi, const float g,
+                                             bool* output_tensor, const int64_t rows) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T gxy_i = gxy[i];
     const T gxi_i = gxi[i];
@@ -59,8 +56,8 @@ __global__ void FusedGetTargetOffsetsForward(MOD_FUNCTOR mod_functor,
     const T gxi_mod_1 = mod_functor.Compute(gxi_i);
     const bool stats_1 = get_stats_functor.Compute(gxy_i, gxy_mod_1, g);
     const bool stats_2 = get_stats_functor.Compute(gxi_i, gxi_mod_1, g);
-    if (i % 2 == 0) { 
-      const int64_t extra_cols = i / 2; 
+    if (i % 2 == 0) {
+      const int64_t extra_cols = i / 2;
       output_tensor[i - extra_cols + rows] = stats_1;
       output_tensor[i + n - extra_cols + rows] = stats_2;
     } else {
@@ -94,15 +91,16 @@ class FusedGetTargetOffsetsKernel final : public user_op::OpKernel {
     ModFunctor<T> mod_functor{};
     GetStatsFunctor<T> get_stats_functor{};
 
-    RUN_CUDA_KERNEL((FusedGetTargetOffsetsForward<decltype(mod_functor), decltype(get_stats_functor), T>), ctx->stream(), elem_cnt, 
-                    mod_functor, get_stats_functor, elem_cnt,
-                    gxy->dptr<T>(), gxi->dptr<T>(), g, j->mut_dptr<bool>(), rows);
+    RUN_CUDA_KERNEL(
+        (FusedGetTargetOffsetsForward<decltype(mod_functor), decltype(get_stats_functor), T>),
+        ctx->stream(), elem_cnt, mod_functor, get_stats_functor, elem_cnt, gxy->dptr<T>(),
+        gxi->dptr<T>(), g, j->mut_dptr<bool>(), rows);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("fused_yolov5_get_target_offsets")                          \
+  REGISTER_USER_KERNEL("fused_yolov5_get_target_offsets")                   \
       .SetCreateFn<FusedGetTargetOffsetsKernel<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
                        && (user_op::HobDataType("j", 0) == DataType::kBool) \

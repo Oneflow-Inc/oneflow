@@ -197,7 +197,7 @@ class FusedGetCiouDiagonalAngleKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle")                \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle")         \
       .SetCreateFn<FusedGetCiouDiagonalAngleKernel<dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("v", 0) == GetDataType<dtype>::value));
@@ -243,7 +243,7 @@ class FusedGetCiouDiagonalAngleGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle_grad")           \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle_grad")    \
       .SetCreateFn<FusedGetCiouDiagonalAngleGradKernel<dtype>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("w1_diff", 0) == GetDataType<dtype>::value));

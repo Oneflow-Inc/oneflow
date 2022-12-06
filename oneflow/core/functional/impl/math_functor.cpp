@@ -3641,8 +3641,7 @@ class FusedGetTargetOffsetsFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& gxy,
-                           const std::shared_ptr<one::Tensor>& gxi,
-                           const float g) const {
+                           const std::shared_ptr<one::Tensor>& gxi, const float g) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("g");
     attrs.SetAllAttrs(g);
     auto shape = gxy->shape();
