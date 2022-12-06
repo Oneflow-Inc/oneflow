@@ -198,7 +198,7 @@
 
 - name: "pow_y_grad"
   signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowYGrad"
-  bind_python: False
+  bind_python: FalseScalar
 
 - name: "searchsorted"
   signature:
@@ -392,6 +392,14 @@
 
 - name: "logsumexp"
   signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
+  bind_python: True
+
+- name: "logaddexp"
+  signature: "Tensor (Tensor x, Tensor y) => LogAddExp"
+  bind_python: True
+  
+- name: "quantile"
+  signature: 'Tensor (Tensor x, Scalar q, Int32 dim, Bool keepdim=False, String interpolation="linear", Tensor out=None) => Quantile'
   bind_python: True
 
 - name: "transpose"
