@@ -2694,7 +2694,7 @@
   bind_python: True
 
 - name: "multi_tensor_sgd_update"
-  signature: "void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
 - name: "multi_tensor_adam_update"
@@ -2952,5 +2952,5 @@
   bind_python: False
 
 - name: "fused_clip_grad"
-  signature: "void (Tensor grad, Float max_norm, Float norm_type) => FusedClipGrad"
+  signature: "Void (Tensor grad, Float max_norm, Float norm_type) => FusedClipGrad"
   bind_python: True
