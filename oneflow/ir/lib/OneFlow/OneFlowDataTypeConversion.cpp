@@ -43,11 +43,17 @@ Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt) {
   if (dt == ::oneflow::DataType::kUInt8) {
     return IntegerType::get(context, 8, IntegerType::Unsigned);
   }
-  if (dt == ::oneflow::DataType::kUInt16) { IntegerType::get(context, 16, IntegerType::Unsigned); }
-  if (dt == ::oneflow::DataType::kUInt32) { IntegerType::get(context, 32, IntegerType::Unsigned); }
-  if (dt == ::oneflow::DataType::kUInt64) { IntegerType::get(context, 64, IntegerType::Unsigned); }
+  if (dt == ::oneflow::DataType::kUInt16) {
+    return IntegerType::get(context, 16, IntegerType::Unsigned);
+  }
+  if (dt == ::oneflow::DataType::kUInt32) {
+    return IntegerType::get(context, 32, IntegerType::Unsigned);
+  }
+  if (dt == ::oneflow::DataType::kUInt64) {
+    return IntegerType::get(context, 64, IntegerType::Unsigned);
+  }
   if (dt == ::oneflow::DataType::kUInt128) {
-    IntegerType::get(context, 128, IntegerType::Unsigned);
+    return IntegerType::get(context, 128, IntegerType::Unsigned);
   }
   llvm::errs() << "unsupported oneflow data type: " << dt << "\n";
   return Type();
