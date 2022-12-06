@@ -92,45 +92,65 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
     // obtain saved optional tensor from forward process
     const auto& matmul_vx = ctx->SavedTensors()[2];
 
-    // calculate the intermediate gradient using fused kernel
-    // 统一判断
-    const auto& middle_results =
-        JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, matmul_vx, ctx->activation));
-    const auto& d_matmul_wx = (*middle_results)[0];
-    const auto& d_matmul_vx = (*middle_results)[1];
+    if (ctx->w_requires_grad or ctx->b_requires_grad or ctx->v_requires_grad or ctx->c_requires_grad){
+      // calculate the intermediate gradient using fused kernel
+      const auto& middle_results =
+          JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, matmul_vx, ctx->activation));
+      const auto& d_matmul_wx = (*middle_results)[0];
+      const auto& d_matmul_vx = (*middle_results)[1];
 
-    // calculate the final result
-    // 版本限制!
-    const auto& wb_results = JUST(functional::CublasMatmulBiasAddGrad(d_matmul_wx, x));
-    const auto& vc_results = JUST(functional::CublasMatmulBiasAddGrad(d_matmul_vx, x));
-    
-    // Matmul、boradcast (yanzhuo)
-    // TDO
-    
-    const auto& w_grad = (*wb_results)[0];
-    const auto& b_grad = (*wb_results)[1];
-    const auto& v_grad = (*vc_results)[0];
-    const auto& c_grad = (*vc_results)[1];
+      // calculate the final gradient result of w (if necessary)
+      if (ctx->w_requires_grad){
+        (*in_grads)[1] = JUST(functional::BroadcastMatmulGradB(d_matmul_wx, x, 1.0));
+      }
 
-    // update gradients
-    if (ctx->w_requires_grad) { (*in_grads)[1] = w_grad; }
-    if (ctx->b_requires_grad) { (*in_grads)[2] = b_grad; }
-    if (ctx->v_requires_grad) { (*in_grads)[3] = v_grad; }
-    if (ctx->c_requires_grad) { (*in_grads)[4] = c_grad; }
+      // calculate the final gradient result of b (if necessary)
+      if (ctx->b_requires_grad) {
+        const int64_t num_axes = d_matmul_wx->shape()->NumAxes();
+        std::vector<int32_t> reduce_axes_vec;
+        reduce_axes_vec.reserve(num_axes - 1);
+        for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
+
+        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false));
+      }
+
+      // calculate the final gradient result of v (if necessary)
+      if (ctx->v_requires_grad){
+        (*in_grads)[3] = JUST(functional::BroadcastMatmulGradB(d_matmul_vx, x, 1.0));
+      }
+
+      // calculate the final gradient result of c (if necessary)
+      if (ctx->c_requires_grad) {
+        const int64_t num_axes = d_matmul_vx->shape()->NumAxes();
+        std::vector<int32_t> reduce_axes_vec;
+        reduce_axes_vec.reserve(num_axes - 1);
+        for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
+
+        (*in_grads)[4] = JUST(functional::ReduceSum(d_matmul_vx, reduce_axes_vec, false));
+      }
+    }
   } else {
-    // calculate the intermediate gradient using fused kernel
-    const auto& middle_results =
-        JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, nullptr, ctx->activation));
-    const auto& d_matmul_wx = (*middle_results)[0];
+    if (ctx->w_requires_grad or ctx->b_requires_grad){
+      // calculate the intermediate gradient using fused kernel
+      const auto& middle_results =
+          JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, nullptr, ctx->activation));
+      const auto& d_matmul_wx = (*middle_results)[0];
+      
+      // calculate the final gradient result of w (if necessary)
+      if (ctx->w_requires_grad){
+        (*in_grads)[1] = JUST(functional::BroadcastMatmulGradB(d_matmul_wx, x, 1.0));
+      }
 
-    // calculate the final result
-    const auto& results = JUST(functional::CublasMatmulBiasAddGrad(d_matmul_wx, x));
-    const auto& w_grad = (*results)[0];
-    const auto& b_grad = (*results)[1];
+      // calculate the final gradient result of b (if necessary)
+      if (ctx->b_requires_grad) {
+        const int64_t num_axes = d_matmul_wx->shape()->NumAxes();
+        std::vector<int32_t> reduce_axes_vec;
+        reduce_axes_vec.reserve(num_axes - 1);
+        for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
 
-    // update gradients
-    if (ctx->w_requires_grad) { (*in_grads)[1] = w_grad; }
-    if (ctx->b_requires_grad) { (*in_grads)[2] = b_grad; }
+        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false));
+      }
+    }
   }
 
   return Maybe<void>::Ok();
