@@ -1,8 +1,6 @@
 #include "OneFlow/OneFlowOps.td"
 #include "OneFlowPDLLUtils.pdll"
 
-Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
-Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
 Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
