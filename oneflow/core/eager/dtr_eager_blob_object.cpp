@@ -156,6 +156,7 @@ Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
   Global<dtr::TensorPool>::Get()->inc_num_eviction(eager_evict);
+  JUST(Global<dtr::TensorPool>::Get()->update_after_evict(this));
   return Maybe<void>::Ok();
 }
 

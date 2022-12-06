@@ -173,7 +173,6 @@ Maybe<bool> TensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
   if (best == nullptr) { return false; }
   JUST(best->evict(false));
-  JUST(update_after_evict(best));
   return true;
 }
 
