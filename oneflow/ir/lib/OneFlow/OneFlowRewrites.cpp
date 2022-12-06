@@ -88,6 +88,44 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
                                                   operands, attributes);
 }
 
+static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Value weight,
+                                          Attribute padding_before, Attribute data_format,
+                                          Operation* conv) {
+  auto conv_op = llvm::dyn_cast<Conv2DOp>(conv);
+  assert(conv_op);
+  SmallVector<Value, 4> operands;
+  operands.push_back(x);
+  operands.push_back(weight);
+  NamedAttrList attributes = conv_op->getAttrs();
+  llvm::SmallVector<int32_t> padding_before_array;
+
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(conv).str()
+                                        + "-fuse-conv"));
+
+  if (data_format.cast<StringAttr>().str() == "channels_first") {
+    for (auto val : padding_before.cast<ArrayAttr>().getValue().take_back(2)) {
+      padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+    }
+  } else {
+    padding_before_array.push_back(padding_before.cast<ArrayAttr>()
+                                       .getValue()[1]
+                                       .cast<IntegerAttr>()
+                                       .getValue()
+                                       .getSExtValue());
+    padding_before_array.push_back(padding_before.cast<ArrayAttr>()
+                                       .getValue()[2]
+                                       .cast<IntegerAttr>()
+                                       .getValue()
+                                       .getSExtValue());
+  }
+
+  attributes.set(conv_op.padding_beforeAttrName(),
+                 getSI32ArrayAttr(rewriter, padding_before_array));
+  return rewriter.create<Conv2DOp>(conv_op->getLoc(), conv_op.out().getType(), operands,
+                                   attributes);
+}
+
 IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
   return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                           APInt(64, value, /*isSigned=*/true));
@@ -100,6 +138,46 @@ static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* t
                             transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
 }
 
+static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
+                                                         Attribute padding_before,
+                                                         Attribute padding_after,
+                                                         Attribute data_format) {
+  if (padding_before.cast<ArrayAttr>().size() == 4 && padding_after.cast<ArrayAttr>().size() == 4) {
+    if (padding_before.cast<ArrayAttr>().getValue().equals(
+            padding_after.cast<ArrayAttr>().getValue())) {
+      if (data_format.cast<StringAttr>().str() == "channels_first") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[1]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+      if (data_format.cast<StringAttr>().str() == "channels_last") {
+        return success(padding_before.cast<ArrayAttr>()
+                               .getValue()[0]
+                               .cast<IntegerAttr>()
+                               .getValue()
+                               .getSExtValue()
+                           == 0
+                       && padding_before.cast<ArrayAttr>()
+                                  .getValue()[3]
+                                  .cast<IntegerAttr>()
+                                  .getValue()
+                                  .getSExtValue()
+                              == 0);
+      }
+    }
+  }
+  return failure();
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -110,6 +188,8 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
   patterns.getPDLPatterns().registerRewriteFunction("GetNumHeadsFromTranpose",
                                                     GetNumHeadsFromTranpose);
+  patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
+                                                    CreateConv2dAndErasePad);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
@@ -119,6 +199,14 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 
 }  // namespace rewrites
 
+namespace constraints {
+
+void populateConstraints(RewritePatternSet& patterns) {
+  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
+                                                       IsPaddingCouldBeAssimilatedIntoConv);
+}
+
+}  // namespace constraints
 }  // namespace oneflow
 
 }  // namespace mlir
