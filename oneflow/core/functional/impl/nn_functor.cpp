@@ -4597,6 +4597,24 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
+class FusedClipGradFunctor {
+ public:
+  FusedClipGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("grad").Build());
+  }
+
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& grad,
+                         const float& max_norm, const float& norm_type) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
+    attrs.SetAllAttrs(max_norm, norm_type);
+    JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {grad}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4723,6 +4741,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
+  m.add_functor<impl::FusedClipGradFunctor>("FusedClipGrad");
 }
 
 }  // namespace functional
