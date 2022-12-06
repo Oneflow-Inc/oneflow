@@ -295,9 +295,9 @@ bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activati
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 __global__ void FusedGluForwardGpu(
-    const IndexType m, const IndexType packed_n, const IndexType k, const IndexType packed_stride,
-    const IndexType packed_num, ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act,
-    const T* matmul_wx, const T* b, const T* matmul_vx, const T* c, T* y) {
+    const IndexType m, const IndexType packed_n, const IndexType packed_num, 
+    const IndexType packed_stride, ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act,
+    T* matmul_wx, const T* b, T* matmul_vx, const T* c, T* y) {
   // obtain global thread index
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -312,10 +312,8 @@ __global__ void FusedGluForwardGpu(
     const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    const LoadPack* matmul_wx_load = reinterpret_cast<const LoadPack*>(matmul_wx)
-                                     + (y_packed_row * packed_stride + y_packed_col);
-    const LoadPack* matmul_vx_load = reinterpret_cast<const LoadPack*>(matmul_vx)
-                                     + (y_packed_row * packed_stride + y_packed_col);
+    LoadPack* matmul_wx_load = reinterpret_cast<LoadPack*>(matmul_wx) + (y_packed_row * packed_stride + y_packed_col);
+    LoadPack* matmul_vx_load = reinterpret_cast<LoadPack*>(matmul_vx) + (y_packed_row * packed_stride + y_packed_col);
     const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b) + y_packed_col;
     const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c) + y_packed_col;
 
@@ -324,6 +322,8 @@ __global__ void FusedGluForwardGpu(
     LoadPack matmul_vx_vec = *matmul_vx_load;
     LoadPack b_vec = *b_load;
     LoadPack c_vec = *c_load;
+    LoadPack matmu_wx_bias_vec;
+    LoadPack matmu_vx_bias_vec;
     LoadPack y_vec;
 
 #pragma unroll
@@ -331,50 +331,69 @@ __global__ void FusedGluForwardGpu(
       // calculate the hidden_state and gate
       T hidden_state = matmul_wx_vec.elem[i] + b_vec.elem[i];
       T gate = matmul_vx_vec.elem[i] + c_vec.elem[i];
-
+      
       // calculate activation
       T act_gate = act(gate);
 
       // calculate element-wise product
       y_vec.elem[i] = hidden_state * act_gate;
+      matmu_wx_bias_vec.elem[i] = hidden_state;
+      matmu_vx_bias_vec.elem[i] = gate;
     }
-    *(reinterpret_cast<LoadPack*>(y + packed_index * pack_size)) = y_vec;
+    *( reinterpret_cast<LoadPack*>(y+packed_index*pack_size) ) = y_vec;
+    *( matmul_wx_load ) = matmu_wx_bias_vec;
+    *( matmul_vx_load ) = matmu_vx_bias_vec;
   }
 }
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
-void LaunchFusedGluForwardGpu(ep::Stream* stream, const int64_t m, const int64_t packed_n,
-                              const int64_t k, int64_t packed_stride, const T* matmul_wx,
-                              const T* b, const T* matmul_vx, const T* c, T* y) {
-  ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
-  int64_t pack_num = m * packed_n;
+void LaunchFusedGluForwardGpu(ep::Stream* stream, const IndexType m, const IndexType packed_n,
+                              const IndexType pack_num, const IndexType packed_stride, T* matmul_wx,
+                              const T* b, T* matmul_vx, const T* c, T* y) {
   constexpr int32_t block_size = 128;
   unsigned int grid_size = (pack_num + block_size - 1) / block_size;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          m, packed_n, k, packed_stride, pack_num, act, matmul_wx, b, matmul_vx, c, y);
+          m, packed_n, pack_num, packed_stride, act, matmul_wx, b, matmul_vx, c, y);
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, int32_t pack_size>
-void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
-                       int64_t packed_stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t packed_n,
+                       const int64_t pack_num, const int64_t packed_stride, 
+                       T* matmul_wx, const T* b, T* matmul_vx,
                        const T* c, T* y) {
-  // convert n based on pack size
-  const int64_t packed_n = n / pack_size;
-
   // dispatch index type
-  if (m * packed_n < (1 << 30)) {
-    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, packed_n, k, packed_stride,
+  if (pack_num < (1 << 30)) {
+    LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(stream, m, packed_n, pack_num, packed_stride,
                                                               matmul_wx, b, matmul_vx, c, y);
   } else {
-    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, packed_n, k, packed_stride,
+    LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(stream, m, packed_n, pack_num, packed_stride,
                                                               matmul_wx, b, matmul_vx, c, y);
   }
 }
 
+template<typename T, ep::primitive::UnaryOp act_type, int32_t alignment, typename std::enable_if<alignment/sizeof(T) == 0, int>::type = 0>
+void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n,
+                       const int64_t stride, T* matmul_wx, const T* b, T* matmul_vx,
+                       const T* c, T* y) {
+  DispatchIndexType<T, act_type, 1>(stream, m, n, m*n, stride, matmul_wx, b, matmul_vx, c, y);
+}
+
+template<typename T, ep::primitive::UnaryOp act_type, int32_t alignment, typename std::enable_if<alignment/sizeof(T) != 0, int>::type = 0>
+void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n,
+                       const int64_t stride, T* matmul_wx, const T* b, T* matmul_vx,
+                       const T* c, T* y) {
+  const int64_t pack_size = alignment / sizeof(T);
+  const int64_t packed_n = n / pack_size;
+  const int64_t pack_num = m * packed_n;
+  const int64_t packed_stride = stride / pack_size;
+  DispatchIndexType<T, act_type, alignment / sizeof(T)>(stream, m, packed_n, pack_num, packed_stride, matmul_wx, b, matmul_vx, c, y);
+}
+
 template<typename T, ep::primitive::UnaryOp act_type>
-void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
-                       int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n,
+                       const int64_t stride, T* matmul_wx, const T* b, T* matmul_vx,
                        const T* c, T* y) {
   const auto IsAligned = [&](const size_t alignment) {
     const uintptr_t matmul_wx_ptr = reinterpret_cast<uintptr_t>(matmul_wx);
@@ -392,99 +411,39 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
   };
 
   if (IsAligned(16)) {
-    switch (sizeof(T)) {
-      case 8:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 4:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 2:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride / 8, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 1:
-        DispatchIndexType<T, act_type, 16>(stream, m, n, k, stride / 16, matmul_wx, b, matmul_vx, c,
-                                           y);
-        break;
-      default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-    }
+    DispatchPackSize<T, act_type, 16>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (IsAligned(8)) {
-    switch (sizeof(T)) {
-      case 4:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 2:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 1:
-        DispatchIndexType<T, act_type, 8>(stream, m, n, k, stride / 8, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-    }
+    DispatchPackSize<T, act_type, 8>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (IsAligned(4)) {
-    switch (sizeof(T)) {
-      case 2:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      case 1:
-        DispatchIndexType<T, act_type, 4>(stream, m, n, k, stride / 4, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-    }
+    DispatchPackSize<T, act_type, 4>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
   } else if (IsAligned(2)) {
-    switch (sizeof(T)) {
-      case 1:
-        DispatchIndexType<T, act_type, 2>(stream, m, n, k, stride / 2, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-      default:
-        DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c,
-                                          y);
-        break;
-    }
+    DispatchPackSize<T, act_type, 2>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
   } else {
-    DispatchIndexType<T, act_type, 1>(stream, m, n, k, stride / 1, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 1>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
   }
 }
 
 template<typename T>
-void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t k,
-                            int64_t stride, const T* matmul_wx, const T* b, const T* matmul_vx,
+void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n,
+                            const int64_t stride, T* matmul_wx, const T* b, T* matmul_vx,
                             const T* c, T* y, const std::string& activation) {
   if (activation == "none") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity>(stream, m, n, stride, matmul_wx, b,
                                                             matmul_vx, c, y);
   } else if (activation == "sigmoid") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid>(stream, m, n, stride, matmul_wx, b,
                                                            matmul_vx, c, y);
   } else if (activation == "relu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kRelu>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kRelu>(stream, m, n, stride, matmul_wx, b,
                                                         matmul_vx, c, y);
   } else if (activation == "gelu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kGelu>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kGelu>(stream, m, n, stride, matmul_wx, b,
                                                         matmul_vx, c, y);
   } else if (activation == "fast_gelu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kFastGelu>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kFastGelu>(stream, m, n, stride, matmul_wx, b,
                                                             matmul_vx, c, y);
   } else if (activation == "silu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kSilu>(stream, m, n, k, stride, matmul_wx, b,
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSilu>(stream, m, n, stride, matmul_wx, b,
                                                         matmul_vx, c, y);
   } else {
     UNIMPLEMENTED();
@@ -600,12 +559,12 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     // dispatch according to activation type
     DispatchActivationType<T>(
         ctx->stream(),
-        /*m, n, k=*/m, n, k,
+        /*m, n=*/m, n,
         /*stride=*/is_split_mode ? n : 2 * n,
-        /*matmul_wx=*/out_tensor_matmul_wx->dptr<T>(),
+        /*matmul_wx=*/out_tensor_matmul_wx->mut_dptr<T>(),
         /*b=*/input_tensor_b->dptr<T>(),
         /*matmul_vx=*/
-        is_split_mode ? out_tensor_matmul_vx->dptr<T>() : out_tensor_matmul_wx->dptr<T>() + n,
+        is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>() : out_tensor_matmul_wx->mut_dptr<T>() + n,
         /*c=*/is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
         /*y=*/out_tensor_y->mut_dptr<T>(),
         /*activation=*/ctx->Attr<std::string>("activation"));

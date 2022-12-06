@@ -3370,7 +3370,7 @@ class FusedGluWithoutLinearGradFunctor {
                                .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& matmul_wx,
                            const Optional<one::Tensor>& matmul_vx,
                            const std::string& activation) const {
@@ -3443,10 +3443,9 @@ class FusedGluWithoutLinearGradFunctor {
 
     // dispatch corresponding operator
     if (is_split_mode) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {dy, matmul_wx, JUST(matmul_vx)},
-                                                 attrs);
+      return OpInterpUtil::Dispatch<TensorTuple>(*split_op_, {dy, matmul_wx, JUST(matmul_vx)}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, matmul_wx}, attrs);
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, matmul_wx}, attrs);
     }
   }
 

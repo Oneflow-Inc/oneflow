@@ -55,13 +55,13 @@ namespace oneflow {
         << ") is not consistent";
   }
   if (is_split_mode) {
-    CHECK_EQ_OR_RETURN(2 * dy_shape.At(dy_num_axes - 1), matmul_wx_shape.At(matmul_wx_num_axes - 1))
-        << "two times of the last dimension of \'dy\'(" << 2 * dy_shape.At(dy_num_axes - 1)
+    CHECK_EQ_OR_RETURN(dy_shape.At(dy_num_axes - 1), matmul_wx_shape.At(matmul_wx_num_axes - 1))
+        << "the last dimension of \'dy\'(" << dy_shape.At(dy_num_axes - 1)
         << ") is not consistant with the last dimension of \'matmul_wx\'("
         << matmul_wx_shape.At(matmul_wx_num_axes - 1) << ")";
   } else {
-    CHECK_EQ_OR_RETURN(dy_shape.At(dy_num_axes - 1), matmul_wx_shape.At(matmul_wx_num_axes - 1))
-        << "the last dimension of \'dy\'(" << dy_shape.At(dy_num_axes - 1)
+    CHECK_EQ_OR_RETURN(2 * dy_shape.At(dy_num_axes - 1), matmul_wx_shape.At(matmul_wx_num_axes - 1))
+        << "two times of the last dimension of \'dy\'(" << 2 * dy_shape.At(dy_num_axes - 1)
         << ") is not consistant with the last dimension of \'matmul_wx\'("
         << matmul_wx_shape.At(matmul_wx_num_axes - 1) << ")";
   }

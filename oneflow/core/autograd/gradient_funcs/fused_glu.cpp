@@ -156,5 +156,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
   return Maybe<void>::Ok();
 }
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_glu", FusedGluGrad);
+
 }  // namespace one
 }  // namespace oneflow
