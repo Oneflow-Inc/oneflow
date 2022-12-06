@@ -2882,11 +2882,11 @@ def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", 
 
 def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$grad,
+    OneFlow_Tensor:$grad
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "2.">:$max_norm,
-    DefaultValuedAttr<F32Attr, "1.">:$norm_type,
+    DefaultValuedAttr<F32Attr, "1.">:$norm_type
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
