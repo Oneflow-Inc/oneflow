@@ -83,7 +83,7 @@ EagerLocalTensorImpl::~EagerLocalTensorImpl() {
   if (eager_blob_object_) { ss << ", use_count=" << eager_blob_object_.use_count(); }
   ss << ", storage=" << (void*)tensor_storage_.get();
   if (tensor_storage_) { ss << ", use_count=" << tensor_storage_.use_count(); }
-  VLOG(3) << ss.str();
+  LOG(INFO) << ss.str();
 }
 
 Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
@@ -94,10 +94,10 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           if (eager_blob_object->producer_stream().has_value()) {
             if (eager_blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-              VLOG(3) << "ReleaseTensor blob=" << (void*)eager_blob_object.get()
-                      << ", shape=" << eager_blob_object->shape().ToString()
-                      << ", size=" << eager_blob_object->tensor_storage()->blob_bytes()
-                      << ", ptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
+              LOG(INFO) << "ReleaseTensor blob=" << (void*)eager_blob_object.get()
+                        << ", shape=" << eager_blob_object->shape().ToString()
+                        << ", size=" << eager_blob_object->tensor_storage()->blob_bytes()
+                        << ", ptr=" << (void*)eager_blob_object->tensor_storage()->blob_dptr();
             }
             JUST(builder->ReleaseTensor(eager_blob_object));
           }
@@ -169,8 +169,8 @@ std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
   auto detached_impl = std::make_shared<EagerLocalTensorImpl>(tensor_storage_, false, true);
   detached_impl->eager_blob_object_ = eager_blob_object_;
-  VLOG(3) << "EagerLocalTensorImpl::detach this=" << (void*)this
-          << ", detached=" << (void*)detached_impl.get();
+  LOG(INFO) << "EagerLocalTensorImpl::detach this=" << (void*)this
+            << ", detached=" << (void*)detached_impl.get();
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 

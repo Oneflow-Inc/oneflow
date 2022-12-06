@@ -122,6 +122,7 @@ void CudaDevice::DestroyEvents(Event** events, size_t count) {
 }
 
 Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size_t size) {
+  static size_t total_allocated = 0;
   CudaCurrentDeviceGuard guard(device_index_);
   CHECK(!options.HasPinnedDevice());
   cudaError_t err = cudaMalloc(ptr, size);
@@ -132,6 +133,9 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
     }
     return Error::RuntimeError() << cudaGetErrorString(err);
   } else {
+    total_allocated += size;
+    LOG(INFO) << "CudaDevice::Alloc ptr=" << *ptr << ", size=" << size
+              << ", total_allocated=" << total_allocated;
     return Maybe<void>::Ok();
   }
 }

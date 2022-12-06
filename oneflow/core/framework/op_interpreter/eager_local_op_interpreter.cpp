@@ -136,7 +136,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     ss << "{" << i << ", " << (void*)JUST(outputs->at(i)->mut_eager_local_tensor_impl()) << ", "
        << (void*)output_eager_blob_objects.at(i).get() << "} ";
   }
-  VLOG(3) << ss.str();
+  LOG(INFO) << ss.str();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());

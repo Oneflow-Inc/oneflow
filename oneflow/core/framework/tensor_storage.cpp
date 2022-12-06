@@ -29,7 +29,7 @@ TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_st
 
 TensorStorage::~TensorStorage() {
   if (!IsShuttingDown() && releaser_hook_) {
-    VLOG(3) << "TensorStorage destruction this=" << (void*)this;
+    LOG(INFO) << "TensorStorage destruction this=" << (void*)this;
     (*releaser_hook_)(storage_);
   }
 }

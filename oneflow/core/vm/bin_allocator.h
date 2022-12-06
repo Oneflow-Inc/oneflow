@@ -229,14 +229,10 @@ void BinAllocator<ThreadLock>::UnMarkPiece(Piece* piece) {
 template<typename ThreadLock>
 typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
-  Piece* piece = nullptr;
-  Piece* new_piece = nullptr;
-  int32_t bin_num = 0;
-  size_t found_piece_size = 0;
-  for (bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
+  for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
-      piece = *it;
+      Piece* piece = *it;
       CHECK(piece->is_free);
       CHECK_NOTNULL(piece->ptr);
       CHECK_EQ(piece->bin_num, bin_num);
@@ -245,9 +241,8 @@ typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(si
         bin->pieces.erase(it);
         piece->bin_num = kInvalidBinNum;
         piece->is_free = false;
-        found_piece_size = piece->size;
         if (piece->size >= aligned_size * 2 || piece->size - aligned_size >= kPieceSplitThreshold) {
-          new_piece = AllocatePiece();
+          Piece* new_piece = AllocatePiece();
           new_piece->ptr = piece->ptr + aligned_size;
           new_piece->size = piece->size - aligned_size;
           piece->size = aligned_size;
@@ -265,25 +260,73 @@ typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(si
           InsertPiece2Bin(new_piece);
           MarkPiece(new_piece);
         }
-        break;
-      } else {
-        piece = nullptr;
+        return piece;
       }
     }
   }
-  if (piece != nullptr) {
-    std::ostringstream ss;
-    ss << "BinAllocator::FindPiece (" << (void*)this << ") aligned_size=" << aligned_size
-       << ", found piece ptr=" << (void*)piece->ptr << ", origin size=" << found_piece_size
-       << ", origin bin_num=" << bin_num << ", size=" << piece->size;
-    if (new_piece != nullptr) {
-      ss << ", new piece ptr=" << (void*)new_piece->ptr << ", size=" << new_piece->size
-         << ", bin_num=" << new_piece->bin_num;
-    }
-    VLOG(3) << ss.str();
-  }
-  return piece;
+  return nullptr;
 }
+
+// template<typename ThreadLock>
+// typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(size_t
+// aligned_size) {
+//   CHECK(IsAlignedSize(aligned_size, alignment_));
+//   Piece* piece = nullptr;
+//   Piece* new_piece = nullptr;
+//   int32_t bin_num = 0;
+//   size_t found_piece_size = 0;
+//   for (bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
+//     Bin* bin = &bins_.at(bin_num);
+//     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
+//       piece = *it;
+//       CHECK(piece->is_free);
+//       CHECK_NOTNULL(piece->ptr);
+//       CHECK_EQ(piece->bin_num, bin_num);
+//       CHECK(IsAlignedSize(piece->size, alignment_));
+//       if (piece->size >= aligned_size) {
+//         bin->pieces.erase(it);
+//         piece->bin_num = kInvalidBinNum;
+//         piece->is_free = false;
+//         found_piece_size = piece->size;
+//         if (piece->size >= aligned_size * 2 || piece->size - aligned_size >=
+//         kPieceSplitThreshold) {
+//           new_piece = AllocatePiece();
+//           new_piece->ptr = piece->ptr + aligned_size;
+//           new_piece->size = piece->size - aligned_size;
+//           piece->size = aligned_size;
+
+//           Piece* next_p = piece->next;
+//           piece->next = new_piece;
+//           new_piece->prev = piece;
+//           new_piece->next = next_p;
+//           if (next_p != nullptr) { next_p->prev = new_piece; }
+
+//           new_piece->is_free = true;
+//           new_piece->bin_num = kInvalidBinNum;
+//           CHECK(IsAlignedSize(piece->size, alignment_));
+//           CHECK(IsAlignedSize(new_piece->size, alignment_));
+//           InsertPiece2Bin(new_piece);
+//           MarkPiece(new_piece);
+//         }
+//         break;
+//       } else {
+//         piece = nullptr;
+//       }
+//     }
+//   }
+//   if (piece != nullptr) {
+//     std::ostringstream ss;
+//     ss << "BinAllocator::FindPiece (" << (void*)this << ") aligned_size=" << aligned_size
+//        << ", found piece ptr=" << (void*)piece->ptr << ", origin size=" << found_piece_size
+//        << ", origin bin_num=" << bin_num << ", size=" << piece->size;
+//     if (new_piece != nullptr) {
+//       ss << ", new piece ptr=" << (void*)new_piece->ptr << ", size=" << new_piece->size
+//          << ", bin_num=" << new_piece->bin_num;
+//     }
+//     VLOG(3) << ss.str();
+//   }
+//   return piece;
+// }
 
 template<typename ThreadLock>
 void BinAllocator<ThreadLock>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
@@ -338,10 +381,10 @@ Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t align
 
   CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second) << "existed mem_ptr";
 
-  VLOG(3) << "BinAllocator::AllocateBlockToExtendTotalMem (" << (void*)this
-          << ") allocating bytes=" << final_allocate_bytes
-          << ", allocated bytes=" << total_memory_bytes_ << ", new piece ptr=" << (void*)mem_ptr
-          << ", size=" << piece->size << ", bin_num=" << piece->bin_num;
+  LOG(INFO) << "BinAllocator::AllocateBlockToExtendTotalMem (" << (void*)this
+            << ") allocating bytes=" << final_allocate_bytes
+            << ", allocated bytes=" << total_memory_bytes_ << ", new piece ptr=" << (void*)mem_ptr
+            << ", size=" << piece->size << ", bin_num=" << piece->bin_num;
 
   return true;
 }
@@ -371,8 +414,8 @@ bool BinAllocator<ThreadLock>::DeallocateFreeBlockForGarbageCollection() {
   total_memory_bytes_ -= total_free_bytes;
 
   if (total_free_bytes > 0) {
-    VLOG(3) << "BinAllocator try deallocate free block for garbage collection. "
-            << " deallocate free bytes : " << total_free_bytes;
+    LOG(INFO) << "BinAllocator try deallocate free block for garbage collection. "
+              << " deallocate free bytes : " << total_free_bytes;
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
       CHECK(it != mem_ptr2block_.end());
@@ -396,9 +439,9 @@ bool BinAllocator<ThreadLock>::DeallocateFreeBlockForGarbageCollection() {
       mem_ptr2block_.erase(it);
       backend_->Deallocate(ptr, block.size);
     }
-    VLOG(3) << "BinAllocator::DeallocateFreeBlockForGarbageCollection (" << (void*)this
-            << ") total_free_bytes=" << total_free_bytes
-            << ", total_memory_bytes=" << total_memory_bytes_;
+    LOG(INFO) << "BinAllocator::DeallocateFreeBlockForGarbageCollection (" << (void*)this
+              << ") total_free_bytes=" << total_free_bytes
+              << ", total_memory_bytes=" << total_memory_bytes_;
   }
   return total_free_bytes > 0;
 }
@@ -411,8 +454,8 @@ Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size)
     return Maybe<void>::Ok();
   }
   size_t aligned_size = MemAlignedBytes(size, alignment_);
-  VLOG(3) << "BinAllocator::Allocate (" << (void*)this << ") size=" << size
-          << ", aligned_size=" << aligned_size;
+  LOG(INFO) << "BinAllocator::Allocate (" << (void*)this << ") size=" << size
+            << ", aligned_size=" << aligned_size;
 
   Piece* piece = FindPiece(aligned_size);
 
@@ -474,11 +517,11 @@ void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   }
   InsertPiece2Bin(last_piece_insert_to_bin);
 
-  VLOG(3) << "BinAllocator::Deallocate (" << (void*)this << ") ptr=" << (void*)mem_ptr
-          << ", size=" << size << ", merge_next=" << merge_next << ", merge_prev=" << merge_prev
-          << ", recycle piece size=" << last_piece_insert_to_bin->size
-          << ", bin_num=" << last_piece_insert_to_bin->bin_num
-          << ", ptr=" << (void*)last_piece_insert_to_bin->ptr;
+  LOG(INFO) << "BinAllocator::Deallocate (" << (void*)this << ") ptr=" << (void*)mem_ptr
+            << ", size=" << size << ", merge_next=" << merge_next << ", merge_prev=" << merge_prev
+            << ", recycle piece size=" << last_piece_insert_to_bin->size
+            << ", bin_num=" << last_piece_insert_to_bin->bin_num
+            << ", ptr=" << (void*)last_piece_insert_to_bin->ptr;
 }
 
 }  // namespace vm

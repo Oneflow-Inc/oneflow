@@ -91,13 +91,13 @@ struct OpCallInstructionUtil final {
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
       }
       if (blob_object->mem_case().device_type() == DeviceType::kCUDA) {
-        VLOG(3) << "OpCallInstructionPolicy::AllocateOutputBlobsMemory ["
-                << op_call_instruction_policy->DebugName(*instruction)
-                << "] stream=" << StreamType_Name(stream_type)
-                << ", blob=" << (void*)blob_object.get()
-                << ", shape=" << blob_object->shape().ToString()
-                << ", size=" << blob_object->tensor_storage()->blob_bytes()
-                << ", dptr=" << (void*)blob_object->tensor_storage()->blob_dptr();
+        LOG(INFO) << "OpCallInstructionPolicy::AllocateOutputBlobsMemory ["
+                  << op_call_instruction_policy->DebugName(*instruction)
+                  << "] stream=" << StreamType_Name(stream_type)
+                  << ", blob=" << (void*)blob_object.get()
+                  << ", shape=" << blob_object->shape().ToString()
+                  << ", size=" << blob_object->tensor_storage()->blob_bytes()
+                  << ", dptr=" << (void*)blob_object->tensor_storage()->blob_dptr();
       }
     }
     return Maybe<void>::Ok();
@@ -115,10 +115,10 @@ struct OpCallInstructionUtil final {
       tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
       if (tmp_tensor->mem_case().device_type() == DeviceType::kCUDA) {
         StreamType stream_type = instruction->stream().stream_type();
-        VLOG(3) << "OpCallInstructionPolicy::TryAllocateTempStorage ["
-                << op_call_instruction_policy->DebugName(*instruction)
-                << "] stream=" << StreamType_Name(stream_type) << ", tmp_buffer_size=" << byte_size
-                << ", ptr=" << (void*)mem_ptr;
+        LOG(INFO) << "OpCallInstructionPolicy::TryAllocateTempStorage ["
+                  << op_call_instruction_policy->DebugName(*instruction)
+                  << "] stream=" << StreamType_Name(stream_type)
+                  << ", tmp_buffer_size=" << byte_size << ", ptr=" << (void*)mem_ptr;
       }
     }
     return Maybe<void>::Ok();
