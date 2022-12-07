@@ -417,6 +417,34 @@ __global__ void AdamaxUpdateGpu(int64_t n, T scale, float l1, float l2, float be
   }
 }
 
+template<typename T, typename G>
+__global__ void RAdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+                               const float* bias_correction1_ptr, float bias_correction1_val,
+                               const float* bias_correction2_ptr, float bias_correction2_val,
+                               const float* bias_correction2_numerator_ptr,
+                               float bias_correction2_numerator_val, float epsilon,
+                               float weight_decay, float learning_rate_val, float lr_scale,
+                               const float* learning_rate, const T* scale_by_ptr,
+                               const int64_t* skip_if, const G* model_diff, T* model, T* m, T* v,
+                               float rho_inf) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
+  if (bias_correction2_numerator_ptr != nullptr) {
+    bias_correction2_val = *bias_correction2_numerator_ptr;
+  }
+
+  learning_rate_val *= lr_scale;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    RAdamUpdateFunctor<T, G>()(model_diff, model, m, v, scale, l1, l2, beta1, beta2, rho_inf,
+                               bias_correction1_val, bias_correction2_val,
+                               bias_correction2_numerator_val, epsilon, weight_decay,
+                               learning_rate_val);
+  }
+}
+
 }  // namespace
 
 template<typename T, typename G, typename C>
@@ -1015,5 +1043,67 @@ void AdamaxUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
 template struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 template struct AdamaxUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
+
+template<typename T, typename G>
+struct RAdamUpdateKernelUtil<DeviceType::kCUDA, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, const float* bias_correction1_ptr,
+                     const float* bias_correction2_ptr, const float* bias_correction2_numerator_ptr,
+                     float bias_correction1_val, float bias_correction2_val,
+                     float bias_correction2_numerator_val, float epsilon, float weight_decay,
+                     float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* m, T* v, float rho_inf);
+};
+
+template<typename T, typename G>
+void RAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr,
+    const float* bias_correction2_numerator_ptr, float bias_correction1_val,
+    float bias_correction2_val, float bias_correction2_numerator_val, float epsilon,
+    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* m, T* v,
+    float rho_inf) {
+  RAdamUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                         stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      n, scale, l1, l2, beta1, beta2, bias_correction1_ptr, bias_correction1_val,
+      bias_correction2_ptr, bias_correction2_val, bias_correction2_numerator_ptr,
+      bias_correction2_numerator_val, epsilon, weight_decay, learning_rate_val, lr_scale,
+      learning_rate_ptr, scale_by_ptr, skip_if, model_diff, model, m, v, rho_inf);
+}
+
+template<typename T>
+struct RAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, const float* bias_correction1_ptr,
+                     const float* bias_correction2_ptr, const float* bias_correction2_numerator_ptr,
+                     float bias_correction1_val, float bias_correction2_val,
+                     float bias_correction2_numerator_val, float epsilon, float weight_decay,
+                     float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
+                     T* model, T* m, T* v, float rho_inf);
+};
+
+template<typename T>
+void RAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr,
+    const float* bias_correction2_numerator_ptr, float bias_correction1_val,
+    float bias_correction2_val, float bias_correction2_numerator_val, float epsilon,
+    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+    const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff, T* model, T* m, T* v,
+    float rho_inf) {
+  RAdamUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
+      stream, n, scale, l1, l2, beta1, beta2, bias_correction1_ptr, bias_correction2_ptr,
+      bias_correction2_numerator_ptr, bias_correction1_val, bias_correction2_val,
+      bias_correction2_numerator_val, epsilon, weight_decay, learning_rate_val, lr_scale,
+      learning_rate_ptr, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model, m,
+      v, rho_inf);
+};
+
+template struct RAdamUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct RAdamUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct RAdamUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 }  // namespace oneflow

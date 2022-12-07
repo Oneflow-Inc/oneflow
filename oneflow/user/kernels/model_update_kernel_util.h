@@ -459,6 +459,46 @@ struct AdamaxUpdateKernelUtil {
                      bool maximize);
 };
 
+template<typename T, typename G>
+struct RAdamUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const G* model_diff, T* model, T* m, T* v, T scale, float l1, float l2,
+                  float beta1, float beta2, float rho_inf, float bias_correction1,
+                  float bias_correction2, float bias_correction2_numerator, float epsilon,
+                  float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+
+    const T mt = beta1 * *m + (1 - beta1) * model_diff_t;
+    const T vt = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
+    const T mt_hat = mt / bias_correction1;
+    const T rho_t = rho_inf - bias_correction2_numerator / bias_correction2;
+    *m = mt;
+    *v = vt;
+    if (rho_t > 5) {
+      const T lt = sqrt(bias_correction1 / (vt + epsilon));
+      const T rt =
+          sqrt((rho_t - 4) * (rho_t - 2) * rho_inf / ((rho_inf - 4) * (rho_inf - 2) * rho_t));
+      *model = model_val - learning_rate * mt_hat * lt * rt;
+    } else {
+      *model = model_val - learning_rate * mt_hat;
+    }
+  }
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct RAdamUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, const float* bias_correction1_ptr,
+                     const float* bias_correction2_ptr, const float* bias_correction2_numerator_ptr,
+                     float bias_correction1_val, float bias_correction2_val,
+                     float bias_correction2_numerator_val, float epsilon, float weight_decay,
+                     float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* m, T* v, float rho_inf);
+};
+
 #endif
 
 }  // namespace oneflow

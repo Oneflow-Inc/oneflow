@@ -170,7 +170,6 @@ class Adamax(Optimizer):
             optimizer_conf.base_learning_rate = lr
             self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
 
-
             optimizer_conf.adamax_conf.beta1 = beta1
             optimizer_conf.adamax_conf.beta2 = beta2
             optimizer_conf.adamax_conf.epsilon = epsilon

@@ -517,10 +517,43 @@ void AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 
 template struct AdamaxUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct AdamaxUpdateKernelUtil<DeviceType::kCPU, double, double>;
-// ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
-// float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
-// float learning_rate_val, float lr_scale, float bias_correction1_val, float bias_correction2_val,
-// const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-// const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
-// T* model, C* model_copy, T* m, T* v, T* max_v
+
+template<typename T, typename G>
+struct RAdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, const float* bias_correction1_ptr,
+                     const float* bias_correction2_ptr, const float* bias_correction2_numerator_ptr,
+                     float bias_correction1_val, float bias_correction2_val,
+                     float bias_correction2_numerator_val, float epsilon, float weight_decay,
+                     float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* m, T* v, float rho_inf);
+};
+
+template<typename T, typename G>
+void RAdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr,
+    const float* bias_correction2_numerator_ptr, float bias_correction1_val,
+    float bias_correction2_val, float bias_correction2_numerator_val, float epsilon,
+    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate_ptr,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* m, T* v,
+    float rho_inf) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate_ptr != nullptr) { learning_rate_val = *learning_rate_ptr; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
+  if (bias_correction2_numerator_ptr != nullptr) {
+    bias_correction2_val = *bias_correction2_numerator_ptr;
+  }
+  for (int64_t i = 0; i != n; ++i) {
+    RAdamUpdateFunctor<T, G>()(model_diff, model, m, v, scale, l1, l2, beta1, beta2, rho_inf,
+                               bias_correction1_val, bias_correction2_val,
+                               bias_correction2_numerator_val, epsilon, weight_decay,
+                               learning_rate_val);
+  }
+};
+template struct RAdamUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct RAdamUpdateKernelUtil<DeviceType::kCPU, double, double>;
 }  // namespace oneflow
