@@ -21,6 +21,7 @@ limitations under the License.
 //
 //===----------------------------------------------------------------------===//
 
+#include "OneFlow/UserOpConversion.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -135,11 +136,10 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
 static LogicalResult IsSingleDevice(PatternRewriter& rewriter, Attribute device_name,
                                     Attribute device_tag) {
-  auto devices = device_name.dyn_cast_or_null<ArrayAttr>();
-  if (!devices || devices.size() != 1) { return failure(); }
-  auto device_str = devices[0].dyn_cast_or_null<StringAttr>();
-  if (!device_str) { return failure(); }
-  return success(device_str.str().find("-") == std::string::npos);
+  ::oneflow::ParallelConf parallel_conf =
+      user_op::getParallelConfFromAttrs(device_name, device_tag);
+  ::oneflow::ParallelDesc parallel_desc(parallel_conf);
+  return success(parallel_desc.parallel_num() == 1);
 }
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
