@@ -74,9 +74,8 @@ template<typename T>
 PyObject* PyTensor_wrap(const std::shared_ptr<T>& data, PyTensorObject* bind_pyobj) {
   if (!data) { Py_RETURN_NONE; }
   PyObject* py_tensor = (PyObject*)data->pyobject();
-  if (py_tensor) {
+  if (bind_pyobj == nullptr && py_tensor) {
     // Has been wrapped by python before
-    if (bind_pyobj) { throw std::runtime_error("Tensor has been binded other PyTensorObject"); }
     if (data->owns_pyobj()) {
       // PyTensor are not alive in python side, so we flip back the ownership to PyTensor
       data->set_owns_pyobj(false);
@@ -94,9 +93,9 @@ PyObject* PyTensor_wrap(const std::shared_ptr<T>& data, PyTensorObject* bind_pyo
       bind_pyobj = (PyTensorObject*)PyTensorObject_Type->tp_alloc(*AllocType<T>::value, 0);
     }
     bind_pyobj->data = data;
-    data->set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>(
+    bind_pyobj->data->set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>(
         bind_pyobj, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
-    data->set_owns_pyobj(false);
+    bind_pyobj->data->set_owns_pyobj(false);
     return (PyObject*)bind_pyobj;
   }
 }
@@ -123,11 +122,6 @@ static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs)
   auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   PyTensor_wrap<Tensor>(PyTensor_Unpack(temp), (PyTensorObject*)self);
-
-  // reset temp data to prevent clearing the pyobject
-  // when the temp is deallocated
-  ((PyTensorObject*)temp)->data.reset();
-  Py_XDECREF(temp);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
@@ -135,6 +129,8 @@ static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs)
 static void PyTensorObject_dealloc(PyObject* self) {
   if (PyTensor_tryResurrect(self)) { return; }
 
+  auto* _self = (PyTensorObject*)self;
+  if (_self->data) { _self->data.reset(); }
   // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
