@@ -38,12 +38,44 @@ if(THIRD_PARTY)
       -DCUTLASS_ENABLE_LIBRARY:BOOL=ON
       -DCUTLASS_NVCC_ARCHS:STRING=80;86
       -DCUTLASS_ENABLE_TESTS:BOOL=OFF
+      -DCUTLASS_NVCC_EMBED_PTX:BOOL=OFF
       )
 
 add_custom_target(cutlass_copy_examples_to_destination DEPENDS cutlass)
 set(CUTLASS_SOURCE_EXAMPLES_DIR ${CUTLASS_SOUREC_DIR}/examples)
-file(GLOB_RECURSE examples_files RELATIVE ${CUTLASS_SOURCE_EXAMPLES_DIR} ${CUTLASS_SOURCE_EXAMPLES_DIR}/*)
-foreach(filename ${examples_files} )
+
+set(CUTLASS_INSTALL_EXAMPLES_FILES 
+"41_fused_multi_head_attention/iterators/make_residual_last.h"
+"41_fused_multi_head_attention/iterators/epilogue_predicated_tile_iterator.h"
+"41_fused_multi_head_attention/iterators/predicated_tile_iterator_residual_last.h"
+"41_fused_multi_head_attention/iterators/predicated_tile_access_iterator_residual_last.h"
+"41_fused_multi_head_attention/mma_from_smem.h"
+"41_fused_multi_head_attention/epilogue_rescale_output.h"
+"41_fused_multi_head_attention/attention_scaling_coefs_updater.h"
+"41_fused_multi_head_attention/gemm_kernel_utils.h"
+"41_fused_multi_head_attention/fmha_grouped_problem_visitor.h"
+"41_fused_multi_head_attention/fmha_grouped.h"
+"41_fused_multi_head_attention/default_fmha_grouped.h"
+"41_fused_multi_head_attention/epilogue_pipelined.h"
+"41_fused_multi_head_attention/epilogue_thread_apply_logsumexp.h"
+"41_fused_multi_head_attention/kernel_forward.h"
+"41_fused_multi_head_attention/gemm/custom_mma_multistage.h"
+"41_fused_multi_head_attention/gemm/custom_mma_base.h"
+"41_fused_multi_head_attention/gemm/custom_mma.h"
+"41_fused_multi_head_attention/gemm/custom_mma_pipelined.h"
+"41_fused_multi_head_attention/find_default_mma.h"
+"41_fused_multi_head_attention/debug_utils.h"
+"45_dual_gemm/test_run.h"
+"45_dual_gemm/kernel/dual_gemm.h"
+"45_dual_gemm/device/dual_gemm.h"
+"45_dual_gemm/dual_gemm_run.h"
+"45_dual_gemm/thread/left_silu_and_mul.h"
+"45_dual_gemm/threadblock/dual_mma_multistage.h"
+"45_dual_gemm/threadblock/dual_epilogue.h"
+"45_dual_gemm/threadblock/dual_mma_base.h"
+	)
+
+foreach(filename ${CUTLASS_INSTALL_EXAMPLES_FILES} )
     add_custom_command(TARGET cutlass_copy_examples_to_destination
 	    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CUTLASS_SOURCE_EXAMPLES_DIR}/${filename} ${CUTLASS_INSTALL_DIR}/examples/${filename})
 endforeach()

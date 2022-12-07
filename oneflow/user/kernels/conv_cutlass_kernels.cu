@@ -88,10 +88,7 @@ const cutlass::library::Operation* FindConv2dOperation(
   {
     std::lock_guard<std::mutex> lock(cache_mutex);
     auto it = cache.find(cache_key);
-    if (it != cache.end()) {
-      LOG(ERROR) << "HIT";
-      return it->second;
-    }
+    if (it != cache.end()) { return it->second; }
   }
 
   constexpr int turing_warmup_iters = 3;
@@ -108,10 +105,13 @@ const cutlass::library::Operation* FindConv2dOperation(
         != cutlass::library::Singleton::get().operation_table.conv2d_operations.cend());
   const cutlass::library::ConvOperationVectorMap& operations_map = operations_map_it->second;
   for (const auto& pair : operations_map) {
-    if (pair.first.compute_capability * 10 > stream->cuda_arch()) { continue; }
-    LOG(ERROR) << pair.first.compute_capability << " " << pair.first.iterator_algorithm << " "
-               << pair.second.size();
     for (auto operation : pair.second) {
+      if (operation->description().tile_description.minimum_compute_capability * 10
+              > stream->cuda_arch()
+          || operation->description().tile_description.maximum_compute_capability * 10
+                 < stream->cuda_arch()) {
+        continue;
+      }
       auto status = operation->can_implement(&configuraion, &arguments);
       const auto* conv_description =
           static_cast<const cutlass::library::ConvDescription*>(&operation->description());
@@ -120,6 +120,12 @@ const cutlass::library::Operation* FindConv2dOperation(
       const size_t device_workspace_size = operation->get_device_workspace_size(&configuraion);
       if (device_workspace_size > workspace_size) { continue; }
       std::vector<uint8_t> host_workspace(host_workspace_size, 0);
+      if (operation->initialize(&configuraion, host_workspace.data(), workspace,
+                                stream->cuda_stream())
+          != cutlass::Status::kSuccess) {
+        continue;
+      }
+
       const auto Run = [&]() {
         auto init_status = operation->initialize(&configuraion, host_workspace.data(), workspace,
                                                  stream->cuda_stream());
@@ -136,7 +142,7 @@ const cutlass::library::Operation* FindConv2dOperation(
       OF_CUDA_CHECK(cudaEventSynchronize(end));
       float time = 0;
       OF_CUDA_CHECK(cudaEventElapsedTime(&time, start, end));
-      LOG(ERROR) << operation->description().name << " " << time;
+      VLOG(3) << operation->description().name << " " << time;
       if (fastest_operation == nullptr || time < fastest_time) {
         fastest_operation = operation;
         fastest_time = time;
@@ -144,7 +150,7 @@ const cutlass::library::Operation* FindConv2dOperation(
     }
   }
   CHECK(fastest_operation != nullptr);
-  LOG(ERROR) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
+  VLOG(3) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
   {
     std::lock_guard<std::mutex> lock(cache_mutex);
     cache[cache_key] = fastest_operation;
@@ -159,11 +165,6 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
-    return nullptr;
-  }
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -171,6 +172,9 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+    CHECK(bias == nullptr);
+    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+    CHECK(add_to_output == nullptr);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
@@ -186,12 +190,10 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     const int k = weight->shape_view().At(0);
     const int r = weight->shape_view().At(1);
     const int s = weight->shape_view().At(2);
-    // const int c = in->shape_view().At(3);
+    CHECK_EQ(weight->shape_view().At(3), c);
 
-    // const int n = out->shape_view().At(0);
     const int p = out->shape_view().At(1);
     const int q = out->shape_view().At(2);
-    // const int c = out->shape_view().At(3);
 
     auto* stream = ctx->stream()->As<ep::CudaStream>();
 
@@ -225,11 +227,7 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     arguments.A = in->dptr();
     arguments.B = weight->dptr();
     arguments.reordered_B = nullptr;
-    if (bias == nullptr) {
-      arguments.C = nullptr;
-    } else {
-      arguments.C = bias->dptr();
-    }
+    arguments.C = nullptr;
     arguments.D = out->mut_dptr();
 
     union SP {
@@ -259,37 +257,10 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     std::vector<uint8_t> host_workspace(host_workspace_size, 0);
     auto init_status = operation->initialize(&configuraion, host_workspace.data(),
                                              tmp_buffer->mut_dptr(), stream->cuda_stream());
+    CHECK(init_status == cutlass::Status::kSuccess);
     auto run_status = operation->run(&arguments, host_workspace.data(), tmp_buffer->mut_dptr(),
                                      stream->cuda_stream());
-
-    /*
-    const auto& operations_map_it =
-        cutlass::library::Singleton::get().operation_table.conv2d_operations.find(key);
-    CHECK(operations_map_it
-          != cutlass::library::Singleton::get().operation_table.conv2d_operations.cend());
-    const cutlass::library::ConvOperationVectorMap& operations_map = operations_map_it->second;
-    for (const auto& pair : operations_map) {
-      if (pair.first.compute_capability * 10 > stream->cuda_arch()) { continue; }
-      LOG(ERROR) << pair.first.compute_capability << " " << pair.first.iterator_algorithm << " "
-                 << pair.second.size();
-      for (auto operation : pair.second) {
-        auto status = operation->can_implement(&configuraion, &arguments);
-        LOG(ERROR) << operation->description().name << " " << status;
-        const auto* conv_description =
-            static_cast<const cutlass::library::ConvDescription*>(&operation->description());
-        LOG(ERROR) << "alignment " << conv_description->A.alignment << " "
-                   << conv_description->B.alignment << " " << conv_description->C.alignment;
-        if (status != cutlass::Status::kSuccess) { continue; }
-        const size_t host_workspace_size = operation->get_host_workspace_size(&configuraion);
-        const size_t device_workspace_size = operation->get_device_workspace_size(&configuraion);
-        if (device_workspace_size > tmp_buffer->shape_view().elem_cnt()) { continue; }
-        std::vector<uint8_t> host_workspace(host_workspace_size, 0);
-        auto init_status = operation->initialize(&configuraion, host_workspace.data(),
-                                                 tmp_buffer->mut_dptr(), stream->cuda_stream());
-        auto run_status = operation->run(&arguments, host_workspace.data(), tmp_buffer->mut_dptr(),
-                                         stream->cuda_stream());
-      }
-    } */
+    CHECK(run_status == cutlass::Status::kSuccess);
   }
 };
 
@@ -297,6 +268,7 @@ REGISTER_USER_KERNEL("conv2d")
     .SetCreateFn<Conv2dCutlassKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobAttr<std::string>("data_format") == "channels_last")
+                     && (user_op::HobAttr<int32_t>("groups") == 1)
                      && (user_op::HobDataType("in", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
       // use static workspace size
