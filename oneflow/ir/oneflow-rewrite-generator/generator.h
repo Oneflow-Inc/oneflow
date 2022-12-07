@@ -1,5 +1,7 @@
 #pragma once
+#include <llvm/ADT/Hashing.h>
 #include <iostream>
+#include <unordered_map>
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -21,20 +23,24 @@ class Generator {
     pdl = PDLPatternModule(
         ModuleOp::create(FileLineColLoc::get(builder.getStringAttr("pdl.mlir"), 0, 0)));
   }
-  void dfs(int depth, SmallVector<Value*>& input);
+  void dfs(int depth, SmallVector<Value*>& inputs);
 
  private:
   template<typename... Args>
-  void dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& input);
+  void dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& inputs);
   template<typename T>
-  void dfs_broadcast_binary_op(int depth, SmallVector<Value*>& input);
+  void dfs_broadcast_binary_op(int depth, SmallVector<Value*>& inputs);
 
   const int max_depth = 3;
   MLIRContext* context;
   OpBuilder builder;
   ModuleOp graph;
   PDLPatternModule pdl;
+  std::unordered_map<llvm::hash_code, Operation*> D;
   auto get_random_tensor();
+  ModuleOp build_pdl_from_oneflow_op(Operation* op);
+  size_t fingerprint(Operation*);
+  Operation* pdl_temp;
 };
 }  // namespace oneflow
 }  // namespace mlir

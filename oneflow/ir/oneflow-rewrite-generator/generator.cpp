@@ -1,4 +1,6 @@
 #include "generator.h"
+#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Visitors.h"
 #include "wrapper.h"
 #include <llvm/ADT/SmallVector.h>
@@ -96,7 +98,7 @@ void Generator::run() {
   auto opconf = job.net().op(1);
   for (auto& op : job.net().op()) {
     auto& user_op_conf = op.user_conf();
-    user_op_conf.input();
+    user_op_conf.input();  // not sure we need this
   }
   // LoadJobFromIR()
   // check their hash (and that the hashes are equal)
@@ -122,7 +124,12 @@ void Generator::run() {
   builder.create<pdl::ReplaceOp>(rewrite->getLoc(), pdl_res1, pdl_res2, ValueRange());
 }
 
-void Generator::dfs(int depth, SmallVector<Value*>& input) {
+size_t Generator::fingerprint(Operation* op) {
+  // TODO: get forward result, get hash
+  return {};
+}
+
+void Generator::dfs(int depth, SmallVector<Value*>& inputs) {
   auto res = graph.walk([](Operation* op) {
     // add op to some set, check existence
     op->print(llvm::outs());
@@ -130,39 +137,73 @@ void Generator::dfs(int depth, SmallVector<Value*>& input) {
   });
   if (res.wasInterrupted())  // contains duplicate operations
     return;
+  auto graph_pdl = build_pdl_from_oneflow_op(graph);
+  D.insert({fingerprint(graph), graph_pdl});
   if (depth > 3) return;
   dfs_broadcast_binary_ops<
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
-      >(depth, input);
+      >(depth, inputs);
+  // and binary ops, conv ops, math ops, matmul ops, etc.
   // how to check validity of Operation?
   // use verifier, is that enough?
 }
 
+ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
+  static int graph_index{};
+  // go over the operands
+  BlockAndValueMapping bav{};
+  auto new_pdl_module = ModuleOp::create(FileLineColLoc::get(
+      builder.getStringAttr("pdl-" + std::to_string(graph_index++) + ".mlir"), 0, 0));
+  auto loc = new_pdl_module.getLoc();
+  // clone graph to the new pdl module
+  assert(graph->getNumRegions() == 1);
+  for (Block& block : graph.getBodyRegion().getBlocks()) {
+    for (Operation& op : block.getOperations()) {
+      if (llvm::dyn_cast<FrozenVariableOp>(op)) {
+        // create pdl operand op
+        auto pdlop = builder.create<pdl::OperandOp>(loc);
+        bav.map(op.getResult(0), pdlop);  // can this compile?
+        loc = pdlop->getLoc();
+      } else {
+        // normal op, create operation op
+        SmallVector<Value> pdl_operands;
+        for (auto operand : op.getOperands()) { pdl_operands.push_back(bav.lookup(operand)); }
+        auto pdlop =
+            builder.create<pdl::OperationOp>(loc, op.getName(), pdl_operands, op.getAttrs());
+        // what if the original op has multiple results? pdl OperationOp is OneResult??
+        for (auto result : op.getResults()) { bav.map(result, pdlop); }
+        loc = pdlop->getLoc();
+      }
+    }
+  }
+  return new_pdl_module;
+}
+
 template<typename... Args>
-void Generator::dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& input) {
+void Generator::dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& inputs) {
   /**
-   * for i ∈ input and i is a valid input to op do
+   * for i ∈ inputs and i is a valid input to op do
    * Add operator op into graph G.
    * Add the output tensors of op into I.
    */
-  (void)std::initializer_list<int>{0, (dfs_broadcast_binary_op<Args>(depth + 1, input), 0)...};
+  (void)std::initializer_list<int>{0, (dfs_broadcast_binary_op<Args>(depth + 1, inputs), 0)...};
   // taken from Dialect::addOperations
 }
 
 template<typename T>
-void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value*>& input) {
-  input.reserve(input.size() + 1);
-  for (auto it1 = input.begin(); it1 != input.end(); ++it1) {
-    for (auto it2 = it1; it2 != input.end(); ++it2) {
+void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value*>& inputs) {
+  inputs.reserve(inputs.size() + 1);
+  for (auto it1 = inputs.begin(); it1 != inputs.end(); ++it1) {
+    for (auto it2 = it1; it2 != inputs.end(); ++it2) {
       auto op = builder.create<T>(graph->getLoc(), TypeRange((*it1)->getType()),
                                   ValueRange({**it1, **it2}));
       if (op.verifyInvariants().succeeded()) {
-        for (OpResult out : op->getOpResults()) { input.push_back(&out); }
+        for (OpResult out : op->getOpResults()) { inputs.push_back(&out); }
         // go down one level
-        dfs(depth + 1, input);
+        dfs(depth + 1, inputs);
         // remove op results from input
-        input.pop_back_n(op->getOpResults().size());
+        inputs.pop_back_n(op->getOpResults().size());
         // delete op from graph, how to delete??
       } else {
         return;
