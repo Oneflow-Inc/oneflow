@@ -15,10 +15,12 @@ limitations under the License.
 """
 import os
 import unittest
+import types
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.nn as nn
 import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
@@ -49,6 +51,33 @@ class TestGraphBlock(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphHasFunc()
+        x = np.ones((10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
+
+    def test_module_has_special_attr(test_case):
+        class CustomModuleHasSpecialAttr(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.config = 1
+                self.name = "test_name"
+
+            def forward(self, x):
+                test_case.assertEqual(self.config, 1)
+                test_case.assertEqual(self.name, "test_name")
+                test_case.assertEqual(self.to(nn.graph.GraphModule).name, "m")
+                return x
+
+        class CustomGraphHasSpecialAttr(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModuleHasSpecialAttr()
+
+            def build(self, x):
+                return self.m(x)
+
+        g = CustomGraphHasSpecialAttr()
         x = np.ones((10, 10))
         x = flow.tensor(x, dtype=flow.float32)
         out = g(x)
@@ -87,7 +116,7 @@ class TestGraphBlock(flow.unittest.TestCase):
                 return self._forward_impl(x)
 
             def _forward_impl(self, x):
-                test_case.assertTrue(isinstance(self.linear, flow.nn.graph.Block))
+                test_case.assertTrue(isinstance(self.linear, flow.nn.graph.Proxy))
                 return self.linear(x)
 
         class LinearTrainGraph(flow.nn.Graph):
@@ -137,7 +166,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linears = flow.nn.Sequential(*list_of_m)
-                self.linears.config.activation_checkpointing = True
+                self.linears.to(nn.graph.GraphModule).activation_checkpointing = True
 
             def build(self, x):
                 x = self.linears(x)
@@ -185,9 +214,11 @@ class TestGraphBlock(flow.unittest.TestCase):
                 super().__init__()
                 self.linears = flow.nn.ModuleList(list_of_m)
                 # NOTE: ModuleList doesn't have config.
-                # self.linears.config.activation_checkpointing = True
+                # self.linears.to(GraphModule).activation_checkpointing = True
                 for i, _ in enumerate(self.linears):
-                    self.linears[i].config.activation_checkpointing = True
+                    self.linears[i].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleList can act as an iterable, or be indexed using ints
@@ -205,6 +236,39 @@ class TestGraphBlock(flow.unittest.TestCase):
 
         # print(module_list_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_module_list_slice(test_case):
+        class ModuleListSlice(nn.Module):
+            def __init__(self,):
+                super().__init__()
+                linear1 = nn.Linear(5, 5, bias=False)
+                linear2 = nn.Linear(5, 5, bias=False)
+                linear3 = nn.Linear(5, 5, bias=False)
+                self.modulelist = nn.ModuleList([linear1, linear2, linear3])
+
+            def forward(self, x):
+                sliced_m = self.modulelist[1:]
+                test_case.assertEqual(len(sliced_m), 2)
+                y = sliced_m[1](x)
+                return y
+
+        class GraphModuleListSlice(nn.Graph):
+            def __init__(self, m):
+                super().__init__()
+                self.m = m
+
+            def build(self, x):
+                return self.m(x)
+
+        in_tensor = flow.randn(5, 5)
+
+        m = ModuleListSlice()
+        eager_out = m(in_tensor)
+
+        g = GraphModuleListSlice(m)
+        graph_out = g(in_tensor)
+
+        test_case.assertTrue(np.array_equal(eager_out.numpy(), graph_out.numpy()))
 
     def test_block_with_dict_container(test_case):
         class SubModule0(flow.nn.Module):
@@ -239,9 +303,11 @@ class TestGraphBlock(flow.unittest.TestCase):
                 self.linears = flow.nn.ModuleDict(dict_of_m)
 
                 # NOTE: ModuleDict doesn't have config.
-                # self.linears.config.activation_checkpointing = True
+                # self.linears.to(GraphModule).activation_checkpointing = True
                 for k, _ in self.linears.items():
-                    self.linears[k].config.activation_checkpointing = True
+                    self.linears[k].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleDict can act as an iterable, or get using key
@@ -329,6 +395,60 @@ class TestGraphBlock(flow.unittest.TestCase):
 
         # print(para_dict_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_mixin_module(test_case):
+        class ModuleMixin(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self._dtype = flow.float32
+
+            @property
+            def dtype(self):
+                return self._dtype
+
+        class ConfigMixin:
+            def hello_from_cfg(self):
+                return "hello_from_cfg"
+
+            @property
+            def property_from_cfg(self):
+                return 128
+
+        class MixedModule(ModuleMixin, ConfigMixin):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                test_case.assertEqual(self.dtype, flow.float32)
+                test_case.assertEqual(self.hello_from_cfg(), "hello_from_cfg")
+                test_case.assertEqual(self.property_from_cfg, 128)
+                return x
+
+        mixedm = MixedModule()
+
+        class GraphConfigMixin(object):
+            @property
+            def hello_from_graph(self):
+                return "hello_from_gcfg"
+
+            def mixin_get_name(self):
+                return self.name
+
+        class MixinGraph(flow.nn.Graph, GraphConfigMixin):
+            def __init__(self):
+                super().__init__()
+                self.m = mixedm
+
+            def build(self, x):
+                test_case.assertEqual(self.hello_from_graph, "hello_from_gcfg")
+                test_case.assertEqual(self.mixin_get_name(), self.name)
+                return self.m(x)
+
+        g = MixinGraph()
+        x = np.ones((10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ namespace oneflow {
 
 Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
   return Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&]() -> Maybe<void> {
-    while (cnt_val_ > 0) {};
+    while (cnt_val_ > 0) {}
     return Maybe<void>::Ok();
   });
 }

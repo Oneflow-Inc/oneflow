@@ -54,7 +54,7 @@ def _test_linear_graph(test_case, device):
             return self.my_linear(x)
 
     linear_g = LinearGraph()
-    linear_g.debug(1)
+    linear_g.debug(0)
     of_lazy_out = linear_g(x)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
@@ -83,7 +83,7 @@ def _test_linear_graph_func(test_case, device):
     np_out = np.matmul(input_arr, np_weight)
     test_case.assertTrue(np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05))
 
-    @flow.nn.Graph.to_graph
+    @flow.nn.Graph.trace
     def linear_func(x):
         return linear(x)
 

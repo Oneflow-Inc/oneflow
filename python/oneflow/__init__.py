@@ -77,6 +77,7 @@ from oneflow._C import amin
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
 from oneflow._C import split
@@ -94,6 +95,8 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
+from oneflow._C import logaddexp
+from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import mish
 from oneflow._C import repeat
@@ -208,7 +211,6 @@ from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import masked_fill_
-from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
@@ -227,6 +229,7 @@ from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
+from oneflow._C import index_add, index_add_
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -305,7 +308,7 @@ from oneflow.framework.dtype import (
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
-from oneflow._C import from_numpy
+from oneflow._C import from_numpy, from_dlpack
 
 from oneflow.autograd import (
     enable_grad,
@@ -346,6 +349,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.equal import equal_op as equal
 from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
@@ -405,6 +409,11 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
+from oneflow.nn.modules.broadcast_ops import (
+    broadcast_tensors,
+    broadcast_shapes,
+    broadcast_to,
+)
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
 # autocast
@@ -440,6 +449,7 @@ import oneflow.multiprocessing
 import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
+import oneflow.mock_torch
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
