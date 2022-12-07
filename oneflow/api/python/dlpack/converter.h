@@ -13,25 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/PatternMatch.h"
-
-namespace mlir {
+#include "oneflow/api/python/dlpack/dlpack.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-namespace rewrites {
+namespace one {
+class Tensor;
+}
 
-mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
-void populateRewrites(RewritePatternSet& patterns);
+Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src);
 
-}  // namespace rewrites
-
-namespace constraints {
-
-void populateConstraints(RewritePatternSet& patterns);
-
-}  // namespace constraints
 }  // namespace oneflow
-
-}  // namespace mlir
