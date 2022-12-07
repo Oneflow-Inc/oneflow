@@ -126,35 +126,34 @@ inline ge::TensorDesc convertAscendType(Attribute type, Attribute shape) {
   return convertAscendType(type.dyn_cast<mlir::oneflow::DataTypeAttr>().getValue(), shapeArray);
 }
 
-inline ge::Operator::OpListInt convert4DimSize(ArrayAttr sizes) {
-  assert(sizes.size() == 2 || sizes.size() == 4);
-  if (sizes.size() == 2) {
-    int s0 = sizes[0].dyn_cast<IntegerAttr>().getSInt();
-    int s1 = sizes[1].dyn_cast<IntegerAttr>().getSInt();
+inline ge::Operator::OpListInt convertPaddings(ArrayAttr paddings) {
+  assert(paddings.size() == 2 || paddings.size() == 4);
+  if (paddings.size() == 2) {
+    int s0 = paddings[0].dyn_cast<IntegerAttr>().getSInt();
+    int s1 = paddings[1].dyn_cast<IntegerAttr>().getSInt();
     return ge::Operator::OpListInt({s0, s0, s1, s1});
   } else {
-    int s0 = sizes[0].dyn_cast<IntegerAttr>().getSInt();
-    int s1 = sizes[1].dyn_cast<IntegerAttr>().getSInt();
-    int s2 = sizes[2].dyn_cast<IntegerAttr>().getSInt();
-    int s3 = sizes[3].dyn_cast<IntegerAttr>().getSInt();
+    int s0 = paddings[0].dyn_cast<IntegerAttr>().getSInt();
+    int s1 = paddings[1].dyn_cast<IntegerAttr>().getSInt();
+    int s2 = paddings[2].dyn_cast<IntegerAttr>().getSInt();
+    int s3 = paddings[3].dyn_cast<IntegerAttr>().getSInt();
     return ge::Operator::OpListInt({s0, s1, s2, s3});
   }
 }
 
-inline ge::Operator::OpListInt convertPaddings(ArrayAttr paddings) {
-  return convert4DimSize(paddings);
-}
-
 inline ge::Operator::OpListInt convertStrides(ArrayAttr strides) {
-  return convert4DimSize(strides);
+  assert(strides.size() == 2);
+  int s0 = strides[0].dyn_cast<IntegerAttr>().getSInt();
+  int s1 = strides[1].dyn_cast<IntegerAttr>().getSInt();
+  return ge::Operator::OpListInt({1, 1, s0, s1});
 }
 
 inline ge::Operator::OpListInt convertDilations(ArrayAttr dilations) {
-  return convert4DimSize(dilations);
+  return convertStrides(dilations);
 }
 
 inline ge::Operator::OpListInt convertKernelSize(ArrayAttr kernel_size) {
-  return convert4DimSize(kernel_size);
+  return convertStrides(kernel_size);
 }
 
 inline StringRef convertDataFormat(StringRef dataFormat) {

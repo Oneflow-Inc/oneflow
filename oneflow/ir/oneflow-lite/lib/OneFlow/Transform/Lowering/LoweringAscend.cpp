@@ -132,6 +132,10 @@ void AscendCompiler::serializeToBuffer(llvm::SmallVector<uint8_t, 4>* data) {
   ge::Graph graph("ascend-graph");
   graph.SetInputs(ins).SetOutputs(outs);
 
+  if (!graph.IsValid()) {
+    llvm::errs() << "ascend graph is invalid\n";
+    exit(1);
+  }
   const char* outputFilename = ".__TMP__ascend_graph";
   graph.SaveToFile(outputFilename);
 
@@ -285,7 +289,11 @@ void AscendCompiler::lowerOp(Add2Op op) {
 
 void AscendCompiler::lowerOp(AdaptiveAvgPool2DOp op) {
   auto adaptiveAvgPoolOp = createOp<ge::op::AdaptiveAvgPool2d>(op.op_name());
-  adaptiveAvgPoolOp->set_attr_output_size(convert4DimSize(op.output_size()));
+  ArrayAttr output_size = op.output_size();
+  assert(output_size.size() == 2);
+  int64_t s0 = output_size[0].dyn_cast<IntegerAttr>().getSInt();
+  int64_t s1 = output_size[1].dyn_cast<IntegerAttr>().getSInt();
+  adaptiveAvgPoolOp->set_attr_output_size(ge::Operator::OpListInt({s0, s1}));
   SET_INPUT(adaptiveAvgPoolOp, x, getValue(op.x()));
   auto outType = convertAscendType(op.y().getType());
   adaptiveAvgPoolOp->update_output_desc_y(outType);
