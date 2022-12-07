@@ -66,7 +66,6 @@ Pattern {
 Pattern {
   let device_name: Attr;
   let device_tag: Attr;
-  let has_int_operand: Attr;
   let has_float_operand: Attr;
   let int_operand: Attr;
   let float_operand: Attr;
@@ -75,15 +74,13 @@ Pattern {
   let integer_fill_value: Attr;
   let is_floating_fill_value: Attr;
 
-
   let tril = 
     op<oneflow.tril>(
       op<oneflow.scalar_mul>(x: Value)
-      {device_name = device_name, device_tag = device_tag, has_int_operand = has_int_operand, 
+      {device_name = device_name, device_tag = device_tag, 
         has_float_operand = has_float_operand, int_operand = int_operand, float_operand = float_operand}) 
       {device_name = device_name, device_tag = device_tag, diagonal = diagonal, floating_fill_value = floating_fill_value, 
         integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value} -> (out: Type);
-
   
   rewrite tril with{
     let floating_scale_value = float_operand;
@@ -91,14 +88,13 @@ Pattern {
     let is_floating_scale_value = has_float_operand;
     replace tril with CopyUserOpAttrs(tril, op<oneflow.fused_scale_tril>(x)
     {diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value, is_floating_fill_value = is_floating_fill_value,
-      floating_scale_value, integer_scale_value, is_floating_scale_value} -> (out));
+      floating_scale_value = floating_scale_value, integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out));
   };
 }
 
 Pattern {
   let device_name: Attr;
   let device_tag: Attr;
-  let has_int_operand: Attr;
   let has_float_operand: Attr;
   let int_operand: Attr;
   let float_operand: Attr;
@@ -107,22 +103,20 @@ Pattern {
   let integer_fill_value: Attr;
   let is_floating_fill_value: Attr;
  
-
   let scalar = 
     op<oneflow.scalar_mul>(
       op<oneflow.tril>(x: Value)
       {device_name = device_name, device_tag = device_tag, diagonal = diagonal, floating_fill_value = floating_fill_value, 
         integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value }) 
-      {device_name = device_name, device_tag = device_tag, has_int_operand = has_int_operand, 
+      {device_name = device_name, device_tag = device_tag, 
         has_float_operand = has_float_operand, int_operand = int_operand, float_operand = float_operand} -> (out: Type);
 
-  
   rewrite scalar with{
     let floating_scale_value = float_operand;
     let integer_scale_value = int_operand;
     let is_floating_scale_value = has_float_operand;
     replace scalar with CopyUserOpAttrs(scalar, op<oneflow.fused_scale_tril>(x)
     {diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value, is_floating_fill_value = is_floating_fill_value,
-      floating_scale_value, integer_scale_value, is_floating_scale_value} -> (out));
+      floating_scale_value = floating_scale_value, integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out));
   };
 }
