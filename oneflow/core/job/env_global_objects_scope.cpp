@@ -71,11 +71,15 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_minloglevel = logging_conf.minloglevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
-  if (!FLAGS_logtostderr || IsInDebugMode()) {
-    LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  if (IsInDebugMode()) {
+    // record all level logs to file in debug mode
+    FLAGS_logtostderr = 0;
+    FLAGS_minloglevel = 0;  // 0=INFO
   }
+  if (!FLAGS_logtostderr) { LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir); }
 }
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }

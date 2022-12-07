@@ -158,6 +158,7 @@ def main():
         os.makedirs(log_directory_path, exist_ok=True)
         current_env["GLOG_log_dir"] = log_directory_path
         current_env["GLOG_logtostderr"] = str(0)
+        current_env["GLOG_minloglevel"] = str(0)
         if args.redirect_stdout_and_stderr:
             node_rank = args.node_rank
             stdout_handle = open(os.path.join(log_directory_path, stdout_filename), "w")
