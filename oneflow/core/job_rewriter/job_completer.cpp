@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 
 namespace oneflow {
 
@@ -109,47 +109,46 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   const auto& job_name = job->job_conf().job_name();
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   if (!Singleton<ResourceDesc, ForSession>::Get()
            ->resource()
            .disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
-  compile_tc->Count("[GraphCompile]" + job_name + " GroupBoxingByDstParallel", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " GroupBoxingByDstParallel", 1, true);
   if (GlobalProcessCtx::WorldSize() > 1) {
     JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   }
-  compile_tc->Count("[GraphCompile]" + job_name + " BoxingWithMiddleNodes", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " BoxingWithMiddleNodes", 1, true);
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
-  compile_tc->Count("[GraphCompile]" + job_name + " SetCtrlInOpName4VariableOp", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " SetCtrl", 1, true);
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
-  compile_tc->Count("[GraphCompile]" + job_name + " AutoPrependTick", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " AutoPrependTick", 1, true);
   JUST(WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape));
-  compile_tc->Count("[GraphCompile]" + job_name + " AddTickForTimeShape", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " AddTickForTimeShape", 1, true);
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
-  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoSourceAndSinkTick", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " AutoSourceAndSinkTick", 1, true);
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
-  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoInterfaceCriticalSectionTick",
-                    1);
+  compile_tc->Count("[GraphCompile]" + job_name + " CriticalSectionTick", 1, true);
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
-  compile_tc->Count("[GraphCompile]" + job_name + " SystemOpFillJobNamePass", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " SystemOpFillJobNamePass", 1, true);
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
-  compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
 #ifdef WITH_CUDA
   if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
-    compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1);
+    compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1, true);
     // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
-    compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1);
+    compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
   }
 #endif  // WITH_CUDA
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   JUST(CheckOpGraph(OpGraph(*job)));
-  compile_tc->Count("[GraphCompile]" + job_name + " CheckOpGraph", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " CheckOpGraph", 1, true);
   return Maybe<void>::Ok();
 }
 
