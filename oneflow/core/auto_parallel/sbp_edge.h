@@ -81,7 +81,7 @@ class SbpEdge final {
   bool EmptyLbi() const;
 
   // Get the minimum element in Cost
-  double GetMinCost();
+  double GetMinCost(double memory_ratio_search);
   // Get the maximum element in Cost
   double GetMaxCost() const;
 
@@ -150,7 +150,13 @@ class SbpEdge final {
   // Minimum cost in the 2D array Cost.
   // Would be initialized after GetMinCost();
   // Only used in the final graph.
+  // Such pre-store and access process save a lot time.
+  // Gpt2 has 1178 storing and 14053 taking.
+  // Bert has 1464 storing and 17633 taking.
   double min_cost_ = -1.0;
+  // If consider memory, each GetMinCost would have a memory_ratio_search
+  // Use the stored value for the same memory_ratio_search
+  double memory_ratio_search4min_cost_ = -1.0;
 
   // The produced blob belongs to the support of the total memory
   bool in_memory_support_ = false;

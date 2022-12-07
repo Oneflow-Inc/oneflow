@@ -585,8 +585,8 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     order2acc_min_in_nbh_cost[order] =
         order2acc_min_in_nbh_cost[order + 1]
         + *std::min_element(out_nbh_costs[nbh_id].begin(), out_nbh_costs[nbh_id].end())
-        + node_list_[nbh_id2node_list_id[nbh_id]]->EvalMinInNbhCost(node_list_id2nbh_id,
-                                                                    nbh_id2order);
+        + node_list_[nbh_id2node_list_id[nbh_id]]->EvalMinInNbhCost(
+            node_list_id2nbh_id, nbh_id2order, memory_ratio_search_);
   }
   // Use brute force (DFS) to adjust for the best strategy in the neighborhood.
   DfsAddNbhCost(nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,

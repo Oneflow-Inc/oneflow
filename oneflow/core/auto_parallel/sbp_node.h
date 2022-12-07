@@ -80,7 +80,8 @@ class SbpNode final {
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
   double EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                          const std::vector<int32_t>& nbh_id2order) const;
+                          const std::vector<int32_t>& nbh_id2order,
+                          double memory_ratio_search) const;
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const;
   // Get the n ring neighborhood of this node
@@ -221,7 +222,7 @@ class SbpNode final {
 // In dynamic programming, we can not minimize a vector (copy cost, memory cost)
 // Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
 // Memory ratio for dynamic programming only, we have different memory ratio for searching strategy
-static const double kMemoryRatioDp = 1.0;
+static const double kMemoryRatioDp = 0.0;
 
 }  // namespace auto_parallel
 }  // namespace oneflow
