@@ -570,13 +570,21 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                      ConvertToString(op.data_typeAttr().getValue())));
       return ::mlir::failure();
     }
-    CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
-        tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
-                      // compiling with gcc and I has no idea why.
-                      // But it works when compiling with clang.
-                      // Maybe temporary objects would be released earlier when using gcc.
-        support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()),
-        CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    auto var_tensor = CHECK_JUST(
+        ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()));
+    if (var_tensor) {
+      support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr(),
+                                         var_tensor);
+    } else {
+      CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
+          tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
+                        // compiling with gcc and I has no idea why.
+                        // But it works when compiling with clang.
+                        // Maybe temporary objects would be released earlier when using gcc.
+          support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(),
+                                             op.device_nameAttr()),
+          CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    }
     // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
@@ -643,10 +651,6 @@ bool IsInsertTransposeOpBefore(NCHWCompatible op, PatternRewriter& rewriter) {
     }
   }
   return insert_transpose_op_flag;
-}
-
-bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
-  return cast_result.getType() == input.getType();
 }
 
 }  // namespace oneflow
@@ -1219,7 +1223,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
-  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
