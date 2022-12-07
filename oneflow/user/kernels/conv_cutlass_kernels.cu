@@ -219,7 +219,7 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     configuraion.split_k_mode = cutlass::conv::SplitKMode::kSerial;
     configuraion.problem_size = problem_size;
     configuraion.stride_a = {c, w * c, h * w * c};
-    configuraion.stride_b = {c, s * c, k * s * c};
+    configuraion.stride_b = {c, s * c, r * s * c};
     configuraion.stride_c = {0, 0, 0};
 
     cutlass::library::ConvArguments arguments;
