@@ -259,10 +259,8 @@ struct BinaryFunctor<device, BinaryOp::kScalarExpPowerGrad, Src, Dst> {
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIdentityBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-  
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>(dy);
-  }
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(dy); }
 };
 
 template<DeviceType device, typename Src, typename Dst>

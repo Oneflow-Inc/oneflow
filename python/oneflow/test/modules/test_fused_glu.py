@@ -25,6 +25,7 @@ import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
+
 class Glu(nn.Module):
     def __init__(self):
         super().__init__()
@@ -40,9 +41,13 @@ class Glu(nn.Module):
         activation: str = "none",
     ) -> flow.Tensor:
         # matmul
-        matmul_wx = flow._C.matmul(input=x, other=w, transpose_a=False, transpose_b=True)
+        matmul_wx = flow._C.matmul(
+            input=x, other=w, transpose_a=False, transpose_b=True
+        )
         if split_mode:
-            matmul_vx = flow._C.matmul(input=x, other=v, transpose_a=False, transpose_b=True)
+            matmul_vx = flow._C.matmul(
+                input=x, other=v, transpose_a=False, transpose_b=True
+            )
 
         # add bias
         matmul_wx_b = flow._C.add(input=matmul_wx, other=b)
@@ -70,8 +75,9 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
+
 def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
-     # config test data
+    # config test data
     m = params["m"]
     n = params["n"]
     k = params["k"]
@@ -92,19 +98,25 @@ def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
     tensor_w = flow.FloatTensor(w).to(dtype=dtype, device="cuda").requires_grad_(True)
     tensor_b = flow.FloatTensor(b).to(dtype=dtype, device="cuda").requires_grad_(True)
     if is_split_mode:
-        tensor_v = flow.FloatTensor(v).to(dtype=dtype, device="cuda").requires_grad_(True)
-        tensor_c = flow.FloatTensor(c).to(dtype=dtype, device="cuda").requires_grad_(True)
+        tensor_v = (
+            flow.FloatTensor(v).to(dtype=dtype, device="cuda").requires_grad_(True)
+        )
+        tensor_c = (
+            flow.FloatTensor(c).to(dtype=dtype, device="cuda").requires_grad_(True)
+        )
 
     if is_split_mode:
         return tensor_x, tensor_w, tensor_b, tensor_v, tensor_c
     else:
         return tensor_x, tensor_w, tensor_b
 
+
 def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
     test_case.assertTrue(
         np.allclose(a.numpy(), b.numpy(), rtol=rtol, atol=atol),
         f"\na\n{a.numpy()}\n{'-' * 80}\nb:\n{b.numpy()}\n{'*' * 80}\ndiff:\n{a.numpy() - b.numpy()}",
     )
+
 
 def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
     flow_module = Glu()
@@ -119,7 +131,9 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
     fused_x = x.detach().clone()
     fused_w = w.detach().clone().requires_grad_(True)
     fused_b = b.detach().clone().requires_grad_(True)
-    fused_y = flow._C.fused_glu(x=fused_x, w=fused_w, b=fused_b, v=None, c=None, activation=params["act"])
+    fused_y = flow._C.fused_glu(
+        x=fused_x, w=fused_w, b=fused_b, v=None, c=None, activation=params["act"]
+    )
     fused_y.mean().backward()
     fused_w_grad = fused_w.grad.detach().cpu()
     fused_b_grad = fused_b.grad.detach().cpu()
@@ -133,13 +147,16 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_y, y)
         compare_result(test_case, fused_w_grad, w_grad)
         compare_result(test_case, fused_b_grad, b_grad)
-    print(str(dtype) + ", " + params["act"] + " passed!" )
+    print(str(dtype) + ", " + params["act"] + " passed!")
+
 
 def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     flow_module = Glu()
     x, w, b, v, c = tensor_builder(params=params, dtype=dtype, is_split_mode=True)
 
-    y = flow_module.forward(x=x, w=w, b=b, v=v, c=c, split_mode=True, activation=params["act"])
+    y = flow_module.forward(
+        x=x, w=w, b=b, v=v, c=c, split_mode=True, activation=params["act"]
+    )
     y.mean().backward()
     w_grad = w.grad.detach().cpu()
     b_grad = b.grad.detach().cpu()
@@ -152,7 +169,9 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     fused_b = b.detach().clone().requires_grad_(True)
     fused_v = v.detach().clone().requires_grad_(True)
     fused_c = c.detach().clone().requires_grad_(True)
-    fused_y = flow._C.fused_glu(x=fused_x, w=fused_w, b=fused_b, v=fused_v, c=fused_c, activation=params["act"])
+    fused_y = flow._C.fused_glu(
+        x=fused_x, w=fused_w, b=fused_b, v=fused_v, c=fused_c, activation=params["act"]
+    )
     fused_y.mean().backward()
     fused_w_grad = fused_w.grad.detach().cpu()
     fused_b_grad = fused_b.grad.detach().cpu()
@@ -172,7 +191,8 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_b_grad, b_grad)
         compare_result(test_case, fused_v_grad, v_grad)
         compare_result(test_case, fused_c_grad, c_grad)
-    print(str(dtype) + ", " + params["act"] + " passed!" )
+    print(str(dtype) + ", " + params["act"] + " passed!")
+
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")

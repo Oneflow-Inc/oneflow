@@ -92,7 +92,8 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
     // obtain saved optional tensor from forward process
     const auto& matmul_vx = ctx->SavedTensors()[2];
 
-    if (ctx->w_requires_grad or ctx->b_requires_grad or ctx->v_requires_grad or ctx->c_requires_grad){
+    if (ctx->w_requires_grad or ctx->b_requires_grad or ctx->v_requires_grad
+        or ctx->c_requires_grad) {
       // calculate the intermediate gradient using fused kernel
       const auto& middle_results =
           JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, matmul_vx, ctx->activation));
@@ -100,7 +101,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
       const auto& d_matmul_vx = (*middle_results)[1];
 
       // calculate the final gradient result of w (if necessary)
-      if (ctx->w_requires_grad){
+      if (ctx->w_requires_grad) {
         (*in_grads)[1] = JUST(functional::BroadcastMatmulGradB(d_matmul_wx, x, 1.0));
       }
 
@@ -115,7 +116,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
       }
 
       // calculate the final gradient result of v (if necessary)
-      if (ctx->v_requires_grad){
+      if (ctx->v_requires_grad) {
         (*in_grads)[3] = JUST(functional::BroadcastMatmulGradB(d_matmul_vx, x, 1.0));
       }
 
@@ -130,14 +131,14 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
       }
     }
   } else {
-    if (ctx->w_requires_grad or ctx->b_requires_grad){
+    if (ctx->w_requires_grad or ctx->b_requires_grad) {
       // calculate the intermediate gradient using fused kernel
       const auto& middle_results =
           JUST(functional::FusedGluWithoutLinearGrad(dy, matmul_wx, nullptr, ctx->activation));
       const auto& d_matmul_wx = (*middle_results)[0];
-      
+
       // calculate the final gradient result of w (if necessary)
-      if (ctx->w_requires_grad){
+      if (ctx->w_requires_grad) {
         (*in_grads)[1] = JUST(functional::BroadcastMatmulGradB(d_matmul_wx, x, 1.0));
       }
 

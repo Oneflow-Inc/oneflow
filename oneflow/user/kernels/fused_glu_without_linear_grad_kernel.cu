@@ -37,21 +37,23 @@ namespace {
 
 // declear using "BinaryFunctor" from namespace "ep::primitive::broadcast_elementwise_binary"
 template<DeviceType device, ep::primitive::BinaryOp binary_op, typename Src, typename Dst>
-using BinaryFunctor = ep::primitive::broadcast_elementwise_binary::BinaryFunctor<device, binary_op, Src, Dst>;
+using BinaryFunctor =
+    ep::primitive::broadcast_elementwise_binary::BinaryFunctor<device, binary_op, Src, Dst>;
 
 template<typename T, ep::primitive::BinaryOp d_act_type>
-__device__ T dact_function(T& d_act_gate, T& act_gate, T& gate, BinaryFunctor<DeviceType::kCUDA, d_act_type, T, T> dact){
-  if(d_act_type == ep::primitive::BinaryOp::kIdentityBackwardWithDyX){
+__device__ T dact_function(T& d_act_gate, T& act_gate, T& gate,
+                           BinaryFunctor<DeviceType::kCUDA, d_act_type, T, T> dact) {
+  if (d_act_type == ep::primitive::BinaryOp::kIdentityBackwardWithDyX) {
     return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kSigmoidBackwardWithDyY){
+  } else if (d_act_type == ep::primitive::BinaryOp::kSigmoidBackwardWithDyY) {
     return dact(d_act_gate, act_gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kReluBackwardWithDyY){
+  } else if (d_act_type == ep::primitive::BinaryOp::kReluBackwardWithDyY) {
     return dact(d_act_gate, act_gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kGeluBackwardWithDyX){
+  } else if (d_act_type == ep::primitive::BinaryOp::kGeluBackwardWithDyX) {
     return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kFastGeluBackwardWithDyX){
+  } else if (d_act_type == ep::primitive::BinaryOp::kFastGeluBackwardWithDyX) {
     return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kSiluBackwardWithDyX){
+  } else if (d_act_type == ep::primitive::BinaryOp::kSiluBackwardWithDyX) {
     return dact(d_act_gate, gate);
   } else {
     return dact(d_act_gate, gate);
@@ -103,7 +105,8 @@ __global__ void FusedGluWithoutLinearGradGpu(
       d_matmul_wx_vec.elem[i] = act_gate * dy_vec.elem[i];  // d_hidden_state
 
       // calculate the gradient of gate
-      d_matmul_vx_vec.elem[i] = dact_function<T, d_act_type>(d_act_gate, act_gate, gate, dact);  // d_gate
+      d_matmul_vx_vec.elem[i] =
+          dact_function<T, d_act_type>(d_act_gate, act_gate, gate, dact);  // d_gate
     }
     *(reinterpret_cast<LoadPack*>(d_matmul_wx) + (packed_row * packed_stride + packed_col)) =
         d_matmul_wx_vec;
@@ -146,16 +149,16 @@ void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t packed
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, ep::primitive::BinaryOp d_act_type,
-         int32_t alignment, typename std::enable_if<alignment/sizeof(T) == 0, int>::type = 0>
+         int32_t alignment, typename std::enable_if<alignment / sizeof(T) == 0, int>::type = 0>
 void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t stride,
                       const T* dy, const T* matmul_wx, const T* matmul_vx, T* d_matmul_wx,
                       T* d_matmul_vx) {
   DispatchIndexType<T, act_type, d_act_type, 1>(stream, m, n, m * n, stride, dy, matmul_wx,
-                                                  matmul_vx, d_matmul_wx, d_matmul_vx);
+                                                matmul_vx, d_matmul_wx, d_matmul_vx);
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, ep::primitive::BinaryOp d_act_type,
-         int32_t alignment, typename std::enable_if<alignment/sizeof(T) != 0, int>::type = 0>
+         int32_t alignment, typename std::enable_if<alignment / sizeof(T) != 0, int>::type = 0>
 void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t stride,
                       const T* dy, const T* matmul_wx, const T* matmul_vx, T* d_matmul_wx,
                       T* d_matmul_vx) {
@@ -211,7 +214,7 @@ void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n
                             const T* matmul_wx, const T* matmul_vx, T* d_matmul_wx,
                             T* d_matmul_vx) {
   if (activation == "none") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity, 
+    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity,
                       ep::primitive::BinaryOp::kIdentityBackwardWithDyX>(
         stream, m, n, stride, dy, matmul_wx, matmul_vx, d_matmul_wx, d_matmul_vx);
   } else if (activation == "sigmoid") {
@@ -315,15 +318,19 @@ class GpuFusedGluWithoutLinearGradKernel final : public user_op::OpKernel {
     const int64_t n = dy_shape.At(dy_num_axes - 1);
 
     // start dispatch process
-    DispatchActivationType<T>(ctx->stream(),
-                              /*m, n=*/m, n,
-                              /*activation=*/ctx->Attr<std::string>("activation"),
-                              /*stride=*/is_split_mode ? n : n * 2,
-                              /*dy=*/input_tensor_dy->dptr<T>(),
-                              /*matmul_wx=*/input_tensor_matmul_wx->dptr<T>(),
-                              /*matmul_vx=*/is_split_mode ? input_tensor_matmul_vx->dptr<T>() : input_tensor_matmul_wx->dptr<T>() + n,
-                              /*d_matmul_wx=*/out_tensor_d_matmul_wx->mut_dptr<T>(),
-                              /*d_matmul_vx=*/is_split_mode ? out_tensor_d_matmul_vx->mut_dptr<T>() : out_tensor_d_matmul_wx->mut_dptr<T>() + n);
+    DispatchActivationType<T>(
+        ctx->stream(),
+        /*m, n=*/m, n,
+        /*activation=*/ctx->Attr<std::string>("activation"),
+        /*stride=*/is_split_mode ? n : n * 2,
+        /*dy=*/input_tensor_dy->dptr<T>(),
+        /*matmul_wx=*/input_tensor_matmul_wx->dptr<T>(),
+        /*matmul_vx=*/
+        is_split_mode ? input_tensor_matmul_vx->dptr<T>() : input_tensor_matmul_wx->dptr<T>() + n,
+        /*d_matmul_wx=*/out_tensor_d_matmul_wx->mut_dptr<T>(),
+        /*d_matmul_vx=*/
+        is_split_mode ? out_tensor_d_matmul_vx->mut_dptr<T>()
+                      : out_tensor_d_matmul_wx->mut_dptr<T>() + n);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -331,10 +338,10 @@ class GpuFusedGluWithoutLinearGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_GPU_FUSED_GLU_WITHOUT_LINEAR_GRAD_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("fused_glu_without_linear_grad")                                         \
-      .SetCreateFn<GpuFusedGluWithoutLinearGradKernel<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+#define REGISTER_GPU_FUSED_GLU_WITHOUT_LINEAR_GRAD_KERNEL(dtype)       \
+  REGISTER_USER_KERNEL("fused_glu_without_linear_grad")                \
+      .SetCreateFn<GpuFusedGluWithoutLinearGradKernel<dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("d_matmul_wx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_FUSED_GLU_WITHOUT_LINEAR_GRAD_KERNEL(double)
