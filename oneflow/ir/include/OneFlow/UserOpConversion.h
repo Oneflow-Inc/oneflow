@@ -34,7 +34,8 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
 LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands,
                                   DictionaryAttr attributes, ::oneflow::UserOpConf* user_conf);
 ::oneflow::ParallelConf getParallelConfFromAttrDictionary(DictionaryAttr attributes);
-::oneflow::ParallelConf getParallelConfFromAttrs(Attribute device_name_attr, Attribute device_tag_attr);
+::oneflow::ParallelConf getParallelConfFromAttrs(Attribute device_name_attr,
+                                                 Attribute device_tag_attr);
 ::oneflow::DeviceType getDeviceTypeFromAttrDictionary(DictionaryAttr attributes);
 
 }  // namespace user_op
