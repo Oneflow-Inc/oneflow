@@ -59,12 +59,12 @@ namespace {
 
 template<typename T>
 struct AllocType {};
-#define DEFINE_ALLOC_TYPE(type) \
-  template<>                    \
-  struct AllocType<type> {      \
-    static PyTypeObject* value; \
-  };                            \
-  PyTypeObject* AllocType<type>::value = Py##type##Object_Type
+#define DEFINE_ALLOC_TYPE(type)  \
+  template<>                     \
+  struct AllocType<type> {       \
+    static PyTypeObject** value; \
+  };                             \
+  PyTypeObject** AllocType<type>::value = &Py##type##Object_Type
 
 DEFINE_ALLOC_TYPE(Tensor);
 DEFINE_ALLOC_TYPE(Parameter);
@@ -89,7 +89,7 @@ PyObject* PyTensor_wrap(const std::shared_ptr<T>& data) {
     }
   } else {
     // Has not been wrapped by python before, so we create a new PyTensor and give it the ownership
-    auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(AllocType<T>::value, 0);
+    auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(*AllocType<T>::value, 0);
     self->data = data;
     data->set_pyobject_ptr(
         std::unique_ptr<void, void (*)(void*)>(self, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
