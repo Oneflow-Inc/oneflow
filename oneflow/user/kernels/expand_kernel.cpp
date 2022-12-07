@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ auto PrimitiveExists() {
 
 }  // namespace
 
-class ExpandKernel final : public user_op::OpKernel {
+class ExpandKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ExpandKernel() = default;
   ~ExpandKernel() = default;

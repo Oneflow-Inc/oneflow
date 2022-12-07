@@ -201,7 +201,12 @@ class EmptyFunctor {
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -3579,11 +3584,17 @@ class BaddBmmFunctor {
         << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
         << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
 
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    return JUST(functional::Add(JUST(functional::ScalarMul(beta, input)),
-                                JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
-                                /*alpha=*/1.0, /*inplace=*/false));
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
+    }
   }
 };
 
