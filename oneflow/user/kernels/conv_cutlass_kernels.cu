@@ -172,7 +172,6 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    CHECK(bias == nullptr);
     const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
     CHECK(add_to_output == nullptr);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -217,7 +216,7 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
         strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
         cutlass::conv::Mode::kCrossCorrelation);
     cutlass::library::Conv2dConfiguration configuraion;
-    configuraion.split_k_mode = cutlass::conv::SplitKMode::kNone;
+    configuraion.split_k_mode = cutlass::conv::SplitKMode::kSerial;
     configuraion.problem_size = problem_size;
     configuraion.stride_a = {c, w * c, h * w * c};
     configuraion.stride_b = {c, s * c, k * s * c};
@@ -227,7 +226,11 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     arguments.A = in->dptr();
     arguments.B = weight->dptr();
     arguments.reordered_B = nullptr;
-    arguments.C = nullptr;
+    if (bias == nullptr) {
+      arguments.C = nullptr;
+    } else {
+      arguments.C = bias->dptr();
+    }
     arguments.D = out->mut_dptr();
 
     union SP {
@@ -240,10 +243,10 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
 
     if (allow_half_accumulation) {
       alpha.h = 1;
-      beta.h = 0;
+      beta.h = 1;
     } else {
       alpha.f = 1;
-      beta.f = 0;
+      beta.f = 1;
     }
     arguments.alpha = &alpha;
     arguments.beta = &beta;
