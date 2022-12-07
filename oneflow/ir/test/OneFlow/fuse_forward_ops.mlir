@@ -42,7 +42,7 @@ module  {
     // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.conv2d"(%[[OUT0]], %[[OUT]])
     // CHECK: %[[OUT2:[a-zA-Z0-9_]+]] = "oneflow.output"
     return %output_1 : tensor<2x3x5x6xf32>
-    }
+  }
 
   func.func @GraphToRun_3(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32> {
     %output_0 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_3_input.0.0_2", output_lbns = ["_GraphToRun_3_input.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
