@@ -51,7 +51,7 @@ class FusedClipGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_clip_grad")                                                 \
       .SetCreateFn<FusedClipGradKernel<device, dtype>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("grad", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA
 REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, float);

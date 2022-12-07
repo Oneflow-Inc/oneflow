@@ -20,4 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
+template struct FusedClipGradKernelUtil<DeviceType::kCUDA, float>;
+
 }  // namespace oneflow
