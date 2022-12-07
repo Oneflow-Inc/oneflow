@@ -29,9 +29,11 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/common/data_type.h"
 
 #include <iostream>
 #include <vector>
+
 namespace mlir {
 
 namespace oneflow {
@@ -109,6 +111,51 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
   return tensor;
 }
 
+template<typename T>
+void __DenseElementsAttrToTensor(const mlir::DenseElementsAttr dense_attr,
+                                 const mlir::Attribute& device_tag_attr,
+                                 const mlir::Attribute& device_name_attr,
+                                 const ::oneflow::DataType& dtype,
+                                 std::shared_ptr<::oneflow::one::Tensor>& tensor) {
+  const auto dense_type = dense_attr.getType().cast<mlir::RankedTensorType>();
+  std::vector<int64_t> shape = dense_type.getShape().vec();
+  int ndim = shape.size();
+  CHECK_EQ(tensor->shape()->size(), ndim);
+  for (int i = 0; i < ndim; ++i) { CHECK_EQ(tensor->shape()->at(i), shape[i]); }
+
+  const auto device = MakeDevice(device_tag_attr, device_name_attr);
+  CHECK(CHECK_JUST(tensor->device()) == device);
+
+  std::vector<T> data;
+  std::vector<::oneflow::float16> fp16_data;
+  void* dptr = nullptr;
+  const size_t tensor_size =
+      tensor->shape()->elem_cnt() * ::oneflow::GetSizeOfDataType(tensor->dtype()->data_type());
+
+  CHECK_EQ(::oneflow::GetDataType<T>::value, dtype);
+  if (tensor->dtype()->data_type() == ::oneflow::DataType::kFloat16) {
+    for (const T elem : dense_attr.getValues<T>()) {
+      fp16_data.push_back(static_cast<::oneflow::float16>(elem));
+    }
+    CHECK_EQ(fp16_data.size() * sizeof(::oneflow::float16), tensor_size);
+    dptr = fp16_data.data();
+  } else if (tensor->dtype()->data_type() == dtype) {
+    for (const T elem : dense_attr.getValues<T>()) { data.push_back(elem); }
+    CHECK_EQ(data.size() * sizeof(T), tensor_size);
+    dptr = data.data();
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  const auto& callback =
+      [=](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), dptr, tensor_size,
+                              eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
+      };
+  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
+}
+
 }  // namespace
 
 mlir::DenseElementsAttr TensorToDenseElementsAttr(
@@ -141,6 +188,24 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
       << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 and int64 now."
       << "\n";
   exit(EXIT_FAILURE);
+}
+
+void DenseElementsAttrToTensor(const mlir::Attribute& dense_attr,
+                               const mlir::Attribute& device_tag_attr,
+                               const mlir::Attribute& device_name_attr,
+                               std::shared_ptr<::oneflow::one::Tensor>& tensor) {
+  ::oneflow::LazyMode::Guard guard{false};
+  const auto dense_attr_ = dense_attr.cast<mlir::DenseElementsAttr>();
+  const auto dense_element_type = dense_attr_.getElementType();
+  if (dense_element_type.isF32()) {
+    __DenseElementsAttrToTensor<float>(dense_attr_, device_tag_attr, device_name_attr,
+                                       ::oneflow::DataType::kFloat, tensor);
+  } else {
+    llvm::errs() << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 "
+                    "and int64 now."
+                 << "\n";
+    exit(EXIT_FAILURE);
+  }
 }
 
 FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type) {
