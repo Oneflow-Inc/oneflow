@@ -20,7 +20,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.graph import GraphModule
-import oneflow.utils.global_view as global_view 
+import oneflow.utils.global_view as global_view
 from oneflow.utils.global_view import global_mode
 
 
@@ -253,8 +253,8 @@ def _test_global_mode(test_case):
                 "randperm_out": randperm_out,
                 "arange_out": arange_out,
                 "empty_out": empty_out,
-                "tensor_out": tensor_out, 
-                "hann_window_out": hann_window_out
+                "tensor_out": tensor_out,
+                "hann_window_out": hann_window_out,
             }
 
     global_graph = GlobalModeGraph()
