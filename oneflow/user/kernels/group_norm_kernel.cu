@@ -543,7 +543,7 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const ComputeT
 
 template<typename T, typename ComputeType>
 __global__ void BatchReduceGammaBetaGradKernel(ComputeType* ds_sum, ComputeType* db_sum,
-                                               ComputeType* dgamma, ComputeType* dbeta,
+                                               T* dgamma, T* dbeta,
                                                const int32_t batch_size, const int32_t group_size,
                                                const int32_t channel_size,
                                                const int32_t spatial_size) {
@@ -640,8 +640,8 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel,
     // (N, C)
     BatchReduceGammaBetaGradKernel<T, ComputeType>
         <<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            reduce_ds_buf_ptr, reduce_db_buf_ptr, dgamma->mut_dptr<ComputeType>(),
-            dbeta->mut_dptr<ComputeType>(), batch_size, group_size, channel_size, spatial_size);
+            reduce_ds_buf_ptr, reduce_db_buf_ptr, dgamma->mut_dptr<T>(),
+            dbeta->mut_dptr<T>(), batch_size, group_size, channel_size, spatial_size);
   };
 };
 
