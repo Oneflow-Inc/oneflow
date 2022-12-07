@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +12,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/PatternMatch.h"
+"""
+import oneflow as flow
 
-namespace mlir {
 
-namespace oneflow {
+def equal_op(a, b):
+    res = flow._C.equal(a, b)
+    return res.all().item()
 
-namespace rewrites {
 
-mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter);
-void populateRewrites(RewritePatternSet& patterns);
+if __name__ == "__main__":
+    import doctest
 
-}  // namespace rewrites
-
-namespace constraints {
-
-void populateConstraints(RewritePatternSet& patterns);
-
-}  // namespace constraints
-}  // namespace oneflow
-
-}  // namespace mlir
+    doctest.testmod(raise_on_error=True)
