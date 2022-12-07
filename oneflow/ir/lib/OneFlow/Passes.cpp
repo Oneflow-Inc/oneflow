@@ -389,40 +389,6 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
-::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
-                                                              OpResult conv_result,
-                                                              OpResult pad_result) {
-  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-    if (auto pad_op = llvm::dyn_cast<oneflow::PadOp>(pad_result.getDefiningOp())) {
-      NamedAttrList attributes = conv_op->getAttrs();
-      SmallVector<Value, 4> operands;
-      operands.push_back(pad_op.x());
-      operands.push_back(conv_op.weight());
-      if (conv_op.bias()) operands.push_back(conv_op.bias());
-      llvm::SmallVector<int32_t> padding_before_array;
-      if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
-        for (auto val : pad_op.padding_before().getValue().take_back(2)) {
-          padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-        }
-      } else {
-        padding_before_array.push_back(
-            pad_op.padding_before().getValue()[1].cast<IntegerAttr>().getValue().getSExtValue());
-        padding_before_array.push_back(
-            pad_op.padding_before().getValue()[2].cast<IntegerAttr>().getValue().getSExtValue());
-      }
-      attributes.set(conv_op.padding_beforeAttrName(),
-                     getSI32ArrayAttr(rewriter, padding_before_array));
-      auto res = rewriter
-                     .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-                                                operands, attributes)
-                     ->getResults();
-      // pad op is expected to be erased if it is not used
-      return res;
-    }
-  }
-  return {};
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -604,13 +570,21 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                      ConvertToString(op.data_typeAttr().getValue())));
       return ::mlir::failure();
     }
-    CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
-        tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
-                      // compiling with gcc and I has no idea why.
-                      // But it works when compiling with clang.
-                      // Maybe temporary objects would be released earlier when using gcc.
-        support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()),
-        CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    auto var_tensor = CHECK_JUST(
+        ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()));
+    if (var_tensor) {
+      support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr(),
+                                         var_tensor);
+    } else {
+      CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
+          tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
+                        // compiling with gcc and I has no idea why.
+                        // But it works when compiling with clang.
+                        // Maybe temporary objects would be released earlier when using gcc.
+          support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(),
+                                             op.device_nameAttr()),
+          CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    }
     // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
@@ -1249,9 +1223,9 @@ void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
-  patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
+  constraints::populateConstraints(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
