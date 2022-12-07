@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class FusedClipGradKernel final : public user_op::OpKernel {
  public:
   FusedClipGradKernel() = default;
@@ -46,6 +46,16 @@ class FusedClipGradKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                             \
+  REGISTER_USER_KERNEL("fused_clip_grad")                                                 \
+      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value));
+
+#ifdef WITH_CUDA
+REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, float);
+#endif
 
 }  // namespace
 

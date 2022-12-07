@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 struct FusedClipGradKernelUtil {
   static void Update(ep::Stream* stream, const float max_norm, const float norm_type);
 };
