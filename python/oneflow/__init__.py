@@ -95,6 +95,8 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
+from oneflow._C import logaddexp
+from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import mish
 from oneflow._C import repeat
@@ -209,7 +211,6 @@ from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import masked_fill_
-from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
@@ -348,6 +349,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.equal import equal_op as equal
 from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
