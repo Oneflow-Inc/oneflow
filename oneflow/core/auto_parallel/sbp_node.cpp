@@ -276,15 +276,15 @@ void SbpNode::FinalizeSbp() {
   }
 }
 
-double SbpNode::GreedyStrategy() {
+double SbpNode::GreedyStrategy(double memory_ratio_search) {
   // Current Cost, Minimum Cost, Cost with original sbp
   double curr_cost = 0;
-  double original_cost = EvalNbhCost();
+  double original_cost = EvalNbhCost(memory_ratio_search);
   double min_cost = original_cost;
   int32_t min_sbp = final_sbp_sig_id_;
   for (int32_t sbp = 0; sbp < cost_.size(); sbp++) {
     final_sbp_sig_id_ = sbp;
-    curr_cost = EvalNbhCost();
+    curr_cost = EvalNbhCost(memory_ratio_search);
     if (curr_cost < min_cost) {
       min_cost = curr_cost;
       min_sbp = sbp;
@@ -294,14 +294,14 @@ double SbpNode::GreedyStrategy() {
   return min_cost - original_cost;
 }
 
-double SbpNode::EvalNbhCost() const {
+double SbpNode::EvalNbhCost(double memory_ratio_search) const {
   // Current Cost, Minimum Cost, Cost with original sbp
-  double curr_cost = cost_[final_sbp_sig_id_];
+  double curr_cost = GetWeightedCost(memory_ratio_search);
   for (SbpEdge* this_edge : edges_in_) {
-    curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
+    curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
   }
   for (SbpEdge* this_edge : edges_out_) {
-    curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
+    curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
   }
   return curr_cost;
 }
@@ -311,21 +311,19 @@ double SbpNode::EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // Cost with original sbp
-  double curr_cost = GetWeightedCost(final_sbp_sig_id_, memory_ratio_search);
+  double curr_cost = GetWeightedCost(memory_ratio_search);
   for (SbpEdge* this_edge : edges_in_) {
     // if the start node is not in the neighborhood
     if (node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_)
         == node_list_id2nbh_id.end()) {
-      curr_cost += this_edge->GetWeightedCost(this_edge->start_node_->final_sbp_sig_id_,
-                                              final_sbp_sig_id_, memory_ratio_search);
+      curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
     // if the end node is not in the neighborhood
     if (node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_)
         == node_list_id2nbh_id.end()) {
-      curr_cost += this_edge->GetWeightedCost(
-          final_sbp_sig_id_, this_edge->end_node_->final_sbp_sig_id_, memory_ratio_search);
+      curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
     }
   }
   return curr_cost;
@@ -349,8 +347,7 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
     const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
-      curr_cost += this_edge->GetWeightedCost(this_edge->start_node_->final_sbp_sig_id_,
-                                              final_sbp_sig_id_, memory_ratio_search);
+      curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
       // End this function and return infinity.
       if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
@@ -359,8 +356,7 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
     const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
-      curr_cost += this_edge->GetWeightedCost(
-          final_sbp_sig_id_, this_edge->end_node_->final_sbp_sig_id_, memory_ratio_search);
+      curr_cost += this_edge->GetWeightedCost(memory_ratio_search);
       if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
   }

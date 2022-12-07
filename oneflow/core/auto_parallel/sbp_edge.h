@@ -109,6 +109,10 @@ class SbpEdge final {
   double GetWeightedCost(int32_t i, int32_t j, double memory_ratio_search) const {
     return cost_[i][j] + memory_ratio_search * GetMemory(i, j);
   }
+  double GetWeightedCost(double memory_ratio_search) const {
+    return GetWeightedCost(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_,
+                           memory_ratio_search);
+  }
 
  private:
   friend class SbpNode;

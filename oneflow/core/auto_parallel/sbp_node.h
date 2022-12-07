@@ -69,7 +69,7 @@ class SbpNode final {
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
   // node You should have an initial strategy before running this
-  double GreedyStrategy();
+  double GreedyStrategy(double memory_ratio_search);
   // Evaluate summery of cost between neighborhood and outside nodes
   double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
                         double memory_ratio_search) const;
@@ -142,6 +142,9 @@ class SbpNode final {
   double GetWeightedCost(int32_t i, double memory_ratio_search) const {
     return cost_[i] + memory_ratio_search * GetMemory(i);
   }
+  double GetWeightedCost(double memory_ratio_search) const {
+    return GetWeightedCost(final_sbp_sig_id_, memory_ratio_search);
+  }
 
   // Setter
   void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }
@@ -208,7 +211,7 @@ class SbpNode final {
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);
 
   // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost() const;
+  double EvalNbhCost(double memory_ratio_search) const;
   // Drop down the maximum layer with the minimum layer from consumer
   void DropMaxLayer(int32_t upper_bound);
   // Drop down the available wait time with the minimum cost from downstream

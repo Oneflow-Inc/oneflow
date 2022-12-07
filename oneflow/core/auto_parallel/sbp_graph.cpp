@@ -275,7 +275,7 @@ double SbpGraph::GreedyStrategy(bool for_node) const {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
       if (for_node || this_node->edges_in_.size() + this_node->edges_out_.size() == 0) {
-        cost_reduction += this_node->GreedyStrategy();
+        cost_reduction += this_node->GreedyStrategy(memory_ratio_search_);
       } else {
         // GreedyStrategy on Edges.
         for (SbpEdge* this_edge : this_node->edges_out_) {
