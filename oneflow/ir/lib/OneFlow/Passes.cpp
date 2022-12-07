@@ -635,10 +635,6 @@ bool IsInsertTransposeOpBefore(NCHWCompatible op, PatternRewriter& rewriter) {
   return insert_transpose_op_flag;
 }
 
-bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
-  return cast_result.getType() == input.getType();
-}
-
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -1209,7 +1205,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
-  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
