@@ -308,8 +308,6 @@ use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 8dbb42044031337fa302c2ab9d1875fa)
 
 include(cuda)
-add_subdirectory(external)
-include(third_party)
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
@@ -345,6 +343,14 @@ if(BUILD_CUDA)
     endif()
   endif()
 
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
@@ -360,6 +366,9 @@ if(BUILD_CUDA)
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()
 endif()
+
+add_subdirectory(external)
+include(third_party)
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
