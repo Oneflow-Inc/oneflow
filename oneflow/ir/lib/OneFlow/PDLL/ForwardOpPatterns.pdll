@@ -92,3 +92,11 @@ Pattern {
     replace conv with CopyUserOpAttrs(conv, conv2d_and_erase_pad);
   };
 }
+
+Pattern {
+  let valueType: Type;
+  let x: Value<valueType>;
+  let cast = op<oneflow.cast>(x) -> (valueType);
+
+  replace cast with x;
+}
