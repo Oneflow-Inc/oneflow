@@ -31,6 +31,7 @@ def _test_quantile(test_cast, q):
     out = torch.quantile(a, q, dim=1, interpolation="linear")
     return out
 
+
 @unittest.skipIf(True, "pytorch-1.10.0 will cause oneflow cudnn or cublas error")
 @flow.unittest.skip_unless_1n1d()
 class TestQuantile(flow.unittest.TestCase):
