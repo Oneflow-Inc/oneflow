@@ -23,9 +23,11 @@ limitations under the License.
 
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "OneFlow/OneFlowOps.h"
@@ -133,7 +135,11 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
 static LogicalResult IsSingleDevice(PatternRewriter& rewriter, Attribute device_name,
                                     Attribute device_tag) {
-  return failure();
+  auto devices = device_name.dyn_cast_or_null<ArrayAttr>();
+  if (!devices || devices.size() != 1) { return failure(); }
+  auto device_str = devices[0].dyn_cast_or_null<StringAttr>();
+  if (!device_str) { return failure(); }
+  return success(device_str.str().find("-") == std::string::npos);
 }
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
