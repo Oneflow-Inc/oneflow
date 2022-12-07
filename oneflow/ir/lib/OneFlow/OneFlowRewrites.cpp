@@ -198,15 +198,14 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 namespace constraints {
 
 void populateConstraints(RewritePatternSet& patterns) {
-  auto &pdll_patterns = patterns.getPDLPatterns();
+  auto& pdll_patterns = patterns.getPDLPatterns();
 
-  #define PDLL_REGISTER(NAME) \
-  pdll_patterns.registerConstraintFunction(#NAME, NAME);
+#define PDLL_REGISTER(NAME) pdll_patterns.registerConstraintFunction(#NAME, NAME);
 
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsSingleDevice);
 
-  #undef PDLL_REGISTER
+#undef PDLL_REGISTER
 }
 
 }  // namespace constraints
