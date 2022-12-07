@@ -66,7 +66,11 @@ def allreduce_fn(module, param):
 
 
 def DistributedDataParallel(
-    module: "flow.nn.Module", *, broadcast_buffers: bool = True, broadcast_parameters: bool = True, bucket_size: int = 10
+    module: "flow.nn.Module",
+    *,
+    broadcast_buffers: bool = True,
+    broadcast_parameters: bool = True,
+    bucket_size: int = 10
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
     if parse_boolean_from_env("ONEFLOW_DISABLE_VIEW", False):
