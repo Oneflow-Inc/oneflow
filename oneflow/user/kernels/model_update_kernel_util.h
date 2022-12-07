@@ -476,11 +476,14 @@ struct RAdamUpdateFunctor {
     const T rho_t = rho_inf - bias_correction2_numerator / bias_correction2;
     *m = mt;
     *v = vt;
+    printf("model_val: %f, model_diff_t: %f, mt: %f, vt: %f, mt_hat: %f, rho_t: %f\n", model_val,
+           model_diff_t, mt, vt, mt_hat, rho_t);
     if (rho_t > 5) {
-      const T lt = sqrt(bias_correction1 / (vt + epsilon));
+      const T lt = sqrt(bias_correction2 / (vt + epsilon));
       const T rt =
           sqrt((rho_t - 4) * (rho_t - 2) * rho_inf / ((rho_inf - 4) * (rho_inf - 2) * rho_t));
       *model = model_val - learning_rate * mt_hat * lt * rt;
+      printf("lt: %f, rt: %f, model: %f", lt, rt, *model);
     } else {
       *model = model_val - learning_rate * mt_hat;
     }

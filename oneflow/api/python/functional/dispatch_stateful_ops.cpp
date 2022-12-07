@@ -458,6 +458,22 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
+  m.add_functor("DispatchRAdamUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, float weight_decay,
+                   float beta1, float beta2, float rho_inf, float bias_correction1_val,
+                   float bias_correction2_val, float bias_correction2_numerator_val, float epsilon,
+                   bool do_bias_correction) -> Maybe<void> {
+                  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+                      "learning_rate_val", "scale", "l1", "l2", "weight_decay", "beta1", "beta2",
+                      "rho_inf", "bias_correction1_val", "bias_correction2_val",
+                      "bias_correction2_numerator_val", "epsilon", "do_bias_correction");
+                  attrs.SetAllAttrs(learning_rate, scale, l1, l2, weight_decay, beta1, beta2,
+                                    rho_inf, bias_correction1_val, bias_correction2_val,
+                                    bias_correction2_numerator_val, epsilon, do_bias_correction);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
   m.add_functor("DispatchEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf) -> Maybe<Tensor> {

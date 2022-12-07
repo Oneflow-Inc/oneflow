@@ -1231,7 +1231,7 @@ class RAdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGr
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
-    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const auto rho_inf = ctx->Attr<float>("rho_inf");
     const float epsilon = ctx->Attr<float>("epsilon");
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
@@ -1271,12 +1271,12 @@ class RAdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(bias_correction2->shape_view().elem_cnt(), 1);
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
-    // RAdamUpdateKernelUtil<device_type, T, G>::Update(
-    //     ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta1,
-    //     beta2, bias_correction1_ptr, bias_correction1_val, epsilon, weight_decay,
-    //     learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-    //     model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), norm->mut_dptr<T>(),
-    //     do_bias_correction, maximize);
+    RAdamUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
+        bias_correction1_ptr, bias_correction2_ptr, bias_correction2_numerator_ptr,
+        bias_correction1_val, bias_correction2_val, bias_correction2_numerator_val, epsilon,
+        weight_decay, learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), rho_inf);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

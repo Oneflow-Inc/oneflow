@@ -548,8 +548,8 @@ void RAdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     bias_correction2_val = *bias_correction2_numerator_ptr;
   }
   for (int64_t i = 0; i != n; ++i) {
-    RAdamUpdateFunctor<T, G>()(model_diff, model, m, v, scale, l1, l2, beta1, beta2, rho_inf,
-                               bias_correction1_val, bias_correction2_val,
+    RAdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, scale, l1, l2, beta1, beta2,
+                               rho_inf, bias_correction1_val, bias_correction2_val,
                                bias_correction2_numerator_val, epsilon, weight_decay,
                                learning_rate_val);
   }

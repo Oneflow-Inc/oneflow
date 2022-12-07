@@ -438,8 +438,8 @@ __global__ void RAdamUpdateGpu(int64_t n, T scale, float l1, float l2, float bet
 
   learning_rate_val *= lr_scale;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    RAdamUpdateFunctor<T, G>()(model_diff, model, m, v, scale, l1, l2, beta1, beta2, rho_inf,
-                               bias_correction1_val, bias_correction2_val,
+    RAdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, scale, l1, l2, beta1, beta2,
+                               rho_inf, bias_correction1_val, bias_correction2_val,
                                bias_correction2_numerator_val, epsilon, weight_decay,
                                learning_rate_val);
   }
