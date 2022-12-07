@@ -1,2 +1,4 @@
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
+
+Constraint IsSingleDevice(device_name: Attr, device_tag: Attr);

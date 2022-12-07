@@ -131,6 +131,11 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
+static LogicalResult IsSingleDevice(PatternRewriter& rewriter, Attribute device_name,
+                                    Attribute device_tag) {
+  return failure();
+}
+
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,
                                                          Attribute padding_after,
@@ -193,8 +198,15 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 namespace constraints {
 
 void populateConstraints(RewritePatternSet& patterns) {
-  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
-                                                       IsPaddingCouldBeAssimilatedIntoConv);
+  auto &pdll_patterns = patterns.getPDLPatterns();
+
+  #define PDLL_REGISTER(NAME) \
+  pdll_patterns.registerConstraintFunction(#NAME, NAME);
+
+  PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
+  PDLL_REGISTER(IsSingleDevice);
+
+  #undef PDLL_REGISTER
 }
 
 }  // namespace constraints

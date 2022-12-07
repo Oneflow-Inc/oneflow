@@ -371,24 +371,6 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
   return true;
 }
 
-bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after,
-                                         ::mlir::StringAttr data_format) {
-  if (padding_before.size() == 4 && padding_after.size() == 4) {
-    if (padding_before.getValue().equals(padding_after.getValue())) {
-      if (data_format.str() == "channels_first") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-      if (data_format.str() == "channels_last") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-    }
-  }
-  return false;
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
