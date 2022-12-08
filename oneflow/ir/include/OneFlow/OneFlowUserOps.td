@@ -3223,6 +3223,7 @@ def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoSideEffect, D
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
 }
 
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
