@@ -24,9 +24,9 @@ limitations under the License.
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 
-#ifdef ENABLE_LOWERING_ASCEND
+#ifdef LITE_USE_ASCEND_NPU
 #include "OneFlow/Transform/Lowering/LoweringAscend.h"
-#endif  // ENABLE_LOWERING_ASCEND
+#endif  // LITE_USE_ASCEND_NPU
 
 namespace mlir {
 namespace oneflow {
@@ -47,12 +47,12 @@ LogicalResult LoweringLaunchJobPass::loweringLaunchJob(
     OpBuilder& builder, Operation* callee, StringRef backend,
     llvm::SmallVector<uint8_t, 4>* loweringData) {
   if (backend == "ascend") {
-#ifdef ENABLE_LOWERING_ASCEND
+#ifdef LITE_USE_ASCEND_NPU
     return loweringAscend(builder, callee, checkpointDir, loweringData);
 #else
-    llvm::errs() << "please recompile with ENABLE_LOWERING_ASCEND=ON\n";
+    llvm::errs() << "please recompile with LITE_USE_ASCEND_NPU=ON\n";
     return failure();
-#endif  // ENABLE_LOWERING_ASCEND
+#endif  // LITE_USE_ASCEND_NPU
   } else {
     llvm::errs() << "lowering for backend " << backend << " is not supported yet\n";
     return failure();

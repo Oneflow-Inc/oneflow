@@ -1,12 +1,12 @@
 set(LITE_LOWERING_SRCS "")
 set(LITE_LOWERING_LIBS "")
 
-if(ENABLE_LOWERING_ASCEND)
+if(LITE_USE_ASCEND_NPU)
   include(cmake/FindAscendSdk.cmake)
   include_directories(${ASCEND_INCLUDE_DIR})
   include_directories(${ASCEND_INCLUDE_DIR}/../../opp)
 
-  add_definitions(-DENABLE_LOWERING_ASCEND=1)
+  add_definitions(-DLITE_USE_ASCEND_NPU=1)
 
   list(APPEND LITE_LOWERING_SRCS
     Transform/Lowering/LoweringAscend.cpp
@@ -52,7 +52,3 @@ oneflow_add_mlir_library(
   ${LITE_LOWERING_LIBS}
   flatcc-runtime
 )
-
-# if(ENABLE_LOWERING_ASCEND)
-#   target_compile_definitions(OneFlowLiteConversion PUBLIC ENABLE_LOWERING_ASCEND)
-# endif()

@@ -30,7 +30,8 @@ option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 option(OF_LAYER_NORM_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
 option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
-option(ENABLE_LOWERING_ASCEND "" OFF)
+
+option(LITE_USE_ASCEND_NPU "" OFF)
 
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
