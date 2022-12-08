@@ -46,8 +46,10 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()], DType::priority_order[DType::Float16()->data_type()]);
-  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()], DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())
@@ -91,8 +93,10 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()], DType::priority_order[DType::Float16()->data_type()]);
-  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()], DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())

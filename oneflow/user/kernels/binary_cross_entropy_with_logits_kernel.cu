@@ -41,7 +41,8 @@ template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kNone> {
   TARGET_T zero_;
   TARGET_T one_;
-  BinaryCrossEntropyWithLogitsFunctor() : zero_(GetZeroVal<TARGET_T>()), one_(GetOneVal<TARGET_T>()) {}
+  BinaryCrossEntropyWithLogitsFunctor()
+      : zero_(GetZeroVal<TARGET_T>()), one_(GetOneVal<TARGET_T>()) {}
   __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val) const {
     const TARGET_T input_val_ = static_cast<TARGET_T>(input_val);
     const TARGET_T max_val = -input_val_ < zero_ ? zero_ : -input_val_;
@@ -54,8 +55,10 @@ template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight> {
   TARGET_T zero_;
   TARGET_T one_;
-  BinaryCrossEntropyWithLogitsFunctor() : zero_(GetZeroVal<TARGET_T>()), one_(GetOneVal<TARGET_T>()) {}
-  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T weight_val) const {
+  BinaryCrossEntropyWithLogitsFunctor()
+      : zero_(GetZeroVal<TARGET_T>()), one_(GetOneVal<TARGET_T>()) {}
+  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                 TARGET_T weight_val) const {
     const TARGET_T input_val_ = static_cast<TARGET_T>(input_val);
     const TARGET_T max_val = -input_val_ < zero_ ? zero_ : -input_val_;
     const TARGET_T pos_weight_processed_val = weight_val - target_val + one_;
@@ -97,7 +100,8 @@ struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, float, WeightType::kPosWeigh
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kNone> f;
-  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T weight_val) const {
+  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                 TARGET_T weight_val) const {
     return f(input_val, target_val) * weight_val;
   }
 };
@@ -105,8 +109,9 @@ struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kWeigh
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight> f;
-  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T weight_val,
-                                          TARGET_T pos_weight_val) const {
+  __device__ __forceinline__ TARGET_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                 TARGET_T weight_val,
+                                                 TARGET_T pos_weight_val) const {
     return f(input_val, target_val, pos_weight_val) * weight_val;
   }
 };
@@ -123,8 +128,7 @@ struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, half, WeightType::kPosWeight
   BinaryCrossEntropyWithLogitsFunctor<INPUT_T, float, WeightType::kPosWeight> f;
   __device__ __forceinline__ half operator()(INPUT_T input_val, half target_val,
                                              half weight_val) const {
-    return __float2half(
-        f(input_val, __half2float(target_val), __half2float(weight_val)));
+    return __float2half(f(input_val, __half2float(target_val), __half2float(weight_val)));
   }
 };
 template<typename INPUT_T>
@@ -132,8 +136,7 @@ struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, half, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsFunctor<INPUT_T, float, WeightType::kWeight> f;
   __device__ __forceinline__ half operator()(INPUT_T input_val, half target_val,
                                              half weight_val) const {
-    return __float2half(
-        f(input_val, __half2float(target_val), __half2float(weight_val)));
+    return __float2half(f(input_val, __half2float(target_val), __half2float(weight_val)));
   }
 };
 template<typename INPUT_T>
@@ -141,8 +144,8 @@ struct BinaryCrossEntropyWithLogitsFunctor<INPUT_T, half, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsFunctor<INPUT_T, float, WeightType::kBoth> f;
   __device__ __forceinline__ half operator()(INPUT_T input_val, half target_val, half weight_val,
                                              half pos_weight_val) const {
-    return __float2half(f(input_val, __half2float(target_val),
-                          __half2float(weight_val), __half2float(pos_weight_val)));
+    return __float2half(f(input_val, __half2float(target_val), __half2float(weight_val),
+                          __half2float(pos_weight_val)));
   }
 };
 
@@ -203,31 +206,39 @@ struct BinaryCrossEntropyWithLogitsGradFunctor;
 
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kNone> {
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T dy_val) const {
-    return (CalSigmoid(input_val) - static_cast<INPUT_T>(target_val)) * static_cast<INPUT_T>(dy_val);
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                TARGET_T dy_val) const {
+    return (CalSigmoid(input_val) - static_cast<INPUT_T>(target_val))
+           * static_cast<INPUT_T>(dy_val);
   }
 };
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight> {
   INPUT_T one_;
   BinaryCrossEntropyWithLogitsGradFunctor() : one_(GetOneVal<INPUT_T>()) {}
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val) const {
-    TARGET_T dx_tmp = dy_val * ((weight_val + one_ - target_val) * static_cast<TARGET_T>(CalSigmoid(input_val)) - weight_val);
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                TARGET_T dy_val, TARGET_T weight_val) const {
+    TARGET_T dx_tmp =
+        dy_val
+        * ((weight_val + one_ - target_val) * static_cast<TARGET_T>(CalSigmoid(input_val))
+           - weight_val);
     return static_cast<INPUT_T>(dx_tmp);
   }
 };
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kNone> f;
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val) const {
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                TARGET_T dy_val, TARGET_T weight_val) const {
     return f(input_val, target_val, dy_val) * static_cast<INPUT_T>(weight_val);
   }
 };
 template<typename INPUT_T, typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight> f;
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val,
-                                          TARGET_T pos_weight_val) const {
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, TARGET_T target_val,
+                                                TARGET_T dy_val, TARGET_T weight_val,
+                                                TARGET_T pos_weight_val) const {
     return f(input_val, target_val, dy_val, pos_weight_val) * static_cast<INPUT_T>(weight_val);
   }
 };
@@ -242,37 +253,42 @@ template<>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, half, WeightType::kPosWeight> {
   half one_;
   BinaryCrossEntropyWithLogitsGradFunctor() : one_(GetOneVal<half>()) {}
-  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val, half weight_val) const {
+  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val,
+                                             half weight_val) const {
     return dy_val * ((weight_val + one_ - target_val) * CalSigmoid(input_val) - weight_val);
   }
 };
 template<>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, half, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsGradFunctor<half, half, WeightType::kNone> f;
-  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val, half weight_val) const {
+  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val,
+                                             half weight_val) const {
     return f(input_val, target_val, dy_val) * weight_val;
   }
 };
 template<>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, half, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsGradFunctor<half, half, WeightType::kPosWeight> f;
-  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val, half weight_val,
-                                          half pos_weight_val) const {
+  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val,
+                                             half weight_val, half pos_weight_val) const {
     return f(input_val, target_val, dy_val, pos_weight_val) * weight_val;
   }
 };
 
 template<typename INPUT_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kNone> {
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val) const {
-    return (CalSigmoid(input_val) - static_cast<INPUT_T>(__half2float(target_val))) * static_cast<INPUT_T>(__half2float(dy_val));
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val,
+                                                half dy_val) const {
+    return (CalSigmoid(input_val) - static_cast<INPUT_T>(__half2float(target_val)))
+           * static_cast<INPUT_T>(__half2float(dy_val));
   }
 };
 template<typename INPUT_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kPosWeight> {
   INPUT_T one_;
   BinaryCrossEntropyWithLogitsGradFunctor() : one_(GetOneVal<INPUT_T>()) {}
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val, half weight_val) const {
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val,
+                                                half weight_val) const {
     const INPUT_T dy_val_f = static_cast<INPUT_T>(__half2float(dy_val));
     const INPUT_T target_val_f = static_cast<INPUT_T>(__half2float(target_val));
     const INPUT_T weight_val_f = static_cast<INPUT_T>(__half2float(weight_val));
@@ -282,22 +298,25 @@ struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kPosWe
 template<typename INPUT_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kNone> f;
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val, half weight_val) const {
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val,
+                                                half weight_val) const {
     return f(input_val, target_val, dy_val) * static_cast<INPUT_T>(__half2float(weight_val));
   }
 };
 template<typename INPUT_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, half, WeightType::kPosWeight> f;
-  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val, half weight_val,
-                                          half pos_weight_val) const {
-    return f(input_val, target_val, dy_val, pos_weight_val) * static_cast<INPUT_T>(__half2float(weight_val));
+  __device__ __forceinline__ INPUT_T operator()(INPUT_T input_val, half target_val, half dy_val,
+                                                half weight_val, half pos_weight_val) const {
+    return f(input_val, target_val, dy_val, pos_weight_val)
+           * static_cast<INPUT_T>(__half2float(weight_val));
   }
 };
 
 template<typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kNone> {
-  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val) const {
+  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val,
+                                             TARGET_T dy_val) const {
     const half dy_val_h = __float2half(static_cast<float>(dy_val));
     const half target_val_h = __float2half(static_cast<float>(target_val));
     return (CalSigmoid(input_val) - target_val_h) * dy_val_h;
@@ -307,7 +326,8 @@ template<typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kPosWeight> {
   half one_;
   BinaryCrossEntropyWithLogitsGradFunctor() : one_(GetOneVal<half>()) {}
-  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val) const {
+  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val,
+                                             TARGET_T weight_val) const {
     const half dy_val_h = __float2half(static_cast<float>(dy_val));
     const half target_val_h = __float2half(static_cast<float>(target_val));
     const half weight_val_h = __float2half(static_cast<float>(weight_val));
@@ -317,16 +337,18 @@ struct BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kPosW
 template<typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kWeight> {
   BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kNone> f;
-  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val) const {
+  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val,
+                                             TARGET_T weight_val) const {
     return f(input_val, target_val, dy_val) * __float2half(static_cast<float>(weight_val));
   }
 };
 template<typename TARGET_T>
 struct BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kBoth> {
   BinaryCrossEntropyWithLogitsGradFunctor<half, TARGET_T, WeightType::kPosWeight> f;
-  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val, TARGET_T weight_val,
-                                          TARGET_T pos_weight_val) const {
-    return f(input_val, target_val, dy_val, pos_weight_val) * __float2half(static_cast<float>(weight_val));
+  __device__ __forceinline__ half operator()(half input_val, TARGET_T target_val, TARGET_T dy_val,
+                                             TARGET_T weight_val, TARGET_T pos_weight_val) const {
+    return f(input_val, target_val, dy_val, pos_weight_val)
+           * __float2half(static_cast<float>(weight_val));
   }
 };
 
@@ -369,24 +391,27 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
         using FunctorT = BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kBoth>;
         using FactoryT = cuda::elementwise::SimpleFactory<FunctorT>;
-        OF_CUDA_CHECK((cuda::elementwise::GenericLauncher<FactoryT, TARGET_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
-            FactoryT(FunctorT()), elem_cnt, out, input, target, weight, pos_weight_processed,
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        OF_CUDA_CHECK(
+            (cuda::elementwise::
+                 GenericLauncher<FactoryT, TARGET_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
+                     FactoryT(FunctorT()), elem_cnt, out, input, target, weight,
+                     pos_weight_processed, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       } else {
         OF_CUDA_CHECK((cuda::elementwise::Ternary(
-            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight>(), elem_cnt, out, input,
-            target, pos_weight_processed, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight>(),
+            elem_cnt, out, input, target, pos_weight_processed,
+            ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       }
     } else {
       if (ctx->has_input("weight", 0)) {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
         OF_CUDA_CHECK((cuda::elementwise::Ternary(
-            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kWeight>(), elem_cnt, out, input,
-            target, weight, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kWeight>(), elem_cnt,
+            out, input, target, weight, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       } else {
         OF_CUDA_CHECK((cuda::elementwise::Binary(
-            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kNone>(), elem_cnt, out, input,
-            target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+            BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kNone>(), elem_cnt,
+            out, input, target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       }
     }
   }
@@ -432,31 +457,40 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
                         pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
       if (ctx->has_input("weight", 0)) {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
-        using FunctorT = BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kBoth>;
+        using FunctorT =
+            BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kBoth>;
         using FactoryT = cuda::elementwise::SimpleFactory<FunctorT>;
-        OF_CUDA_CHECK((cuda::elementwise::GenericLauncher<FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
-            FactoryT(FunctorT()), elem_cnt, dx, input, target, dy, weight, pos_weight_processed,
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        OF_CUDA_CHECK((cuda::elementwise::GenericLauncher<
+                       FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T,
+                       TARGET_T>::Launch(FactoryT(FunctorT()), elem_cnt, dx, input, target, dy,
+                                         weight, pos_weight_processed,
+                                         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
 
       } else {
-        using FunctorT = BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight>;
+        using FunctorT =
+            BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kPosWeight>;
         using FactoryT = cuda::elementwise::SimpleFactory<FunctorT>;
-        OF_CUDA_CHECK((cuda::elementwise::GenericLauncher<FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
-            FactoryT(FunctorT()), elem_cnt, dx, input, target, dy, pos_weight_processed,
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        OF_CUDA_CHECK(
+            (cuda::elementwise::
+                 GenericLauncher<FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
+                     FactoryT(FunctorT()), elem_cnt, dx, input, target, dy, pos_weight_processed,
+                     ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       }
     } else {
       if (ctx->has_input("weight", 0)) {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
-        using FunctorT = BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kWeight>;
+        using FunctorT =
+            BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kWeight>;
         using FactoryT = cuda::elementwise::SimpleFactory<FunctorT>;
-        OF_CUDA_CHECK((cuda::elementwise::GenericLauncher<FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
-            FactoryT(FunctorT()), elem_cnt, dx, input, target, dy, weight,
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        OF_CUDA_CHECK(
+            (cuda::elementwise::
+                 GenericLauncher<FactoryT, INPUT_T, INPUT_T, TARGET_T, TARGET_T, TARGET_T>::Launch(
+                     FactoryT(FunctorT()), elem_cnt, dx, input, target, dy, weight,
+                     ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       } else {
         OF_CUDA_CHECK((cuda::elementwise::Ternary(
-            BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kNone>(), elem_cnt, dx, input,
-            target, dy, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+            BinaryCrossEntropyWithLogitsGradFunctor<INPUT_T, TARGET_T, WeightType::kNone>(),
+            elem_cnt, dx, input, target, dy, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
       }
     }
   }
@@ -484,24 +518,24 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 }
 
 }  // namespace
- 
-#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(input_dtype, target_dtype)                                      \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                               \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<input_dtype, target_dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+
+#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(input_dtype, target_dtype)                           \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                        \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<input_dtype, target_dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                            \
                        && (user_op::HobDataType("input", 0) == GetDataType<input_dtype>::value)   \
                        && (user_op::HobDataType("target", 0) == GetDataType<target_dtype>::value) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<target_dtype>::value)) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<target_dtype>::value))   \
       .SetInferTmpSizeFn(GenFwInferTmpSizeFn<target_dtype>());
 
-#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(input_dtype, target_dtype)                                \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                         \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<input_dtype, target_dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(input_dtype, target_dtype)                      \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                                   \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<input_dtype, target_dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                            \
                        && (user_op::HobDataType("input", 0) == GetDataType<input_dtype>::value)   \
                        && (user_op::HobDataType("target", 0) == GetDataType<target_dtype>::value) \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<target_dtype>::value)  \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<input_dtype>::value)) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<target_dtype>::value)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<input_dtype>::value))     \
       .SetInferTmpSizeFn(GenBwInferTmpSizeFn<target_dtype>());
 
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(half, half)
