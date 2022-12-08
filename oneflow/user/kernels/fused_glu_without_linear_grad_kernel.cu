@@ -40,26 +40,6 @@ template<DeviceType device, ep::primitive::BinaryOp binary_op, typename Src, typ
 using BinaryFunctor =
     ep::primitive::broadcast_elementwise_binary::BinaryFunctor<device, binary_op, Src, Dst>;
 
-template<typename T, ep::primitive::BinaryOp d_act_type>
-__device__ T dact_function(T& d_act_gate, T& act_gate, T& gate,
-                           BinaryFunctor<DeviceType::kCUDA, d_act_type, T, T> dact) {
-  if (d_act_type == ep::primitive::BinaryOp::kIdentityBackwardWithDyX) {
-    return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kSigmoidBackwardWithDyY) {
-    return dact(d_act_gate, act_gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kReluBackwardWithDyY) {
-    return dact(d_act_gate, act_gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kGeluBackwardWithDyX) {
-    return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kFastGeluBackwardWithDyX) {
-    return dact(d_act_gate, gate);
-  } else if (d_act_type == ep::primitive::BinaryOp::kSiluBackwardWithDyX) {
-    return dact(d_act_gate, gate);
-  } else {
-    return dact(d_act_gate, gate);
-  }
-}
-
 template<typename T, typename IndexType, ep::primitive::BinaryOp d_act_type,
          ep::primitive::UnaryOp act_type, int32_t pack_size>
 __global__ void FusedGluWithoutLinearGradGpu(
@@ -105,8 +85,7 @@ __global__ void FusedGluWithoutLinearGradGpu(
       d_matmul_wx_vec.elem[i] = act_gate * dy_vec.elem[i];  // d_hidden_state
 
       // calculate the gradient of gate
-      d_matmul_vx_vec.elem[i] =
-          dact_function<T, d_act_type>(d_act_gate, act_gate, gate, dact);  // d_gate
+      d_matmul_vx_vec.elem[i] = dact(d_act_gate, gate);  // d_gate
     }
     *(reinterpret_cast<LoadPack*>(d_matmul_wx) + (packed_row * packed_stride + packed_col)) =
         d_matmul_wx_vec;
@@ -219,11 +198,11 @@ void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n
         stream, m, n, stride, dy, matmul_wx, matmul_vx, d_matmul_wx, d_matmul_vx);
   } else if (activation == "sigmoid") {
     DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid,
-                      ep::primitive::BinaryOp::kSigmoidBackwardWithDyY>(
+                      ep::primitive::BinaryOp::kSigmoidBackwardWithDyX>(
         stream, m, n, stride, dy, matmul_wx, matmul_vx, d_matmul_wx, d_matmul_vx);
   } else if (activation == "relu") {
     DispatchAlignment<T, ep::primitive::UnaryOp::kRelu,
-                      ep::primitive::BinaryOp::kReluBackwardWithDyY>(
+                      ep::primitive::BinaryOp::kReluBackwardWithDyX>(
         stream, m, n, stride, dy, matmul_wx, matmul_vx, d_matmul_wx, d_matmul_vx);
   } else if (activation == "gelu") {
     DispatchAlignment<T, ep::primitive::UnaryOp::kGelu,
