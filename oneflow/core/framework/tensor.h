@@ -133,7 +133,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   void set_owns_pyobj(bool owns_pyobj) { owns_pyobj_ = owns_pyobj; }
 
  protected:
-  Tensor() : pyobj_ptr_(nullptr, [](void*) {}), owns_pyobj_(true) {}
+  Tensor() : pyobj_ptr_(nullptr, [](void*) {}), owns_pyobj_(false) {}
 
  private:
   std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
