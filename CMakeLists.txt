@@ -43,10 +43,6 @@ if(BUILD_FOR_CI)
   set(ONEFLOW_CURRENT_VERSION ci)
 endif()
 
-if(LITE_USE_ASCEND_NPU)
-  set(WITH_MLIR ON)
-endif()
-
 set(LLVM_PROVIDER "in-tree" CACHE STRING "in-tree, install")
 
 if(NOT WITH_MLIR)
