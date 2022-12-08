@@ -16,8 +16,22 @@ limitations under the License.
 
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
+
+Symbol<ParallelDesc> GetGlobalParallelDescFromDevice(const Optional<Symbol<Device>>& device) {
+  auto parallel_desc = GlobalMode::parallel_desc();
+  if (device.has_value()) {
+    const auto& device_type = device.value_or(Symbol<Device>())->type();
+    if (parallel_desc->parallel_conf().device_tag() != device_type) {
+      ParallelConf parallel_conf = parallel_desc->parallel_conf();
+      parallel_conf.set_device_tag(device_type);
+      parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+    }
+  }
+  return parallel_desc;
+}
 
 /* static */ bool* GlobalMode::get_mode_ptr() {
   thread_local bool mode = false;

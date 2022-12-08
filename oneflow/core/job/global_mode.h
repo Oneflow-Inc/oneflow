@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
+
+Symbol<ParallelDesc> GetGlobalParallelDescFromDevice(const Optional<Symbol<Device>>& device);
 class GlobalMode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalMode);

@@ -175,7 +175,6 @@ def _test_linear_train_graph_with_ddp(test_case):
         result_check_list = []
 
         def one_train_iter(iter_cnt=0):
-            print("========> x.placement ", x.placement)
             out = linear_t_g(x)
             result_check_list.append(out)
 
@@ -231,7 +230,7 @@ def _test_global_mode(test_case):
                 # Test global mode meta data
                 cur_global_mode = global_view.current_global_mode()
                 test_case.assertTrue(cur_global_mode.is_enabled)
-                test_case.assertEqual(cur_global_mode.placement, P, cur_global_mode.placement)
+                test_case.assertEqual(cur_global_mode.placement, P)
                 test_case.assertEqual(cur_global_mode.sbp[0], B)
 
                 # Test global mode source op
@@ -268,7 +267,7 @@ def _test_global_mode(test_case):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithDDP(oneflow.unittest.TestCase):
-    def _test_linear_train_graph_with_ddp(test_case):
+    def test_linear_train_graph_with_ddp(test_case):
         _test_linear_train_graph_with_ddp(test_case)
 
     def test_global_mode(test_case):
