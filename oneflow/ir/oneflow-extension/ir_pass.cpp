@@ -16,7 +16,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
+#include "OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
@@ -70,7 +70,9 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     is_updated_ = true;
   }
   void DumpLog(const std::string& filename, const std::string& content) override {
-    TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    if (IsInDebugMode()) {
+      TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    }
   }
 
   const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
@@ -173,19 +175,22 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   job_before.CopyFrom(*job);
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
   SortJob(job_before);
-
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
-      ->Write(job_before);
+  if (IsInDebugMode()) {
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
+        ->Write(job_before);
+  }
   mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;
   });
-  Job job_after{};
-  job_after.CopyFrom(*job);
-  SortJob(job_after);
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
-      ->Write(job_after);
+  if (IsInDebugMode()) {
+    Job job_after{};
+    job_after.CopyFrom(*job);
+    SortJob(job_after);
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
+        ->Write(job_after);
+  }
   return Maybe<void>::Ok();
 }
 

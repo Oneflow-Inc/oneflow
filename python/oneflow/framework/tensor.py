@@ -441,9 +441,7 @@ def _numpy(self):
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
             self.to_global(placement=self_cpu_placement)
-            .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-            )
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
             .to_local()
         )
     assert self.is_local
@@ -568,6 +566,10 @@ def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
 
+def _logaddexp(self, other):
+    return flow._C.logaddexp(self, other)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -643,6 +645,7 @@ def RegisterMethods():
     Tensor.index_add = _index_add
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
+    Tensor.logaddexp = _logaddexp
 
 
 def register_tensor_op(op_name):
