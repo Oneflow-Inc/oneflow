@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
 #include "oneflow/user/kernels/binary_cross_entropy_with_logits_mean_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
 namespace oneflow {
@@ -37,15 +38,15 @@ template<typename INPUT_T, typename TARGET_T>
 void ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(int64_t elem_cnt, const INPUT_T* input,
                                                       const TARGET_T* target, TARGET_T* out,
                                                       int64_t reduce_elem_cnt) {
-  TARGET_T result = 0.0;
+  double result = 0.0;
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    TARGET_T input_val = static_cast<TARGET_T>(input[i]);
-    TARGET_T target_val = target[i];
-    TARGET_T max_val = ComputeMaxVal(input_val);
+    double input_val = static_cast<double>(input[i]);
+    double target_val = static_cast<double>(target[i]);
+    double max_val = ComputeMaxVal(input_val);
     result += (1 - target_val) * input_val + max_val
               + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
   }
-  out[0] = result / reduce_elem_cnt;
+  out[0] = static_cast<TARGET_T>(result) / reduce_elem_cnt;
 }
 
 template<typename INPUT_T, typename TARGET_T>

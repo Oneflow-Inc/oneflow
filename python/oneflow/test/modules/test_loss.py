@@ -311,8 +311,8 @@ def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
         np.allclose(
             flow_loss.detach().cpu().numpy(),
             torch_loss.detach().cpu().numpy(),
-            rtol=1e-4,
-            atol=1e-4,
+            rtol=1e-5,
+            atol=1e-5,
         )
     )
     test_case.assertTrue(
