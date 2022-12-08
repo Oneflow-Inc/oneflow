@@ -329,7 +329,9 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         map_location = None
 
 
-def is_file_and_support_pytorch_format(path: Path, support_pytorch_format: bool) -> bool:
+def is_file_and_support_pytorch_format(
+    path: Path, support_pytorch_format: bool
+) -> bool:
     return path.is_file() and support_pytorch_format
 
 
