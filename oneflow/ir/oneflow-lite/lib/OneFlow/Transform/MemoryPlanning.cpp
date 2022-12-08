@@ -165,9 +165,7 @@ bool MemoryPlanningPass::canShareMemoryWithBlock(Value value, llvm::SmallVector<
   if (isDynamicTensorType(value.getType().cast<TensorType>())) { return false; }
   auto device = getValueDevice(value);
   for (auto v : block) {
-    if (device != getValueDevice(v)) {
-      return false;
-    }
+    if (device != getValueDevice(v)) { return false; }
     if (valueLiveness.isLivenessOverlap(value, v)) { return false; }
   }
   return true;
