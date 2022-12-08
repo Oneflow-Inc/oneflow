@@ -4946,11 +4946,11 @@ class FusedClipGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("grad").Build());
   }
 
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& grad,
-                         const float& max_norm, const float& norm_type) const {
+  Maybe<void> operator()(const TensorTuple& grad, const float& max_norm,
+                         const float& norm_type) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
     attrs.SetAllAttrs(max_norm, norm_type);
-    JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {grad}, attrs));
+    JUST(OpInterpUtil::Dispatch<Tensor>(*op_, grad, attrs));
     return Maybe<void>::Ok();
   }
 

@@ -30,18 +30,23 @@ class FusedClipGradKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* grad = ctx->Tensor4ArgNameAndIndex("grad", 0);
+    const int32_t input_size = ctx->input_size("grad");
     const float max_norm = ctx->Attr<float>("max_norm");
     const float norm_type = ctx->Attr<float>("norm_type");
 
-    if (norm_type == 0) {
 
-    } else if (norm_type == INFINITY) {
+    for (int32_t i = 0; i < input_size; ++i) {
+      const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("grad", i);
+    
+      if (norm_type == 0) {
 
-    } else if (norm_type == -INFINITY) {
+      } else if (norm_type == INFINITY) {
 
-    } else {
+      } else if (norm_type == -INFINITY) {
 
+      } else {
+
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
