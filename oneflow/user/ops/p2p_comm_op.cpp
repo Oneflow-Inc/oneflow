@@ -52,7 +52,7 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RecvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return SendOp::InferLogicalTensorDesc(ctx);
+  return RecvOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RecvOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("dtype"));
