@@ -46,6 +46,31 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
   }
 }
 
+template<>
+__global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
+                                   const half epsilon, const half* in, half* square_x_sum, half* out) {
+  using BlockReduce = cub::BlockReduce<float, ep::CudaStream::kDefaultBlockSize>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+
+  for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
+    float sum = GetZeroVal<float>();
+    const int32_t offset = (i / d) * d * c + (i % d);
+    for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+      const float x = static_cast<float>(in[offset + j * d]);
+      sum += x * x;
+    }
+    const float reduce_sum = BlockReduce(temp_storage).Sum(sum);
+    if (threadIdx.x == 0) { square_x_sum[i] = static_cast<half>(reduce_sum); }
+    __syncthreads();
+
+    const float inv_norm = rsqrtf(fmaxf(static_cast<float>(square_x_sum[i]), static_cast<float>(epsilon)));
+    for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+      const int32_t index = offset + j * d;
+      out[index] = static_cast<half>(inv_norm * static_cast<float>(in[index]));
+    }
+  }
+}
+
 template<typename T>
 __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int32_t d,
                                     const float epsilon, const T* out, const T* out_diff,
@@ -112,6 +137,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(half)                    
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(double)
 
