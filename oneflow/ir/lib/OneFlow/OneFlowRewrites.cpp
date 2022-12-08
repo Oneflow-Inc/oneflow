@@ -134,14 +134,6 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
-static LogicalResult IsSingleDevice(PatternRewriter& rewriter, Attribute device_name,
-                                    Attribute device_tag) {
-  ::oneflow::ParallelConf parallel_conf =
-      user_op::getParallelConfFromAttrs(device_name, device_tag);
-  ::oneflow::ParallelDesc parallel_desc(parallel_conf);
-  return success(parallel_desc.parallel_num() == 1);
-}
-
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,
                                                          Attribute padding_after,
@@ -209,7 +201,6 @@ void populateConstraints(RewritePatternSet& patterns) {
 #define PDLL_REGISTER(NAME) pdll_patterns.registerConstraintFunction(#NAME, NAME);
 
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
-  PDLL_REGISTER(IsSingleDevice);
 
 #undef PDLL_REGISTER
 }
