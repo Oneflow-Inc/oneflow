@@ -59,6 +59,18 @@ Operation* getEntryJobOp(Operation* op) {
   return entry;
 }
 
+StringAttr getValueDevice(Value value) {
+  StringAttr device;
+  Operation* op = value.getDefiningOp();
+  if (auto copyOp = dyn_cast<CopyOp>(op)) {
+    device = copyOp.device_typeAttr();
+  } else {
+    device = value.getDefiningOp()->getAttrOfType<StringAttr>(
+        OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
+  }
+  return device;
+}
+
 Optional<StringRef> getLiteStringElementType(Type type) {
   assert(type.isIntOrFloat());
   if (type.isF16()) {

@@ -31,6 +31,8 @@ namespace lite {
 Operation* getEntryJobOp(ModuleOp module);
 Operation* getEntryJobOp(Operation* op);
 
+StringAttr getValueDevice(Value value);
+
 Optional<StringRef> getLiteStringElementType(Type type);
 Optional<StringRef> getLiteStringElementType(::mlir::oneflow::DataType type);
 

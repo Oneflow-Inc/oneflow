@@ -163,12 +163,9 @@ void MemoryPlanningPass::computeValueSizeAndSort() {
 
 bool MemoryPlanningPass::canShareMemoryWithBlock(Value value, llvm::SmallVector<Value, 4> block) {
   if (isDynamicTensorType(value.getType().cast<TensorType>())) { return false; }
-  auto device = value.getDefiningOp()->getAttrOfType<StringAttr>(
-      OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
+  auto device = getValueDevice(value);
   for (auto v : block) {
-    if (device
-        != v.getDefiningOp()->getAttrOfType<StringAttr>(
-            OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
+    if (device != getValueDevice(v)) {
       return false;
     }
     if (valueLiveness.isLivenessOverlap(value, v)) { return false; }
@@ -192,9 +189,8 @@ void MemoryPlanningPass::doMemoryPlanning() {
 
   llvm::SmallVector<LiteBufferSegment, 4>& segments = bufferStrategy->getSegments();
   for (auto& block : memoryBlocks) {
+    auto device = getValueDevice(block.front());
     int segmentId = segments.size();
-    auto device = block.front().getDefiningOp()->getAttrOfType<StringAttr>(
-        OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
     size_t blockSize = 0;
     size_t alignment = 512;
     for (auto value : block) {
