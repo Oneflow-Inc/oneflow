@@ -43,7 +43,7 @@ if(BUILD_FOR_CI)
   set(ONEFLOW_CURRENT_VERSION ci)
 endif()
 
-if(ENABLE_LOWERING_ASCEND)
+if(LITE_USE_ASCEND_NPU)
   set(WITH_MLIR ON)
 endif()
 
