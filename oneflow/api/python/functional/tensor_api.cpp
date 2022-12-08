@@ -52,8 +52,9 @@ class TensorWithDataFunctor {
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalTensorWithData(
-          data, dtype, GetGlobalParallelDescFromDevice(device), *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
+      return JUST(
+          functional::GlobalTensorWithData(data, dtype, GetGlobalParallelDescFromDevice(device),
+                                           *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
     }
 
     if (PyTensor_Check(data)) {
