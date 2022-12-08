@@ -14,9 +14,4 @@ list(APPEND EXTERNAL_TARGETS fmt)
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
 
-if(BUILD_CUDA)
-  add_subdirectory(cutlass)
-  list(APPEND EXTERNAL_TARGETS cutlass_headers)
-endif()
-
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
