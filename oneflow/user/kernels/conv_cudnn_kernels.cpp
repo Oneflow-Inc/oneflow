@@ -199,26 +199,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
       beta = CudnnSPZeroPtr(in->data_type());
     }
 
-#if CUDNN_MAJOR >= 8
-    if (bias != nullptr && algo_perf.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
-        && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
-      const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
-      CHECK_NOTNULL(conv_cache);
-      cudnnActivationDescriptor_t activation_desc{};
-      OF_CUDNN_CHECK(cudnnCreateActivationDescriptor(&activation_desc));
-      OF_CUDNN_CHECK(cudnnSetActivationDescriptor(activation_desc, CUDNN_ACTIVATION_IDENTITY,
-                                                  CUDNN_PROPAGATE_NAN, 0));
-      OF_CUDNN_CHECK(cudnnConvolutionBiasActivationForward(
-          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
-          args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
-          algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, beta, args.ydesc.Get(),
-          out->mut_dptr(), conv_cache->bias_desc->Get(), bias->dptr(), activation_desc,
-          args.ydesc.Get(), out->mut_dptr()));
-      OF_CUDNN_CHECK(cudnnDestroyActivationDescriptor(activation_desc));
-      return;
-    }
-#endif  // CUDNN_MAJOR >= 8
-
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
         args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
