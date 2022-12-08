@@ -231,7 +231,9 @@ def _test_global_mode(test_case):
                 # Test global mode meta data
                 cur_global_mode = global_view.current_global_mode()
                 test_case.assertTrue(cur_global_mode.is_enabled)
-                test_case.assertEqual(cur_global_mode.placement, P, cur_global_mode.placement)
+                test_case.assertEqual(
+                    cur_global_mode.placement, P, cur_global_mode.placement
+                )
                 test_case.assertEqual(cur_global_mode.sbp[0], B)
 
                 # Test global mode source op
