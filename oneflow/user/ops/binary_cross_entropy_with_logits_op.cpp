@@ -73,7 +73,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
       << "Input shape should be equal to Target shape. ";
-  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape())
+      << "Dy shape should be equal to Target shape. ";
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());

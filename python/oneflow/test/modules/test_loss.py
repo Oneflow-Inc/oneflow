@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 from oneflow.test_utils.automated_test_util import *
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
 import torch as torch_original
@@ -257,6 +258,73 @@ def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
     return y
 
 
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+    test_case, reduction="none", device="cpu"
+):
+    arr = np.random.randn(48, 160, 160)
+    flow_pred_mask = flow.Tensor(arr).float().to(device)
+    flow_pred_mask.requires_grad = True
+    flow_gt_mask = flow.Tensor(arr).double().to(device)
+    flow_loss = flow.nn.functional.binary_cross_entropy_with_logits(
+        flow_pred_mask, flow_gt_mask, reduction=reduction
+    )
+    flow_loss.sum().backward()
+    torch_pred_mask = torch_original.Tensor(arr).float().to(device)
+    torch_pred_mask.requires_grad = True
+    torch_gt_mask = torch_original.Tensor(arr).double().to(device)
+    torch_loss = torch_original.nn.functional.binary_cross_entropy_with_logits(
+        torch_pred_mask, torch_gt_mask, reduction=reduction
+    )
+    torch_loss.sum().backward()
+    test_case.assertTrue(
+        np.allclose(
+            flow_loss.detach().cpu().numpy(),
+            torch_loss.detach().cpu().numpy(),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            flow_pred_mask.grad.data.cpu().numpy(),
+            torch_pred_mask.grad.data.cpu().numpy(),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+    )
+
+    flow_pred_mask = flow.Tensor(arr).double().to(device)
+    flow_pred_mask.requires_grad = True
+    flow_gt_mask = flow.Tensor(arr).float().to(device)
+    flow_loss = flow.nn.functional.binary_cross_entropy_with_logits(
+        flow_pred_mask, flow_gt_mask, reduction=reduction
+    )
+    flow_loss.sum().backward()
+    torch_pred_mask = torch_original.Tensor(arr).double().to(device)
+    torch_pred_mask.requires_grad = True
+    torch_gt_mask = torch_original.Tensor(arr).float().to(device)
+    torch_loss = torch_original.nn.functional.binary_cross_entropy_with_logits(
+        torch_pred_mask, torch_gt_mask, reduction=reduction
+    )
+    torch_loss.sum().backward()
+    test_case.assertTrue(
+        np.allclose(
+            flow_loss.detach().cpu().numpy(),
+            torch_loss.detach().cpu().numpy(),
+            rtol=1e-4,
+            atol=1e-4,
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            flow_pred_mask.grad.data.cpu().numpy(),
+            torch_pred_mask.grad.data.cpu().numpy(),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -303,6 +371,17 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     def test_nn_functional_binary_cross_entropy_with_logits(test_case):
         dim = random(2, 6).to(int).value()
         return _test_nn_functional_binary_cross_entropy_with_logits(dim)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case):
+        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "none", "cpu")
+        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "none", "cuda")
+        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "sum", "cpu")
+        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "sum", "cuda")
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "mean", "cpu"
+        )
+        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "mean", "cuda")
 
 
 @flow.unittest.skip_unless_1n1d()
