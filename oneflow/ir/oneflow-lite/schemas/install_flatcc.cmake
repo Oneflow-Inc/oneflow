@@ -4,22 +4,18 @@ include(FetchContent)
 
 #FetchContent_Declare(flatcc URL https://github.com/dvidelabs/flatcc/archive/refs/tags/v0.6.1.tar.gz)
 #FetchContent_Populate(flatcc)
-FetchContent_Populate(
-  flatcc
-  URL https://github.com/dvidelabs/flatcc/archive/refs/tags/v0.6.1.tar.gz
-  SOURCE_DIR flatcc
-)
+FetchContent_Populate(flatcc URL https://github.com/dvidelabs/flatcc/archive/refs/tags/v0.6.1.tar.gz
+                      SOURCE_DIR flatcc)
 
 set(FLATCC_ROOT ${CMAKE_CURRENT_BINARY_DIR}/flatcc)
 set(FLATCC_SRCS
-  "${FLATCC_ROOT}/src/runtime/builder.c"
-  "${FLATCC_ROOT}/src/runtime/verifier.c"
-  "${FLATCC_ROOT}/src/runtime/emitter.c"
-  "${FLATCC_ROOT}/src/runtime/json_parser.c"
-  "${FLATCC_ROOT}/src/runtime/json_printer.c"
-  "${FLATCC_ROOT}/src/runtime/refmap.c"
-  "${FLATCC_ROOT}/config/config.h"
-)
+    "${FLATCC_ROOT}/src/runtime/builder.c"
+    "${FLATCC_ROOT}/src/runtime/verifier.c"
+    "${FLATCC_ROOT}/src/runtime/emitter.c"
+    "${FLATCC_ROOT}/src/runtime/json_parser.c"
+    "${FLATCC_ROOT}/src/runtime/json_printer.c"
+    "${FLATCC_ROOT}/src/runtime/refmap.c"
+    "${FLATCC_ROOT}/config/config.h")
 set(FLATCC_INCLUDE_DIR ${FLATCC_ROOT}/include)
 add_library(flatcc-runtime STATIC ${FLATCC_SRCS})
 target_include_directories(flatcc-runtime SYSTEM PUBLIC ${FLATCC_INCLUDE_DIR})
@@ -51,11 +47,9 @@ add_executable(
   "${FLATCC_ROOT}/src/compiler/codegen_c_json_printer.c"
   "${FLATCC_ROOT}/src/runtime/builder.c"
   "${FLATCC_ROOT}/src/runtime/emitter.c"
-  "${FLATCC_ROOT}/src/runtime/refmap.c"
-)
-target_include_directories(
-  flatcc-cli PRIVATE
-  "${FLATCC_ROOT}/external" "${FLATCC_ROOT}/include" "${FLATCC_ROOT}/config")
+  "${FLATCC_ROOT}/src/runtime/refmap.c")
+target_include_directories(flatcc-cli PRIVATE "${FLATCC_ROOT}/external" "${FLATCC_ROOT}/include"
+                                              "${FLATCC_ROOT}/config")
 
 #set(FLATCC_EXE ${CMAKE_CURRENT_BINARY_DIR}/flatcc-cli PARENT_SCOPE)
 set(FLATCC_EXE ${CMAKE_CURRENT_BINARY_DIR}/flatcc-cli)

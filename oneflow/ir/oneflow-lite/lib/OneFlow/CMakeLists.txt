@@ -8,9 +8,7 @@ if(LITE_USE_ASCEND_NPU)
 
   add_definitions(-DLITE_USE_ASCEND_NPU=1)
 
-  list(APPEND LITE_LOWERING_SRCS
-    Transform/Lowering/LoweringAscend.cpp
-  )
+  list(APPEND LITE_LOWERING_SRCS Transform/Lowering/LoweringAscend.cpp)
   list(APPEND LITE_LOWERING_LIBS ${ASCEND_LIBRARIES})
 endif()
 
@@ -50,5 +48,4 @@ oneflow_add_mlir_library(
   $<TARGET_OBJECTS:of_op_schema>
   MLIROneFlowExtension
   ${LITE_LOWERING_LIBS}
-  $<BUILD_INTERFACE:flatcc-runtime>
-)
+  $<BUILD_INTERFACE:flatcc-runtime>)

@@ -9,7 +9,8 @@ add_subdirectory(lib)
 set(LLVM_LINK_COMPONENTS Support)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
-add_llvm_executable(oneflow-lite-compile OneFlowLiteCompileMain.cpp DEPENDS MLIROneFlow lite_schemas OneFlowLiteConversion)
+add_llvm_executable(oneflow-lite-compile OneFlowLiteCompileMain.cpp DEPENDS MLIROneFlow
+                    lite_schemas OneFlowLiteConversion)
 
 set(_origin_prefix "\$ORIGIN")
 if(APPLE)
@@ -17,7 +18,7 @@ if(APPLE)
 endif()
 set_target_properties(
   oneflow-lite-compile PROPERTIES BUILD_WITH_INSTALL_RPATH OFF BUILD_RPATH "${_origin_prefix}"
-                               INSTALL_RPATH "${_origin_prefix}")
+                                  INSTALL_RPATH "${_origin_prefix}")
 
 llvm_update_compile_flags(oneflow-lite-compile)
 
