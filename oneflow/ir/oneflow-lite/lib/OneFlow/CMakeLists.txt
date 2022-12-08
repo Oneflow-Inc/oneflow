@@ -50,5 +50,5 @@ oneflow_add_mlir_library(
   $<TARGET_OBJECTS:of_op_schema>
   MLIROneFlowExtension
   ${LITE_LOWERING_LIBS}
-  flatcc-runtime
+  $<BUILD_INTERFACE:flatcc-runtime>
 )
