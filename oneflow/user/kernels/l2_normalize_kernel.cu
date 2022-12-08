@@ -24,7 +24,8 @@ namespace {
 
 template<typename T, typename ComputeType>
 __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
-                                   const ComputeType epsilon, const T* in, ComputeType* square_x_sum, T* out) {
+                                   const ComputeType epsilon, const T* in,
+                                   ComputeType* square_x_sum, T* out) {
   using BlockReduce = cub::BlockReduce<ComputeType, ep::CudaStream::kDefaultBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -102,8 +103,9 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     int32_t n = x->shape_view().elem_cnt() / c;
     int32_t d = x->shape_view().Count(axis + 1);
     using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-    RUN_CUDA_KERNEL((L2NormalizeForward<T, ComputeType>), ctx->stream(), n, n, c, d, static_cast<ComputeType>(epsilon),
-                    x->dptr<T>(), square_x_sum->mut_dptr<ComputeType>(), y->mut_dptr<T>());
+    RUN_CUDA_KERNEL((L2NormalizeForward<T, ComputeType>), ctx->stream(), n, n, c, d,
+                    static_cast<ComputeType>(epsilon), x->dptr<T>(),
+                    square_x_sum->mut_dptr<ComputeType>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
