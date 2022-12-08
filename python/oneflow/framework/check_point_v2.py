@@ -359,6 +359,7 @@ def load_from_pytorch_file(
                 flow_obj,
                 placement=flow.placement("cpu", [global_src_rank]),
                 sbp=flow.sbp.broadcast,
+                warn_on_non_tensor_leaf=False,
             )
 
         flow_obj = ArgsTree(flow_obj).map_leaf(lambda x: smart_to(x, map_location))
