@@ -30,11 +30,8 @@ class TestSaveLoad(flow.unittest.TestCase):
             torch.save(conv_torch.state_dict(), f.name)
             with test_case.assertRaises(NotImplementedError) as ctx:
                 conv_flow.load_state_dict(flow.load(f.name, support_pytorch=False))
-        test_case.assertTrue(
-            "No valid load method found" in str(ctx.exception)
-        )
+        test_case.assertTrue("No valid load method found" in str(ctx.exception))
 
 
 if __name__ == "__main__":
     unittest.main()
-

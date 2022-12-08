@@ -317,54 +317,76 @@ class TestModule(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_load_pytorch_weights(test_case):
-        for device in ['cpu', 'cuda']:
-            for map_location in [None, flow.device('cuda:0')]:
+        for device in ["cpu", "cuda"]:
+            for map_location in [None, flow.device("cuda:0")]:
                 conv_torch = torch.nn.Conv2d(3, 3, 3).to(device)
 
                 conv_flow1 = flow.nn.Conv2d(3, 3, 3).to(device)
                 with tempfile.NamedTemporaryFile() as f:
                     torch.save(conv_torch.state_dict(), f.name)
-                    conv_flow1.load_state_dict(flow.load(f.name, map_location=map_location))
+                    conv_flow1.load_state_dict(
+                        flow.load(f.name, map_location=map_location)
+                    )
                 test_case.assertTrue(
                     np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(), conv_flow1.weight.numpy()
-                    ))
+                        conv_torch.weight.detach().cpu().numpy(),
+                        conv_flow1.weight.numpy(),
+                    )
+                )
 
                 conv_flow2 = flow.nn.Conv2d(3, 3, 3).to(device)
                 with tempfile.NamedTemporaryFile() as f:
                     torch.save({"weights": conv_torch.state_dict()}, f.name)
-                    conv_flow2.load_state_dict(flow.load(f.name, map_location=map_location)["weights"])
+                    conv_flow2.load_state_dict(
+                        flow.load(f.name, map_location=map_location)["weights"]
+                    )
                 test_case.assertTrue(
                     np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(), conv_flow2.weight.numpy()
-                    ))
+                        conv_torch.weight.detach().cpu().numpy(),
+                        conv_flow2.weight.numpy(),
+                    )
+                )
 
     @flow.unittest.skip_unless_1n2d()
     def test_load_pytorch_weights_global(test_case):
-        for device in ['cpu', 'cuda']:
-            for map_location in [None, flow.placement.all('cuda')]:
+        for device in ["cpu", "cuda"]:
+            for map_location in [None, flow.placement.all("cuda")]:
                 conv_torch = torch.nn.Conv2d(3, 3, 3).to(device)
 
                 all_placement = flow.placement.all(device)
-                conv_flow1 = flow.nn.Conv2d(3, 3, 3).to_global(all_placement, flow.sbp.broadcast)
+                conv_flow1 = flow.nn.Conv2d(3, 3, 3).to_global(
+                    all_placement, flow.sbp.broadcast
+                )
                 with tempfile.NamedTemporaryFile() as f:
                     if flow.env.get_rank() == 0:
                         torch.save(conv_torch.state_dict(), f.name)
-                    conv_flow1.load_state_dict(flow.load(f.name, map_location=map_location, global_src_rank=0))
+                    conv_flow1.load_state_dict(
+                        flow.load(f.name, map_location=map_location, global_src_rank=0)
+                    )
                 test_case.assertTrue(
                     np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(), conv_flow1.weight.numpy()
-                    ))
+                        conv_torch.weight.detach().cpu().numpy(),
+                        conv_flow1.weight.numpy(),
+                    )
+                )
 
-                conv_flow2 = flow.nn.Conv2d(3, 3, 3).to_global(all_placement, flow.sbp.broadcast)
+                conv_flow2 = flow.nn.Conv2d(3, 3, 3).to_global(
+                    all_placement, flow.sbp.broadcast
+                )
                 with tempfile.NamedTemporaryFile() as f:
                     if flow.env.get_rank() == 0:
                         torch.save({"weights": conv_torch.state_dict()}, f.name)
-                    conv_flow2.load_state_dict(flow.load(f.name, map_location=map_location, global_src_rank=0)["weights"])
+                    conv_flow2.load_state_dict(
+                        flow.load(f.name, map_location=map_location, global_src_rank=0)[
+                            "weights"
+                        ]
+                    )
                 test_case.assertTrue(
                     np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(), conv_flow2.weight.numpy()
-                    ))
+                        conv_torch.weight.detach().cpu().numpy(),
+                        conv_flow2.weight.numpy(),
+                    )
+                )
 
     @flow.unittest.skip_unless_1n1d()
     def test_save_load_module_directly(test_case):

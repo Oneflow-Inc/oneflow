@@ -126,7 +126,9 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
-def smart_to(tensor: "oneflow.Tensor", dest: Optional[Union[str, flow.device, flow.placement]]) -> "oneflow.Tensor":
+def smart_to(
+    tensor: "oneflow.Tensor", dest: Optional[Union[str, flow.device, flow.placement]]
+) -> "oneflow.Tensor":
     if dest is None:
         return tensor
     if isinstance(dest, (str, flow.device)):
@@ -136,7 +138,9 @@ def smart_to(tensor: "oneflow.Tensor", dest: Optional[Union[str, flow.device, fl
 
 
 def _LoadSingleVariable(
-    path: Optional[str], global_src_rank: Optional[int] = None, map_location: Optional[Union[flow.device, flow.placement]] = None
+    path: Optional[str],
+    global_src_rank: Optional[int] = None,
+    map_location: Optional[Union[flow.device, flow.placement]] = None,
 ) -> "flow.Tensor":
     if global_src_rank is not None:
         rank = flow.env.get_rank()
@@ -219,7 +223,9 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank, map_location)
+        tmp_tensor = _LoadSingleVariable(
+            str(abs_dir_name), global_src_dsk_rank, map_location
+        )
         self.__init__(tmp_tensor)
     else:
         assert map_location is None
@@ -280,7 +286,9 @@ def is_dir_and_no_pickle_file(path: Path, support_pytorch: bool):
 
 @load_if(is_dir_and_no_pickle_file)
 def legacy_load(
-    path: Path, global_src_rank: Optional[int] = None, map_location: Optional[Union[str, flow.device]] = None,
+    path: Path,
+    global_src_rank: Optional[int] = None,
+    map_location: Optional[Union[str, flow.device]] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -319,28 +327,39 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         global_src_dsk_rank = None
         save_load_path = None
         map_location = None
-        
+
 
 def is_file_and_support_pytorch(path: Path, support_pytorch: bool) -> bool:
     return path.is_file() and support_pytorch
 
 
 @load_if(is_file_and_support_pytorch)
-def load_from_pytorch_file(path: Path, global_src_rank = None, map_location: Optional[Union[str, flow.device]] = None):
+def load_from_pytorch_file(
+    path: Path,
+    global_src_rank=None,
+    map_location: Optional[Union[str, flow.device]] = None,
+):
     with flow.mock_torch.disable():
         import torch
+
         if global_src_rank is None or global_src_rank == flow.env.get_rank():
-            torch_obj = torch.load(path, map_location='cpu')
+            torch_obj = torch.load(path, map_location="cpu")
+
             def torch_tensor_to_flow(x):
                 if isinstance(x, torch.Tensor):
                     return flow.utils.tensor.from_torch(x)
                 else:
                     return x
+
             flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
         else:
             flow_obj = None
         if global_src_rank is not None:
-            flow_obj = flow.utils.global_view.to_global(flow_obj, placement=flow.placement("cpu", [global_src_rank]), sbp=flow.sbp.broadcast)
+            flow_obj = flow.utils.global_view.to_global(
+                flow_obj,
+                placement=flow.placement("cpu", [global_src_rank]),
+                sbp=flow.sbp.broadcast,
+            )
 
         flow_obj = ArgsTree(flow_obj).map_leaf(lambda x: smart_to(x, map_location))
         return flow_obj
@@ -358,7 +377,7 @@ def load_oneflow_pickle(
     path: Path,
     global_src_rank: Optional[int] = None,
     map_location: Optional[Union[str, flow.device, flow.placement]] = None,
-    ):
+):
     rank = flow.env.get_rank()
     pickle_path = path / PICKLE_FILENAME
     if global_src_rank is not None:
@@ -419,7 +438,7 @@ def load(
         i = _broadcast_py_object(None, global_src_rank)
         load = load_methods[i][1]
 
-    return load(path, global_src_rank, map_location) # type: ignore
+    return load(path, global_src_rank, map_location)  # type: ignore
 
 
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:

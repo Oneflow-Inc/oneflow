@@ -106,6 +106,7 @@ class TestMock(flow.unittest.TestCase):
     def test_noop_disable(test_case):
         with mock.disable():
             import torch
+
             test_case.assertEqual(torch.__package__, "torch")
 
     def test_3rd_party(test_case):
