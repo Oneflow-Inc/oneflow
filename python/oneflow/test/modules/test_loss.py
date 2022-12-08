@@ -374,14 +374,24 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case):
-        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "none", "cpu")
-        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "none", "cuda")
-        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "sum", "cpu")
-        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "sum", "cuda")
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "none", "cpu"
+        )
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "none", "cuda"
+        )
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "sum", "cpu"
+        )
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "sum", "cuda"
+        )
         _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
             test_case, "mean", "cpu"
         )
-        # _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case, "mean", "cuda")
+        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
+            test_case, "mean", "cuda"
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
