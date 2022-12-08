@@ -114,7 +114,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUDA_L2_NORMALIZE_KERNEL(half)                    
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(half)
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(double)
 
