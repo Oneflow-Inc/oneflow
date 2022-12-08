@@ -28,17 +28,10 @@ class TestSaveLoad(flow.unittest.TestCase):
         conv_flow = flow.nn.Conv2d(3, 3, 3)
         with tempfile.NamedTemporaryFile() as f:
             torch.save(conv_torch.state_dict(), f.name)
-            with test_case.assertRaises(AssertionError) as ctx:
-                conv_flow.load_state_dict(flow.load(f.name, global_src_rank=0))
+            with test_case.assertRaises(NotImplementedError) as ctx:
+                conv_flow.load_state_dict(flow.load(f.name, support_pytorch=False))
         test_case.assertTrue(
-            "doesn't exist" in str(ctx.exception)
-        )
-        with tempfile.NamedTemporaryFile() as f:
-            torch.save(conv_torch.state_dict(), f.name)
-            with test_case.assertRaises(AssertionError) as ctx:
-                conv_flow.load_state_dict(flow.load(f.name, global_src_rank=0, support_pytorch=True))
-        test_case.assertTrue(
-            "PyTorch support is not compatible with global_src_rank" in str(ctx.exception)
+            "No valid load method found" in str(ctx.exception)
         )
 
 

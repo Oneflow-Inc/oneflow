@@ -126,13 +126,21 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
+def smart_to(tensor: "oneflow.Tensor", dest: Optional[Union[str, flow.device, flow.placement]]) -> "oneflow.Tensor":
+    if dest is None:
+        return tensor
+    if isinstance(dest, (str, flow.device)):
+        return tensor.to(device=dest)
+    else:
+        return tensor.to_global(placement=dest)
+
+
 def _LoadSingleVariable(
-    path: Optional[str], global_src_rank: Optional[int] = None
+    path: Optional[str], global_src_rank: Optional[int] = None, map_location: Optional[Union[flow.device, flow.placement]] = None
 ) -> "flow.Tensor":
     if global_src_rank is not None:
         rank = flow.env.get_rank()
         if rank == global_src_rank:
-            assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
             loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype)
         else:
@@ -140,10 +148,9 @@ def _LoadSingleVariable(
         loaded = loaded.to_global(
             flow.placement("cpu", [global_src_rank]), flow.sbp.broadcast
         )
-        return loaded
-
-    assert isinstance(path, str)
-    return flow.tensor(FileBackendVariableBlob(path).numpy())
+    else:
+        loaded = flow.tensor(FileBackendVariableBlob(path).numpy())
+    return smart_to(loaded, map_location)
 
 
 def _broadcast_py_object(obj, src: int = 0):
@@ -212,16 +219,7 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank)
-        if map_location is not None:
-            if isinstance(map_location, flow.device):
-                tmp_tensor = tmp_tensor.to(map_location)
-            elif isinstance(map_location, flow.placement):
-                tmp_tensor = tmp_tensor.to_global(map_location)
-            else:
-                raise ValueError(
-                    f"Unsupported 'map_location' type {type(map_location)}."
-                )
+        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank, map_location)
         self.__init__(tmp_tensor)
     else:
         assert map_location is None
@@ -262,8 +260,27 @@ def RegisterMethods():
     flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
+load_methods = []
+
+
+def load_if(condition):
+    def decorator(func):
+        load_methods.append((condition, func))
+        return func
+
+    return decorator
+
+
+def is_dir_and_no_pickle_file(path: Path, support_pytorch: bool):
+    if path.is_dir():
+        pickle_path = path / PICKLE_FILENAME
+        return not pickle_path.exists()
+    return False
+
+
+@load_if(is_dir_and_no_pickle_file)
 def legacy_load(
-    path: Union[str, Path], global_src_rank: Optional[int] = None,
+    path: Path, global_src_rank: Optional[int] = None, map_location: Optional[Union[str, flow.device]] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -279,7 +296,7 @@ def legacy_load(
     for f in all_files:
         var_dir = os.path.join(path, f)
         try:
-            var_dict[f] = _LoadSingleVariable(var_dir, global_src_rank)
+            var_dict[f] = _LoadSingleVariable(var_dir, global_src_rank, map_location)
         except FileNotFoundError:
             warnings.warn(
                 f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
@@ -302,26 +319,65 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         global_src_dsk_rank = None
         save_load_path = None
         map_location = None
+        
+
+def is_file_and_support_pytorch(path: Path, support_pytorch: bool) -> bool:
+    return path.is_file() and support_pytorch
 
 
-def _load_from_pytorch_file(path: Union[str, Path], map_location: Optional[Union[str, flow.device]] = None,):
+@load_if(is_file_and_support_pytorch)
+def load_from_pytorch_file(path: Path, global_src_rank = None, map_location: Optional[Union[str, flow.device]] = None):
     with flow.mock_torch.disable():
         import torch
-        if map_location is None:
-            map_location = "cpu"
-        if isinstance(map_location, flow.device):
-            if map_location.type == 'cpu':
-                map_location = torch.device(map_location.type)
-            else:
-                map_location = torch.device(map_location.type, map_location.index)
-        torch_obj = torch.load(path, map_location=map_location)
-        def torch_tensor_to_flow(x):
-            if isinstance(x, torch.Tensor):
-                return flow.from_torch(x)
-            else:
-                return x
-        flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
+        if global_src_rank is None or global_src_rank == flow.env.get_rank():
+            torch_obj = torch.load(path, map_location='cpu')
+            def torch_tensor_to_flow(x):
+                if isinstance(x, torch.Tensor):
+                    return flow.utils.tensor.from_torch(x)
+                else:
+                    return x
+            flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
+        else:
+            flow_obj = None
+        if global_src_rank is not None:
+            flow_obj = flow.utils.global_view.to_global(flow_obj, placement=flow.placement("cpu", [global_src_rank]), sbp=flow.sbp.broadcast)
+
+        flow_obj = ArgsTree(flow_obj).map_leaf(lambda x: smart_to(x, map_location))
         return flow_obj
+
+
+def is_dir_and_has_pickle_file(path: Path, support_pytorch: bool) -> bool:
+    if path.is_dir():
+        pickle_path = path / PICKLE_FILENAME
+        return pickle_path.exists()
+    return False
+
+
+@load_if(is_dir_and_has_pickle_file)
+def load_oneflow_pickle(
+    path: Path,
+    global_src_rank: Optional[int] = None,
+    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+    ):
+    rank = flow.env.get_rank()
+    pickle_path = path / PICKLE_FILENAME
+    if global_src_rank is not None:
+        if rank == global_src_rank:
+            pickle_bytes = pickle_path.read_bytes()
+            _broadcast_py_object(pickle_bytes, global_src_rank)
+        else:
+            pickle_bytes = _broadcast_py_object(None, global_src_rank)
+    else:
+        pickle_bytes = pickle_path.read_bytes()
+
+    if map_location is not None:
+        assert isinstance(
+            map_location, (str, flow.device, flow.placement)
+        ), "'map_location' only supports str, device or placement."
+    with tensor_pickling_context(path, global_src_rank, map_location):
+        res = pickle.loads(pickle_bytes)
+    assert res["protocol_version"] == PROTOCOL_VERSION
+    return res["data"]
 
 
 def load(
@@ -329,7 +385,7 @@ def load(
     global_src_rank: Optional[int] = None,
     map_location: Optional[Union[str, flow.device, flow.placement]] = None,
     *,
-    support_pytorch: Optional[bool] = None,
+    support_pytorch: bool = True,
 ) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
@@ -343,48 +399,27 @@ def load(
             `flow.placement('cuda', [global_src_rank])`
         map_location (str, flow.device or flow.placement, optional):
             indicates the location where all tensors should be loaded.
+        support_pytorch (bool, optional): whether to support loading
+            the file saved by `torch.save`. Default: True
 
     Returns:
         The loaded object
     """
     path: Path = Path(path)
     rank = flow.env.get_rank()
-    if support_pytorch is None:
-        support_pytorch = (global_src_rank is None)
-    assert not (global_src_rank is not None and support_pytorch), "PyTorch support is not compatible with global_src_rank"
     if global_src_rank is None or global_src_rank == rank:
-        if path.is_file() and support_pytorch:
-            assert global_src_rank is None
-            return _load_from_pytorch_file(path, map_location)
-        assert path.is_dir(), "Directory {} doesn't exist!".format(path)
-        pickle_path = path / PICKLE_FILENAME
-        is_legacy = not pickle_path.exists()
-        if global_src_rank is not None:
-            _broadcast_py_object(is_legacy, global_src_rank)
-    else:
-        is_legacy = _broadcast_py_object(None, global_src_rank)
-    if is_legacy:
-        return legacy_load(path, global_src_rank)
-
-    if global_src_rank is not None:
-        if rank == global_src_rank:
-            pickle_bytes = pickle_path.read_bytes()
-            _broadcast_py_object(pickle_bytes, global_src_rank)
+        for i, (condition, load) in enumerate(load_methods):
+            if condition(path, support_pytorch):
+                if global_src_rank is not None:
+                    _broadcast_py_object(i, global_src_rank)
+                break
         else:
-            pickle_bytes = _broadcast_py_object(None, global_src_rank)
+            raise NotImplementedError("No valid load method found for {}".format(path))
     else:
-        pickle_bytes = pickle_path.read_bytes()
+        i = _broadcast_py_object(None, global_src_rank)
+        load = load_methods[i][1]
 
-    if map_location is not None:
-        if isinstance(map_location, str):
-            map_location: flow.device = flow.device(map_location)
-        assert isinstance(
-            map_location, (flow.device, flow.placement)
-        ), "'map_location' only supports str, device or placement."
-    with tensor_pickling_context(path, global_src_rank, map_location):
-        res = pickle.loads(pickle_bytes)
-    assert res["protocol_version"] == PROTOCOL_VERSION
-    return res["data"]
+    return load(path, global_src_rank, map_location) # type: ignore
 
 
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
