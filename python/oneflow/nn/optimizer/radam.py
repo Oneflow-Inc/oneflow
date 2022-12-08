@@ -43,7 +43,8 @@ class RAdam(Optimizer):
         options["betas"] = betas
         options["eps"] = eps
         options["weight_decay"] = weight_decay
-        options["rho_inf"] = 2 / (1 - betas[1]) - 1
+        # import ipdb; ipdb.set_trace()
+        # options["rho_inf"] = 2 / (1 - betas[1]) - 1
         options["do_bias_correction"] = do_bias_correction
         options["fused"] = fused
         super().__init__(params, options)
@@ -56,6 +57,8 @@ class RAdam(Optimizer):
                 if param_group["fused"] and not param.is_cuda:
                     warnings.warn("Fused SGD only support cuda parameters.")
                     param_group["fused"] = False
+
+                param_group["rho_inf"] = 2 / (1 - param_group["betas"][1]) - 1
 
         self._radam = (
             flow.stateful_op("radam_update")

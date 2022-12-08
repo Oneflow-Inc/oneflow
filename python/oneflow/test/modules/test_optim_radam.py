@@ -169,9 +169,6 @@ def compare_with_numpy_radam(
             v = beta2 * vt + (1 - beta2) * grad * grad
             m_hat = m / bias_correction1
             rho_t = rho_inf - bias_correction2_numerator / bias_correction2
-            print(
-                f"numpy : model_val: {x}, model_diff_t: {grad}, mt: {m}, vt: {v}, mt_hat: {m_hat}, rho_t: {rho_t}"
-            )
             if rho_t > 5:
                 lt = np.sqrt(bias_correction2 / (v + eps))
                 rt = np.sqrt(
@@ -181,7 +178,6 @@ def compare_with_numpy_radam(
                     / ((rho_inf - 4) * (rho_inf - 2) * rho_t)
                 )
                 param = x - learning_rate * m_hat * lt * rt
-                print(f"numpy : lt: {lt}, rt: {rt}, param: {param}")
             else:
                 param = x - learning_rate * m_hat
             return (param, m, v)
@@ -197,9 +193,6 @@ def compare_with_numpy_radam(
     torch_res = train_by_torch()
 
     for i in range(tensor_num):
-        print("oneflow result: ", oneflow_res[i].numpy().flatten())
-        print("torch result: ", torch_res[i].detach().cpu().numpy().flatten())
-        print("numpy result: ", numpy_res[i].flatten())
         test_case.assertTrue(
             np.allclose(
                 oneflow_res[i].numpy().flatten(),
@@ -210,7 +203,7 @@ def compare_with_numpy_radam(
         )
 
 
-def compare_with_numpy_adamax_clip_grad(
+def compare_with_numpy_radam_clip_grad(
     test_case,
     device,
     x_shape,
@@ -247,8 +240,7 @@ def compare_with_numpy_adamax_clip_grad(
             x.append(
                 Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
             )
-
-        adamax = flow.optim.Adamax(
+        radam = flow.optim.RAdam(
             [
                 {
                     "params": x,
@@ -275,28 +267,29 @@ def compare_with_numpy_adamax_clip_grad(
                 )
                 loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
-            adamax.clip_grad()
-            adamax.step()
-            adamax.zero_grad()
+            radam.clip_grad()
+            radam.step()
+            radam.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
-                state_dict = adamax.state_dict()
-                adamax = flow.optim.Adamax([{"params": x,}])
+                state_dict = radam.state_dict()
+                radam = flow.optim.RAdam([{"params": x,}])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
                         state_dict = flow.load(save_dir)
-                adamax.load_state_dict(state_dict)
+                radam.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
         x = init_value_seq
         mt = np.zeros_like(x)
-        normt = np.zeros_like(x)
+        vt = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
+        rho_inf = 2 / (1 - beta2) - 1
 
         def train_one_iter(step, grad):
             total_norm, grad = clip_grad_norm_np(
@@ -307,14 +300,30 @@ def compare_with_numpy_adamax_clip_grad(
                 grad[i] = grad[i] + weight_decay * x[i]
 
                 bias_correction1 = 1.0
-
                 if do_bias_correction:
                     bias_correction1 = 1.0 - np.power(beta1, step)
+                    bias_correction2 = 1.0 - np.power(beta2, step)
+                    bias_correction2_numerator = 2 * step * np.power(beta2, step)
+                else:
+                    bias_correction1 = 1.0
+                    bias_correction2 = 1.0
+                    bias_correction2_numerator = 1.0
 
                 mt[i] = beta1 * mt[i] + (1 - beta1) * grad[i]
-                normt[i] = np.maximum(beta2 * normt[i], abs(grad[i]) + eps)
-
-                x[i] = x[i] - ((learning_rate / bias_correction1) * mt[i] / normt[i])
+                vt[i] = beta2 * vt[i] + (1 - beta2) * grad[i] * grad[i]
+                m_hat = mt[i] / bias_correction1
+                rho_t = rho_inf - bias_correction2_numerator / bias_correction2
+                if rho_t > 5:
+                    lt = np.sqrt(bias_correction2 / (vt[i] + eps))
+                    rt = np.sqrt(
+                        (rho_t - 4)
+                        * (rho_t - 2)
+                        * rho_inf
+                        / ((rho_inf - 4) * (rho_inf - 2) * rho_t)
+                    )
+                    x[i] = x[i] - learning_rate * m_hat * lt * rt
+                else:
+                    x[i] = x[i] - learning_rate * m_hat
 
         for i in range(1, train_iters + 1):
             train_one_iter(i, random_grad_seq[i - 1])
@@ -353,29 +362,28 @@ class TestRAdam(flow.unittest.TestCase):
         arg_dict["tensor_num"] = [1, 4]
 
         for arg in GenArgList(arg_dict):
-            print(arg)
             compare_with_numpy_radam(test_case, *arg)
 
-    # def test_adamax_clip_grad(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["learning_rate"] = [1e-3]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["betas"] = [(0.99, 0.9)]
-    #     arg_dict["weight_decay"] = [0.1, 0.000]
-    #     arg_dict["eps"] = [1e-08]
-    #     arg_dict["do_bias_correction"] = [True, False]
-    #     arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
-    #     arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
-    #     arg_dict["reload_state_step"] = [5]  # save and load optim state
-    #     arg_dict["save_load_by_pickle"] = [False, True]
-    #     # TODO(WangYi): support fused adamax
-    #     arg_dict["fused"] = [False]
-    #     arg_dict["tensor_num"] = [1, 4]
+    def test_radam_clip_grad(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [0.1, 0.000]
+        arg_dict["eps"] = [1e-08]
+        arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
+        arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
+        # TODO(WangYi): support fused radam
+        arg_dict["fused"] = [False]
+        arg_dict["tensor_num"] = [1, 4]
 
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_adamax_clip_grad(test_case, *arg)
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_radam_clip_grad(test_case, *arg)
 
 
 if __name__ == "__main__":
