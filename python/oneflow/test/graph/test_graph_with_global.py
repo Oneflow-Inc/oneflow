@@ -75,14 +75,14 @@ def _test_linear_train_graph_with_ddp(test_case):
             out = linear_t_g(x)
             result_check_list.append(out)
 
-            if iter_cnt == 0:
-                if flow.env.get_rank() == 0:
-                    import traceback
+            # if iter_cnt == 0:
+            #     if flow.env.get_rank() == 0:
+            #         import traceback
 
-                    try:
-                        print(linear_t_g)
-                    except:
-                        print(traceback.format_exc())
+            #         try:
+            #             print(linear_t_g)
+            #         except:
+            #             print(traceback.format_exc())
 
         def one_eval_iter(iter_cnt=0):
             out = linear_e_g(x)
@@ -119,7 +119,6 @@ def _test_linear_train_graph_with_ddp(test_case):
                 super().__init__()
                 self.linear_dp = linear_dp
                 self.add_optimizer(of_sgd)
-                self.debug(op_repr_with_py_stack=True)
 
             def build(self, x):
                 # This is ok
@@ -176,17 +175,18 @@ def _test_linear_train_graph_with_ddp(test_case):
         result_check_list = []
 
         def one_train_iter(iter_cnt=0):
+            print("========> x.placement ", x.placement)
             out = linear_t_g(x)
             result_check_list.append(out)
 
-            if iter_cnt == 0:
-                if flow.env.get_rank() == 0:
-                    import traceback
+            # if iter_cnt == 0:
+            #     if flow.env.get_rank() == 0:
+            #         import traceback
 
-                    try:
-                        print(linear_t_g)
-                    except:
-                        print(traceback.format_exc())
+            #         try:
+            #             print(linear_t_g)
+            #         except:
+            #             print(traceback.format_exc())
 
         def one_eval_iter(iter_cnt=0):
             out = linear_e_g(x)
@@ -230,8 +230,11 @@ def _test_global_mode(test_case):
             with global_mode(True, placement=P, sbp=B):
                 # Test global mode meta data
                 cur_global_mode = global_view.current_global_mode
+                print("current placement", cur_global_mode.placement)
+                print("current sbp", cur_global_mode.sbp)
+                print("current enable", cur_global_mode.is_enabled)
                 test_case.assertTrue(cur_global_mode.is_enabled)
-                test_case.assertEqual(cur_global_mode.placement, P)
+                test_case.assertEqual(cur_global_mode.placement, P, cur_global_mode.placement)
                 test_case.assertEqual(cur_global_mode.sbp[0], B)
 
                 # Test global mode source op
@@ -268,7 +271,7 @@ def _test_global_mode(test_case):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithDDP(oneflow.unittest.TestCase):
-    def test_linear_train_graph_with_ddp(test_case):
+    def _test_linear_train_graph_with_ddp(test_case):
         _test_linear_train_graph_with_ddp(test_case)
 
     def test_global_mode(test_case):
