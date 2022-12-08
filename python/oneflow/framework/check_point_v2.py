@@ -277,7 +277,7 @@ def load_if(condition):
     return decorator
 
 
-def is_dir_and_no_pickle_file(path: Path, support_pytorch: bool):
+def is_dir_and_no_pickle_file(path: Path, support_pytorch_format: bool):
     if path.is_dir():
         pickle_path = path / PICKLE_FILENAME
         return not pickle_path.exists()
@@ -329,11 +329,11 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         map_location = None
 
 
-def is_file_and_support_pytorch(path: Path, support_pytorch: bool) -> bool:
-    return path.is_file() and support_pytorch
+def is_file_and_support_pytorch_format(path: Path, support_pytorch_format: bool) -> bool:
+    return path.is_file() and support_pytorch_format
 
 
-@load_if(is_file_and_support_pytorch)
+@load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
     path: Path,
     global_src_rank=None,
@@ -365,7 +365,7 @@ def load_from_pytorch_file(
         return flow_obj
 
 
-def is_dir_and_has_pickle_file(path: Path, support_pytorch: bool) -> bool:
+def is_dir_and_has_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
     if path.is_dir():
         pickle_path = path / PICKLE_FILENAME
         return pickle_path.exists()
@@ -404,7 +404,7 @@ def load(
     global_src_rank: Optional[int] = None,
     map_location: Optional[Union[str, flow.device, flow.placement]] = None,
     *,
-    support_pytorch: bool = True,
+    support_pytorch_format: bool = True,
 ) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
@@ -418,8 +418,8 @@ def load(
             `flow.placement('cuda', [global_src_rank])`
         map_location (str, flow.device or flow.placement, optional):
             indicates the location where all tensors should be loaded.
-        support_pytorch (bool, optional): whether to support loading
-            the file saved by `torch.save`. Default: True
+        support_pytorch_format (bool, optional): whether to support
+            loading the file saved by `torch.save`. Default: True
 
     Returns:
         The loaded object
@@ -428,7 +428,7 @@ def load(
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
         for i, (condition, load) in enumerate(load_methods):
-            if condition(path, support_pytorch):
+            if condition(path, support_pytorch_format):
                 if global_src_rank is not None:
                     _broadcast_py_object(i, global_src_rank)
                 break
