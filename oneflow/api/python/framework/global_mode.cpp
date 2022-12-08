@@ -58,8 +58,7 @@ ONEFLOW_API_PYBIND11_MODULE("global_view", m) {
 
   py::class_<GlobalMode, std::shared_ptr<GlobalMode>>(m, "current_global_mode")
       .def(py::init([]() { return std::make_shared<GlobalMode>(); }))
-      //.def_property_readonly("is_enabled", [](const GlobalMode& gm) { return gm.is_enabled(); })
-      .def("is_enabled", [](const GlobalMode& gm) { return gm.is_enabled(); })
+      .def_property_readonly("is_enabled", [](const GlobalMode& gm) { return gm.is_enabled(); })
       .def_property_readonly("sbp",
                              [](const GlobalMode& gm) {
                                if (!gm.is_enabled()) {
