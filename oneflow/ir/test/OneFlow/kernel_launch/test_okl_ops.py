@@ -39,7 +39,7 @@ def _test_okl_ops(test_case: flow.unittest.TestCase):
     lazy_relu = graph_to_run(x)
 
     cmp = flow.sort(flow.tanh(flow.relu(x)))
-    test_case.assertTrue(flow.all(flow.equal(cmp[0], lazy_relu[0])))
+    test_case.assertTrue(flow.equal(cmp[0], lazy_relu[0]))
 
 
 def _test_okl_ops_with_cuda(test_case: flow.unittest.TestCase):
@@ -57,7 +57,7 @@ def _test_okl_ops_with_cuda(test_case: flow.unittest.TestCase):
     lazy_relu = graph_to_run(x)
 
     cmp = flow.sort(flow.tanh(flow.relu(x)))
-    test_case.assertTrue(flow.all(flow.equal(cmp[0], lazy_relu[0])))
+    test_case.assertTrue(flow.equal(cmp[0], lazy_relu[0]))
 
 
 @flow.unittest.skip_unless_1n1d()

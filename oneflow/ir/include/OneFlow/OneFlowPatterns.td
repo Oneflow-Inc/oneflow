@@ -299,24 +299,4 @@ def FuseConv2DBatchNormPattern : Pat<
   []
 >;
 
-def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
-
-def DeleteSameDtypeCastOpPattern : Pat<
-  (
-    OneFlow_CastOp : $res
-     $x,
-     $cast_op_name,
-     $cast_device_tag,
-     $cast_device_name,
-     $cast_scope_symbol_id,
-     $cast_hierarchy,
-     $dtype,
-     $pin_memory
-  ),
-  (
-    replaceWithValue $x
-  ),
-  [(IsSameDtype $res, $x)]
->;
-
 #endif // ONEFLOW_PATTERNS
