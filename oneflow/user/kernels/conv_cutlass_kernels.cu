@@ -289,11 +289,19 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     SP beta;
 
     if (allow_half_accumulation) {
-      alpha.h = 1;
-      beta.h = 1;
+      alpha.h = static_cast<half>(1.0F);
+      if (bias == nullptr) {
+        beta.h = static_cast<half>(0.0F);
+      } else {
+        beta.h = static_cast<half>(1.0F);
+      }
     } else {
-      alpha.f = 1;
-      beta.f = 1;
+      alpha.f = 1.0F;
+      if (bias == nullptr) {
+        beta.f = 0.0F;
+      } else {
+        beta.f = 1.0F;
+      }
     }
     arguments.alpha = &alpha;
     arguments.beta = &beta;
