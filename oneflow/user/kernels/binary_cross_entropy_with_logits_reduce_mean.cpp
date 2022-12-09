@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstddef>
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/user/kernels/binary_cross_entropy_with_logits_mean_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+
 namespace oneflow {
 namespace user_op {
 namespace {
@@ -34,19 +35,32 @@ inline T CalSigmoid(const T x) {
   return half_of_one * std::tanh(half_of_one * x) + half_of_one;
 }
 
+template<typename INPUT_T, typename TARGET_T, typename ComputeType>
+struct ComputeBinaryCrossEntropyWithLogitsReduceMeanOutFunctor {
+  inline ComputeType Compute(int64_t elem_cnt, const INPUT_T* input, const TARGET_T* target, int64_t reduce_elem_cnt) {
+    ComputeType result = 0.0;
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      ComputeType input_val = static_cast<ComputeType>(input[i]);
+      ComputeType target_val = static_cast<ComputeType>(target[i]);
+      ComputeType max_val = ComputeMaxVal(input_val);
+      result += (1 - target_val) * input_val + max_val
+                + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
+    }
+    return static_cast<TARGET_T>(result) / reduce_elem_cnt;
+  }
+};
+
 template<typename INPUT_T, typename TARGET_T>
 void ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(int64_t elem_cnt, const INPUT_T* input,
                                                       const TARGET_T* target, TARGET_T* out,
                                                       int64_t reduce_elem_cnt) {
-  double result = 0.0;
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    double input_val = static_cast<double>(input[i]);
-    double target_val = static_cast<double>(target[i]);
-    double max_val = ComputeMaxVal(input_val);
-    result += (1 - target_val) * input_val + max_val
-              + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
+  if (sizeof(INPUT_T) > sizeof(TARGET_T)) {
+    ComputeBinaryCrossEntropyWithLogitsReduceMeanOutFunctor<INPUT_T, TARGET_T, INPUT_T> f;
+    out[0] = f.Compute(elem_cnt, input, target, reduce_elem_cnt);
+  } else {
+    ComputeBinaryCrossEntropyWithLogitsReduceMeanOutFunctor<INPUT_T, TARGET_T, TARGET_T> f;
+    out[0] = f.Compute(elem_cnt, input, target, reduce_elem_cnt);
   }
-  out[0] = static_cast<TARGET_T>(result) / reduce_elem_cnt;
 }
 
 template<typename INPUT_T, typename TARGET_T>

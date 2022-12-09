@@ -15,7 +15,10 @@ limitations under the License.
 """
 
 import unittest
+from collections import OrderedDict
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
+
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
@@ -258,10 +261,19 @@ def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
     return y
 
 
-def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-    test_case, reduction="none", device="cpu"
-):
-    arr = np.random.randn(48, 160, 160)
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first(test_case, shape, reduction, device):
+    def compare(a, b):
+        test_case.assertTrue(
+            np.allclose(
+                a.detach().cpu().numpy(),
+                b.detach().cpu().numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
+        )
+
+    arr = np.random.randn(*shape)
+
     flow_pred_mask = flow.Tensor(arr).float().to(device)
     flow_pred_mask.requires_grad = True
     flow_gt_mask = flow.Tensor(arr).double().to(device)
@@ -276,22 +288,22 @@ def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
         torch_pred_mask, torch_gt_mask, reduction=reduction
     )
     torch_loss.sum().backward()
-    test_case.assertTrue(
-        np.allclose(
-            flow_loss.detach().cpu().numpy(),
-            torch_loss.detach().cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
+    compare(flow_loss, torch_loss)
+    compare(flow_pred_mask.grad.data, torch_pred_mask.grad.data)
+
+
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first(test_case, shape, reduction, device):
+    def compare(a, b):
+        test_case.assertTrue(
+            np.allclose(
+                a.detach().cpu().numpy(),
+                b.detach().cpu().numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
         )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            flow_pred_mask.grad.data.cpu().numpy(),
-            torch_pred_mask.grad.data.cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-        )
-    )
+    
+    arr = np.random.randn(*shape)
 
     flow_pred_mask = flow.Tensor(arr).double().to(device)
     flow_pred_mask.requires_grad = True
@@ -307,22 +319,8 @@ def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
         torch_pred_mask, torch_gt_mask, reduction=reduction
     )
     torch_loss.sum().backward()
-    test_case.assertTrue(
-        np.allclose(
-            flow_loss.detach().cpu().numpy(),
-            torch_loss.detach().cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            flow_pred_mask.grad.data.cpu().numpy(),
-            torch_pred_mask.grad.data.cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-        )
-    )
+    compare(flow_loss, torch_loss)
+    compare(flow_pred_mask.grad.data, torch_pred_mask.grad.data)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -374,24 +372,17 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case):
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "none", "cpu"
-        )
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "none", "cuda"
-        )
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "sum", "cpu"
-        )
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "sum", "cuda"
-        )
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "mean", "cpu"
-        )
-        _test_nn_functional_binary_cross_entropy_with_logits_different_dtype(
-            test_case, "mean", "cuda"
-        )
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first,
+            _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first,
+        ]
+        arg_dict["shape"] = [(24, 16, 80), (42, 160), (4, 54, 32, 56)]
+        arg_dict["reduction"] = ["sum", "mean", "none"]
+        arg_dict["device"] = ["cpu", "cuda"]
+
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 @flow.unittest.skip_unless_1n1d()
