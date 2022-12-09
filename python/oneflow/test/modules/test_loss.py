@@ -261,7 +261,9 @@ def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
     return y
 
 
-def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first(test_case, shape, reduction, device):
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first(
+    test_case, shape, reduction, device
+):
     def compare(a, b):
         test_case.assertTrue(
             np.allclose(
@@ -292,7 +294,9 @@ def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_f
     compare(flow_pred_mask.grad.data, torch_pred_mask.grad.data)
 
 
-def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first(test_case, shape, reduction, device):
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first(
+    test_case, shape, reduction, device
+):
     def compare(a, b):
         test_case.assertTrue(
             np.allclose(
@@ -302,7 +306,7 @@ def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_
                 atol=1e-5,
             )
         )
-    
+
     arr = np.random.randn(*shape)
 
     flow_pred_mask = flow.Tensor(arr).double().to(device)
