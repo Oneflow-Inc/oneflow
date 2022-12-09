@@ -33,13 +33,13 @@ struct PartitionLaunchJobPass
 
   bool needPartition(StringRef device) const { return device == "tensorrt" || device == "ascend"; }
 
-  oneflow::Job addCallableJob(OpBuilder& builder, StringRef callee_name,
+  func::FuncOp addCallableFunc(OpBuilder& builder, StringRef callee_name,
                               const llvm::SmallVector<Value, 4>& operands,
                               const llvm::SmallVector<Value, 4>& results,
                               const llvm::SmallVector<Operation*, 4>& block);
 };
 
-oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRef callee_name,
+func::FuncOp PartitionLaunchJobPass::addCallableFunc(OpBuilder& builder, StringRef callee_name,
                                                     const llvm::SmallVector<Value, 4>& operands,
                                                     const llvm::SmallVector<Value, 4>& results,
                                                     const llvm::SmallVector<Operation*, 4>& block) {
@@ -54,8 +54,8 @@ oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRe
   builder.setInsertionPointToStart(parentModuleOp.getBody());
 
   auto funcType = builder.getFunctionType(operand_types, result_types);
-  auto jobOp = builder.create<oneflow::Job>(block[0]->getLoc(), callee_name, funcType);
-  auto* entryBlock = jobOp.addEntryBlock();
+  auto funcOp = builder.create<func::FuncOp>(block[0]->getLoc(), callee_name, funcType);
+  auto* entryBlock = funcOp.addEntryBlock();
 
   BlockAndValueMapping mapping;
   for (auto operand : llvm::enumerate(operands)) {
@@ -71,8 +71,8 @@ oneflow::Job PartitionLaunchJobPass::addCallableJob(OpBuilder& builder, StringRe
   }
   llvm::SmallVector<Value, 4> mappingResults;
   for (auto result : results) { mappingResults.push_back(mapping.lookup(result)); }
-  builder.create<mlir::oneflow::ReturnOp>(block[0]->getLoc(), mappingResults);
-  return jobOp;
+  builder.create<func::ReturnOp>(block[0]->getLoc(), mappingResults);
+  return funcOp;
 }
 
 void PartitionLaunchJobPass::runOnOperation() {
@@ -116,8 +116,8 @@ void PartitionLaunchJobPass::runOnOperation() {
     for (auto out : resultVals) { results[out.second] = out.first; }
 
     OpBuilder builder(&getContext());
-    auto callableJob =
-        addCallableJob(builder, it.first.str() + ".launch", operands, results, block);
+    auto callableFunc =
+        addCallableFunc(builder, it.first.str() + ".launch", operands, results, block);
 
     Operation* firstOp = block[0];
     NamedAttrList attributes;
@@ -135,7 +135,7 @@ void PartitionLaunchJobPass::runOnOperation() {
     }
     builder.setInsertionPointAfter(firstOp);
 
-    auto launchOp = builder.create<MlirJitOp>(firstOp->getLoc(), callableJob, attributes, operands);
+    auto launchOp = builder.create<MlirJitOp>(firstOp->getLoc(), callableFunc, attributes, operands);
     launchOp->setAttr("mlir_assembly", builder.getStringAttr(""));
 
     for (auto result : llvm::enumerate(results)) {

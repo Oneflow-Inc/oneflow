@@ -98,7 +98,7 @@ class AscendCompiler {
   void lowerOp(MatmulOp op);
   void lowerOp(BroadcastAddOp op);
   void lowerOp(ReshapeOp op);
-  void lowerOp(ReturnOp op);
+  void lowerOp(func::ReturnOp op);
 
   void serializeToBuffer(llvm::SmallVector<uint8_t, 4>* data);
 
@@ -351,7 +351,7 @@ void AscendCompiler::lowerOp(ReshapeOp op) {
   ascendVals[op.out()] = AscendValue(reshapeOp, outType, "y");
 }
 
-void AscendCompiler::lowerOp(ReturnOp op) {
+void AscendCompiler::lowerOp(func::ReturnOp op) {
   for (auto operand : op.operands()) { results.push_back(getValue(operand)); }
 }
 
@@ -361,13 +361,12 @@ LogicalResult loweringAscend(OpBuilder& builder, Operation* callee, StringRef ch
                              llvm::SmallVector<uint8_t, 4>* loweringData) {
   AscendCompiler compiler;
   llvm::SmallVector<Value, 4> inputs;
-  auto func = dyn_cast<oneflow::Job>(callee);
+  auto func = dyn_cast<func::FuncOp>(callee);
   for (auto argument : func.getArguments()) { inputs.push_back(argument); }
 
   compiler.addInputs(inputs);
 
-  callee->walk([&](Operation* op) {
-    if (dyn_cast<oneflow::Job>(op)) { return; }
+  func.getBody().walk([&](Operation* op) {
     if (auto x = dyn_cast<VariableOp>(op)) {
       compiler.lowerOp(x, checkpointDir);
     } else if (auto x = dyn_cast<Conv2DOp>(op)) {
@@ -390,7 +389,7 @@ LogicalResult loweringAscend(OpBuilder& builder, Operation* callee, StringRef ch
       compiler.lowerOp(x);
     } else if (auto x = dyn_cast<ReshapeOp>(op)) {
       compiler.lowerOp(x);
-    } else if (auto x = dyn_cast<ReturnOp>(op)) {
+    } else if (auto x = dyn_cast<func::ReturnOp>(op)) {
       compiler.lowerOp(x);
     } else {
       llvm::errs() << "could not lowerring " << op->getName() << " for backend ascend\n";
