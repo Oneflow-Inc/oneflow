@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/mutable_attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/job/global_mode.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -198,6 +201,11 @@ class RandFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRand(shape, GetGlobalParallelDescFromDevice(device),
+                                         *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                         requires_grad));
+    }
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
@@ -279,6 +287,11 @@ class RandNFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandN(shape, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                          requires_grad));
+    }
     if (dtype.has_value() && !JUST(dtype)->is_floating_point()) {
       OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
@@ -500,6 +513,11 @@ class RandIntFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandInt(
+          low, high, shape, GetGlobalParallelDescFromDevice(device),
+          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
+    }
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -647,6 +665,11 @@ class RandPermFunctor {
   Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandPerm(n, GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp())), generator,
+                                             dtype, requires_grad));
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed");
     attrs.SetAllAttrs(n, static_cast<int64_t>(gen->current_seed()));
