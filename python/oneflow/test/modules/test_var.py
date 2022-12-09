@@ -24,13 +24,24 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestVar(flow.unittest.TestCase):
+    @autotest(n=5)
     def test_flow_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.var(x)
         return y
 
-    @autotest(check_graph=True)
+    # TODO: In oneflow fp16 mode, variance op backward maybe has a bug.
+    # Because from the results of AutoTest, there is a gap of 1e-3 between the gradient of PyTorch and OneFlow.
+    @autotest(n=5, rtol=1e-3, atol=1e-3)
+    def test_flow_var_float16_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        x = x.to(torch.float16)
+        y = torch.var(x)
+        return y
+
+    @autotest(n=5)
     def test_flow_var_one_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)

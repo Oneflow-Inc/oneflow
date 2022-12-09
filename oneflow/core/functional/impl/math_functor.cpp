@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
@@ -2253,11 +2255,15 @@ class VarianceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    if (!IsFloatingDataType(input->dtype()->data_type())) {
+    std::shared_ptr<Tensor> input_fp32 = input;
+    if (input->dtype()->data_type() == DataType::kFloat16) {
+      input_fp32 = JUST(functional::Cast(input, DType::Float(), false));
+    }
+    if (!IsFloatingDataType(input_fp32->dtype()->data_type())) {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
     std::vector<int32_t> axis;
-    const int ndim = input->ndim();
+    const int ndim = input_fp32->ndim();
     axis.reserve(ndim);
     if (!dim) {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
@@ -2271,8 +2277,12 @@ class VarianceFunctor {
       if (axis[i] < 0) { axis[i] += ndim; }
     }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("unbiased", "keepdim", "dim", "dtype");
-    attrs.SetAllAttrs(unbiased, keepdim, axis, input->dtype()->data_type());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    attrs.SetAllAttrs(unbiased, keepdim, axis, input_fp32->dtype()->data_type());
+    std::shared_ptr<Tensor> res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_fp32}, attrs));
+    if (input->dtype()->data_type() == DataType::kFloat16) {
+      res = JUST(functional::Cast(res, DType::Float16(), false));
+    }
+    return res;
   }
 
  private:
