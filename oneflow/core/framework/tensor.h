@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/job/global_mode.h"
 
 namespace oneflow {
 
@@ -596,6 +597,10 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
+    if (GlobalMode::is_enabled()) {
+      const auto& device_tag = JUST(parallel_desc())->device_tag();
+      return JUST(Device::New(device_tag));
+    }
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
                           "'.placement' for global tensors.";
   }
