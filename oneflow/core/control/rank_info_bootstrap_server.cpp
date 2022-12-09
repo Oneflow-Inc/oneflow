@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rank_info_bootstrap_server.h"
+#include <cstdio>
 #include "grpc/grpc_posix.h"
 
 namespace oneflow {
@@ -27,6 +28,12 @@ std::string GetHostFromUri(const std::string& uri) {
   CHECK_EQ(protocol_family, "ipv4");
   size_t second_delimiter_pos = uri.rfind(":");
   return uri.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
+}
+
+int64_t rpc_bootsrtap_server_check_seconds() {
+  static const int64_t rpc_bootsrtap_server_check_seconds =
+      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_CHECK_SECONDS", 20);
+  return rpc_bootsrtap_server_check_seconds;
 }
 
 }  // namespace
@@ -47,6 +54,31 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
   LOG(INFO) << "RankInfoBootstrapServer listening on "
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
+  if (bootstrap_conf.rank() == 0) {
+    check_thread_ = std::thread(&RankInfoBootstrapServer::CheckServerRpcs, this);
+  }
+}
+
+void RankInfoBootstrapServer::CheckServerRpcs() {
+  bool fail_status = true;
+  if (!rank2host_) {
+    std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_check_seconds()));
+    LOG(WARNING)
+        << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
+        << ", world size: " << world_size_ << ", ready ranks: 0";
+  } else {
+    CHECK(rank2host_->size() <= world_size_);
+    if (rank2host_->size() == world_size_) {
+      check_thread_.join();
+      fail_status = false;
+    } else {
+      LOG(WARNING)
+          << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
+          << ", world size: " << world_size_ << ", ready ranks: " << rank2host_->size();
+      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_check_seconds()));
+    }
+  }
+  if (fail_status) { LOG(FATAL) << "Grpc failed."; }
 }
 
 Maybe<const std::vector<std::string>&> RankInfoBootstrapServer::rank2host() const {

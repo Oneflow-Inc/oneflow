@@ -32,12 +32,14 @@ class RankInfoBootstrapServer final : public BootstrapServer {
 
   int64_t port() const { return port_; }
   Maybe<const std::vector<std::string>&> rank2host() const;
+  void CheckServerRpcs();
 
  private:
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
 
   int port_;
   const int64_t world_size_;
+  std::thread check_thread_;
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
 };
