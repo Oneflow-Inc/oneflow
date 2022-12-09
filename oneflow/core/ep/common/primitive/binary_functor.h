@@ -268,13 +268,13 @@ struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kCeluBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<device, BinaryOp::kCeluBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
       : inv_alpha(1.0f / attr0.Value<double>()) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>((x > static_cast<Src>(0)) ? dy
-                                                      : dy * static_cast<Src>(exp(x * inv_alpha)));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    Src currentGrad = static_cast<Src>(y * inv_alpha + static_cast<Src>(1));
+    return static_cast<Dst>((y > static_cast<Src>(0)) ? dy : dy * currentGrad);
   }
   const Src inv_alpha;
 };
