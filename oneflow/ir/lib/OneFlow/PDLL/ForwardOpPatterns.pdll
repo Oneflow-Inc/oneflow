@@ -3,6 +3,17 @@
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
+Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, integer_fill_value: Attr, 
+                          is_floating_fill_value: Attr, float_operand: Attr, int_operand: Attr, has_float_operand: Attr, out: Type) -> Op {
+  let floating_scale_value = float_operand;
+  let integer_scale_value = int_operand;
+  let is_floating_scale_value = has_float_operand;
+  let scale_tril_op = op<oneflow.fused_scale_tril>(x){diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value, 
+                                                        is_floating_fill_value = is_floating_fill_value, floating_scale_value = floating_scale_value, 
+                                                        integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out);
+  return scale_tril_op;
+}
+
 Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
 Pattern {
@@ -76,18 +87,13 @@ Pattern {
   let tril = 
     op<oneflow.tril>(
       op<oneflow.scalar_mul>(x: Value)
-      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand, int_operand = int_operand, float_operand = float_operand}) 
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand, 
+        int_operand = int_operand, float_operand = float_operand}) 
       {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value, 
         integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value} -> (out: Type);
   
-  rewrite tril with{
-    let floating_scale_value = float_operand;
-    let integer_scale_value = int_operand;
-    let is_floating_scale_value = has_float_operand;
-    replace tril with CopyUserOpAttrs(tril, op<oneflow.fused_scale_tril>(x)
-    {diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value, is_floating_fill_value = is_floating_fill_value,
-      floating_scale_value = floating_scale_value, integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out));
-  };
+  replace tril with CopyUserOpAttrs(tril, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value, 
+                                      is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
 }
 
 Pattern {
@@ -105,14 +111,9 @@ Pattern {
       op<oneflow.tril>(x: Value)
       {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value, 
         integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value }) 
-      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand, int_operand = int_operand, float_operand = float_operand} -> (out: Type);
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand, 
+        int_operand = int_operand, float_operand = float_operand} -> (out: Type);
 
-  rewrite scalar with{
-    let floating_scale_value = float_operand;
-    let integer_scale_value = int_operand;
-    let is_floating_scale_value = has_float_operand;
-    replace scalar with CopyUserOpAttrs(scalar, op<oneflow.fused_scale_tril>(x)
-    {diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value, is_floating_fill_value = is_floating_fill_value,
-      floating_scale_value = floating_scale_value, integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out));
-  };
+  replace scalar with CopyUserOpAttrs(scalar, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value, 
+                                        is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
 }
