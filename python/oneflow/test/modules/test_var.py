@@ -43,6 +43,9 @@ class TestVar(flow.unittest.TestCase):
         )
         return y
 
+    # In fp16 mode, variance op backward has a gap of 1e-3 between the gradient of PyTorch
+    # and OneFlow for some unknown reason. However, it is not important now, because both in
+    # PyTorch and OneFlow variance op don't need support fp16 backward in amp train.
     @autotest(n=5, auto_backward=True, check_graph=True, rtol=1e-3, atol=1e-3)
     def test_flow_var_one_dim_with_random_half_data(test_case):
         device = random_device()
