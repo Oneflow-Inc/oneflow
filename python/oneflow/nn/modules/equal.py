@@ -13,13 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.utils.global_view.to_global import to_global
-from oneflow.utils.global_view.to_local import to_local
-from oneflow._oneflow_internal.global_view import global_mode, current_global_mode
+import oneflow as flow
 
-__all__ = [
-    "to_global",
-    "to_local",
-    "global_mode",
-    "current_global_mode",
-]
+
+def equal_op(a, b):
+    res = flow._C.equal(a, b)
+    return res.all().item()
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
