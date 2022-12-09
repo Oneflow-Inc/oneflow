@@ -196,6 +196,8 @@ const cutlass::library::Operation* FindConv2dOperation(
       }
     }
   }
+  OF_CUDA_CHECK(cudaEventDestroy(start));
+  OF_CUDA_CHECK(cudaEventDestroy(end));
   CHECK(fastest_operation != nullptr);
   VLOG(3) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
   {
