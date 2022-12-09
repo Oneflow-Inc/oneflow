@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/cost_util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -25,26 +28,22 @@ class FuseConsecutiveAddPass final : public JobPass {
   FuseConsecutiveAddPass() = default;
   ~FuseConsecutiveAddPass() override = default;
 
-  Maybe<bool> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    bool changed = false;
-    do {
-      const OpGraph op_graph(*job);
-      JobBuilder job_builder(job);
-      changed = JUST(Apply(op_graph, &job_builder));
-    } while (changed);
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    JUST(Apply(op_graph, &job_builder));
     return Maybe<void>::Ok();
   }
 };
 
-Maybe<bool> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
-  std::vector<OperatorConf> delete_ops;
-  HashSet<const OpNode*> replaced_ops;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
+  std::vector<std::string> delete_ops;
+  op_graph.TopoForEachNode([&](const OpNode* op_node) {
     if (!IsUserOpWithTypeName(op_node->op().op_conf(), "add_n") || !IsSafeToDelete(op_node)
-        || op_node->out_edges().size() != 1 || replaced_ops.count(op_node)) {
+        || op_node->out_edges().size() != 1) {
       return;
     }
     OpNode* sole_dst_node = op_node->SoleOutEdge()->dst_node();
@@ -53,32 +52,48 @@ Maybe<bool> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
       return;
     }
 
-    replaced_ops.insert(sole_dst_node);
-    delete_ops.emplace_back(op_node->op().op_conf());
+    const std::string this_op_name = op_node->op().op_name();
 
-    user_op::UserOpConfWrapperBuilder fused_op_builder(sole_dst_node->op().op_name());
-    fused_op_builder.OpTypeName("add_n").Output("out");
-
-    std::vector<LogicalBlobId> operands;
-    for (const OpEdge* edge : sole_dst_node->in_edges()) {
-      if (edge->src_node() != op_node) {
-        operands.insert(operands.end(), edge->lbis().begin(), edge->lbis().end());
+    const auto& GetCurOpConf = [&](const OpNode& cur_op) -> OperatorConf {
+      const std::string& cur_op_name = cur_op.op().op_name();
+      if (!CHECK_JUST(job_builder->IsInMutOpTransaction(cur_op_name))) {
+        return cur_op.op().op_conf();
       } else {
-        for (const OpEdge* src_node_edge : op_node->in_edges()) {
-          operands.insert(operands.end(), src_node_edge->lbis().begin(),
-                          src_node_edge->lbis().end());
-        }
+        return CHECK_JUST(job_builder->MutOpTransactionGet(cur_op_name));
+      }
+    };
+
+    int64_t fused_cnt = 0;
+    auto fused_op_conf = GetCurOpConf(*sole_dst_node);
+    auto in_it = fused_op_conf.mutable_user_conf()->mutable_input()->find("in");
+    CHECK(in_it != fused_op_conf.mutable_user_conf()->mutable_input()->end());
+    auto* in_lbns = in_it->second.mutable_s();
+    auto in_lbn_it = in_lbns->begin();
+    while (in_lbn_it != in_lbns->end()) {
+      const auto lbi = GenLogicalBlobId(*in_lbn_it);
+      if (lbi.op_name() == this_op_name) {
+        in_lbn_it = in_lbns->erase(in_lbn_it);
+        ++fused_cnt;
+      } else {
+        ++in_lbn_it;
       }
     }
-    for (const auto& lbi : operands) { fused_op_builder.Input("in", GenLogicalBlobName(lbi)); }
-    OperatorConf new_op_conf = sole_dst_node->op().op_conf();
-    *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
-    job_builder->MutOpsOnlyOnce({new_op_conf});
+
+    const auto& this_op_conf = GetCurOpConf(*op_node);
+    auto this_in_it = this_op_conf.user_conf().input().find("in");
+    CHECK(this_in_it != this_op_conf.user_conf().input().end());
+    for (int64_t fuse_i = 0; fuse_i < fused_cnt; ++fuse_i) {
+      for (const auto& this_in_lbn : this_in_it->second.s()) { *(in_lbns->Add()) = this_in_lbn; }
+    }
+
+    CHECK_JUST(job_builder->MutOpTransactionMut(fused_op_conf));
+    delete_ops.emplace_back(this_op_name);
   });
 
-  if (delete_ops.empty()) { return /*changed = */ false; }
+  if (delete_ops.empty()) { return Maybe<void>::Ok(); }
+  JUST(job_builder->MutOpTransactionCommit());
   job_builder->DelOps(delete_ops);
-  return /*changed = */ true;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

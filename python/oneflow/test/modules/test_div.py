@@ -143,6 +143,13 @@ class TestDiv(flow.unittest.TestCase):
         y /= random_tensor(2, 2, 2).to(device)
         return y
 
+    @autotest(n=3, check_graph=False)
+    def test_int_dtype_inplace_div(test_case):
+        num_elems = 20
+        flow_out = flow.arange(num_elems) / num_elems
+        torch_out = torch.arange(num_elems) / num_elems
+        test_case.assertTrue(np.allclose(flow_out.numpy(), torch_out.numpy()))
+
     @autotest(n=5)
     def test_scalar_div_with_random_devices(test_case):
         x1_device = random_device()

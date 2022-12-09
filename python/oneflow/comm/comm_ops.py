@@ -53,7 +53,7 @@ def all_reduce(tensor):
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
     device_type = tensor.device.type
-    placement = flow.env.all_device_placement(device_type)
+    placement = flow.placement.all(device_type)
     result = tensor.to_global(placement=placement, sbp=flow.sbp.partial_sum).to_global(
         placement=placement, sbp=flow.sbp.broadcast
     )
@@ -107,7 +107,7 @@ def all_gather(tensor_list, tensor):
     assert tensor.is_local
     tensor = tensor.expand(*([1] + list(tensor.shape)))
     device_type = tensor.device.type
-    placement = flow.env.all_device_placement(device_type)
+    placement = flow.placement.all(device_type)
     tensor = (
         tensor.to_global(placement=placement, sbp=flow.sbp.split(0))
         .to_global(placement=placement, sbp=flow.sbp.broadcast)
@@ -153,7 +153,7 @@ def broadcast(tensor, src):
     assert isinstance(src, int)
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
-    flow._C.broadcast(tensor, src_rank=src, inplace=True)
+    flow._C.comm_broadcast(tensor, src_rank=src, inplace=True)
 
 
 def scatter(tensor, scatter_list=None, src=0):
@@ -257,7 +257,7 @@ def barrier():
     Synchronizes all processes.
 
     """
-    flow._oneflow_internal.eager.Sync()
+    flow._oneflow_internal.eager.ClusterSync()
 
 
 def reduce_scatter(output, input_list):
@@ -275,7 +275,7 @@ def reduce_scatter(output, input_list):
     assert len(input_list) == flow.env.get_world_size()
     output_shape = output.shape
     device_type = output.device.type
-    placement = flow.env.all_device_placement(device_type)
+    placement = flow.placement.all(device_type)
     reduced_tensor_list = []
     for tensor in input_list:
         assert tensor.is_local
@@ -305,7 +305,7 @@ def gather(tensor, gather_list=None, dst=0):
     dtype = tensor.dtype
     tensor = tensor.expand(*([1] + list(shape)))
     device_type = tensor.device.type
-    placement = flow.env.all_device_placement(device_type)
+    placement = flow.placement.all(device_type)
     tensor = tensor.to_global(placement=placement, sbp=flow.sbp.split(0)).to_global(
         placement=placement, sbp=flow.sbp.broadcast
     )

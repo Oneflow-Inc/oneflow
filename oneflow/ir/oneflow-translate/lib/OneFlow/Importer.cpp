@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OneFlowSupport.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
@@ -119,6 +120,11 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
 }
 
 }  // namespace
+
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  return success(op_def.IsAttrName(attr_name));
+}
 
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
@@ -618,7 +624,8 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
   return ConvertDT(dt_attr.getValue(), data_type);
 }
 
-LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
+LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
+                                      bool is_mapping_size) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
@@ -676,9 +683,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       } else if (attr_type == ::oneflow::kAtStride) {
         WriteAttrToStride(attr, user_attr.mutable_at_stride());
       } else if (attr_type == ::oneflow::kAtDataType) {
-        ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
-        if (succeeded(ConvertDTFromAttr(attr, dt))) {
-          user_attr.set_at_data_type(dt);
+        const auto dt = support::FromMLIRAttrToOFDataType(attr);
+        if (succeeded(dt)) {
+          user_attr.set_at_data_type(dt.getValue());
         } else {
           op->emitError() << "fail to convert op attr to data type, key: " + id.str();
           return failure();
@@ -704,9 +711,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         }
       } else if (attr_type == ::oneflow::kAtListDataType) {
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-          ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
-          if (succeeded(ConvertDTFromAttr(v, dt))) {
-            user_attr.mutable_at_list_data_type()->add_val(dt);
+          const auto dt = support::FromMLIRAttrToOFDataType(attr);
+          if (succeeded(dt)) {
+            user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
           } else {
             op->emitError() << "fail to convert op attr to data type, key: " + id.str();
             return failure();
@@ -744,6 +751,17 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_input();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   {
     std::vector<std::string> keys{};
@@ -754,6 +772,16 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+    if (is_mapping_size) {
+      for (const auto it : llvm::zip(keys, sizes)) {
+        auto key = std::get<0>(it).c_str();
+        auto size = std::get<1>(it);
+        auto tar = op_conf.mutable_user_conf()->mutable_output();
+        auto val = ::oneflow::UserOpConf_ListString::default_instance();
+        tar->insert({key, val});
+        for (int i = 0; i < size; ++i) { tar->at(key).add_s(); }
+      }
+    }
   }
   return success();
 }
@@ -781,11 +809,11 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      var_op_conf->set_data_type(dt.getValue());
     }
-    var_op_conf->set_data_type(dt);
   }
 
   if (op->hasAttr("model_name")) { var_op_conf->set_model_name(op.model_name().str()); }
@@ -851,11 +879,11 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      input_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }
-    input_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
@@ -897,11 +925,11 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      output_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }
-    output_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {

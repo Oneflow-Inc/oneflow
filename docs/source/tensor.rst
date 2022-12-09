@@ -250,6 +250,8 @@ Tensor class reference
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point
@@ -332,6 +334,7 @@ Tensor class reference
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -376,3 +379,6 @@ Tensor class reference
     Tensor.bernoulli
     Tensor.bernoulli_
     Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
+    Tensor.broadcast_to

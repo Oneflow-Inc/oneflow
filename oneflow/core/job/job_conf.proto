@@ -207,8 +207,9 @@ message JobSignatureDef {
 
 enum StraightenAlgorithmTag {
   kDisable = 1;                  
-  kOverlap4ModelParallelism = 2;  
-  kCompressMemory = 3;            
+  kOverlap4Transfer = 2;  
+  kCompressMemory = 3;
+  kOverlap4CpuGpu = 4;            
 }
 
 message JobConfigProto {
@@ -267,12 +268,12 @@ message JobConfigProto {
   optional bool enable_auto_parallel = 700 [default = false];
   optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
   optional double auto_parallel_wait_time = 702 [default = 1.65e4];
-  optional double auto_parallel_transfer_cost = 703 [default = 0.0];
-  optional bool enable_auto_parallel_mainstem_algo = 704 [default = true];
-  optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
-  optional bool enable_auto_parallel_ignore_user_sbp_config = 706 [default = false];
+  optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
+  optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
+  optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
   
   optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
+  optional bool enable_compress_memory = 801 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 

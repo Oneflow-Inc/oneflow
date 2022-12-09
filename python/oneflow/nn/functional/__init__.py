@@ -35,6 +35,9 @@ from .functional_maxpool import adaptive_max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
+from oneflow._C import max_unpool1d
+from oneflow._C import max_unpool2d
+from oneflow._C import max_unpool3d
 from oneflow._C import cosine_similarity, pairwise_distance
 from oneflow._C import relu
 from oneflow._C import hardtanh
@@ -63,6 +66,7 @@ from oneflow.nn.modules.normalization import layer_norm
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .functional_pad import pad
+from .functional_batch_norm import batch_norm
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
@@ -82,3 +86,4 @@ from oneflow._C import unfold
 from oneflow._C import fold
 from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
+from oneflow._C import gumbel_softmax

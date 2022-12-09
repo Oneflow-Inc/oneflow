@@ -107,6 +107,7 @@ Indexing, Slicing, Joining, Mutating Ops
     vsplit
     vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
@@ -319,6 +320,7 @@ Reduction Ops
     nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
@@ -348,6 +350,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -390,6 +394,9 @@ Other Ops
     triu
     cross
     bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -399,7 +406,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm
