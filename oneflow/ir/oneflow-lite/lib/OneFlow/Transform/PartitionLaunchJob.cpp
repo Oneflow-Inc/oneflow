@@ -34,15 +34,14 @@ struct PartitionLaunchJobPass
   bool needPartition(StringRef device) const { return device == "tensorrt" || device == "ascend"; }
 
   func::FuncOp addCallableFunc(OpBuilder& builder, StringRef callee_name,
-                              const llvm::SmallVector<Value, 4>& operands,
-                              const llvm::SmallVector<Value, 4>& results,
-                              const llvm::SmallVector<Operation*, 4>& block);
+                               const llvm::SmallVector<Value, 4>& operands,
+                               const llvm::SmallVector<Value, 4>& results,
+                               const llvm::SmallVector<Operation*, 4>& block);
 };
 
-func::FuncOp PartitionLaunchJobPass::addCallableFunc(OpBuilder& builder, StringRef callee_name,
-                                                    const llvm::SmallVector<Value, 4>& operands,
-                                                    const llvm::SmallVector<Value, 4>& results,
-                                                    const llvm::SmallVector<Operation*, 4>& block) {
+func::FuncOp PartitionLaunchJobPass::addCallableFunc(
+    OpBuilder& builder, StringRef callee_name, const llvm::SmallVector<Value, 4>& operands,
+    const llvm::SmallVector<Value, 4>& results, const llvm::SmallVector<Operation*, 4>& block) {
   llvm::SmallVector<Type, 4> operand_types, result_types;
   for (auto operand : operands) { operand_types.push_back(operand.getType()); }
   for (auto result : results) { result_types.push_back(result.getType()); }
@@ -135,7 +134,8 @@ void PartitionLaunchJobPass::runOnOperation() {
     }
     builder.setInsertionPointAfter(firstOp);
 
-    auto launchOp = builder.create<MlirJitOp>(firstOp->getLoc(), callableFunc, attributes, operands);
+    auto launchOp =
+        builder.create<MlirJitOp>(firstOp->getLoc(), callableFunc, attributes, operands);
     launchOp->setAttr("mlir_assembly", builder.getStringAttr(""));
 
     for (auto result : llvm::enumerate(results)) {
