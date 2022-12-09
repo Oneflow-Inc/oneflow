@@ -168,8 +168,8 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
       x_scalar_operand = static_cast<T>(ctx->Attr<int64_t>("x_int_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<int64_t>("y_int_operand"));
     } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-      x_scalar_operand = static_cast<T>(ctx->Attr<double>("x_float_operand"));
-      y_scalar_operand = static_cast<T>(ctx->Attr<double>("y_float_operand"));
+      x_scalar_operand = static_cast<T>(ctx->Attr<float>("x_float_operand"));
+      y_scalar_operand = static_cast<T>(ctx->Attr<float>("y_float_operand"));
     } else if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
       x_scalar_operand = static_cast<T>(ctx->Attr<bool>("x_bool_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<bool>("y_bool_operand"));
@@ -255,7 +255,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_Y_KERNEL, DEVICE_TYPE_SEQ
                                          BOOL_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_XY_KERNEL, DEVICE_TYPE_SEQ,
-                                 OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
                                          BOOL_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)

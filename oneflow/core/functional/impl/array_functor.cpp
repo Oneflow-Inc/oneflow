@@ -376,8 +376,8 @@ class WhereScalarXYFunctor {
       attrs.SetAllAttrs(x_scalar.As<bool>(), y_scalar.As<bool>(), true, true, NullOpt, NullOpt,
                         false, false, NullOpt, NullOpt, false, false);
     } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<double>(),
-                        y_scalar.As<double>(), true, true, NullOpt, NullOpt, false, false);
+      attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<float>(), y_scalar.As<float>(),
+                        true, true, NullOpt, NullOpt, false, false);
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, NullOpt, false, false, NullOpt, NullOpt, false, false,
                         x_scalar.As<int64_t>(), y_scalar.As<int64_t>(), true, true);

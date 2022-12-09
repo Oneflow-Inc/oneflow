@@ -73,6 +73,7 @@ def _test_where_scalar(test_case, device):
     y = 2.0
     condition = flow.tensor(np.array([1]), dtype=flow.int32)
     of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.float32)
     np_out = np.array([0.5])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 

@@ -302,7 +302,8 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
     ctx->SetOutputDType("out", 0, GetDataType<int64_t>::value);
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-    ctx->SetOutputDType("out", 0, GetDataType<double>::value);
+    // Align with PyTorch's where op output datatype when x and y is all Scalar.
+    ctx->SetOutputDType("out", 0, GetDataType<float>::value);
   } else {
     UNIMPLEMENTED();
   }
