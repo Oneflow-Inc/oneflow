@@ -93,6 +93,10 @@ PyObject* PyTensor_wrap(const std::shared_ptr<T>& data, PyTensorObject* bind_pyo
       bind_pyobj = (PyTensorObject*)PyTensorObject_Type->tp_alloc(*AllocType<T>::value, 0);
     }
     bind_pyobj->data = data;
+    if (py_tensor) {
+      // If it has bind pyobj, reset the shared_ptr in origin PyTensorObject
+      ((PyTensorObject*)py_tensor)->data.reset();
+    }
     bind_pyobj->data->set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>(
         bind_pyobj, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
     bind_pyobj->data->set_owns_pyobj(false);
@@ -129,8 +133,6 @@ static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs)
 static void PyTensorObject_dealloc(PyObject* self) {
   if (PyTensor_tryResurrect(self)) { return; }
 
-  auto* _self = (PyTensorObject*)self;
-  if (_self->data) { _self->data.reset(); }
   // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
