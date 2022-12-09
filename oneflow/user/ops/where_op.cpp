@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
@@ -303,7 +306,18 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     ctx->SetOutputDType("out", 0, GetDataType<int64_t>::value);
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
     // Align with PyTorch's where op output datatype when x and y is all Scalar.
-    ctx->SetOutputDType("out", 0, GetDataType<float>::value);
+    if (GetDefaultDType() == DType::Float()) {
+      ctx->SetOutputDType("out", 0, GetDataType<float>::value);
+    } else if (GetDefaultDType() == DType::Double()) {
+      ctx->SetOutputDType("out", 0, GetDataType<double>::value);
+    } else if (GetDefaultDType() == DType::Float16()) {
+      ctx->SetOutputDType("out", 0, GetDataType<float16>::value);
+    } else if (GetDefaultDType() == DType::BFloat16()) {
+      ctx->SetOutputDType("out", 0, GetDataType<bfloat16>::value);
+    } else {
+      UNIMPLEMENTED();
+    }
+
   } else {
     UNIMPLEMENTED();
   }

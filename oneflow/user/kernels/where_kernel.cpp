@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/where_kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
@@ -169,13 +168,8 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
       x_scalar_operand = static_cast<T>(ctx->Attr<int64_t>("x_int_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<int64_t>("y_int_operand"));
     } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-      if (GetDefaultDType() == DType::Float()) {
-        x_scalar_operand = static_cast<T>(ctx->Attr<float>("x_float_operand"));
-        y_scalar_operand = static_cast<T>(ctx->Attr<float>("y_float_operand"));
-      } else {
-        x_scalar_operand = static_cast<T>(ctx->Attr<double>("x_float_operand"));
-        y_scalar_operand = static_cast<T>(ctx->Attr<double>("y_float_operand"));
-      }
+      x_scalar_operand = static_cast<T>(ctx->Attr<double>("x_float_operand"));
+      y_scalar_operand = static_cast<T>(ctx->Attr<double>("y_float_operand"));
     } else if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
       x_scalar_operand = static_cast<T>(ctx->Attr<bool>("x_bool_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<bool>("y_bool_operand"));

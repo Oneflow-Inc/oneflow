@@ -79,6 +79,12 @@ def _test_where_scalar(test_case, device):
     flow.set_default_dtype(flow.double)
     of_out = flow.where(condition, x, y)
     test_case.assertTrue(of_out.dtype == flow.double)
+    flow.set_default_dtype(flow.float16)
+    of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.float16)
+    flow.set_default_dtype(flow.bfloat16)
+    of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.bfloat16)
 
 
 def _test_where_dim4(test_case, device):
