@@ -1147,8 +1147,8 @@ def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
 def autotest(
     n=20,
     auto_backward=True,
-    rtol=0.0001,
-    atol=1e-05,
+    rtol=-1.0,
+    atol=-1.0,
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
@@ -1179,6 +1179,8 @@ def autotest(
                 global_rtol = rtol
                 global_atol = atol
                 global_backward = auto_backward
+                local_rtol = rtol
+                local_atol = atol
 
                 try:
                     global testing_graph
@@ -1271,9 +1273,13 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
+                        if local_rtol < 0:
+                            global_rtol = local_rtol = 1e-3 if x.dtype == torch.float16 else 1e-4
+                        if local_atol < 0:
+                            global_atol = local_atol = 1e-4 if x.dtype == torch.float16 else 1e-5
                         test_case.assertTrue(
                             check_equality(
-                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                                x, rtol=local_rtol, atol=local_atol, check_dtype=check_dtype
                             ),
                             x,
                         )
