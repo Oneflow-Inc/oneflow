@@ -144,7 +144,7 @@ def to_global(input, placement=None, sbp=None, warn_on_non_tensor_leaf=True, **k
                     flow._oneflow_internal.cpu_broadcast(None, src_rank)
                 )
 
-    if isinstance(input, (dict, tuple, list)):
+    if isinstance(input, (Tensor, dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
@@ -157,20 +157,22 @@ def to_global(input, placement=None, sbp=None, warn_on_non_tensor_leaf=True, **k
                     return to_global_tensor(node, placement, sbp, **kwargs)
 
             else:
-                warnings.warn(
-                    "Non-Tensor type: {} encountered, it will remain the same.".format(
-                        type(node)
+                if warn_on_non_tensor_leaf:
+                    warnings.warn(
+                        "Non-Tensor type: {} encountered, it will remain the same.".format(
+                            type(node)
+                        )
                     )
-                )
                 return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
 
     else:
-        warnings.warn(
-            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                type(input)
+        if warn_on_non_tensor_leaf:
+            warnings.warn(
+                "Non-Tensor type: {} encountered, it will remain the same.".format(
+                    type(input)
+                )
             )
-        )
         return input
