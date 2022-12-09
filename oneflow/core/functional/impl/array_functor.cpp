@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -386,8 +387,13 @@ class WhereScalarXYFunctor {
       attrs.SetAllAttrs(x_scalar.As<bool>(), y_scalar.As<bool>(), true, true, NullOpt, NullOpt,
                         false, false, NullOpt, NullOpt, false, false);
     } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<float>(), y_scalar.As<float>(),
-                        true, true, NullOpt, NullOpt, false, false);
+      if (GetDefaultDType() == DType::Float()) {
+        attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<float>(),
+                          y_scalar.As<float>(), true, true, NullOpt, NullOpt, false, false);
+      } else {
+        attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<double>(),
+                          y_scalar.As<double>(), true, true, NullOpt, NullOpt, false, false);
+      }
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, NullOpt, false, false, NullOpt, NullOpt, false, false,
                         x_scalar.As<int64_t>(), y_scalar.As<int64_t>(), true, true);
