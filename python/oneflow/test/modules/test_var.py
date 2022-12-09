@@ -24,6 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestVar(flow.unittest.TestCase):
+    @autotest(check_graph=True)
     def test_flow_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -42,10 +43,34 @@ class TestVar(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(n=5, auto_backward=True, check_graph=True, rtol=1e-3, atol=1e-3)
+    def test_flow_var_one_dim_with_random_half_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device).to(torch.float16)
+        y = torch.var(
+            x,
+            dim=random(low=-4, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_var_0_size_data_with_random_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, 0, 4).to(device)
+        y = torch.var(
+            x,
+            dim=random(low=-4, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
+
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_flow_var_0_size_data_with_random_half_data(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 3, 0, 4).to(device).to(torch.float16)
         y = torch.var(
             x,
             dim=random(low=-4, high=4).to(int),
