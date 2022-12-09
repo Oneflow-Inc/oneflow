@@ -150,6 +150,7 @@ if(BUILD_CUDA)
     list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   endif()
   include(nccl)
+  include(cutlass)
 
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
@@ -159,6 +160,11 @@ if(BUILD_CUDA)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
        ${NCCL_INCLUDE_DIR})
+
+  list(APPEND oneflow_third_party_dependencies cutlass)
+  list(APPEND oneflow_third_party_dependencies cutlass_copy_examples_to_destination)
+  list(APPEND oneflow_third_party_libs ${CUTLASS_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUTLASS_INCLUDE_DIR})
 endif()
 
 if(BUILD_RDMA)
