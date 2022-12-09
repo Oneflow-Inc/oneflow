@@ -836,6 +836,33 @@ REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
 #endif  // WITH_CUDA
 
+template<DeviceType device_type>
+class RAdamBiasCorrectionFactorKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
+ public:
+  RAdamBiasCorrectionFactorKernel() = default;
+  ~RAdamBiasCorrectionFactorKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto beta = ctx->Attr<float>("beta");
+    RAdamBiasCorrectionFactorKernelUtil<device_type>::RAdamBiasCorrectionFactorCompute(
+        ctx->stream(), beta, train_step->dptr<int64_t>(), out->mut_dptr<float>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_RADAM_BIAS_CORRECTION_FACTOR_KERNEL(device)  \
+  REGISTER_USER_KERNEL("radam_bias_correction_factor")        \
+      .SetCreateFn<RAdamBiasCorrectionFactorKernel<device>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device));
+REGISTER_RADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_RADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
+#endif  // WITH_CUDA
+
 template<DeviceType device_type, typename T, typename G>
 class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:

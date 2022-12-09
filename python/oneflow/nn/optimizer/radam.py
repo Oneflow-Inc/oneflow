@@ -165,41 +165,41 @@ class RAdam(Optimizer):
     #         new_opt_confs.append(optimizer_conf)
     #     return new_opt_confs
 
-    # def _generate_conf_for_graph(self, train_conf, vars_conf):
-    #     new_opt_confs = []
-    #     for param_group in self.param_groups:
-    #         optimizer_conf = train_conf.optimizer_conf.add()
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.optimizer_conf.add()
 
-    #         lr = (
-    #             param_group["initial_lr"]
-    #             if "initial_lr" in param_group
-    #             else param_group["lr"]
-    #         )
-    #         l2 = param_group["weight_decay"]
-    #         beta1 = param_group["betas"][0]
-    #         beta2 = param_group["betas"][1]
-    #         epsilon = param_group["eps"]
-    #         do_bias_correction = param_group["do_bias_correction"]
-    #         maximize = param_group["maximize"]
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
+            l2 = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+            rho_inf = param_group["rho_inf"]
+            epsilon = param_group["eps"]
+            do_bias_correction = param_group["do_bias_correction"]
 
-    #         optimizer_conf.base_learning_rate = lr
-    #         self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+            optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
 
-    #         optimizer_conf.adamax_conf.beta1 = beta1
-    #         optimizer_conf.adamax_conf.beta2 = beta2
-    #         optimizer_conf.adamax_conf.epsilon = epsilon
-    #         optimizer_conf.adamax_conf.do_bias_correction = do_bias_correction
-    #         optimizer_conf.adamax_conf.maximize = maximize
+            optimizer_conf.radam_conf.beta1 = beta1
+            optimizer_conf.radam_conf.beta2 = beta2
+            optimizer_conf.radam_conf.rho_inf = rho_inf
+            optimizer_conf.radam_conf.epsilon = epsilon
+            optimizer_conf.radam_conf.do_bias_correction = do_bias_correction
 
-    #         self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
-    #         for param in param_group.parameters:
-    #             vars_conf[param].l2 = l2
-    #             if param.requires_grad:
-    #                 optimizer_conf.variable_op_names.append(vars_conf[param].name)
+            for param in param_group.parameters:
+                vars_conf[param].l2 = l2
+                if param.requires_grad:
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
-    #         new_opt_confs.append(optimizer_conf)
-    #     return new_opt_confs
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs
 
     @property
     def support_sparse(self):

@@ -302,6 +302,14 @@ __global__ void BiasCorrectionFactorKernelGpu(float beta, const int64_t* train_s
   *out = bias_correction_factor;
 }
 
+__global__ void RAdamBiasCorrectionFactorKernelGpu(float beta, const int64_t* train_step,
+                                                   float* out) {
+  const auto exponent = static_cast<double>(*train_step + 1);
+  const float bias_correction_factor = 2 * exponent * static_cast<float>(pow(beta, exponent));
+  *out = bias_correction_factor;
+  // *out = 1.234k;
+}
+
 template<typename T, typename G, typename C>
 __global__ void AdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta1, float beta2,
                               float epsilon, float weight_decay, bool amsgrad,
@@ -685,6 +693,18 @@ struct BiasCorrectionFactorKernelUtil<DeviceType::kCUDA> {
 void BiasCorrectionFactorKernelUtil<DeviceType::kCUDA>::BiasCorrectionFactorCompute(
     ep::Stream* stream, float beta, const int64_t* train_step, float* out) {
   BiasCorrectionFactorKernelGpu<<<1, 1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      beta, train_step, out);
+}
+
+template<>
+struct RAdamBiasCorrectionFactorKernelUtil<DeviceType::kCUDA> {
+  static void RAdamBiasCorrectionFactorCompute(ep::Stream* stream, float beta,
+                                               const int64_t* train_step, float* out);
+};
+
+void RAdamBiasCorrectionFactorKernelUtil<DeviceType::kCUDA>::RAdamBiasCorrectionFactorCompute(
+    ep::Stream* stream, float beta, const int64_t* train_step, float* out) {
+  RAdamBiasCorrectionFactorKernelGpu<<<1, 1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
       beta, train_step, out);
 }
 

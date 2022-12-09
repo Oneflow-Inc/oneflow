@@ -88,8 +88,9 @@ message AdamaxModelUpdateConf {
 message RAdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
-  optional float epsilon = 3 [default = 1e-8];
-  optional bool do_bias_correction = 4 [default = true];
+  optional float rho_inf = 3 [default = 1999.0];
+  optional float epsilon = 4 [default = 1e-8];
+  optional bool do_bias_correction = 5 [default = true];
 }
 
 message ClipByGlobalNormConf {

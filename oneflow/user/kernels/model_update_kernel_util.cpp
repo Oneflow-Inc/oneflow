@@ -348,6 +348,20 @@ void BiasCorrectionFactorKernelUtil<DeviceType::kCPU>::BiasCorrectionFactorCompu
   *out = bias_correction_factor;
 }
 
+template<>
+struct RAdamBiasCorrectionFactorKernelUtil<DeviceType::kCPU> {
+  static void RAdamBiasCorrectionFactorCompute(ep::Stream* stream, float beta,
+                                               const int64_t* train_step, float* out);
+};
+
+void RAdamBiasCorrectionFactorKernelUtil<DeviceType::kCPU>::RAdamBiasCorrectionFactorCompute(
+    ep::Stream* stream, float beta, const int64_t* train_step, float* out) {
+  const float bias_correction_factor =
+      2 * (*train_step + 1) * Fastpow<float>(beta, *train_step + 1);
+  // *out = bias_correction_factor;
+  *out = 1.234;
+}
+
 template<typename T, typename G>
 struct RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered,

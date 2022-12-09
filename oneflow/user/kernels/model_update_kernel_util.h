@@ -297,6 +297,13 @@ struct BiasCorrectionFactorKernelUtil {
                                           float* out);
 };
 
+template<DeviceType device_type>
+struct RAdamBiasCorrectionFactorKernelUtil {
+ public:
+  static void RAdamBiasCorrectionFactorCompute(ep::Stream* stream, float beta,
+                                               const int64_t* train_step, float* out);
+};
+
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
@@ -474,6 +481,8 @@ struct RAdamUpdateFunctor {
     const T vt = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
     const T mt_hat = mt / bias_correction1;
     const T rho_t = rho_inf - bias_correction2_numerator / bias_correction2;
+    printf("mt: %f, vt: %f, mt_hat: %f, rho_t: %f, rho_inf: %f, b1: %f, b2: %f, b2n: %f\n", mt, vt,
+           mt_hat, rho_t, rho_inf, bias_correction1, bias_correction2, bias_correction2_numerator);
     *m = mt;
     *v = vt;
     if (rho_t > 5) {
