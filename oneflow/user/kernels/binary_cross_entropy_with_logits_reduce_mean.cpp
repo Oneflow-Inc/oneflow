@@ -37,7 +37,8 @@ inline T CalSigmoid(const T x) {
 
 template<typename INPUT_T, typename TARGET_T, typename ComputeType>
 struct ComputeBinaryCrossEntropyWithLogitsReduceMeanOutFunctor {
-  inline ComputeType Compute(int64_t elem_cnt, const INPUT_T* input, const TARGET_T* target, int64_t reduce_elem_cnt) {
+  inline ComputeType Compute(int64_t elem_cnt, const INPUT_T* input, const TARGET_T* target,
+                             int64_t reduce_elem_cnt) {
     ComputeType result = 0.0;
     FOR_RANGE(int64_t, i, 0, elem_cnt) {
       ComputeType input_val = static_cast<ComputeType>(input[i]);
