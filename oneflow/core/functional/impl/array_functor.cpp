@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -162,6 +163,11 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalConstant(shape, value, dtype,
+                                             GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value");
     if (IsIntegralDataType(dtype->data_type())) {
@@ -186,6 +192,10 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
@@ -2899,13 +2909,20 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
-        << Error::RuntimeError()
-        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
     if (input->is_global()) {
-      std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      if (!device_.has_value()) {
+        std::string device_type = JUST(input->parallel_desc())->device_tag();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      } else {
+        if (!GlobalMode::is_enabled()) {
+          CHECK_OR_RETURN(!device_.has_value())
+              << Error::RuntimeError()
+              << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+              << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+        }
+        std::string device_type = device_.value_or(Symbol<Device>())->type();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      }
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -3567,11 +3584,17 @@ class BaddBmmFunctor {
         << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
         << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
 
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-    return JUST(functional::Add(JUST(functional::ScalarMul(beta, input)),
-                                JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
-                                /*alpha=*/1.0, /*inplace=*/false));
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
+    }
   }
 };
 

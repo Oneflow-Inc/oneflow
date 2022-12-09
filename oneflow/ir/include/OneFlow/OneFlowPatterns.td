@@ -115,51 +115,6 @@ def FusedScaleTrilPattern : Pat<
   ]
 >;
 
-def FusePadAndConv2d :
-  NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
-
-def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
-
-def FusedPadConv2DPattern : Pat<
-  (
-    OneFlow_Conv2DOp : $conv_2d_res
-    (
-      OneFlow_PadOp : $pad_res
-        $x,
-        $pad_op_name,
-        $pad_device_tag,
-        $pad_device_name,
-        $pad_scope_symbol_id,
-        $pad_hierarchy,
-        $pad_op_padding_before,
-        $pad_op_padding_after,
-        $pad_op_padding,
-        $floating_constant_value,
-        $integral_constant_value
-    ),
-    $weight,
-    $bias,
-    $_add_to_output,
-    $conv2d_op_name,
-    $conv2d_device_tag,
-    $conv2d_device_name,
-    $conv2d_scope_symbol_id,
-    $conv2d_hierarchy,
-    $operand_segment_sizes,
-    $filters,
-    $padding_before,
-    $data_format,
-    $kernel_size,
-    $strides,
-    $dilation_rate,
-    $groups
-  ),
-  (FusePadAndConv2d $conv_2d_res, $pad_res),
-  [
-    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after, $data_format)
-  ]
->;
-
 def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
 
 // TODO: use either to merge two patterns
@@ -342,26 +297,6 @@ def FuseConv2DBatchNormPattern : Pat<
     FuseConv2DBatchNorm $conv_2d_op, $batch_norm_op__0
   ),
   []
->;
-
-def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
-
-def DeleteSameDtypeCastOpPattern : Pat<
-  (
-    OneFlow_CastOp : $res
-     $x,
-     $cast_op_name,
-     $cast_device_tag,
-     $cast_device_name,
-     $cast_scope_symbol_id,
-     $cast_hierarchy,
-     $dtype,
-     $pin_memory
-  ),
-  (
-    replaceWithValue $x
-  ),
-  [(IsSameDtype $res, $x)]
 >;
 
 #endif // ONEFLOW_PATTERNS
