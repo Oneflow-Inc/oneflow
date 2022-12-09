@@ -40,10 +40,10 @@ namespace cutlass {
 namespace epilogue {
 namespace thread {
 
-template<typename ElementOutput_, int Count, typename ElementAccumulator_ = ElementOutput_,
-         typename ElementCompute_ = ElementOutput_,
+template<typename ElementOutput_, int Count, template<typename> typename Activation,
+         typename ElementAccumulator_ = ElementOutput_, typename ElementCompute_ = ElementOutput_,
          FloatRoundStyle Round = FloatRoundStyle::round_to_nearest>
-class RightFastGeluAndMul {
+class RightActivationAndMul {
  public:
   using ElementOutput = ElementOutput_;
   using ElementAccumulator = ElementAccumulator_;
@@ -64,7 +64,7 @@ class RightFastGeluAndMul {
 
  public:
   CUTLASS_HOST_DEVICE
-  RightFastGeluAndMul(Params const& /*params*/) {}
+  RightActivationAndMul(Params const& /*params*/) {}
 
   CUTLASS_HOST_DEVICE
   bool is_source_needed() const { return true; }
@@ -79,20 +79,20 @@ class RightFastGeluAndMul {
     FragmentOutput converted_lhs = accumulator_to_output(lhs);
     FragmentOutput converted_rhs = accumulator_to_output(rhs);
 
-    cutlass::epilogue::thread::GELU_taylor<FragmentOutput> fast_gelu;
+    Activation<FragmentOutput> act;
     cutlass::multiplies<FragmentOutput> mul;
-    auto fast_gelu_rhs = fast_gelu(converted_rhs);
-    return mul(fast_gelu_rhs, converted_lhs);
+    auto act_rhs = act(converted_rhs);
+    return mul(act_rhs, converted_lhs);
   }
 
   CUTLASS_HOST_DEVICE
   ElementOutput operator()(ElementAccumulator const& lhs, ElementAccumulator const& rhs) const {
     ElementOutput convert_lhs(lhs);
     ElementOutput convert_rhs(rhs);
-    cutlass::epilogue::thread::GELU_taylor<ElementOutput> fast_gelu;
+    Activation<ElementOutput> act;
     cutlass::multiplies<ElementOutput> mul;
-    auto fast_gelu_lhs = fast_gelu(convert_lhs);
-    return mul(fast_gelu_lhs, convert_rhs);
+    auto act_lhs = fast_gelu(convert_lhs);
+    return mul(act_lhs, convert_rhs);
   }
 };
 }  // namespace thread
@@ -126,7 +126,7 @@ struct GetCutlassType<nv_bfloat16> {
 
 #endif
 
-template<typename Acc, typename Arch>
+template<typename Acc, typename Arch, template<typename> typename Activation>
 void DualGemmGegluHalf(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, const void* x,
                        const void* w, const void* v, const void* b, const void* c, void* wx,
                        int32_t wx_stride, void* vx, int32_t vx_stride, void* y) {
@@ -156,8 +156,8 @@ void DualGemmGegluHalf(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, 
       cutlass::epilogue::thread::LinearCombination<ElementOutput,
                                                    128 / cutlass::sizeof_bits<ElementOutput>::value,
                                                    ElementAccumulator, ElementCompute, kScaleType>;
-  using EpilogueOutputOp2 = cutlass::epilogue::thread::RightFastGeluAndMul<
-      ElementOutput, 128 / cutlass::sizeof_bits<ElementOutput>::value, ElementOutput,
+  using EpilogueOutputOp2 = cutlass::epilogue::thread::RightActivationAndMul<
+      ElementOutput, 128 / cutlass::sizeof_bits<ElementOutput>::value, Activation, ElementOutput,
       ElementCompute>;
 
   const ElementCompute alpha0 = ElementCompute(1);
@@ -212,7 +212,12 @@ bool TryDispatchDualGemmImplActivation(ep::CudaStream* stream, const std::string
                                        void* wx, int32_t wx_stride, void* vx, int32_t vx_stride,
                                        void* y) {
   if (activation == "fast_gelu") {
-    DualGemmGegluHalf<Acc, Arch>(stream, m, n, k, x, w, v, b, c, wx, wx_stride, vx, vx_stride, y);
+    DualGemmGegluHalf<Acc, Arch, cutlass::epilogue::thread::GELU_taylor>(
+        stream, m, n, k, x, w, v, b, c, wx, wx_stride, vx, vx_stride, y);
+    return true;
+  } else if (activation == "gelu") {
+    DualGemmGegluHalf<Acc, Arch, cutlass::epilogue::thread::GELU>(stream, m, n, k, x, w, v, b, c,
+                                                                  wx, wx_stride, vx, vx_stride, y);
     return true;
   } else {
     return false;
