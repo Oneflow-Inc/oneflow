@@ -256,7 +256,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
     const static bool enable_trt_flash_attn =
-        ParseBooleanFromEnv("ONEFLOW_KERENL_ENABLE_TRT_FLASH_ATTN_IMPL", false)
+        ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", false)
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
     const bool inputs_contiguous =
