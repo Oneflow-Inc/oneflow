@@ -17,7 +17,12 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/device/cuda_util.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include <limits>
 
 namespace oneflow {
@@ -42,7 +47,11 @@ __global__ void MultiBlockReduceGpu(TransformFn transform,
     const auto& param = pack_params.params[i];
     CUDA_1D_KERNEL_LOOP(j, param.size) { t_out = reduce_fn(t_out, transform(param.data[j])); }
   }
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_out = BlockReduce(temp_storage).Reduce(t_out, reduce_fn);
   if (threadIdx.x == 0) { out[blockIdx.x] = b_out; }
@@ -97,9 +106,15 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
     }
     size_t wksp_size = 0;
     auto DeviceReduce = [&](void* temp_storage) -> void {
+#ifdef WITH_ROCM
+      OF_CUDA_CHECK(hipcub::DeviceReduce::Reduce(temp_storage, wksp_size, temp, ret, total_num_blocks,
+                                              ReduceFn{}, init,
+                                              stream->As<ep::CudaStream>()->cuda_stream()));
+#else
       OF_CUDA_CHECK(cub::DeviceReduce::Reduce(temp_storage, wksp_size, temp, ret, total_num_blocks,
                                               ReduceFn{}, init,
                                               stream->As<ep::CudaStream>()->cuda_stream()));
+#endif
     };
     DeviceReduce(nullptr);
     // NOTE(zwx): We have allocated the temp storage with the space

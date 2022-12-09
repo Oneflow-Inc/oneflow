@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
+#if !defined(WITH_ROCM)
+
 #include "grid_sample_kernel_util.h"
 
 namespace oneflow {
@@ -220,3 +222,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL, (DeviceTyp
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
+
+#endif

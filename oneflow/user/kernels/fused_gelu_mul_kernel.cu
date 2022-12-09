@@ -303,7 +303,7 @@ __global__ void __launch_bounds__(elementwise::kBlockSize)
 }
 
 template<size_t pack_size, typename T>
-cudaError_t LaunchFusedFastGeluMulGradCudaKernelByPack(cudaStream_t stream, int64_t n, T* x_diff,
+GPU(Error_t) LaunchFusedFastGeluMulGradCudaKernelByPack(GPU(Stream_t) stream, int64_t n, T* x_diff,
                                                        T* m_diff, const T* dy, const T* x,
                                                        const T* m) {
   const int64_t n_pack = n / pack_size;
@@ -311,8 +311,8 @@ cudaError_t LaunchFusedFastGeluMulGradCudaKernelByPack(cudaStream_t stream, int6
   const int64_t n_tail = n - tail_offset;
   int num_blocks;
   {
-    cudaError_t err = elementwise::GetNumBlocks(n_pack, &num_blocks);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = elementwise::GetNumBlocks(n_pack, &num_blocks);
+    if (err != GPU(Success)) { return err; }
   }
   FusedFastGeluMulGradCudaKernel<pack_size><<<num_blocks, elementwise::kBlockSize, 0, stream>>>(
       n_pack, reinterpret_cast<elementwise::Packed<T, pack_size>*>(x_diff),
@@ -321,11 +321,11 @@ cudaError_t LaunchFusedFastGeluMulGradCudaKernelByPack(cudaStream_t stream, int6
       reinterpret_cast<const elementwise::Packed<T, pack_size>*>(x),
       reinterpret_cast<const elementwise::Packed<T, pack_size>*>(m), n_tail, x_diff + tail_offset,
       m_diff + tail_offset, dy + tail_offset, x + tail_offset, m + tail_offset);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename T>
-static cudaError_t LaunchFusedFastGeluMulGradCudaKernel(cudaStream_t stream, int64_t n, T* x_diff,
+static GPU(Error_t) LaunchFusedFastGeluMulGradCudaKernel(GPU(Stream_t) stream, int64_t n, T* x_diff,
                                                         T* m_diff, const T* dy, const T* x,
                                                         const T* m) {
   constexpr int max_pack_size = elementwise::PackSize<T>();

@@ -246,7 +246,7 @@ void DispatchPreluForwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   int grid_size;
   const int pack_size = GetLaunchPackSize<T>(inner_size);
   const int64_t pack_num = elem_cnt / pack_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   if (pack_size == 8) {
     PReluForwardMultiAlphaGpu<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -284,7 +284,7 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   int grid_size;
   const int pack_size = GetLaunchPackSize<T>(inner_size);
   const int64_t pack_num = elem_cnt / pack_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
 
   if (pack_size == 8) {
     if (alpha_requires_grad) {
@@ -351,7 +351,7 @@ void DispatchPreluBackwardSingleAlphaTail(ep::Stream* stream, const IndexType el
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;

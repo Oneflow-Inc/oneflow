@@ -100,9 +100,9 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                         buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                         buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    OF_CUDA_CHECK(cudaMemcpy2DAsync(out->mut_dptr<int64_t>(), k * sizeof(int64_t),
+    OF_CUDA_CHECK(GPU(Memcpy2DAsync)(out->mut_dptr<int64_t>(), k * sizeof(int64_t),
                                     buf_manager.SortedIndicesPtr(), instance_size * sizeof(int64_t),
-                                    k * sizeof(int64_t), instance_num, cudaMemcpyDefault,
+                                    k * sizeof(int64_t), instance_num, GPU(MemcpyDefault),
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

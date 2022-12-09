@@ -122,7 +122,7 @@ __global__ void ContiguousInverseUniquePartitionIndices(const int32_t num_ids, I
 }
 
 template<typename T>
-void ShuffleData(cudaStream_t cuda_stream, ncclComm_t comm, DataType data_type,
+void ShuffleData(GPU(Stream_t) cuda_stream, ncclComm_t comm, DataType data_type,
                  const std::vector<int64_t>& send_offsets,
                  const std::vector<int64_t>& send_elem_cnt, const T* send_data,
                  const std::vector<int64_t>& recv_offsets,
@@ -192,7 +192,7 @@ void MakeShuffleParams(const IDX* host_num_unique_matrix, const int64_t num_ids,
 }
 
 template<typename K, typename U, typename IDX>
-void ShuffleIdsAndTableIds(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleIdsAndTableIds(GPU(Stream_t) cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, DataType ids_data_type,
                            DataType table_ids_data_type, IDX* host_num_unique_matrix,
                            K* partitioned_unique_ids, U* partitioned_unique_table_ids,
@@ -286,7 +286,7 @@ void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
 }  // namespace
 
 template<typename K, typename V, typename IDX, typename HASH>
-void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capacity,
+void UniqueAndPartition(GPU(Stream_t) cuda_stream, int64_t num_ids, size_t capacity,
                         int64_t num_partition, const K* ids, const V* table_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_table_ids, IDX* inverse_unique_partition_indices,
@@ -294,9 +294,9 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
                         const bool has_padding_idx, const int64_t padding_idx) {
   size_t table_capacity_bytes = capacity * sizeof(TableEntry<K>);
   CHECK_GE(workspace_bytes, table_capacity_bytes);
-  OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, table_capacity_bytes, cuda_stream));
+  OF_CUDA_CHECK(GPU(MemsetAsync)(workspace_ptr, 0, table_capacity_bytes, cuda_stream));
   OF_CUDA_CHECK(
-      cudaMemsetAsync(num_partitioned_unique_ids_ptr, 0, num_partition * sizeof(IDX), cuda_stream));
+      GPU(MemsetAsync)(num_partitioned_unique_ids_ptr, 0, num_partition * sizeof(IDX), cuda_stream));
   HashTableUniqueAndPartitionPairs<K, V, IDX, HASH>
       <<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
           capacity, num_ids, num_partition, num_partitioned_unique_ids_ptr,
@@ -306,7 +306,7 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
 }
 
 template<typename T, typename IDX>
-void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleEmbeddings(GPU(Stream_t) cuda_stream, ncclComm_t comm, int64_t parallel_id,
                        int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                        DataType data_type, IDX* host_num_unique_matrix,
                        const T* reverse_unique_cur_rank_embeddings, T* received_embeddings) {
@@ -322,7 +322,7 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
 
 // Quantized Version.
 template<typename T, typename IDX>
-void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleEmbeddings(GPU(Stream_t) cuda_stream, ncclComm_t comm, int64_t parallel_id,
                        int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                        DataType data_type, IDX* host_num_unique_matrix,
                        int8_t* reverse_unique_cur_rank_embeddings, int8_t* received_embeddings,
@@ -344,7 +344,7 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
 }
 
 template<typename T, typename IDX>
-void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleEmbeddingsGrad(GPU(Stream_t) cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
                            const T* unique_partition_embedding_grad, T* received_embeddings_grad) {
@@ -361,7 +361,7 @@ void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t pa
 
 // Quantize Version.
 template<typename T, typename IDX>
-void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleEmbeddingsGrad(GPU(Stream_t) cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
                            int8_t* unique_partition_embedding_grad,
@@ -400,7 +400,7 @@ void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t unique_partitioned
                                   const IDX* inverse_unique_partition_indices,
                                   T* unique_partition_embedding_grad) {
   const int64_t valid_value_size = unique_partitioned_num_ids * padded_embedding_size * sizeof(T);
-  OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad, 0, valid_value_size,
+  OF_CUDA_CHECK(GPU(MemsetAsync)(unique_partition_embedding_grad, 0, valid_value_size,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   UnsortedSegmentSum<T, IDX>(stream, inverse_unique_partition_indices, embedding_grad, num_ids,
                              unique_partitioned_num_ids, embedding_size, padded_embedding_size,
@@ -415,13 +415,13 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
                                 const T* cur_rank_embedding_grad,
                                 const IDX* cur_rank_inverse_indices,
                                 T* cur_rank_unique_embedding_grad, T* tmp_buffer) {
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   // memset cur_rank_unique_embedding_grad, if only_zero_valid_grad, only memset valid data.
   if (only_zero_valid_grad) {
-    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad, 0,
+    OF_CUDA_CHECK(GPU(MemsetAsync)(cur_rank_unique_embedding_grad, 0,
                                   num_unique * embedding_size * sizeof(T), cuda_stream));
   } else {
-    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad, 0,
+    OF_CUDA_CHECK(GPU(MemsetAsync)(cur_rank_unique_embedding_grad, 0,
                                   cur_rank_unique_embedding_grad_elem_cnt * sizeof(T),
                                   cuda_stream));
   }
@@ -429,7 +429,7 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
   if (embedding_size != padded_embedding_size) {
     unsorted_segment_sum_out = tmp_buffer;
     size_t buffer_size = GetCudaAlignedSize(num_unique * padded_embedding_size * sizeof(T));
-    OF_CUDA_CHECK(cudaMemsetAsync(unsorted_segment_sum_out, 0, buffer_size, cuda_stream));
+    OF_CUDA_CHECK(GPU(MemsetAsync)(unsorted_segment_sum_out, 0, buffer_size, cuda_stream));
   } else {
     // cur_rank_unique_embedding_grad's has been memset, not need to memset again.
     unsorted_segment_sum_out = cur_rank_unique_embedding_grad;
@@ -476,7 +476,7 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
                DataType num_unique_matrix_dtype, DataType ids_dtype, DataType table_ids_dtype,
                bool need_process_table_ids, const bool has_padding_idx, const int64_t padding_idx,
                IDX* host_num_unique_matrix, IDX* host_num_keys) {
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   size_t hash_table_capacity = parallel_num * num_ids;
   UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
       cuda_stream, num_ids, hash_table_capacity, parallel_num, data_ptrs.ids_ptr,
@@ -489,8 +489,8 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
                               parallel_num, GetNcclDataType(num_unique_matrix_dtype), comm,
                               cuda_stream));
 
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, data_ptrs.num_unique_matrix_ptr,
-                                parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_unique_matrix, data_ptrs.num_unique_matrix_ptr,
+                                parallel_num * parallel_num * sizeof(IDX), GPU(MemcpyDefault),
                                 cuda_stream));
   CHECK_JUST(stream->Sync());
   if (parallel_num > 1) {
@@ -512,11 +512,11 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
       data_ptrs.cur_rank_inverse_indices_ptr, data_ptrs.workspace_ptr, data_ptrs.workspace_size,
       need_process_table_ids, has_padding_idx, padding_idx);
   if (!need_process_table_ids) {
-    OF_CUDA_CHECK(cudaMemsetAsync(data_ptrs.cur_rank_unique_table_ids_ptr, 0,
+    OF_CUDA_CHECK(GPU(MemsetAsync)(data_ptrs.cur_rank_unique_table_ids_ptr, 0,
                                   received_elem_cnt * sizeof(U), cuda_stream));
   }
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, data_ptrs.cur_rank_num_unique_ptr, sizeof(IDX),
-                                cudaMemcpyDefault, cuda_stream));
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_keys, data_ptrs.cur_rank_num_unique_ptr, sizeof(IDX),
+                                GPU(MemcpyDefault), cuda_stream));
   CHECK_JUST(stream->Sync());
 }
 

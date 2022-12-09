@@ -93,7 +93,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -178,7 +178,7 @@ class MultiTensorMomentumUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -288,7 +288,7 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -369,7 +369,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 #endif
@@ -456,7 +456,7 @@ class MultiTensorMomentumUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 #endif
@@ -568,7 +568,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 #endif
@@ -617,7 +617,7 @@ class MultiTensorYoloV5WeightUpdateKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device)              \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MULTI_TENSOR_YOLOV5_WEIGHT_UPDATE_KERNEL(DeviceType::kCUDA, float);
 #endif
 

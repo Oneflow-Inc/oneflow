@@ -19,7 +19,11 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <mma.h>
+#endif
 
 namespace oneflow {
 
@@ -124,7 +128,7 @@ void ConcatFeatures(user_op::KernelComputeContext* ctx, int64_t dst_rows, int64_
   int64_t pad_dim = dst_cols - out_col_offset;
   if (pad_dim > 0) {
     char* out_ptr = reinterpret_cast<char*>(dst_ptr) + out_col_offset * sizeof(T);
-    OF_CUDA_CHECK(cudaMemset2DAsync(out_ptr, dst_cols * sizeof(T), 0, pad_dim * sizeof(T), dst_rows,
+    OF_CUDA_CHECK(GPU(Memset2DAsync)(out_ptr, dst_cols * sizeof(T), 0, pad_dim * sizeof(T), dst_rows,
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 }
@@ -135,7 +139,7 @@ void GatherConcatKernel(ep::Stream* stream, int32_t elem_cnt, int32_t out_dim,
                         int32_t concated_padded_dim, int32_t output_concat_end_dim,
                         bool self_interaction, const T* matmul_out, const T* output_concat_ptr,
                         int32_t* gather_indices_ptr, T* out_ptr) {
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   const int32_t gen_indices_elem_cnt = features_concated_dim * features_concated_dim;
   int32_t offset = self_interaction ? 1 : 0;
   GenerateGatherIndicesGpu<<<BlocksNum4ThreadsNum(gen_indices_elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -437,12 +441,12 @@ struct DotFeatureInteractionKernel {
     const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
     const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
     int max_active_blocks;
-    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    OF_CUDA_CHECK(GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks,
         DotFeatureInteractionWmmaImpl<T, ComputeType, max_in, pack_size, mn_tile_dim, k_tile_dim>,
         block_size, total_shared_mem_bytes));
     if (max_active_blocks <= 0) { return false; }
-    cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
     DotFeatureInteractionWmmaImpl<T, ComputeType, max_in, pack_size, mn_tile_dim, k_tile_dim>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
             m_num_tiles, k_num_tiles, batch_size, concated_padded_dim, vector_num_pack,
@@ -719,13 +723,13 @@ struct DotFeatureInteractionBackwardKernel {
         in_shared_mem_num_cols / sparse_grad_pack_size;
 
     int max_active_blocks;
-    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    OF_CUDA_CHECK(GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks,
         DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size,
                                               sparse_grad_pack_size, mn_tile_dim, k_tile_dim>,
         block_size, total_shared_mem_bytes));
     if (max_active_blocks <= 0) { return false; }
-    cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
     DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size, sparse_grad_pack_size,
                                           mn_tile_dim, k_tile_dim>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
@@ -755,7 +759,7 @@ __global__ void MemsetGpu(int64_t parallel_num, int64_t vector_size, const uint3
 }
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack != 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
+typename std::enable_if<(pack != 0), void>::type LaunchPackMemsetGpu(GPU(Stream_t) stream,
                                                                      const uint32_t* num_valid,
                                                                      T* ptr, size_t sm_count,
                                                                      int64_t vector_size,
@@ -764,7 +768,7 @@ typename std::enable_if<(pack != 0), void>::type LaunchPackMemsetGpu(cudaStream_
 }
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack == 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
+typename std::enable_if<(pack == 0), void>::type LaunchPackMemsetGpu(GPU(Stream_t) stream,
                                                                      const uint32_t* num_valid,
                                                                      T* ptr, size_t sm_count,
                                                                      int64_t vector_size,
@@ -773,7 +777,7 @@ typename std::enable_if<(pack == 0), void>::type LaunchPackMemsetGpu(cudaStream_
 }
 
 template<typename T>
-void LaunchMemset(cudaStream_t stream, size_t sm_count, int64_t vector_size, int64_t parallel_num,
+void LaunchMemset(GPU(Stream_t) stream, size_t sm_count, int64_t vector_size, int64_t parallel_num,
                   const uint32_t* num_valid, T* ptr) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(ptr);
   if (uintptr % 16 == 0) {
@@ -1057,7 +1061,7 @@ void DispatchFeatureInteractionSumPackSize(ep::Stream* stream, const int64_t bat
   GetBlockDims(vector_num_pack, &block_dim_x, &block_dim_y);
   const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
   dim3 block_dims = dim3(block_dim_x, block_dim_y);
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   if (pack_size == 2) {
     FeatureInteractionSum<T, max_in, 2>
         <<<num_blocks, block_dims, 0, cuda_stream>>>(batch_size, vector_num_pack, param);

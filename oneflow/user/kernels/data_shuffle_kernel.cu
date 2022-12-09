@@ -320,13 +320,21 @@ __device__ float RoundHalfAwayFromZero(const float x) {
 }
 
 // warp reduce version.
+#ifdef WITH_ROCM
+constexpr int32_t kWarpSize = 64;
+#else
 constexpr int32_t kWarpSize = 32;
+#endif
 constexpr int32_t kMaxColSize = 1024;
 
 template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpMaxAllReduce(T val) {
   for (int32_t lane_mask = thread_group_width / 2; lane_mask > 0; lane_mask /= 2) {
+#ifdef WITH_ROCM
+    val = max(val, __shfl_xor(val, lane_mask, thread_group_width));
+#else
     val = max(val, __shfl_xor_sync(0xffffffff, val, lane_mask, thread_group_width));
+#endif
   }
   return val;
 }

@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -24,7 +29,11 @@ namespace {
 template<typename T>
 __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
                                    const T epsilon, const T* in, T* square_x_sum, T* out) {
+#ifdef WITH_ROCM
+  using BlockReduce = hipcub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
+#else
   using BlockReduce = cub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
@@ -54,7 +63,11 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
     const T inv_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
     const int32_t offset = (i / d) * d * c + (i % d);
     if (square_x_sum[i] >= epsilon) {
+#ifdef WITH_ROCM
+      using BlockReduce = hipcub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
+#else
       using BlockReduce = cub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
+#endif
       __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
 
       T y_dy_prod_sum = GetZeroVal<T>();

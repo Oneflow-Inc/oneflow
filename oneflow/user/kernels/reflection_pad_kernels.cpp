@@ -201,7 +201,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
   REGISTER_REFLECTION_PAD_ND_KERNELS(device, int32_t)
 
 REGISTER_REFLECTION_PAD_ND_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_REFLECTION_PAD_ND_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_REFLECTION_PAD_ND_KERNELS(DeviceType::kCUDA, float16)
 #endif

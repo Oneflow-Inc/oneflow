@@ -66,8 +66,8 @@ __global__ void sampleMultinomialWithReplacement(uint64_t seed, uint64_t offset,
 
   // global index formula for 2D grid of 1D blocks
   int idx = blockIdx.y * gridDim.x * blockDim.x + blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, idx, offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, idx, offset, &state);
 
   // The block determines the distribution for which we generate a point
   for (int64_t curDist = blockIdx.y; curDist < distributions; curDist += gridDim.y) {

@@ -166,7 +166,7 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double, float16);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double, float16);
@@ -312,7 +312,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
 
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -492,7 +492,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double, float16);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double, float16);
@@ -561,7 +561,7 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
@@ -803,7 +803,7 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
 
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -832,7 +832,7 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
       .SetCreateFn<BiasCorrectionFactorKernel<device>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == device));
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
 #endif  // WITH_CUDA
 
@@ -897,7 +897,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -1002,7 +1002,7 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
 
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -1072,7 +1072,7 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
@@ -1136,7 +1136,7 @@ class AdadeltaUpdateKernel final : public user_op::OpKernel, public user_op::Cud
 
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, double, double);

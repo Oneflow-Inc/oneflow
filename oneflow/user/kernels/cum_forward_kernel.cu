@@ -52,7 +52,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   if (in_shape.elem_cnt() == dim_size) {
     size_t temp_storage_bytes = 0;
 #ifdef WITH_ROCM
-OF_CUDA_CHECK(hipcub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
+    OF_CUDA_CHECK(hipcub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
                                                  static_cast<T*>(nullptr), static_cast<T*>(nullptr),
                                                  BinaryFunc<T>(), dim_size));
 #else

@@ -25,18 +25,18 @@ namespace oneflow {
 
 namespace {
 
-__device__ int64_t GenUniformInt(curandState* state, const int64_t low, const int64_t high) {
-  auto rand_num = curand_uniform(state);
+__device__ int64_t GenUniformInt(GPURAND(State)* state, const int64_t low, const int64_t high) {
+  auto rand_num = GPURAND(_uniform)(state);
   // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
   if (rand_num == 1.0) { rand_num = 0.0; }
   return static_cast<int64_t>(rand_num * (high - low) + low);
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const int64_t low,
+__global__ void GenerateGpu(GPURAND(State)* state, const int64_t elem_cnt, T* dptr, const int64_t low,
                             const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  GPURAND(State) localState = state[id];
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
   }

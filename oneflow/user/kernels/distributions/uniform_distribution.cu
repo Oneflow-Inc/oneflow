@@ -23,39 +23,39 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__device__ T GenUniform(curandState* state, const T low, const T high);
+__device__ T GenUniform(GPURAND(State)* state, const T low, const T high);
 
 template<>
-__device__ float GenUniform<float>(curandState* state, const float low, const float high) {
-  auto rand_num = curand_uniform(state);
+__device__ float GenUniform<float>(GPURAND(State)* state, const float low, const float high) {
+  auto rand_num = GPURAND(_uniform)(state);
   // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
   if (rand_num == 1.0) { rand_num = 0.0; }
   return rand_num * (high - low) + low;
 }
 
 template<>
-__device__ double GenUniform<double>(curandState* state, const double low, const double high) {
-  auto rand_num = curand_uniform_double(state);
+__device__ double GenUniform<double>(GPURAND(State)* state, const double low, const double high) {
+  auto rand_num = GPURAND(_uniform_double)(state);
   // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
   if (rand_num == 1.0) { rand_num = 0.0; }
   return rand_num * (high - low) + low;
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T low,
+__global__ void GenerateGpu(GPURAND(State)* state, const int64_t elem_cnt, T* dptr, const T low,
                             const T high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  GPURAND(State) localState = state[id];
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
   state[id] = localState;
 }
 
 // specialization for half
 template<>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, half* dptr, const half low,
+__global__ void GenerateGpu(GPURAND(State)* state, const int64_t elem_cnt, half* dptr, const half low,
                             const half high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  GPURAND(State) localState = state[id];
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<half>(GenUniform<float>(&localState, low, high));
   }

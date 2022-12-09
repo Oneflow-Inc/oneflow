@@ -22,8 +22,13 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/user/kernels/one_embedding_data_shuffle.cuh"
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#else
 #include <curand.h>
 #include <curand_kernel.h>
+#endif
 
 namespace oneflow {
 
@@ -205,8 +210,12 @@ template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_keys_), sizeof(IDX)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
@@ -228,28 +237,36 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
                       &initializer_index);
 
     const size_t param_size_bytes = initializer_param.size() * sizeof(EmbeddingInitializer);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_param_), param_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_param_, param_size_bytes));
+#endif
     std::memcpy(host_initializer_param_, initializer_param.data(), param_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_param_, param_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_param_, host_initializer_param_,
-                                  param_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_param_, param_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_param_, host_initializer_param_,
+                                  param_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     const size_t index_size_bytes = initializer_index.size() * sizeof(int8_t);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_index_), index_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, index_size_bytes));
+#endif
     std::memcpy(host_initializer_index_, initializer_index.data(), index_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, index_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_index_, host_initializer_index_,
-                                  index_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_index_, index_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_index_, host_initializer_index_,
+                                  index_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   ~EmbeddingKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_param_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_param_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_index_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_keys_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_param_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_param_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_index_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_index_));
   }
 
   void* HostNumKeys() { return host_num_keys_; }
@@ -310,8 +327,8 @@ __global__ void InitValueKernel(uint64_t seed, const int32_t line_size,
     const int64_t offset = index * line_size + col;
     const int32_t table_idx = table_ids[index];
     const K id = unique_ids[index];
-    curandStatePhilox4_32_10_t state;
-    curand_init(seed, id, col, &state);
+    GPURAND(StatePhilox4_32_10_t) state;
+    GPURAND(_init)(seed, id, col, &state);
     const int32_t initializer_idx = initializer_index[table_idx * line_size + col];
     EmbeddingInitializer initializer = initializer_param[initializer_idx];
     T value;
@@ -343,7 +360,7 @@ void LookupAndInitMissing(ep::Stream* stream, uint64_t seed, embedding::KeyValue
              reinterpret_cast<uint32_t*>(num_missing_ptr),
              reinterpret_cast<uint32_t*>(missing_indices));
   CHECK_GE(sizeof(IDX), sizeof(uint32_t));  // host_num_keys's buffer size is sizeof(IDX)
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t), cudaMemcpyDefault,
+  OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_keys, num_missing_ptr, sizeof(uint32_t), GPU(MemcpyDefault),
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   CHECK_JUST(stream->Sync());
   uint32_t num_missing = *reinterpret_cast<uint32_t*>(host_num_keys);
@@ -397,8 +414,8 @@ __global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed, const 
     if (!lookup_mask[row]) {
       const int32_t table_idx = table_ids[row];
       const K id = unique_ids[row];
-      curandStatePhilox4_32_10_t state;
-      curand_init(seed, id, col, &state);
+      GPURAND(StatePhilox4_32_10_t) state;
+      GPURAND(_init)(seed, id, col, &state);
 #pragma unroll
       for (int k = 0; k < pack_size; ++k) {
         const int32_t initializer_idx =
@@ -435,7 +452,7 @@ __global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed, const 
 }
 
 template<typename T, typename K, typename U, typename V>
-void InitMissingAndSliceCast(cudaStream_t cuda_stream, uint32_t num_unique,
+void InitMissingAndSliceCast(GPU(Stream_t) cuda_stream, uint32_t num_unique,
                              const int64_t embedding_size, const int64_t line_size, uint64_t seed,
                              const EmbeddingInitializer* initializer_param,
                              const int8_t* initializer_index, const void* unique_ids,
@@ -486,7 +503,7 @@ void LookupAndFusedInitMissingSliceCast(ep::Stream* stream, EmbeddingKernelState
   embedding::KeyValueStore* store = kernel_state->KeyValueStore();
   const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
   const int8_t* initializer_index = kernel_state->InitializerIndex();
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  GPU(Stream_t) cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   store->Get(stream, num_unique, unique_ids, values_ptr, lookup_mask_ptr);
   if (embedding_dtype == value_dtype) {
     InitMissingAndSliceCast<T, K, U, T>(
@@ -1114,12 +1131,18 @@ class OneEmbeddingFusedLookupKernelState final : public user_op::OpKernelState {
       : device_index_(-1),
         stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_keys_), sizeof(IDX)));
+    OF_CUDA_CHECK(
+        hipMallocHost(reinterpret_cast<void **>(&host_num_unique_matrix_), parallel_num * parallel_num * sizeof(IDX)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     OF_CUDA_CHECK(
         cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         embedding_name, parallel_id);
@@ -1141,29 +1164,37 @@ class OneEmbeddingFusedLookupKernelState final : public user_op::OpKernelState {
                       &initializer_index);
 
     const size_t param_size_bytes = initializer_param.size() * sizeof(EmbeddingInitializer);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_param_), param_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_param_, param_size_bytes));
+#endif
     std::memcpy(host_initializer_param_, initializer_param.data(), param_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_param_, param_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_param_, host_initializer_param_,
-                                  param_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_param_, param_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_param_, host_initializer_param_,
+                                  param_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     const size_t index_size_bytes = initializer_index.size() * sizeof(int8_t);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_index_), index_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, index_size_bytes));
+#endif
     std::memcpy(host_initializer_index_, initializer_index.data(), index_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, index_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_index_, host_initializer_index_,
-                                  index_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_index_, index_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_index_, host_initializer_index_,
+                                  index_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   ~OneEmbeddingFusedLookupKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
-    OF_CUDA_CHECK(cudaFreeHost(host_num_unique_matrix_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_param_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_param_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_index_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_keys_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_unique_matrix_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_param_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_param_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_index_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_index_));
   }
 
   ncclComm_t comm() { return GetOrCreate().comm; }
@@ -1294,7 +1325,7 @@ class OneEmbeddingFusedLookupKernel final : public user_op::OpKernel {
     const int64_t num_ids = ids->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     DataType value_dtype = ctx->Attr<DataType>("dtype");
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -1444,9 +1475,13 @@ class OneEmbeddingFusedLookupLocalKernelState final : public user_op::OpKernelSt
  public:
   explicit OneEmbeddingFusedLookupLocalKernelState(user_op::KernelInitContext* ctx)
       : device_index_(-1) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_num_keys_), sizeof(IDX)));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         embedding_name, parallel_id);
@@ -1467,28 +1502,36 @@ class OneEmbeddingFusedLookupLocalKernelState final : public user_op::OpKernelSt
                       &initializer_index);
 
     const size_t param_size_bytes = initializer_param.size() * sizeof(EmbeddingInitializer);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_param_), param_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_param_, param_size_bytes));
+#endif
     std::memcpy(host_initializer_param_, initializer_param.data(), param_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_param_, param_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_param_, host_initializer_param_,
-                                  param_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_param_, param_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_param_, host_initializer_param_,
+                                  param_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     const size_t index_size_bytes = initializer_index.size() * sizeof(int8_t);
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_initializer_index_), index_size_bytes));
+#else
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, index_size_bytes));
+#endif
     std::memcpy(host_initializer_index_, initializer_index.data(), index_size_bytes);
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, index_size_bytes));
-    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_index_, host_initializer_index_,
-                                  index_size_bytes, cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(Malloc)(&device_initializer_index_, index_size_bytes));
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(device_initializer_index_, host_initializer_index_,
+                                  index_size_bytes, GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   ~OneEmbeddingFusedLookupLocalKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_param_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_param_));
-    OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
-    OF_CUDA_CHECK(cudaFree(device_initializer_index_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_keys_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_param_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_param_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_initializer_index_));
+    OF_CUDA_CHECK(GPU(Free)(device_initializer_index_));
   }
 
   IDX* HostNumKeys() { return host_num_keys_; }
@@ -1626,7 +1669,7 @@ class OneEmbeddingFusedLookupLocalKernel final : public user_op::OpKernel {
     const bool has_table_ids = ctx->has_input("table_ids", 0);
     const bool need_process_table_ids = (has_table_ids || num_tables > 1);
     const int64_t num_ids = ids->shape_view().elem_cnt();
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     DataType value_dtype = ctx->Attr<DataType>("dtype");
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -1680,7 +1723,7 @@ class OneEmbeddingFusedLookupLocalKernel final : public user_op::OpKernel {
         reinterpret_cast<data_shuffle::TableEntry<K>*>(workspace_ptr), workspace_bytes,
         need_process_table_ids, has_padding_idx, padding_idx);
 
-    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ptr, sizeof(IDX), cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(host_num_keys, num_unique_ptr, sizeof(IDX), GPU(MemcpyDefault),
                                   cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
 

@@ -36,7 +36,11 @@ namespace embedding {
 
 namespace {
 
+#ifdef WITH_ROCM
+constexpr int kWarpSize = 64;
+#else
 constexpr int kWarpSize = 32;
+#endif
 constexpr int kNumWarpPerBlock = 4;
 constexpr int kBlockSize = kNumWarpPerBlock * kWarpSize;
 constexpr uint32_t kFullMask = 0xFFFFFFFFU;

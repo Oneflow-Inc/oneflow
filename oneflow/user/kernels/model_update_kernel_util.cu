@@ -16,7 +16,12 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -72,7 +77,11 @@ __global__ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T*
     t_sum0 += src0[i] * src0[i];
     t_sum1 += src1[i] * src1[i];
   }
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage0;
   __shared__ typename BlockReduce::TempStorage temp_storage1;
   T b_sum0 = BlockReduce(temp_storage0).Sum(t_sum0);

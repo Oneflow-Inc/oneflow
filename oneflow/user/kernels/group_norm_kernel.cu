@@ -19,6 +19,9 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/cuda/layer_norm.cuh"
+
+#if !defined(WITH_ROCM)
+
 #include <cub/cub.cuh>
 #include <cutlass/fast_math.h>
 #include "oneflow/core/kernel/cuda_graph_support.h"
@@ -666,3 +669,5 @@ REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16, float)
 #endif
 
 }  // namespace oneflow
+
+#endif

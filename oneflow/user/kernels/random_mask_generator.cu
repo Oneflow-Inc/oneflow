@@ -29,13 +29,13 @@ union Pack {
   bool b_value[sizeof(PackType)];
 };
 
-__device__ bool GenMask(curandState* state, const float rate) {
-  return curand_uniform(state) > rate;
+__device__ bool GenMask(GPURAND(State)* state, const float rate) {
+  return GPURAND(_uniform)(state) > rate;
 }
 
-__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, bool* mask) {
+__global__ void GenerateGpu(GPURAND(State)* state, const int64_t n, const float rate, bool* mask) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  GPURAND(State) localState = state[id];
   PackType* pack_mask = reinterpret_cast<PackType*>(mask);
   Pack pack;
   CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {

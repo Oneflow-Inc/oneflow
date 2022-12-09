@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename ComputeType, typename MASK, int num_dims>
-void LaunchBroadcastForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y,
+void LaunchBroadcastForwardKernel(GPU(Stream_t) stream, const T* x, T* y, T* softmax_y,
                                   const MASK* mask, const bool* dropout_mask,
                                   const int64_t elem_cnt, const int64_t rows, const int64_t cols,
                                   const float fill, const float scale, const float dropout_scale,
@@ -46,7 +46,7 @@ void LaunchBroadcastForwardKernel(cudaStream_t stream, const T* x, T* y, T* soft
 }
 
 template<typename T, typename ComputeType, typename MASK>
-void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y,
+void LaunchElementwiseForwardKernel(GPU(Stream_t) stream, const T* x, T* y, T* softmax_y,
                                     const MASK* mask, const bool* dropout_mask, const int64_t rows,
                                     const int64_t cols, const float fill, const float scale,
                                     const float dropout_scale) {
@@ -62,7 +62,7 @@ void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, T* so
 }
 
 template<typename T, typename ComputeType, typename MASK, int num_dims>
-void LaunchBroadcastBackwardKernel(cudaStream_t stream, const T* softmax_y, const T* dy, T* dx,
+void LaunchBroadcastBackwardKernel(GPU(Stream_t) stream, const T* softmax_y, const T* dy, T* dx,
                                    const MASK* mask, const bool* dropout_mask,
                                    const int64_t elem_cnt, const int64_t rows, const int64_t cols,
                                    const float fill, const float scale, const float dropout_scale,
@@ -86,7 +86,7 @@ void LaunchBroadcastBackwardKernel(cudaStream_t stream, const T* softmax_y, cons
 }
 
 template<typename T, typename ComputeType, typename MASK>
-void LaunchElementwiseBackwardKernel(cudaStream_t stream, const T* softmax_y, const T* dy, T* dx,
+void LaunchElementwiseBackwardKernel(GPU(Stream_t) stream, const T* softmax_y, const T* dy, T* dx,
                                      const MASK* mask, const bool* dropout_mask, const int64_t rows,
                                      const int64_t cols, const float fill, const float scale,
                                      const float dropout_scale) {

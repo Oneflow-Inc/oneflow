@@ -246,9 +246,9 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     T* min_ptr = max_ptr + 1;
 
     int64_t* host_current_train_step_ptr = new int64_t[current_train_step->shape_view().elem_cnt()];
-    OF_CUDA_CHECK(cudaMemcpy(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
+    OF_CUDA_CHECK(GPU(Memcpy)(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
                              current_train_step->shape_view().elem_cnt() * sizeof(int64_t),
-                             cudaMemcpyDefault));
+                             GPU(MemcpyDefault)));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if (*host_current_train_step_ptr <= stop_update_after_iters && is_training) {
       LAUNCH_CUDA_KERNEL((InitMaxMin<T>), cuda_stream, 1, 0, 1, max_ptr, min_ptr);

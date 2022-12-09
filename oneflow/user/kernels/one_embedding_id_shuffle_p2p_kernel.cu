@@ -201,7 +201,7 @@ __global__ void GenerateTableIdsAndMemsetUniqueWorkspace(int32_t elem_cnt, int32
 }
 
 template<typename K, typename V, typename IDX, typename HASH>
-void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_blocks, int64_t num_ids,
+void UniqueAndPartition(GPU(Stream_t) cuda_stream, int64_t num_blocks, int64_t num_ids,
                         size_t capacity, int64_t num_partition, const K* ids, const V* table_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_table_ids, IDX* inverse_unique_partition_indices,
@@ -268,11 +268,17 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
       : device_index_(-1),
         parallel_desc_(ctx->parallel_desc()),
         parallel_id_(ctx->parallel_ctx().parallel_id()) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(GPU(GetDevice)(&device_index_));
     int64_t parallel_num = parallel_desc_.parallel_num();
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK(
+        hipMallocHost(reinterpret_cast<void **>(&host_num_unique_matrix_), parallel_num * parallel_num * sizeof(IDX)));
+    OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&host_cur_rank_num_unique_), sizeof(IDX)));
+#else
     OF_CUDA_CHECK(
         cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(IDX)));
     OF_CUDA_CHECK(cudaMallocHost(&host_cur_rank_num_unique_, sizeof(IDX)));
+#endif
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = parallel_id_;
     embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
@@ -285,14 +291,14 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     size_t buffer_size = num_partitioned_unique_size_ + partitioned_unique_ids_size_
                          + partitioned_unique_table_ids_size_ + is_kernel_start_size_;
     buffer_ptrs_.resize(parallel_num);
-    cudaMalloc(&buffer_ptrs_.at(parallel_id), buffer_size);
-    cudaMemset(buffer_ptrs_.at(parallel_id), 0, buffer_size);
+    GPU(Malloc)(&buffer_ptrs_.at(parallel_id), buffer_size);
+    GPU(Memset)(buffer_ptrs_.at(parallel_id), 0, buffer_size);
   }
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_cur_rank_num_unique_));
-    OF_CUDA_CHECK(cudaFreeHost(host_num_unique_matrix_));
-    OF_CUDA_CHECK(cudaFree(buffer_ptrs_.at(parallel_id_)));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_cur_rank_num_unique_));
+    OF_CUDA_CHECK(GPU(FreeHost)(host_num_unique_matrix_));
+    OF_CUDA_CHECK(GPU(Free)(buffer_ptrs_.at(parallel_id_)));
   }
 
   std::vector<void*>* BufferPtrs() { return &buffer_ptrs_; }
@@ -341,20 +347,20 @@ void GetPtrs(user_op::KernelComputeContext* ctx, std::vector<void*>* buffer_ptrs
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   std::string name = ctx->op_name();
-  cudaIpcMemHandle_t handle;
-  OF_CUDA_CHECK(cudaIpcGetMemHandle(&handle, buffer_ptrs->at(parallel_id)));
+  GPU(IpcMemHandle_t) handle;
+  OF_CUDA_CHECK(GPU(IpcGetMemHandle)(&handle, buffer_ptrs->at(parallel_id)));
   Singleton<CtrlClient>::Get()->PushKV(
       name + std::to_string(parallel_id),
-      std::string(reinterpret_cast<const char*>(&handle), sizeof(cudaIpcMemHandle_t)));
+      std::string(reinterpret_cast<const char*>(&handle), sizeof(GPU(IpcMemHandle_t))));
   for (int64_t i = 0; i < parallel_num; ++i) {
     std::string key = name + std::to_string(i);
     if (parallel_id != i) {
-      cudaIpcMemHandle_t handle;
+      GPU(IpcMemHandle_t) handle;
       Singleton<CtrlClient>::Get()->PullKV(key, [&handle](const std::string& val) {
-        memcpy(&handle, val.data(), sizeof(cudaIpcMemHandle_t));
+        memcpy(&handle, val.data(), sizeof(GPU(IpcMemHandle_t)));
       });
       OF_CUDA_CHECK(
-          cudaIpcOpenMemHandle(&buffer_ptrs->at(i), handle, cudaIpcMemLazyEnablePeerAccess));
+          GPU(IpcOpenMemHandle)(&buffer_ptrs->at(i), handle, GPU(IpcMemLazyEnablePeerAccess)));
     }
   }
 }
@@ -435,7 +441,7 @@ class IdShuffleP2PKernel final : public user_op::OpKernel {
     const int64_t num_ids = ids->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     IdShuffleTmpBufferManager<K, U, IDX> buffer_manager(
         tmp_buffer->mut_dptr(), num_ids, parallel_num, need_gen_table_ids, need_process_table_ids);
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
@@ -467,9 +473,9 @@ class IdShuffleP2PKernel final : public user_op::OpKernel {
       table_ids_ptr = nullptr;
     }
     if (!skip_memset) {
-      OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, workspace_size, cuda_stream));
+      OF_CUDA_CHECK(GPU(MemsetAsync)(workspace_ptr, 0, workspace_size, cuda_stream));
       OF_CUDA_CHECK(
-          cudaMemsetAsync(num_partitioned_unique, 0, parallel_num * sizeof(IDX), cuda_stream));
+          GPU(MemsetAsync)(num_partitioned_unique, 0, parallel_num * sizeof(IDX), cuda_stream));
     }
     UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
         cuda_stream, num_blocks, num_ids, hash_table_capacity, parallel_num,
@@ -511,7 +517,7 @@ class IdShuffleP2PKernel final : public user_op::OpKernel {
         host_num_unique_matrix, cur_rank_num_unique_ids_ptr, host_cur_rank_num_unique);
 
     if (!need_process_table_ids) {
-      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_table_ids->mut_dptr(), 0,
+      OF_CUDA_CHECK(GPU(MemsetAsync)(cur_rank_unique_table_ids->mut_dptr(), 0,
                                     cur_rank_unique_table_ids->shape_view().elem_cnt() * sizeof(U),
                                     cuda_stream));
     }
@@ -578,3 +584,4 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_P2P_KERNEL, ID_DATA_TY
                                  TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
+

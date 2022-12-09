@@ -111,7 +111,7 @@ struct BiasAddScaleMaskLoad {
 };
 
 template<typename T, typename MASK>
-void DispatchForward(cudaStream_t stream, const user_op::Tensor* x, const user_op::Tensor* bias,
+void DispatchForward(GPU(Stream_t) stream, const user_op::Tensor* x, const user_op::Tensor* bias,
                      const user_op::Tensor* mask, const user_op::Tensor* dropout_mask,
                      const float mask_fill, const float scale, const float dropout_scale,
                      user_op::Tensor* y, user_op::Tensor* softmax_y) {

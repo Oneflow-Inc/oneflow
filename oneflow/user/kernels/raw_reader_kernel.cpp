@@ -320,9 +320,9 @@ class RawReaderKernelState final : public user_op::OpKernelState {
       if (ctx->device_type() == DeviceType::kCPU) {
         request.buffer = aligned_alloc(4096, RoundUp(local_batch_size_bytes_, 4096));  // NOLINT
       } else if (ctx->device_type() == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
         int dev = 0;
-        OF_CUDA_CHECK(cudaGetDevice(&dev));
+        OF_CUDA_CHECK(GPU(GetDevice)(&dev));
         OF_CUDA_CHECK(NumaAwareCudaMallocHost(dev, &request.buffer, local_batch_size_bytes_));
 #else
         UNIMPLEMENTED();
@@ -344,8 +344,8 @@ class RawReaderKernelState final : public user_op::OpKernelState {
       if (device_type_ == DeviceType::kCPU) {
         free(request.buffer);  // NOLINT
       } else if (device_type_ == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-        OF_CUDA_CHECK(cudaFreeHost(request.buffer));
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
+        OF_CUDA_CHECK(GPU(FreeHost)(request.buffer));
 #else
         UNIMPLEMENTED();
 #endif
@@ -364,9 +364,9 @@ class RawReaderKernelState final : public user_op::OpKernelState {
     if (ctx->stream()->device_type() == DeviceType::kCPU) {
       std::memcpy(tensor->mut_dptr<char>(), request.buffer, local_batch_size_bytes_);
     } else if (ctx->stream()->device_type() == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      OF_CUDA_CHECK(cudaMemcpyAsync(tensor->mut_dptr<char>(), request.buffer,
-                                    local_batch_size_bytes_, cudaMemcpyDefault,
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
+      OF_CUDA_CHECK(GPU(MemcpyAsync)(tensor->mut_dptr<char>(), request.buffer,
+                                    local_batch_size_bytes_, GPU(MemcpyDefault),
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 #else
       UNIMPLEMENTED();

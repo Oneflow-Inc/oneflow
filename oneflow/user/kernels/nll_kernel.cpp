@@ -179,7 +179,7 @@ REGISTER_NLL_KERNELS(DeviceType::kCPU, float, int64_t);
 REGISTER_NLL_KERNELS(DeviceType::kCPU, double, int32_t);
 REGISTER_NLL_KERNELS(DeviceType::kCPU, double, int64_t);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 REGISTER_NLL_KERNELS(DeviceType::kCUDA, float, int32_t);
 REGISTER_NLL_KERNELS(DeviceType::kCUDA, float, int64_t);

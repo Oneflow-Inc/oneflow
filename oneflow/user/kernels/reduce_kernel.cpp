@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/ep/cuda/cuda_device.h"
 #endif  // WITH_CUDA
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -170,7 +170,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
 REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
@@ -186,7 +186,7 @@ REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
   REGISTER_REDUCE_SUM_KERNELS(device, int64_t)
 
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float)
@@ -209,7 +209,7 @@ REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float16)
   REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int64_t)
 
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCUDA)
 
 namespace {

@@ -122,7 +122,11 @@ __device__ __forceinline__ int32_t getMSB(int32_t val) { return 31 - __clz(val);
 template<typename T>
 __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = warpSize,
                                            unsigned int mask = 0xffffffff) {
+#ifdef WITH_ROCM
+  return __shfl_xor(value, laneMask, width);
+#else
   return __shfl_xor_sync(mask, value, laneMask, width);
+#endif
 }
 
 #endif

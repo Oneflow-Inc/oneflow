@@ -97,7 +97,7 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
   int64_t product = 1;
   int64_t shifted_index = 0;
   for (int64_t i = index_ndims - 1; i >= 0; --i) {
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIP_DEVICE_COMPILE__)
     assert(nd_index[i] < dense_shape[i] && nd_index[i] >= -dense_shape[i] && "index out of bounds");
 #else
     CHECK(nd_index[i] < dense_shape[i] && nd_index[i] >= -dense_shape[i])

@@ -20,7 +20,10 @@ limitations under the License.
 #include "oneflow/core/embedding/embedding_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+
+#ifdef WITH_CUDA
 #include <cuda.h>
+#endif
 
 #if CUDA_VERSION >= 11030
 

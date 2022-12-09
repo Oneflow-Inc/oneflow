@@ -15,7 +15,7 @@ limitations under the License.
 */
 // NOTE(Liang Depeng): Modified from
 // https://github.com/pytorch/pytorch/blob/master/c10/macros/Macros.h#L256
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 // constants from
 // (https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#features-and-technical-specifications)
 // The maximum number of threads per multiprocessor is 1024 for Turing
@@ -23,7 +23,7 @@ limitations under the License.
 // architectures. You'll get warnings if you exceed these constants. Hence, the
 // following macros adjust the input values from the user to resolve potential
 // warnings.
-#if __CUDA_ARCH__ == 750
+#if (__CUDA_ARCH__ == 750) || defined(WITH_ROCM)
 constexpr uint32_t CUDA_MAX_THREADS_PER_SM = 1024;
 #elif __CUDA_ARCH__ == 860
 constexpr uint32_t CUDA_MAX_THREADS_PER_SM = 1536;

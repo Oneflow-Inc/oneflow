@@ -13,16 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#else
 #include <cub/cub.cuh>
 #include <curand.h>
 #include <curand_kernel.h>
+#endif
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -33,8 +40,13 @@ namespace {
 template<typename K>
 int64_t GetCubSortPairsTempStorageSize(int64_t n) {
   size_t cub_sort_temp_store_size = 0;
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK((hipcub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
+                                                       nullptr, nullptr, nullptr, n)));
+#else
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
                                                        nullptr, nullptr, nullptr, n)));
+#endif
   size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
   CHECK_GE(temp_store_size, 0);
   CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
@@ -45,8 +57,13 @@ template<typename K>
 int64_t GetCubScanTempStorageSize(int64_t n) {
   size_t cub_scan_temp_store_size = 0;
   NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(nullptr, 0);
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+      nullptr, cub_scan_temp_store_size, unique_counting_iter, nullptr, n)));
+#else
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
       nullptr, cub_scan_temp_store_size, unique_counting_iter, nullptr, n)));
+#endif
   size_t temp_store_size = GetCudaAlignedSize(cub_scan_temp_store_size);
   CHECK_GE(temp_store_size, 0);
   CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
@@ -126,18 +143,18 @@ class TmpBufferManager final {
   void* ptr_;
 };
 
-__global__ void SetupKernel(int64_t seed, curandState* state) {
+__global__ void SetupKernel(int64_t seed, GPURAND(State)* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
                        + (static_cast<size_t>(id) >> 2U));
-  curand_init(local_seed, 0, 0, &state[id]);
+  GPURAND(_init)(local_seed, 0, 0, &state[id]);
 }
 
 template<typename K>
-__global__ void GenerateGpu(curandState* state, const int64_t n, const int64_t max_val, K* buffer) {
+__global__ void GenerateGpu(GPURAND(State)* state, const int64_t n, const int64_t max_val, K* buffer) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, n) { buffer[i] = static_cast<K>(curand(&localState) % max_val); }
+  GPURAND(State) localState = state[id];
+  CUDA_1D_KERNEL_LOOP(i, n) { buffer[i] = static_cast<K>(GPURAND()(&localState) % max_val); }
   state[id] = localState;
 }
 
@@ -148,14 +165,14 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
       : lower_(lower), upper_(upper), num_sample_per_rank_(num_sample_per_rank) {
     CHECK_NOTNULL(stream);
     const int64_t num_classes = upper_ - lower_;
-    OF_CUDA_CHECK(cudaMalloc(&curand_states_, BlocksNum4ThreadsNum(num_classes)
-                                                  * kCudaThreadsNumPerBlock * sizeof(curandState)));
+    OF_CUDA_CHECK(GPU(Malloc)(&curand_states_, BlocksNum4ThreadsNum(num_classes)
+                                                  * kCudaThreadsNumPerBlock * sizeof(GPURAND(State))));
     SetupKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
                   stream->As<ep::CudaStream>()->cuda_stream()>>>(seed, curand_states_);
   }
   ~DistributedPartialFcSampleOpKernelState() {
-    cudaError_t ret = cudaFree(curand_states_);
-    if (ret != cudaErrorCudartUnloading) { OF_CUDA_CHECK(ret); }
+    GPU(Error_t) ret = GPU(Free)(curand_states_);
+    if (ret != GPU(ErrorCudartUnloading)) { OF_CUDA_CHECK(ret); }
   };
 
   int64_t lower() const { return lower_; }
@@ -173,7 +190,7 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   const int64_t lower_;
   const int64_t upper_;
   const int64_t num_sample_per_rank_;
-  curandState* curand_states_;
+  GPURAND(State)* curand_states_;
 };
 
 template<typename K>
@@ -255,6 +272,16 @@ void MapLabel(ep::Stream* stream, const int64_t num_classes, const int64_t batch
               void* cub_tmp_storage_ptr, K* bound_index_ptr, K* bound_value_ptr) {
   IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                stream->As<ep::CudaStream>()->cuda_stream()>>>(batch_size, cub_sort_values_ptr);
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK((hipcub::DeviceRadixSort::SortPairs<K, K>(
+      cub_tmp_storage_ptr, temp_storage_bytes, label_ptr, cub_sort_keys_out_ptr,
+      cub_sort_values_ptr, cub_sort_values_out_ptr, batch_size, 0, sizeof(K) * 8,
+      stream->As<ep::CudaStream>()->cuda_stream())));
+  NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(cub_sort_keys_out_ptr, 0);
+  OF_CUDA_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+      cub_tmp_storage_ptr, temp_storage_bytes, unique_counting_iter, cub_sort_values_ptr,
+      batch_size, stream->As<ep::CudaStream>()->cuda_stream())));
+#else
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
       cub_tmp_storage_ptr, temp_storage_bytes, label_ptr, cub_sort_keys_out_ptr,
       cub_sort_values_ptr, cub_sort_values_out_ptr, batch_size, 0, sizeof(K) * 8,
@@ -263,6 +290,7 @@ void MapLabel(ep::Stream* stream, const int64_t num_classes, const int64_t batch
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
       cub_tmp_storage_ptr, temp_storage_bytes, unique_counting_iter, cub_sort_values_ptr,
       batch_size, stream->As<ep::CudaStream>()->cuda_stream())));
+#endif
 
   GetPartionBound<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -342,11 +370,19 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_classes, buffer_manager.CubSortValuesPtr());
     size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+#ifdef WITH_ROCM
+    OF_CUDA_CHECK((hipcub::DeviceRadixSort::SortPairs<K, K>(
+        buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.CubSortKeysPtr(),
+        buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesPtr(),
+        buffer_manager.CubSortValuesOutPtr(), num_classes, 0, sizeof(K) * 8,
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+#else
     OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
         buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.CubSortKeysPtr(),
         buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesPtr(),
         buffer_manager.CubSortValuesOutPtr(), num_classes, 0, sizeof(K) * 8,
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+#endif
 
     GetSampledLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

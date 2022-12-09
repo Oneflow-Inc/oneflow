@@ -108,11 +108,11 @@ class CudaInvKernel final : public user_op::OpKernel {
                    infos_getrs_ptr, batch_count);
     std::vector<int> infos_getrf_vec_host(batch_count, 0);
     std::vector<int> infos_getrs_vec_host(batch_count, 0);
-    OF_CUDA_CHECK(cudaMemcpyAsync(infos_getrf_vec_host.data(), infos_getrf_ptr,
-                                  batch_count * sizeof(int), cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(infos_getrf_vec_host.data(), infos_getrf_ptr,
+                                  batch_count * sizeof(int), GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    OF_CUDA_CHECK(cudaMemcpyAsync(infos_getrs_vec_host.data(), infos_getrs_ptr,
-                                  batch_count * sizeof(int), cudaMemcpyDefault,
+    OF_CUDA_CHECK(GPU(MemcpyAsync)(infos_getrs_vec_host.data(), infos_getrs_ptr,
+                                  batch_count * sizeof(int), GPU(MemcpyDefault),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     FOR_RANGE(int64_t, i, 0, batch_count) {

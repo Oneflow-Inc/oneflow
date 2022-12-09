@@ -18,7 +18,12 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -133,7 +138,11 @@ struct AddStore {
 
 template<typename T>
 __inline__ __device__ T WarpReduce(T val) {
+#ifdef WITH_ROCM
+  for (int mask = 32; mask > 0; mask /= 2) { val += __shfl_down(val, mask, 64); }
+#else
   for (int mask = 16; mask > 0; mask /= 2) { val += __shfl_down_sync(0xffffffff, val, mask); }
+#endif
   return val;
 }
 
@@ -204,13 +213,13 @@ int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
   const int max_grid_dim_y = (num_instances + tile_size - 1) / tile_size;
   const int block_size = block_dim_x * block_dim_y;
   int max_active_blocks = 0;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_CUDA_CHECK(GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
       &max_active_blocks, LayerNormParamGrad<T, ComputeType>, block_size, 0));
   int waves = 1;
   int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
+  OF_CUDA_CHECK(GPU(GetDevice)(&dev));
   int sm_count;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev));
+  OF_CUDA_CHECK(GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev));
   int num_blocks = max_active_blocks * sm_count * waves;
   int grid_dim_y = std::min(max_grid_dim_y, static_cast<int>(num_blocks / grid_dim_x));
   return std::max(grid_dim_y, 1);

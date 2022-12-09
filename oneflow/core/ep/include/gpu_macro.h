@@ -18,6 +18,7 @@ limitations under the License.
 
 #ifdef WITH_ROCM
 #define GPU(str) hip##str
+#define GPURAND(str) hiprand##str
 void SYNCWARP()
 {
     __syncthreads();
@@ -27,6 +28,7 @@ void TRAP()
     asm volatile("s_trap 0;");}
 #else
 #define GPU(str) cuda##str
+#define GPURAND(str) curand##str
 void SYNCWARP()
 {
     __syncwarp();

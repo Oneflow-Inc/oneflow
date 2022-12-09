@@ -16,7 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda.h>
+#endif
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 
@@ -24,7 +28,11 @@ namespace oneflow {
 
 namespace {
 
+#ifdef WITH_ROCM
+constexpr int32_t kWarpSize = 64;
+#else
 constexpr int32_t kWarpSize = 32;
+#endif
 
 template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void VectorizedReluDropoutBitmaskBackwardKernel(

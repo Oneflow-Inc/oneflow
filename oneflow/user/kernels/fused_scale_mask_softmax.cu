@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename ComputeType, typename MASK, size_t num_dims>
-void LaunchBroadcastForwardKernel(cudaStream_t stream, const T* x, T* y, const MASK* mask,
+void LaunchBroadcastForwardKernel(GPU(Stream_t) stream, const T* x, T* y, const MASK* mask,
                                   const int64_t elem_cnt, const int64_t rows, const int64_t cols,
                                   const float fill, const float scale, const int64_t* input_dims,
                                   const int64_t* mask_dims) {
@@ -44,7 +44,7 @@ void LaunchBroadcastForwardKernel(cudaStream_t stream, const T* x, T* y, const M
 }
 
 template<typename T, typename ComputeType, typename MASK>
-void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, const MASK* mask,
+void LaunchElementwiseForwardKernel(GPU(Stream_t) stream, const T* x, T* y, const MASK* mask,
                                     const int64_t rows, const int64_t cols, const float fill,
                                     const float scale) {
   cuda::fused_softmax::ElementwiseMaskSoftmaxParams params;
@@ -58,7 +58,7 @@ void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, const
 }
 
 template<typename T, typename ComputeType, typename MASK, size_t num_dims>
-void LaunchBroadcastBackwardKernel(cudaStream_t stream, const T* y, const T* dy, T* dx,
+void LaunchBroadcastBackwardKernel(GPU(Stream_t) stream, const T* y, const T* dy, T* dx,
                                    const MASK* mask, const int64_t elem_cnt, const int64_t rows,
                                    const int64_t cols, const float fill, const float scale,
                                    const int64_t* input_dims, const int64_t* mask_dims) {
@@ -81,7 +81,7 @@ void LaunchBroadcastBackwardKernel(cudaStream_t stream, const T* y, const T* dy,
 }
 
 template<typename T, typename ComputeType, typename MASK>
-void LaunchElementwiseBackwardKernel(cudaStream_t stream, const T* y, const T* dy, T* dx,
+void LaunchElementwiseBackwardKernel(GPU(Stream_t) stream, const T* y, const T* dy, T* dx,
                                      const MASK* mask, const int64_t rows, const int64_t cols,
                                      const float fill, const float scale) {
   cuda::fused_softmax::ElementwiseMaskSoftmaxParams params;

@@ -132,8 +132,8 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
     const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
@@ -196,8 +196,8 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
     const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
@@ -276,8 +276,8 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
     const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using MaskType = cuda::elementwise::PackType<bool, pack_size>;

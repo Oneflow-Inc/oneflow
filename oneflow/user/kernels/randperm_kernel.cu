@@ -13,8 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#else
 #include <curand.h>
 #include <curand_kernel.h>
+#endif
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -33,11 +38,11 @@ limitations under the License.
 
 namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
-                                  curandState* state) {
+                                  GPURAND(State)* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState local_state = state[id];
+  GPURAND(State) local_state = state[id];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(&local_state);
+    keys[i] = GPURAND()(&local_state);
     values[i] = i;
   }
   state[id] = local_state;
@@ -65,8 +70,13 @@ namespace {
 template<typename K>
 size_t GetCubSortPairsTempStorageSize(int64_t n) {
   size_t cub_sort_temp_store_size = 0;
+#ifdef WITH_ROCM
+  OF_CUDA_CHECK((hipcub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
+                                                       nullptr, nullptr, nullptr, n)));
+#else
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
                                                        nullptr, nullptr, nullptr, n)));
+#endif
   size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
   CHECK_GE(temp_store_size, 0) << "temp_store_size should >= 0.";
   CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()))
@@ -125,7 +135,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
 
     int32_t block_num = gpu_generator->max_block_num();
     int32_t thread_num = gpu_generator->max_thread_num();
-    curandState* curand_states = gpu_generator->curand_states();
+    GPURAND(State)* curand_states = gpu_generator->curand_states();
 
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.
@@ -146,6 +156,20 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         n, value_base, key_base, curand_states);
     if (cache == nullptr) {
+#ifdef WITH_ROCM
+      auto err = hipcub::DeviceRadixSort::SortPairs(
+          /* d_temp_storage */ tmp_base,
+          /* temp_storage_bytes */ temp_storage_bytes,
+          /* d_keys_in */ key_base,
+          /* d_keys_out */ key_base + n,
+          /* d_values_in */ value_base,
+          /* d_values_out */ output,
+          /* num_items */ n,
+          /* begin_bit */ 0,
+          /* end_bit */ sizeof(int32_t) * 8,
+          /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      OF_CUDA_CHECK(err);
+#else
       auto err = cub::DeviceRadixSort::SortPairs(
           /* d_temp_storage */ tmp_base,
           /* temp_storage_bytes */ temp_storage_bytes,
@@ -158,7 +182,22 @@ class GpuRandPermKernel final : public user_op::OpKernel {
           /* end_bit */ sizeof(int32_t) * 8,
           /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
       OF_CUDA_CHECK(err);
+#endif
     } else {
+#ifdef WITH_ROCM
+      auto err = hipcub::DeviceRadixSort::SortPairs(
+          /* d_temp_storage */ tmp_base,
+          /* temp_storage_bytes */ temp_storage_bytes,
+          /* d_keys_in */ key_base,
+          /* d_keys_out */ key_base + n,
+          /* d_values_in */ value_base,
+          /* d_values_out */ temp_buffer_base,
+          /* num_items */ n,
+          /* begin_bit */ 0,
+          /* end_bit */ sizeof(int32_t) * 8,
+          /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      OF_CUDA_CHECK(err);
+#else
       auto err = cub::DeviceRadixSort::SortPairs(
           /* d_temp_storage */ tmp_base,
           /* temp_storage_bytes */ temp_storage_bytes,
@@ -171,6 +210,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
           /* end_bit */ sizeof(int32_t) * 8,
           /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
       OF_CUDA_CHECK(err);
+#endif
       const auto* randperm_cache = dynamic_cast<const GpuRandPermKernelCache*>(cache);
       auto len = randperm_cache->upper() - randperm_cache->lower();
       const int64_t offset = randperm_cache->lower();

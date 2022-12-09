@@ -97,7 +97,7 @@ void DispatchBroadcastMulPackSize(ep::Stream* stream, const T* x, const T* y, T*
   int grid_size;
   const int pack_size = GetLaunchPackSize<T>(cols);
   const int64_t pack_num = elem_cnt / pack_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   if (pack_size == 8) {
     BroadcastMulKernel<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, out, cols,
@@ -161,7 +161,7 @@ void DispatchBroadcastAddElementwiseMulPackSize(ep::Stream* stream, const T* x, 
   int grid_size;
   const int pack_size = GetLaunchPackSize<T>(cols);
   const int64_t pack_num = elem_cnt / pack_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  GPU(Error_t) err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   if (pack_size == 8) {
     BroadcastAddElementwiseMulKernel<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, z, out,

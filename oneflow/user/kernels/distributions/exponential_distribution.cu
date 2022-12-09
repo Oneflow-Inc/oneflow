@@ -59,8 +59,8 @@ __global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel
                                                                    double* out_ptr) {
   int32_t unroll_factor = 2;
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, idx, offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, idx, offset, &state);
 
   int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
                      * gridDim.x * unroll_factor;
@@ -92,8 +92,8 @@ __global__ void distribution_elementwise_grid_stride_kernel_float(int32_t numel,
                                                                   float epsilon, float* out_ptr) {
   int32_t unroll_factor = 4;
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, idx, offset, &state);
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, idx, offset, &state);
 
   int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
                      * gridDim.x * unroll_factor;

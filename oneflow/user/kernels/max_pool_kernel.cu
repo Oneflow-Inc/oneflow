@@ -14,11 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#if defined(WITH_ROCM)
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
+#else
 #include <cuda_fp16.h>
+#endif
 
 namespace oneflow {
 namespace {
