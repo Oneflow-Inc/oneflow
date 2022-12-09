@@ -83,16 +83,16 @@ def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
     k = params["k"]
 
     # generate random input
-    x = np.random.randn(2, m, k)
+    x = np.random.randn(2, m, k)/100
     y_nor = np.random.randn(2, m, n)
     if is_split_mode:
-        w = np.random.randn(n, k)  # transpose
-        b = np.random.randn(n)
-        v = np.random.randn(n, k)  # transpose
-        c = np.random.randn(n)
+        w = np.random.randn(n, k)/100  # transpose
+        b = np.random.randn(n)/100
+        v = np.random.randn(n, k)/100  # transpose
+        c = np.random.randn(n)/100
     else:
-        w = np.random.randn(n * 2, k)  # transpose
-        b = np.random.randn(n * 2)
+        w = np.random.randn(n * 2, k)/100  # transpose
+        b = np.random.randn(n * 2)/100
 
     # transfer to gpu memory
     tensor_x = flow.FloatTensor(x).to(dtype=dtype, device="cuda")
@@ -142,12 +142,12 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
 
     if dtype == flow.float16:
         compare_result(test_case, fused_y, y, 1e-2, 1e-3)
-        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1)
-        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
     else:
         compare_result(test_case, fused_y, y)
-        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-1)
-        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-1)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
     print(str(dtype) + ", " + params["act"] + " passed!")
 
 
@@ -184,16 +184,16 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
 
     if dtype == flow.float16:
         compare_result(test_case, fused_y, y, 1e-2, 1e-3)
-        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1)
-        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1)
-        compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1)
-        compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1e-2)
     else:
         compare_result(test_case, fused_y, y)
-        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1)
-        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1)
-        compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1)
-        compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1e-2)
     print(str(dtype) + ", " + params["act"] + " passed!")
 
 
