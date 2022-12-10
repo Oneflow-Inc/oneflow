@@ -271,7 +271,6 @@ void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRConte
   results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
 }
 
-
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
