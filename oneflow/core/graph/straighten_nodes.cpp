@@ -54,6 +54,7 @@ class TopoStruct {
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
   int32_t exceed_time = -1;
+  int32_t min_lifetime = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -333,6 +334,37 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   }
 }
 
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  // Find the maximum consumer layer
+  for (auto& pair : *task_node2topo_struct) {
+    int32_t curr_min_layer = pair.second.min_layer;
+    pair.first->ForEachNodeOnInDataEdge([&](TaskNode* in) {
+      auto& max_consumer_layer = task_node2topo_struct->at(in).min_lifetime;
+      if (max_consumer_layer < curr_min_layer) { max_consumer_layer = curr_min_layer; }
+    });
+  }
+  // Compute the life time
+  for (auto& pair : *task_node2topo_struct) {
+    if (pair.second.min_layer >= pair.second.min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      pair.second.min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      pair.second.min_lifetime -= pair.second.min_layer - 1;
+    }
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << pair.first->VisualStr() << ", lifetime: " << pair.second.min_lifetime
+                << std::endl;
+  }
+}
+
 }  // anonymous namespace
 
 // Some operators have longer time in cpu and less time in gpu.
@@ -477,6 +509,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Generate other parameters in the topological data structure
   FindTrunk(&task_node2topo_struct);
+  FindMinLifetime(&task_node2topo_struct);
 
   // Update sat, since sat might be changed in previous jobs
   UpdateSat(task_node2topo_struct, &sat);
