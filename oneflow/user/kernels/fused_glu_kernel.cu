@@ -31,7 +31,7 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
 
 #include "device/dual_gemm.h"
 #include "thread/left_silu_and_mul.h"
@@ -99,13 +99,13 @@ class RightActivationAndMul {
 }  // namespace epilogue
 }  // namespace cutlass
 
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
 
 namespace oneflow {
 
 namespace {
 
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
 
 template<typename T>
 struct GetCutlassType {
@@ -279,12 +279,12 @@ bool TryDispatchDualGemmImplArchTag(ep::CudaStream* stream, const std::string& a
   }
 }
 
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
 template<typename T>
 bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activation, int32_t m,
                              int32_t n, int32_t k, const T* x, const T* w, const T* v, const T* b,
                              const T* c, T* wx, int32_t wx_stride, T* vx, int32_t vx_stride, T* y) {
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
   const static bool enabled =
       ParseBooleanFromEnv("ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL", false);
   if (enabled) {
@@ -295,7 +295,7 @@ bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activati
   }
 #else
   return false;
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
 }
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>

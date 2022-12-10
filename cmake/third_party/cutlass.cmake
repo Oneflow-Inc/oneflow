@@ -1,5 +1,17 @@
 include(ExternalProject)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	SET(WITH_CUTLASS_INIT OFF)
+else()
+	set(WITH_CUTLASS_INIT ON)
+endif()
+
+set(WITH_CUTLASS ${WITH_CUTLASS_INIT} CACHE BOOL "")
+
+if(WITH_CUTLASS)
+
+	add_definitions(-DWITH_CUTLASS)
+
 find_package(Threads)
 
 set(CUTLASS_PROJECT cutlass)
@@ -88,3 +100,4 @@ if(THIRD_PARTY)
   endforeach()
 
 endif(THIRD_PARTY)
+endif(WITH_CUTLASS)
