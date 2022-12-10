@@ -270,6 +270,8 @@ class Topk(Module):
             self.dim = -1
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
+        if input.device.type == "npu":
+            return flow._C.top_k_npu(input, self.k, axis, self.sorted, self.largest)
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:

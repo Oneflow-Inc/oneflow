@@ -261,4 +261,52 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
+
+/* static */ Maybe<void> LayerNormNpuGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> LayerNormNpuGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LayerNormNpuGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> LayerNormNpuGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(dy.data_type());
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  DataType bn_param_data_type = InferBnParamDataType(x.data_type());
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(mean.data_type());
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(inv_variance.data_type());
+
+  DimVector param_shape_dim_vec;
+  const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                             dy.shape().dim_vec().cbegin() + begin_params_axis,
+                             dy.shape().dim_vec().cend());
+  const Shape param_shape(param_shape_dim_vec);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
+  dx->set_data_type(dy.data_type());
+  dx->set_shape(dy.shape());
+  user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+  gamma_diff->set_shape(param_shape);
+  gamma_diff->set_data_type(dy.data_type());
+  user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+  beta_diff->set_data_type(dy.data_type());
+  beta_diff->set_shape(param_shape);
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

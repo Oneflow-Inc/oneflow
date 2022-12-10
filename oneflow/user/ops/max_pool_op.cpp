@@ -21,6 +21,21 @@ namespace oneflow {
 
 namespace {
 
+int64_t CeilDiv(int64_t value, int64_t factor) {
+  int64_t value_num = 0;
+  if (factor == 0) {
+    return value_num;
+  }
+  if (value % factor == 0) {
+    value_num = value / factor;
+  } else {
+    value_num = value / factor + 1;
+  }
+
+  return value_num;
+}
+
+
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
 
 TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {

@@ -326,16 +326,22 @@ def _gen_tensor_str_template(tensor, is_meta):
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
-
     # tensor is local or global
     if tensor.is_global:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
+    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
+        suffixes.append("device='" + str(tensor.device) + "'")
+    elif tensor.device.type == "npu":
+        suffixes.append("device='" + str(tensor.device) + "'")
     elif tensor.device.type != "cpu":
         suffixes.append("device='" + str(tensor.device) + "'")
+        
+    if tensor.device.type == "npu":
+        # print("Convert to Cpu")
+        tensor = tensor.to("cpu")
     if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
-
     # tensor is empty, meta or normal
     if tensor.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
@@ -350,14 +356,12 @@ def _gen_tensor_str_template(tensor, is_meta):
             tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
         else:
             tensor_str = _tensor_str(tensor, indent)
-
     suffixes.append("dtype=" + str(tensor.dtype))
     if tensor.grad_fn is not None:
         name = tensor.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
     elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
-
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
 

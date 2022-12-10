@@ -181,8 +181,10 @@ class CommBroadcastFunctor {
                            bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu" || device_type_str == "npu");
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA 
+                              : device_type_str == "npu"? DeviceType::kNPU
+                              : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
@@ -231,6 +233,7 @@ class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+
     const auto& device = JUST(x->device());
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
@@ -241,6 +244,7 @@ class LocalAllReduceFunctor {
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
     }
+
     if (inplace) {
       JUST(CheckInplaceValid(op_input));
       TensorTuple outputs{op_input};

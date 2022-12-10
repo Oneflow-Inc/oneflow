@@ -30,6 +30,10 @@
     ]
   bind_python: true
 
+- name: "add_npu"
+  signature: "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=True) => AddNpu"
+  bind_python: true
+
 - name: "amin"
   signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
   bind_python: True
@@ -1192,6 +1196,10 @@
   signature: "Tensor(Tensor out_grad, Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index) => NLLGrad"
   bind_python: False
 
+- name: "nll_grad_npu"
+  signature: "Tensor(Tensor out_grad, Tensor input, Tensor target, Tensor total_weight, Tensor weight=None,  Int64 ignore_index) => NLLGradNpu"
+  bind_python: False
+
 - name: "binary_cross_entropy_loss"
   signature: 'Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction="mean") => BinaryCrossEntropyLoss'
   bind_python: True
@@ -1238,6 +1246,10 @@
 
 - name: "cross_entropy"
   signature: 'Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction="mean", Double label_smoothing=0.0) => CrossEntropy'
+  bind_python: True
+
+- name: "cross_entropy_npu"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropyNpu"
   bind_python: True
 
 - name: "cross_entropy_label_smoothing"
@@ -1413,6 +1425,10 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance) => GroupNormParamGrad"
   bind_python: False
 
+- name: "layer_norm_npu_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_params_axis, Double epsilon) => LayerNormNpuGrad"
+  bind_python: False
+
 - name: "avg_pool2d_nhwc"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
@@ -1462,6 +1478,7 @@
     Bool return_indices=True, Bool ceil_mode=False,
     String data_format="channels_first") => MaxPool2D'
   bind_python: True
+
 
 - name: "max_pool3d"
   signature:
@@ -1553,6 +1570,10 @@
 
 - name: "slice_grad"
   signature: "Tensor (Tensor dy, Shape like_shape, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  bind_python: False
+
+- name: "view_copy_npu"
+  signature: "Tensor (Tensor in, Tensor out) => ViewCopyNpu"
   bind_python: False
 
 - name: "copy"
@@ -2285,6 +2306,10 @@
   signature: "Tensor (Tensor in) => Identity"
   bind_python: True
 
+- name: "identity_eval"
+  signature: 'Tensor (Tensor in, String code="0") => IdentityEval'
+  bind_python: True
+  
 - name: "amp_white_identity"
   signature: "Tensor (Tensor in) => AmpWhiteIdentity"
   bind_python: True
@@ -2608,6 +2633,10 @@
 
 - name: "top_k"
   signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+  bind_python: True
+
+- name: "top_k_npu"
+  signature: "TensorTuple (Tensor input, Int32 k, Int32 dim, Bool sorted=True, Bool largest=True) => TopKNpu"
   bind_python: True
 
 - name: "in_top_k"

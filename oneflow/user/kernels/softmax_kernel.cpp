@@ -71,6 +71,7 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 };
 
 REGISTER_USER_KERNEL("softmax").SetCreateFn<SoftmaxKernel>().SetIsMatchedHob(
+    !(user_op::HobDeviceType() == DeviceType::kNPU) &&
     SoftmaxPrimitiveExists() == true);
 
 class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -98,6 +99,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
 
 REGISTER_USER_KERNEL("softmax_grad")
     .SetCreateFn<SoftmaxGradKernel>()
-    .SetIsMatchedHob(SoftmaxBackwardPrimitiveExists() == true);
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      && SoftmaxBackwardPrimitiveExists() == true);
 
 }  // namespace oneflow

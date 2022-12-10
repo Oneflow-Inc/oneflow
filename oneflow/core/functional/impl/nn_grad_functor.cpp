@@ -480,6 +480,49 @@ class NLLGradFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
+class NLLGradNpuFunctor {
+ public:
+  NLLGradNpuFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("nll_grad_npu")
+                         .Input("out_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("total_weight")
+                         .Output("in_grad")
+                         .Build());
+
+    op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad_npu")
+                                .Input("out_grad")
+                                .Input("input")
+                                .Input("target")
+                                .Input("total_weight")
+                                .Input("weight")
+                                .Output("in_grad")
+                                .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const std::shared_ptr<one::Tensor>& total_weight,
+                           const Optional<one::Tensor>& weight,
+                           const int64_t ignore_index) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
+    attrs.SetAllAttrs(ignore_index);
+
+    if (weight) {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_weight_, {out_grad, input, target, total_weight, JUST(JUST(weight)->detach())}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target, total_weight}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+
 class BinaryCrossEntropyLossGradFunctor {
  public:
   BinaryCrossEntropyLossGradFunctor() {
@@ -1003,6 +1046,38 @@ class LayerNormParamGradFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
+class LayerNormNpuGradFunctor {
+ public:
+  LayerNormNpuGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm_npu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Input("gamma")
+                         .Output("dx")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& inv_variance,
+                                const std::shared_ptr<one::Tensor>& gamma,
+                                const int64_t& begin_params_axis, const double& epsilon) const {
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_params_axis", "epsilon");
+    attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis);
+    attrs.SetAttr<double>("epsilon", epsilon);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 
 class GroupNormGradFunctor {
  public:
@@ -1574,6 +1649,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
   m.add_functor<impl::KLDivLossTargetGradFunctor>("KLDivLossTargetGrad");
   m.add_functor<impl::NLLGradFunctor>("NLLGrad");
+  m.add_functor<impl::NLLGradNpuFunctor>("NLLGradNpu");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyLossTargetGradFunctor>("BinaryCrossEntropyLossTargetGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
@@ -1598,6 +1674,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
   m.add_functor<impl::NormalizationAddReluGradFunctor>("NormalizationAddReluGrad");
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
+  m.add_functor<impl::LayerNormNpuGradFunctor>("LayerNormNpuGrad");
   m.add_functor<impl::LayerNormAffineGradFunctor>("LayerNormAffineGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::GroupNormGradFunctor>("GroupNormGrad");

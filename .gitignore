@@ -9,6 +9,10 @@
 /examples/**/oneflow
 /benchmark/**/oneflow
 log/
+/debug
+/relwithdebinfo
+/host_relwithdebinfo
+/kernel_meta_*
 *plan
 core.*
 *.pyc
@@ -41,6 +45,7 @@ unittest-log-*
 /data-test
 /tmp
 /python/oneflow/test/dataloader/data-test/
+kernel_meta_*
 
 /target
 saved_model

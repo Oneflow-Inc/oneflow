@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/device/npu_util.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/graph_scope_vars.h"
@@ -87,6 +88,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RDMAIsInitialized", &RDMAIsInitialized);
   m.def("DestoryRDMA", &DestoryRDMA);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+#ifdef WITH_NPU
+  m.def("NpuGetDeviceCount", &NpuGetDeviceCount);
+  m.def("NpuSynchronize",&NpuSynchronize);
+  m.def("GetNpuDeviceIndex", &GetNpuDeviceIndex);
+  #endif
   m.def("EmptyCache", &EmptyCache);
 #ifdef WITH_CUDA
   RegisterCudaDeviceProperties(m);
@@ -99,6 +105,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
       py::return_value_policy::reference);
 #endif  // WITH_CUDA
+
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);

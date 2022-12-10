@@ -23,7 +23,7 @@ namespace pthread_fork {
 bool IsForkedSubProcess();
 
 extern const char* kOfCudaNotSupportInForkedSubProcess;
-
+extern const char* kOfNpuNotSupportInForkedSubProcess;
 }  // namespace pthread_fork
 
 }  // namespace oneflow

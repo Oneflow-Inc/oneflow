@@ -66,7 +66,8 @@ auto AddPrimitiveExists() {
 
 REGISTER_USER_KERNEL("add_n")
     .SetCreateFn<AddNKernel>()
-    .SetIsMatchedHob(AddPrimitiveExists() == true)
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      &&AddPrimitiveExists() == true)
     .SetInplaceProposalFn([](const InferContext&,
                              const AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));

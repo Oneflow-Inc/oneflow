@@ -100,7 +100,7 @@ namespace oneflow {
                   ctx->device_type(), UnaryOp, src->data_type(), dst->data_type());       \
             });                                                                           \
       })                                                                                  \
-      .SetIsMatchedHob(UnaryPrimitiveExists(UnaryOp, "y", "x"));
+      .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) && UnaryPrimitiveExists(UnaryOp, "y", "x"));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_PRIMITIVE_KERNEL, MATH_UNARY_ELEMENTWISE_PRIMITIVE_SEQ)
 

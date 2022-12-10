@@ -121,6 +121,8 @@ def _addmm(self, mat1, mat2, alpha=1, beta=1):
 def _add_inplace(self, other, *, alpha=1):
     return flow._C.add(self, other, alpha=alpha, inplace=True)
 
+def _add_npu(self, other, alpha = 1.0, inplace=True):
+    return flow._C.add_npu(self, other, alpha=alpha, inplace=True)
 
 def _iadd(self, other):
     return self.add_(other)
@@ -603,6 +605,7 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.argsort = _argsort
     Tensor.argwhere = _argwhere
+    Tensor.add_npu = _add_npu
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.new_empty = _new_empty

@@ -55,7 +55,7 @@ auto FillPrimitiveExists() {
 
 REGISTER_USER_KERNEL("ones_like")
     .SetCreateFn<OnesLikeKernel>()
-    .SetIsMatchedHob(FillPrimitiveExists());
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)&&FillPrimitiveExists());
 
 }  // namespace
 

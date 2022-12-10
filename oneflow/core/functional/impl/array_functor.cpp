@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/npu_util.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -29,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1538,6 +1544,7 @@ class SliceGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
 class UpsampleGradFunctor {
  public:
   UpsampleGradFunctor() {
@@ -1568,11 +1575,39 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
+
+#ifdef WITH_NPU
+    if (device_type == "npu")  { InitNpuContextOnce(device_id); }
+#endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ViewCopyNpuFunctor {
+ public:
+  ViewCopyNpuFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("view_copy_npu").Input("in").Output("out").Build());
+    op_id = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& view_grad) const {
+    // out_grad --view_copy-> view_grad
+
+    // 1. in -> ToContiguous
+    // 2. view_copy
+    // 3.
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = view_grad;
+
+    JUST(OpInterpUtil::Dispatch(*op_, {out_grad}, outputs.get()));
+    return outputs->at(0);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_id;
 };
 
 class FlipFunctor {
@@ -2453,6 +2488,21 @@ class IdentityFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class IdentityEvalFunctor {
+   public:
+  IdentityEvalFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("identity_eval").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const std::string& code) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_params_axis", "epsilon");
+    attrs.SetAttr<std::string>("code", code);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AmpWhiteIdentityFunctor {
  public:
   AmpWhiteIdentityFunctor() {
@@ -3003,6 +3053,23 @@ class TopKFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
+class TopKNpuFunctor {
+ public:
+  TopKNpuFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k_npu").Input("in").Output("out").Output("indice").Build()); }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t k, int32_t dim, bool sorted, bool largest) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted", "dim", "largest");
+    attrs.SetAttr<int32_t>("k", k);
+    attrs.SetAttr<bool>("sorted", sorted);
+    attrs.SetAttr<int32_t>("dim", dim);
+    attrs.SetAttr<bool>("largest", largest);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 
 class InTopKFunctor {
  public:
@@ -3659,6 +3726,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::ViewCopyNpuFunctor>("ViewCopyNpu");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
@@ -3708,6 +3776,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
   m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::IdentityEvalFunctor>("IdentityEval");
   m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
   m.add_functor<impl::AmpBlackIdentityFunctor>("AmpBlackIdentity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
@@ -3726,6 +3795,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
                 impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
+  m.add_functor<impl::TopKNpuFunctor>("TopKNpu");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");

@@ -1,5 +1,5 @@
 include(python)
-
+link_directories("/usr/local/Ascend/ascend-toolkit/latest/lib64")
 function(oneflow_add_executable)
   add_executable(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
@@ -295,11 +295,13 @@ include(op_schema)
 
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
+target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
+
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt -lascendcl -lacl_op_compiler -lhccl)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -309,7 +311,10 @@ elseif(UNIX)
     -Wl,--no-whole-archive
     -Wl,--as-needed
     -ldl
-    -lrt)
+    -lrt
+    -lascendcl
+    -lacl_op_compiler
+    -lhccl)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()

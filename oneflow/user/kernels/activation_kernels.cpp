@@ -213,7 +213,8 @@ REGISTER_USER_KERNEL("gelu")
                 dst->data_type());
           });
     })
-    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kGelu, "out", "in"));
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) 
+                    && UnaryPrimitiveExists(ep::primitive::UnaryOp::kGelu, "out", "in"));
 
 REGISTER_USER_KERNEL("gelu_grad")
     .SetCreateFn([]() {
@@ -226,7 +227,8 @@ REGISTER_USER_KERNEL("gelu_grad")
                 dst->data_type(), 1 /*max_num_dims*/);
           });
     })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kGeluBackwardWithDyX, "dx",
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) &&
+      BinaryPrimitiveExists(ep::primitive::BinaryOp::kGeluBackwardWithDyX, "dx",
                                            "dy"));
 
 REGISTER_USER_KERNEL("fast_gelu")
@@ -321,7 +323,8 @@ REGISTER_USER_KERNEL("relu")
                 dst->data_type());
           });
     })
-    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kRelu, "y", "x"))
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) 
+                      && UnaryPrimitiveExists(ep::primitive::UnaryOp::kRelu, "y", "x"))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));
@@ -339,7 +342,8 @@ REGISTER_USER_KERNEL("relu_grad")
                 dst->data_type(), 1 /*max_num_dims*/);
           });
     })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kReluBackwardWithDyY, "dx",
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) &&
+                      BinaryPrimitiveExists(ep::primitive::BinaryOp::kReluBackwardWithDyY, "dx",
                                            "dy"))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
@@ -506,7 +510,8 @@ REGISTER_USER_KERNEL("tanh")
                 dst->data_type());
           });
     })
-    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kTanh, "y", "x"));
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)&&
+      UnaryPrimitiveExists(ep::primitive::UnaryOp::kTanh, "y", "x"));
 
 REGISTER_USER_KERNEL("tanh_grad")
     .SetCreateFn([]() {

@@ -147,6 +147,42 @@ class AddFunctor {
   std::shared_ptr<OpExpr> broadcast_add_op_;
 };
 
+class AddNpuFunctor {
+ public:
+  AddNpuFunctor() {
+    add_op_ = CHECK_JUST(one::OpBuilder("add_npu").Input("in", 2).Output("out").Build());
+
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
+                           bool inplace) const {
+
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& input_cast = input_vec[0];
+    const std::shared_ptr<one::Tensor>& other_cast = input_vec[1];  
+    CHECK_EQ(inplace, true);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha");
+    attrs.SetAllAttrs(alpha.As<float>());
+    if (inplace) {
+      JUST(CheckInplaceCastValid(input, input_cast));
+      JUST(CheckInplaceValid(input));
+      JUST(CheckInplaceShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input_cast;
+      JUST(OpInterpUtil::Dispatch(*add_op_, input_vec, outputs.get(), attrs));
+      return outputs->at(0);
+    } 
+    return OpInterpUtil::Dispatch<Tensor>(*add_op_, input_vec);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> add_op_;
+};
+
+
 class BroadcastPowFunctor : public BinaryFloatFunctor {
  public:
   BroadcastPowFunctor() {
@@ -513,6 +549,7 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::AddNpuFunctor>("AddNpu");
   m.add_functor<impl::AddcmulFunctor>("Addcmul");
   m.add_functor<impl::InplaceAddcmulFunctor>("InplaceAddcmul");
   m.add_functor<impl::Atan2Functor>("Atan2");

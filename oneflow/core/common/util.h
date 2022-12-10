@@ -137,7 +137,9 @@ inline double GetCurTime() {
 
 const size_t kHostAlignSize = 64;
 const size_t kCudaAlignSize = 512;
+const size_t kNpuAlignSize = 512;
 const size_t kCudaMemAllocAlignSize = 512;
+const size_t kNpuMemAllocAlignSize = 512;
 const int32_t kBlobBodyAlignSize = 512;
 const int32_t kBlobHeaderAlignSize = 64;
 

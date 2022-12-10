@@ -17,6 +17,7 @@ option(BUILD_PYTHON "" ON)
 option(BUILD_CPP_API "Option to build OneFlow C++ API (beta)" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
+option(BUILD_NPU "" ON)
 option(BUILD_TESTING "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
@@ -308,6 +309,11 @@ use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
 
 include(cuda)
+
+
+if(BUILD_NPU)
+  add_definitions(-DWITH_NPU)
+endif()
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags

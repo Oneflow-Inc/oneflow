@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "acl/acl.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -52,6 +53,12 @@ inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
+}
+inline Maybe<size_t> NpuGetDeviceCount() {
+  // dck_caution_here
+  uint32_t device_num;
+  aclrtGetDeviceCount(&device_num);
+  return device_num;
 }
 
 inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {

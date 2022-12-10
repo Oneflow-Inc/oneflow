@@ -32,6 +32,7 @@ StreamType GetH2DStreamType() {
 }
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
+
                                      const Symbol<Device>& out_device, const bool pin_memory) {
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
     return Stream::New(in_device, StreamType::kDevice2Host);
@@ -40,6 +41,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
     return Stream::New(device, GetH2DStreamType());
   } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
+    UNIMPLEMENTED();
     auto pin_device = JUST(Device::New("cuda"));
     return Stream::New(pin_device, StreamType::kPinnedCompute);
   } else {
