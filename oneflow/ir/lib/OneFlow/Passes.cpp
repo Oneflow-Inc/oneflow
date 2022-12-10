@@ -1204,6 +1204,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
+  populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
