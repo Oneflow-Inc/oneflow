@@ -17,29 +17,6 @@ include "mlir/IR/OpBase.td"
 
 include "OneFlow/SBP/SBPOps.td"
 
-def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
-  let builders = [
-    OpBuilder<(ins
-      "Value":$x,
-      "Value":$addend,
-      "Value":$moving_mean,
-      "Value":$moving_variance,
-      "Value":$gamma,
-      "Value":$beta,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "DenseElementsAttr":$operand_segment_sizes,
-      "DenseElementsAttr":$result_segment_sizes,
-      "IntegerAttr":$axis,
-      "FloatAttr":$epsilon,
-      "BoolAttr":$training,
-      "FloatAttr":$momentum
-    )>
-  ];
-}
 
 #ifndef REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
