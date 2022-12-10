@@ -4943,19 +4943,22 @@ class MultiTensorYoloV5WeightUpdateFunctor {
 class FusedClipGradFunctor {
  public:
   FusedClipGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("grad").Build());
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("grad", n + 1).Build());
+    }
   }
 
   Maybe<void> operator()(const TensorTuple& grad, const float& max_norm,
                          const float& norm_type) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
     attrs.SetAllAttrs(max_norm, norm_type);
-    JUST(OpInterpUtil::Dispatch<Tensor>(*op_, grad, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[grad.size() - 1], grad, attrs));
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
 }  // namespace impl
