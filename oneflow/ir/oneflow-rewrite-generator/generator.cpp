@@ -1,7 +1,9 @@
+// 咱就是说这也 include 太多了吧
 #include "generator.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/IR/Verifier.h"
 #include "wrapper.h"
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/InitLLVM.h>
@@ -29,6 +31,7 @@
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "oneflow/api/cpp/env_impl.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
@@ -38,14 +41,13 @@ namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
 namespace pdl = ::mlir::pdl;
 
-namespace llvm {}
 namespace mlir {
 namespace oneflow {
 
 auto Generator::get_random_tensor() {
   // get random i64 tensor, run on cpu?
   auto rand =
-      functional::RandN({2, 3}, of::DType{of::kInt64}, of::Device::ParseAndNew("cpu").GetOrThrow(),
+      functional::RandN({2, 3}, of::DType{of::kFloat}, of::Device::ParseAndNew("cpu").GetOrThrow(),
                         of::one::DefaultCPUGenerator().GetOrThrow(), false)
           .GetPtrOrThrow();
   int64_t rand_arr[256];
@@ -54,7 +56,7 @@ auto Generator::get_random_tensor() {
     of::AutoMemcpy(stream, &rand_arr, eager_blob_object->dptr(), 2 * 3 * sizeof(int64_t),
                    of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
-  std::cout << rand_arr[0] << ", " << rand_arr[1];
+  std::cout << "testing randn results: " << rand_arr[0] << ", " << rand_arr[1];
   CHECK_JUST(of::one::SyncAccessTensorWithTimeOut(rand, callback, "const"));
   auto dense = support::TensorToDenseElementsAttr(rand, context);
   dense.print(llvm::outs());
@@ -67,7 +69,7 @@ auto Generator::get_random_tensor() {
   return frozen;
 }
 
-void Generator::run() {
+void Generator::examples() {
   OpBuilder builder(context);
   llvm::SmallVector<FrozenVariableOp, 4> rands(4);
   std::generate(rands.begin(), rands.end(), [this]() { return get_random_tensor(); });
@@ -124,12 +126,32 @@ void Generator::run() {
   builder.create<pdl::ReplaceOp>(rewrite->getLoc(), pdl_res1, pdl_res2, ValueRange());
 }
 
+void Generator::run() {
+  SmallVector<Value> inputs(4);
+  std::generate(inputs.begin(), inputs.end(), [this] { return get_random_tensor()->getResult(0); });
+  dfs(0, inputs);
+  for (auto& rewrite : rewrites) {
+    rewrite.first->print(llvm::outs());
+    rewrite.second->print(llvm::outs());
+  }
+}
+
 size_t Generator::fingerprint(Operation* op) {
   // TODO: get forward result, get hash
   return {};
 }
 
-void Generator::dfs(int depth, SmallVector<Value*>& inputs) {
+bool Generator::can_be_infered_from_existing_rewrites(Operation* a, Operation* b) const {
+  // TODO
+  for (auto& rewrite : rewrites) {
+    // well, can't use structural bindings
+    auto& lhs = rewrite.first;
+    auto& rhs = rewrite.second;
+  }
+  return false;
+}
+
+void Generator::dfs(int depth, SmallVector<Value>& inputs) {
   auto res = graph.walk([](Operation* op) {
     // add op to some set, check existence
     op->print(llvm::outs());
@@ -138,11 +160,29 @@ void Generator::dfs(int depth, SmallVector<Value*>& inputs) {
   if (res.wasInterrupted())  // contains duplicate operations
     return;
   auto graph_pdl = build_pdl_from_oneflow_op(graph);
-  D.insert({fingerprint(graph), graph_pdl});
+  // get existing rewrites, check if the new graph can be infered
+  auto fp = fingerprint(graph);
+  if (D.count(fp)) {
+    // check
+    auto old_graph = D[fp];
+    if (can_be_infered_from_existing_rewrites(graph_pdl, old_graph)) {
+      // pass
+    } else {
+      // new rewrite found! add
+      rewrites.emplace_back(old_graph, graph_pdl);
+    }
+  } else {
+    // add
+    D[fp] = graph_pdl;
+  }
   if (depth > 3) return;
   dfs_broadcast_binary_ops<
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
+      >(depth, inputs);
+  dfs_binary_ops<
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.binary_ops.cpp.inc"
       >(depth, inputs);
   // and binary ops, conv ops, math ops, matmul ops, etc.
   // how to check validity of Operation?
@@ -169,8 +209,9 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
         // normal op, create operation op
         SmallVector<Value> pdl_operands;
         for (auto operand : op.getOperands()) { pdl_operands.push_back(bav.lookup(operand)); }
+        // TODO: fill type ranges
         auto pdlop =
-            builder.create<pdl::OperationOp>(loc, op.getName(), pdl_operands, op.getAttrs());
+            builder.create<pdl::OperationOp>(loc, TypeRange(), pdl_operands, op.getAttrs());
         // what if the original op has multiple results? pdl OperationOp is OneResult??
         for (auto result : op.getResults()) { bav.map(result, pdlop); }
         loc = pdlop->getLoc();
@@ -181,36 +222,66 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
 }
 
 template<typename... Args>
-void Generator::dfs_broadcast_binary_ops(int depth, SmallVector<Value*>& inputs) {
+void Generator::dfs_broadcast_binary_ops(int depth, SmallVector<Value>& inputs) {
   /**
    * for i ∈ inputs and i is a valid input to op do
    * Add operator op into graph G.
    * Add the output tensors of op into I.
    */
-  (void)std::initializer_list<int>{0, (dfs_broadcast_binary_op<Args>(depth + 1, inputs), 0)...};
+  (void)std::initializer_list<int>{0, (dfs_broadcast_binary_op<Args>(depth, inputs), 0)...};
   // taken from Dialect::addOperations
 }
 
+template<typename... Args>
+void Generator::dfs_binary_ops(int depth, SmallVector<Value>& inputs) {
+  (void)std::initializer_list<int>{0, (dfs_binary_op<Args>(depth, inputs), 0)...};
+}
+
+// FIXME: how to deal with additional attrs?
 template<typename T>
-void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value*>& inputs) {
+void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value>& inputs) {
   inputs.reserve(inputs.size() + 1);
   for (auto it1 = inputs.begin(); it1 != inputs.end(); ++it1) {
     for (auto it2 = it1; it2 != inputs.end(); ++it2) {
-      auto op = builder.create<T>(graph->getLoc(), TypeRange((*it1)->getType()),
-                                  ValueRange({**it1, **it2}));
-      if (op.verifyInvariants().succeeded()) {
-        for (OpResult out : op->getOpResults()) { inputs.push_back(&out); }
+      auto op =
+          builder.create<T>(graph->getLoc(), TypeRange(it1->getType()), ValueRange({*it1, *it2}));
+      if (verify(op).succeeded()) {
+        for (OpResult out : op->getOpResults()) { inputs.push_back(out); }
         // go down one level
         dfs(depth + 1, inputs);
         // remove op results from input
         inputs.pop_back_n(op->getOpResults().size());
-        // delete op from graph, how to delete??
+        // TODO: delete op from graph, how to delete??
       } else {
         return;
       }
     }
   }
 }
+
+// pass in attributes!!! how?
+// do if-else in type level? or case by case?
+template<typename T>
+void Generator::dfs_binary_op(int depth, SmallVector<Value>& inputs) {
+  inputs.reserve(inputs.size() + 1);
+  for (auto it1 = inputs.begin(); it1 != inputs.end(); ++it1) {
+    for (auto it2 = it1; it2 != inputs.end(); ++it2) {
+      auto op =
+          builder.create<T>(graph->getLoc(), TypeRange(it1->getType()), ValueRange({*it1, *it2}));
+      if (verify(op).succeeded()) {
+        for (OpResult out : op->getOpResults()) { inputs.push_back(out); }
+        // go down one level
+        dfs(depth + 1, inputs);
+        // remove op results from input
+        inputs.pop_back_n(op->getOpResults().size());
+        // TODO: delete op from graph, how to delete??
+      } else {
+        return;
+      }
+    }
+  }
+}
+
 }  // namespace oneflow
 }  // namespace mlir
 
@@ -219,9 +290,9 @@ int main(/* int argc, char** argv */) {
   mlir::registerAllTranslations();
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::pdl::PDLDialect>();
-  registry.getDialectAllocator("oneflow");
-  // TODO: add pdl dialect
+  for (auto n : registry.getDialectNames()) llvm::dbgs() << "dialect: " << n << "\n";
   mlir::MLIRContext context{registry};
+  context.loadAllAvailableDialects();
   mlir::oneflow::Generator gen(&context);
   gen.run();
   return 0;
