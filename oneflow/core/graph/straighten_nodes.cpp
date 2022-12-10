@@ -55,6 +55,7 @@ class TopoStruct {
   TopoStruct* next_same_node = nullptr;
   int32_t exceed_time = -1;
   int32_t min_lifetime = -1;
+  int64_t memory_volume = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -77,6 +78,9 @@ class TopoStruct {
   // For most operators, the execution time on gpu exceed the execution time on cpu.
   // However, overlap is needed if time of cpu > time of gpu.
   void ComputeExceedTime();
+
+  // Memory volume is memory * lifetime, but we might change the formula
+  void ComputeMemoryVolume();
 
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
@@ -280,17 +284,30 @@ void TopoStruct::ComputeExceedTime() {
   }
 }
 
+// Memory volume is memory * lifetime, but we might change the formula
+void TopoStruct::ComputeMemoryVolume() {
+  // We might get a large tensor multiply by a long life time, we need some rescaling
+  memory_volume = int64_t(
+      (memory_increment * pow(double(min_lifetime), ParseFloatFromEnv("LifetimeOrder", 1.0)))
+      / 1000.0);
+  // We need to distinguish zero or negative memory increment from slight positive memory increment.
+  // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
+  if (memory_increment > 0) { memory_volume += 1; }
+}
+
 // deciding parameter
 // kTributaryLayerAscend = 0,     // small tributary layers go first
 // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
 // kLayerAscend = 2,              // first in first out
 // kMemoryIncrementAscend = 3,    // small memory increment go first
 // kExceedTimeAscend = 4,         // small exceed time go first
+// kMemoryVolumeAscend = 5,       // small memory volume go first
 // kTributaryLayerDescend = 100,     // large tributary layers go first
 // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
 // kLayerDescend = 102,              // last in first out
 // kMemoryIncrementDescend = 103,    // large memory increment go first
 // kExceedTimeDescend = 104,         // large exceed time go first
+// kMemoryVolumeAscend = 105,        // large memory volume go first
 int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
   if (so >= kDiff4AscendDescend) {
@@ -303,6 +320,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
+    case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
     default: return 0;
   }
 }
@@ -359,9 +377,7 @@ void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
       // The life time is 2 (including a and b) == b.lifetime - a.lifetime
       pair.second.min_lifetime -= pair.second.min_layer - 1;
     }
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << pair.first->VisualStr() << ", lifetime: " << pair.second.min_lifetime
-                << std::endl;
+    pair.second.ComputeMemoryVolume();
   }
 }
 
@@ -396,6 +412,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
                           std::vector<StraightenOrder>* decide_parameters) {
   decide_parameters->clear();
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters->push_back(StraightenOrder::kMemoryVolumeAscend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
     decide_parameters->push_back(StraightenOrder::kTributaryLayerAscend);
   } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {

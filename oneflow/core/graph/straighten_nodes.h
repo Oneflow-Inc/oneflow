@@ -32,6 +32,7 @@ enum StraightenOrder : int {
   kLayerAscend = 2,              // first in first out
   kMemoryIncrementAscend = 3,    // small memory increment go first
   kExceedTimeAscend = 4,         // small exceed time go first
+  kMemoryVolumeAscend = 5,       // small memory volume go first
 
   kTributaryLayerDescend =
       kDiff4AscendDescend + kTributaryLayerAscend,  // large tributary layers go first
@@ -41,6 +42,7 @@ enum StraightenOrder : int {
   kMemoryIncrementDescend =
       kDiff4AscendDescend + kMemoryIncrementAscend,              // large memory increment go first
   kExceedTimeDescend = kDiff4AscendDescend + kExceedTimeAscend,  // large exceed time go first
+  kMemoryVolumeDescend = kDiff4AscendDescend + kMemoryVolumeAscend,  // large memory volume go first
 };
 
 // Some operators have longer time in cpu and less time in gpu.
