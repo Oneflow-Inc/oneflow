@@ -179,7 +179,15 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
       return TaskClassifier::kWaitingMainComputation;
     }
   }
-  if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingOverlapNode; }
+  if (IsTransferNode(task_type)) {
+    if (sat == StraightenAlgorithmTag::kCompressMemory
+        && Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+      // Overlap is not the first consideration, memory is
+      return TaskClassifier::kWaitingMainComputation;
+    } else {
+      return TaskClassifier::kWaitingOverlapNode;
+    }
+  }
   if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
   if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
   CHECK(false) << "Unclassified or invalid task type (" << task_type << ") showing up";
