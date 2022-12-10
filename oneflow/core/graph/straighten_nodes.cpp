@@ -39,22 +39,6 @@ enum TaskClassifier : int {
   kRunALAP = 3
 };
 
-// deciding parameter
-// The sorting order of nodes for the straighten algorithm
-enum StraightenOrder : int {
-  kTributaryLayerAscend = 0,     // small tributary layers go first
-  kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
-  kLayerAscend = 2,              // first in first out
-  kMemoryIncrementAscend = 3,    // small memory increment go first
-  kExceedTimeAscend = 4,         // small exceed time go first
-
-  kTributaryLayerDescend = 100,     // large tributary layers go first
-  kDistanceToOverlapDescend = 101,  // long distance to overlap go first
-  kLayerDescend = 102,              // last in first out
-  kMemoryIncrementDescend = 103,    // large memory increment go first
-  kExceedTimeDescend = 104,         // large exceed time go first
-};
-
 // The difference between a descending order and its corresponding ascending order
 const int kDiff4AscendDescend = 100;
 
@@ -117,25 +101,7 @@ StraightenAlgorithmTag sat;
 //                                                        ParseIntegerFromEnv("Parameter2", 3)});
 // The best parameter set for saving time is {102, 100}
 // The best parameter set for saving memory is {3, 0}
-static std::vector<StraightenOrder> decide_parameters;
-
-// SAT, a.k.a. Scholastic Aptitude Test,
-// is the college admission test in the United States of America.
-void InitDecideParameters(StraightenAlgorithmTag sat) {
-  decide_parameters.clear();
-  if (sat == StraightenAlgorithmTag::kCompressMemory) {
-    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-    decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
-  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
-    decide_parameters.push_back(StraightenOrder::kLayerDescend);
-    decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
-  } else {
-    // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
-    decide_parameters.push_back(StraightenOrder::kExceedTimeDescend);
-    decide_parameters.push_back(StraightenOrder::kLayerDescend);
-    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-  }
-}
+std::vector<StraightenOrder> decide_parameters;
 
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
@@ -191,29 +157,6 @@ bool IsTransferNode(TaskType task_type) {
     case TaskType::kSspVariableProxy: return true;  // 0
     default: return false;
   }
-}
-
-// Some operators have longer time in cpu and less time in gpu.
-// Running those operators without overlap would cause large gap during each iteration.
-// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
-// functions on cpu.
-bool ShortGpuTime(const OperatorConf& op_conf) {
-  if (op_conf.has_variable_conf()) {
-    // Variable operators would not be run. They just create tensors.
-    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-    return true;
-  }
-  if (op_conf.has_user_conf()) {
-    const auto& op_type_name = op_conf.user_conf().op_type_name();
-    // They are sorted according to frequency of occurrences in stable diffusion
-    if (op_type_name == "expand_dims"  // 90
-        || op_type_name == "cast"      // 16
-        || op_type_name == "expand"    // 2
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 // Classifier for the set according to the task type
@@ -389,27 +332,51 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   }
 }
 
-void UpdateSat(const HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
-  sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
-    // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
-    bool exist_cpu_nodes = false;
-    for (const auto& pair : task_node2topo_struct) {
-      // Found a cpu node
-      if (pair.second.exceed_time == 1) {
-        exist_cpu_nodes = true;
-        break;
-      }
-    }
-    if (!exist_cpu_nodes) {
-      // Switch to the compress memory strategy, the default one
-      // Since the overlap strategy for transfer might not be working on 1n1d.
-      sat = StraightenAlgorithmTag::kCompressMemory;
+}  // anonymous namespace
+
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf) {
+  if (op_conf.has_variable_conf()) {
+    // Variable operators would not be run. They just create tensors.
+    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
+    return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const auto& op_type_name = op_conf.user_conf().op_type_name();
+    // They are sorted according to frequency of occurrences in stable diffusion
+    if (op_type_name == "expand_dims"  // 90
+        || op_type_name == "cast"      // 16
+        || op_type_name == "expand"    // 2
+    ) {
+      return true;
     }
   }
+  return false;
 }
 
-}  // anonymous namespace
+// SAT, a.k.a. Scholastic Aptitude Test,
+// is the college admission test in the United States of America.
+void InitDecideParameters(StraightenAlgorithmTag sat,
+                          std::vector<StraightenOrder>* decide_parameters) {
+  decide_parameters->clear();
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+    decide_parameters->push_back(StraightenOrder::kTributaryLayerAscend);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
+    decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kTributaryLayerDescend);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
+    decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+  } else {
+    // sat == StraightenAlgorithmTag::kDisable
+    decide_parameters->push_back(StraightenOrder::kLayerAscend);
+  }
+}
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
@@ -487,9 +454,9 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   FindTrunk(&task_node2topo_struct);
 
   // Update sat, since sat might be changed in previous jobs
-  UpdateSat(task_node2topo_struct);
+  UpdateSat(task_node2topo_struct, &sat);
   // Decide which node should run first
-  InitDecideParameters(sat);
+  InitDecideParameters(sat, &decide_parameters);
   VLOG(3) << "Straightening order: ";
   for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 
