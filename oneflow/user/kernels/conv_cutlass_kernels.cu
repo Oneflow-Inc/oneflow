@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifdef WITH_CUTLASS
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
@@ -341,3 +343,5 @@ REGISTER_USER_KERNEL("conv2d")
 }  // namespace
 
 }  // namespace oneflow
+
+#endif  // WITH_CUTLASS
