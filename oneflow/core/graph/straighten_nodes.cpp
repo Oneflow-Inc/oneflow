@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/straighten_nodes.h"
@@ -378,6 +379,30 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
   }
 }
 
+// Maximum overlap number
+// While running an overlap operator, we would run some other operators simultaneously.
+int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
+  if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    // 10 operators on GPU is enough to cover the time for a CPU operator
+    return 10;
+  }
+  // This condition should be following the sat == StraightenAlgorithmTag::kOverlap4CpuGpu
+  // Since the kOverlap4CpuGpu would not be affected by transfer.
+  if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    // Using nccl compute stream would disable the overlap for transfer
+    // We need to reduce it to 1
+    return 1;
+  }
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    // Actually we do not need the overlap.
+    // Time is not the main consideration, memory is.
+    return 2;
+  }
+  // The default number is 10. Mainly for sat == StraightenAlgorithmTag::kOverlap4Transfer
+  // sat == StraightenAlgorithmTag::kDisable does not need a maximum overlap number.
+  return 10;
+}
+
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
@@ -575,6 +600,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // straightening
+  int32_t maximum_overlap_num = MaximumOverlapNum(sat);
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
       if (waiting_lists[TaskClassifier::kWaitingOverlapNode].empty()) {
@@ -591,11 +617,12 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           execute(TaskClassifier::kWaitingMainComputation, 1);
         }
       } else {
-        int32_t computation_num =
+        int32_t computation_num = std::min(
             std::min(int32_t(waiting_lists[TaskClassifier::kWaitingMainComputation].size()
                              / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
                      remain_task_nums[TaskClassifier::kWaitingMainComputation]
-                         / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
+                         / remain_task_nums[TaskClassifier::kWaitingOverlapNode]),
+            maximum_overlap_num);
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
