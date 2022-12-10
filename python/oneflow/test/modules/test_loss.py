@@ -66,7 +66,7 @@ def generate_necessity_for_bce_loss(dim: int):
     batch_size = random(low=10, high=100).to(int)
     extra_dim = [random().to(int) for _ in range(dim - 2)]
     return (
-        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_tensor(dim, batch_size, num_classes, low=0, high=1, *extra_dim).to(device),
         random_tensor(
             dim,
             batch_size,
@@ -394,8 +394,8 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         device = random_device()
         shape = random_tensor().oneflow.shape
 
-        x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x = random_tensor(len(shape), low=0, *shape).to(device)
+        target = random_tensor(len(shape), low=0, *shape, requires_grad=False).to(device)
 
         m = torch.nn.KLDivLoss(
             reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
@@ -411,8 +411,8 @@ class TestKLDivLossModule(flow.unittest.TestCase):
     def test_nn_functional_kl_div(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
-        x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x = random_tensor(len(shape), low=0, *shape).to(device)
+        target = random_tensor(len(shape), low=0, *shape, requires_grad=False).to(device)
         y = torch.nn.functional.kl_div(
             x,
             target,
