@@ -70,6 +70,18 @@ class TestToTroch(flow.unittest.TestCase):
         )
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.numpy().dtype)
 
+    def test_to_torch_gpu(test_case):
+        flow_t = flow.rand(5, 3, 3).to("cuda")
+
+        torch_t = flow.utils.tensor.from_torch(flow_t)
+
+        flow_t[0][0] = [1, 2, 3]
+        test_case.assertTrue(
+            np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
+        )
+
+        test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
+
 
 if __name__ == "__main__":
     unittest.main()

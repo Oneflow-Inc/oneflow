@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/tensor_util.h"
 
 namespace oneflow {
 
@@ -123,6 +124,81 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   JUST(eager_blob_object->init_producer_stream(stream));
   eager_blob_object->set_last_used_stream(stream);
   return std::static_pointer_cast<Tensor>(std::make_shared<LocalTensor>(tensor_impl));
+}
+
+Maybe<DLDevice> ToDLDevice(Symbol<Device> ofdevice) {
+  DLDevice ctx;
+  ctx.device_id = ofdevice->device_id();
+  switch (ofdevice->enum_type()) {
+    case DeviceType::kCPU: ctx.device_type = DLDeviceType::kDLCPU; break;
+#ifdef WITH_CUDA
+    case DeviceType::kCUDA: ctx.device_type = DLDeviceType::kDLCUDA; break;
+#endif
+    default: UNIMPLEMENTED_THEN_RETURN() << "Unsupported device type: " << ofdevice->type();
+  }
+  return ctx;
+}
+
+Maybe<DLDataType> ToDLDataType(DataType ofdtype) {
+  DLDataType dtype;
+  dtype.lanes = 1;
+  dtype.bits = GetSizeOfDataType(ofdtype) * 8;
+  switch (ofdtype) {
+    case DataType::kUInt8: dtype.code = DLDataTypeCode::kDLUInt; break;
+    case DataType::kInt8: dtype.code = DLDataTypeCode::kDLInt; break;
+    case DataType::kInt16: dtype.code = DLDataTypeCode::kDLInt; break;
+    case DataType::kInt32: dtype.code = DLDataTypeCode::kDLInt; break;
+    case DataType::kInt64: dtype.code = DLDataTypeCode::kDLInt; break;
+    case DataType::kFloat16: dtype.code = DLDataTypeCode::kDLFloat; break;
+    case DataType::kFloat: dtype.code = DLDataTypeCode::kDLFloat; break;
+    case DataType::kDouble: dtype.code = DLDataTypeCode::kDLFloat; break;
+    case DataType::kBFloat16: dtype.code = DLDataTypeCode::kDLBfloat; break;
+    default: UNIMPLEMENTED_THEN_RETURN() << "Unsupported data type: " << DataType_Name(ofdtype);
+  }
+  return dtype;
+}
+
+struct ATenDLMTensor {
+  std::shared_ptr<one::Tensor> handle;
+  DLManagedTensor tensor;
+};
+
+void deleter(DLManagedTensor* arg) { delete static_cast<ATenDLMTensor*>(arg->manager_ctx); }
+
+Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src) {
+  auto shape = *src->shape();
+  auto strides = *JUST(src->stride());
+  // create a new tensor with possibly normalized strides
+  // Reference:
+  // https://github.com/pytorch/pytorch/issues/83069
+  // https://github.com/pytorch/pytorch/issues/82610
+  for (int i = 0; i < src->ndim(); i++) {
+    if (shape[i] <= 1) { strides[i] = 1; }
+  }
+
+  ATenDLMTensor* atDLMTensor(new ATenDLMTensor);
+  atDLMTensor->handle = src;
+  atDLMTensor->tensor.manager_ctx = atDLMTensor;
+  atDLMTensor->tensor.deleter = &deleter;
+  JUST(one::SyncAccessTensorWithTimeOut(
+      src,
+      [&](ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>& tensor) {
+        atDLMTensor->tensor.dl_tensor.data = tensor->mut_raw_dptr();
+      },
+      "const"));
+  auto dldevice = JUST(ToDLDevice(JUST(src->device())));
+  auto dldtype = JUST(ToDLDataType(src->dtype()->data_type()));
+  atDLMTensor->tensor.dl_tensor.device = *dldevice;
+  atDLMTensor->tensor.dl_tensor.ndim = src->ndim();
+  atDLMTensor->tensor.dl_tensor.dtype = *dldtype;
+  atDLMTensor->tensor.dl_tensor.shape =
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+      const_cast<int64_t*>(src->shape()->data());
+  atDLMTensor->tensor.dl_tensor.strides =
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+      const_cast<int64_t*>(JUST(src->stride())->data());
+  atDLMTensor->tensor.dl_tensor.byte_offset = 0;
+  return &(atDLMTensor->tensor);
 }
 
 }  // namespace oneflow

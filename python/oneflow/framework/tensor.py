@@ -654,3 +654,6 @@ def register_tensor_op(op_name):
         return method
 
     return set_tensor_op
+
+
+to_dlpack = lambda tensor: tensor._to_dlpack()
