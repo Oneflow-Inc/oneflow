@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+import os
 
 import oneflow as flow
 import oneflow.unittest
@@ -70,6 +71,7 @@ class TestToTroch(flow.unittest.TestCase):
         )
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.numpy().dtype)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_torch_gpu(test_case):
         flow_t = flow.rand(5, 3, 3).to("cuda")
 
@@ -79,6 +81,14 @@ class TestToTroch(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
         )
+
+        test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_to_torch_global(test_case):
+        flow_t = flow.rand(5, 3, 3).to_global(placement=flow.placement.all('cuda'), sbp=flow.sbp.broadcast)
+
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
 

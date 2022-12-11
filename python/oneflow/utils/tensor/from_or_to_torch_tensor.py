@@ -99,5 +99,7 @@ def to_torch(flow_tensor):
     except:
         print_error_msg()
     assert isinstance(flow_tensor, flow.Tensor)
-    assert flow_tensor.is_local
+    if flow_tensor.is_global:
+        print("WARNING: `to_torch` received a global tensor. A PyTorch CPU tensor which is a copy of its data will be returned.")
+        return torch.from_numpy(flow_tensor.numpy())
     return torch.from_dlpack(flow.to_dlpack(flow_tensor))
