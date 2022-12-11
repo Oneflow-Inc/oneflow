@@ -17,7 +17,6 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <Python.h>
-#include "oneflow/api/python/dlpack/converter.h"
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensortype.h"
@@ -424,35 +423,6 @@ static PyObject* PyTensorObject__copy_from_numpy(PyObject* self, PyObject* array
   END_HANDLE_ERRORS
 }
 
-void DLPack_Capsule_Destructor(PyObject* data) {
-  if (likely(!PyCapsule_IsValid(data, "dltensor"))) {
-    // early out, see DLPack spec: if a consuming library sets the capsule
-    // name to something else, they own it and we don't need to do anything
-    return;
-  }
-  HANDLE_ERRORS
-  // Causes overheads for validity checks again, but this case is rare
-  // since consuming libraries should rename the capsule according to spec.
-  // Note that this cannot set a python error (we checked validity above),
-  // so we don't need to handle python error state here.
-  DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
-  // the dlMTensor has not been consumed, call deleter ourselves.
-  // DLPack spec mentions that deleter may be NULL, but deleter from
-  // `at::toDLPack` is never NULL, so no need for an additional check here.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  dlMTensor->deleter(const_cast<DLManagedTensor*>(dlMTensor));
-  END_HANDLE_ERRORS_RET()
-}
-
-static PyObject* PyTensorObject__to_dlpack(PyObject* self, PyObject* unused) {
-  HANDLE_ERRORS
-
-  DLManagedTensor* dlMTensor = ASSERT(toDLPack(PyTensor_Unpack(self)));
-  return PyCapsule_New(dlMTensor, "dltensor", DLPack_Capsule_Destructor);
-
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, PyObject* hook) {
   HANDLE_ERRORS
   auto _hook = py::cast<std::function<void()>>(py::reinterpret_borrow<py::object>(hook));
@@ -502,7 +472,6 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
     {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},
     {"_copy_from_numpy", PyTensorObject__copy_from_numpy, METH_O, NULL},
-    {"_to_dlpack", PyTensorObject__to_dlpack, METH_NOARGS, NULL},
     {"_register_storage_delete_hook", PyTensorObject__register_storage_delete_hook, METH_O, NULL},
     {NULL}};
 

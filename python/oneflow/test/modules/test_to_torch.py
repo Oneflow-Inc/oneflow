@@ -73,9 +73,9 @@ class TestToTroch(flow.unittest.TestCase):
     def test_to_torch_gpu(test_case):
         flow_t = flow.rand(5, 3, 3).to("cuda")
 
-        torch_t = flow.utils.tensor.from_torch(flow_t)
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
-        flow_t[0][0] = [1, 2, 3]
+        flow_t[0][0] = flow.tensor([1, 2, 3]).to(flow.float32)
         test_case.assertTrue(
             np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
         )

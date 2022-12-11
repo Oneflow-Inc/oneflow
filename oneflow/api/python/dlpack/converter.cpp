@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/python/dlpack/dlpack.h"
+#include "oneflow/api/python/exception/exception.h"
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_util.h"
 
@@ -158,6 +159,7 @@ Maybe<DLDataType> ToDLDataType(DataType ofdtype) {
   return dtype;
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct ATenDLMTensor {
   std::shared_ptr<one::Tensor> handle;
   DLManagedTensor tensor;
@@ -199,6 +201,37 @@ Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src) {
       const_cast<int64_t*>(JUST(src->stride())->data());
   atDLMTensor->tensor.dl_tensor.byte_offset = 0;
   return &(atDLMTensor->tensor);
+}
+
+// This function is mostly copied from PyTorch
+void DLPack_Capsule_Destructor(PyObject* data) {
+  if (likely(!PyCapsule_IsValid(data, "dltensor"))) {
+    // early out, see DLPack spec: if a consuming library sets the capsule
+    // name to something else, they own it and we don't need to do anything
+    return;
+  }
+  HANDLE_ERRORS
+  // Causes overheads for validity checks again, but this case is rare
+  // since consuming libraries should rename the capsule according to spec.
+  // Note that this cannot set a python error (we checked validity above),
+  // so we don't need to handle python error state here.
+  DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  // the dlMTensor has not been consumed, call deleter ourselves.
+  // DLPack spec mentions that deleter may be NULL, but deleter from
+  // `flow.to_dlpack` is never NULL, so no need for an additional check here.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  dlMTensor->deleter(const_cast<DLManagedTensor*>(dlMTensor));
+  END_HANDLE_ERRORS_RET()
+}
+
+namespace py = pybind11;
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("to_dlpack", [](const std::shared_ptr<one::Tensor>& tensor) -> Maybe<py::capsule> {
+    DLManagedTensor* dlMTensor = JUST(toDLPack(tensor));
+    return py::capsule(dlMTensor, "dltensor", DLPack_Capsule_Destructor);
+  });
+  // from_dlpack is exported in tensor_api.yaml
 }
 
 }  // namespace oneflow

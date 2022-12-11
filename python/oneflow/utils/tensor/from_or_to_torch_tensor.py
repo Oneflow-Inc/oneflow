@@ -100,4 +100,4 @@ def to_torch(flow_tensor):
         print_error_msg()
     assert isinstance(flow_tensor, flow.Tensor)
     assert flow_tensor.is_local
-    return torch.from_dlpack(flow_tensor.to_dlpack())
+    return torch.from_dlpack(flow.to_dlpack(flow_tensor))
