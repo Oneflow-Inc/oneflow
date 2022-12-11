@@ -68,8 +68,8 @@ bool IsBreakpointOpNode(const OpNode* node) {
   }
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
+    if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
+        || user_type_name == "identity_buffer") {
       return true;
     }
   }
@@ -94,6 +94,10 @@ std::shared_ptr<const Shape> GetOpNodeInputTimeShape(const OpNode* op_node) {
   return CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape());
 }
 
+std::shared_ptr<const Shape> GetOpNodeFastestTimeShape(const OpNode* op_node) {
+  return CHECK_JUST(op_node->op().GetInputOutputFastestTimeShape());
+}
+
 bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
                          const std::shared_ptr<const Shape>& rhs) {
   return (*lhs) == (*rhs);
@@ -105,7 +109,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
   // NOTE(chengcheng): acc subgraph may greater than fw/bw subgraph. we need use max time shape.
   std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   op_graph.ForEachNode([&](const OpNode* node) {
-    std::shared_ptr<const Shape> this_time_shape = GetOpNodeTimeShape(node);
+    std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
     if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
       seed_time_shape = this_time_shape;
     }
@@ -122,13 +126,18 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
     if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
-    if (!SharedPtrShapeEqual(GetOpNodeTimeShape(seed_node), seed_time_shape)) { continue; }
+    // NOTE(chengcheng): using fastest time shape for merge acc into bw subgraph.
+    if (!SharedPtrShapeEqual(GetOpNodeFastestTimeShape(seed_node), seed_time_shape)) { continue; }
     if (IsBreakpointOpNode(seed_node)) { continue; }
+    // NOTE(chengcheng):
+    //   stream name hint maybe set by other job pass like replace embedding.
+    //   we cannot replace stream name in subgraph
+    if (seed_node->op().op_conf().has_stream_name_hint()) { continue; }
 
     HashSet<const OpNode*> this_subgraph;
     std::queue<const OpNode*> queued_nodes;
 
-    std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(seed_node);
+    std::shared_ptr<const Shape> seed_time_shape = GetOpNodeFastestTimeShape(seed_node);
     queued_nodes.push(seed_node);
     while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
@@ -140,7 +149,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
         if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-            && SharedPtrShapeEqual(GetOpNodeTimeShape(next_node), seed_time_shape)) {
+            && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
@@ -566,7 +575,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
       const std::string& src_op_name = src_node->op().op_name();
       CHECK(src_node != dst_node);
       if (src_node->parallel_desc().EqualsIgnoringHierarchy(dst_node->parallel_desc())
-          && SharedPtrShapeEqual(GetOpNodeTimeShape(src_node), GetOpNodeTimeShape(dst_node))) {
+          && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(src_node),
+                                 GetOpNodeFastestTimeShape(dst_node))) {
         // NOTE(chengcheng): We don't care src node whether in this subgraph, or whether is repeat
         //  op, or whether is breaking op. We ONLY care src node is same placement with dst
         //  and time shape is equal.
@@ -963,13 +973,8 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
           << "\n\n"
           << " Debug: before acc op: " << bw_sink_op->op().op_conf().DebugString()
           << " -> after acc op: " << first_acc_op->op().op_conf().DebugString();
-  CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
+  CHECK_GE(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
   CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
-
-  for (const OpNode* acc : ordered_acc_op_nodes) {
-    CHECK(SharedPtrShapeEqual(time_shape_before_acc, GetOpNodeInputTimeShape(acc)));
-    CHECK(SharedPtrShapeEqual(time_shape_after_acc, GetOpNodeTimeShape(acc)));
-  }
 
   // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
   //  after_acc_nccl_ops start.
@@ -987,20 +992,29 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
           .ScopeSymbolId(bw_sink_op->op().op_conf().scope_symbol_id())
           .Build();
 
+  std::string bw_sink_tick_lbn = cast_to_tick_op.output("out", 0);
+  // NOTE(chengcheng): for acc can be merged in bw subgraph, so bw sink op maybe acc itself,
+  //   in this case, there is no need insert acc tick.
   OperatorConf bw_sink_acc_tick_conf;
-  bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
-  bw_sink_acc_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
-  auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
-  acc_conf->set_one(cast_to_tick_op.output("out", 0));
-  acc_conf->set_acc("acc");
-  acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
+  if (time_shape_before_acc->elem_cnt() > time_shape_after_acc->elem_cnt()) {
+    bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
+    bw_sink_acc_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
+    auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
+    acc_conf->set_one(bw_sink_tick_lbn);
+    acc_conf->set_acc("acc");
+    acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
+    bw_sink_tick_lbn = GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc");
+  } else {
+    CHECK(bw_sink_op->op().op_conf().has_user_conf());
+    CHECK_EQ(bw_sink_op->op().op_conf().user_conf().op_type_name(), "acc");
+  }
 
   OperatorConf bw_sink_final_tick_conf;
   bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
                                    + NewUniqueId());
   bw_sink_final_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
   auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
-  tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
+  tick_conf->add_tick(bw_sink_tick_lbn);
   tick_conf->set_out("out");
 
   // insert nccl ops after acc
@@ -1021,9 +1035,11 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
         job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), cast_to_tick_op.op_conf()));
     VLOG(3) << " Insert cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
 
-    CHECK_JUST(
-        job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf));
-    VLOG(3) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    if (time_shape_before_acc->elem_cnt() > time_shape_after_acc->elem_cnt()) {
+      CHECK_JUST(
+          job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf));
+      VLOG(3) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    }
 
     CHECK_JUST(
         job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_final_tick_conf));
