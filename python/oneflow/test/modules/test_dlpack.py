@@ -27,11 +27,13 @@ from oneflow.test_utils.test_util import GenCartesianProduct
 
 
 test_device_args = (
-    [('cpu',)]
+    [("cpu",)]
     if os.getenv("ONEFLOW_TEST_CPU_ONLY")
-    else [('cpu',), ('cuda', 0), ('cuda', 1)]
+    else [("cpu",), ("cuda", 0), ("cuda", 1)]
 )
-test_args = list(GenCartesianProduct((test_device_args, [(torch, flow), (flow, torch)])))
+test_args = list(
+    GenCartesianProduct((test_device_args, [(torch, flow), (flow, torch)]))
+)
 
 
 def are_tensors_equal(a, b):
@@ -77,17 +79,21 @@ class TestPack(flow.unittest.TestCase):
         # PyTorch bfloat16 tensor doesn't support .numpy() method
         # so we can't test it
         # torch.bfloat16, flow.bfloat16
-        dtypes = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8', 'uint8']
+        dtypes = ["float64", "float32", "float16", "int64", "int32", "int8", "uint8"]
 
         for device_args, (m1, m2) in test_args:
             for dtype in dtypes:
-                tensor1 = m1.ones((2, 3), dtype=getattr(m1, dtype), device=m1.device(*device_args))
+                tensor1 = m1.ones(
+                    (2, 3), dtype=getattr(m1, dtype), device=m1.device(*device_args)
+                )
                 tensor2 = m2.from_dlpack(m1.to_dlpack(tensor1))
                 test_case.assertTrue(are_tensors_equal(tensor1, tensor2))
 
     def test_non_contiguous_input(test_case):
         for device_args, (m1, m2) in test_args:
-            tensor1 = m1.randn(2, 3, 4, 5).permute(2, 0, 3, 1).to(m1.device(*device_args))
+            tensor1 = (
+                m1.randn(2, 3, 4, 5).permute(2, 0, 3, 1).to(m1.device(*device_args))
+            )
             tensor2 = m2.from_dlpack(m1.to_dlpack(tensor1))
             test_case.assertTrue(are_tensors_equal(tensor1, tensor2))
 

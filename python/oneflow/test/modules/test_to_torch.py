@@ -78,15 +78,15 @@ class TestToTroch(flow.unittest.TestCase):
         torch_t = flow.utils.tensor.to_torch(flow_t)
 
         flow_t[0][0] = flow.tensor([1, 2, 3]).to(flow.float32)
-        test_case.assertTrue(
-            np.array_equal(torch_t.cpu().numpy(), flow_t.numpy())
-        )
+        test_case.assertTrue(np.array_equal(torch_t.cpu().numpy(), flow_t.numpy()))
 
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_torch_global(test_case):
-        flow_t = flow.rand(5, 3, 3).to_global(placement=flow.placement.all('cuda'), sbp=flow.sbp.broadcast)
+        flow_t = flow.rand(5, 3, 3).to_global(
+            placement=flow.placement.all("cuda"), sbp=flow.sbp.broadcast
+        )
 
         torch_t = flow.utils.tensor.to_torch(flow_t)
 
