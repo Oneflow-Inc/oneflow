@@ -60,7 +60,9 @@ class TestPack(flow.unittest.TestCase):
             test_case.assertEqual(tensor2.storage_offset(), 0)
 
             tensor2[1:2, 2:3, 3:4] = random.random()
-            flow.cuda.synchronize()
+            # NOTE: OneFlow operations are asynchoronously executed,
+            # so we need to synchronize explicitly here.
+            flow._oneflow_internal.eager.Sync()
             test_case.assertTrue(are_tensors_equal(tensor1, tensor2))
 
     def test_use_ops(test_case):
