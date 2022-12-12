@@ -250,7 +250,6 @@ class GraphConfig(object):
             #  just using logical chain in acc on.
             os.environ["ENABLE_LOGICAL_CHAIN"] = "true"
 
-
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.
 
