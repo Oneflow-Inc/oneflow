@@ -78,7 +78,7 @@ def _test_get_ciou_result_impl(test_case, device, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
+class TestGetCiouResultModule(flow.unittest.TestCase):
     def test_get_ciou_result(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_get_ciou_result_impl]

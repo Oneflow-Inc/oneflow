@@ -1055,7 +1055,7 @@ class OneRecReader(Module):
             batch_size=10,
             shuffle=True,
             shuffle_mode="batch",
-            placement=flow.env.all_device_placement("cpu") ,
+            placement=flow.placement.all("cpu") ,
             sbp=[flow.sbp.split(0)],
         )
         readdata_2 = onerec_reader2()

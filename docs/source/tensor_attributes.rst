@@ -194,6 +194,10 @@ oneflow.placement
 --------------------------------------------------------------
 .. autoclass:: oneflow.placement
 
+oneflow.placement.all
+--------------------------------------------------------------
+.. autofunction:: oneflow.placement.all
+
 oneflow.env.all_device_placement
 --------------------------------------------------------------
 .. autofunction:: oneflow.env.all_device_placement

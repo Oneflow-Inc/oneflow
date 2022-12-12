@@ -171,7 +171,7 @@ def get_list(T):
             self.add_module(str(len(self)), module)
             return self
 
-        def extend(self: T, modules: Iterable[Module]) -> T:
+        def extend(self: T, modules: Iterable[T]) -> T:
             """Appends modules from a Python iterable to the end of the list.
     
             Arguments:
