@@ -428,7 +428,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
   std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
-  std::cout << "Total memory: " << sbp_graph_.GetMemory() << std::endl;
+  std::cout << "Total auto parallel guessed memory: " << sbp_graph_.GetMemory() << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node

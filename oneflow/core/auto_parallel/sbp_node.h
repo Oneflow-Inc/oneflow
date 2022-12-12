@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
@@ -219,10 +220,12 @@ class SbpNode final {
   void DropAvailWaitTime(double curr_trunk_cost);
 };  // class SbpNode
 
+double UpdateRatio();
+
 // In dynamic programming, we can not minimize a vector (copy cost, memory cost)
 // Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
 // Memory ratio for dynamic programming only, we have different memory ratio for searching strategy
-static const double kMemoryRatioDp = 0.0;
+static double kMemoryRatioDp = UpdateRatio();
 
 }  // namespace auto_parallel
 }  // namespace oneflow

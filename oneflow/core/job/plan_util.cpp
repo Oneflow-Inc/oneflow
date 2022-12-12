@@ -1136,7 +1136,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
               rank_memory_info.not_reused_mem_block_ids.end(), CompMemBlock);
     std::sort(rank_memory_info.eager_variable_mem_block_ids.begin(),
               rank_memory_info.eager_variable_mem_block_ids.end(), CompMemBlock);
-    LOG(INFO) << "\n Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
+    std::cout << "\n Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
               << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
               << B2MiB(rank_memory_info.total_mem_size)
               << " MiB ] device memory. \n   In general, Chunk id: "

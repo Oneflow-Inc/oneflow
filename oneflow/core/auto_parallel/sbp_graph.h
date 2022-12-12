@@ -111,7 +111,7 @@ class SbpGraph final {
   // Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
   // Memory ratio for searching strategy only, we have different memory ratio for dynamic
   // programming
-  double memory_ratio_search_ = 0.0;
+  double memory_ratio_search_ = UpdateRatio();
 
   // Remove a node from the node list
   void RemoveFromNodeList(SbpNode* this_node);

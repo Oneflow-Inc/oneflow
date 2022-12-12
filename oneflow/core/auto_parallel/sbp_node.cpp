@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -774,6 +775,19 @@ const NdSbpSignature& SbpNode::FinalSbpSignature() const {
   CHECK(!sbp_sig_list_.empty()) << "Asking for sbp signature for an empty node";
   return sbp_sig_list_[final_sbp_sig_id_];
 };
+
+double UpdateRatio() {
+  int32_t ratio_num = ParseIntegerFromEnv("RatioNum", 0);
+  double ratio = 0.0;
+  if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
+  // if (ratio_num > 0 && ratio_num < 57) {
+  //   ratio = 0.1615 * pow(1.02, ratio_num - 1);
+  // } else if (ratio_num >= 57) {
+  //   ratio = 6.1917 * pow(1.03, ratio_num - 57);
+  // }
+  std::cout << "Memory ratio: " << ratio << std::endl;
+  return ratio;
+}
 
 }  // namespace auto_parallel
 }  // namespace oneflow
