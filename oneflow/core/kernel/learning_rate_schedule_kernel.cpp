@@ -204,6 +204,85 @@ double MultiStepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_b
   return lr * std::pow(gamma, i);
 }
 
+double CyclicLearningRate(const CyclicLRConf& conf, int64_t cur_batch_num) {
+  double lr = 0;
+  double gamma = conf.gamma();
+  double base_lr = conf.base_lr();
+  double max_lr = conf.base_lr();
+  int64_t step_size_total = conf.step_size_total();
+  double step_up_ratio =
+      static_cast<double>(conf.step_size_up()) / static_cast<double>(step_size_total);
+  double offset_ratio =
+      static_cast<double>(cur_batch_num % step_size_total) / static_cast<double>(step_size_total);
+  double scale_factor = 0;
+  if (offset_ratio < step_up_ratio) {
+    scale_factor = offset_ratio / step_up_ratio;
+  } else {
+    scale_factor = (1 - offset_ratio) / (1 - step_up_ratio);
+  }
+
+  int32_t mode = conf.mode();
+  std::function<double(int)> scale_fn;
+  if (mode == 0) {  // "triangular"
+    scale_fn = [](int x) { return 1.0; };
+  } else if (mode == 1) {  // "triangular2"
+    scale_fn = [](int x) { return 1.0 / std::pow(2.0, (x - 1)); };
+  } else if (mode == 2) {  // "exp_range"
+    scale_fn = [&gamma](int x) { return std::pow(gamma, static_cast<double>(x)); };
+  }
+
+  int32_t scale_mode = conf.scale_mode();
+  double height = (max_lr - base_lr) * scale_factor;
+  if (scale_mode == 0) {  // "cycle"
+    int32_t cycle_num = 1.0 + cur_batch_num / step_size_total;
+    lr = base_lr + height * scale_fn(cycle_num);
+  } else {
+    lr = base_lr + height * scale_fn(cur_batch_num);
+  }
+  return lr;
+}
+
+double OneCycleLR(const OneCycleLRConf& conf, int64_t step) {
+  std::function<double(double, double, double)> anneal_fn;
+  if (conf.anneal_strategy() == 0) {  // "cos"
+    anneal_fn = [](double start, double end, double pct) {
+      double offset = (std::cos(M_PI * pct) + static_cast<double>(1)) / 2.0;
+      return end + (end - start) * offset;
+    };
+  } else if (conf.anneal_strategy() == 1) {  // "linear"
+    anneal_fn = [](double start, double end, double pct) { return start + (end - start) * pct; };
+  }
+  double max_lr = conf.max_lr();
+  double initial_lr = max_lr / conf.div_factor();
+  double min_lr = initial_lr / conf.final_div_factor();
+  double total_steps = static_cast<double>(conf.total_steps());
+  double milestone = conf.pct_start() * total_steps - 1;
+  double step_double = static_cast<double>(step);
+  double pct = 0;
+  double lr = 0;
+  if (conf.three_phase()) {
+    if (lr < milestone) {
+      pct = step_double / milestone;
+      lr = anneal_fn(initial_lr, max_lr, pct);
+    } else if (lr < milestone * 2) {
+      pct = step_double / milestone - 1;
+      lr = anneal_fn(max_lr, initial_lr, pct);
+    } else {
+      pct = (step_double - milestone * 2) / (total_steps - 1);
+      lr = anneal_fn(initial_lr, min_lr, pct);
+    }
+  } else {
+    if (lr < milestone) {
+      pct = step_double / milestone;
+      lr = anneal_fn(initial_lr, max_lr, pct);
+    } else {
+      pct = (step_double - milestone) / (total_steps - 1);
+      lr = anneal_fn(max_lr, min_lr, pct);
+    }
+  }
+  return lr;
+}
+
 double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestartsConf& conf,
                                                const double base_lr, const int64_t step) {
   int64_t epoch_steps = conf.t_initial();
@@ -280,6 +359,10 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
                                                    cur_batch_num);
   } else if (conf.has_sequential_scheduler_conf()) {
     return SequentialScheduler(conf.sequential_scheduler_conf(), lr, cur_batch_num);
+  } else if (conf.has_cyclic_lr_conf()) {
+    return CyclicLearningRate(conf.cyclic_lr_conf(), cur_batch_num);
+  } else if (conf.has_onecycle_lr_conf()) {
+    return OneCycleLR(conf.onecycle_lr_conf(), cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
