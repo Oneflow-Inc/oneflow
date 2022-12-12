@@ -4,6 +4,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/IR/Verifier.h"
+#include "oneflow/api/cpp/env.h"
 #include "wrapper.h"
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/InitLLVM.h>
@@ -21,6 +22,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
+// #include "mlir/IR/OpDefinition.h"
 
 #include "OneFlow/OneFlowOps.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -34,9 +36,14 @@
 #include "oneflow/api/cpp/env_impl.h"
 
 #include <type_traits>
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDL/IR/PDLTypes.h"
+
+// #define GET_TYPEDEF_CLASSES
+// #include "mlir/Dialect/PDL/IR/PDLOpsTypes.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 
 namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
@@ -156,20 +163,23 @@ bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
       if (a.getOperations().size() != b.getOperations().size()) return false;
     }
     for (const auto& pair : llvm::zip(ra.getOps(), rb.getOps())) {
-      Operation& a = std::get<0>(pair);
-      Operation& b = std::get<1>(pair);
+      Op<pdl::OperationOp>* p;
+      Operation* a = &std::get<0>(pair);
+      Operation* b = &std::get<1>(pair);
       pdl::OperandOp rand_a = llvm::dyn_cast<pdl::OperandOp>(a);
       pdl::OperandOp rand_b = llvm::dyn_cast<pdl::OperandOp>(b);
       pdl::OperationOp opa = llvm::dyn_cast<pdl::OperationOp>(a);
       pdl::OperationOp opb = llvm::dyn_cast<pdl::OperationOp>(b);
-      if (rand_a and rand_b) {  // both are (input) operand
+
+      if (isa<pdl::OperandOp>(a) and isa<pdl::OperandOp>(b)) {  // both are (input) operand
         auto a_mapped = bav.lookupOrNull(rand_a.getResult());
         if (a_mapped == nullptr) {
           bav.map(rand_a, rand_b);
         } else if (a_mapped != rand_b) {
           return false;
         }
-      } else if (opa and opb) {  // represents some oneflow operation
+      } else if (isa<pdl::OperationOp>(a)
+                 and isa<pdl::OperationOp>(b)) {  // represents some oneflow operation
         // TODO
       } else {
         return false;
@@ -239,7 +249,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
   assert(graph->getNumRegions() == 1);
   for (Block& block : graph.getBodyRegion().getBlocks()) {
     for (Operation& op : block.getOperations()) {
-      if (llvm::dyn_cast<FrozenVariableOp>(op)) {
+      if (llvm::isa<FrozenVariableOp>(op)) {
         // create pdl operand op
         auto pdlop = builder.create<pdl::OperandOp>(loc);
         bav.map(op.getResult(0), pdlop);  // can this compile?
@@ -252,7 +262,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
         auto pdlop =
             builder.create<pdl::OperationOp>(loc, TypeRange(), pdl_operands, op.getAttrs());
         // what if the original op has multiple results? pdl OperationOp is OneResult??
-        for (auto result : op.getResults()) { bav.map(result, pdlop); }
+        for (auto result : op.getResults()) { bav.map(result, pdlop->getResult(0)); }
         loc = pdlop->getLoc();
       }
     }
@@ -333,14 +343,17 @@ void Generator::dfs_binary_op(int depth, SmallVector<Value>& inputs) {
 }  // namespace mlir
 
 int main(/* int argc, char** argv */) {
-  mlir::DialectRegistry registry;
-  mlir::registerAllTranslations();
-  registry.insert<mlir::oneflow::OneFlowDialect>();
-  registry.insert<mlir::pdl::PDLDialect>();
-  for (auto n : registry.getDialectNames()) llvm::dbgs() << "dialect: " << n << "\n";
-  mlir::MLIRContext context{registry};
-  context.loadAllAvailableDialects();
-  mlir::oneflow::Generator gen(&context);
-  gen.run();
-  return 0;
+  oneflow_api::initialize();
+  oneflow_api::release();
+
+  // mlir::DialectRegistry registry;
+  // mlir::registerAllTranslations();
+  // registry.insert<mlir::oneflow::OneFlowDialect>();
+  // registry.insert<mlir::pdl::PDLDialect>();
+  // for (auto n : registry.getDialectNames()) llvm::dbgs() << "dialect: " << n << "\n";
+  // mlir::MLIRContext context{registry};
+  // context.loadAllAvailableDialects();
+  // mlir::oneflow::Generator gen(&context);
+  // gen.run();
+  // return 0;
 }
