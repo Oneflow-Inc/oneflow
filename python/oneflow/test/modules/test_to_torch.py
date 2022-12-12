@@ -78,6 +78,9 @@ class TestToTroch(flow.unittest.TestCase):
         torch_t = flow.utils.tensor.to_torch(flow_t)
 
         flow_t[0][0] = flow.tensor([1, 2, 3]).to(flow.float32)
+        # NOTE: OneFlow operations are asynchoronously executed,
+        # so we need to synchronize explicitly here.
+        flow._oneflow_internal.eager.Sync()
         test_case.assertTrue(np.array_equal(torch_t.cpu().numpy(), flow_t.numpy()))
 
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
