@@ -24,13 +24,13 @@ limitations under the License.
 
 using namespace mlir;
 
-#include "oneflow/ir/lib/OneFlow/PDLL/ForwardOpPatterns.h.inc"
+#include "oneflow/ir/lib/OneFlow/PDLL/NormalizationPatterns.h.inc"
 
 namespace mlir {
 
 namespace oneflow {
 
-void populateForwardOpPatterns(RewritePatternSet& patterns) {
+void populateNormalizationOpPatterns(RewritePatternSet& patterns) {
   populateGeneratedPDLLPatterns(patterns);
 }
 
