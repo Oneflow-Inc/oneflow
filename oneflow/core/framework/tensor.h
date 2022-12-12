@@ -126,14 +126,19 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   // The same tensor instance should share the python object to ensure that
   // their id are consistent in Python. That is if x and y are hold the same tensor,
   // then `id(x)` should equal to `id(y)`
-  void* pyobject() const { return pyobject_; }
-  void set_pyobject(void* object) { pyobject_ = object; }
+  void* pyobject() const { return pyobj_ptr_.get(); }
+  void set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>&& pyobj_ptr) {
+    pyobj_ptr_ = std::move(pyobj_ptr);
+  }
+  bool owns_pyobj() const { return owns_pyobj_; }
+  void set_owns_pyobj(bool owns_pyobj) { owns_pyobj_ = owns_pyobj; }
 
  protected:
-  Tensor() : pyobject_(nullptr) {}
+  Tensor() : pyobj_ptr_(nullptr, [](void*) {}), owns_pyobj_(false) {}
 
  private:
-  void* pyobject_;
+  std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
+  bool owns_pyobj_;
 };
 
 class StaticZerosTensor final : public Tensor {
