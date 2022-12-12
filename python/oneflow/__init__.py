@@ -380,6 +380,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.unique import unique_op as unique
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn

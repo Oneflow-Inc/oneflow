@@ -397,6 +397,7 @@ Other Ops
     broadcast_shapes
     broadcast_tensors
     broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
