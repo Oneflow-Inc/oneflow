@@ -33,6 +33,7 @@
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/api/cpp/env_impl.h"
 
+#include <type_traits>
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -40,6 +41,7 @@
 namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
 namespace pdl = ::mlir::pdl;
+using std::is_same_v;
 
 namespace mlir {
 namespace oneflow {
@@ -50,13 +52,13 @@ auto Generator::get_random_tensor() {
       functional::RandN({2, 3}, of::DType{of::kFloat}, of::Device::ParseAndNew("cpu").GetOrThrow(),
                         of::one::DefaultCPUGenerator().GetOrThrow(), false)
           .GetPtrOrThrow();
-  int64_t rand_arr[256];
+  float rand_arr[256];
   const auto& callback = [&](of::ep::Stream* stream,
                              const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
-    of::AutoMemcpy(stream, &rand_arr, eager_blob_object->dptr(), 2 * 3 * sizeof(int64_t),
+    of::AutoMemcpy(stream, rand_arr, eager_blob_object->dptr(), 2 * 3 * sizeof(float),
                    of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
-  std::cout << "testing randn results: " << rand_arr[0] << ", " << rand_arr[1];
+  llvm::outs() << "testing randn results: " << rand_arr[0] << ", " << rand_arr[1];
   CHECK_JUST(of::one::SyncAccessTensorWithTimeOut(rand, callback, "const"));
   auto dense = support::TensorToDenseElementsAttr(rand, context);
   dense.print(llvm::outs());
@@ -131,8 +133,8 @@ void Generator::run() {
   std::generate(inputs.begin(), inputs.end(), [this] { return get_random_tensor()->getResult(0); });
   dfs(0, inputs);
   for (auto& rewrite : rewrites) {
-    rewrite.first->print(llvm::outs());
-    rewrite.second->print(llvm::outs());
+    rewrite.first->print(llvm::outs() << "First: ");
+    rewrite.second->print(llvm::outs() << "Second: ");
   }
 }
 
@@ -141,12 +143,50 @@ size_t Generator::fingerprint(Operation* op) {
   return {};
 }
 
+bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
+  BlockAndValueMapping bav{};
+  if (lhs->getNumRegions() != rhs->getNumRegions()) return false;
+  for (auto i = 0u; i < lhs->getNumRegions(); ++i) {
+    auto& ra = lhs->getRegion(i);
+    auto& rb = rhs->getRegion(i);
+    if (ra.getBlocks().size() != rb.getBlocks().size()) return false;
+    for (const auto& pair : llvm::zip(ra.getBlocks(), rb.getBlocks())) {
+      Block& a = std::get<0>(pair);
+      Block& b = std::get<1>(pair);
+      if (a.getOperations().size() != b.getOperations().size()) return false;
+    }
+    for (const auto& pair : llvm::zip(ra.getOps(), rb.getOps())) {
+      Operation& a = std::get<0>(pair);
+      Operation& b = std::get<1>(pair);
+      pdl::OperandOp rand_a = llvm::dyn_cast<pdl::OperandOp>(a);
+      pdl::OperandOp rand_b = llvm::dyn_cast<pdl::OperandOp>(b);
+      pdl::OperationOp opa = llvm::dyn_cast<pdl::OperationOp>(a);
+      pdl::OperationOp opb = llvm::dyn_cast<pdl::OperationOp>(b);
+      if (rand_a and rand_b) {  // both are (input) operand
+        auto a_mapped = bav.lookupOrNull(rand_a.getResult());
+        if (a_mapped == nullptr) {
+          bav.map(rand_a, rand_b);
+        } else if (a_mapped != rand_b) {
+          return false;
+        }
+      } else if (opa and opb) {  // represents some oneflow operation
+        // TODO
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;  // clear!
+}
+
 bool Generator::can_be_infered_from_existing_rewrites(Operation* a, Operation* b) const {
   // TODO
   for (auto& rewrite : rewrites) {
     // well, can't use structural bindings
     auto& lhs = rewrite.first;
     auto& rhs = rewrite.second;
+    if (same_via_subst(lhs, a) and same_via_subst(rhs, b)) return true;
+    if (same_via_subst(lhs, b) and same_via_subst(rhs, a)) return true;
   }
   return false;
 }
@@ -154,7 +194,6 @@ bool Generator::can_be_infered_from_existing_rewrites(Operation* a, Operation* b
 void Generator::dfs(int depth, SmallVector<Value>& inputs) {
   auto res = graph.walk([](Operation* op) {
     // add op to some set, check existence
-    op->print(llvm::outs());
     return WalkResult::advance();
   });
   if (res.wasInterrupted())  // contains duplicate operations
@@ -180,10 +219,10 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
       >(depth, inputs);
-  dfs_binary_ops<
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.binary_ops.cpp.inc"
-      >(depth, inputs);
+  //   dfs_binary_ops<
+  // #define GET_OP_LIST
+  // #include "OneFlow/OneFlow.binary_ops.cpp.inc"
+  //       >(depth, inputs);
   // and binary ops, conv ops, math ops, matmul ops, etc.
   // how to check validity of Operation?
   // use verifier, is that enough?
@@ -237,30 +276,38 @@ void Generator::dfs_binary_ops(int depth, SmallVector<Value>& inputs) {
   (void)std::initializer_list<int>{0, (dfs_binary_op<Args>(depth, inputs), 0)...};
 }
 
-// FIXME: how to deal with additional attrs?
 template<typename T>
 void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value>& inputs) {
+  // I'm only using C++17 in generator, the oneflow library is still compiled using C++14
+  // TODO: special handling of some Ops
+  if constexpr (is_same_v<T, BroadcastLikeOp> or is_same_v<T, BroadcastDivGradOp>) { return; }
+
+  NamedAttrList attrs{{device_name, device_tag, hierarchy, op_name(), scope_symbol_id}};
   inputs.reserve(inputs.size() + 1);
+  // broadcast binary op needs two value from inputs
   for (auto it1 = inputs.begin(); it1 != inputs.end(); ++it1) {
     for (auto it2 = it1; it2 != inputs.end(); ++it2) {
-      auto op =
-          builder.create<T>(graph->getLoc(), TypeRange(it1->getType()), ValueRange({*it1, *it2}));
+      Operation* op = builder.create<T>(graph->getLoc(), TypeRange(it1->getType()),
+                                        ValueRange({*it1, *it2}), attrs);
       if (verify(op).succeeded()) {
+        builder.insert(op);
+        inputs.append(op->getOpResults().begin(), op->getOpResults().end());
         for (OpResult out : op->getOpResults()) { inputs.push_back(out); }
         // go down one level
         dfs(depth + 1, inputs);
         // remove op results from input
         inputs.pop_back_n(op->getOpResults().size());
         // TODO: delete op from graph, how to delete??
+        op->erase();
       } else {
+        op->destroy();
+        llvm::errs() << "Operation Verification Failure, exitting dfs\n";
         return;
       }
     }
   }
 }
 
-// pass in attributes!!! how?
-// do if-else in type level? or case by case?
 template<typename T>
 void Generator::dfs_binary_op(int depth, SmallVector<Value>& inputs) {
   inputs.reserve(inputs.size() + 1);
