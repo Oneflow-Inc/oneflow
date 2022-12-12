@@ -13,27 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "OneFlow/OneFlowPDLLPatterns.h"
-
-using namespace mlir;
-
-#include "oneflow/ir/lib/OneFlow/PDLL/ForwardOpPatterns.h.inc"
+#include "mlir/IR/Builders.h"
+#include "OneFlow/OneFlowSupport.h"
 
 namespace mlir {
 
 namespace oneflow {
 
-void populateForwardOpPatterns(RewritePatternSet& patterns) {
-  populateGeneratedPDLLPatterns(patterns);
-}
+Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt);
 
 }  // namespace oneflow
 
 }  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
