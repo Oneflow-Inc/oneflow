@@ -4945,15 +4945,15 @@ class FusedClipGradFunctor {
   FusedClipGradFunctor() {
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < op_.size(); ++n) {
-      op_[n] = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("grad", n + 1).Build());
+      op_[n] = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("model_diff", n + 1).Build());
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& grad, const float& max_norm,
+  Maybe<void> operator()(const TensorTuple& model_diff, const float& max_norm,
                          const float& norm_type) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
     attrs.SetAllAttrs(max_norm, norm_type);
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[grad.size() - 1], grad, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[model_diff.size() - 1], model_diff, attrs));
     return Maybe<void>::Ok();
   }
 

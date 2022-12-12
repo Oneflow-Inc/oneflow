@@ -3213,7 +3213,7 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
 
 def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<OneFlow_Tensor>:$grad
+    Variadic<OneFlow_Tensor>:$model_diff
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "2.">:$max_norm,
