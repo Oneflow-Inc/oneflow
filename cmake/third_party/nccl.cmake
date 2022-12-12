@@ -49,7 +49,7 @@ else()
 
   set(NCCL_ARCHS_LIST ${CUDA_REAL_ARCHS_LIST})
 
-  # remove redundant archs
+  # remove redundant archs, https://github.com/NVIDIA/nccl/blob/cb111f764a6d46370f24f75101d6b219bb2dda54/makefiles/common.mk#L28
   if("70" IN_LIST NCCL_ARCHS_LIST AND "75" IN_LIST NCCL_ARCHS_LIST)
     list(REMOVE_ITEM NCCL_ARCHS_LIST "75")
   endif()
