@@ -374,12 +374,12 @@ def full_op(
 
     """
     size = _handle_size_arg(size)
-    if dtype is None:
-        dtype = flow.tensor(fill_value).dtype
-    if not isinstance (fill_value, (int, float)):
-        # numpy dtype
+    if not isinstance (fill_value, (int, float, flow.Tensor)):
+        # handle numpy scalar dtype
         assert isinstance (fill_value.dtype, (np.dtype)), "fill_value must be python scalar or numpy scalar."
         fill_value = fill_value.item()
+    if dtype is None:
+        dtype = flow.tensor(fill_value).dtype
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 
