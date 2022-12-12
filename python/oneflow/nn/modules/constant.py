@@ -378,8 +378,8 @@ def full_op(
         dtype = flow.tensor(fill_value).dtype
     if not isinstance (fill_value, (int, float)):
         # numpy dtype
-        if isinstance (fill_value.dtype, (np.dtype)):
-            fill_value = fill_value.item()
+        assert isinstance (fill_value.dtype, (np.dtype)), "fill_value must be python scalar or numpy scalar."
+        fill_value = fill_value.item()
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 
