@@ -21,11 +21,14 @@ limitations under the License.
 //
 //===----------------------------------------------------------------------===//
 
+#include "OneFlow/UserOpConversion.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "OneFlow/OneFlowOps.h"
@@ -202,8 +205,13 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 namespace constraints {
 
 void populateConstraints(RewritePatternSet& patterns) {
-  patterns.getPDLPatterns().registerConstraintFunction("IsPaddingCouldBeAssimilatedIntoConv",
-                                                       IsPaddingCouldBeAssimilatedIntoConv);
+  auto& pdll_patterns = patterns.getPDLPatterns();
+
+#define PDLL_REGISTER(NAME) pdll_patterns.registerConstraintFunction(#NAME, NAME);
+
+  PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
+
+#undef PDLL_REGISTER
 }
 
 }  // namespace constraints
