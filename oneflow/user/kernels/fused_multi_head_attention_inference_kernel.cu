@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -344,4 +344,4 @@ REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
 
 }  // namespace oneflow
 
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
