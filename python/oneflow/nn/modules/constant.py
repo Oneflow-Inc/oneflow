@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import List, Optional, Union
+import numpy as np
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
@@ -375,6 +376,10 @@ def full_op(
     size = _handle_size_arg(size)
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
+    if not isinstance (fill_value, (int, float)):
+        # numpy dtype
+        if isinstance (fill_value.dtype, (np.dtype)):
+            fill_value = fill_value.item()
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 
