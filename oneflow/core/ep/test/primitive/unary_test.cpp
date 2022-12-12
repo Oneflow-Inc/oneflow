@@ -45,11 +45,11 @@ Scalar GetScalar<Eigen::half>(const Eigen::half& value) {
 template<UnaryOp unary_op, DataType src_data_type, typename Src, DataType dst_data_type,
          typename Dst>
 void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
-                                    const std::set<DeviceType>& device_types, int test_type) {
+                                    const std::set<DeviceType>& device_types) {
   const int num_axes = 4;
   const int broadcast_dim0 = 2;
   const int broadcast_dim1 = 3;
-  const int broadcast_dim2 = 4;
+  const int broadcast_dim2 = 2;
   const int broadcast_dim3 = 2;
 
   const int a_dim0 = 1;
@@ -62,18 +62,17 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   const int a_broadcast3 = 1;
   const Eigen::array<int, 4> a_broadcast = {a_broadcast0, a_broadcast1, a_broadcast2, a_broadcast3};
   Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dim0, a_dim1, a_dim2, a_dim3);
-  Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2,
+  const Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2,
                                            broadcast_dim3);
 
   const std::vector<int64_t> a_strides = {a_dim1*a_dim2*a_dim3, a_dim2*a_dim3, a_dim3, 1};
-  const std::vector<int64_t> c_strides = {broadcast_dim1, 1, broadcast_dim0*broadcast_dim1*broadcast_dim3, broadcast_dim0*broadcast_dim1};
+  const std::vector<int64_t> c_strides = {broadcast_dim3, broadcast_dim0*broadcast_dim2*broadcast_dim3, broadcast_dim0*broadcast_dim3, 1};
 
   a.setRandom();
   std::vector<int64_t> a_dims = {a.dimension(0), a.dimension(1), a.dimension(2), a.dimension(3)};
   std::vector<int64_t> c_dims = {c.dimension(0), c.dimension(1), c.dimension(2), c.dimension(3)};
 
-  const Eigen::array<int, 4> shuffle = {2, 3, 0, 1};
-  Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a = a.broadcast(a_broadcast).template cast<Dst>().shuffle(shuffle);
+  Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a = a.broadcast(a_broadcast).template cast<Dst>();
   
   const int64_t a_size           = a.size() * sizeof(Src);
   const int64_t c_size           = c.size() * sizeof(Dst);
@@ -124,26 +123,27 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
     d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
     CHECK_JUST(stream.stream()->Sync());
 
-    Eigen::Map<Eigen::Matrix<Dst, 1, Eigen::Dynamic>, Eigen::Unaligned> eigen_out
-      (reinterpret_cast<Dst*>(broadcast_output.ptr()), c.size());
-    Eigen::Map<Eigen::Matrix<Dst, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
-        reinterpret_cast<Dst*>(output.ptr()), c.size());
-    ASSERT_TRUE(eigen_out.template isApprox(of_out));
-  }
-}
+    Dst thresh = 1e-4;
+    bool res = true;
 
-template<UnaryOp unary_op, DataType src_data_type, typename Src, DataType dst_data_type,
-         typename Dst>
-void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
-                                    const std::set<DeviceType>& device_types) {
-  TestElementwiseBroadcastUnary<unary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, 0);
-  TestElementwiseBroadcastUnary<unary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, 1);
-  TestElementwiseBroadcastUnary<unary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, 2);
-  TestElementwiseBroadcastUnary<unary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, 3);
+    for (int i0 = 0; i0 < broadcast_dim0; i0++) {
+        for (int i1 = 0; i1 < broadcast_dim1; i1++) {
+            for (int i2 = 0; i2 < broadcast_dim2; i2++) {
+                for (int i3 = 0; i3 < broadcast_dim3; i3++) {
+                    #define ABS(x) ((x > 0) ? (x) : (-x))
+                    const size_t src_index = broadcast_dim1*broadcast_dim2*broadcast_dim3*i0 + broadcast_dim2*broadcast_dim3*i1
+                        + broadcast_dim3*i2 + i3;
+                    const size_t dst_index = broadcast_dim3*i0 + broadcast_dim0*broadcast_dim2*broadcast_dim3*i1
+                         + broadcast_dim0*broadcast_dim3*i2 + i3;
+                    if (ABS(reinterpret_cast<Dst*>(broadcast_output.ptr())[src_index] - reinterpret_cast<Dst*>(output.ptr())[dst_index]) > thresh) {
+                        res = false;
+                    }
+                }
+            }
+        }
+    }
+    ASSERT_TRUE(res);
+  }
 }
 
 template<UnaryOp unary_op>

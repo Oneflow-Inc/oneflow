@@ -212,15 +212,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)
-            // For Float Type OP
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_FLOATING_MATH_OP_SEQ,
-                                             CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
-
-            // For Int Type OP
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_INT_MATH_OP_SEQ, CPU_PRIMITIVE_INT_TYPE_SEQ)};
+                                             UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY

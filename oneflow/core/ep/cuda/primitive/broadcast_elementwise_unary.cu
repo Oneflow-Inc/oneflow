@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 // #include "oneflow/core/cuda/elementwise.cuh"
 
+#include "stdio.h"
+
 namespace oneflow {
 
 namespace ep {
@@ -107,6 +109,7 @@ __global__ void BroadcastElementwiseUnaryGpu(
     if (!params.dst_is_contiguous) {
       dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
     }
+    // printf("dst_index(%d, %d, %d, %d) dst_index %d\n", dst_offet, dst_index);
     dst[dst_offset] = dst_pack;
   }
 }
@@ -211,11 +214,12 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
   // TODO(zzk): this pack has bug, will be fixed in future
-  // if (src_enable_pack && dst_enable_pack) {
-  //   pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
-  //   src,
-  //                                                   simplified_dst_dims, dst);
-  // }
+   if (src_enable_pack && dst_enable_pack) {
+     pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
+     src,
+                                                     simplified_dst_dims, dst);
+  }
+  printf("pack size: %d\n", pack_size);
   bool continuous_output = true;
   for (int i = simplified_num_dims - 1; i >= 0; i--) {
     if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
@@ -228,6 +232,10 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   }
   simplified_src_dims[simplified_num_dims - 1] /= pack_size;
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
+  for (int i = 0; i < simplified_num_dims - 1; i++) {
+    simplified_src_strides[i] /= pack_size;
+    simplified_dst_strides[i] /= pack_size;
+  }
   DispatchNumDims<op, Src, Dst>(stream, pack_size, simplified_num_dims, simplified_src_dims,
                                 simplified_src_strides, src, simplified_dst_dims,
                                 simplified_dst_strides, dst, continuous_output, attr0, attr1);
@@ -399,15 +407,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
-            // For Float Type OP
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_FLOATING_MATH_OP_SEQ,
-                                             CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
-
-            // For Int Type OP
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_INT_MATH_OP_SEQ, CUDA_PRIMITIVE_INT_TYPE_SEQ)};
+                                             UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
