@@ -340,6 +340,7 @@ import oneflow.utils.tensor
 import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow._oneflow_internal import to_dlpack
 from oneflow.framework.type_tensor import *
 
 from oneflow.framework.tensor import zero_
