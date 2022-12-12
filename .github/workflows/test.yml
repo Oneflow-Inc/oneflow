@@ -210,7 +210,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache]
-    timeout-minutes: 120
+    timeout-minutes: 80
     strategy:
       fail-fast: true
       max-parallel: 5
