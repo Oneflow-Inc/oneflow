@@ -29,6 +29,14 @@ struct MultiScaleMulParam {
   size_t size;
 };
 
+constexpr int64_t kMultiReduceScaleMulPackSize = 64;
+
+template<typename T>
+struct MultiScaleMulParamsPack {
+  MultiScaleMulParam<T> params[kMultiReduceScaleMulPackSize];
+  size_t size;
+};
+
 template<DeviceType device_type, typename T>
 struct MultiScaleMul {
   void operator()(ep::Stream* stream, std::vector<MultiScaleMulParam<T>>& params, T* scale);

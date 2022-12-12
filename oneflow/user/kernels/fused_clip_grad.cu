@@ -21,14 +21,6 @@ namespace oneflow {
 
 namespace {
 
-constexpr int64_t kMultiReduceScaleMulPackSize = 64;
-
-template<typename T>
-struct MultiScaleMulParamsPack {
-  MultiScaleMulParam<T> params[kMultiReduceScaleMulPackSize];
-  size_t size;
-};
-
 template<typename T>
 __global__ void MultiBlockScaleMulGpu(MultiScaleMulParamsPack<T> pack_params, T* scale) {
   T t = *scale;

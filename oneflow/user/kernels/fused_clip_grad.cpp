@@ -17,14 +17,42 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/multi_reduce_kernel_util.h"
 #include "oneflow/user/kernels/fused_clip_grad_util.h"
 #include <cmath>
 
 namespace oneflow {
 
+namespace {
+
+size_t InferFusedClipGradTempStorageSize(user_op::InferContext* ctx) {
+  auto input_size = ctx->input_size("model_diff");
+  if (input_size == 0) { return 0; }
+  int64_t max_elem_cnt = 0;
+  int64_t pack_size = 0;
+  int32_t num_blocks = 0;
+  for (size_t i = 0; i < input_size; ++i) {
+    int64_t elem_cnt = ctx->InputShape("model_diff", i).elem_cnt();
+    max_elem_cnt = std::max(max_elem_cnt, elem_cnt);
+    pack_size++;
+    if (pack_size == kMultiReduceScaleMulPackSize || i == input_size - 1) {
+      CHECK_LT(max_elem_cnt, std::numeric_limits<int32_t>::max());
+      num_blocks += BlocksNum4ThreadsNum(static_cast<int32_t>(max_elem_cnt));
+      max_elem_cnt = 0;
+      pack_size = 0;
+    }
+  }
+  CHECK_LT(num_blocks, kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock)
+      << "Too much blocks needed for computing " << ctx->op_name() << ", should be less than "
+      << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock
+      << ", but got " << num_blocks;
+  size_t elem_size = GetSizeOfDataType(ctx->InputDType("model_diff", 0));
+  return GetCudaAlignedSize(num_blocks * elem_size * 2);
+}
+
 template<DeviceType device_type, typename T>
-class FusedClipGradKernel final : public user_op::OpKernel {
+class FusedClipGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   FusedClipGradKernel() = default;
   ~FusedClipGradKernel() override = default;
@@ -44,10 +72,8 @@ class FusedClipGradKernel final : public user_op::OpKernel {
       params[i].data = x->dptr<T>();
     }
 
-    T *temp = nullptr;
+    T* temp = (ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0))->mut_dptr<T>();
     T *total_norm = nullptr;
-    // TODO: caculate the needing memory
-    OF_CUDA_CHECK(cudaMalloc(&temp, 512 * sizeof(T)));
     OF_CUDA_CHECK(cudaMalloc(&total_norm, sizeof(T)));
 
     bool not_special = false;
@@ -73,8 +99,6 @@ class FusedClipGradKernel final : public user_op::OpKernel {
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), total_norm, temp);
     }
-
-    OF_CUDA_CHECK(cudaFree(temp));
 
     T *h_total_norm = nullptr;
     OF_CUDA_CHECK(cudaMallocHost(&h_total_norm, sizeof(T)));
@@ -104,14 +128,15 @@ class FusedClipGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                                    \
-  REGISTER_USER_KERNEL("fused_clip_grad")                                                 \
-      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       && (user_op::HobDataType("model_diff", 0) == GetDataType<dtype>::value));
+} // namespace
 
-#ifdef WITH_CUDA
+#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                                            \
+  REGISTER_USER_KERNEL("fused_clip_grad")                                                         \
+      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<dtype>::value))   \
+      .SetInferTmpSizeFn(InferFusedClipGradTempStorageSize);
+
 REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, float);
-#endif
 
 }  // namespace oneflow
