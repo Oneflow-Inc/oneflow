@@ -198,7 +198,7 @@ class TestConstantModule(flow.unittest.TestCase):
         shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
         y = torch.full(shape, 2.0, requires_grad=True)
         return y
-    
+
     @autotest(n=5)
     def test_full_with_random_data_numpy_scalar(test_case):
         device = random_device()
