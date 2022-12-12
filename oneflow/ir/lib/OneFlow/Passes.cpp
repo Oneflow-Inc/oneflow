@@ -371,24 +371,6 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
   return true;
 }
 
-bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after,
-                                         ::mlir::StringAttr data_format) {
-  if (padding_before.size() == 4 && padding_after.size() == 4) {
-    if (padding_before.getValue().equals(padding_after.getValue())) {
-      if (data_format.str() == "channels_first") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-      if (data_format.str() == "channels_last") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-    }
-  }
-  return false;
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -961,8 +943,8 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   };
 
   std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
-  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
-                                            TypeRange(ArrayRef<Value>(proto.second)));
+  auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(proto.first))),
+                                            TypeRange(ValueRange(ArrayRef<Value>(proto.second))));
   auto func_name = "wrap" + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) {
@@ -1220,7 +1202,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
-  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }

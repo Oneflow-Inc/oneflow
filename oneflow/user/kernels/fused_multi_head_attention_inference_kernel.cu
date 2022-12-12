@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -256,7 +256,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
     const static bool enable_trt_flash_attn =
-        ParseBooleanFromEnv("ONEFLOW_KERENL_ENABLE_TRT_FLASH_ATTN_IMPL", false)
+        ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", false)
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
     const bool inputs_contiguous =
@@ -344,4 +344,4 @@ REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
 
 }  // namespace oneflow
 
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
