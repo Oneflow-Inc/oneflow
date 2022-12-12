@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OneFlowDataTypeConversion.h"
+#include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Transform/AggregateComputeOps.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -28,6 +30,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 #include "OneFlow/OneFlowUtils.h"
+#include "OneFlow/UserOpConversion.h"
 
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -178,12 +181,12 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 }
 
 Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
-  Type ret = this->GetBuilder().getNoneType();
+  Type ret{};
   job_wrapper_.QueryLogicalBlob(
       lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
                               ::oneflow::DataType dt) {
-        if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
-          ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
+        if (auto t = getTypeFromOneFlowDataType(GetMLIRContext(), dt)) {
+          ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t);
         } else {
           llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
         }
@@ -714,7 +717,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(ConvertUserOpAttributes(op, *op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }
@@ -732,7 +735,7 @@ LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
   for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
     auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-    std::string new_val = GetOutputLbn(result).getValue();
+    std::string new_val = user_op::GetOutputLbn(result).getValue();
     job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
         &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
   }
@@ -764,11 +767,13 @@ LogicalResult JobImporter::ConvertOutputOp(OutputOp op, ::oneflow::Job& job) {
 
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
   if (!blob_conf.has_data_type()) { return Type{}; }
-  if (!blob_conf.has_shape()) { return Type{}; }
-  auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type());
-  if (!data_type.hasValue()) { return Type{}; }
-  return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
-                               *data_type);
+  if (!blob_conf.has_shape()) { return Type{}; };
+  if (auto data_type = getTypeFromOneFlowDataType(GetMLIRContext(), blob_conf.data_type())) {
+    return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
+                                 data_type);
+  } else {
+    return Type{};
+  }
 }
 
 void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
@@ -816,6 +821,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
+  }
+  if (!job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS", false)) {
+    pm.addPass(oneflow::createFuseNormalizationOps());
   }
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
