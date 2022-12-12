@@ -50,7 +50,7 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   const int broadcast_dim0 = 2;
   const int broadcast_dim1 = 3;
   const int broadcast_dim2 = 2;
-  const int broadcast_dim3 = 2;
+  const int broadcast_dim3 = 4;
 
   const int a_dim0 = 1;
   const int a_dim1 = broadcast_dim1;
@@ -62,20 +62,19 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   const int a_broadcast3 = 1;
   const Eigen::array<int, 4> a_broadcast = {a_broadcast0, a_broadcast1, a_broadcast2, a_broadcast3};
   Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dim0, a_dim1, a_dim2, a_dim3);
-  const Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2,
-                                           broadcast_dim3);
 
   const std::vector<int64_t> a_strides = {a_dim1*a_dim2*a_dim3, a_dim2*a_dim3, a_dim3, 1};
-  const std::vector<int64_t> c_strides = {broadcast_dim3, broadcast_dim0*broadcast_dim2*broadcast_dim3, broadcast_dim0*broadcast_dim3, 1};
+  const std::vector<int64_t> c_strides = {broadcast_dim2*broadcast_dim3, broadcast_dim0*broadcast_dim2*broadcast_dim3, 1, broadcast_dim2};
 
   a.setRandom();
   std::vector<int64_t> a_dims = {a.dimension(0), a.dimension(1), a.dimension(2), a.dimension(3)};
-  std::vector<int64_t> c_dims = {c.dimension(0), c.dimension(1), c.dimension(2), c.dimension(3)};
+  std::vector<int64_t> c_dims = {broadcast_dim0, broadcast_dim1, broadcast_dim2, broadcast_dim3};
 
   Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a = a.broadcast(a_broadcast).template cast<Dst>();
   
   const int64_t a_size           = a.size() * sizeof(Src);
-  const int64_t c_size           = c.size() * sizeof(Dst);
+  const int64_t c_count          = std::accumulate(c_dims.begin(), c_dims.end(), 1, std::multiplies<int64_t>());
+  const int64_t c_size           = c_count * sizeof(Dst);
   const int64_t broadcast_a_size = broadcast_a.size() * sizeof(Dst);
 
   ASSERT_TRUE(c_size == broadcast_a_size);
@@ -100,7 +99,7 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
     ASSERT_TRUE(unary.operator bool());
     h2d->Launch(stream.stream(), device_broadcast_a.ptr(), input_broadcast_a.ptr(), broadcast_a_size);
 
-    unary->Launch(stream.stream(), device_broadcast_a.ptr(), device_broadcast_c.ptr(), c.size()); // c.size() is for count
+    unary->Launch(stream.stream(), device_broadcast_a.ptr(), device_broadcast_c.ptr(), c_count); // c.size() is for count
 
     d2h->Launch(stream.stream(), broadcast_output.ptr(), device_broadcast_c.ptr(), c_size); // c_size is in bytes
     CHECK_JUST(stream.stream()->Sync());
@@ -133,8 +132,7 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
                     #define ABS(x) ((x > 0) ? (x) : (-x))
                     const size_t src_index = broadcast_dim1*broadcast_dim2*broadcast_dim3*i0 + broadcast_dim2*broadcast_dim3*i1
                         + broadcast_dim3*i2 + i3;
-                    const size_t dst_index = broadcast_dim3*i0 + broadcast_dim0*broadcast_dim2*broadcast_dim3*i1
-                         + broadcast_dim0*broadcast_dim3*i2 + i3;
+                    const size_t dst_index = broadcast_dim2*broadcast_dim3*i0 + broadcast_dim0*broadcast_dim2*broadcast_dim3*i1 + i2 + broadcast_dim2*i3;
                     if (ABS(reinterpret_cast<Dst*>(broadcast_output.ptr())[src_index] - reinterpret_cast<Dst*>(output.ptr())[dst_index]) > thresh) {
                         res = false;
                     }
