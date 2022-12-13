@@ -49,7 +49,7 @@ def _test_data_local(test_case, device, fn):
     data_1 = flow.zeros([16, 64, 128, 128]).to(device)
     data_2 = flow.zeros([16, 64, 128, 128]).to(device)
 
-    class GlobalRandnGraph(flow.nn.Graph):
+    class NormalGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
@@ -57,7 +57,7 @@ def _test_data_local(test_case, device, fn):
             fn(data_1).to(device)
             return data_1
 
-    model = GlobalRandnGraph()
+    model = NormalGraph()
     lazy_x = model()
     fn(data_2)
 
@@ -70,7 +70,7 @@ def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
     data_1 = data_1.to_global(placement=placement, sbp=sbp)
     data_2 = data_2.to_global(placement=placement, sbp=sbp)
 
-    class GlobalRandnGraph(flow.nn.Graph):
+    class GlobalNormalGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
@@ -79,7 +79,7 @@ def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
             fn(data_1, placement, sbp)
             return data_1
 
-    model = GlobalRandnGraph()
+    model = GlobalNormalGraph()
     lazy_x = model()
 
     flow.manual_seed(233)
