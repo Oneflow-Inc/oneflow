@@ -56,7 +56,12 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
         retain_graph=True,
     )[0]
     test_case.assertTrue(
-        np.allclose(dx.pytorch.detach().cpu().numpy(), dx.oneflow.detach().numpy())
+        np.allclose(
+            dx.pytorch.detach().cpu().numpy(),
+            dx.oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
+        )
     )
 
     dw = torch.autograd.grad(
@@ -67,7 +72,12 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
         retain_graph=True,
     )[0]
     test_case.assertTrue(
-        np.allclose(dw.pytorch.detach().cpu().numpy(), dw.oneflow.detach().numpy())
+        np.allclose(
+            dw.pytorch.detach().cpu().numpy(),
+            dw.oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
+        )
     )
 
     # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
@@ -88,10 +98,20 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     )
 
     test_case.assertTrue(
-        np.allclose(ddw_pytorch.detach().cpu().numpy(), ddw_oneflow.detach().numpy())
+        np.allclose(
+            ddw_pytorch.detach().cpu().numpy(),
+            ddw_oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
+        )
     )
     test_case.assertTrue(
-        np.allclose(ddx_pytorch.detach().cpu().numpy(), ddx_oneflow.detach().numpy())
+        np.allclose(
+            ddx_pytorch.detach().cpu().numpy(),
+            ddx_oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
+        )
     )
 
     dgrad_dx = torch.autograd.grad(
@@ -103,7 +123,10 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     )[0]
     test_case.assertTrue(
         np.allclose(
-            dgrad_dx.pytorch.detach().cpu().numpy(), dgrad_dx.oneflow.detach().numpy()
+            dgrad_dx.pytorch.detach().cpu().numpy(),
+            dgrad_dx.oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
         )
     )
 
@@ -116,7 +139,10 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     )[0]
     test_case.assertTrue(
         np.allclose(
-            dgrad_dw.pytorch.detach().cpu().numpy(), dgrad_dw.oneflow.detach().numpy()
+            dgrad_dw.pytorch.detach().cpu().numpy(),
+            dgrad_dw.oneflow.detach().numpy(),
+            rtol=1e-4,
+            atol=1e-5,
         )
     )
 
