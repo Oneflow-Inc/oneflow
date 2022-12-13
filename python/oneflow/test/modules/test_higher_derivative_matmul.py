@@ -54,7 +54,12 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
             retain_graph=True,
         )[0]
         test_case.assertTrue(
-            np.allclose(da.pytorch.detach().cpu().numpy(), da.oneflow.detach().numpy())
+            np.allclose(
+                da.pytorch.detach().cpu().numpy(),
+                da.oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
+            )
         )
 
         db = torch.autograd.grad(
@@ -65,7 +70,12 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
             retain_graph=True,
         )[0]
         test_case.assertTrue(
-            np.allclose(db.pytorch.detach().cpu().numpy(), db.oneflow.detach().numpy())
+            np.allclose(
+                db.pytorch.detach().cpu().numpy(),
+                db.oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
+            )
         )
 
         # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
@@ -87,12 +97,18 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
 
         test_case.assertTrue(
             np.allclose(
-                ddb_pytorch.detach().cpu().numpy(), ddb_oneflow.detach().numpy()
+                ddb_pytorch.detach().cpu().numpy(),
+                ddb_oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
             )
         )
         test_case.assertTrue(
             np.allclose(
-                dda_pytorch.detach().cpu().numpy(), dda_oneflow.detach().numpy()
+                dda_pytorch.detach().cpu().numpy(),
+                dda_oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
             )
         )
 
@@ -107,6 +123,8 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
             np.allclose(
                 dgrad_da.pytorch.detach().cpu().numpy(),
                 dgrad_da.oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
             )
         )
 
@@ -121,6 +139,8 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
             np.allclose(
                 dgrad_db.pytorch.detach().cpu().numpy(),
                 dgrad_db.oneflow.detach().numpy(),
+                rtol=1e-4,
+                atol=1e-5,
             )
         )
 
