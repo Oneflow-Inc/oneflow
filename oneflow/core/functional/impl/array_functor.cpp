@@ -3659,37 +3659,38 @@ class UniqueWithCountsFunctor {
  private:
   std::shared_ptr<OpExpr> unique_op_;
   std::shared_ptr<OpExpr> unique_with_counts_op_;
+};
 
-  class BaddBmmFunctor {
-   public:
-    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                             const std::shared_ptr<one::Tensor>& batch1,
-                             const std::shared_ptr<one::Tensor>& batch2, const double& beta,
-                             const double& alpha) const {
-      const int32_t batch1_ndim = batch1->ndim();
-      const int32_t batch2_ndim = batch2->ndim();
-      CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
-      CHECK_EQ_OR_RETURN(batch2_ndim, 3) << Error::RuntimeError() << "batch2 must be a 3D tensor";
-      CHECK_EQ_OR_RETURN(batch1->dim(0), batch2->dim(0))
-          << Error::RuntimeError() << "batch1 and batch2 must have same number of batches, got ,"
-          << batch1->dim(0) << " and " << batch2->dim(0);
-      CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
-          << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
-          << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
+class BaddBmmFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& batch1,
+                           const std::shared_ptr<one::Tensor>& batch2, const double& beta,
+                           const double& alpha) const {
+    const int32_t batch1_ndim = batch1->ndim();
+    const int32_t batch2_ndim = batch2->ndim();
+    CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch2_ndim, 3) << Error::RuntimeError() << "batch2 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch1->dim(0), batch2->dim(0))
+        << Error::RuntimeError() << "batch1 and batch2 must have same number of batches, got ,"
+        << batch1->dim(0) << " and " << batch2->dim(0);
+    CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
+        << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
+        << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
 
-      if (beta == 0.0) {
-        // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
-        // optimize speed and bandwidth in cuda.
-        return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
-      } else {
-        // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
-        return JUST(
-            functional::Add(JUST(functional::ScalarMul(beta, input)),
-                            JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
-                            /*alpha=*/1.0, /*inplace=*/false));
-      }
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
     }
-  };
+  }
+};
 
 }  // namespace impl
 
