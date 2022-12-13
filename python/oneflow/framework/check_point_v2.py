@@ -19,6 +19,8 @@ import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 import pickle
+import json
+from collections import OrderedDict
 
 import numpy as np
 from google.protobuf import text_format
@@ -32,6 +34,7 @@ import oneflow.framework.id_util as id_util
 from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
 import pickle
+from oneflow.nn.graph import GraphTensor
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
@@ -170,10 +173,17 @@ def tensor_getstate(self):
             rel_dir_name = f"global_tensor_{self.global_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_global(
-                sbp=flow.sbp.broadcast,
-                placement=flow.placement("cpu", [global_src_dsk_rank]),
-            ).to_local()
+            # Boxing to cpu firstly to avoid extra gpu memory usage
+            tensor = (
+                self.to_global(
+                    sbp=self.sbp, placement=flow.placement("cpu", self.placement.ranks)
+                )
+                .to_global(
+                    sbp=flow.sbp.broadcast,
+                    placement=flow.placement("cpu", [global_src_dsk_rank]),
+                )
+                .to_local()
+            )
         if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 
@@ -348,6 +358,43 @@ def load(
     return res["data"]
 
 
+def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
+    path: Path = Path(path)
+
+    _embedding_info_dict = {"embedding": []}
+    os.makedirs(path, exist_ok=True)
+
+    _save_one_embedding_info_flag = False
+
+    for module in state_dict.keys():
+        if not isinstance(state_dict[module], OrderedDict):
+            continue
+        for module_key in state_dict[module].keys():
+            _info_dict = {}
+            if "OneEmbeddingKeyValueOptions" in module_key:
+                if not _save_one_embedding_info_flag:
+                    _save_one_embedding_info_flag = True
+
+                module_key_prefix = module_key.rstrip("OneEmbeddingKeyValueOptions")
+
+                _embedding_info_dict["embedding"].append(
+                    {
+                        "snapshot": state_dict["module"][
+                            module_key_prefix + "OneEmbeddingSnapshot"
+                        ],
+                        "kv_options": json.loads(
+                            state_dict["module"][
+                                module_key_prefix + "OneEmbeddingKeyValueOptions"
+                            ]
+                        ),
+                    }
+                )
+
+    if _save_one_embedding_info_flag:
+        with open(os.path.join(path, "one_embedding_options.json"), "w") as f:
+            f.write(json.dumps(_embedding_info_dict, indent=4))
+
+
 def save(
     obj: Any, path: Union[str, Path], global_dst_rank: Optional[int] = None,
 ) -> None:
@@ -375,7 +422,12 @@ def save(
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():
-            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+            _save_tensor_to_disk(
+                x.to(Tensor),
+                path / f"{x.to(GraphTensor).name_prefix}{x.to(GraphTensor).name}",
+            )
+
+        save_one_embedding_info(obj.state_dict(), path)
 
         return
 

@@ -16,9 +16,9 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
-import copy
 
 import oneflow as flow
+from oneflow.nn.graph import GraphModule
 import oneflow.unittest
 
 
@@ -70,8 +70,8 @@ class MyGraph(flow.nn.Graph):
             and module2.param.is_global
             and module1.param.placement != module2.param.placement
         ):
-            self.m1.config.stage_id = 0
-            self.m2.config.stage_id = 1
+            self.m1.to(GraphModule).set_stage(0)
+            self.m2.to(GraphModule).set_stage(1)
 
         if optimizer is not None:
             self.add_optimizer(optimizer)
@@ -172,10 +172,10 @@ class TensorGenerator(object):
         return self.target.to_local()
 
     def local_param1(self):
-        return copy.deepcopy(self.param1).to_local()
+        return self.param1.clone().to_local()
 
     def local_param2(self):
-        return copy.deepcopy(self.param2).to_local()
+        return self.param2.clone().to_local()
 
     def global_input(self):
         if self.input_sbp is None and self.placement1 is None:
@@ -191,13 +191,13 @@ class TensorGenerator(object):
 
     def global_param1(self):
         if self.param1_sbp is None and self.placement1 is None:
-            return copy.deepcopy(self.param1)
+            return self.param1.clone()
 
         return self.param1.to_global(placement=self.placement1, sbp=self.param1_sbp)
 
     def global_param2(self):
         if self.param2_sbp is None and self.placement2 is None:
-            return copy.deepcopy(self.param2)
+            return self.param2.clone()
 
         return self.param2.to_global(placement=self.placement2, sbp=self.param2_sbp)
 
@@ -259,15 +259,19 @@ def _compare_with_eager(
 
     if parallel_mode is None:
         loss_b = graph_loss.numpy()
-        grad1_b = graph.m1.origin.param.numpy()
-        grad2_b = graph.m2.origin.param.numpy()
+        grad1_b = graph.m1.to(flow.nn.Module).param.numpy()
+        grad2_b = graph.m2.to(flow.nn.Module).param.numpy()
     else:
         ranks = np.array(range(flow.env.get_world_size()))
         placement = flow.placement(device, ranks)
         loss_b = graph_loss.to_global(placement, flow.sbp.broadcast).to_local().numpy()
-        grad1_b = graph.m1.origin.param.to_global(placement, flow.sbp.broadcast)
+        grad1_b = graph.m1.to(flow.nn.Module).param.to_global(
+            placement, flow.sbp.broadcast
+        )
         grad1_b = grad1_b.to_local().numpy()
-        grad2_b = graph.m2.origin.param.to_global(placement, flow.sbp.broadcast)
+        grad2_b = graph.m2.to(flow.nn.Module).param.to_global(
+            placement, flow.sbp.broadcast
+        )
         grad2_b = grad2_b.to_local().numpy()
 
     # compare

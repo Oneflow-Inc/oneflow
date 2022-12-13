@@ -25,6 +25,7 @@ import multiprocessing as python_multiprocessing
 import oneflow.multiprocessing as multiprocessing
 from oneflow._utils import ExceptionWrapper
 import oneflow as flow
+import numpy as np
 
 string_classes = (str, bytes)
 
@@ -368,7 +369,7 @@ class DataLoader(Generic[T_co]):
         if self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
-            else:
+            elif not self._iterator._status_reset:
                 self._iterator._reset(self)
             return self._iterator
         else:
@@ -501,19 +502,22 @@ class _BaseDataLoaderIter(object):
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
-        self._generator = loader.generator
-        self._base_seed = flow.tensor([0], dtype=flow.int64).uniform_().numpy().item()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
+        self._base_seed = flow.randint(
+            0, np.iinfo(np.int64).max, (), generator=loader.generator
+        ).item()
         self._persistent_workers = loader.persistent_workers
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
             self.__class__.__name__
         )
+        self._status_reset = True
 
     def __iter__(self) -> "_BaseDataLoaderIter":
         return self
 
     def _reset(self, loader, first_iter=False):
+        self._status_reset = True
         self._sampler_iter = iter(self._index_sampler)
         self._num_yielded = 0
         self._IterableDataset_len_called = loader._IterableDataset_len_called
@@ -525,6 +529,7 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
+        self._status_reset = False
         if self._sampler_iter is None:
             self._reset()
         data = self._next_data()
@@ -541,6 +546,7 @@ class _BaseDataLoaderIter(object):
             if self._num_workers > 1:
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
+
         return data
 
     next = __next__
@@ -886,7 +892,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
     def __init__(self, loader):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
-
         assert not flow.env.rdma_is_initialized(), (
             "RDMA is initialized! Could not create _MultiProcessingDataLoaderIter any more. "
             "Please make sure Dataloader is created before invoking oneflow.env.init_rdma(). "
@@ -929,7 +934,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     self._auto_collation,
                     self._collate_fn,
                     self._drop_last,
-                    self._generator,
                     self._base_seed,
                     self._worker_init_fn,
                     i,
@@ -1207,9 +1211,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Called when shutting down this `_MultiProcessingDataLoaderIter`.
         # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on
         # the logic of this function.
-        python_exit_status = _utils.python_exit_status
+
+        # See (2) of the note. If Python is shutting down, do no-op.
+        try:
+            python_exit_status = _utils.python_exit_status
+        except AttributeError:
+            # Python is shutting down and `_utils` has been freed
+            assert _utils is None
+            return
         if python_exit_status is True or python_exit_status is None:
-            # See (2) of the note. If Python is shutting down, do no-op.
             return
         # Normal exit when last reference is gone / iterator is depleted.
         # See (1) and the second half of the note.

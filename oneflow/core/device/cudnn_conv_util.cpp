@@ -341,7 +341,10 @@ ManagedCudnnConvResource::ManagedCudnnConvResource(const CudnnConvArgs& args)
 }
 
 ManagedCudnnConvResource::~ManagedCudnnConvResource() {
-  if (handle_ != nullptr) { OF_CUDNN_CHECK(cudnnDestroy(handle_)); }
+  if (handle_ != nullptr) {
+    Singleton<CudnnHandlePool>::Get()->Put(handle_);
+    handle_ = nullptr;
+  }
   if (x_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(x_dptr_)); }
   if (w_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(w_dptr_)); }
   if (y_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(y_dptr_)); }
@@ -349,7 +352,7 @@ ManagedCudnnConvResource::~ManagedCudnnConvResource() {
 }
 
 cudnnHandle_t ManagedCudnnConvResource::cudnn_handle() {
-  if (handle_ == nullptr) { OF_CUDNN_CHECK(cudnnCreate(&handle_)); }
+  if (handle_ == nullptr) { handle_ = Singleton<CudnnHandlePool>::Get()->Get(); }
   return handle_;
 }
 
@@ -392,7 +395,12 @@ bool operator==(const CudnnConvParams& a, const CudnnConvParams& b) {
 }
 
 DataType GetConvDescDataType(DataType data_type, bool pseudo_half) {
-  return (data_type == DataType::kFloat16 && pseudo_half) ? DataType::kFloat : data_type;
+  if (data_type == DataType::kFloat16 && pseudo_half) {
+    return DataType::kFloat;
+  } else if (data_type == DataType::kBFloat16) {
+    return DataType::kFloat;
+  }
+  return data_type;
 }
 
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,

@@ -147,6 +147,8 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
 
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
 
+  bool operator==(const Shape& rhs) const;
+
  private:
   // Set default value here because some constructors are inherited from DimVector
   // TODO(daquexian): remove this field and make it initializied by construction
@@ -170,6 +172,7 @@ namespace std {
 template<>
 struct hash<oneflow::Shape> {
   size_t operator()(const oneflow::Shape& shape) const {
+    if (!shape.is_initialized()) { return 0; }
     size_t ret = shape.NumAxes();
     FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::AddHash(&ret, shape.At(i)); }
     return ret;

@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/api/common/ofblob.h"
+#include "nlohmann/json.hpp"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -23,6 +22,7 @@ limitations under the License.
 #include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
+#include "oneflow/api/cpp/embedding/embedding.h"
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -32,6 +32,8 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/embedding/posix_file.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -52,6 +54,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -107,6 +111,30 @@ Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
   std::vector<int64_t> dims(of_shape.dim_vec().begin(), of_shape.dim_vec().end());
   return Shape(dims);
 }
+
+#ifdef __linux__
+
+void LoadOneEmbedding(const std::string& model_path, const Device& device) {
+  const std::string one_embedding_info_name("one_embedding_options.json");
+  const std::string one_embedding_info_save_path(
+      oneflow::JoinPath(model_path, one_embedding_info_name));
+  if (oneflow::embedding::PosixFile::FileExists(one_embedding_info_save_path)) {
+    std::ifstream one_embedding_info_file(one_embedding_info_save_path);
+    auto one_embedding_json = nlohmann::json::parse(one_embedding_info_file);
+    for (auto& it : one_embedding_json["embedding"]) {
+      const std::string snapshot_path = it["snapshot"];
+      auto kv_options_json = it["kv_options"];
+      std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump(),
+                                                                  /*local_rank_id=*/0,
+                                                                  /*rank_id=*/0,
+                                                                  /*world_size=*/1);
+      embedding::LoadSnapshot(snapshot_path, embedding_name, /*local_rank_id=*/0,
+                              /*rank_id=*/0);
+    }
+  }
+}
+
+#endif  // __linux__
 
 }  // namespace
 
@@ -202,6 +230,9 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
+#ifdef __linux__
+  LoadOneEmbedding(model_path, device);
+#endif  // __linux__
   Graph graph(model_path, device);
   return graph;
 }
@@ -374,11 +405,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback = [&](uint64_t of_blob_ptr) {
-      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-          of_blob_ptr, buffer.data(),
-          variable_tensor->shape()->elem_cnt()
-              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    const auto& callback = [&](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(),
+                     variable_tensor->shape()->elem_cnt()
+                         * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()),
+                     eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }

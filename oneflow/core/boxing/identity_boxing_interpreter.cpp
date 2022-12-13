@@ -51,7 +51,7 @@ Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbo
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
                                              *tensor->shape(), tensor->dtype(),
-                                             /* sync_data */ false, /*copy=*/false));
+                                             /* sync_data */ false, /*copy=*/true));
 }
 
 COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocalCachedCopiable),

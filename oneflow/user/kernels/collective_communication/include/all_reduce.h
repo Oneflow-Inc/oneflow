@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_
+#ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_
+#define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_
 
 #include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 
@@ -42,4 +42,4 @@ inline bool IsAllReduceRegistered(DeviceType device_type) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_
+#endif  // ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_ALL_REDUCE_H_

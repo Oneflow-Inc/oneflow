@@ -115,102 +115,7 @@ def FusedScaleTrilPattern : Pat<
   ]
 >;
 
-def FusePadAndConv2d :
-  NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
-
-def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
-
-def FusedPadConv2DPattern : Pat<
-  (
-    OneFlow_Conv2DOp : $conv_2d_res
-    (
-      OneFlow_PadOp : $pad_res
-        $x,
-        $pad_op_name,
-        $pad_device_tag,
-        $pad_device_name,
-        $pad_scope_symbol_id,
-        $pad_hierarchy,
-        $pad_op_padding_before,
-        $pad_op_padding_after,
-        $pad_op_padding,
-        $floating_constant_value,
-        $integral_constant_value
-    ),
-    $weight,
-    $bias,
-    $bias_multiplier,
-    $conv2d_op_name,
-    $conv2d_device_tag,
-    $conv2d_device_name,
-    $conv2d_scope_symbol_id,
-    $conv2d_hierarchy,
-    $operand_segment_sizes,
-    $filters,
-    $padding_before,
-    $data_format,
-    $kernel_size,
-    $strides,
-    $dilation_rate,
-    $groups
-  ),
-  (FusePadAndConv2d $conv_2d_res, $pad_res),
-  [
-    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after, $data_format)
-  ]
->;
-
-def GetDefaultSeed :
-  NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
-
-def FusedBiasAddMaskScale :
-  NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
-
 def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
-
-def FusedBiasAddDropoutPattern : Pattern<
-  (
-    OneFlow_DropoutOp: $dropout_res
-    (
-      OneFlow_BiasAddOp: $bias_add_res
-        $a,
-        $b,
-        $bias_add_op_name,
-        $bias_add_device_tag,
-        $bias_add_device_name,
-        $bias_add_scope_symbol_id,
-        $bias_add_hierarchy,
-        $bias_add_op_axis
-    ),
-    $_add_to_output,
-    $dropout_op_name,
-    $dropout_device_tag,
-    $dropout_device_name,
-    $dropout_scope_symbol_id,
-    $dropout_hierarchy,
-    $dropout_op_rate
-  ),
-  [
-    (
-      FusedBiasAddMaskScale
-      $dropout_res__0,
-      $bias_add_res,
-      (
-        OneFlow_RandomMaskLikeOp : $mask
-          $a,
-          $bias_add_op_name,
-          $dropout_device_tag,
-          $dropout_device_name,
-          $dropout_scope_symbol_id,
-          $dropout_hierarchy,
-          $dropout_op_rate,
-          (GetDefaultSeed)
-      )
-    ),
-    (replaceWithValue $mask)
-  ],
-  [(IsAddToOutputNone $_add_to_output)]
->;
 
 // TODO: use either to merge two patterns
 def FusedScaleTrilPattern2 : Pat<
@@ -259,99 +164,7 @@ def FusedScaleTrilPattern2 : Pat<
   ]
 >;
 
-def FusedBiasAddGeluPattern : Pat<
-  (
-    OneFlow_GeluOp : $gelu_op
-    (
-      OneFlow_BiasAddOp
-        $a,
-        $b,
-        $bias_add_op_name,
-        $bias_add_device_tag,
-        $bias_add_device_name,
-        $bias_add_scope_symbol_id,
-        $bias_add_hierarchy,
-        $axis
-    ),
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy
-  ),
-  (OneFlow_FusedBiasAddGeluOp $a, $b,
-    $gelu_op_name,
-    $gelu_device_tag,
-    $gelu_device_name,
-    $gelu_scope_symbol_id,
-    $gelu_hierarchy,
-    $axis
-  ),
-  []
->;
-
 def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
-// TODO: check mean and inv_variance are not used
-def NormalizationAddReluPattern : Pattern<
-  /* match */ (
-    OneFlow_ReluOp (
-      OneFlow_Add2Op (
-          OneFlow_NormalizationOp:$results
-            $bn_x,
-            $bn_moving_mean,
-            $bn_moving_variance,
-            $bn_gamma,
-            $bn_beta,
-            $bn__add_to_output, // TODO: check this is none
-            $bn_op_name,
-            $bn_device_tag,
-            $bn_device_name,
-            $bn_scope_symbol_id,
-            $bn_hierarchy,
-            $operand_segment_sizes,
-            $result_segment_sizes,
-            $bn_axis,
-            $bn_epsilon,
-            $bn_training,
-            $bn_momentum
-      ),
-      $addend,
-      $add_op_name,
-      $add_device_tag,
-      $add_device_name,
-      $add_scope_symbol_id,
-      $add_hierarchy
-    ),
-    $relu_op_name,
-    $relu_device_tag,
-    $relu_device_name,
-    $relu_scope_symbol_id,
-    $relu_hierarchy
-  ),
-  /* replace */ [(
-    OneFlow_NormalizationAddReluOp: $fuse_results
-    $bn_x,
-    $addend,
-    (GetFirstValue $bn_moving_mean),
-    (GetFirstValue $bn_moving_variance),
-    $bn_gamma,
-    $bn_beta,
-    $bn_op_name,
-    $bn_device_tag,
-    $bn_device_name,
-    $bn_scope_symbol_id,
-    $bn_hierarchy,
-    /* not used */ $operand_segment_sizes,
-    /* not used */ $result_segment_sizes,
-    $bn_axis,
-    $bn_epsilon,
-    $bn_training,
-    $bn_momentum
-  ),
-  (replaceWithValue $fuse_results__0),
-  ],
-  [(IsTraingTrue $bn_training)]
->;
 
 def IsArg: Constraint<CPred<"$0.dyn_cast<::mlir::BlockArgument>()">, "">;
 def getResultTypes : NativeCodeCall<"$0.getResultTypes()">;
@@ -379,6 +192,7 @@ def FuseConv2DBatchNormPattern : Pat<
             OneFlow_FrozenVariableOp : $variable_conv_2d_weight
               $value,
               $v_op_name,
+              $v_data_type,
               $v_device_tag,
               $v_device_name,
               $v_scope_symbol_id,
@@ -386,7 +200,7 @@ def FuseConv2DBatchNormPattern : Pat<
               $v_nd_sbp
           ),
           $bias,
-          $bias_multiplier,
+          $_add_to_output,
           $conv2d_op_name,
           $conv2d_device_tag,
           $conv2d_device_name,
@@ -422,26 +236,6 @@ def FuseConv2DBatchNormPattern : Pat<
     FuseConv2DBatchNorm $conv_2d_op, $batch_norm_op__0
   ),
   []
->;
-
-def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
-
-def DeleteSameDtypeCastOpPattern : Pat<
-  (
-    OneFlow_CastOp : $res
-     $x,
-     $cast_op_name,
-     $cast_device_tag,
-     $cast_device_name,
-     $cast_scope_symbol_id,
-     $cast_hierarchy,
-     $dtype,
-     $pin_memory
-  ),
-  (
-    replaceWithValue $x
-  ),
-  [(IsSameDtype $res, $x)]
 >;
 
 #endif // ONEFLOW_PATTERNS

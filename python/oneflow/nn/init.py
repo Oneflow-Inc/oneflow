@@ -14,17 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import math
+
+import numpy as np
 
 import oneflow as flow
-from oneflow.framework.tensor import _copy_from_numpy_to_eager_local_tensor, Tensor
-from oneflow.ops.util.initializer_util import calc_gain as calculate_gain
+from oneflow.ops.util.initializer_util import (
+    calc_gain as calculate_gain,
+    calc_fan,
+    get_data_format,
+)
+from oneflow.framework.tensor import Tensor
+import oneflow.framework.dtype as dtype_util
 import oneflow.ops.initializer_register as initializer_register
 
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     # NOTE: initializing weight should not enable autograd mode
     if random_seed is None:
-        random_seed = flow.default_generator.initial_seed()
+        random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
     initializer = initializer_register.get_initializer(
         initializer_conf, random_seed, shape
@@ -42,28 +50,64 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
             )
             tensor.copy_(src_tensor)
         else:
-            _copy_from_numpy_to_eager_local_tensor(
-                tensor, np_arr,
-            )
+            shared_mem_tensor = flow.from_numpy(np_arr)
+            tensor[...] = shared_mem_tensor
     return tensor
 
 
 def uniform_(tensor, a=0.0, b=1.0):
-    if isinstance(a, Tensor):
-        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
-        a = a.numpy().item()
-    if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
-        b = b.numpy().item()
-    initializer_conf = initializer_register.random_uniform_initializer(
-        minval=a, maxval=b, dtype=tensor.dtype
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    r"""
+    
+    Fills the input Tensor with values drawn from the uniform
+    distribution :math:`\mathcal{U}(a, b)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        a: the lower bound of the uniform distribution
+        b: the upper bound of the uniform distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.uniform_(w)
+    """
+    assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}" % (b, a)
+    with flow.no_grad():
+        return flow._C.uniform_(tensor, a, b)
 
 
 def normal_(tensor, mean=0.0, std=1.0):
-    initializer_conf = initializer_register.random_normal_initializer(mean, std)
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    r"""
+    
+    Fills the input Tensor with values drawn from the normal
+    distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        mean: the mean of the normal distribution
+        std: the standard deviation of the normal distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.normal_(w)
+    """
+    with flow.no_grad():
+        if tensor.is_local:
+            return flow.normal(mean=mean, std=std, size=tensor.shape, out=tensor)
+        else:
+            return flow.normal(
+                mean=mean,
+                std=std,
+                size=tensor.shape,
+                out=tensor,
+                placement=tensor.placement,
+                sbp=tensor.sbp,
+            )
 
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -83,17 +127,17 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_uniform"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -113,17 +157,18 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_normal_(w)
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_normal"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+        data_format = "NHWC"
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    return normal_(tensor, 0.0, std)
 
 
 def orthogonal_(tensor, gain=1.0):
@@ -168,7 +213,7 @@ def kaiming_uniform_(
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -184,15 +229,11 @@ def kaiming_uniform_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_uniform",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def kaiming_normal_(
@@ -214,7 +255,7 @@ def kaiming_normal_(
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -230,37 +271,107 @@ def kaiming_normal_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_normal",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    assert mode in ["fan_in", "fan_out"]
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    return normal_(tensor, 0.0, std)
 
 
 def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
-    initializer_conf = initializer_register.truncated_normal_initializer(
-        mean=mean, std=std, a=a, b=b,
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    with flow.no_grad():
+        return tensor.normal_(mean, std).clamp_(a, b)
 
 
 def constant_(tensor, val):
+    r"""
+    
+    Fills the input Tensor with the value :math:`\text{val}`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        val: the value to fill the tensor with
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.constant_(w, 0.3)
+    """
     with flow.no_grad():
-        return tensor.fill_(val)
+        tensor[...] = val
+        return tensor
 
 
 def ones_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `1`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.ones_(w)
+    """
     with flow.no_grad():
-        return tensor.fill_(1)
+        return constant_(tensor, 1)
 
 
 def zeros_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `0`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.zeros_(w)
+    """
     with flow.no_grad():
-        return tensor.fill_(0)
+        return constant_(tensor, 0)
+
+
+def eye_(tensor):
+    r"""
+    
+    Fills the 2-dimensional input `Tensor` with the identity
+    matrix. Preserves the identity of the inputs in `Linear` layers, where as
+    many inputs are preserved as possible.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: a 2-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.eye_(w)
+    """
+    if tensor.ndimension() != 2:
+        raise ValueError("Only tensors with 2 dimensions are supported")
+    with flow.no_grad():
+        # TODO: use flow._C.eye_ after eye_op supporting non-contiguous kernel
+        assign_tensor = flow.from_numpy(
+            np.eye(
+                tensor.shape[0],
+                tensor.shape[1],
+                dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
+            )
+        )
+        tensor[...] = assign_tensor
+        return tensor
 
 
 def _calculate_fan_in_and_fan_out(tensor):

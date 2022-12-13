@@ -17,10 +17,10 @@ import os
 import sys
 import unittest
 import numpy as np
-import copy
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 rank = flow.env.get_rank()
@@ -141,10 +141,10 @@ def _train_with_graph(iter_num=3):
             self.train_data_loader = train_data_loader
             self.pp_m = pp_m
             # Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
-            self.pp_m.stage_0_m.config.stage_id = 0
-            self.pp_m.stage_1_m.config.stage_id = 1
-            self.pp_m.stage_2_m.config.stage_id = 2
-            self.pp_m.stage_3_m.config.stage_id = 3
+            self.pp_m.stage_0_m.to(GraphModule).set_stage(0)
+            self.pp_m.stage_1_m.to(GraphModule).set_stage(1)
+            self.pp_m.stage_2_m.to(GraphModule).set_stage(2)
+            self.pp_m.stage_3_m.to(GraphModule).set_stage(3)
             self.mseloss = flow.nn.MSELoss("sum")
             self.add_optimizer(sgd)
             # Let graph to do gradient accumulatioin, pipline execution depends on gradient accumulatioin.
@@ -185,8 +185,8 @@ def _train_with_graph(iter_num=3):
     for i in range(iter_num):
         out = one_iter(i)
         if rank == 3:
-            check_list.append(copy.deepcopy(out[0]))
-            data_list.append((copy.deepcopy(out[1]), copy.deepcopy(out[2])))
+            check_list.append(out[0])
+            data_list.append((out[1], out[2]))
     return check_list, data_list
 
 

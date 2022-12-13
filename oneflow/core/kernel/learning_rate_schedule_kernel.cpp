@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -30,7 +33,8 @@ class LearningRateScheduleKernel final : public Kernel {
  private:
   void VirtualKernelInit(KernelContext* ctx) override {
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
+      pid_t pid = getpid();
+      log_stream_ = TeePersistentLogStream::Create(std::to_string(pid) + "-train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
     if (IsOpenGraphVerboseStepLr()) { print_step_lr_ = true; }
@@ -60,7 +64,7 @@ double LinearLearningRate(double base_lr, double start_factor, double end_factor
   CHECK_LE(start_factor, 1.0);
   CHECK_GE(end_factor, 0.0);
   CHECK_LE(end_factor, 1.0);
-  double multiplier = 1.0;
+  double multiplier = end_factor;
   double c_step_f = float(cur_step);
   double t_step_f = float(total_step);
   if (cur_step < total_step) {

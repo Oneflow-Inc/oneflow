@@ -19,7 +19,6 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_policy_util.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {
@@ -63,7 +62,6 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   InstructionList* mut_instruction_list() { return &instruction_list_; }
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  private:
   Maybe<void> Prepare(Instruction* instruction) override {

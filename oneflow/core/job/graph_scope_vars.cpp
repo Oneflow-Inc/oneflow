@@ -65,8 +65,8 @@ void SetGraphVerboseStepLr(bool verbose) {
 void InitPythonPathsToBeKeptAndFilteredForDebugging(const std::string& python_base_dir) {
   std::vector<std::string>* kept_paths = GetPythonPathsToBeKeptForDebuggingVar();
   kept_paths->clear();
-  kept_paths->push_back(python_base_dir + "/oneflow/test");
-  kept_paths->push_back(python_base_dir + "/oneflow/nn/modules");
+  kept_paths->push_back(python_base_dir + "/test");
+  kept_paths->push_back(python_base_dir + "/nn/modules");
 
   std::vector<std::string>* filtered_paths = GetPythonPathsToBeFilteredForDebuggingVar();
   filtered_paths->clear();

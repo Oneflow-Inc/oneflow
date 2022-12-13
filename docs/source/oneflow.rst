@@ -37,6 +37,9 @@ Tensor
     is_nonzero
     numel
     set_printoptions
+    get_default_dtype
+    set_default_dtype
+    set_default_tensor_type
 
 .. _tensor-creation-ops:
 
@@ -63,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
@@ -70,6 +74,7 @@ Creation Ops
     linspace
     eye
     empty
+    empty_like
     full
     full_like
     tensor_scatter_nd_update
@@ -85,16 +90,24 @@ Indexing, Slicing, Joining, Mutating Ops
     :nosignatures:
 
     argwhere
+    atleast_1d
+    atleast_2d
+    atleast_3d
     cat
+    column_stack
     concat
     chunk
+    dstack
     expand
     gather
     gather_nd
     batch_gather
     hsplit
+    hstack
     vsplit
+    vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
@@ -102,6 +115,7 @@ Indexing, Slicing, Joining, Mutating Ops
     permute
     repeat
     reshape
+    row_stack
     select
     scatter
     scatter_add
@@ -141,6 +155,7 @@ Random sampling
     randint
     randn
     randperm
+    multinomial
     
 In-place random sampling
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,6 +251,8 @@ Pointwise Ops
     atan2 
     ceil 
     clamp 
+    clamp_min
+    clamp_max
     clip 
     cos 
     cosh 
@@ -252,6 +269,7 @@ Pointwise Ops
     log 
     log1p 
     log2 
+    log10
     logical_and 
     logical_not 
     logical_or 
@@ -279,6 +297,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    trunc
     floor_divide
 
 Reduction Ops
@@ -298,8 +317,10 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
@@ -329,6 +350,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -337,7 +360,6 @@ Spectral Ops
     :toctree: generated
     :nosignatures:
 
-    
     hann_window
     
 Other Ops
@@ -370,6 +392,11 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
+    bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -379,7 +406,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm

@@ -20,23 +20,6 @@ namespace oneflow {
 
 namespace {
 
-std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
-  HashSet<std::string> ctrl_in_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
-    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
-      ctrl_in_op_names.insert(ctrl_in_op_name);
-    }
-  });
-  return [=](const OpNode* op_node) {
-    if (op_node->out_edges().size() > 1) { return false; }
-    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
-    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
-      return false;
-    }
-    return true;
-  };
-}
-
 void UpdateConsumerOpConf(const OpNode* consumer, const LogicalBlobId& out,
                           const std::string& new_out_lbn,
                           HashMap<std::string, OperatorConf>* op_name2op_conf) {
@@ -53,10 +36,6 @@ void UpdateConsumerOpConf(const OpNode* consumer, const LogicalBlobId& out,
     }
   }
 }
-
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
 
 class FuseBCEReduceMeanFwBwPass final : public JobPass {
  public:

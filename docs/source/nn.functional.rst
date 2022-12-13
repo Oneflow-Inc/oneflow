@@ -27,6 +27,15 @@ Convolution functions
     fold
     unfold
 
+BatchNorm functions
+--------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    batch_norm
+
 Pooling functions
 ----------------------------------
 
@@ -40,9 +49,15 @@ Pooling functions
     max_pool1d
     max_pool2d
     max_pool3d
+    max_unpool1d
+    max_unpool2d
+    max_unpool3d
     adaptive_avg_pool1d
     adaptive_avg_pool2d
     adaptive_avg_pool3d
+    adaptive_max_pool1d
+    adaptive_max_pool2d
+    adaptive_max_pool3d
 
 Non-linear activation functions
 -------------------------------
@@ -70,6 +85,7 @@ Non-linear activation functions
     softmax
     softshrink
     log_softmax
+    gumbel_softmax
     tanh
     sigmoid
     hardsigmoid
@@ -95,6 +111,9 @@ Dropout functions
     :nosignatures:
 
     dropout
+    dropout1d
+    dropout2d
+    dropout3d
 
 Sparse functions
 ----------------------------------
@@ -114,6 +133,7 @@ Distance functions
     :nosignatures:
 
     cosine_similarity
+    pairwise_distance
 
 
 Loss functions
@@ -125,6 +145,8 @@ Loss functions
 
     sparse_softmax_cross_entropy
     cross_entropy
+    l1_loss
+    mse_loss
     smooth_l1_loss
     triplet_margin_loss
     binary_cross_entropy
@@ -137,6 +159,7 @@ Vision functions
     :toctree: generated
     :nosignatures:
 
+    deform_conv2d
     pad
     interpolate
     upsample

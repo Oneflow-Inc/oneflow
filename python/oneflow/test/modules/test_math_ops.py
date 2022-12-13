@@ -28,6 +28,9 @@ from oneflow.test_utils.test_util import (
     type_name_to_np_type,
 )
 
+import torch as torch_original
+from packaging import version
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
@@ -207,6 +210,15 @@ class TestPow(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
+    @autotest(n=5)
+    def test_scalar_pow_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = torch.pow(x1, x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
@@ -273,6 +285,14 @@ class TestAtan(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=2, dim1=3).to(device)
         y = random_tensor(ndim=2, dim1=3).to(device)
+        z = torch.atan2(x, y)
+        return z
+
+    @autotest(n=5)
+    def test_flow_atan2_with_1elem_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim1=1).to(device)
+        y = random_tensor(ndim=3, dim1=random(1, 6).to(int)).to(device)
         z = torch.atan2(x, y)
         return z
 
@@ -387,19 +407,21 @@ class TestAtan2(flow.unittest.TestCase):
 class TestMinimum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.minimum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.minimum(x, y)
 
 
@@ -407,19 +429,21 @@ class TestMinimum(flow.unittest.TestCase):
 class TestMaximum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_mximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.maximum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_maximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.maximum(x, y)
 
 
@@ -439,6 +463,113 @@ class TestFloorDiv(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random().to(int)
         return torch.floor_divide(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFmod(flow.unittest.TestCase):
+    # other.grad in torch.fmod(input, other) was not implemented before pytorch 1.11.0
+    grad_implemented = version.parse(torch_original.__version__) >= version.parse(
+        "1.11.0"
+    )
+
+    @autotest(auto_backward=grad_implemented)
+    def test_elementwise_fmod_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.fmod(x, y)
+
+    @autotest(n=5, auto_backward=grad_implemented)
+    def test_flow_broadcast_fmod_with_random_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
+        return torch.fmod(x, y)
+
+    @autotest(auto_backward=grad_implemented)
+    def test_tensor_fmod_scalar_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.fmod(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestPow(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_pow_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.pow(x, y)
+
+    @autotest(n=5)
+    def test_flow_broadcast_pow_with_random_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
+        return torch.pow(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_pow_scalar_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.pow(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAbsModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_abs_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.abs(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestCoshModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_cosh_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.cosh(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLgammaModule(flow.unittest.TestCase):
+    # TODO: Add lgamma backward.
+    @autotest(n=5, auto_backward=False)
+    def test_lgamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.lgamma(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog2Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log2_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log2(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog10Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log10_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log10(x)
 
 
 if __name__ == "__main__":

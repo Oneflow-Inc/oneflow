@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
+#include "oneflow/core/vm/stream_get_allocator_stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -27,32 +29,30 @@ namespace vm {
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
-    Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
-    JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       InferTempStorageSize(op_call_instruction_policy);
-      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
-      // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
-      // kernel executed.
-      DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
     return Maybe<void>::Ok();
   }
 
-  static inline void Compute(OpCallInstructionPolicy* op_call_instruction_policy,
-                             Instruction* instruction) {
-    ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
-    if (!op_call_instruction_policy->is_all_outputs_pod()) {
-      for (const auto& blob_object : op_call_instruction_policy->outputs()) {
-        blob_object->TryInitNonPODTypeEagerBlobObjectIfNeed();
-      }
+  static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
+                                    Instruction* instruction) {
+    Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
+    JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, instruction));
+    if (unlikely(op_call_instruction_policy->need_temp_storage())) {
+      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
     }
+    ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (op_call_instruction_policy->user_opkernel()->has_state_or_cache()) {
       TryInitOpKernelStateAndCache(op_call_instruction_policy, stream, &state, &cache);
     }
     OpKernelCompute(op_call_instruction_policy, stream, state, cache);
+    if (unlikely(op_call_instruction_policy->need_temp_storage())) {
+      DeallocateTempStorage(op_call_instruction_policy, allocator);
+    }
+    return Maybe<void>::Ok();
   }
 
  private:
@@ -78,11 +78,18 @@ struct OpCallInstructionUtil final {
         op_call_instruction_policy->user_opkernel(), state, cache);
   }
 
+  // Returns true if allocation happened.
   static inline Maybe<void> AllocateOutputBlobsMemory(
-      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
+      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator,
+      Instruction* instruction) {
     OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
+    StreamType stream_type = instruction->stream().stream_type();
+    StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream_type));
     for (const auto& blob_object : op_call_instruction_policy->outputs()) {
-      JUST(blob_object->TryAllocateBlobBodyMemory(allocator));
+      if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
+        CHECK_OR_RETURN(stream_type == allocator_stream_type)
+            << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
+      }
     }
     return Maybe<void>::Ok();
   }
@@ -95,9 +102,15 @@ struct OpCallInstructionUtil final {
     if (byte_size > 0) {
       char* mem_ptr = nullptr;
       JUST(allocator->Allocate(&mem_ptr, byte_size));
-      tmp_tensor->init_tmp_buffer_ptr(mem_ptr);
+      tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
     return Maybe<void>::Ok();
+  }
+
+  static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
+                                           Allocator* allocator) {
+    auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
+    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
   }
 
   static inline void OpKernelCompute(OpCallInstructionPolicy* op_call_instruction_policy,
@@ -106,13 +119,6 @@ struct OpCallInstructionUtil final {
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
     op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(),
                                                         stream, user_kernel, state, cache);
-  }
-
-  static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
-                                           Allocator* allocator) {
-    OF_PROFILER_RANGE_GUARD("DeallocateTempStorage");
-    auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
-    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
   }
 };
 
@@ -132,16 +138,11 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
       need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
-      output_dependences_(),
-      is_all_outputs_pod_(false) {
+      output_dependences_() {
   ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
   ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   InitStreamSequentialDependence();
-  for (const auto& blob_object : outputs) {
-    is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
-  }
-  CHECK_JUST(Init());
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {
@@ -159,7 +160,7 @@ void OpCallInstructionPolicy::ForEachConstDependence(const DoEachT& DoEach) cons
 
 void OpCallInstructionPolicy::InitStreamSequentialDependence() {
   auto* device_schedule_dep_object = vm_stream_->schedule_local_dep_object().get();
-  if (IsCommNetStream::Visit(vm_stream_->stream_role())) {
+  if (IsCommNetStream::Visit(vm_stream_->stream_type())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {
@@ -175,8 +176,9 @@ void OpCallInstructionPolicy::InitStreamSequentialDependence() {
 
 template<typename DoEachT>
 void OpCallInstructionPolicy::ForEachMutDependence(const DoEachT& DoEach) const {
-  const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
-  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
+  for (const auto& transport_dependence : vm_stream_->transport_dependences()) {
+    DoEach(transport_dependence.get());
+  }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
@@ -204,7 +206,7 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  OpCallInstructionUtil::Compute(this, instruction);
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction), instruction->DebugName());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {

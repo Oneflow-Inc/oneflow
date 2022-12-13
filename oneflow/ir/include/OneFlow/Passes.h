@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
 
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -29,6 +31,8 @@ limitations under the License.
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
+#include "OneFlow/Transform/AggregateComputeOps.h"
+#include "OneFlow/Transform/CSEWithAttributesIgnored.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
@@ -47,6 +51,10 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns);
+void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns);
+void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
+void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);

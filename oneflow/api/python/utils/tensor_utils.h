@@ -29,10 +29,13 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -74,10 +77,11 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
       numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
-  const auto& Callback = [&](uint64_t ofblob_ptr) {
-    data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<T>();
+  const auto& Callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    data_ptr = eager_blob_object->mut_dptr<T>();
   };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
   }));
@@ -90,20 +94,43 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
 }
 
 template<typename T>
-inline Maybe<void> CopyBetweenLocalTensorAndNumpy(const std::shared_ptr<Tensor>& t, PyObject* array,
-                                                  Maybe<void> (*Copy)(uint64_t,
-                                                                      const NumPyArrayPtr&),
-                                                  const std::string& modifier,
-                                                  bool block_host_until_done) {
+struct TensorTypeToPyType final {
+  typedef T type;
+};
+
+template<>
+struct TensorTypeToPyType<float16> final {
+  typedef float type;
+};
+
+template<>
+struct TensorTypeToPyType<bfloat16> final {
+  typedef float type;
+};
+
+template<typename T>
+inline static Maybe<PyObject*> EagerLocalTensorItem(const std::shared_ptr<Tensor>& tensor) {
+  // OF_PROFILER_RANGE_GUARD("EagerLocalTensorItem");
+  T value = JUST(GetItemInScalarTensor<T>(tensor));
+  return functional::CastToPyObject(static_cast<typename TensorTypeToPyType<T>::type>(value));
+}
+
+inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
+    const std::shared_ptr<Tensor>& t, PyObject* array,
+    void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&, const NumPyArrayPtr&),
+    const std::string& modifier, bool block_host_until_done) {
   auto tensor = JUST(t->AsLocalTensor());
+  CHECK_OR_RETURN(tensor->is_contiguous()) << "contiguous tensors supported only.";
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
 
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
-    const auto& Callback = [array_ptr, Copy](uint64_t ofblob_ptr) {
-      CHECK_JUST(Copy(ofblob_ptr, array_ptr));
+    const auto& Callback = [array_ptr, Copy](
+                               ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      Copy(stream, eager_blob_object, array_ptr);
     };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
+    auto btb = std::make_shared<BlockingThenBusy>();
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(tensor, btb, Callback, modifier);
     }));
@@ -120,16 +147,15 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(const std::shared_ptr<Tensor>&
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->AccessBlobByCallback(
           tensor,
-          [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
+          [array_ptr, Copy](ep::Stream* stream,
+                            const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+            Copy(stream, eager_blob_object, array_ptr);
+          },
           modifier);
     }));
   }
   return Maybe<void>::Ok();
 }
-
-Maybe<std::string> GetCopyLocalTensorToNumpyFuncName(DataType dtype);
-
-Maybe<std::string> GetCopyLocalTensorFromNumpyFuncName(DataType dtype);
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);

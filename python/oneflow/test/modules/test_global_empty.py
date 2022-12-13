@@ -31,12 +31,20 @@ def _test_global_empty(test_case, func, shape, placement, sbp):
     elif func == "new_empty":
         func = flow.empty
         func2 = flow.new_empty
+    elif func == "empty_like":
+        func = flow.empty
+        func2 = flow.empty_like
     else:
         raise NotImplementedError
 
     x = func(*shape, placement=placement, sbp=sbp)
     if func2:
-        x = func2(x, size=shape)
+        if func2.__name__ == "new_empty_op":
+            x = func2(x, size=shape)
+        elif func2.__name__ == "empty_like_op":
+            x = func2(x)
+        else:
+            raise NotImplementedError
 
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
@@ -50,6 +58,9 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
     elif func == "new_empty":
         func = flow.empty
         func2 = flow.new_empty
+    elif func == "empty_like":
+        func = flow.empty
+        func2 = flow.empty_like
     else:
         raise NotImplementedError
 
@@ -60,7 +71,12 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
         def build(self):
             x = func(*shape, placement=placement, sbp=sbp)
             if func2:
-                x = func2(x, size=shape)
+                if func2.__name__ == "new_empty_op":
+                    x = func2(x, size=shape)
+                elif func2.__name__ == "empty_like_op":
+                    x = func2(x)
+                else:
+                    raise NotImplementedError
             return x
 
     model = GlobalEmptyGraph()
@@ -78,6 +94,7 @@ class TestEmptyGlobal(flow.unittest.TestCase):
         functions = [
             "empty",
             "new_empty",
+            "empty_like",
         ]
         for func in functions:
             for shape in shapes:
@@ -91,7 +108,7 @@ class TestEmptyGlobal(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_empty_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["func"] = ["empty", "new_empty"]
+        arg_dict["func"] = ["empty", "new_empty", "empty_like"]
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["placement"] = [
             # 1d

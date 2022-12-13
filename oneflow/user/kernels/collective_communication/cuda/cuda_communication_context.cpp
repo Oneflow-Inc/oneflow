@@ -28,6 +28,7 @@ void CudaCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
     int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(parallel_id));
     int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(parallel_id));
     device_set.emplace(std::make_pair(machine_id, device_id));
+    rank2nccl_index_.emplace(machine_id, parallel_id);
   }
   nccl_comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
 }

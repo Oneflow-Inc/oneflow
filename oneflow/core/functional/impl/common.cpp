@@ -13,13 +13,81 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "fmt/core.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/ccl/ccl.h"
+#include "oneflow/core/job/rank_group.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
+namespace {
+
+Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Shape& other_shape) {
+  // same shapes need no broadcasting
+  if (input_shape == other_shape) { return input_shape; }
+
+  const auto unify_shapes_with_same_num_axes = [](const Shape& input_shape,
+                                                  const Shape& other_shape) -> Maybe<Shape> {
+    // num_axes.first == num_axes.second
+    Shape target;
+    for (size_t i = 0; i < input_shape.NumAxes() /* both input_shape and other_shape are ok */;
+         ++i) {
+      const auto num_in_curr_dim = std::make_pair(input_shape.At(i), other_shape.At(i));
+
+      // A = (2, ), B = (2, ), A[0] == B[0], so C = (2, )
+      if (num_in_curr_dim.first == num_in_curr_dim.second) {
+        target.push_back(num_in_curr_dim.first);
+        continue;
+      }
+
+      // A = (2, ), B = (3, ), A[0] != B[0] and A[0] != 1 and B[0] != 1, so raise RuntimeError
+      if (num_in_curr_dim.first != 1 && num_in_curr_dim.second != 1) {
+        return Error::RuntimeError()
+               << fmt::format("input and other can't be broadcasted to a single shape. [input's "
+                              "shape: {}, other's shape: {}].",
+                              input_shape.ToString(), other_shape.ToString());
+      }
+
+      // A = (2, ), B = (1, ), A[0] != B[0] but B[0] == 1, so C = (2, )
+      target.push_back(
+          num_in_curr_dim.first == 1
+              ? num_in_curr_dim.second
+              : num_in_curr_dim.first);  // num_in_curr_dim.first and num_in_curr_dim.second can't
+                                         // be 1 at the same time
+    }
+    return target;
+  };
+
+  const int64_t input_num_axes = input_shape.NumAxes();
+  const int64_t other_num_axes = other_shape.NumAxes();
+
+  if (input_num_axes == other_num_axes) {
+    return unify_shapes_with_same_num_axes(input_shape, other_shape);
+  }
+
+  const int64_t unified_num_axes = std::max(input_num_axes, other_num_axes);
+
+  // shape = (3, 4) and unified_num_axes = 3 ==> shape will be (1, 3, 4)
+  const auto expand_shape_if_necessary = [unified_num_axes](const Shape& shape_to_expand) {
+    const int64_t shape_to_expand_num_axes = shape_to_expand.NumAxes();
+    if (shape_to_expand_num_axes < unified_num_axes) {
+      auto new_shape = Shape::Ones(unified_num_axes);
+      std::copy(shape_to_expand.begin(), shape_to_expand.end(),
+                new_shape.begin() + (unified_num_axes - shape_to_expand_num_axes));
+      return new_shape;
+    }
+    return shape_to_expand;
+  };
+
+  return unify_shapes_with_same_num_axes(expand_shape_if_necessary(input_shape),
+                                         expand_shape_if_necessary(other_shape));
+}
+
+}  // namespace
 
 bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x) {
   return nullptr != std::dynamic_pointer_cast<StaticZerosTensor>(x);
@@ -29,25 +97,24 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
   return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
+bool IsScalarTensor(const std::shared_ptr<Tensor>& x) {
+  return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
+}
+
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
-
+  int32_t reduce_ndim = naxis;
+  if (naxis == 0 || ndim == 0) { reduce_ndim = ndim; };
+  std::vector<int32_t> reduce_axis(reduce_ndim);
   if (naxis == 0) {
-    std::vector<int32_t> reduce_axis(ndim);
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-    return reduce_axis;
   } else {
-    std::vector<int32_t> reduce_axis(naxis);
-    std::vector<int32_t> axis_num(ndim);
+    JUST(dim_list_to_bitset(axis, ndim));  // checking axis[dim]'s validation
     for (int32_t i = 0; i < naxis; i++) {
-      reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim));
-      axis_num[reduce_axis[i]]++;
-      CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
-          << Error::RuntimeError() << "dim " << reduce_axis[i]
-          << " appears multiple times in the list of dims";
+      if (i < reduce_ndim) { reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim)); };
     }
-    return reduce_axis;
   }
+  return reduce_axis;
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
@@ -84,7 +151,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
-      CHECK_OR_RETURN(expand_shape.At(i) > 0);  // NOLINT(maybe-need-error-msg)
+      // For 0-size tensor, expand_shape.At(i) can equal to 0.
+      CHECK_OR_RETURN(expand_shape.At(i) >= 0);  // NOLINT(maybe-need-error-msg)
     }
   }
 
@@ -167,6 +235,52 @@ Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& sh
         << "' is invalid for input of size " << elem_count;
   }
   return infered_shape;
+}
+
+Maybe<Shape> InferUnifiedShapeForBroadcasting(const std::vector<Shape>& shapes) {
+  if (shapes.empty()) { return Error::RuntimeError() << "shapes should not be empty."; }
+  if (shapes.size() == 1) { return JUST(VectorAt(shapes, 0)); }
+
+  auto result =
+      *JUST(InferUnifiedShapeForBroadcasting(JUST(VectorAt(shapes, 0)), JUST(VectorAt(shapes, 1))));
+
+  // (1, 2) vs (3, 2) => (3, 2)
+  if (shapes.size() == 2) { return result; }
+
+  /*
+    (1, 3) vs (3, 1) vs (3, 1, 1)
+
+    1. (1, 3) vs (3, 1) => (3, 3)
+    2. (3, 3) vs (3, 1, 1) => (3, 3, 3)
+    3. (3, 3, 3) is the final result
+  */
+  for (auto iter = shapes.begin() + 2; iter != shapes.end(); ++iter) {
+    result = *JUST(InferUnifiedShapeForBroadcasting(result, *iter));
+  }
+  return result;
+}
+
+/*
+  if input shapes are [(1, 3), (3, 1), (3, 1, 1)]
+  will return ((3, 3, 3), [true, true, true])
+  means the shape to broadcast to is (3, 3, 3) and all three shapes need broadcasting
+*/
+Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithInfo(
+    const std::vector<Shape>& shapes) {
+  const auto unified_shape = *JUST(InferUnifiedShapeForBroadcasting(shapes));
+  std::deque<bool> need_to_broadcast;
+  for (const auto& x : shapes) { need_to_broadcast.emplace_back(x != unified_shape); }
+  return std::make_tuple(unified_shape, need_to_broadcast);
+}
+
+Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root) {
+  CHECK_NOTNULL_OR_RETURN(seed) << "seed is not allowed to be nullptr";
+  const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(DeviceType::kCPU, rank_group));
+  const auto& meta_transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeMeta));
+  JUST(ccl::CpuBroadcast(seed, seed, sizeof(*seed), root, parallel_desc, meta_transport_token));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

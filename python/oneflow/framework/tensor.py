@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from numbers import Number
 import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -29,18 +30,10 @@ def _ndim(self):
 
 
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
-    if not lazy_mode.is_enabled():
-        flow.autograd.backward(self, gradient, retain_graph, create_graph)
-    else:
+    if lazy_mode.is_enabled():
         assert (
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
-        assert (
-            self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tensor.sum() or loss_tensor.mean() to make it a scalar tensor."
-        assert (
-            gradient is None
-        ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
         assert (
             not retain_graph
         ), "nn.Graph donot accept 'retain_graph' argument in backward() at the moment."
@@ -48,6 +41,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
             not create_graph
         ), "nn.Graph donot accept 'create_graph' argument in backward() at the moment."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
+    flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
 
 def _str(self):
@@ -177,11 +171,6 @@ def _scalar_int(self):
     return self.numpy().astype(np.int64).item()
 
 
-def _item(self):
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
-
-
 def _new_empty(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
@@ -189,13 +178,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    size=None,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -204,6 +187,21 @@ def _new_zeros(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_full(
+    self,
+    size,
+    fill_value,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_full(
+        self, size, fill_value, dtype, device, placement, sbp, requires_grad
+    )
 
 
 def _mm(self, mat2):
@@ -218,12 +216,12 @@ def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
-def _split(self, split_size_or_sections=None, dim=0):
-    return flow._C.split(self, split_size_or_sections, dim)
-
-
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
+
+
+def _exponential(self, lambd=1.0, generator=None):
+    return flow._C.exponential_(self, lambd, generator)
 
 
 def _trunc_normal_(
@@ -284,13 +282,11 @@ def _fill(self, value):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    method_name = eager_local_tensor._get_copy_local_tensor_from_numpy_func_name()
-    copy_from_numpy = getattr(eager_local_tensor, method_name)
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
-    copy_from_numpy(np_arr)
+    eager_local_tensor._copy_from_numpy(np_arr)
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
@@ -308,7 +304,13 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
                 not other.is_global
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
-                flow._C.assign_local_tensor(self, other)
+                other = flow._C.broadcast_like(other, self)
+                if not self.is_contiguous():
+                    # NOTE: slice_update support non-contiguous input tensor
+                    with flow.no_grad():
+                        self[...] = other
+                else:
+                    flow._C.assign_local_tensor(self, other)
                 return
 
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
@@ -332,10 +334,6 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             other = other.numpy()
 
         _copy_from_numpy_to_eager_local_tensor(self, other)
-
-
-def _flip(self, dims):
-    return flow.flip(self, dims)
 
 
 def _format(self, format_spec):
@@ -428,25 +426,22 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _is_floating_point(self):
-    return flow.is_floating_point(self)
-
-
 def _numpy(self):
     assert (
         not self.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
+    # TODO: support bfloat16 to numpy in C++
+    if self.dtype == flow.bfloat16:
+        self = self.to(flow.float32)
     if self.is_global:
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
             self.to_global(placement=self_cpu_placement)
-            .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-            )
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
             .to_local()
         )
     assert self.is_local
@@ -466,6 +461,11 @@ def _is_consistent(self):
 
 def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
+
+
+def _item(self):
+    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return self.numpy().item()
 
 
 def _new_tensor(
@@ -501,6 +501,75 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
+def _inv(self):
+    return flow._C.inv(self)
+
+
+def _trunc(self):
+    """trunc() -> Tensor
+
+    See :func:`oneflow.trunc`
+    """
+    return flow._C.trunc(self)
+
+
+def _cross(self, other, dim=None):
+    return flow._C.cross(self, other, dim)
+
+
+def _scatter(self, dim, index, src, *, reduce=""):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
+
+
+def _scatter_inplace(self, dim, index, src, *, reduce=None):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
+
+
+def _scatter_add(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=False)
+
+
+def _scatter_add_inplace(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=True)
+
+
+def _contains(self, element):
+    r"""Check if `element` is present in tensor
+
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
+    if isinstance(element, (flow.Tensor, Number)):
+        # type hint doesn't understand the __contains__ result array
+        return (element == self).any().item()  # type: ignore[union-attr]
+
+    raise RuntimeError(
+        "Tensor.__contains__ only supports Tensor or scalar, but you passed in a %s."
+        % type(element)
+    )
+
+
+def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return flow._C.allclose(self, other, atol, rtol, equal_nan)
+
+
+def _index_add(self, dim, index, source, alpha=1):
+    return flow._C.index_add(self, dim, index, source, alpha)
+
+
+def _index_add_inplace(self, dim, index, source, alpha=1):
+    return flow._C.index_add_(self, dim, index, source, alpha)
+
+
+def _as_strided(self, size, stride, storage_offset=0):
+    return flow._C.as_strided(self, size, stride, storage_offset)
+
+
+def _logaddexp(self, other):
+    return flow._C.logaddexp(self, other)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -511,6 +580,7 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__contains__ = _contains
     Tensor.__bool__ = is_nonzero
     Tensor.__iadd__ = _iadd
     Tensor.addmm = _addmm
@@ -520,6 +590,7 @@ def RegisterMethods():
     Tensor.__int__ = _scalar_int
     Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
+    Tensor.exponential_ = _exponential
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
@@ -534,17 +605,16 @@ def RegisterMethods():
     Tensor.argwhere = _argwhere
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.flip = _flip
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
+    Tensor.new_full = _new_full
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
-    Tensor.split = _split
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.T = property(_T)
@@ -554,7 +624,6 @@ def RegisterMethods():
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
@@ -565,6 +634,18 @@ def RegisterMethods():
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
+    Tensor.inverse = _inv
+    Tensor.trunc = _trunc
+    Tensor.cross = _cross
+    Tensor.scatter = _scatter
+    Tensor.scatter_ = _scatter_inplace
+    Tensor.scatter_add = _scatter_add
+    Tensor.scatter_add_ = _scatter_add_inplace
+    Tensor.allclose = _allclose
+    Tensor.index_add = _index_add
+    Tensor.index_add_ = _index_add_inplace
+    Tensor.as_strided = _as_strided
+    Tensor.logaddexp = _logaddexp
 
 
 def register_tensor_op(op_name):

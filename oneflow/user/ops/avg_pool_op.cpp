@@ -22,8 +22,6 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
@@ -57,7 +55,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
                                     ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    y_desc->set_shape(params_3d.GetYShape());
 
     return Maybe<void>::Ok();
   };
@@ -82,28 +80,23 @@ Maybe<void> AvgPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op("avg_pool_" + std::to_string(dim) + "d_grad")
-              .Input("x", op.input("x", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-              .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
-              .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
-              .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
-              .Attr("count_include_pad", op.attr<bool>("count_include_pad"))
-              .Attr("divisor_override", op.attr<int32_t>("divisor_override"))
-              .Build();
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      AddOp(grad_op);
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx,
+                                 const std::string& blob_name) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  double logical_computation_cost = std::accumulate(
+      pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0).elem_cnt(),
+      std::multiplies<double>());
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex(blob_name, 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
     }
-    return Maybe<void>::Ok();
-  };
+  }
+  return logical_computation_cost;
 }
 
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
@@ -112,12 +105,12 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -135,6 +128,10 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
+  }                                                                                      \
+  /*static*/ Maybe<double> name##Op::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                        \
+    return GetComputationCost(ctx, "y");                                                 \
   }
 
 IMPLEMENT_AVGPOOL_FUNCS(AvgPool1D, 1)
@@ -154,15 +151,15 @@ IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \
+  }                                                                                          \
+  /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                            \
+    return GetComputationCost(ctx, "dy");                                                    \
   }
 
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool1D)
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool2D)
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool3D)
 #undef IMPLEMENT_AVGPOOL_BACKWARD_FUNCS
-
-REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(1));
-REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(2));
-REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(3));
 
 }  // namespace oneflow

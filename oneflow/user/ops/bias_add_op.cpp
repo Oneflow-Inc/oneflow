@@ -35,8 +35,8 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of tensor " << a_tensor_desc.shape().ToString()
       << " must match the size of tensor " << b_tensor_desc.shape().ToString() << " at dimension "
       << bias_add_axis;
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("a", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("a", 0));
   return Maybe<void>::Ok();
 }
 
@@ -64,34 +64,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> BiasAddOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("a", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("a", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("bias_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("a", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "a", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("b", 0)) {
-        const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
-        const int32_t bias_add_axis = op.attr<int32_t>("axis");
-        std::vector<int32_t> reduce_axes_vec;
-        FOR_RANGE(int64_t, i, 0, num_axes) {
-          if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
-        }
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        auto grad_op = builder.Op("reduce_sum")
-                           .Input("input_tensor", op.GetGradTensorWithOpOutput("out", 0))
-                           .Output("output_tensor")
-                           .Attr("axis", reduce_axes_vec)
-                           .Attr("keepdims", false)
-                           .Build();
-        AddOp(grad_op);
-        op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

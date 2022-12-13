@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/pinned_ep_stream_policy.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"

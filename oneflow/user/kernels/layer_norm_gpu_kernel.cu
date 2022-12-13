@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/layer_norm.cuh"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -45,14 +48,14 @@ struct AffineStore {
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<DST>(1.f); }
     }
     if (do_center) {
       beta_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
+      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = static_cast<DST>(0.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -73,6 +76,7 @@ struct AffineStore {
 
 template<typename SRC, typename DST, bool do_scale>
 struct ScaleLoad {
+  using LoadType = DST;
   ScaleLoad(const SRC* src, const SRC* gamma, int64_t row_size)
       : src(src), gamma(gamma), row_size(row_size) {}
   template<int N>
@@ -87,7 +91,7 @@ struct ScaleLoad {
           *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -218,7 +222,7 @@ void LayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
                          const T* beta_ptr, T* y_ptr, user_op::Tensor* mean,
                          user_op::Tensor* inv_variance) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
+  cuda::layer_norm::DirectLoad<T, T> load(x_ptr, norm_size);
   AffineStore<ComputeType, T, do_scale, do_center> store(y_ptr, norm_size, gamma_ptr, beta_ptr);
   cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
       stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
@@ -251,8 +255,8 @@ void LayerNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
                           const user_op::Tensor* inv_variance, const T* gamma_ptr,
                           const T* add_to_output_ptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x_ptr, norm_size);
-  ScaleLoad<T, ComputeType, do_scale> load_scaled_dy(dy_ptr, gamma_ptr, norm_size);
+  cuda::layer_norm::DirectLoad<T, T> load_x(x_ptr, norm_size);
+  ScaleLoad<T, T, do_scale> load_scaled_dy(dy_ptr, gamma_ptr, norm_size);
   AddStore<ComputeType, T, do_add> store(add_to_output_ptr, dx_ptr, norm_size);
   OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
                                                          decltype(store), ComputeType>(
@@ -331,6 +335,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 REGISTER_LAYER_NORM_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -382,6 +389,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -460,5 +470,8 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow

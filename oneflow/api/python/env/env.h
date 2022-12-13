@@ -44,12 +44,6 @@ inline Maybe<std::string> EnvResource() {
   return PbMessage2TxtString(Singleton<ResourceDesc, ForEnv>::Get()->resource());
 }
 
-inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
-  CHECK_NOTNULL_OR_RETURN((Singleton<bool, EagerExecution>::Get()));
-  *Singleton<bool, EagerExecution>::Get() = enable_eager_execution;
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
 inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }

@@ -27,7 +27,7 @@ namespace oneflow {
     dim_vec.push_back(instance_shape.At(i));
   }
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
-  *out_tensor->mut_shape() = Shape(dim_vec);
+  out_tensor->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -51,12 +51,12 @@ namespace oneflow {
   for (int64_t i = 0; i < instance_shape.NumAxes(); ++i) {
     dim_vec.push_back(instance_shape.At(i));
   }
-  *out_tensor->mut_shape() = Shape({dim_vec});
+  out_tensor->set_shape(Shape({dim_vec}));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> RawReaderOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
 
@@ -67,7 +67,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RawReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("data_type");
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("data_type"));
   return Maybe<void>::Ok();
 }
 

@@ -49,3 +49,38 @@ add_docstr(
         >>> output = F.cosine_similarity(input1, input2)
     """,
 )
+
+add_docstr(
+    oneflow._C.pairwise_distance,
+    r"""
+    pairwise_distance(x1: Tensor, x2: Tensor, dim: float=2.0, eps: float=1e-6, keepdim: bool=False) -> Tensor
+    Computes the pairwise distance between vectors :math:`v_1`, :math:`v_2` using the p-norm:
+
+    .. math ::
+        \left \| x \right \| _p = (\sum_{i=1}^n \left | x_i \right |^p )^{\frac{1}{p}}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.PairwiseDistance.html.
+
+    Args:
+        x1 (Tensor): First input.
+        x2 (Tensor): Second input.
+        p (real): the norm degree. Default: 2
+        eps (float, optional): Small value to avoid division by zero. Default: 1e-6
+        keepdim (bool, optional): Determines whether or not to keep the vector dimension. Default: False
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.arange(12).reshape(3, 4)
+        >>> x2 = flow.arange(12).reshape(3, 4)
+        >>> output = flow.nn.functional.pairwise_distance(x1, x2, p=2)
+        >>> output
+        tensor([2.0000e-06, 2.0000e-06, 2.0000e-06], dtype=oneflow.float32)
+        >>> output.shape
+        oneflow.Size([3])
+
+    """,
+)

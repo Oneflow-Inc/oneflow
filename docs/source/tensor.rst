@@ -156,14 +156,13 @@ Tensor class reference
     Tensor.new_empty
     Tensor.new_ones 
     Tensor.new_zeros
+    Tensor.new_full
     Tensor.new_tensor
-    
     Tensor.is_cuda
     Tensor.is_global
     Tensor.device
     Tensor.grad
     Tensor.ndim
-
     Tensor.abs
     Tensor.acos
     Tensor.acosh
@@ -195,6 +194,7 @@ Tensor class reference
     Tensor.atanh
     Tensor.backward
     Tensor.bmm
+    Tensor.bool
     Tensor.byte
     Tensor.cast
     Tensor.ceil
@@ -245,12 +245,13 @@ Tensor class reference
     Tensor.gather
     Tensor.ge
     Tensor.get_device
-    
     Tensor.grad_fn
     Tensor.gt
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point
@@ -263,6 +264,7 @@ Tensor class reference
     Tensor.log
     Tensor.log1p
     Tensor.log2
+    Tensor.log10
     Tensor.logical_and
     Tensor.logical_or
     Tensor.logical_not
@@ -270,6 +272,7 @@ Tensor class reference
     Tensor.long
     Tensor.lt
     Tensor.masked_fill
+    Tensor.masked_fill_
     Tensor.masked_select
     Tensor.matmul
     Tensor.mm
@@ -283,6 +286,7 @@ Tensor class reference
     Tensor.mish
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
@@ -330,6 +334,7 @@ Tensor class reference
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -349,6 +354,7 @@ Tensor class reference
     Tensor.transpose
     Tensor.tril
     Tensor.triu
+    Tensor.trunc
     Tensor.type_as
     Tensor.type
     Tensor.t
@@ -365,4 +371,14 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
-
+    Tensor.cross
+    Tensor.scatter
+    Tensor.scatter_
+    Tensor.scatter_add
+    Tensor.scatter_add_
+    Tensor.bernoulli
+    Tensor.bernoulli_
+    Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
+    Tensor.broadcast_to

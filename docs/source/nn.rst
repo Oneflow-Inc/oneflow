@@ -20,6 +20,7 @@ These are the basic building blocks for graphs:
 
     Parameter
 
+
 Containers
 ----------------------------------
 .. currentmodule:: oneflow.nn
@@ -35,6 +36,46 @@ Containers
     ModuleDict
     ParameterList
     ParameterDict
+
+nn.Module
+----------------------------------
+.. currentmodule:: oneflow.nn.Module
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    add_module
+    apply
+    buffers
+    children
+    cpu
+    cuda
+    double
+    train
+    eval
+    extra_repr
+    float
+    forward
+    load_state_dict
+    modules
+    named_buffers
+    named_children
+    named_modules
+    named_parameters
+    parameters
+    register_buffer
+    register_forward_hook
+    register_forward_pre_hook
+    register_parameter
+    requires_grad_
+    state_dict
+    to
+    zero_grad
+
+
+
+Containers
 
 Convolution Layers
 ----------------------------------
@@ -64,9 +105,15 @@ Pooling Layers
     nn.MaxPool1d 
     nn.MaxPool2d 
     nn.MaxPool3d 
+    nn.MaxUnpool1d
+    nn.MaxUnpool2d
+    nn.MaxUnpool3d
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
+    nn.AdaptiveMaxPool1d 
+    nn.AdaptiveMaxPool2d 
+    nn.AdaptiveMaxPool3d
     nn.AvgPool1d 
     nn.AvgPool2d 
     nn.AvgPool3d
@@ -140,7 +187,8 @@ Normalization Layers
 
     nn.BatchNorm1d 
     nn.BatchNorm2d 
-    nn.BatchNorm3d 
+    nn.BatchNorm3d
+    nn.SyncBatchNorm
     nn.FusedBatchNorm1d 
     nn.FusedBatchNorm2d
     nn.FusedBatchNorm3d 
@@ -150,6 +198,7 @@ Normalization Layers
     nn.InstanceNorm3d 
     nn.LayerNorm
     nn.RMSLayerNorm
+    nn.RMSNorm
 
 Recurrent Layers
 ----------------
@@ -186,6 +235,9 @@ Dropout Layers
     :template: classtemplate.rst
 
     nn.Dropout
+    nn.Dropout1d
+    nn.Dropout2d
+    nn.Dropout3d
 
 Sparse Layers
 ----------------------------------
@@ -206,6 +258,7 @@ Distance Functions
     :template: classtemplate.rst
 
     nn.CosineSimilarity
+    nn.PairwiseDistance
 
 Loss Functions
 ----------------------------------
@@ -276,7 +329,6 @@ Quantization Aware Training
     :toctree: generated
     :nosignatures:
 
-    
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
     nn.FakeQuantization

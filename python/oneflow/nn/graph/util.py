@@ -16,7 +16,7 @@ limitations under the License.
 import sys
 from string import Template
 from collections import OrderedDict
-from typing import Callable, Dict, Union, List, Tuple
+from typing import Callable, Dict, Union, List, Tuple, Optional
 
 import google.protobuf as protobuf
 from google.protobuf import text_format
@@ -183,27 +183,44 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     return input_sig_str, output_sig_str
 
 
+class GraphIR(object):
+    def __init__(self, g_proto: job_pb.Job):
+        assert g_proto is not None and isinstance(g_proto, job_pb.Job)
+        self._graph_proto = g_proto
+        self._op2conf = None
+        self._op2placement = None
+
+    def get_op_conf(self, op_name: str) -> Optional[op_conf_util.OperatorConf]:
+        if self._op2conf is None:
+            self._op2conf = dict()
+            for op_conf in self._graph_proto.net.op:
+                self._op2conf[op_conf.name] = op_conf
+        if op_name not in self._op2conf:
+            return None
+        return self._op2conf[op_name]
+
+    def get_op_placement(self, op_name: str) -> Optional[oneflow.placement]:
+        if self._op2placement is None:
+            self._op2placement = dict()
+            for group in self._graph_proto.placement.placement_group:
+                parallel_conf = group.parallel_conf
+                for op_name in group.op_set.op_name:
+                    self._op2placement[op_name] = oneflow.placement(
+                        proto_str=text_format.MessageToString(parallel_conf)
+                    )
+        if op_name not in self._op2placement:
+            return None
+        return self._op2placement[op_name]
+
+
 def operators_repr(
     ops: protobuf.pyext._message.RepeatedCompositeContainer,
-    graph_proto: job_pb.Job,
+    graph_ir: GraphIR,
     show_op_loc: bool,
 ) -> List[str]:
     r"""Generate operators' string representation of this module
     """
-    if len(ops) > 0:
-        op_confs = dict()
-        for op_conf in graph_proto.net.op:
-            op_confs[op_conf.name] = op_conf
-
-        op2placement = dict()
-        for group in graph_proto.placement.placement_group:
-            parallel_conf = group.parallel_conf
-            for op_name in group.op_set.op_name:
-                op2placement[op_name] = str(
-                    oneflow.placement(
-                        proto_str=text_format.MessageToString(parallel_conf)
-                    )
-                )
+    graph_proto = graph_ir._graph_proto
 
     def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
@@ -214,7 +231,7 @@ def operators_repr(
             op.name
             + "($input) -> ($output)"
             + ", placement=("
-            + op2placement[op.name]
+            + str(graph_ir.get_op_placement(op.name))
             + ")"
         )
         input_sig_str = "..."
@@ -258,9 +275,9 @@ def operators_repr(
 
     ops_strs = []
     for op in ops:
-        if op not in op_confs:
+        op_conf = graph_ir.get_op_conf(op)
+        if op_conf is None:
             continue
-        op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
         got_repr, op_str = _op_signature(op_conf)
         if got_repr:
@@ -295,13 +312,25 @@ def seq_to_func_return(seq, need_unpack=False):
     return seq
 
 
+def _is_raw_type(value, raw_type):
+    # Special case for namedtuple return types
+    # For example, max(x, dim=1) return oneflow.return_types.max(values=..., indices=...)
+    if (
+        raw_type == tuple
+        and isinstance(value, tuple)
+        and type(value).__module__ == "oneflow.return_types"
+    ):
+        return True
+    return type(value) is raw_type
+
+
 class NamedArg(object):
     r"""
     The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
     The input/output argument can be viewed as a tree. NamedArg basically wraps over each tree node on this tree.
     The recursive structure of the input/output arguments are kept, for example:
 
-    iuput = [1, {key: "value" }] will be constructed into: 
+    input = [1, {key: "value" }] will be constructed into: 
         
     named_input = NamedArg([NamedArg(1), NamedArg({key: NamedArg("value")})])
     """
@@ -329,13 +358,14 @@ class NamedArg(object):
     def is_leaf(self):
         assert self._is_value_set, "self._value is not set yet"
         return not (
-            isinstance(self._value, dict)
-            or isinstance(self._value, tuple)
-            or isinstance(self._value, list)
+            _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
+            or _is_raw_type(self._value, tuple)
+            or _is_raw_type(self._value, list)
         )
 
     def set_value(self, value):
-        assert not isinstance(value, NamedArg), "cannot accept value of type NamedArg"
+        assert not _is_raw_type(value, NamedArg), "cannot accept value of type NamedArg"
         self._value = value
         self._is_value_set = True
 
@@ -344,11 +374,11 @@ class NamedArg(object):
         repr_str += "(name: " + self._name
         repr_str += ", idx: " + str(self._global_index)
         repr_str += ", type: "
-        if isinstance(self._value, tuple):
+        if _is_raw_type(self._value, tuple):
             repr_str += "TUPLE"
-        elif isinstance(self._value, list):
+        elif _is_raw_type(self._value, list):
             repr_str += "LIST"
-        elif isinstance(self._value, dict):
+        elif _is_raw_type(self._value, dict) or _is_raw_type(self._value, OrderedDict):
             repr_str += "DICT"
         elif isinstance(self._value, Tensor):
             repr_str += "TENSOR"
@@ -359,9 +389,10 @@ class NamedArg(object):
         if isinstance(self._value, Tensor):
             repr_str += ", value: " + self._value._meta_repr()
         elif (
-            isinstance(self._value, dict)
-            or isinstance(self._value, list)
-            or isinstance(self._value, tuple)
+            _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
+            or _is_raw_type(self._value, list)
+            or _is_raw_type(self._value, tuple)
         ):
             pass
         else:
@@ -379,10 +410,11 @@ class ArgsTree(object):
         root_name: str = None,
     ) -> None:
         assert (
-            isinstance(io_args, dict)
-            or isinstance(io_args, tuple)
-            or isinstance(io_args, list)
-        ), "input/output arguments must be one of those types"
+            _is_raw_type(io_args, dict)
+            or _is_raw_type(io_args, OrderedDict)
+            or _is_raw_type(io_args, tuple)
+            or _is_raw_type(io_args, list)
+        ), "input/output arguments must be one of those types(typle/list/dict/OrderedDict)"
 
         self._io_args = io_args
         self._gen_name = gen_name
@@ -415,14 +447,16 @@ class ArgsTree(object):
         stack.append(args_to_iter)
         while len(stack) > 0:
             curr = stack.pop()
-            if isinstance(curr, NamedArg):
+            if _is_raw_type(curr, NamedArg):
                 curr_value = curr.value()
             else:
                 curr_value = curr
 
-            if isinstance(curr_value, list) or isinstance(curr_value, tuple):
+            if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
                 children = curr_value
-            elif isinstance(curr_value, dict):
+            elif _is_raw_type(curr_value, dict) or _is_raw_type(
+                curr_value, OrderedDict
+            ):
                 children = list(curr_value.values())
             else:
                 children = None
@@ -442,7 +476,7 @@ class ArgsTree(object):
         arg = NamedArg(prefix, name, self._next_global_index)
         self._next_global_index += 1
 
-        if isinstance(value, list) or isinstance(value, tuple):
+        if _is_raw_type(value, list) or _is_raw_type(value, tuple):
 
             def construct_func(enum):
                 (i, v) = enum
@@ -452,7 +486,7 @@ class ArgsTree(object):
 
             arg.set_value(value.__class__(map(construct_func, enumerate(value))))
 
-        elif isinstance(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
 
             def construct_func(enum):
                 i, (key, v) = enum
@@ -482,18 +516,18 @@ class ArgsTree(object):
         return self._execute_mapping(args_to_map, map_function)
 
     def _execute_mapping(self, value, map_function):
-        if isinstance(value, tuple) or isinstance(value, list):
+        if _is_raw_type(value, tuple) or _is_raw_type(value, list):
             mapped_value = value.__class__(
                 map(lambda x: self._execute_mapping(x, map_function), value)
             )
-        elif isinstance(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
             mapped_value = value.__class__(
                 map(
                     lambda x: (x[0], self._execute_mapping(x[1], map_function)),
                     value.items(),
                 )
             )
-        elif isinstance(value, NamedArg):
+        elif _is_raw_type(value, NamedArg):
             if value.is_leaf():  # only map the leaf: TENSOR/NONE/OPAQUE
                 mapped_value = map_function(value)
             else:
