@@ -90,7 +90,7 @@ def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
     )
 
 
-class TestGlobalNormalOpData(flow.unittest.TestCase):
+class TestNormalOpInplaceData(flow.unittest.TestCase):
     @oneflow.unittest.skip_unless_1n1d()
     def test_normal_op_data_local_with_eager_and_lazy(test_case):
 
