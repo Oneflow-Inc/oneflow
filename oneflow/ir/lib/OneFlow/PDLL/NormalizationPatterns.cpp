@@ -13,16 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/dlpack/dlpack.h"
-#include "oneflow/core/common/maybe.h"
+
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+
+using namespace mlir;
+
+#include "oneflow/ir/lib/OneFlow/PDLL/NormalizationPatterns.h.inc"
+
+namespace mlir {
 
 namespace oneflow {
 
-namespace one {
-class Tensor;
+void populateNormalizationOpPatterns(RewritePatternSet& patterns) {
+  populateGeneratedPDLLPatterns(patterns);
 }
 
-Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src);
-Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src);
-
 }  // namespace oneflow
+
+}  // namespace mlir

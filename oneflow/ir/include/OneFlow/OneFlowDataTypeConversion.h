@@ -13,16 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/dlpack/dlpack.h"
-#include "oneflow/core/common/maybe.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
+
+#include "mlir/IR/Builders.h"
+#include "OneFlow/OneFlowSupport.h"
+
+namespace mlir {
 
 namespace oneflow {
 
-namespace one {
-class Tensor;
-}
-
-Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src);
-Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src);
+Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt);
 
 }  // namespace oneflow
+
+}  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWDATATYPECONVERSION_H_
