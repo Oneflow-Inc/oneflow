@@ -79,7 +79,7 @@ struct UnaryScalarPtrFunctorFactory {
 
 template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_size,
          typename IndexType>
-__global__ void BroadcastElementwiseUnaryGpu(
+__global__ void BroadcastElementwisePackedUnaryGpu(
     BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
   using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
   using StorePack = cuda::elementwise::Packed<Dst, pack_size>;
@@ -111,6 +111,75 @@ __global__ void BroadcastElementwiseUnaryGpu(
   }
 }
 
+constexpr int unroll_size = 4;
+
+template<UnaryOp op, typename Src, typename Dst, size_t max_dims, typename IndexType>
+__global__ void BroadcastElementwiseUnrollUnaryGpu(
+    BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
+  const IndexType tail_offset = (params.count / unroll_size * unroll_size);
+  const IndexType remain = params.count - tail_offset;
+  IndexType src_index[max_dims];
+  IndexType dst_index[max_dims];
+  size_t num_dims = params.num_dims;
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(params.attr0, params.attr1);
+
+  Src load[unroll_size];
+  Dst store[unroll_size];
+
+  for (IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; idx < params.count;
+       idx += unroll_size * blockDim.x * gridDim.x) {
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) {
+        params.dst_offset_to_index_helper.OffsetToNdIndex(global_idx, dst_index, num_dims);
+#pragma unroll
+        for (int i = 0; i < max_dims; ++i) {
+          if (i < num_dims) { src_index[i] = params.src_index_mask[i] * dst_index[i]; }
+        }
+        const IndexType src_offset =
+            params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
+        load[unroll_idx] = params.src[src_offset];
+      }
+    }
+
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) { store[unroll_idx] = functor(load[unroll_idx]); }
+    }
+
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) {
+        IndexType dst_offset = global_idx;
+        if (!params.dst_is_contiguous) {
+          dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
+        }
+        params.dst[dst_offset] = store[unroll_idx];
+      }
+    }
+  }
+
+  if (remain > 0) {
+    CUDA_1D_KERNEL_LOOP(offset, remain) {
+      IndexType dst_offset = offset + tail_offset;
+      params.dst_offset_to_index_helper.OffsetToNdIndex(dst_offset, dst_index, num_dims);
+#pragma unroll
+      for (int i = 0; i < max_dims; ++i) {
+        if (i < num_dims) { src_index[i] = params.src_index_mask[i] * dst_index[i]; }
+      }
+      const IndexType src_offset =
+          params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
+      if (!params.dst_is_contiguous) {
+        dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
+      }
+      params.dst[dst_offset] = functor(params.src[src_offset]);
+    }
+  }
+}
+
 template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_size,
          typename IndexType>
 void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
@@ -133,7 +202,12 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
   params.attr1 = attr1;
   params.dst_is_contiguous = continuous_output;
 
-  BroadcastElementwiseUnaryGpu<op, Src, Dst, max_dims, pack_size, IndexType>
+  // BroadcastElementwisePackedUnaryGpu<op, Src, Dst, max_dims, pack_size, IndexType>
+  //     <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,
+  //     stream->cuda_stream()>>>(
+  //         params);
+
+  BroadcastElementwiseUnrollUnaryGpu<op, Src, Dst, max_dims, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
           params);
 }
@@ -201,33 +275,39 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
        continuous_output, attr0, attr1);
 }
 
+bool IsContiguous(int64_t* dims, int64_t* strides, size_t num_dims) {
+  bool is_contiguous = true;
+  for (int i = num_dims - 1; i >= 0; i--) {
+    if ((i == num_dims - 1 && strides[i] != 1)
+        || (i != num_dims - 1 && strides[i] != strides[i + 1] * dims[i + 1])) {
+      is_contiguous = false;
+      break;
+    }
+  }
+  return is_contiguous;
+}
+
 template<UnaryOp op, typename Src, typename Dst>
 void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
                           int64_t* simplified_src_dims, int64_t* simplified_src_strides,
                           const Src* src, int64_t* simplified_dst_dims,
                           int64_t* simplified_dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
   CHECK_LE(simplified_num_dims, kMaxNumDims);
+  bool continuous_output =
+      IsContiguous(simplified_dst_dims, simplified_dst_strides, simplified_num_dims);
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
-  // TODO(zzk): this pack has bug, will be fixed in future
-  // if (src_enable_pack && dst_enable_pack) {
-  //   pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
-  //   src,
-  //                                                   simplified_dst_dims, dst);
-  // }
-  bool continuous_output = true;
-  for (int i = simplified_num_dims - 1; i >= 0; i--) {
-    if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
-        || (i != simplified_num_dims - 1
-            && simplified_dst_strides[i]
-                   != simplified_dst_strides[i + 1] * simplified_dst_dims[i + 1])) {
-      continuous_output = false;
-      break;
+  if (src_enable_pack && dst_enable_pack) {
+    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims, src,
+                                                    simplified_dst_dims, dst);
+    simplified_src_dims[simplified_num_dims - 1] /= pack_size;
+    simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
+    for (int i = 0; i < simplified_num_dims - 1; i++) {
+      simplified_src_strides[i] /= pack_size;
+      simplified_dst_strides[i] /= pack_size;
     }
   }
-  simplified_src_dims[simplified_num_dims - 1] /= pack_size;
-  simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
   DispatchNumDims<op, Src, Dst>(stream, pack_size, simplified_num_dims, simplified_src_dims,
                                 simplified_src_strides, src, simplified_dst_dims,
                                 simplified_dst_strides, dst, continuous_output, attr0, attr1);
