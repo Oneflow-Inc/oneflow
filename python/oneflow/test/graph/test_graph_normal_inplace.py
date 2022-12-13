@@ -32,7 +32,7 @@ _fn_param_local = {
 }
 
 
-_fn_param_consistent = {
+_fn_param_global = {
     "normal": lambda data, placement, sbp: flow.normal(
         size=([16, 64, 128, 128]),
         mean=0.0,
@@ -59,13 +59,13 @@ def _test_data_local(test_case, device, fn):
 
     model = GlobalRandnGraph()
     lazy_x = model()
-    eager_x = fn(data_2)
+    fn(data_2)
 
     test_case.assertTrue(lazy_x.numpy().sum() != 0)
-    test_case.assertTrue(eager_x.numpy().sum() != 0)
+    test_case.assertTrue(data_2.numpy().sum() != 0)
 
 
-def _test_data_consistent(test_case, data_1, data_2, placement, sbp, fn):
+def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
 
     data_1 = data_1.to_global(placement=placement, sbp=sbp)
     data_2 = data_2.to_global(placement=placement, sbp=sbp)
@@ -83,10 +83,10 @@ def _test_data_consistent(test_case, data_1, data_2, placement, sbp, fn):
     lazy_x = model()
 
     flow.manual_seed(233)
-    eager_x = fn(data_2, placement, sbp)
+    fn(data_2, placement, sbp)
 
     test_case.assertTrue(
-        np.array_equal(lazy_x.to_local().numpy(), eager_x.to_local().numpy())
+        np.array_equal(lazy_x.to_local().numpy(), data_2.to_local().numpy())
     )
 
 
@@ -103,10 +103,10 @@ class TestGlobalNormalOpData(flow.unittest.TestCase):
 
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
-                for _, fn in _fn_param_consistent.items():
+                for _, fn in _fn_param_global.items():
                     data_1 = flow.empty([16, 64, 128, 128])
                     data_2 = flow.empty([16, 64, 128, 128])
-                    _test_data_consistent(
+                    _test_data_global(
                         test_case, data_1, data_2, placement, sbp, fn=fn
                     )
 
