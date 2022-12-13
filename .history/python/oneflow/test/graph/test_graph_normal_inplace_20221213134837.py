@@ -83,7 +83,6 @@ def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
 
 class TestNormalOpInplaceData(flow.unittest.TestCase):
     @oneflow.unittest.skip_unless_1n1d()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_normal_op_data_local_with_eager_and_lazy(test_case):
 
         for device in ["cuda", "cpu"]:
