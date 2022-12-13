@@ -54,8 +54,8 @@ def _test_data_local(test_case, device, fn):
             super().__init__()
 
         def build(self):
-            fn(data_1).to(device)
-            return data_1
+            x = fn(data_1).to(device)
+            return x
 
     model = GlobalRandnGraph()
     lazy_x = model()
@@ -76,8 +76,8 @@ def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
 
         def build(self):
             flow.manual_seed(233)
-            fn(data_1, placement, sbp)
-            return data_1
+            x = fn(data_1, placement, sbp)
+            return x
 
     model = GlobalRandnGraph()
     lazy_x = model()
