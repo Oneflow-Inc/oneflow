@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// #include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-// #include "oneflow/core/cuda/elementwise.cuh"
 
 #include "stdio.h"
 

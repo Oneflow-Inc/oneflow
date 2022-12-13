@@ -32,16 +32,6 @@ namespace test {
 
 namespace {
 
-template<typename T>
-Scalar GetScalar(const T& value) {
-  return Scalar(value);
-}
-
-template<>
-Scalar GetScalar<Eigen::half>(const Eigen::half& value) {
-  return Scalar(static_cast<float>(value));
-}
-
 template<UnaryOp unary_op, DataType src_data_type, typename Src, DataType dst_data_type,
          typename Dst>
 void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
@@ -175,50 +165,11 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   }
 }
 
-template<UnaryOp unary_op>
-void TestComputeUnary(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  /*
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt8, int8_t, DataType::kInt8, int8_t>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kUInt8, uint8_t, DataType::kUInt8, uint8_t>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt32, int32_t, DataType::kInt32, int32_t>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt64, int64_t, DataType::kInt64, int64_t>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kDouble, double, DataType::kDouble, double>(
-      registry, device_types);*/
-  TestElementwiseBroadcastUnary<unary_op, DataType::kFloat, float, DataType::kFloat, float>(
-      registry, device_types);
-  /*
-  TestElementwiseBroadcastUnary<unary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16,
-                                 Eigen::half>(registry, device_types);*/
-}
-
-template<UnaryOp unary_op>
-void TestLogicalUnary(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  /*
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt8, int8_t, DataType::kBool, bool>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kUInt8, uint8_t, DataType::kBool, bool>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt32, int32_t, DataType::kBool, bool>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kInt64, int64_t, DataType::kBool, bool>(
-      registry, device_types);
-  TestElementwiseBroadcastUnary<unary_op, DataType::kDouble, double, DataType::kBool, bool>(
-      registry, device_types);*/
-  TestElementwiseBroadcastUnary<unary_op, DataType::kFloat, float, DataType::kBool, bool>(
-      registry, device_types);
-  /*
-  TestElementwiseBroadcastUnary<unary_op, DataType::kFloat16, Eigen::half, DataType::kBool, bool>(
-      registry, device_types);*/
-}
-
 }  // namespace
 
 TEST_F(PrimitiveTest, TestUnary) {
-  TestComputeUnary<UnaryOp::kAbs>(&device_manager_registry_, available_device_types_);
+  TestElementwiseBroadcastUnary<UnaryOp::kIdentity, DataType::kFloat, float, DataType::kFloat,
+                                float>(&device_manager_registry_, available_device_types_);
 }
 
 }  // namespace test
