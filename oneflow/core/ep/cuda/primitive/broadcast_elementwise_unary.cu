@@ -213,13 +213,10 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
-  // TODO(zzk): this pack has bug, will be fixed in future
-   if (src_enable_pack && dst_enable_pack) {
-     pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
-     src,
-                                                     simplified_dst_dims, dst);
+  if (src_enable_pack && dst_enable_pack) {
+    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
+      src, simplified_dst_dims, dst);
   }
-  printf("pack size: %d\n", pack_size);
   bool continuous_output = true;
   for (int i = simplified_num_dims - 1; i >= 0; i--) {
     if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
@@ -397,19 +394,13 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
    NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
 
-#define MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_type_pair, dst_dtype_pair)  \
-  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_type_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_type_pair),                                  \
-                       OF_PP_PAIR_FIRST(dst_dtype_pair)>},
-
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
 
-#undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =

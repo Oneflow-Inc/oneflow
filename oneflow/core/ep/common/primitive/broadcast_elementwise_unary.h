@@ -171,7 +171,7 @@ class OffsetToIndexWithStrideCalculator {
   FastIntegerMath<T> math_helper_[N];
 };
 
-#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
+#define UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
 
 }  // namespace broadcast_elementwise_unary
 }  // namespace primitive

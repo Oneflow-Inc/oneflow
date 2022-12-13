@@ -202,19 +202,13 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
    NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
 
-#define MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_type_pair, dst_dtype_pair)  \
-  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_type_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_type_pair),                                  \
-                       OF_PP_PAIR_FIRST(dst_dtype_pair)>},
-
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
-#undef MAKE_NEW_DIFFERENT_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =
