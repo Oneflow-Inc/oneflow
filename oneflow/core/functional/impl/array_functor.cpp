@@ -20,9 +20,11 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -161,6 +163,11 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalConstant(shape, value, dtype,
+                                             GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value");
     if (IsIntegralDataType(dtype->data_type())) {
@@ -185,12 +192,21 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -2893,13 +2909,20 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
-        << Error::RuntimeError()
-        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
     if (input->is_global()) {
-      std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      if (!device_.has_value()) {
+        std::string device_type = JUST(input->parallel_desc())->device_tag();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      } else {
+        if (!GlobalMode::is_enabled()) {
+          CHECK_OR_RETURN(!device_.has_value())
+              << Error::RuntimeError()
+              << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+              << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+        }
+        std::string device_type = device_.value_or(Symbol<Device>())->type();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      }
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -3636,6 +3659,37 @@ class UniqueWithCountsFunctor {
  private:
   std::shared_ptr<OpExpr> unique_op_;
   std::shared_ptr<OpExpr> unique_with_counts_op_;
+
+
+class BaddBmmFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& batch1,
+                           const std::shared_ptr<one::Tensor>& batch2, const double& beta,
+                           const double& alpha) const {
+    const int32_t batch1_ndim = batch1->ndim();
+    const int32_t batch2_ndim = batch2->ndim();
+    CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch2_ndim, 3) << Error::RuntimeError() << "batch2 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch1->dim(0), batch2->dim(0))
+        << Error::RuntimeError() << "batch1 and batch2 must have same number of batches, got ,"
+        << batch1->dim(0) << " and " << batch2->dim(0);
+    CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
+        << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
+        << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
+
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
+    }
+  }
 };
 
 }  // namespace impl
@@ -3787,6 +3841,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
   m.add_functor<impl::UniqueFunctor>("Unique");
   m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
+  m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
 };
 
 }  // namespace functional

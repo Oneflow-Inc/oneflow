@@ -32,6 +32,9 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
     Returns a placement that contains all available devices.
 
+    Note:
+        It is recommended to use `oneflow.placement.all` instead of this function.
+
     Args:
         device_type (str): cuda or cpu
 
@@ -46,7 +49,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
     """
-    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+    return oneflow.placement.all(device_type)
 
 
 def check_non_localhost_proxy_and_print_warning():
@@ -190,9 +193,11 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
+        cpp_logging_conf.logtostderr = str2int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
-        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+        cpp_logging_conf.logbuflevel = str2int(os.getenv("GLOG_logbuflevel"))
+    if os.getenv("GLOG_minloglevel"):
+        cpp_logging_conf.minloglevel = str2int(os.getenv("GLOG_minloglevel"))
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
