@@ -23,7 +23,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> UniqueOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  // CHECK_EQ_OR_RETURN(x.shape().NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(x.shape().NumAxes(), 1);
 
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   y->set_shape(x.shape());
@@ -32,10 +32,6 @@ namespace oneflow {
   user_op::TensorDesc* idx = ctx->MutOutputTensorDesc("idx", 0);
   idx->set_shape(x.shape());
   idx->set_is_dynamic(x.is_dynamic());
-
-  // user_op::TensorDesc* count = ctx->MutOutputTensorDesc("count", 0);
-  // count->set_shape(x.shape());
-  // count->set_is_dynamic(x.is_dynamic());
 
   user_op::TensorDesc* num_unique = ctx->MutOutputTensorDesc("num_unique", 0);
   num_unique->set_shape(Shape({1}));
@@ -54,8 +50,6 @@ namespace oneflow {
   user_op::TensorDesc* idx = ctx->MutOutputTensorDesc("idx", 0);
   idx->set_data_type(out_idx);
 
-  // user_op::TensorDesc* count = ctx->MutOutputTensorDesc("count", 0);
-  // count->set_data_type(out_idx);
   user_op::TensorDesc* num_unique = ctx->MutOutputTensorDesc("num_unique", 0);
   num_unique->set_data_type(out_idx);
   return Maybe<void>::Ok();

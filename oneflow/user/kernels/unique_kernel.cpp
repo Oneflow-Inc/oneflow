@@ -31,7 +31,6 @@ class UniqueKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* idx = ctx->Tensor4ArgNameAndIndex("idx", 0);
-    // user_op::Tensor* count = ctx->Tensor4ArgNameAndIndex("count", 0);
     user_op::Tensor* num_unique = ctx->Tensor4ArgNameAndIndex("num_unique", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;

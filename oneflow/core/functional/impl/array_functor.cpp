@@ -3556,7 +3556,7 @@ class UniqueFunctor {
     attrs.SetAllAttrs(out_idx);
     std::shared_ptr<TensorTuple> output = JUST(
         OpInterpUtil::Dispatch<TensorTuple>(*op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
-    int32_t num_unique = 0;
+    int64_t num_unique = 0;
     std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
     {
       if (num_unique_tensor->is_global()) {
@@ -3604,7 +3604,7 @@ class UniqueWithCountsFunctor {
           *unique_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
     }
 
-    int32_t num_unique = 0;
+    int64_t num_unique = 0;
     std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
     {
       if (num_unique_tensor->is_global()) {

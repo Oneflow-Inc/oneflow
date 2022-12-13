@@ -60,7 +60,7 @@ def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.in
 
     """
     if not return_inverse and not return_counts:
-        return flow._C.unique(input)
+        return flow._C.unique(input, dtype=dtype)
     else:
         return flow._C.unique(
             input,
