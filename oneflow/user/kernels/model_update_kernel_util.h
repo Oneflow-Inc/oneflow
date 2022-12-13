@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_MODEL_UPDATE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_MODEL_UPDATE_KERNEL_UTIL_H_
 
-#include <cmath>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"

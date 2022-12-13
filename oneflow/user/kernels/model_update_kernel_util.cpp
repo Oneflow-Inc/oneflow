@@ -517,10 +517,4 @@ void AdamaxUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 
 template struct AdamaxUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct AdamaxUpdateKernelUtil<DeviceType::kCPU, double, double>;
-// ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
-// float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
-// float learning_rate_val, float lr_scale, float bias_correction1_val, float bias_correction2_val,
-// const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-// const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
-// T* model, C* model_copy, T* m, T* v, T* max_v
 }  // namespace oneflow

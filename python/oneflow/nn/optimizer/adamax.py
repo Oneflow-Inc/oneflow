@@ -96,6 +96,7 @@ class Adamax(Optimizer):
     For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
 
     """
+
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],
