@@ -25,10 +25,9 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
+# NOTE(lixiang): source op that can be inplaced.
 _fn_param_local = {
-    "normal": lambda data: flow.normal(
-        size=data.shape, mean=0.0, std=1.0, out=data
-    ),  # NOTE(lixiang): source op that can be inplaced.
+    "normal": lambda data: flow.normal(size=data.shape, mean=0.0, std=1.0, out=data),
 }
 
 

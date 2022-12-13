@@ -26,9 +26,7 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 _fn_param_local = {
-    "normal": lambda data: flow.normal(
-        size=data.shape, mean=0.0, std=1.0, out=data
-    ),  # NOTE(lixiang): source op that can be inplaced.
+    "normal": lambda data: flow.normal(size=data.shape, mean=0.0, std=1.0, out=data),
 }
 
 
@@ -48,6 +46,7 @@ def _test_data_local(test_case, device, fn):
 
     data_1 = flow.zeros([16, 64, 128, 128]).to(device)
     data_2 = flow.zeros([16, 64, 128, 128]).to(device)
+    print(data_2.sum())
 
     class GlobalRandnGraph(flow.nn.Graph):
         def __init__(self):

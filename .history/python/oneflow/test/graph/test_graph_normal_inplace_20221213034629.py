@@ -26,9 +26,7 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 _fn_param_local = {
-    "normal": lambda data: flow.normal(
-        size=data.shape, mean=0.0, std=1.0, out=data
-    ),  # NOTE(lixiang): source op that can be inplaced.
+    "normal": lambda data: flow.normal(size=data.shape, mean=0.0, std=1.0, out=data), # NOTE(lixiang): source op that can be inplaced.
 }
 
 
