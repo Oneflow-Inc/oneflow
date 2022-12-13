@@ -107,6 +107,9 @@ void CompleteEnvProto(of::EnvProto& env_proto) {
   if (HasEnvVar("GLOG_logbuflevel")) {
     cpp_logging_conf->set_logbuflevel(GetEnvVar("GLOG_logbuflevel", -1));
   }
+  if (HasEnvVar("GLOG_minloglevel")) {
+    cpp_logging_conf->set_minloglevel(GetEnvVar("GLOG_minloglevel", -1));
+  }
 }
 }  // namespace
 

@@ -142,7 +142,7 @@ class Module(object):
         self._load_state_dict_pre_hooks = OrderedDict()
         if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
-            flow.nn.parallel.DistributedDataParallel(self)
+            flow.nn.parallel.DistributedDataParallel(self, broadcast_parameters=False)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()

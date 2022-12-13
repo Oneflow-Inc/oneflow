@@ -394,6 +394,14 @@
   signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
   bind_python: True
 
+- name: "logaddexp"
+  signature: "Tensor (Tensor x, Tensor y) => LogAddExp"
+  bind_python: True
+  
+- name: "quantile"
+  signature: 'Tensor (Tensor x, Scalar q, Int32 dim, Bool keepdim=False, String interpolation="linear", Tensor out=None) => Quantile'
+  bind_python: True
+
 - name: "transpose"
   signature:
     [
@@ -662,6 +670,10 @@
 
 - name: "glu"
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
+  bind_python: True
+
+- name: "fused_glu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
 - name: "sigmoid"
@@ -1113,6 +1125,11 @@
   signature:
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => BatchMatMul"
+  bind_python: True
+
+- name: "baddbmm"
+  signature:
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BaddBmm"
   bind_python: True
 
 - name: "matrix_vector_product"
@@ -2773,6 +2790,10 @@
   signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
+- name: "multi_tensor_yolov5_weight_update"
+  signature: "Void (TensorTuple model, TensorTuple model_update, Float d) => MultiTensorYoloV5WeightUpdate"
+  bind_python: True
+
 - name: "multi_tensor_momentum_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum, Float dampening, Bool nesterov, Bool maximize) => MultiTensorMomentumUpdate"
   bind_python: True
@@ -3041,4 +3062,8 @@
 - name: "fused_fast_gelu_mul_grad"
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
+
+- name: "fused_weighted_sum"
+  signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
+  bind_python: True
 
