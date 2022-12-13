@@ -4563,7 +4563,7 @@ class MultiTensorAdamUpdateFunctor {
 
 class SparseMatrixVectorProductFunctor {
  public:
-  SparseMatrixVectorProductFunctor(){
+  SparseMatrixVectorProductFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("sparse_matrix_vector_product")
                          .Input("mat_rows")
                          .Input("mat_cols")
@@ -4576,8 +4576,7 @@ class SparseMatrixVectorProductFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mat_rows,
                            const std::shared_ptr<one::Tensor>& mat_cols,
                            const std::shared_ptr<one::Tensor>& mat_values,
-                           const std::shared_ptr<one::Tensor>& in_vec,
-                           const std::string& format,
+                           const std::shared_ptr<one::Tensor>& in_vec, const std::string& format,
                            const int64_t num_rows) const {
     // obtain input shape
     const auto& mat_rows_shape = *(mat_rows->shape());
@@ -4586,48 +4585,47 @@ class SparseMatrixVectorProductFunctor {
     const auto& in_vec_shape = *(in_vec->shape());
 
     // check attributes
-    CHECK_OR_RETURN(format=="csr" || format=="csc" || format=="coo")
-      << "unknown data format " << format;
-    CHECK_GT_OR_RETURN(num_rows, 0)
-      << "invalid number of rows attribute" << num_rows;
-    
+    CHECK_OR_RETURN(format == "csr" || format == "csc" || format == "coo")
+        << "unknown data format " << format;
+    CHECK_GT_OR_RETURN(num_rows, 0) << "invalid number of rows attribute" << num_rows;
+
     // check dimension
     CHECK_EQ_OR_RETURN(mat_rows_shape.NumAxes(), 1)
-      << "number of axes of \'mat_rows\' should be 1, yet get " << mat_rows_shape.NumAxes();
+        << "number of axes of \'mat_rows\' should be 1, yet get " << mat_rows_shape.NumAxes();
     CHECK_EQ_OR_RETURN(mat_cols_shape.NumAxes(), 1)
-      << "number of axes of \'mat_cols\' should be 1, yet get " << mat_cols_shape.NumAxes();
+        << "number of axes of \'mat_cols\' should be 1, yet get " << mat_cols_shape.NumAxes();
     CHECK_EQ_OR_RETURN(mat_values_shape.NumAxes(), 1)
-      << "number of axes of \'mat_values\' should be 1, yet get " << mat_values_shape.NumAxes();
+        << "number of axes of \'mat_values\' should be 1, yet get " << mat_values_shape.NumAxes();
     CHECK_EQ_OR_RETURN(in_vec_shape.NumAxes(), 1)
-      << "number of axes of \'in_vec\' should be 1, yet get " << in_vec_shape.NumAxes();
+        << "number of axes of \'in_vec\' should be 1, yet get " << in_vec_shape.NumAxes();
 
     // check input shape
     size_t num_mat_rows = mat_rows_shape.At(0) - 1;
     size_t num_mat_cols = mat_cols_shape.At(0);
     size_t num_mat_values = mat_values_shape.At(0);
-    if(format == "csr"){
+    if (format == "csr") {
       CHECK_EQ_OR_RETURN(num_mat_cols, num_mat_values)
-        << "under CSR format, "
-        << "the number of elements in \'mat_cols\'(" << num_mat_cols
-        << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
+          << "under CSR format, "
+          << "the number of elements in \'mat_cols\'(" << num_mat_cols
+          << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
       CHECK_EQ_OR_RETURN(num_mat_rows, num_rows)
-        << "under CSR format, "
-        << "the number of elements in \'mat_rows\'(" << num_mat_cols
-        << ") should be equal to the given attribute \'num_rows\'(" << num_rows << ")";
-    } else if(format == "csc"){
+          << "under CSR format, "
+          << "the number of elements in \'mat_rows\'(" << num_mat_cols
+          << ") should be equal to the given attribute \'num_rows\'(" << num_rows << ")";
+    } else if (format == "csc") {
       CHECK_EQ_OR_RETURN(num_mat_rows, num_mat_values)
-        << "under CSC format, "
-        << "the number of elements in \'mat_rows\'(" << num_mat_rows
-        << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
-    } else if(format == "coo"){
+          << "under CSC format, "
+          << "the number of elements in \'mat_rows\'(" << num_mat_rows
+          << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
+    } else if (format == "coo") {
       CHECK_EQ_OR_RETURN(num_mat_rows, num_mat_cols)
-        << "under COO format, "
-        << "the number of elements in \'mat_rows\'(" << num_mat_rows
-        << ") should be equal to the one of \'mat_cols\'(" << num_mat_cols << ")";
+          << "under COO format, "
+          << "the number of elements in \'mat_rows\'(" << num_mat_rows
+          << ") should be equal to the one of \'mat_cols\'(" << num_mat_cols << ")";
       CHECK_EQ_OR_RETURN(num_mat_rows, num_mat_values)
-        << "under COO format, "
-        << "the number of elements in \'mat_rows\'(" << num_mat_rows
-        << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
+          << "under COO format, "
+          << "the number of elements in \'mat_rows\'(" << num_mat_rows
+          << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
     }
 
     // set activation attribute
@@ -4635,7 +4633,8 @@ class SparseMatrixVectorProductFunctor {
     attrs.SetAllAttrs(format, num_rows);
 
     // dispatch operator
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {mat_rows, mat_rows, mat_values, in_vec}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {mat_rows, mat_rows, mat_values, in_vec},
+                                               attrs);
   }
 
  private:

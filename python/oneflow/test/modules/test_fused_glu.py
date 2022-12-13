@@ -83,16 +83,16 @@ def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
     k = params["k"]
 
     # generate random input
-    x = np.random.randn(2, m, k)/100
+    x = np.random.randn(2, m, k) / 100
     y_nor = np.random.randn(2, m, n)
     if is_split_mode:
-        w = np.random.randn(n, k)/100  # transpose
-        b = np.random.randn(n)/100
-        v = np.random.randn(n, k)/100  # transpose
-        c = np.random.randn(n)/100
+        w = np.random.randn(n, k) / 100  # transpose
+        b = np.random.randn(n) / 100
+        v = np.random.randn(n, k) / 100  # transpose
+        c = np.random.randn(n) / 100
     else:
-        w = np.random.randn(n * 2, k)/100  # transpose
-        b = np.random.randn(n * 2)/100
+        w = np.random.randn(n * 2, k) / 100  # transpose
+        b = np.random.randn(n * 2) / 100
 
     # transfer to gpu memory
     tensor_x = flow.FloatTensor(x).to(dtype=dtype, device="cuda")
