@@ -77,9 +77,15 @@ class _ConstantBase(Module):
                 sbp=self.sbp,
             )
         else:
-            res = flow._C.constant(
-                self.shape, self.value, dtype=self.dtype, device=self.device
-            )
+            print("type of value >>>>>>>>>>>>>>>> ", type(self.value))
+            if isinstance (self.value, flow.Tensor):
+                res = flow._C.tensor_constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
+            else:
+                res = flow._C.constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
         res.requires_grad = self.requires_grad
         return res
 

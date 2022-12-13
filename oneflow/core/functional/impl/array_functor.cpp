@@ -158,6 +158,33 @@ class GlobalConstantFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TensorConstantFunctor {
+ public:
+  TensorConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
+                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value");
+    if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), false);
+    } else {
+      attrs.SetAllAttrs(shape, dtype->data_type(), true);
+    }
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
+                                            OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
@@ -3604,6 +3631,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
+  m.add_functor<impl::TensorConstantFunctor>("TensorConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
