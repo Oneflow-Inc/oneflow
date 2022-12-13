@@ -34,7 +34,12 @@ _fn_param_local = {
 
 _fn_param_global = {
     "normal": lambda data, placement, sbp: flow.normal(
-        size=data.shape, mean=0.0, std=1.0, out=data, placement=placement, sbp=sbp,
+        size=data.shape,
+        mean=0.0,
+        std=1.0,
+        out=data,
+        placement=placement,
+        sbp=sbp,
     ),
 }
 
@@ -61,6 +66,8 @@ def _test_data_local(test_case, device, fn):
 
 
 def _test_data_global(test_case, data_1, data_2, placement, sbp, fn):
+
+
     class GlobalNormalGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -94,13 +101,9 @@ class TestNormalOpInplaceData(flow.unittest.TestCase):
 
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
-
-                data_1 = flow.empty([8, 64, 128, 128]).to_global(
-                    placement=placement, sbp=sbp
-                )
-                data_2 = flow.empty([8, 64, 128, 128]).to_global(
-                    placement=placement, sbp=sbp
-                )
+                
+                data_1 = flow.empty([8, 64, 128, 128]).to_global(placement=placement, sbp=sbp)
+                data_2 = flow.empty([8, 64, 128, 128]).to_global(placement=placement, sbp=sbp)
 
                 for _, fn in _fn_param_global.items():
                     _test_data_global(test_case, data_1, data_2, placement, sbp, fn=fn)
