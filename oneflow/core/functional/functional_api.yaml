@@ -1132,6 +1132,10 @@
     "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BaddBmm"
   bind_python: True
 
+- name: "sparse_matrix_vector_product"
+  signature: "Tensor (Tensor mat_rows, Tensor mat_cols, Tensor mat_values, Tensor in_vec, String format, Int64 num_rows) => SparseMatrixVectorProduct"
+  bind_python: True
+
 - name: "matrix_vector_product"
   signature: "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
   bind_python: True

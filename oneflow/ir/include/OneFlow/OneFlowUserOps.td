@@ -5073,6 +5073,26 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   let has_compute_complexity_fn = 1;
 }
 
+def OneFlow_SparseMatrixVectorProductOp : OneFlow_BaseOp<"sparse_matrix_vector_product", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$mat_rows,
+    OneFlow_Tensor:$mat_cols,
+    OneFlow_Tensor:$mat_values,
+    OneFlow_Tensor:$in_vec
+  );
+  let output = (outs
+    OneFlow_Tensor:$out_vec
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$num_rows,
+    DefaultValuedAttr<StrAttr, "\"csr\"">:$format
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_MatrixVectorProductOp : OneFlow_BaseOp<"matrix_vector_product", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,
