@@ -45,4 +45,4 @@ class CudaGraphSupport {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
+#endif  // ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
