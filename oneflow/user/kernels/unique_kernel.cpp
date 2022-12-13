@@ -46,7 +46,7 @@ template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const auto& x = ctx->InputTensorDesc("x", 0);
-    int64_t workspace_size_in_bytes;
+    int64_t workspace_size_in_bytes = 0;
     UniqueKernelUtil<device_type, T, K>::GetUniqueWorkspaceSizeInBytes(
         nullptr, x.shape().elem_cnt(), &workspace_size_in_bytes);
 
