@@ -3554,18 +3554,23 @@ class UniqueFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
     DataType out_idx = dtype->data_type();
     attrs.SetAllAttrs(out_idx);
-    std::shared_ptr<TensorTuple> result =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs));
-    int64_t num_unique = 0;
+    std::shared_ptr<TensorTuple> output = JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    int32_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
     {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
       const auto& callback = [&](ep::Stream* stream,
                                  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(), sizeof(num_unique),
-                       memory::MakeHostMemCase(), eager_blob_object->mem_case());
+        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
       };
-      JUST(SyncAccessTensorWithTimeOut(result->at(2), callback, "const"));
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
     }
-    return functional::Slice(result->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1},
+    return functional::Slice(output->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1},
                              false);
   }
 
@@ -3589,8 +3594,7 @@ class UniqueWithCountsFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, bool return_inverse,
                                 bool return_counts, const Symbol<DType>& dtype) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
-    DataType out_idx = dtype->data_type();
-    attrs.SetAllAttrs(out_idx);
+    attrs.SetAllAttrs(dtype->data_type());
     std::shared_ptr<TensorTuple> output;
     if (return_counts) {
       output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
@@ -3600,15 +3604,19 @@ class UniqueWithCountsFunctor {
           *unique_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
     }
 
-    int64_t num_unique = 0;
+    int32_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
     {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
       const auto& callback = [&](ep::Stream* stream,
                                  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
         SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
-                       sizeof(GetSizeOfDataType(dtype->data_type())), memory::MakeHostMemCase(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
                        eager_blob_object->mem_case());
       };
-      JUST(SyncAccessTensorWithTimeOut(output->at(2), callback, "const"));
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
     }
     auto result = std::make_shared<TensorTuple>();
     const auto& y = JUST(

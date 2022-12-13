@@ -16,14 +16,15 @@ limitations under the License.
 import oneflow as flow
 
 
-def unique_op(input, *, return_inverse=False, return_counts=False):
+def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.int):
     r"""
     Returns the unique elements of the input tensor.
 
     Args:
-        input (Tensor): the input tensor
+        input (Tensor): The input tensor.
         return_inverse (bool): Whether to also return the indices for where elements in the original input ended up in the returned unique list.
         return_counts (bool): Whether to also return the counts for each unique element.
+        dtype (flow.dtype): Dtype of the returned indices and counts.
 
     Returns:
         oneflow.Tensor or List of oneflow.Tensor:
@@ -39,11 +40,34 @@ def unique_op(input, *, return_inverse=False, return_counts=False):
           returned tensor (same shape as output or output.size(dim), if dim was specified)
           representing the number of occurrences for each unique value or tensor.
 
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> flow.unique(x)
+        tensor([3, 1, 2, 0], dtype=oneflow.int64)
+        >>> results, indices = flow.unique(x, return_inverse=True)
+        >>> indices
+        tensor([0, 1, 2, 3, 2], dtype=oneflow.int32)
+        >>> results, counts = flow.unique(x, return_counts=True)
+        >>> counts
+        tensor([1, 1, 2, 1], dtype=oneflow.int32)
+        >>> results, indices = flow.unique(x, return_inverse=True, dtype=flow.long)
+        >>> indices
+        tensor([0, 1, 2, 3, 2], dtype=oneflow.int64)
+
     """
     if not return_inverse and not return_counts:
         return flow._C.unique(input)
     else:
-        return flow._C.unique(input, return_inverse, return_counts)
+        return flow._C.unique(
+            input,
+            return_inverse=return_inverse,
+            return_counts=return_counts,
+            dtype=dtype,
+        )
 
 
 if __name__ == "__main__":

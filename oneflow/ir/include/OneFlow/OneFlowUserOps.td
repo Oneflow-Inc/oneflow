@@ -5831,7 +5831,9 @@ def OneFlow_UniqueOp : OneFlow_BaseOp<"unique", [NoSideEffect, NoGrad, DeclareOp
     OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$idx,
+    OneFlow_Tensor:$num_unique
   );
   let attrs = (ins
     OneFlow_DataType:$out_idx
@@ -5849,8 +5851,8 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
   let output = (outs
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$idx,
-    OneFlow_Tensor:$count,
-    OneFlow_Tensor:$num_unique
+    OneFlow_Tensor:$num_unique,
+    OneFlow_Tensor:$count
   );
   let attrs = (ins
     OneFlow_DataType:$out_idx
