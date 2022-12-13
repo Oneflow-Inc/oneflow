@@ -4944,7 +4944,7 @@ class FusedClipGradFunctor {
  public:
   FusedClipGradFunctor() {
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-    for (int n = 1; n < op_.size(); ++n) {
+    for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("fused_clip_grad").Input("model_diff", n + 1).Build());
     }
   }

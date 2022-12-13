@@ -28,12 +28,14 @@ namespace {
 
 size_t InferFusedClipGradTempStorageSize(user_op::InferContext* ctx) {
   auto input_size = ctx->input_size("model_diff");
+  std::cout << "input_size:" << input_size << std::endl;
   if (input_size == 0) { return 0; }
   int64_t max_elem_cnt = 0;
   int64_t pack_size = 0;
   int32_t num_blocks = 0;
   for (size_t i = 0; i < input_size; ++i) {
     int64_t elem_cnt = ctx->InputShape("model_diff", i).elem_cnt();
+    std::cout << "shape:" << elem_cnt << std::endl;
     max_elem_cnt = std::max(max_elem_cnt, elem_cnt);
     pack_size++;
     if (pack_size == kMultiReduceScaleMulPackSize || i == input_size - 1) {
@@ -123,6 +125,7 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
       scale_mul(ctx->stream(), mut_params, total_norm);
     }
 
+    OF_CUDA_CHECK(cudaFreeHost(h_total_norm));
     OF_CUDA_CHECK(cudaFree(total_norm));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
