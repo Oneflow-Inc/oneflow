@@ -146,7 +146,7 @@ def _test_deform_conv2d_forward(
     )
     test_case.assertTrue(
         np.allclose(
-            flow_out.numpy(), torch_out.detach().cpu().numpy(), rtol=1e-5, atol=1e-5
+            flow_out.numpy(), torch_out.detach().cpu().numpy(), rtol=1e-3, atol=1e-2
         )
     )
 
@@ -201,8 +201,8 @@ def _test_deform_conv2d_backward(
         np.allclose(
             flow_weight.grad.numpy(),
             torch_weight.grad.cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
+            rtol=1e-3,
+            atol=1e-2,
         )
     )
     test_case.assertTrue(
