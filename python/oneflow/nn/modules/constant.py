@@ -77,7 +77,6 @@ class _ConstantBase(Module):
                 sbp=self.sbp,
             )
         else:
-            print("type of value >>>>>>>>>>>>>>>> ", type(self.value))
             if isinstance (self.value, flow.Tensor):
                 res = flow._C.tensor_constant(
                     self.shape, self.value, dtype=self.dtype, device=self.device
