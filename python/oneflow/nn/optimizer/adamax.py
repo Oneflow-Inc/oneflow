@@ -25,6 +25,77 @@ from .optimizer import Optimizer, ParamGroup
 
 
 class Adamax(Optimizer):
+    r"""Implements Adamax algorithm. (a variant of Adam based on infinity norm).
+
+    the equation of parameters updating is:
+
+    .. math::
+
+        & m_t = \beta_1*m_{t-1} + (1-\beta_1)*grad
+
+        & u_t = \max(\beta_2u_{t-1}, |grad| + \epsilon)
+
+        & param_{new} = param_{old} - learning\_rate * \frac{m_t}{(1 - \beta_1^t) u_t}
+
+
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 2e-3)
+        betas (Tuple[float, float], optional): coefficients used for computing
+            running averages of gradient and its square (default: (0.9, 0.999))
+        eps (float, optional): term added to the denominator to improve
+            numerical stability (default: 1e-8)
+        weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
+        maximize (bool, optional): maximize the params based on the objective, instead of minimizing (default: False)
+        fused (bool, optional): whether to divide all the parameters into several groups, then
+            update each group of parameters with the fused kernel. (default: False)
+
+    For example:
+
+    Example 1:
+
+    .. code-block:: python
+
+        # Assume net is a custom model.
+        adamax = flow.optim.Adamax(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on.
+            # ...
+            loss.backward()
+            adamax.step()
+            adamax.zero_grad()
+
+    Example 2:
+
+    .. code-block:: python
+
+        # Assume net is a custom model.
+        adamax = flow.optim.Adamax(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on.
+            # ...
+            loss.backward()
+            adamax.clip_grad()
+            adamax.step()
+            adamax.zero_grad()
+
+    If you want to use clip_grad, you can refer this example.
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
+
+    """
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],
@@ -39,6 +110,7 @@ class Adamax(Optimizer):
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert weight_decay >= 0.0, f"Invalid weight_decay: {weight_decay}"
+        assert fused is False, f"fused Adamax not implemented!"
         options = dict()
         options["lr"] = lr
         options["betas"] = betas
@@ -55,7 +127,7 @@ class Adamax(Optimizer):
                 self._state[param] = dict()
 
                 if param_group["fused"] and not param.is_cuda:
-                    warnings.warn("Fused SGD only support cuda parameters.")
+                    warnings.warn("Fused Adamax only support cuda parameters.")
                     param_group["fused"] = False
 
         self._adamax = (
@@ -113,43 +185,6 @@ class Adamax(Optimizer):
         self._state["step"] = self._state["step"] + 1
         return loss
 
-    # def _generate_conf_for_graph(self, train_conf, vars_conf):
-    #     new_opt_confs = []
-    #     for param_group in self.param_groups:
-    #         optimizer_conf = train_conf.optimizer_conf.add()
-    #         lr = (
-    #             param_group["initial_lr"]
-    #             if "initial_lr" in param_group
-    #             else param_group["lr"]
-    #         )
-    #         beta = param_group["momentum"]
-    #         l2 = param_group["weight_decay"]
-    #         dampening = param_group["dampening"]
-    #         nesterov = param_group["nesterov"]
-    #         maximize = param_group["maximize"]
-
-    #         optimizer_conf.base_learning_rate = lr
-    #         self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
-
-    #         if beta == 0:
-    #             optimizer_conf.naive_conf.SetInParent()
-    #         else:
-    #             optimizer_conf.momentum_conf.beta = beta
-    #             # Only Momentum Optimizer support these params.
-    #             optimizer_conf.momentum_conf.dampening = dampening
-    #             optimizer_conf.momentum_conf.nesterov = nesterov
-    #             optimizer_conf.momentum_conf.maximize = maximize
-
-    #         self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
-
-    #         for param in param_group.parameters:
-    #             vars_conf[param].l2 = l2
-    #             if param.requires_grad:
-    #                 optimizer_conf.variable_op_names.append(vars_conf[param].name)
-
-    #         new_opt_confs.append(optimizer_conf)
-    #     return new_opt_confs
-
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
@@ -170,7 +205,6 @@ class Adamax(Optimizer):
             optimizer_conf.base_learning_rate = lr
             self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
 
-
             optimizer_conf.adamax_conf.beta1 = beta1
             optimizer_conf.adamax_conf.beta2 = beta2
             optimizer_conf.adamax_conf.epsilon = epsilon
@@ -189,7 +223,7 @@ class Adamax(Optimizer):
 
     @property
     def support_sparse(self):
-        """Whether SGD Optimizer support sparse update. 
+        """Whether Adamax Optimizer support sparse update.
 
         """
         return True

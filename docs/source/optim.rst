@@ -175,6 +175,7 @@ Algorithms
 
     Adagrad
     Adam
+    Adamax
     AdamW
     LAMB
     RMSprop
