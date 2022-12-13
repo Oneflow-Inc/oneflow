@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -61,7 +49,7 @@ namespace oneflow {
       << "number of axes of \'in_vec\' should be 1, yet get " << in_vec_shape.NumAxes();
 
   // check input shape
-  size_t num_mat_rows = mat_rows_shape.At(0) - 1;
+  size_t num_mat_rows = mat_rows_shape.At(0);
   size_t num_mat_cols = mat_cols_shape.At(0);
   size_t num_mat_values = mat_values_shape.At(0);
   if (format == "csr") {
@@ -69,10 +57,10 @@ namespace oneflow {
         << "under CSR format, "
         << "the number of elements in \'mat_cols\'(" << num_mat_cols
         << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
-    CHECK_EQ_OR_RETURN(num_mat_rows, num_rows)
+    CHECK_EQ_OR_RETURN(num_mat_rows, num_rows + 1)
         << "under CSR format, "
-        << "the number of elements in \'mat_rows\'(" << num_mat_cols
-        << ") should be equal to the given attribute \'num_rows\'(" << num_rows << ")";
+        << "the number of elements in \'mat_rows\'(" << num_mat_rows
+        << ") should be equal to the given attribute \'num_rows\'+1 (" << num_rows + 1 << ")";
   } else if (format == "csc") {
     CHECK_EQ_OR_RETURN(num_mat_rows, num_mat_values)
         << "under CSC format, "

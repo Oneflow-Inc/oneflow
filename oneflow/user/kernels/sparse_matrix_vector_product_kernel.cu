@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/framework/framework.h"
@@ -52,7 +40,7 @@ namespace {
 
 template<typename T, typename IndexType>
 __device__ T warpReduce(T reduction_result) {
-  for (IndexType i = 32 / 2; i > 0; i++) {
+  for (IndexType i = 32 / 2; i > 0; i /= 2) {
     reduction_result += __shfl_down_sync(FULL_WARP_MASK, reduction_result, i);
   }
   return reduction_result;
@@ -174,10 +162,10 @@ __device__ void CsrVector(const IndexType num_rows, const IndexType target_row_i
     for (IndexType j = col_ids_begin_idx + lane; j < col_ids_end_idx; j += 32) {
       reduction_result += mat_values[j] * in_vec[col_ids[j]];
     }
-
-    // use warp primitive for reduction within the warp
-    reduction_result = warpReduce<T, IndexType>(reduction_result);
   }
+
+  // use warp primitive for reduction within the warp
+  reduction_result = warpReduce<T, IndexType>(reduction_result);
 
   if (lane == 0 && warp_id == 0
       && target_row_idx < num_rows) {  // TODO: might no need the last judgement here
@@ -225,8 +213,6 @@ __device__ void CsrVectorL(const IndexType num_rows, const IndexType target_row_
   }
 }
 
-// ref:
-// https://github.com/senior-zero/matrix_format_performance/blob/master/gpu/csr_adaptive_spmv.cu
 template<typename T, typename IndexType>
 __global__ void CsrSpMVGpu(const IndexType* row_assignment, const IndexType num_rows,
                            const IndexType* row_ptrs, const IndexType* col_ids, const T* mat_values,
@@ -268,17 +254,17 @@ __global__ void CsrSpMVGpu(const IndexType* row_assignment, const IndexType num_
 }
 
 template<typename IndexType>
-std::vector<IndexType>* InferRowAssignment(const IndexType num_ptrs, const IndexType* ptrs,
-                                           IndexType* num_block) {
+std::vector<IndexType>* InferRowAssignment(const IndexType num_ptrs, const IndexType* ptrs) {
   IndexType last_row_id = 0;
   IndexType nnz_sum = 0;
   std::vector<IndexType>* row_assignment = new std::vector<IndexType>;
+  row_assignment->push_back(0);
 
 #define UPDATE_ASSIGNMENT_META(row_id) \
   row_assignment->push_back(row_id);   \
   last_row_id = row_id;                \
   nnz_sum = 0;
-  for (IndexType i = 1; i < num_ptrs; i++) {
+  for (IndexType i = 1; i <= num_ptrs; i++) {
     nnz_sum += ptrs[i] - ptrs[i - 1];
     if (nnz_sum == BLOCK_SIZE) {
       // case: number of scanned nnz equals to BLOCK_SIZE
@@ -294,7 +280,6 @@ std::vector<IndexType>* InferRowAssignment(const IndexType num_ptrs, const Index
   }
 #undef UPDATE_ASSIGNMENT_META
 
-  *num_block = row_assignment->size();
   row_assignment->push_back(num_ptrs);
   return row_assignment;
 }
@@ -303,27 +288,40 @@ template<typename T, typename IndexType>
 void LaunchCsrSpMVGpuKernel(ep::Stream* stream, const IndexType num_rows, const IndexType nnz,
                             const IndexType* mat_row, const IndexType* mat_col, const T* mat_values,
                             const T* in_vec, T* out_vec) {
+  // copy mat_row to host memory
+  std::vector<IndexType>* h_mat_row = new std::vector<IndexType>;
+  ;
+  h_mat_row->reserve(num_rows);
+  OF_CUDA_CHECK(cudaMemcpyAsync(h_mat_row->data(), mat_row, num_rows * sizeof(IndexType),
+                                cudaMemcpyDeviceToHost,
+                                stream->As<ep::CudaStream>()->cuda_stream()));
+  CHECK_JUST(stream->Sync());
+
   // conduct row assignment and infer kernel shape
-  IndexType num_block = 0;
   std::vector<IndexType>* row_assignment =
-      InferRowAssignment<IndexType>(num_rows, mat_row, &num_block);
+      InferRowAssignment<IndexType>(num_rows, h_mat_row->data());
+  IndexType num_block = row_assignment->size() - 1;
 
   // copy row_assignment to device memory
   IndexType* d_row_assignment;
-  OF_CUDA_CHECK(cudaMalloc(&d_row_assignment, (num_block + 1) * sizeof(IndexType)));
+  OF_CUDA_CHECK(cudaMalloc(&d_row_assignment, row_assignment->size() * sizeof(IndexType)));
   OF_CUDA_CHECK(cudaMemcpyAsync(d_row_assignment, row_assignment->data(),
-                                (num_block + 1) * sizeof(IndexType), cudaMemcpyDefault,
+                                row_assignment->size() * sizeof(IndexType), cudaMemcpyDefault,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
+  CHECK_JUST(stream->Sync());
 
   // launch kernel
   CsrSpMVGpu<T, IndexType>
       <<<num_block, BLOCK_SIZE, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           d_row_assignment, num_rows, mat_row, mat_col, mat_values, in_vec, out_vec);
+  CHECK_JUST(stream->Sync());
+
   // clear memory space for row assignment
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaFree(d_row_assignment));
   delete row_assignment;
+  delete h_mat_row;
 }
+
 template<typename T, typename IndexType>
 void DispatchFormat(ep::Stream* stream, const IndexType num_ptrs, const IndexType nnz,
                     const IndexType* mat_row, const IndexType* mat_col, const T* mat_value,
@@ -339,18 +337,19 @@ void DispatchFormat(ep::Stream* stream, const IndexType num_ptrs, const IndexTyp
     UNIMPLEMENTED();
   }
 }
+
 template<typename T>
 void DispatchIndexType(ep::Stream* stream, const int64_t num_ptrs, const int64_t nnz,
                        const user_op::Tensor* mat_row_tensor, const user_op::Tensor* mat_col_tensor,
                        const user_op::Tensor* mat_value_tensor,
                        const user_op::Tensor* in_vec_tensor, user_op::Tensor* out_vec_tensor,
                        const std::string& format) {
-  if (num_ptrs < (1 << 30) && nnz < (1 << 30)) {
+  if (mat_row_tensor->data_type() == DataType::kInt32) {
     DispatchFormat<T, int32_t>(stream, static_cast<int32_t>(num_ptrs), static_cast<int32_t>(nnz),
                                mat_row_tensor->dptr<int32_t>(), mat_col_tensor->dptr<int32_t>(),
                                mat_value_tensor->dptr<T>(), in_vec_tensor->dptr<T>(),
                                out_vec_tensor->mut_dptr<T>(), format);
-  } else {
+  } else if (mat_row_tensor->data_type() == DataType::kInt64) {
     DispatchFormat<T, int64_t>(stream, static_cast<int64_t>(num_ptrs), static_cast<int64_t>(nnz),
                                mat_row_tensor->dptr<int64_t>(), mat_col_tensor->dptr<int64_t>(),
                                mat_value_tensor->dptr<T>(), in_vec_tensor->dptr<T>(),
@@ -393,7 +392,7 @@ class GpuSparseMatrixVectorProductKernel final : public user_op::OpKernel {
     CHECK_EQ(in_vec_shape.NumAxes(), 1)
         << "number of axes of \'in_vec\' should be 1, yet get " << in_vec_shape.NumAxes();
     // check input shape
-    const int64_t num_mat_rows = mat_rows_shape.At(0) - 1;
+    const int64_t num_mat_rows = mat_rows_shape.At(0);
     const int64_t num_mat_cols = mat_cols_shape.At(0);
     const int64_t num_mat_values = mat_values_shape.At(0);
     if (format == "csr") {
@@ -401,10 +400,10 @@ class GpuSparseMatrixVectorProductKernel final : public user_op::OpKernel {
           << "under CSR format, "
           << "the number of elements in \'mat_cols\'(" << num_mat_cols
           << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
-      CHECK_EQ(num_mat_rows, num_rows)
+      CHECK_EQ(num_mat_rows, num_rows + 1)
           << "under CSR format, "
-          << "the number of elements in \'mat_rows\'(" << num_mat_cols
-          << ") should be equal to the given attribute \'num_rows\'(" << num_rows << ")";
+          << "the number of elements in \'mat_rows\'(" << num_mat_rows
+          << ") should be equal to the given attribute \'num_rows\'+1 (" << num_rows + 1 << ")";
     } else if (format == "csc") {
       CHECK_EQ(num_mat_rows, num_mat_values)
           << "under CSC format, "
@@ -437,15 +436,16 @@ class GpuSparseMatrixVectorProductKernel final : public user_op::OpKernel {
     CHECK_EQ(mat_values_dtype, in_vec_dtype)
         << "data type of \'mat_values\' is not consitant with \'in_vec\'";
     // start dispatch process
-    DispatchIndexType<T>(ctx->stream(),
-                         /*num_ptrs*/ format == "csr" ? num_mat_rows : num_mat_cols,
-                         /*nnz*/ format == "csr" ? num_mat_cols : num_mat_rows,
-                         /*mat_row_tensor*/ in_mat_rows,
-                         /*mat_col_tensor*/ in_mat_cols,
-                         /*mat_value_tensor*/ in_mat_values,
-                         /*in_vec_tensor*/ in_vec,
-                         /*out_vec_tensor*/ out_vec,
-                         /*format*/ format);
+    DispatchIndexType<T>(
+        ctx->stream(),
+        /*num_ptrs*/ format == "csr" ? /*csr*/ num_mat_rows - 1 : /*csc/coo*/ num_mat_cols - 1,
+        /*nnz*/ format == "csr" ? /*csr*/ num_mat_cols : /*csc/coo*/ num_mat_rows,
+        /*mat_row_tensor*/ in_mat_rows,
+        /*mat_col_tensor*/ in_mat_cols,
+        /*mat_value_tensor*/ in_mat_values,
+        /*in_vec_tensor*/ in_vec,
+        /*out_vec_tensor*/ out_vec,
+        /*format*/ format);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

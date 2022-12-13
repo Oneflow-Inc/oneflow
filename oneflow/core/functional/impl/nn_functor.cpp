@@ -4586,8 +4586,9 @@ class SparseMatrixVectorProductFunctor {
 
     // check attributes
     CHECK_OR_RETURN(format == "csr" || format == "csc" || format == "coo")
-        << "unknown data format " << format;
-    CHECK_GT_OR_RETURN(num_rows, 0) << "invalid number of rows attribute" << num_rows;
+        << "unknown data format " << format << "use \"csr\", \"csc\" or \"coo\" instead";
+    CHECK_GT_OR_RETURN(num_rows, 0) << "attribute num_rows (" << num_rows << ") "
+                                    << "should larger than 0";
 
     // check dimension
     CHECK_EQ_OR_RETURN(mat_rows_shape.NumAxes(), 1)
@@ -4600,7 +4601,7 @@ class SparseMatrixVectorProductFunctor {
         << "number of axes of \'in_vec\' should be 1, yet get " << in_vec_shape.NumAxes();
 
     // check input shape
-    size_t num_mat_rows = mat_rows_shape.At(0) - 1;
+    size_t num_mat_rows = mat_rows_shape.At(0);
     size_t num_mat_cols = mat_cols_shape.At(0);
     size_t num_mat_values = mat_values_shape.At(0);
     if (format == "csr") {
@@ -4608,10 +4609,10 @@ class SparseMatrixVectorProductFunctor {
           << "under CSR format, "
           << "the number of elements in \'mat_cols\'(" << num_mat_cols
           << ") should be equal to the one of \'mat_values\'(" << num_mat_values << ")";
-      CHECK_EQ_OR_RETURN(num_mat_rows, num_rows)
+      CHECK_EQ_OR_RETURN(num_mat_rows, num_rows + 1)
           << "under CSR format, "
-          << "the number of elements in \'mat_rows\'(" << num_mat_cols
-          << ") should be equal to the given attribute \'num_rows\'(" << num_rows << ")";
+          << "the number of elements in \'mat_rows\'(" << num_mat_rows
+          << ") should be equal to the given attribute \'num_rows\'+1 (" << num_rows + 1 << ")";
     } else if (format == "csc") {
       CHECK_EQ_OR_RETURN(num_mat_rows, num_mat_values)
           << "under CSC format, "
@@ -4633,7 +4634,7 @@ class SparseMatrixVectorProductFunctor {
     attrs.SetAllAttrs(format, num_rows);
 
     // dispatch operator
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {mat_rows, mat_rows, mat_values, in_vec},
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {mat_rows, mat_cols, mat_values, in_vec},
                                                attrs);
   }
 
