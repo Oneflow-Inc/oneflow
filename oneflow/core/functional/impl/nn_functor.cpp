@@ -4953,7 +4953,13 @@ class FusedClipGradFunctor {
                          const float& norm_type) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
     attrs.SetAllAttrs(max_norm, norm_type);
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[model_diff.size() - 1], model_diff, attrs));
+    const int64_t weight_size = model_diff.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(size);
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin());
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
     return Maybe<void>::Ok();
   }
 
