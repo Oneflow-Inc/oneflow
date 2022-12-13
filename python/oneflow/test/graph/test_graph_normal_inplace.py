@@ -106,9 +106,7 @@ class TestGlobalNormalOpData(flow.unittest.TestCase):
                 for _, fn in _fn_param_global.items():
                     data_1 = flow.empty([16, 64, 128, 128])
                     data_2 = flow.empty([16, 64, 128, 128])
-                    _test_data_global(
-                        test_case, data_1, data_2, placement, sbp, fn=fn
-                    )
+                    _test_data_global(test_case, data_1, data_2, placement, sbp, fn=fn)
 
 
 if __name__ == "__main__":
