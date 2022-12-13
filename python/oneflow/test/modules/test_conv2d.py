@@ -1163,7 +1163,18 @@ def _test_conv2d(
 
 
 def _test_conv2d_backward(
-    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda", data_rtol = 1e-4, data_atol = 1e-8, weight_rtol = 1e-4, weight_atol = 1e-8
+    test_case,
+    conv,
+    data,
+    weight,
+    data_grad,
+    weight_grad,
+    bias=None,
+    device="cuda",
+    data_rtol=1e-4,
+    data_atol=1e-8,
+    weight_rtol=1e-4,
+    weight_atol=1e-8,
 ):
     to_device = flow.device(device)
     x = flow.tensor(data, dtype=flow.float32, device=to_device, requires_grad=True)
@@ -1174,9 +1185,13 @@ def _test_conv2d_backward(
     print(x.shape)
     of_out = conv(x)
     of_out.sum().backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=data_rtol, atol=data_atol))
     test_case.assertTrue(
-        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=weight_rtol, atol=weight_atol)
+        np.allclose(x.grad.numpy(), data_grad, rtol=data_rtol, atol=data_atol)
+    )
+    test_case.assertTrue(
+        np.allclose(
+            conv.weight.grad.numpy(), weight_grad, rtol=weight_rtol, atol=weight_atol
+        )
     )
 
 
@@ -1708,7 +1723,7 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_padding_data_grad,
                 test_conv2d_padding_weight_grad,
                 device=device,
-                weight_atol=1e-3
+                weight_atol=1e-3,
             )
 
     def test_conv2d_stride(test_case):
