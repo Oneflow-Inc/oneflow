@@ -205,6 +205,13 @@ class TestConstantModule(flow.unittest.TestCase):
         shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
         y = torch.full(shape, np.array([2.0])[0], device=device, requires_grad=True)
         return y
+    
+    @autotest(n=5)
+    def test_full_with_random_scalar_tensor(test_case):
+        device = random_device()
+        shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
+        y = torch.full(shape, torch.tensor(2.0), device=device, requires_grad=True)
+        return y
 
     @profile(torch.full)
     def profile_full(test_case):

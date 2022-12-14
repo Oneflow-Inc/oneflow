@@ -843,11 +843,12 @@
   signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
   bind_python: True
 
+- name: "global_tensor_constant"
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorConstant"
+  bind_python: True
+
 - name: "tensor_constant"
-  signature:
-    [
-      "Tensor (Shape shape, Tensor value, *, DataType dtype, Device device=None) => TensorConstant",
-    ]
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Device device=None) => TensorConstant"
   bind_python: True
 
 - name: "constant"

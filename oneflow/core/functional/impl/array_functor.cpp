@@ -106,6 +106,92 @@ class ArgMinFunctor {
         .call(x);
   }
 };
+
+class GlobalTensorConstantFunctor {
+ public:
+  GlobalTensorConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
+                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value", "nd_sbp");
+    if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), false, NullOpt);
+    } else {
+      attrs.SetAllAttrs(shape, dtype->data_type(), true, NullOpt);
+    }
+
+    auto dispatch_constant =
+        [&](const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+      if (LazyMode::is_enabled()) {
+        std::vector<std::string> nd_sbp(sbp_tuple.size());
+        {
+          for (int i = 0; i < sbp_tuple.size(); ++i) {
+            nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
+          }
+        }
+        attrs.SetAttr<5>(nd_sbp);
+      }
+      const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
+                                            OpExprInterpContext(attrs, placement, nd_sbp));
+    };
+    bool has_partial_parallel = [&]() {
+      for (const auto& sbp : sbp_tuple) {
+        if (sbp->has_partial_sum_parallel()) { return true; }
+      }
+      return false;
+    }();
+    // Since the source op does not support Partial, it is necessary to replace Partial
+    // with Broadcast, and then convert it to Partial
+    if (has_partial_parallel) {
+      const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
+      const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
+      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
+                                  /*copy*/ false);
+    } else {
+      return dispatch_constant(sbp_tuple);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TensorConstantFunctor {
+ public:
+  TensorConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
+                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalTensorConstant(shape, value, dtype,
+                                                   GetGlobalParallelDescFromDevice(device),
+                                                   *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value");
+    if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), false);
+    } else {
+      attrs.SetAllAttrs(shape, dtype->data_type(), true);
+    }
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
+                                            OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GlobalConstantFunctor {
  public:
   GlobalConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
@@ -151,33 +237,6 @@ class GlobalConstantFunctor {
                                   /*copy*/ false);
     } else {
       return dispatch_constant(sbp_tuple);
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class TensorConstantFunctor {
- public:
-  TensorConstantFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
-                           const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value");
-    if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), false);
-    } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), true);
-    }
-    if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
-                                            OpExprInterpContext(attrs, device_symbol));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
     }
   }
 
@@ -3630,8 +3689,9 @@ class BaddBmmFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
-  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
+  m.add_functor<impl::GlobalTensorConstantFunctor>("GlobalTensorConstant");
   m.add_functor<impl::TensorConstantFunctor>("TensorConstant");
+  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
