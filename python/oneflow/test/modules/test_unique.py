@@ -83,7 +83,7 @@ class TestUnique(flow.unittest.TestCase):
     @autotest(n=5)
     def test_unique(test_case):
         dtype = [torch.int8, torch.int, torch.float, torch.double]
-        device = ["cpu", "cuda"]
+        device = [random_device()]
         arg_dict = OrderedDict()
         arg_dict["dtype"] = dtype
         arg_dict["device"] = device
