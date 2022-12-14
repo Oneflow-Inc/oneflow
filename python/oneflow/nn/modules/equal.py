@@ -17,8 +17,12 @@ import oneflow as flow
 
 
 def equal_op(a, b):
-    res = flow._C.equal(a, b)
-    return res.all().item()
+    # True if two tensors have the same size and elements, False otherwise.
+    if a.shape == b.shape and a.numel() == b.numel():
+        res = flow._C.equal(a, b)
+        return res.all().item()
+    else:
+        return False
 
 
 if __name__ == "__main__":
