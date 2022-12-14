@@ -23,15 +23,7 @@ import oneflow.unittest
 
 
 class DataChecker:
-    check_list = [
-        "mean",
-        "std",
-        "min",
-        "max",
-        "value",
-        "function",
-        "param"
-    ]
+    check_list = ["mean", "std", "min", "max", "value", "lambda_func"]
 
     def __init__(self, **kwargs):
         self.checkers = {}
@@ -58,12 +50,11 @@ class DataChecker:
         if "value" in self.checkers:
             test_case.assertTrue(np.all(tensor.numpy() == self.checkers["value"]))
 
-        if "function" and "param" in self.checkers:
-            params=self.checkers["param"]
+        if "lambda_func" in self.checkers:
             test_case.assertTrue(
                 np.allclose(
                     tensor.numpy(),
-                    self.checkers["function"](params),
+                    self.checkers["lambda_func"](tensor.shape),
                     rtol=1e-4,
                     atol=1e-4,
                 )
@@ -160,10 +151,8 @@ check_func_list = [
     # oneflow.nn.init.eye_
     {
         "func": flow.nn.init.eye_,
-        "params":{},
-        "checker": DataChecker(
-            function=np.eye,param=256
-        ),
+        "params": {},
+        "checker": DataChecker(lambda_func=lambda size: np.eye(*size)),
     },
 ]
 

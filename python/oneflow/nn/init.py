@@ -27,6 +27,7 @@ from oneflow.ops.util.initializer_util import (
 from oneflow.framework.tensor import Tensor
 import oneflow.framework.dtype as dtype_util
 
+
 def uniform_(tensor, a=0.0, b=1.0):
     r"""
     
@@ -335,6 +336,7 @@ def eye_(tensor):
         raise ValueError("Only tensors with 2 dimensions are supported")
     with flow.no_grad():
         return flow._C.eye_(tensor)
+
 
 def _calculate_fan_in_and_fan_out(tensor):
     dimensions = tensor.ndimension()
