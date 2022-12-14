@@ -18,7 +18,7 @@ import math
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from typing import Tuple
 
 
