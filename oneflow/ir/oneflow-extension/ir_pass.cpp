@@ -70,7 +70,9 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     is_updated_ = true;
   }
   void DumpLog(const std::string& filename, const std::string& content) override {
-    TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    if (IsInDebugMode()) {
+      TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    }
   }
 
   const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
@@ -108,19 +110,6 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
                                                 const std::string& ibn,
                                                 const std::string& new_val) const override {
     return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
-  }
-
-  AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
-    user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
-    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-    return op_def.GetAttrType(attr_name);
-  }
-
-  UserOpDef GetUserOpDef(const std::string& op_type_name) const {
-    const user_op::OpRegistryResult* val =
-        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-    CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-    return val->op_def;
   }
 
   void QueryLogicalBlob(
@@ -173,19 +162,22 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   job_before.CopyFrom(*job);
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
   SortJob(job_before);
-
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
-      ->Write(job_before);
+  if (IsInDebugMode()) {
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
+        ->Write(job_before);
+  }
   mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;
   });
-  Job job_after{};
-  job_after.CopyFrom(*job);
-  SortJob(job_after);
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
-      ->Write(job_after);
+  if (IsInDebugMode()) {
+    Job job_after{};
+    job_after.CopyFrom(*job);
+    SortJob(job_after);
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
+        ->Write(job_after);
+  }
   return Maybe<void>::Ok();
 }
 
