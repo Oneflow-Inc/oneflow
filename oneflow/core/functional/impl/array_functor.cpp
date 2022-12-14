@@ -3653,6 +3653,100 @@ class BinCountFunctor {
   std::shared_ptr<OpExpr> weight_op_;
 };
 
+class UniqueFunctor {
+ public:
+  UniqueFunctor() {
+    op_ = CHECK_JUST(
+        OpBuilder("unique").Input("x").Output("y").Output("idx").Output("num_unique").Build());
+  };
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
+    DataType out_idx = dtype->data_type();
+    attrs.SetAllAttrs(out_idx);
+    std::shared_ptr<TensorTuple> output = JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    int64_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
+    {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
+    }
+    return functional::Slice(output->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1},
+                             false);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UniqueWithCountsFunctor {
+ public:
+  UniqueWithCountsFunctor() {
+    unique_op_ = CHECK_JUST(
+        OpBuilder("unique").Input("x").Output("y").Output("idx").Output("num_unique").Build());
+    unique_with_counts_op_ = CHECK_JUST(OpBuilder("unique_with_counts")
+                                            .Input("x")
+                                            .Output("y")
+                                            .Output("idx")
+                                            .Output("num_unique")
+                                            .Output("count")
+                                            .Build());
+  };
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, bool return_inverse,
+                                bool return_counts, const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
+    attrs.SetAllAttrs(dtype->data_type());
+    std::shared_ptr<TensorTuple> output;
+    if (return_counts) {
+      output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *unique_with_counts_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    } else {
+      output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *unique_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    }
+
+    int64_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
+    {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
+    }
+    auto result = std::make_shared<TensorTuple>();
+    const auto& y = JUST(
+        functional::Slice(output->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1}, false));
+    result->emplace_back(y);
+    if (return_inverse) {
+      result->emplace_back(JUST(functional::Reshape(output->at(1), *x->shape())));
+    }
+    if (return_counts) {
+      const auto count = JUST(functional::Slice(output->at(3), /*start=*/{0}, /*end=*/{num_unique},
+                                                /*step=*/{1}, false));
+      result->emplace_back(count);
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> unique_op_;
+  std::shared_ptr<OpExpr> unique_with_counts_op_;
+};
+
 class BaddBmmFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -3833,6 +3927,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BinCountFunctor>("BinCount");
   m.add_functor<impl::IndexAddFunctor>("IndexAdd");
   m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
+  m.add_functor<impl::UniqueFunctor>("Unique");
+  m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
 };
 
