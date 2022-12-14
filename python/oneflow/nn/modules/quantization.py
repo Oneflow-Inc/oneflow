@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class Quantization(Module):
