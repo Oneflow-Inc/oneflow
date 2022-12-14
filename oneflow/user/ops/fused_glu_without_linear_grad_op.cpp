@@ -19,6 +19,30 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ auto FusedGluWithoutLinearGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  // check existance of optional args
+  bool is_split_mode = false;
+  if (ctx->user_op_conf().has_input("matmul_vx", 0)) {
+    is_split_mode = true;
+  }
+
+  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes();
+       ++i) {
+    if (is_split_mode) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("matmul_wx", 0), i)
+          .Split(user_op::OpArg("matmul_vx", 0), i)
+          .Split(ctx->outputs(), i)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("matmul_wx", 0), i)
+          .Split(ctx->outputs(), i)
+          .Build();
+    }
+  }
+  
   return Maybe<void>::Ok();
 }
 
