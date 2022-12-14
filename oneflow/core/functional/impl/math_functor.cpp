@@ -2102,8 +2102,7 @@ class InplaceScalarLogicalGreaterFunctor {
         JUST(functional::ScalarLogicalGreater(x, scalar));
     const std::shared_ptr<one::Tensor>& condition_scalar_x = JUST(functional::ScalarLogicalGreater(
         JUST(functional::ScalarMul(x, -1.0, /*inplace=*/false)), Scalar(-1.0) * scalar));
-    std::shared_ptr<one::Tensor> output =
-        JUST(functional::MaskedFillInplace(x, condition_x_scalar, 1));
+    JUST(functional::MaskedFillInplace(x, condition_x_scalar, 1));
     return JUST(functional::MaskedFillInplace(x, condition_scalar_x, 0));
   }
 };
