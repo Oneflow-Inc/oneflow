@@ -47,10 +47,12 @@
 
 namespace functional = ::oneflow::one::functional;
 namespace of = ::oneflow;
-namespace pdl = ::mlir::pdl;
+// namespace pdl = ::mlir::pdl;
 using std::is_same_v;
 
 namespace mlir {
+using pdl::OperandOp;
+using pdl::OperationOp;
 namespace oneflow {
 
 auto Generator::get_random_tensor() {
@@ -65,10 +67,11 @@ auto Generator::get_random_tensor() {
     of::AutoMemcpy(stream, rand_arr, eager_blob_object->dptr(), 2 * 3 * sizeof(float),
                    of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
-  llvm::outs() << "testing randn results: " << rand_arr[0] << ", " << rand_arr[1];
+  llvm::outs() << "testing randn results: " << rand_arr[0] << ", " << rand_arr[1] << "\n";
   CHECK_JUST(of::one::SyncAccessTensorWithTimeOut(rand, callback, "const"));
   auto dense = support::TensorToDenseElementsAttr(rand, context);
   dense.print(llvm::outs());
+  llvm::outs() << "\n";
   NamedAttrList attrs;
   attrs.set("value", dense);
 
@@ -97,6 +100,7 @@ void Generator::examples() {
                                               ValueRange{rands[1], rands[2]}, addop_attrs);
   auto res2 = builder.create<BroadcastAddOp>(add12->getLoc(), result_type,
                                              ValueRange{rands[0], add12}, addop_attrs);
+  (void)res2;
   // TODO: how to evaluate res1 & res2?
   // I have a job, but the job is constituted of multiple OPs
   of::Job job;
@@ -117,18 +121,18 @@ void Generator::examples() {
   // res1 and res2 equal, add to pdl
   TypeAttr ta;
   auto pdl_result_type = builder.create<pdl::TypeOp>(pdl.getModule().getLoc(), result_type, ta);
-  auto pdl_op1 = builder.create<pdl::OperandOp>(pdl_result_type.getLoc());
-  auto pdl_op2 = builder.create<pdl::OperandOp>(pdl_op1.getLoc());
-  auto pdl_op3 = builder.create<pdl::OperandOp>(pdl_op2.getLoc());
-  auto pdl_of_add_op = builder.create<pdl::OperationOp>(pdl_op3->getLoc(), res1.op_name(),
-                                                        ValueRange{pdl_op1, pdl_op2});
-  auto pdl_res1 = builder.create<pdl::OperationOp>(pdl_of_add_op->getLoc(), res1.op_name(),
-                                                   ValueRange{pdl_of_add_op, pdl_op3});
+  auto pdl_op1 = builder.create<OperandOp>(pdl_result_type.getLoc());
+  auto pdl_op2 = builder.create<OperandOp>(pdl_op1.getLoc());
+  auto pdl_op3 = builder.create<OperandOp>(pdl_op2.getLoc());
+  auto pdl_of_add_op =
+      builder.create<OperationOp>(pdl_op3->getLoc(), res1.op_name(), ValueRange{pdl_op1, pdl_op2});
+  auto pdl_res1 = builder.create<OperationOp>(pdl_of_add_op->getLoc(), res1.op_name(),
+                                              ValueRange{pdl_of_add_op, pdl_op3});
 
-  auto pdl_of_add_op2 = builder.create<pdl::OperationOp>(pdl_res1->getLoc(), res1.op_name(),
-                                                         ValueRange{pdl_op2, pdl_op3});
-  auto pdl_res2 = builder.create<pdl::OperationOp>(pdl_of_add_op2->getLoc(), res1.op_name(),
-                                                   ValueRange{pdl_op1, pdl_of_add_op2});
+  auto pdl_of_add_op2 =
+      builder.create<OperationOp>(pdl_res1->getLoc(), res1.op_name(), ValueRange{pdl_op2, pdl_op3});
+  auto pdl_res2 = builder.create<OperationOp>(pdl_of_add_op2->getLoc(), res1.op_name(),
+                                              ValueRange{pdl_op1, pdl_of_add_op2});
   auto rewrite =
       builder.create<pdl::RewriteOp>(pdl_res2->getLoc(), pdl_res1, nullptr, ValueRange());
   // final replace op
@@ -163,23 +167,22 @@ bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
       if (a.getOperations().size() != b.getOperations().size()) return false;
     }
     for (const auto& pair : llvm::zip(ra.getOps(), rb.getOps())) {
-      Op<pdl::OperationOp>* p;
       Operation* a = &std::get<0>(pair);
       Operation* b = &std::get<1>(pair);
-      pdl::OperandOp rand_a = llvm::dyn_cast<pdl::OperandOp>(a);
-      pdl::OperandOp rand_b = llvm::dyn_cast<pdl::OperandOp>(b);
-      pdl::OperationOp opa = llvm::dyn_cast<pdl::OperationOp>(a);
-      pdl::OperationOp opb = llvm::dyn_cast<pdl::OperationOp>(b);
+      OperandOp rand_a = llvm::dyn_cast<OperandOp>(a);
+      OperandOp rand_b = llvm::dyn_cast<OperandOp>(b);
+      OperationOp opa = llvm::dyn_cast<OperationOp>(a);
+      OperationOp opb = llvm::dyn_cast<OperationOp>(b);
 
-      if (isa<pdl::OperandOp>(a) and isa<pdl::OperandOp>(b)) {  // both are (input) operand
+      if (isa<OperandOp>(a) and isa<OperandOp>(b)) {  // both are (input) operand
         auto a_mapped = bav.lookupOrNull(rand_a.getResult());
         if (a_mapped == nullptr) {
           bav.map(rand_a, rand_b);
         } else if (a_mapped != rand_b) {
           return false;
         }
-      } else if (isa<pdl::OperationOp>(a)
-                 and isa<pdl::OperationOp>(b)) {  // represents some oneflow operation
+      } else if (isa<OperationOp>(a) and isa<OperationOp>(b)) {
+        // represents some oneflow operation
         // TODO
       } else {
         return false;
@@ -209,6 +212,10 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
   if (res.wasInterrupted())  // contains duplicate operations
     return;
   auto graph_pdl = build_pdl_from_oneflow_op(graph);
+  if (verify(graph_pdl, true).succeeded()) {
+  } else {
+    llvm::errs() << "Error verifying pdl\n";
+  }
   // get existing rewrites, check if the new graph can be infered
   auto fp = fingerprint(graph);
   if (D.count(fp)) {
@@ -224,7 +231,7 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
     // add
     D[fp] = graph_pdl;
   }
-  if (depth > 3) return;
+  if (depth >= 2) return;
   dfs_broadcast_binary_ops<
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
@@ -239,11 +246,15 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
 }
 
 ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
+  // FIXME: start from pdl.pattern
+  auto builder = this->builder;  // copy a new builder
   static int graph_index{};
   // go over the operands
   BlockAndValueMapping bav{};
   auto new_pdl_module = ModuleOp::create(FileLineColLoc::get(
       builder.getStringAttr("pdl-" + std::to_string(graph_index++) + ".mlir"), 0, 0));
+  // set insertion point
+  builder.setInsertionPointToEnd(&new_pdl_module.getBodyRegion().getBlocks().back());
   auto loc = new_pdl_module.getLoc();
   // clone graph to the new pdl module
   assert(graph->getNumRegions() == 1);
@@ -251,7 +262,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
     for (Operation& op : block.getOperations()) {
       if (llvm::isa<FrozenVariableOp>(op)) {
         // create pdl operand op
-        auto pdlop = builder.create<pdl::OperandOp>(loc);
+        auto pdlop = builder.create<OperandOp>(loc);
         bav.map(op.getResult(0), pdlop);  // can this compile?
         loc = pdlop->getLoc();
       } else {
@@ -259,8 +270,10 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
         SmallVector<Value> pdl_operands;
         for (auto operand : op.getOperands()) { pdl_operands.push_back(bav.lookup(operand)); }
         // TODO: fill type ranges
+        // auto tyty = pdl::TypeType();
+        // auto typeop = builder.create<pdl::TypeOp>(loc, tyty, nullptr);
         auto pdlop =
-            builder.create<pdl::OperationOp>(loc, TypeRange(), pdl_operands, op.getAttrs());
+            builder.create<OperationOp>(loc, op.getResultTypes(), pdl_operands, op.getAttrs());
         // what if the original op has multiple results? pdl OperationOp is OneResult??
         for (auto result : op.getResults()) { bav.map(result, pdlop->getResult(0)); }
         loc = pdlop->getLoc();
@@ -288,21 +301,28 @@ void Generator::dfs_binary_ops(int depth, SmallVector<Value>& inputs) {
 
 template<typename T>
 void Generator::dfs_broadcast_binary_op(int depth, SmallVector<Value>& inputs) {
-  // I'm only using C++17 in generator, the oneflow library is still compiled using C++14
+  // I'm only using C++17 in this cmake target, the oneflow library is still compiled using C++14
   // TODO: special handling of some Ops
   if constexpr (is_same_v<T, BroadcastLikeOp> or is_same_v<T, BroadcastDivGradOp>) { return; }
 
   NamedAttrList attrs{{device_name, device_tag, hierarchy, op_name(), scope_symbol_id}};
   inputs.reserve(inputs.size() + 1);
   // broadcast binary op needs two value from inputs
-  for (auto it1 = inputs.begin(); it1 != inputs.end(); ++it1) {
-    for (auto it2 = it1; it2 != inputs.end(); ++it2) {
-      Operation* op = builder.create<T>(graph->getLoc(), TypeRange(it1->getType()),
-                                        ValueRange({*it1, *it2}), attrs);
-      if (verify(op).succeeded()) {
-        builder.insert(op);
+  const auto size = inputs.size();
+  for (auto i = 0u; i != size; ++i) {
+    for (auto j = i; j != size; ++j) {
+      auto input_i = inputs[i];
+      auto input_j = inputs[j];
+      // builder.create will do insertion
+      Operation* op = builder.create<T>(graph->getLoc(), input_i.getType(),
+                                        ValueRange{input_i, input_j}, attrs);
+      if (verify(graph, true).succeeded()) {
+        // op->print(llvm::outs() << "success: ");
+        // llvm::outs() << "\n";
+        // builder.insert(op);
         inputs.append(op->getOpResults().begin(), op->getOpResults().end());
-        for (OpResult out : op->getOpResults()) { inputs.push_back(out); }
+        graph->print(llvm::outs() << "dfs: \n");
+        // for (OpResult out : op->getOpResults()) { inputs.push_back(out); }
         // go down one level
         dfs(depth + 1, inputs);
         // remove op results from input
@@ -343,17 +363,14 @@ void Generator::dfs_binary_op(int depth, SmallVector<Value>& inputs) {
 }  // namespace mlir
 
 int main(/* int argc, char** argv */) {
-  oneflow_api::initialize();
-  oneflow_api::release();
-
-  // mlir::DialectRegistry registry;
-  // mlir::registerAllTranslations();
-  // registry.insert<mlir::oneflow::OneFlowDialect>();
-  // registry.insert<mlir::pdl::PDLDialect>();
-  // for (auto n : registry.getDialectNames()) llvm::dbgs() << "dialect: " << n << "\n";
-  // mlir::MLIRContext context{registry};
-  // context.loadAllAvailableDialects();
-  // mlir::oneflow::Generator gen(&context);
-  // gen.run();
-  // return 0;
+  mlir::DialectRegistry registry;
+  mlir::registerAllTranslations();
+  registry.insert<mlir::oneflow::OneFlowDialect>();
+  registry.insert<mlir::pdl::PDLDialect>();
+  for (auto n : registry.getDialectNames()) llvm::dbgs() << "dialect: " << n << "\n";
+  mlir::MLIRContext context{registry};
+  context.loadAllAvailableDialects();
+  mlir::oneflow::Generator gen(&context);
+  gen.run();
+  return 0;
 }

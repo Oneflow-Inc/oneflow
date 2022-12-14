@@ -35,6 +35,7 @@ class Generator {
         scope_symbol_id(StringAttr::get(context, "scope_symbol_id"),
                         IntegerAttr::get(IntegerType::get(context, 64), 114514)) {
     graph = ModuleOp::create(FileLineColLoc::get(builder.getStringAttr("file.mlir"), 0, 0));
+    builder.setInsertionPointToEnd(&graph.getBodyRegion().getBlocks().back());
     pdl = PDLPatternModule(
         ModuleOp::create(FileLineColLoc::get(builder.getStringAttr("pdl.mlir"), 0, 0)));
     ::oneflow_api::initialize();
