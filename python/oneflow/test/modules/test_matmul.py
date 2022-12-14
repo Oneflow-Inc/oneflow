@@ -71,7 +71,7 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=4, dim2=k).to(device)
         return x.matmul(y)
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-4, atol=1e-3)
     def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
         device = random_device()
         k = random(1, 6)
