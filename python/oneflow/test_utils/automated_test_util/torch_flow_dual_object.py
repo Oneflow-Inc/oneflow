@@ -294,14 +294,19 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
 
 # NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
 def get_global_test_device(oneflow_args, oneflow_kwargs=None):
+    # The case when the parameter input of Op only has kwargs.
     if not oneflow_args:
         return oneflow_kwargs["placement"].type
+    # The case when the parameter input of Op is tensors.
     elif isinstance(oneflow_args[0], flow.Tensor):
         return oneflow_args[0].placement.type
+    # The case when the parameter input of Op is tensor.
     elif isinstance(oneflow_args[0], flow.placement):
         return oneflow_args[0].type
+    # The case when the parameter input of Op is tuple. For example: test_0_dim_tensor.
     elif isinstance(oneflow_args[0], tuple):
         return oneflow_args[0][0].placement.type
+    # When oneflow_args[0] is int or float, etc.
     else:
         return oneflow_args[1].placement.type
 
