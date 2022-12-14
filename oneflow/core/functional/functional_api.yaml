@@ -3063,6 +3063,13 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
 
+- name: "unique"
+  signature: [
+    "Tensor (Tensor x, DataType dtype=kInt32) => Unique",
+    "TensorTuple (Tensor x, Bool return_inverse=False, Bool return_counts=False, DataType dtype=kInt32) => UniqueWithCounts"
+  ]
+  bind_python: True
+
 - name: "fused_weighted_sum"
   signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
   bind_python: True
