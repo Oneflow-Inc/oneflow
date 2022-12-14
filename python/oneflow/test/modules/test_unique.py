@@ -83,7 +83,7 @@ class TestUnique(flow.unittest.TestCase):
     @autotest(n=5)
     def test_unique(test_case):
         dtype = [torch.int8, torch.int, torch.float, torch.double]
-        device = [random_device()]
+        device = ["cpu"]
         arg_dict = OrderedDict()
         arg_dict["dtype"] = dtype
         arg_dict["device"] = device
@@ -91,6 +91,15 @@ class TestUnique(flow.unittest.TestCase):
         arg_dict["return_counts"] = [False, True]
         for arg in GenArgList(arg_dict):
             _test_unique(test_case, *arg[:])
+    
+    @profile(torch.unique)
+    def profile_unique(test_case):
+        input = torch.randint(0, 1000, (1000, ))
+        torch.unique(input)
+        torch.unique(input, return_inverse=True, return_counts=True)
+        input = torch.randn(1000, )
+        torch.unique(input)
+        torch.unique(input, return_inverse=True, return_counts=True)
 
 
 if __name__ == "__main__":

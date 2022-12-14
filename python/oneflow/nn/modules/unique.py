@@ -20,6 +20,8 @@ def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.in
     r"""
     Returns the unique elements of the input tensor.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.unique.html.
+
     Args:
         input (Tensor): The input tensor.
         return_inverse (bool): Whether to also return the indices for where elements in the original input ended up in the returned unique list.
