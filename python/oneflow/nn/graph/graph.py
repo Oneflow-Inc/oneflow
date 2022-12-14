@@ -52,9 +52,9 @@ from oneflow.nn.graph.util import (
     seq_to_func_return,
     sys_exc_error_msg,
 )
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.optim.optimizer import Optimizer
 
 
 class Graph(object):
