@@ -28,7 +28,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_unique(test_case, dtype, device, return_inverse, return_counts):
+def _test_unique(test_case, device, return_inverse, return_counts):
+    dtype = random_util.choice([torch.int8, torch.int, torch.float, torch.double])
     input = random_tensor(ndim=3, dim0=random(), dim1=random(), dim2=random(), high=20)
     input = input.to(device).to(dtype)
     oneflow_output = flow.unique(
@@ -82,22 +83,19 @@ def _test_unique(test_case, dtype, device, return_inverse, return_counts):
 class TestUnique(flow.unittest.TestCase):
     @autotest(n=5)
     def test_unique(test_case):
-        dtype = [torch.int8, torch.int, torch.float, torch.double]
-        device = ["cpu"]
         arg_dict = OrderedDict()
-        arg_dict["dtype"] = dtype
-        arg_dict["device"] = device
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["return_inverse"] = [False, True]
         arg_dict["return_counts"] = [False, True]
         for arg in GenArgList(arg_dict):
-            _test_unique(test_case, *arg[:])
-    
+            _test_unique(test_case, *arg)
+
     @profile(torch.unique)
     def profile_unique(test_case):
-        input = torch.randint(0, 1000, (1000, ))
+        input = torch.randint(0, 1000, (1000,))
         torch.unique(input)
         torch.unique(input, return_inverse=True, return_counts=True)
-        input = torch.randn(1000, )
+        input = torch.randn(1000,)
         torch.unique(input)
         torch.unique(input, return_inverse=True, return_counts=True)
 
