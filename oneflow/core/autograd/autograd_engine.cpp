@@ -89,6 +89,9 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1.0,
                          /*inplace=*/true));
   } else {
+    // NOTE: acc_grad can not share data with current_grad, because accumulate acc_grad
+    // with inplace operation and it maybe change current_grad to get wrong result.
+    // See more details in https://github.com/Oneflow-Inc/oneflow/issues/8248
     JUST(autograd_meta->set_acc_grad(JUST(functional::Identity(current_grad))));
   }
   for (const auto& hook : autograd_meta->post_grad_accumulation_hooks()) {
