@@ -124,6 +124,14 @@
     ]
   bind_python: true
 
+- name: "greater_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceBroadcastGreater",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarLogicalGreater",
+    ]
+  bind_python: true
+
 - name: "greater_equal"
   signature:
     [

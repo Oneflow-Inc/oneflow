@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
@@ -2048,7 +2050,7 @@ class ScalarLogicalBaseFunctor {
     JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
 
  private:
@@ -2092,6 +2094,16 @@ class ScalarLogicalGreater2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return ScalarLogicalLess(x, scalar);
+  }
+};
+
+class InplaceScalarLogicalGreaterFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    const std::shared_ptr<one::Tensor>& condition_x_scalar = JUST(functional::ScalarLogicalGreater(x, scalar));
+    const std::shared_ptr<one::Tensor>& condition_scalar_x = JUST(functional::ScalarLogicalGreater(JUST(functional::ScalarMul(x, -1.0, /*inplace=*/false)), Scalar(-1.0) * scalar));
+    std::shared_ptr<one::Tensor> output = JUST(functional::MaskedFillInplace(x, condition_x_scalar, 1));
+    return JUST(functional::MaskedFillInplace(x, condition_scalar_x, 0));
   }
 };
 
@@ -3782,6 +3794,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");
   m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<InplaceScalarLogicalGreaterFunctor>("InplaceScalarLogicalGreater");
   m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
       "ScalarLogicalGreaterEqual");
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");

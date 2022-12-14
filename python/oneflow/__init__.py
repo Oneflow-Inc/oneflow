@@ -86,6 +86,7 @@ from oneflow._C import sinh
 from oneflow._C import tan
 from oneflow._C import greater
 from oneflow._C import greater as gt
+from oneflow._C import greater_ as gt_
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log

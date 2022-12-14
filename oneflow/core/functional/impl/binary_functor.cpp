@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -405,6 +406,17 @@ class BroadcastGreaterFunctor : public BinaryFunctor {
   }
 };
 
+class InplaceBroadcastGreaterFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    const std::shared_ptr<one::Tensor>& condition_x_y = JUST(functional::BroadcastGreater(x, y));
+    const std::shared_ptr<one::Tensor>& condition_y_x = JUST(functional::BroadcastGreater(y, x));
+    std::shared_ptr<one::Tensor> output = JUST(functional::MaskedFillInplace(x, condition_x_y, 1));
+    return JUST(functional::MaskedFillInplace(x, condition_y_x, 0));
+  }
+};
+
 class BroadcastGreaterEqualFunctor : public BinaryFunctor {
  public:
   BroadcastGreaterEqualFunctor() {
@@ -526,6 +538,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
+  m.add_functor<impl::InplaceBroadcastGreaterFunctor>("InplaceBroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
   m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
   m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
