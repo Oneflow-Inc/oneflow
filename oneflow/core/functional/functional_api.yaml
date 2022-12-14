@@ -290,7 +290,7 @@
   signature:
     [
       "Tensor (Tensor input) => Min",
-      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Min",
       "Tensor (Tensor input, Tensor other) => Min",
     ]
   bind_python: True

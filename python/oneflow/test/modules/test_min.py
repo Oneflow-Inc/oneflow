@@ -98,6 +98,12 @@ class TestMinModule(flow.unittest.TestCase):
         y = random_tensor(ndim, *b_dims, dtype=int).to(device)
         return torch.min(x, y)
 
+    
+    @autotest(n=3, auto_backward=False)
+    def test_min_return_type(test_case):
+        x = random_tensor(3, 4)
+        result = x.min(1)
+        return result.values, result.indices
 
 if __name__ == "__main__":
     unittest.main()
