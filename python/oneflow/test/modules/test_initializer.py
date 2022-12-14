@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 class DataChecker:
-    check_list = ["mean", "std", "min", "max", "value", "lambda_func"]
+    check_list = ["mean", "std", "min", "max", "value", "lambda_func",]
 
     def __init__(self, **kwargs):
         self.checkers = {}
