@@ -77,7 +77,7 @@ class _ConstantBase(Module):
                 sbp=self.sbp,
             )
         else:
-            if isinstance (self.value, flow.Tensor):
+            if isinstance(self.value, flow.Tensor):
                 res = flow._C.tensor_constant(
                     self.shape, self.value, dtype=self.dtype, device=self.device
                 )
