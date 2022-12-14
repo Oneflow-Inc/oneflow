@@ -299,7 +299,7 @@
   signature:
     [
       "Tensor (Tensor input) => Median",
-      "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
     ]
   bind_python: True
 
