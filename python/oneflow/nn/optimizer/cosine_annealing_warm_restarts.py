@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 

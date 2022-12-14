@@ -17,7 +17,7 @@ from typing import Union
 
 import oneflow as flow
 from oneflow.nn.common_types import _size_2_t, _size_4_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _quadruple
 
 
