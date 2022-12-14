@@ -387,7 +387,6 @@ def full_op(
         fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
-    # TODO: constant kernel originally support scalar fill_value tensor rather than by implicitly converting, cause it brings synchronization overhead
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 
