@@ -47,6 +47,14 @@ class TestLerp(flow.unittest.TestCase):
         end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         return start.lerp(end, weight)
+    
+    @autotest()
+    def test_tesnor_inplace_lerp_with_random_data(test_case):
+        device = random_device()
+        start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
+        end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
+        weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
+        return start.lerp_(end, weight)
 
     @profile(torch.lerp)
     def profile_lerp(test_case):

@@ -379,6 +379,9 @@ class LerpFunctor {
                            const std::shared_ptr<one::Tensor>& weight) const {
     const int64_t weight_elem_cnt = weight->nelement();
     CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes());
+    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
+        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
+        << weight->dtype()->name();
 
     std::shared_ptr<Tensor> broadcast_start = start;
     std::shared_ptr<Tensor> broadcast_end = end;
@@ -406,10 +409,6 @@ class LerpFunctor {
       }
     }
 
-    CHECK_EQ_OR_RETURN(broadcast_start->dtype()->data_type(), weight->dtype()->data_type())
-        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
-        << weight->dtype()->name();
-
     if (weight_elem_cnt == 1) {
       auto broadcast_weight = JUST(functional::Expand(weight, *broadcast_start->shape()));
       return OpInterpUtil::Dispatch<Tensor>(*op_,
@@ -420,6 +419,41 @@ class LerpFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceLerpFunctor {
+ public:
+  InplaceLerpFunctor() {
+    lerp_op_ = CHECK_JUST(
+        one::OpBuilder("lerp").Input("start").Input("end").Input("weight").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end,
+                           const std::shared_ptr<one::Tensor>& weight) const {
+    TensorProcessor tensor_processor;
+    if (end->requires_grad() || weight->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(start)), end, weight})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({start, end, weight})
+               .Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(start));
+    JUST(CheckInplaceCastValid(start, start_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = start;
+    JUST(OpInterpUtil::Dispatch(*lerp_op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> lerp_op_;
 };
 
 class LerpGradFunctor {
@@ -612,6 +646,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
   m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
   m.add_functor<impl::LerpFunctor>("Lerp");
+  m.add_functor<impl::InplaceLerpFunctor>("InplaceLerp");
   m.add_functor<impl::LerpGradFunctor>("LerpGrad");
 };
 
