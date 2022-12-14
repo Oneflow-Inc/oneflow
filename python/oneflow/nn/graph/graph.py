@@ -1386,7 +1386,7 @@ class Graph(object):
             raise KeyError('module name can\'t be empty string ""')
 
         self._blocks[name] = get_proxy_cls(module)(
-            module,"", name, weakref.proxy(self)
+            module, "", name, weakref.proxy(self)
         )
 
     def __setattr__(self, name: str, value=None):
