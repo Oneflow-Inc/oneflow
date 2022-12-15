@@ -59,7 +59,7 @@ void OfcclInitCollectiveNode(OfCollectiveBoxingGenericTaskNode* node,
   } else {
     CHECK_EQ(root, -1);
   }
-  // TODO: (Panlichen) may need a new backend defination
+  // TODO(Panlichen):  may need a new backend defination
   op_desc->set_backend(Backend::kBackendOFCCL);
   rank_desc->set_rank(parallel_id);
 
@@ -539,7 +539,7 @@ class OfcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuild
 }  // namespace
 
 OfCollectiveBoxingSubTskGphBuilder::OfCollectiveBoxingSubTskGphBuilder() {
-  // TODO: (Panlichen) maybe we need to extend this in resoure.proto
+  // TODO(Panlichen):  maybe we need to extend this in resoure.proto
   const CollectiveBoxingConf collective_boxing_conf =
       Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;

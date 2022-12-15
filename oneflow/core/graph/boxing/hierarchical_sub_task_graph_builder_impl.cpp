@@ -39,7 +39,7 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
   if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
-    VLOG(1) << "before OfCollectiveBoxingSubTskGphBuilder";
+    VLOG(4) << "before OfCollectiveBoxingSubTskGphBuilder";
     builders.emplace_back(new OfCollectiveBoxingSubTskGphBuilder());
   }
   if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {

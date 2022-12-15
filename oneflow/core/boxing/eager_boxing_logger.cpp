@@ -39,10 +39,10 @@ class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
   ~NaiveEagerBoxingLogger() override = default;
 
   void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override {
-    LOG(INFO) << prefix << "Boxing route: " << (status.boxing_routing());
-    LOG(INFO) << prefix << "Logical shape: " << (status.logical_shape().ToString());
-    LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
-    LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
+    // LOG(INFO) << prefix << "Boxing route: " << (status.boxing_routing());
+    // LOG(INFO) << prefix << "Logical shape: " << (status.logical_shape().ToString());
+    // LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
+    // LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
   }
 };
 
