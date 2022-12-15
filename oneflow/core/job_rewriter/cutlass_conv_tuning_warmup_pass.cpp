@@ -18,10 +18,13 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/user/kernels/cutlass_conv_tuner.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
 namespace {
+
+constexpr size_t kMaxWorkspaceSize = 128 * 1024 * 1024;  // 128MB
 
 class CutlassConvTuningWarmupPass final : public JobPass {
  public:
@@ -92,9 +95,8 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
     ep::Stream* stream = device->CreateStream();
 
-    size_t workspace_size = 128 * 1024 * 1024;
     void* workspace = nullptr;
-    OF_CUDA_CHECK(cudaMalloc(&workspace, workspace_size));
+    OF_CUDA_CHECK(cudaMalloc(&workspace, kMaxWorkspaceSize));
     void* x_ptr = nullptr;
     void* w_ptr = nullptr;
     void* y_ptr = nullptr;
@@ -126,7 +128,7 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     OF_CUDA_CHECK(cudaMalloc(&y_ptr, out_desc.ByteSizeOfBlobBody()));
     arguments.D = y_ptr;
     union SP {
-      float f;
+      float f{};
       half h;
     };
 
@@ -153,7 +155,7 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     arguments.pointer_mode = cutlass::library::ScalarPointerMode::kHost;
 
     const cutlass::library::Operation* operation = CutlassConvTuner::Get().FindConv2dOperation(
-        stream->As<ep::CudaStream>(), key, configuraion, arguments, workspace, workspace_size);
+        stream->As<ep::CudaStream>(), key, configuraion, arguments, workspace, kMaxWorkspaceSize);
     if (operation != nullptr) { VLOG(3) << "Fastest operation: " << operation->description().name; }
 
     OF_CUDA_CHECK(cudaFree(workspace));
