@@ -382,3 +382,4 @@ Tensor class reference
     Tensor.isclose
     Tensor.allclose
     Tensor.broadcast_to
+    Tensor.unique
