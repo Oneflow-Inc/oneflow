@@ -217,11 +217,12 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
   }
   OF_CUDA_CHECK(cudaEventDestroy(start));
   OF_CUDA_CHECK(cudaEventDestroy(end));
-  CHECK(fastest_operation != nullptr);
-  VLOG(3) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
-  {
-    std::lock_guard<std::mutex> lock(mutex);
-    cache[dev][cache_key] = fastest_operation;
+  if (fastest_operation != nullptr) {
+    VLOG(3) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      cache[dev][cache_key] = fastest_operation;
+    }
   }
   return fastest_operation;
 }
