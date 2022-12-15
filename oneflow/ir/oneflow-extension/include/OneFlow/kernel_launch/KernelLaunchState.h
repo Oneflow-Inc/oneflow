@@ -46,6 +46,12 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
   void DoCompute(user_op::KernelComputeContext* ctx);
 
+  bool IsCudaGraphSupported() const {
+    // TODO: some kernel need to be operated once.
+    if (!launcher_context_) { return false; }
+    return launcher_context_->IsCudaGraphSupported();
+  }
+
  private:
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;

@@ -74,7 +74,7 @@ namespace {
 using namespace oneflow::okl;
 
 template<typename T>
-class KernelLaunchKernel final : public user_op::OpKernel {
+class KernelLaunchKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   KernelLaunchKernel() = default;
   ~KernelLaunchKernel() = default;
@@ -84,6 +84,11 @@ class KernelLaunchKernel final : public user_op::OpKernel {
     // use ctx to create module, reg_ctx and fn;
     std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
     return res;
+  }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
+    return dynamic_cast<KernelLaunchState*>(state)->IsCudaGraphSupported();
   }
 
  private:
