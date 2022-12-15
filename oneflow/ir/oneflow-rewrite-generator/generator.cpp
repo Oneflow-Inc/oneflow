@@ -72,9 +72,9 @@ auto Generator::get_random_tensor() {
   auto dense = support::TensorToDenseElementsAttr(rand, context);
   dense.print(llvm::outs());
   llvm::outs() << "\n";
-  NamedAttrList attrs;
+  NamedAttrList attrs{{op_name(), device_tag, device_name}};
   attrs.set("value", dense);
-
+  attrs.set("nd_sbp", ArrayAttr::get(context, {}));
   auto frozen =
       builder.create<FrozenVariableOp>(graph->getLoc(), dense.getType(), ValueRange(), attrs);
 
@@ -82,67 +82,99 @@ auto Generator::get_random_tensor() {
 }
 
 void Generator::examples() {
+  int line{};
+  std::function<Location()> loc = [this, &line]() { return Loc("graph.mlir", line++, 0); };
+  llvm::dbgs() << "Running hand-written examples\n";
   OpBuilder builder(context);
   llvm::SmallVector<FrozenVariableOp, 4> rands(4);
   std::generate(rands.begin(), rands.end(), [this]() { return get_random_tensor(); });
   // MLIR: attrs and operands difference?
   // addop_attrs.set("x", r);
   // addop_attrs.set("y", r);
-  NamedAttrList addop_attrs;
-  auto result_type = rands[0].getType();
-  auto loc = graph->getLoc();
-  auto add01 =
-      builder.create<BroadcastAddOp>(loc, result_type, ValueRange{rands[0], rands[1]}, addop_attrs);
-  auto res1 = builder.create<BroadcastAddOp>(add01->getLoc(), result_type,
-                                             ValueRange{add01, rands[2]}, addop_attrs);
+  // NamedAttrList attrs{{device_name, device_tag, hierarchy, op_name(), scope_symbol_id}};
 
-  auto add12 = builder.create<BroadcastAddOp>(res1->getLoc(), result_type,
-                                              ValueRange{rands[1], rands[2]}, addop_attrs);
-  auto res2 = builder.create<BroadcastAddOp>(add12->getLoc(), result_type,
-                                             ValueRange{rands[0], add12}, addop_attrs);
+  auto result_type = rands[0].getType();
+  auto add01 = builder.create<BroadcastAddOp>(
+      loc(), result_type, ValueRange{rands[0], rands[1]},
+      ArrayRef{device_name, device_tag, hierarchy, op_name(), scope_symbol_id});
+  auto res1 = builder.create<BroadcastAddOp>(
+      loc(), result_type, ValueRange{add01, rands[2]},
+      ArrayRef{device_name, device_tag, hierarchy, op_name(), scope_symbol_id});
+
+  auto add12 = builder.create<BroadcastAddOp>(
+      loc(), result_type, ValueRange{rands[1], rands[2]},
+      ArrayRef{device_name, device_tag, hierarchy, op_name(), scope_symbol_id});
+
+  auto res2 = builder.create<BroadcastAddOp>(
+      loc(), result_type, ValueRange{rands[0], add12},
+      ArrayRef{device_name, device_tag, hierarchy, op_name(), scope_symbol_id});
   (void)res2;
+  graph->print(llvm::dbgs() << "Example MLIR Graph:\n");
+  if (verify(graph, true).failed()) { llvm::errs() << "verify failed"; }
   // TODO: how to evaluate res1 & res2?
   // I have a job, but the job is constituted of multiple OPs
-  of::Job job;
-  of::RoundTripOneFlowJobWrapper<of::kBeforeAD> job_wrapper(&job);
-  JobImporter importer(job_wrapper, context, graph);
-  if (importer.TryToUpdateJob().succeeded())
-    std::cout << "yeah!\n";
-  else
-    std::cout << "no~~\n";
-  auto opconf = job.net().op(1);
-  for (auto& op : job.net().op()) {
-    auto& user_op_conf = op.user_conf();
-    user_op_conf.input();  // not sure we need this
-  }
+  // of::Job job;
+  // of::RoundTripOneFlowJobWrapper<of::kBeforeAD> job_wrapper(&job);
+  // JobImporter importer(job_wrapper, context, graph);
+  // if (importer.TryToUpdateJob().succeeded())
+  //   std::cout << "yeah!\n";
+  // else
+  //   std::cout << "no~~\n";
+  // auto opconf = job.net().op(1);
+  // for (auto& op : job.net().op()) {
+  //   auto& user_op_conf = op.user_conf();
+  //   user_op_conf.input();  // not sure we need this
+  // }
   // LoadJobFromIR()
   // check their hash (and that the hashes are equal)
 
   // res1 and res2 equal, add to pdl
-  TypeAttr ta;
-  auto pdl_result_type = builder.create<pdl::TypeOp>(pdl.getModule().getLoc(), result_type, ta);
-  auto pdl_op1 = builder.create<OperandOp>(pdl_result_type.getLoc());
-  auto pdl_op2 = builder.create<OperandOp>(pdl_op1.getLoc());
-  auto pdl_op3 = builder.create<OperandOp>(pdl_op2.getLoc());
+  // TypeAttr ta;
+  builder.setInsertionPointToEnd(&pdl.getModule().getBodyRegion().getBlocks().back());
+  line = 0;
+  loc = [this, &line]() { return Loc("pdl.mlir", line++, 0); };
+
+  auto pat = builder.create<pdl::PatternOp>(loc());
+  builder.setInsertionPointToEnd(&pat.getBodyRegion().getBlocks().back());
+  // auto pdl_result_type = builder.create<pdl::TypeOp>(pdl.getModule().getLoc(), result_type, ta);
+  auto pdl_op1 = builder.create<OperandOp>(loc());
+  auto pdl_op2 = builder.create<OperandOp>(loc());
+  auto pdl_op3 = builder.create<OperandOp>(loc());
   auto pdl_of_add_op =
-      builder.create<OperationOp>(pdl_op3->getLoc(), res1.op_name(), ValueRange{pdl_op1, pdl_op2});
-  auto pdl_res1 = builder.create<OperationOp>(pdl_of_add_op->getLoc(), res1.op_name(),
-                                              ValueRange{pdl_of_add_op, pdl_op3});
+      builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op1, pdl_op2});
+  auto vt = pdl::ValueType::Base::get(context);
+
+  auto pdl_of_add_op_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_of_add_op, 0);
+
+  auto pdl_res1 =
+      builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_of_add_op_res, pdl_op3});
+  auto pdl_res1_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_res1, 0);
+
+  //  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState
+  //  &odsState, ::mlir::Type val, ::mlir::Value parent, uint32_t index);
 
   auto pdl_of_add_op2 =
-      builder.create<OperationOp>(pdl_res1->getLoc(), res1.op_name(), ValueRange{pdl_op2, pdl_op3});
-  auto pdl_res2 = builder.create<OperationOp>(pdl_of_add_op2->getLoc(), res1.op_name(),
-                                              ValueRange{pdl_op1, pdl_of_add_op2});
-  auto rewrite =
-      builder.create<pdl::RewriteOp>(pdl_res2->getLoc(), pdl_res1, nullptr, ValueRange());
+      builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op2, pdl_op3});
+  auto pdl_of_add_op2_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_of_add_op2, 0);
+
+  auto pdl_res2 =
+      builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op1, pdl_of_add_op2_res});
+  auto rewrite = builder.create<pdl::RewriteOp>(loc(), pdl_res1, nullptr, ValueRange());
   // final replace op
-  builder.create<pdl::ReplaceOp>(rewrite->getLoc(), pdl_res1, pdl_res2, ValueRange());
+  auto& block = rewrite.body().emplaceBlock();
+  builder.setInsertionPointToStart(&block);
+  builder.create<pdl::ReplaceOp>(loc(), pdl_res1, pdl_res2, ValueRange());
+  pdl.getModule()->print(llvm::dbgs() << "Example PDL module:\n");
+  if (verify(pdl.getModule(), true).failed()) { llvm::errs() << "verify failed"; }
 }
 
 void Generator::run() {
+  // examples();
   SmallVector<Value> inputs(4);
-  std::generate(inputs.begin(), inputs.end(), [this] { return get_random_tensor()->getResult(0); });
+
+  std::generate(inputs.begin(), inputs.end(), [this] { return get_random_tensor(); });
   dfs(0, inputs);
+
   for (auto& rewrite : rewrites) {
     rewrite.first->print(llvm::outs() << "First: ");
     rewrite.second->print(llvm::outs() << "Second: ");

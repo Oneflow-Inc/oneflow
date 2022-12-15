@@ -78,6 +78,9 @@ class Generator {
     return {StringAttr::get(context, "op_name"),
             StringAttr::get(context, std::to_string(op_index))};
   }
+  mlir::Location Loc(const std::string& file_name, int line, int col) {
+    return mlir::FileLineColLoc::get(builder.getStringAttr(file_name), line, col);
+  }
 };
 }  // namespace oneflow
 }  // namespace mlir
