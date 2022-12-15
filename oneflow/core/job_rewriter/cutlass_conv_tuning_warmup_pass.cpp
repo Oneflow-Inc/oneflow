@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifdef WITH_CUTLASS
+
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
@@ -175,3 +178,5 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
 REGISTER_JOB_PASS("CutlassConvTuningWarmupPass", CutlassConvTuningWarmupPass);
 
 }  // namespace oneflow
+
+#endif  // WITH_CUTLASS

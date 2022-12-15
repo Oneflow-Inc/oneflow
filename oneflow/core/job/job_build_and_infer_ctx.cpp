@@ -1031,7 +1031,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("AutoParallelPass"));
+#ifdef WITH_CUTLASS
     JUST(DoPass("CutlassConvTuningWarmupPass"));
+#endif  // WITH_CUTLASS
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
