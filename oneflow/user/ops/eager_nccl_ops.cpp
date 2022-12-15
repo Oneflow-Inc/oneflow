@@ -142,8 +142,7 @@ namespace oneflow {
       << Error::RuntimeError()
       << "output tensor size must be equal to world_size times input tensor size";
   CHECK_EQ_OR_RETURN(ctx->InputDType("in", 0), ctx->Attr<DataType>("output_dtype"))
-      << Error::RuntimeError() << Error::RuntimeError()
-      << "output tensor must have the same type as input tensor";
+      << Error::RuntimeError() << "output tensor must have the same type as input tensor";
   ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("output_shape"));
   ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("output_dtype"));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
