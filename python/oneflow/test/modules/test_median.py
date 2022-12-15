@@ -56,7 +56,7 @@ class TestMedianModule(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim1=0, requires_grad=False).to(device)
         return torch.median(x, 0)
 
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False)
     def test_median_return_type(test_case):
         x = random_tensor(3, 4)
         result = x.median(1)
