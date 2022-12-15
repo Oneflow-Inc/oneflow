@@ -32,7 +32,7 @@ std::string GetHostFromUri(const std::string& uri) {
 
 int64_t rpc_bootsrtap_server_check_seconds() {
   static const int64_t rpc_bootsrtap_server_check_seconds =
-      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_CHECK_SECONDS", 20);
+      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_CHECK_SECONDS", 60);
   return rpc_bootsrtap_server_check_seconds;
 }
 
@@ -55,30 +55,30 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
   if (bootstrap_conf.rank() == 0) {
+    rank2host_ = std::make_shared<std::vector<std::string>>(1);
     check_thread_ = std::thread(&RankInfoBootstrapServer::CheckServerRpcs, this);
   }
 }
 
 void RankInfoBootstrapServer::CheckServerRpcs() {
-  bool fail_status = true;
-  if (!rank2host_) {
-    std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_check_seconds()));
-    LOG(WARNING)
-        << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
-        << ", world size: " << world_size_ << ", ready ranks: 0";
-  } else {
+  bool status_ok = false;
+  size_t timeout_seconds = rpc_bootsrtap_server_check_seconds();
+  while (timeout_seconds > 0) {
     CHECK(rank2host_->size() <= world_size_);
     if (rank2host_->size() == world_size_) {
-      check_thread_.join();
-      fail_status = false;
+      status_ok = true;
+      break;
     } else {
-      LOG(WARNING)
-          << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
-          << ", world size: " << world_size_ << ", ready ranks: " << rank2host_->size();
-      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_check_seconds()));
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      timeout_seconds -= 1;
     }
   }
-  if (fail_status) { LOG(FATAL) << "Grpc failed."; }
+  if (!status_ok) {
+    LOG(WARNING)
+        << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
+        << ", world size: " << world_size_ << ", ready ranks: " << rank2host_->size();
+    LOG(FATAL) << "Grpc failed.";
+  }
 }
 
 Maybe<const std::vector<std::string>&> RankInfoBootstrapServer::rank2host() const {
@@ -90,7 +90,6 @@ void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* ca
   int64_t rank = call->request().rank();
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
-  if (!rank2host_) { rank2host_ = std::make_shared<std::vector<std::string>>(world_size_); }
   rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();
