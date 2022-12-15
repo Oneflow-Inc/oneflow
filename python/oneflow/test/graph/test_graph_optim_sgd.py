@@ -25,7 +25,16 @@ import oneflow as flow
 
 
 def compare_with_numpy_sgd(
-    test_case, device, x_shape, learning_rate, train_iters, momentum, weight_decay
+    test_case,
+    device,
+    x_shape,
+    learning_rate,
+    train_iters,
+    momentum,
+    dampening,
+    nesterov,
+    maximize,
+    weight_decay,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -51,10 +60,13 @@ def compare_with_numpy_sgd(
             {
                 "params": simp_module.parameters(),
                 "lr": learning_rate,
-                "momentum": momentum,
                 "weight_decay": weight_decay,
             }
         ],
+        momentum=momentum,
+        dampening=dampening,
+        nesterov=nesterov,
+        maximize=maximize,
     )
 
     class CustomSGDGraph(flow.nn.Graph):
@@ -85,8 +97,23 @@ def compare_with_numpy_sgd(
 
         def np_train_one_iter(grad):
             grad = grad + weight_decay * x
-            v = momentum * vt - learning_rate * grad
-            param = x + v
+            if momentum > 0.0:
+                next_momentum = momentum * vt + (1 - dampening) * grad
+                v = next_momentum
+
+                if nesterov:
+                    grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
+                alpha = -learning_rate
+                if maximize:
+                    alpha = learning_rate
+                next_model = x + alpha * grad
+                param = next_model
+            else:
+                v = learning_rate * grad
+                param = x - v
             return (param, v)
 
         for i in range(train_iters):
@@ -103,6 +130,9 @@ def compare_with_numpy_sgd_clip_grad(
     x_shape,
     learning_rate,
     momentum,
+    dampening,
+    nesterov,
+    maximize,
     weight_decay,
     clip_grad_max_norm,
     clip_grad_norm_type,
@@ -132,12 +162,15 @@ def compare_with_numpy_sgd_clip_grad(
             {
                 "params": simp_module.parameters(),
                 "lr": learning_rate,
-                "momentum": momentum,
                 "weight_decay": weight_decay,
                 "clip_grad_max_norm": clip_grad_max_norm,
                 "clip_grad_norm_type": clip_grad_norm_type,
             }
-        ]
+        ],
+        momentum=momentum,
+        dampening=dampening,
+        nesterov=nesterov,
+        maximize=maximize,
     )
 
     class CustomSGDGraph(flow.nn.Graph):
@@ -171,8 +204,23 @@ def compare_with_numpy_sgd_clip_grad(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
-            v = momentum * vt - learning_rate * grad
-            param = x + v
+            if momentum > 0.0:
+                next_momentum = momentum * vt + (1 - dampening) * grad
+                v = next_momentum
+
+                if nesterov:
+                    grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
+                alpha = -learning_rate
+                if maximize:
+                    alpha = learning_rate
+                next_model = x + alpha * grad
+                param = next_model
+            else:
+                v = learning_rate * grad
+                param = x - v
             return (param, v)
 
         for i in range(train_iters):
@@ -185,7 +233,7 @@ def compare_with_numpy_sgd_clip_grad(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCpuSGD(flow.unittest.TestCase):
+class TestGraphSGD(flow.unittest.TestCase):
     def test_sgd(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
@@ -193,6 +241,9 @@ class TestCpuSGD(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["momentum"] = [0.9, 0.8]
+        arg_dict["dampening"] = [0.0, 0.9]
+        arg_dict["nesterov"] = [True, False]
+        arg_dict["maximize"] = [True, False]
         arg_dict["weight_decay"] = [0.001, 0.0]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_sgd(test_case, *arg)
@@ -203,6 +254,9 @@ class TestCpuSGD(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["momentum"] = [0.0, 0.9]
+        arg_dict["dampening"] = [0.0, 0.9]
+        arg_dict["nesterov"] = [True, False]
+        arg_dict["maximize"] = [True, False]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["clip_grad_max_norm"] = [1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]

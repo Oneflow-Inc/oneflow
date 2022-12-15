@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 
@@ -47,10 +48,13 @@ class ReduceDeviceStageKernel final : public OpKernel {
         ctx->stream(), XpuVarNdarray<T>(out->shape_view(), out->mut_dptr<T>()),
         XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
         XpuVarNdarray<T>(in->shape_view(), reduce_tmp_buf));
-    NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<bool>(mask->shape_view(), mask->mut_dptr<bool>()),
-        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
-        XpuVarNdarray<const T>(out->shape_view(), out->dptr<T>()));
+    auto bcast_eq = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), ep::primitive::BinaryOp::kEqual, in->data_type(), DataType::kBool,
+        in->shape_view().NumAxes());
+    CHECK(bcast_eq);
+    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
+                     out->shape_view().NumAxes(), out->shape_view().ptr(), out->dptr(),
+                     mask->mut_dptr());
 
     auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
         ctx->device_type(), DataType::kInt8, DataType::kInt32);
@@ -127,9 +131,9 @@ template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
-    const Shape* in_diff_shape = ctx->OutputShape("in_diff", 0);
+    const Shape& in_diff_shape = ctx->OutputShape("in_diff", 0);
     const size_t tmp_bytes = GetCudaAlignedSize(out_diff_shape.elem_cnt() * sizeof(T));
-    const size_t broadcasted_tmp_bytes = GetCudaAlignedSize(in_diff_shape->elem_cnt() * sizeof(T));
+    const size_t broadcasted_tmp_bytes = GetCudaAlignedSize(in_diff_shape.elem_cnt() * sizeof(T));
     return tmp_bytes + broadcasted_tmp_bytes;
   };
 }
@@ -167,10 +171,13 @@ class ReduceGlobalStageKernel final : public OpKernel {
         XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
         XpuVarNdarray<T>(in->shape_view(), tmp_buffer->mut_dptr<T>()));
 
-    NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<bool>(in->shape_view(), mask->mut_dptr<bool>()),
-        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
-        XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
+    auto bcast_eq = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), ep::primitive::BinaryOp::kEqual, in->data_type(), DataType::kBool,
+        in->shape_view().NumAxes());
+    CHECK(bcast_eq);
+    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
+                     reduced_shape.NumAxes(), reduced_shape.dim_vec().data(), out->dptr(),
+                     mask->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -259,7 +266,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const Shape& device_count_shape = ctx->InputShape("device_count", 0);
     const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
-    const Shape* in_diff_shape = ctx->OutputShape("in_diff", 0);
+    const Shape& in_diff_shape = ctx->OutputShape("in_diff", 0);
     const size_t device_count_with_mask_bytes =
         GetCudaAlignedSize(device_count_shape.elem_cnt() * sizeof(int32_t));
     const size_t global_count_bytes =
@@ -268,7 +275,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
         GetCudaAlignedSize(device_count_shape.elem_cnt() * sizeof(int32_t));
     const size_t divided_buf_bytes = GetCudaAlignedSize(out_diff_shape.elem_cnt() * sizeof(T));
     const size_t broadcasted_divided_buf_bytes =
-        GetCudaAlignedSize(in_diff_shape->elem_cnt() * sizeof(T));
+        GetCudaAlignedSize(in_diff_shape.elem_cnt() * sizeof(T));
     const size_t total_bytes = device_count_with_mask_bytes + global_count_bytes
                                + reduce_sum_tmp_bytes + divided_buf_bytes
                                + broadcasted_divided_buf_bytes;

@@ -39,7 +39,8 @@ void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
 }
 
 void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
+  auto regst_num = ParseIntegerFromEnv("ONEFLOW_DECODE_H2D_REGST_NUM", 2);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, regst_num, regst_num);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
   ProduceRegst("tmp", false);
 }
@@ -72,5 +73,6 @@ CompTaskNode* CreateCompTaskNodeByOpDeviceType(const OperatorConf& op_conf) {
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE_WITH_FUNC(OperatorConf::kImageDecoderRandomCropResizeConf,
                                                  CreateCompTaskNodeByOpDeviceType);
+REGISTER_USER_OP_COMP_TASK_NODE_TYPE_WITH_FUNC("raw_reader", CreateCompTaskNodeByOpDeviceType);
 
 }  // namespace oneflow

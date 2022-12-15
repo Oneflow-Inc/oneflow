@@ -27,7 +27,7 @@ namespace oneflow {
 namespace {
 
 Maybe<std::tuple<Symbol<PlacedNdSbp>, Symbol<PlacedNdSbp>>> RawInOutPlacedNdSbpDimReduce(
-    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out, const Shape& logical_shape) {
   // reduce hierarchy
   ParallelDesc reduced_in_placement = *in->placement();
   ParallelDesc reduced_out_placement = *out->placement();
@@ -35,14 +35,14 @@ Maybe<std::tuple<Symbol<PlacedNdSbp>, Symbol<PlacedNdSbp>>> RawInOutPlacedNdSbpD
   NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(*in->placement(), *out->placement(), *in->nd_sbp(), *out->nd_sbp(),
                          &reduced_in_placement, &reduced_out_placement, &reduced_in_nd_sbp,
-                         &reduced_out_nd_sbp);
+                         &reduced_out_nd_sbp, logical_shape);
   return std::make_tuple(
       JUST(PlacedNdSbp::New(SymbolOf(reduced_in_nd_sbp), SymbolOf(reduced_in_placement))),
       JUST(PlacedNdSbp::New(SymbolOf(reduced_out_nd_sbp), SymbolOf(reduced_out_placement))));
 }
 
 constexpr auto* InOutPlacedNdSbpDimReduce =
-    DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocalCached);
+    DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocalCachedCopiable);
 
 // NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
@@ -51,7 +51,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
-  std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));
+  std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out, logical_shape));
 
   for (int64_t in_parallel_id = 0; in_parallel_id < in->placement()->parallel_num();
        ++in_parallel_id) {
@@ -102,13 +102,13 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
 
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
-  std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));
+  std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out, *tensor->shape()));
 
   const std::shared_ptr<one::Tensor>& local_tensor = JUST(tensor->cur_rank_phy_tensor());
 
-  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToConsistent(
+  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToGlobal(
       local_tensor, reduced_in->placement(), *JUST(GetSbpList(reduced_in->nd_sbp())),
-      *tensor->shape(), tensor->dtype()));
+      *tensor->shape(), tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 
   const auto& boxing_interpreter =
       JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
@@ -124,9 +124,9 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
   const std::shared_ptr<one::Tensor>& reduced_out_local_tensor =
       JUST(reduced_out_tensor->cur_rank_phy_tensor());
 
-  return JUST(one::functional::LocalToConsistent(reduced_out_local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(
+      reduced_out_local_tensor, out->placement(), *JUST(GetSbpList(out->nd_sbp())),
+      *tensor->shape(), tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 }
 
 COMMAND(RegisterBoxingFunction("nd-sbp-dim-reduce", CheckParallelDimReduce, &ParallelDimReduce));

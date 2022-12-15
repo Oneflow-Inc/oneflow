@@ -443,6 +443,39 @@ class TestConv1d(flow.unittest.TestCase):
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
 
+    @profile(torch.nn.functional.conv1d)
+    def profile_conv1d(test_case):
+        inputs = torch.ones(40, 16, 30)
+        weight_16c = torch.ones(20, 16, 5)
+        weight_16c_4g = torch.ones(20, 4, 5)
+        weight_3k_16c = torch.ones(20, 16, 3)
+        weight_1k_16c = torch.ones(20, 16, 1)
+        torch.nn.functional.conv1d(inputs, weight_16c)
+        torch.nn.functional.conv1d(inputs, weight_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(inputs, weight_16c, bias=torch.ones(20), padding=2)
+        torch.nn.functional.conv1d(
+            inputs, weight_16c, bias=torch.ones(20), padding=2, stride=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_16c_4g, groups=4)
+        torch.nn.functional.conv1d(inputs, weight_16c_4g, bias=torch.ones(20), groups=4)
+        torch.nn.functional.conv1d(
+            inputs, weight_16c_4g, bias=torch.ones(20), groups=4, stride=4
+        )
+        torch.nn.functional.conv1d(
+            inputs, weight_16c_4g, bias=torch.ones(20), groups=4, padding=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_3k_16c)
+        torch.nn.functional.conv1d(inputs, weight_3k_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(
+            inputs, weight_3k_16c, bias=torch.ones(20), padding=1
+        )
+        torch.nn.functional.conv1d(
+            inputs, weight_3k_16c, bias=torch.ones(20), padding=1, stride=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_1k_16c)
+        torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20), stride=2)
+
     @autotest(n=5)
     def test_conv1d_with_random_data(test_case):
         channels = random(1, 6)

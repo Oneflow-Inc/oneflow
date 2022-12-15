@@ -81,6 +81,13 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_tensor_equal_bool_dtype(test_case):
+        np_bool = np.random.randint(0, 2, size=()).astype(np.bool).item()
+        input = flow.tensor(np_bool, dtype=flow.bool)
+        input2 = flow.tensor([np_bool], dtype=flow.bool)
+        test_case.assertTrue(input == np_bool)
+        test_case.assertTrue(input2 == np_bool)
+
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32, requires_grad=True)
@@ -259,6 +266,16 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(auto_backward=False)
+    def test_clamp_maxnone_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp(
+            min=random(low=-1, high=-0.5).to(float),
+            max=random(low=0.5, high=1).to(float) | nothing(),
+        )
+        return y
+
     @autotest(n=5)
     def test_clamp_inplace_maxnone_tensor_with_random_data(test_case):
         device = random_device()
@@ -268,6 +285,77 @@ class TestTensor(flow.unittest.TestCase):
             min=random(low=-1, high=-0.5).to(float),
             max=random(low=0.5, high=1).to(float) | nothing(),
         )
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_inplace_maxnone_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_(
+            min=random(low=-1, high=-0.5).to(float),
+            max=random(low=0.5, high=1).to(float) | nothing(),
+        )
+        return y
+
+    @autotest(n=5)
+    def test_clamp_min_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_min(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_min_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_min_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_min_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_min(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_min_inplace_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_min_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_max_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_max(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_max_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_max_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_max(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_max_inplace_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
         return y
 
     @autotest(n=5)
@@ -466,7 +554,7 @@ class TestTensor(flow.unittest.TestCase):
     # Not check graph because of one reason:
     # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
     # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
-    @autotest(n=5, auto_backward=False, check_graph="ValidatedFlase")
+    @autotest(n=5, auto_backward=False, check_graph="ValidatedFalse")
     def test_tensor_nonzero_with_random_data(test_case):
         device = random_device()
         ndim = random(2, 6).to(int)
@@ -791,7 +879,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n4d()
-    def test_construct_consistent_tensor_by_numpy(test_case):
+    def test_construct_global_tensor_by_numpy(test_case):
         x = np.ones((4, 4), dtype=np.int32)
         placement = flow.placement("cuda", [0, 1, 2, 3])
         y = flow.tensor(
@@ -818,7 +906,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
-        placement = flow.env.all_device_placement("cpu")
+        placement = flow.placement.all("cpu")
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
@@ -828,7 +916,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
 
-        placement = flow.env.all_device_placement("cuda")
+        placement = flow.placement.all("cuda")
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
@@ -966,6 +1054,26 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
         z = x.repeat_interleave(y, 1, output_size=2)
         return z
+
+    @flow.unittest.skip_unless_1n2d()
+    @globaltest
+    def test_global_tensor_detach(test_case):
+        device = random_device().value()
+        placement = flow.placement(device, [0, 1])
+        a = flow.ones(4, 8).to_global(placement, flow.sbp.broadcast)
+        test_case.assertTrue(a.is_leaf)
+        b = a.float().clone().detach()
+        test_case.assertTrue(b.is_leaf)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_nansum(test_case):
+        device = random_device()
+        x = random_tensor(4, random(0, 5), 2).to(device)
+        mask = x < 0
+        x = x.masked_fill(mask, float("nan"))
+        y = x.nansum()
+        return y
 
 
 if __name__ == "__main__":

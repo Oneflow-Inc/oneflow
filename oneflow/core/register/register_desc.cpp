@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -179,16 +180,10 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
-  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  *ctrl_regst_proto->mutable_mem_case() = memory::MakeHostMemCase();
   ctrl_regst_proto->set_enable_reuse_mem(false);
   ctrl_regst_proto->set_mem_block_id(-1);
   ctrl_regst_proto->set_mem_block_offset(-1);
-}
-
-MemoryCase MakeHostMemCase() {
-  MemoryCase mem_case;
-  mem_case.mutable_host_mem();
-  return mem_case;
 }
 
 }  // namespace oneflow

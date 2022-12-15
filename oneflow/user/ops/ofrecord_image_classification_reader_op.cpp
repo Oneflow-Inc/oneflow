@@ -20,18 +20,18 @@ namespace oneflow {
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->MutOutputTensorDesc("label", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-  *image_tensor->mut_shape() = Shape({batch_size});
-  *label_tensor->mut_shape() = Shape({batch_size});
+  image_tensor->set_shape(Shape({batch_size}));
+  label_tensor->set_shape(Shape({batch_size}));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->MutOutputTensorDesc("label", 0);
   int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
 
@@ -45,13 +45,13 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(local_batch_size % split_num, 0);
     local_batch_size /= split_num;
   }
-  *image_tensor->mut_shape() = Shape({local_batch_size});
-  *label_tensor->mut_shape() = Shape({local_batch_size});
+  image_tensor->set_shape(Shape({local_batch_size}));
+  label_tensor->set_shape(Shape({local_batch_size}));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
 
@@ -68,8 +68,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
-  *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
+  ctx->SetOutputDType("image", 0, DataType::kTensorBuffer);
+  ctx->SetOutputDType("label", 0, DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 

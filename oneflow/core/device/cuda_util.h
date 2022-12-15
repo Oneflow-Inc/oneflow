@@ -30,6 +30,9 @@ limitations under the License.
 #include <curand.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_half.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
@@ -82,7 +85,10 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
 #define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
-  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)                 \
+  return Error::CheckFailedError().AddStackFrame([](const char* function) {                        \
+    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function));      \
+    return frame;                                                                                  \
+  }(__FUNCTION__))                                                                                 \
          << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status) << " (" \
          << _of_nccl_check_status << ") "
 
@@ -157,6 +163,8 @@ int GetCudaDeviceIndex();
 int GetCudaDeviceCount();
 
 Maybe<double> GetCUDAMemoryUsed();
+
+cudaDeviceProp* GetDeviceProperties(int device_id);
 
 void SetCudaDeviceIndex(int device_id);
 

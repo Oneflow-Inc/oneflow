@@ -30,15 +30,6 @@ namespace broadcast_elementwise_binary {
 
 constexpr size_t kMaxNumDims = 8;
 
-inline void CheckInplace(size_t num_dims, const int64_t* src0_dims, const void* src0,
-                         const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
-                         const void* dst) {
-  for (int64_t i = 0; i < num_dims; ++i) {
-    if (src0 == dst) { CHECK_EQ(src0_dims[i], dst_dims[i]); }
-    if (src1 == dst) { CHECK_EQ(src1_dims[i], dst_dims[i]); }
-  }
-}
-
 inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
                          const int64_t* src1_dims) {
   if (num_src0_dims != num_src1_dims) { return false; }
@@ -48,22 +39,30 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   return true;
 }
 
-#define BINARY_MATH_OP_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
+#define BINARY_MATH_OP_SEQ                             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFmod)                \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorDiv)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTruncDiv)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorMod)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarBasePowerGrad) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarExpPowerGrad)
 
-#define BINARY_COMPARISION_OP_SEQ              \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)       \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual)   \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual)
+#define BINARY_COMPARISION_OP_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsCloseEqualNan) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsClose)
 
 #define BINARY_LOGICAL_OP_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd) \
@@ -87,7 +86,38 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftplusBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftshrinkBackwardWithDyY)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanhBackwardWithDyX)        \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFastGeluBackwardWithDyX)
+
+#define BINARY_MATH_BACKWARD_OP_SEQ                               \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAbsBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcosBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcoshBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAsinBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAsinhBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAtanBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAtanhBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCosBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCoshBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfcBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpm1BackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLgammaBackwardWithDyX)          \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog2BackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog10BackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog1pBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogSigmoidBackwardWithDyX)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReciprocalBackwardWithDyX)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReciprocalNoNanBackwardWithDyX) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kRsqrtBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSigmoidBackwardWithDyY)         \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinhBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSqrtBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSquareBackwardWithDyX)          \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanBackwardWithDyX)
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

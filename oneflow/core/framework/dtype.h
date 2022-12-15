@@ -59,6 +59,7 @@ class DType final {
   DataType data_type() const { return data_type_; }
   bool is_signed() const;
   bool is_complex() const;
+  bool is_integer() const;
   bool is_floating_point() const;
   const std::string& name() const;
   Maybe<size_t> bytes() const;
@@ -75,6 +76,9 @@ class DType final {
 };
 
 Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b);
+
+Maybe<void> SetDefaultDType(const Symbol<DType>& dtype);
+Symbol<DType> GetDefaultDType();
 
 }  // namespace oneflow
 

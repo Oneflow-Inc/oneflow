@@ -27,6 +27,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
+from oneflow.nn.graph.proxy import GraphBlockType
 import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
@@ -38,11 +39,12 @@ def graph_build_context(config_proto, session):
     assert type(config_proto) is job_conf_pb.JobConfigProto, type(config_proto)
     config_proto_str = text_format.MessageToString(config_proto)
     new_scope = oneflow._oneflow_internal.MakeInitialScope(
-        config_proto_str, oneflow.placement("cpu", [0]), False,  # is_mirrored
+        config_proto_str, oneflow.placement("cpu", [0]), False,  # is_local
     )
 
     graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
 
+    oneflow._oneflow_internal.eager.Sync()
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
             with BlockScopeContext(prev_scope, graph_scope):
@@ -88,12 +90,22 @@ class BlockScopeContext(object):
 
 
 class DebugScopeContext(object):
-    def __init__(self, s_level, v_level=0, mode=False, max_py_stack_depth=2):
+    def __init__(
+        self,
+        s_level,
+        v_level=0,
+        mode=False,
+        max_py_stack_depth=2,
+        only_user_py_stack=True,
+    ):
         self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
         self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
         self._prev_mode = oneflow._oneflow_internal.GetGraphDebugMode()
         self._prev_max_py_stack_depth = (
             oneflow._oneflow_internal.GetGraphDebugMaxPyStackDepth()
+        )
+        self._prev_only_user_py_stack = (
+            oneflow._oneflow_internal.GetGraphDebugOnlyUserPyStack()
         )
         self._v = max(v_level, self._prev_v)
         self._mode = mode
@@ -101,6 +113,7 @@ class DebugScopeContext(object):
         self._max_py_stack_depth = max(
             max_py_stack_depth, self._prev_max_py_stack_depth
         )
+        self._only_user_py_stack = only_user_py_stack
 
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)
@@ -108,6 +121,7 @@ class DebugScopeContext(object):
         if self._s == 0 and self._v >= 1:
             oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
         oneflow._oneflow_internal.SetGraphDebugMaxPyStackDepth(self._max_py_stack_depth)
+        oneflow._oneflow_internal.SetGraphDebugOnlyUserPyStack(self._only_user_py_stack)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._s == 0 and self._v >= 1:
@@ -116,6 +130,9 @@ class DebugScopeContext(object):
         oneflow._oneflow_internal.SetGraphDebugMode(self._prev_mode)
         oneflow._oneflow_internal.SetGraphDebugMaxPyStackDepth(
             self._prev_max_py_stack_depth
+        )
+        oneflow._oneflow_internal.SetGraphDebugOnlyUserPyStack(
+            self._prev_only_user_py_stack
         )
 
 
@@ -149,14 +166,15 @@ def _make_new_graph_scope(prev_scope, graph_name):
     return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 
-def make_new_block_scope(prev_scope, block):
+def make_new_blockgraph_scope(prev_scope, graph_block):
     assert prev_scope is not None
-    assert block is not None
+    assert graph_block is not None
     attr_dict = dict()
-    if block.config.stage_id is not None:
-        attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
-    if block.config.activation_checkpointing is not None:
-        attr_dict["checkpointing"] = block.config.activation_checkpointing
+    if graph_block.stage_id is not None:
+        attr_dict["pipeline_stage_id_hint"] = graph_block.stage_id
+    if graph_block.type == GraphBlockType.MODULE:
+        if graph_block.activation_checkpointing is not None:
+            attr_dict["checkpointing"] = graph_block.activation_checkpointing
 
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
 
@@ -174,10 +192,12 @@ def make_new_block_scope(prev_scope, block):
             )
         # append name prefix
         scope_proto.ClearField("scope_op_name_prefixes")
-        scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
+        scope_proto.scope_op_name_prefixes.append(
+            graph_block.name_prefix + graph_block.name
+        )
         # set module name
-        if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
-            scope_proto.module_name = block.name_prefix + block.name
+        if graph_block.type == GraphBlockType.MODULE:
+            scope_proto.module_name = graph_block.name_prefix + graph_block.name
         return str(text_format.MessageToString(scope_proto))
 
     return _make_new_scope(prev_scope, scope_proto_str_setter)
@@ -249,5 +269,4 @@ def build_graph_output(op_name, out):
         op_name, output_conf_str, ["in_0"], ["out_0"]
     )
     fake_eager_out = _C.dispatch_fetch_output(output_op, out)
-
     return fake_eager_out

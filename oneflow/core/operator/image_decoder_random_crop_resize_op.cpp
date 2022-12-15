@@ -38,7 +38,7 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   out_dim_vec.emplace_back(conf.target_height());
   out_dim_vec.emplace_back(conf.target_width());
   out_dim_vec.emplace_back(3);
-  out->mut_shape() = Shape(out_dim_vec);
+  out->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -77,7 +77,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
         this->op_conf().image_decoder_random_crop_resize_conf();
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
     tmp->set_data_type(DataType::kUInt8);
-    tmp->mut_shape() = Shape({conf.max_num_pixels() * 3 * conf.num_workers()});
+    tmp->set_shape(Shape({conf.max_num_pixels() * 3 * conf.num_workers()}));
     return Maybe<void>::Ok();
   }
 

@@ -54,7 +54,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     }
 
     Scalar value;
-    if (IsIntegralDataType(x->data_type())) {
+    if (IsIntegralDataType(x->data_type()) || x->data_type() == kBool) {
       value = Scalar(ctx->Attr<int64_t>("integral_constant_value"));
     } else {
       value = Scalar(ctx->Attr<double>("floating_constant_value"));

@@ -50,7 +50,7 @@ class TestLocalInplace(oneflow.unittest.TestCase):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentInplace(oneflow.unittest.TestCase):
+class TestGlobalInplace(oneflow.unittest.TestCase):
     def test_graph_inplace_gpu(test_case):
         x = flow.randn(
             10,

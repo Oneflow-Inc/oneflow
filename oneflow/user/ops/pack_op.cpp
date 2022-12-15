@@ -31,18 +31,18 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> PackOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  const Shape& in_shape = in_desc.shape();
   const int32_t pack_num = ctx->Attr<int32_t>("pack_num");
   CHECK_GT_OR_RETURN(pack_num, 0);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
-  if (in_shape.NumAxes() > 0) {
-    *out_desc->mut_shape() = in_shape;
-    out_desc->mut_shape()->Set(0, in_shape.At(0) * pack_num);
+  Shape out_shape = in_desc.shape();
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
+  out_desc->set_is_dynamic(in_desc.is_dynamic());
+  if (out_shape.NumAxes() > 0) {
+    out_shape.Set(0, out_shape.At(0) * pack_num);
+    out_desc->set_shape(out_shape);
   } else {
     // NOTE(chengcheng): for Scalar input pack
-    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), 1);
-    *out_desc->mut_shape() = Shape({pack_num});
+    CHECK_EQ_OR_RETURN(out_shape.elem_cnt(), 1);
+    out_desc->set_shape(Shape({pack_num}));
   }
   return Maybe<void>::Ok();
 }
@@ -51,7 +51,7 @@ namespace oneflow {
   return PackOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PackOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PackOp::InferOutputBlobTimeShape(
@@ -65,25 +65,5 @@ namespace oneflow {
   *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                         -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("unpack")
-        .InputBind("in", ctx->FwOp().output_grad("out", 0))
-        .Output("out")
-        .Attr<int32_t>("unpack_num", ctx->FwOp().attr<int32_t>("pack_num"))
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("out", 0);
-  });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
 
 }  // namespace oneflow

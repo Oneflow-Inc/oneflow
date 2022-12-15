@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+import os
 
 import oneflow as flow
 import oneflow.unittest
@@ -28,7 +29,7 @@ class TestToTroch(flow.unittest.TestCase):
         flow_t = flow.rand(5, 3, 3)
         numpy_from_flow = flow_t.numpy()
 
-        torch_t = flow.utils.to_torch(flow_t)
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
         test_case.assertEqual(
             torch_t.data_ptr(), numpy_from_flow.__array_interface__["data"][0]
@@ -48,7 +49,7 @@ class TestToTroch(flow.unittest.TestCase):
     def test_to_torch_cpu_with_0_size_data(test_case):
         flow_t = flow.rand(5, 3, 0)
 
-        torch_t = flow.utils.to_torch(flow_t)
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
         test_case.assertTrue(
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
@@ -59,7 +60,7 @@ class TestToTroch(flow.unittest.TestCase):
         flow_t = flow.tensor(5)
         numpy_from_flow = flow_t.numpy()
 
-        torch_t = flow.utils.to_torch(flow_t)
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
         test_case.assertEqual(
             torch_t.data_ptr(), numpy_from_flow.__array_interface__["data"][0]
@@ -69,6 +70,30 @@ class TestToTroch(flow.unittest.TestCase):
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
         )
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.numpy().dtype)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_to_torch_gpu(test_case):
+        flow_t = flow.rand(5, 3, 3).to("cuda")
+
+        torch_t = flow.utils.tensor.to_torch(flow_t)
+
+        flow_t[0][0] = flow.tensor([1, 2, 3]).to(flow.float32)
+        # NOTE: OneFlow operations are asynchoronously executed,
+        # so we need to synchronize explicitly here.
+        flow._oneflow_internal.eager.Sync()
+        test_case.assertTrue(np.array_equal(torch_t.cpu().numpy(), flow_t.numpy()))
+
+        test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_to_torch_global(test_case):
+        flow_t = flow.rand(5, 3, 3).to_global(
+            placement=flow.placement.all("cuda"), sbp=flow.sbp.broadcast
+        )
+
+        torch_t = flow.utils.tensor.to_torch(flow_t)
+
+        test_case.assertEqual(flow_t.numpy().dtype, torch_t.cpu().numpy().dtype)
 
 
 if __name__ == "__main__":

@@ -31,9 +31,8 @@ namespace std {
 template<>
 struct hash<oneflow::BiasCorrectionFactorCacheKey> {
   size_t operator()(const oneflow::BiasCorrectionFactorCacheKey& key) const {
-    const auto& float_hash = std::hash<float>();
-    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
-    return float_hash(key.beta) ^ parallel_conf_hash(key.parallel_conf);
+    using namespace oneflow;
+    return Hash(key.beta, key.parallel_conf);
   }
 };
 
@@ -175,6 +174,10 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
         .Attr<bool>("do_bias_correction", false)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  }
+
+  if (optimizer_conf.has_lr_scale()) {
+    lamb_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
   }
 
   SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);

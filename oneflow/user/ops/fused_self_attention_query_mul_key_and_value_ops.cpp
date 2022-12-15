@@ -20,9 +20,9 @@ namespace oneflow {
 
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  const DataType& dtype = ctx->InputDType("hidden_states", 0);
-  *ctx->OutputDType("query_mul_key", 0) = dtype;
-  *ctx->OutputDType("value", 0) = dtype;
+  DataType dtype = ctx->InputDType("hidden_states", 0);
+  ctx->SetOutputDType("query_mul_key", 0, dtype);
+  ctx->SetOutputDType("value", 0, dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(
@@ -41,8 +41,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(hidden_size % (head_size * 3), 0);
   int64_t num_heads = hidden_size / (head_size * 3);
 
-  *ctx->OutputShape("query_mul_key", 0) = Shape({batch_size, num_heads, seq_len, seq_len});
-  *ctx->OutputShape("value", 0) = Shape({batch_size, num_heads, seq_len, head_size});
+  ctx->SetOutputShape("query_mul_key", 0, Shape({batch_size, num_heads, seq_len, seq_len}));
+  ctx->SetOutputShape("value", 0, Shape({batch_size, num_heads, seq_len, head_size}));
 
   return Maybe<void>::Ok();
 }
@@ -67,9 +67,11 @@ namespace oneflow {
 
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferDataType(
     user_op::InferContext* ctx) -> Maybe<void> {
-  const DataType& dtype = ctx->InputDType("query_mul_key_grad", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype);
-  *ctx->OutputDType("hidden_states_grad", 0) = dtype;
+  DataType dtype = ctx->InputDType("query_mul_key_grad", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype)
+      << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+      << DataType_Name(ctx->InputDType("value_grad", 0));
+  ctx->SetOutputDType("hidden_states_grad", 0, dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferLogicalTensorDesc(
@@ -98,7 +100,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(qmk_grad_shape.At(2), seq_len);
   CHECK_EQ_OR_RETURN(qmk_grad_shape.At(3), seq_len);
 
-  *ctx->OutputShape("hidden_states_grad", 0) = h_shape;
+  ctx->SetOutputShape("hidden_states_grad", 0, h_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferPhysicalTensorDesc(
@@ -121,25 +123,5 @@ namespace oneflow {
       .Build();
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("fused_self_attention_query_mul_key_and_value")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      std::string grad_op_name = ctx->FwOp().op_name() + "_grad";
-
-      ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("fused_self_attention_query_mul_key_and_value_grad")
-            .InputBind("hidden_states", ctx->FwOp().input("hidden_states", 0))
-            .InputBind("query_mul_key_grad", ctx->FwOp().output_grad("query_mul_key", 0))
-            .InputBind("value_grad", ctx->FwOp().output_grad("value", 0))
-            .Output("hidden_states_grad")
-            .Attr("alpha", ctx->FwOp().attr<float>("alpha"))
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("hidden_states", 0), [=]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("hidden_states_grad", 0);
-      });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

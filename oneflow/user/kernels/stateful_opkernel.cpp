@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/profile_manager.h"
@@ -30,12 +30,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class ConsistentTensorInferResult;
+class GlobalTensorInferResult;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectListRawPtr = const std::vector<std::shared_ptr<vm::EagerBlobObject>>*;
-using ConsistentTensorInferResultRawPtr = const ConsistentTensorInferResult*;
+using GlobalTensorInferResultRawPtr = const GlobalTensorInferResult*;
 
 class ZeroCopyBaseContextHelper {
  public:
@@ -51,37 +51,42 @@ class ZeroCopyBaseContextHelper {
                              index);                                                              \
   if (i >= 0) { return (outputs).at(i) post_action; }
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                  const std::string& arg_name,
-                                                  const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        const int32_t index) const {
+    RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
+    return nullptr;
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                     const std::string& arg_name,
+                                                     const int32_t index) const {
+    RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
     return nullptr;
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                           const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
+    RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
     if (arg_name == "tmp_buffer" && index == 0) { return call_ctx->mut_tmp_tensor(); }
     return nullptr;
   }
 
-  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                                   const std::string& arg_name,
-                                                                   const int32_t index) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
-    RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
-                    consistent_tensor_infer_result->output_tensor_metas(),
-                    .shared_from_symbol().get());
+  const GlobalTensorMeta* GlobalTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                           const std::string& arg_name,
+                                                           const int32_t index) const {
+    const auto& global_tensor_infer_result = call_ctx->global_tensor_infer_result();
+    RETURN_IF_FOUND(global_tensor_infer_result->input_tensor_metas(),
+                    global_tensor_infer_result->output_tensor_metas(), .shared_from_symbol().get());
     return nullptr;
   }
 
   Optional<Symbol<ParallelDesc>> parallel_desc(eager::CallContext* call_ctx) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
-    if (!consistent_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
-    if (!consistent_tensor_infer_result->input_tensor_metas().empty()) {
-      return consistent_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
-    } else if (!consistent_tensor_infer_result->output_tensor_metas().empty()) {
-      return consistent_tensor_infer_result->output_tensor_metas().at(0)->parallel_desc();
+    const auto& global_tensor_infer_result = call_ctx->global_tensor_infer_result();
+    if (!global_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
+    if (!global_tensor_infer_result->input_tensor_metas().empty()) {
+      return global_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
+    } else if (!global_tensor_infer_result->output_tensor_metas().empty()) {
+      return global_tensor_infer_result->output_tensor_metas().at(0)->parallel_desc();
     } else {
       UNIMPLEMENTED();
       return Optional<Symbol<ParallelDesc>>();
@@ -160,66 +165,108 @@ class UserOpInferContextHelper final {
 
   const user_op::TensorDesc& InputTensorDesc(eager::CallContext* call_ctx,
                                              const std::string& arg_name, int32_t index) const {
-    return *CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index));
+    return *TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-
-  user_op::TensorDesc* OutputTensorDesc(eager::CallContext* call_ctx, const std::string& arg_name,
-                                        int32_t index) const {
-    return TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  const user_op::TensorDesc& OutputTensorDesc(eager::CallContext* call_ctx,
+                                              const std::string& arg_name, int32_t index) const {
+    return *TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                  const std::string& arg_name,
-                                                  int32_t index) const {
+  user_op::TensorDesc* MutOutputTensorDesc(eager::CallContext* call_ctx,
+                                           const std::string& arg_name, int32_t index) const {
+    return MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        int32_t index) const {
     return zero_copy_base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                     const std::string& arg_name,
+                                                     int32_t index) const {
+    return zero_copy_base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
 
   const Shape& InputShape(eager::CallContext* call_ctx, const std::string& arg_name,
                           int32_t index) const {
-    return *Shape4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  Shape* OutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
-                     int32_t index) const {
     return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                               int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
+  const Shape& OutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
+                           int32_t index) const {
+    return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  void SetOutputShape(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                      const Shape& shape) const {
+    SetShape4ArgNameAndIndex(call_ctx, arg_name, index, shape);
+  }
+  const Shape& Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).shape();
+  }
+  void SetShape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                int32_t index, const Shape& shape) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->set_shape(shape);
   }
   const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                             int32_t index) const {
-    return *Stride4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  Stride* OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
-                       int32_t index) const {
     return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                 int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
-  }
-  const DataType& InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+  const Stride& OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                              int32_t index) const {
-    return *Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
+    return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  DataType* OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
-                        int32_t index) const {
+  void SetOutputStride(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                       const Stride& stride) const {
+    return SetStride4ArgNameAndIndex(call_ctx, arg_name, index, stride);
+  }
+  const Stride& Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                       int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).stride();
+  }
+  void SetStride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index, const Stride& stride) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->set_stride(stride);
+  }
+  DataType InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                      int32_t index) const {
     return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                  int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
+  DataType OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                       int32_t index) const {
+    return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  void SetOutputDType(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                      DataType data_type) const {
+    return SetDtype4ArgNameAndIndex(call_ctx, arg_name, index, data_type);
+  }
+  DataType Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).data_type();
+  }
+  void SetDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                int32_t index, DataType data_type) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)
+        ->set_data_type(data_type);
   }
   bool InputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
-    return *IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  bool* OutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
-                        int32_t index) const {
     return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                  int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
+  bool OutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
+                       int32_t index) const {
+    return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  void SetOutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                          bool is_dynamic) const {
+    return SetIsDynamic4ArgNameAndIndex(call_ctx, arg_name, index, is_dynamic);
+  }
+  bool IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).is_dynamic();
+  }
+  void SetIsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                    int32_t index, bool is_dynamic) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)
+        ->set_is_dynamic(is_dynamic);
   }
 
   const ArgVec& inputs() const { return zero_copy_base_ctx_helper_.inputs(); }
@@ -242,7 +289,7 @@ class UserOpInferContextHelper final {
   }
   const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
-    return *CHECK_NOTNULL(zero_copy_base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(
+    return *CHECK_NOTNULL(zero_copy_base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(
                               call_ctx, arg_name, index))
                 ->nd_sbp();
   }
@@ -280,10 +327,17 @@ class UserOpInferContextHelper final {
   }
 
  private:
-  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                         const std::string& arg_name,
-                                                         int32_t index) const {
-    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  const user_op::TensorDesc& NonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                               const std::string& arg_name,
+                                                               int32_t index) const {
+    const user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+    if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
+    return *tensor_desc;
+  }
+  user_op::TensorDesc* MutNonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                            const std::string& arg_name,
+                                                            int32_t index) const {
+    user_op::TensorDesc* tensor_desc = MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
     if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
@@ -308,48 +362,84 @@ class UserOpInferContext : public user_op::InferContext {
                                              int32_t index) const override {
     return helper_->InputTensorDesc(call_ctx_, arg_name, index);
   }
-  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name,
+                                              int32_t index) const override {
     return helper_->OutputTensorDesc(call_ctx_, arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  user_op::TensorDesc* MutOutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return helper_->MutOutputTensorDesc(call_ctx_, arg_name, index);
+  }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const {
     return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return helper_->InputShape(call_ctx_, arg_name, index);
   }
-  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+  const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputShape(call_ctx_, arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetOutputShape(const std::string& arg_name, int32_t index, const Shape& shape) override {
+    return helper_->SetOutputShape(call_ctx_, arg_name, index, shape);
+  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Shape4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
+    return helper_->SetShape4ArgNameAndIndex(call_ctx_, arg_name, index, shape);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
     return helper_->InputStride(call_ctx_, arg_name, index);
   }
-  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
-    return helper_->OutputStride(call_ctx_, arg_name, index);
+  const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
+    return helper_->InputStride(call_ctx_, arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetOutputStride(const std::string& arg_name, int32_t index, const Stride& stride) override {
+    return helper_->SetOutputStride(call_ctx_, arg_name, index, stride);
+  }
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Stride4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
+    return helper_->SetStride4ArgNameAndIndex(call_ctx_, arg_name, index, stride);
+  }
+  DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->InputDType(call_ctx_, arg_name, index);
   }
-  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+  DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputDType(call_ctx_, arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return helper_->SetOutputDType(call_ctx_, arg_name, index, data_type);
+  }
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Dtype4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
+    return helper_->SetDtype4ArgNameAndIndex(call_ctx_, arg_name, index, data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->InputIsDynamic(call_ctx_, arg_name, index);
   }
-  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
+  bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputIsDynamic(call_ctx_, arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return helper_->SetOutputIsDynamic(call_ctx_, arg_name, index, is_dynamic);
+  }
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->IsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
+    return helper_->SetIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index, is_dynamic);
   }
 
   const ArgVec& inputs() const override { return helper_->inputs(); }
@@ -420,10 +510,6 @@ class UserKernelComputeContextHelper final {
                                           int32_t index) const {
     return base_ctx_helper_.Tensor4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  ep::Stream* stream(DeviceCtx* device_ctx) const {
-    CHECK(device_ctx);
-    return device_ctx->stream();
-  }
 
   DeviceType device_type() const { return base_ctx_helper_.device_type(); }
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
@@ -447,8 +533,8 @@ class UserKernelComputeContextHelper final {
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   UserKernelComputeContext(const UserKernelComputeContextHelper* helper,
-                           eager::CallContext* call_ctx, DeviceCtx* device_ctx)
-      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
+                           eager::CallContext* call_ctx, ep::Stream* stream)
+      : helper_(helper), call_ctx_(call_ctx), stream_(stream) {}
 
   ~UserKernelComputeContext() = default;
 
@@ -461,7 +547,10 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return helper_->Tensor4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
+  ep::Stream* stream() override {
+    CHECK_NOTNULL(stream_);
+    return stream_;
+  }
 
   DeviceType device_type() const override { return helper_->device_type(); }
 
@@ -482,7 +571,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   const UserKernelComputeContextHelper* helper_;
   eager::CallContext* call_ctx_;
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
 };
 
 class UserKernelRegContextHelper final {
@@ -558,11 +647,6 @@ class UserKernelInitAndCacheContextHelper final {
 
   ~UserKernelInitAndCacheContextHelper() = default;
 
-  ep::Stream* stream(DeviceCtx* device_ctx) const {
-    CHECK(device_ctx);
-    return device_ctx->stream();
-  }
-
   DeviceType device_type() const { return base_ctx_helper_.device_type(); }
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
     return base_ctx_helper_.parallel_ctx(call_ctx);
@@ -575,7 +659,7 @@ class UserKernelInitAndCacheContextHelper final {
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                                const std::string& arg_name,
                                                                int32_t index) const {
-    return base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index);
+    return base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                  const std::string& arg_name, int32_t index) const {
@@ -587,7 +671,7 @@ class UserKernelInitAndCacheContextHelper final {
   const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
     return *CHECK_NOTNULL(
-                base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index))
+                base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index))
                 ->nd_sbp();
   }
 
@@ -613,12 +697,15 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
                                             public user_op::KernelCacheContext {
  public:
   UserKernelInitAndCacheContext(const UserKernelInitAndCacheContextHelper* helper,
-                                eager::CallContext* call_ctx, DeviceCtx* device_ctx)
-      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
+                                eager::CallContext* call_ctx, ep::Stream* stream)
+      : helper_(helper), call_ctx_(call_ctx), stream_(stream) {}
 
   ~UserKernelInitAndCacheContext() override = default;
 
-  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
+  ep::Stream* stream() override {
+    CHECK_NOTNULL(stream_);
+    return stream_;
+  }
 
   DeviceType device_type() const override { return helper_->device_type(); }
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
@@ -655,18 +742,18 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
 
   const UserKernelInitAndCacheContextHelper* helper_;
   eager::CallContext* call_ctx_;
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
 };
 
 namespace {
 
-Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
-                                       const ArgVec& indexed_input_pairs,
-                                       const ArgVec& indexed_output_pairs,
-                                       std::vector<int64_t>* input_tuple_indexes4const_ibns,
-                                       std::vector<int64_t>* input_tuple_indexes4mut_ibns,
-                                       std::vector<int64_t>* output_tuple_indexes4mut_obns,
-                                       std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
+Maybe<void> InitTensorTupleIndexes4Bns(
+    const std::shared_ptr<const OperatorConf>& op_conf, const ArgVec& indexed_input_pairs,
+    const ArgVec& indexed_output_pairs, OpArgsVector<int64_t>* input_tuple_indexes4const_ibns,
+    OpArgsVector<int64_t>* input_tuple_indexes4mut_ibns,
+    OpArgsVector<int64_t>* output_tuple_indexes4mut_obns,
+    OpArgsVector<int64_t>* output_tuple_indexes4mut2_obns,
+    small_vector<bool, kOpArgsReservedSize>* output_tuple_indexes2is_mut2_type) {
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -719,8 +806,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const std::string obn = GenRepeatedBn(pair.first, pair.second);
     if (arg_modifier_signature.obn2output_blob_modifier().at(obn).header_infered_before_compute()) {
       output_tuple_indexes4mut_obns->emplace_back(i);
+      output_tuple_indexes2is_mut2_type->emplace_back(false);
     } else {
       output_tuple_indexes4mut2_obns->emplace_back(i);
+      output_tuple_indexes2is_mut2_type->emplace_back(true);
     }
   }
   return Maybe<void>::Ok();
@@ -740,7 +829,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->stream_ = stream;
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
-  opkernel->need_check_mem_case_ = true;
 
   const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
@@ -768,7 +856,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
       op_conf, input_arg_tuple->indexed_arg_name_and_index(),
       output_arg_tuple->indexed_arg_name_and_index(), &opkernel->input_tuple_indexes4const_ibns_,
       &opkernel->input_tuple_indexes4mut_ibns_, &opkernel->output_tuple_indexes4mut_obns_,
-      &opkernel->output_tuple_indexes4mut2_obns_));
+      &opkernel->output_tuple_indexes4mut2_obns_, &opkernel->output_tuple_indexes2is_mut2_type_));
 
   return opkernel;
 }
@@ -785,14 +873,13 @@ size_t StatefulOpKernel::InferTmpSize(eager::CallContext* call_ctx,
 Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
                                              const user_op::OpKernel** user_opkernel,
                                              bool* need_temp_storage) {
-  OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
   DataType primary_dtype = kInvalidDataType;
   const auto& inputs = call_ctx->inputs();
   const auto& outputs = call_ctx->outputs();
-  if (likely(!inputs->empty())) {
-    primary_dtype = (*inputs)[0]->data_type();
-  } else if (likely(!outputs->empty())) {
-    primary_dtype = (*outputs)[0]->data_type();
+  if (likely(!inputs.empty())) {
+    primary_dtype = inputs[0]->data_type();
+  } else if (likely(!outputs.empty())) {
+    primary_dtype = outputs[0]->data_type();
   } else {
     // do nothing
   }
@@ -823,12 +910,12 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
 }
 
 void StatefulOpKernel::TryInitOpKernelStateAndCache(eager::CallContext* call_ctx,
-                                                    DeviceCtx* device_ctx,
+                                                    ep::Stream* stream,
                                                     const user_op::OpKernel* op_kernel,
                                                     user_op::OpKernelState** state,
                                                     user_op::OpKernelCache** cache) {
   UserKernelInitAndCacheContext init_and_cache_ctx(init_and_cache_ctx_helper_.get(), call_ctx,
-                                                   device_ctx);
+                                                   stream);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
@@ -859,11 +946,11 @@ user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
 
 user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
 
-void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
                                const user_op::OpKernel* user_opkernel,
                                user_op::OpKernelState* state,
                                const user_op::OpKernelCache* cache) const {
-  UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
+  UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, stream);
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
   if (Singleton<profiler::ProfileManager>::Get()) {
@@ -895,6 +982,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   } else {
     user_opkernel->Compute(compute_ctx, state, cache);
   }
+  CHECK_JUST(compute_ctx->stream()->GetAsyncError());
 }
 
 }  // namespace one

@@ -131,6 +131,9 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const int32_t elem_cnt = in->shape_view().elem_cnt();
+    CHECK_GE(elem_cnt, 0);
+    if (elem_cnt == 0) { return; }
+
     const int32_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
     TmpBufferManager<T> buffer_manager(tmp_buffer->shape_view().elem_cnt(),
@@ -166,11 +169,13 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
         return key_value_out_bytes + temp_storage_bytes;                                           \
       });
 
+REGISTER_CUDA_ARGMAX_KERNEL(bool)
 REGISTER_CUDA_ARGMAX_KERNEL(float)
 REGISTER_CUDA_ARGMAX_KERNEL(double)
 REGISTER_CUDA_ARGMAX_KERNEL(uint8_t)
 REGISTER_CUDA_ARGMAX_KERNEL(int8_t)
 REGISTER_CUDA_ARGMAX_KERNEL(int32_t)
 REGISTER_CUDA_ARGMAX_KERNEL(int64_t)
+REGISTER_CUDA_ARGMAX_KERNEL(half)
 
 }  // namespace oneflow

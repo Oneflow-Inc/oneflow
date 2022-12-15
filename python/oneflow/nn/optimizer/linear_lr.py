@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
@@ -80,7 +80,7 @@ class LinearLR(LRScheduler):
                 step / self.total_iters
             )
         else:
-            multiplier = 1
+            multiplier = self.end_factor
 
         return base_lr * multiplier
 

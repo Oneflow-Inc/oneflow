@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/lazy/stream_context/include/generic_stream_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -37,6 +38,7 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
   }
 
   actor_thread_ = std::thread([this, stream_id]() {
+    LazyMode::Guard guard(true);
     OF_PROFILER_NAME_THIS_HOST_THREAD("_" + ToString(stream_id.device_id().device_type())
                                       + std::to_string(stream_id.device_id().device_index())
                                       + "_actor");

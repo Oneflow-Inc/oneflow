@@ -95,9 +95,14 @@ class TestEye(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         return x
 
+    @profile(torch.eye)
+    def profile_eye(test_case):
+        torch.eye(1000)
+        torch.eye(100, 1280)
+
 
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentEye(flow.unittest.TestCase):
+class TestGlobalEye(flow.unittest.TestCase):
     def test_eye_with_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_eye_with_1n2d]

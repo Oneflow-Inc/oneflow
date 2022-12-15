@@ -18,43 +18,78 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
+
 namespace vm {
 
-EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                                 const std::shared_ptr<Shape>& shape,
-                                 const std::shared_ptr<Stride>& stride, DataType data_type,
-                                 const std::shared_ptr<TensorStorage>& tensor_storage,
-                                 const intrusive::shared_ptr<LocalDepObject>& dep_object)
+EagerBlobObject::EagerBlobObject(
+    const std::shared_ptr<MemoryCase>& mem_case,
+    const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
+    const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
+    DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+    const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : is_dynamic_(false),
       mem_case_(mem_case),
       data_type_(data_type),
-      shape_(shape),
-      stride_(stride),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      mem_ptr_for_allocation_compuation_pipelining_(nullptr),
-      inited_mem_ptr_for_allocation_compuation_pipelining_(false),
-      is_shape_synced_(true),
+      pin_memory_(false),
       compute_local_dep_object_(dep_object),
-      blob_desc_(shape, stride, data_type) {
-  CHECK(static_cast<bool>(shape));
-  CHECK(static_cast<bool>(stride));
+      static_local_tensor_meta_(static_local_tensor_meta),
+      dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
   CHECK(static_cast<bool>(tensor_storage));
 }
 
-Blob* EagerBlobObject::blob() {
-  if (!blob_) {
-    blob_.reset(new Blob(*mem_case_, &blob_desc_, mut_header_ptr(), mut_dptr<char>()));
+// user_op::TensorDesc overrides
+const Shape& EagerBlobObject::shape() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->shape();
+  } else {
+    return static_local_tensor_meta_->shape();
   }
-  return blob_.get();
+}
+const Stride& EagerBlobObject::stride() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->stride();
+  } else {
+    return static_local_tensor_meta_->stride();
+  }
+}
+
+void EagerBlobObject::set_shape(const Shape& shape) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_shape(shape);
+}
+void EagerBlobObject::set_stride(const Stride& stride) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_stride(stride);
+}
+
+MutShapeView EagerBlobObject::mut_shape_view() {
+  CHECK(dynamic_local_tensor_meta_);
+  return *const_cast<Shape*>(dynamic_local_tensor_meta_->shape_ptr().get());
+}
+
+std::shared_ptr<const Shape> EagerBlobObject::shape_ptr() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->shape_ptr();
+  } else {
+    return static_local_tensor_meta_->shape_ptr();
+  }
+}
+std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->stride_ptr();
+  } else {
+    return static_local_tensor_meta_->stride_ptr();
+  }
 }
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
+Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
@@ -71,11 +106,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-    InitMemPtrForAllocationComputationPipelining();
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+    return true;
   }
-  InitOrCheckMemPtrForAllocationComputationPipelining();
-  return Maybe<void>::Ok();
+  return false;
 }
 
 }  // namespace vm

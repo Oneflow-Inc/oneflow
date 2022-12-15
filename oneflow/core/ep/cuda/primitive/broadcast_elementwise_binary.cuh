@@ -299,8 +299,8 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
   SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
                                      &simplified_num_dims, simplified_src0_dims,
                                      simplified_src1_dims, simplified_dst_dims);
-  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
-               simplified_dst_dims, dst);
+  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_dst_dims, dst);
+  CheckInplace(simplified_num_dims, simplified_src1_dims, src1, simplified_dst_dims, dst);
   if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
                    simplified_src1_dims)) {
     const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);

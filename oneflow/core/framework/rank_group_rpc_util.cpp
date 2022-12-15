@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {

@@ -109,7 +109,7 @@ class TestConvertDependency(flow.unittest.TestCase):
             size_where = 3
 
         p_size = re.compile(r"size=\(.*?\)", re.S)
-        p_type = re.compile(r"dtype=.*?\)", re.S)
+        p_type = re.compile(r"(dtype=.*?)[,|\)]", re.S)
         types = ["INPUT", "PARAMETER", "BUFFER", "OUTPUT"]
         num_nodes = {}
 

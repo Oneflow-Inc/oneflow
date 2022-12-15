@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
@@ -83,7 +83,7 @@ namespace {
 
 Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(const TransportToken& token) {
   CHECK_EQ_OR_RETURN(token.seq_id(), 0);
-  JUST(token.CheckThreadConsistentId());
+  JUST(token.CheckThreadGlobalId());
   auto auto_token = std::make_shared<TransportToken>(token);
   return auto_token;
 }

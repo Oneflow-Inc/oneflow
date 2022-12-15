@@ -22,6 +22,26 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
+    def test_reshape_exception_invalid_dim(test_case):
+        # torch exception and messge:
+        #
+        #   RuntimeError: Invalid shape dimension -2
+        #
+        x = flow.tensor((2, 2))
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = x.reshape((-2, 4))
+        test_case.assertTrue("Invalid shape dimension -2" in str(ctx.exception))
+
+    def test_reshape_exception_invalid_size(test_case):
+        # torch exception and messge:
+        #
+        #   RuntimeError: shape '[2, 3, 5]' is invalid for input of size 24
+        #
+        x = flow.arange(24).reshape(2, 3, 4)
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = x.reshape((2, 3, 5))
+        test_case.assertTrue("is invalid for input of size 24" in str(ctx.exception))
+
     def test_reshape_exception_only_one_dim_infered(test_case):
         # torch exception and messge:
         #

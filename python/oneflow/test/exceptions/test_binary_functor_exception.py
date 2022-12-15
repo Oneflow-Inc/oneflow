@@ -40,7 +40,16 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             y = flow.ones((2, 4))
             x.add_(y)
         test_case.assertTrue(
-            "Can not expand shape (2,4) to (2,3)" in str(context.exception)
+            "Tensor with shape (2,3) doesn't match the broadcast shape in an inplace operation"
+            in str(context.exception)
+        )
+
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.ones((3, 3))
+            y = flow.ones((2, 3, 3))
+            x.add_(y)
+        test_case.assertTrue(
+            "Can not expand origin shape (2,3,3) to (3,3)" in str(context.exception)
         )
 
         with test_case.assertRaises(RuntimeError) as context:
@@ -57,7 +66,16 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             y = flow.ones((2, 4))
             x.mul_(y)
         test_case.assertTrue(
-            "Can not expand shape (2,4) to (2,3)" in str(context.exception)
+            "Tensor with shape (2,3) doesn't match the broadcast shape in an inplace operation"
+            in str(context.exception)
+        )
+
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.ones((3, 3))
+            y = flow.ones((2, 3, 3))
+            x.mul_(y)
+        test_case.assertTrue(
+            "Can not expand origin shape (2,3,3) to (3,3)" in str(context.exception)
         )
 
     def test_div_inplace_runtime_error(test_case):
@@ -75,7 +93,16 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             y = flow.ones((2, 4))
             x.div_(y)
         test_case.assertTrue(
-            "Can not expand shape (2,4) to (2,3)" in str(context.exception)
+            "Tensor with shape (2,3) doesn't match the broadcast shape in an inplace operation"
+            in str(context.exception)
+        )
+
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.ones((3, 3))
+            y = flow.ones((2, 3, 3))
+            x.div_(y)
+        test_case.assertTrue(
+            "Can not expand origin shape (2,3,3) to (3,3)" in str(context.exception)
         )
 
 

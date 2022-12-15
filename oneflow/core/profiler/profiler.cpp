@@ -19,20 +19,20 @@ limitations under the License.
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/vm/vm_util.h"
-#ifdef OF_ENABLE_PROFILER
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
 #include <cuda_profiler_api.h>
-#include "oneflow/core/device/cuda_util.h"
-#endif  // OF_ENABLE_PROFILER
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
 namespace profiler {
 
 void NameThisHostThread(const std::string& name) {
-#ifdef OF_ENABLE_PROFILER
+#ifdef WITH_CUDA
   static thread_local std::unique_ptr<std::string> thread_name_prefix;
   if (!thread_name_prefix) {
     thread_name_prefix.reset(
@@ -40,7 +40,7 @@ void NameThisHostThread(const std::string& name) {
   }
   const std::string name_with_prefix = *thread_name_prefix + name;
   nvtxNameOsThreadA(syscall(SYS_gettid), name_with_prefix.c_str());
-#endif  // OF_ENABLE_PROFILER
+#endif  // WITH_CUDA
 }
 
 void RangePush(const std::string& name) {
