@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from math import inf
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 
 
 class ReduceLROnPlateau(object):
