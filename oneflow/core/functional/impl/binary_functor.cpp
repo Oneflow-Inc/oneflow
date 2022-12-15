@@ -412,7 +412,8 @@ class InplaceBroadcastGreaterFunctor {
     const std::shared_ptr<one::Tensor>& condition_x_y = JUST(functional::BroadcastGreater(x, y));
     const std::shared_ptr<one::Tensor>& condition_y_x = JUST(functional::BroadcastGreater(y, x));
     JUST(functional::MaskedFillInplace(x, condition_x_y, 1));
-    return JUST(functional::MaskedFillInplace(x, condition_y_x, 0));
+    JUST(functional::MaskedFillInplace(x, condition_y_x, 0));
+    return x;
   }
 };
 
