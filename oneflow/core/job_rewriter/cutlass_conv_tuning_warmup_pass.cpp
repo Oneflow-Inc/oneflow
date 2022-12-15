@@ -27,7 +27,8 @@ namespace oneflow {
 
 namespace {
 
-constexpr size_t kMaxWorkspaceSize = 128 * 1024 * 1024;  // 128MB
+constexpr size_t kMaxWorkspaceSize = 128 * 1024 * 1024;   // 128MB
+constexpr size_t kBufferMallocAlign = 128 * 1024 * 1024;  // 128MB
 
 class CutlassConvTuningWarmupPass final : public JobPass {
  public:
@@ -46,19 +47,26 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
   }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
-  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
+
+  auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
+  ep::Stream* stream = device->CreateStream();
+  void* workspace = nullptr;
+  char* buffer = nullptr;
+  size_t buffer_size = 0;
+  OF_CUDA_CHECK(cudaMalloc(&workspace, kMaxWorkspaceSize));
+  op_graph.ForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
-    if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
-    if (op_conf.user_conf().op_type_name() != "conv2d") { return Maybe<void>::Ok(); }
-    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return Maybe<void>::Ok(); }
-    if (node->parallel_desc().parallel_num() != 1) { return Maybe<void>::Ok(); }
-    if (!node->parallel_desc().containing_current_rank()) { return Maybe<void>::Ok(); }
+    if (!op_conf.has_user_conf()) { return; }
+    if (op_conf.user_conf().op_type_name() != "conv2d") { return; }
+    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
+    if (node->parallel_desc().parallel_num() != 1) { return; }
+    if (!node->parallel_desc().containing_current_rank()) { return; }
     user_op::UserOpConfWrapper conv2d_op(op_conf);
-    if (conv2d_op.attr<std::string>("data_format") != "channels_last") { return Maybe<void>::Ok(); }
-    if (conv2d_op.attr<int32_t>("groups") != 1) { return Maybe<void>::Ok(); }
+    if (conv2d_op.attr<std::string>("data_format") != "channels_last") { return; }
+    if (conv2d_op.attr<int32_t>("groups") != 1) { return; }
     VLOG(3) << "Tuning " << op_conf.name();
     const auto& in_desc = node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("in", 0)));
-    if (in_desc.data_type() != DataType::kFloat16) { return Maybe<void>::Ok(); }
+    if (in_desc.data_type() != DataType::kFloat16) { return; }
     const auto& weight_desc =
         node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("weight", 0)));
     const auto& out_desc = node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.output("out", 0)));
@@ -95,15 +103,28 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
       key.element_compute = cutlass::library::NumericTypeID::kF16;
     }
 
-    auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
-    ep::Stream* stream = device->CreateStream();
-
-    void* workspace = nullptr;
-    OF_CUDA_CHECK(cudaMalloc(&workspace, kMaxWorkspaceSize));
-    void* x_ptr = nullptr;
-    void* w_ptr = nullptr;
-    void* y_ptr = nullptr;
+    const size_t x_size = GetCudaAlignedSize(in_desc.ByteSizeOfBlobBody());
+    const size_t w_size = GetCudaAlignedSize(weight_desc.ByteSizeOfBlobBody());
+    const size_t y_size = GetCudaAlignedSize(out_desc.ByteSizeOfBlobBody());
+    size_t bias_size = 0;
+    if (conv2d_op.has_input("bias", 0)) {
+      bias_size =
+          GetCudaAlignedSize(node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("bias", 0)))
+                                 .ByteSizeOfBlobBody());
+    }
+    const size_t total_buf_size = x_size + w_size + y_size + bias_size;
+    if (total_buf_size > buffer_size) {
+      size_t malloc_size = RoundUp(total_buf_size, kBufferMallocAlign);
+      OF_CUDA_CHECK(cudaFree(buffer));
+      OF_CUDA_CHECK(cudaMalloc(&buffer, malloc_size));
+      buffer_size = malloc_size;
+    }
+    void* x_ptr = buffer;
+    void* w_ptr = buffer + x_size;
+    void* y_ptr = buffer + x_size + w_size;
     void* bias_ptr = nullptr;
+    if (bias_size != 0) { bias_ptr = buffer + x_size + w_size + y_size; }
+
     cutlass::conv::Conv2dProblemSize problem_size(
         n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
         strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
@@ -115,20 +136,10 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     configuraion.stride_b = {c, s * c, r * s * c};
     configuraion.stride_c = {0, 0, 0};
     cutlass::library::ConvArguments arguments;
-    OF_CUDA_CHECK(cudaMalloc(&x_ptr, in_desc.ByteSizeOfBlobBody()));
     arguments.A = x_ptr;
-    OF_CUDA_CHECK(cudaMalloc(&w_ptr, weight_desc.ByteSizeOfBlobBody()));
     arguments.B = w_ptr;
     arguments.reordered_B = nullptr;
-    if (conv2d_op.has_input("bias", 0)) {
-      const auto& bias_desc =
-          node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("bias", 0)));
-      OF_CUDA_CHECK(cudaMalloc(&bias_ptr, bias_desc.ByteSizeOfBlobBody()));
-      arguments.C = bias_ptr;
-    } else {
-      arguments.C = nullptr;
-    }
-    OF_CUDA_CHECK(cudaMalloc(&y_ptr, out_desc.ByteSizeOfBlobBody()));
+    arguments.C = bias_ptr;
     arguments.D = y_ptr;
     union SP {
       float f{};
@@ -160,16 +171,10 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     const cutlass::library::Operation* operation = CutlassConvTuner::Get().FindConv2dOperation(
         stream->As<ep::CudaStream>(), key, configuraion, arguments, workspace, kMaxWorkspaceSize);
     if (operation != nullptr) { VLOG(3) << "Fastest operation: " << operation->description().name; }
-
-    OF_CUDA_CHECK(cudaFree(workspace));
-    OF_CUDA_CHECK(cudaFree(x_ptr));
-    OF_CUDA_CHECK(cudaFree(w_ptr));
-    OF_CUDA_CHECK(cudaFree(y_ptr));
-    OF_CUDA_CHECK(cudaFree(bias_ptr));
-    device->DestroyStream(stream);
-
-    return Maybe<void>::Ok();
-  }));
+  });
+  OF_CUDA_CHECK(cudaFree(workspace));
+  OF_CUDA_CHECK(cudaFree(buffer));
+  device->DestroyStream(stream);
   return Maybe<void>::Ok();
 }
 

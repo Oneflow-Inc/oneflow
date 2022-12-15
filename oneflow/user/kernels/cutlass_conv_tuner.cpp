@@ -29,6 +29,25 @@ namespace oneflow {
 
 namespace {
 
+bool IsWeakerAlginOperation(const cutlass::library::Operation* lhs,
+                            const cutlass::library::Operation* rhs) {
+  const char* lhs_name = lhs->description().name;
+  const char* rhs_name = rhs->description().name;
+  const size_t len = std::strlen(lhs_name);
+  const size_t suffix_len = std::strlen("align8");
+  if (std::strlen(rhs_name) != len) { return false; }
+  if (len < suffix_len) { return false; }
+  const size_t prefix_len = len - suffix_len;
+  if (std::strncmp(lhs_name, rhs_name, prefix_len) != 0) { return false; }
+  const auto& HasLegalSuffix = [&](const char* str) {
+    if (std::strncmp(str + prefix_len, "align", std::strlen("align")) != 0) { return false; }
+    const char align = str[len - 1];
+    return align == '8' || align == '4' || align == '2' || align == '1';
+  };
+  if ((!HasLegalSuffix(lhs_name)) || (!HasLegalSuffix(rhs_name))) { return false; }
+  return lhs_name[len - 1] < rhs_name[len - 1];
+}
+
 struct Conv2dOperationCacheKey {
   cutlass::library::ConvFunctionalKey functional_key;
   cutlass::library::Conv2dConfiguration configuraion;
@@ -154,13 +173,13 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
   Conv2dOperationCacheKey cache_key(functional_key, configuraion, arguments);
   {
     std::lock_guard<std::mutex> lock(mutex);
-    auto device_cache = cache[dev];
-    auto it = device_cache.find(cache_key);
+    const auto& device_cache = cache[dev];
+    const auto& it = device_cache.find(cache_key);
     if (it != device_cache.end()) { return it->second; }
   }
 
-  constexpr int turing_warmup_iters = 3;
-  constexpr int turing_iters = 7;
+  constexpr int turing_warmup_iters = 2;
+  constexpr int turing_iters = 5;
   cudaEvent_t start{};
   cudaEvent_t end{};
   OF_CUDA_CHECK(cudaEventCreate(&start));
@@ -172,8 +191,18 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
   CHECK(operations_map_it
         != cutlass::library::Singleton::get().operation_table.conv2d_operations.cend());
   const cutlass::library::ConvOperationVectorMap& operations_map = operations_map_it->second;
+
   for (const auto& pair : operations_map) {
+    std::map<std::string, const cutlass::library::Operation*, std::greater<std::string>> operations;
     for (auto operation : pair.second) {
+      operations.emplace(operation->description().name, operation);
+    }
+    const cutlass::library::Operation* prev_operation = nullptr;
+    for (const auto& name_operation : operations) {
+      const cutlass::library::Operation* operation = name_operation.second;
+      if (prev_operation != nullptr && IsWeakerAlginOperation(operation, prev_operation)) {
+        continue;
+      }
       if (operation->description().tile_description.minimum_compute_capability * 10
               > stream->cuda_arch()
           || operation->description().tile_description.maximum_compute_capability * 10
@@ -209,6 +238,7 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
       float time = 0;
       OF_CUDA_CHECK(cudaEventElapsedTime(&time, start, end));
       VLOG(3) << operation->description().name << " " << time;
+      prev_operation = operation;
       if (fastest_operation == nullptr || time < fastest_time) {
         fastest_operation = operation;
         fastest_time = time;
