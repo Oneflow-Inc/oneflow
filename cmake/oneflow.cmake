@@ -136,6 +136,7 @@ add_custom_target(
   of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+          --exclude="oneflow/user/kernels/fmha_flash_attention"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${ONEFLOW_PYTHON_DIR} --fix --exclude="oneflow/include" --exclude="oneflow/core"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir
@@ -254,20 +255,22 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2")
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
-set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "334997b4879aba15d9323a732356cf2a" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "1ccc00accc87a1a5d42a275d6e31cd8c" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
@@ -318,31 +321,22 @@ elseif(WIN32)
 endif()
 
 if(BUILD_CUDA)
-  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
-    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
-      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
-    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
-      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
-    endif()
-  endforeach()
   string(JOIN "," CUDA_REAL_ARCHS ${CUDA_REAL_ARCHS_LIST})
   set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/core/hardware/cuda_device_descriptor.cpp
                               PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
 endif()
 
-if(BUILD_CUDA)
+if(BUILD_CUDA AND WITH_CUTLASS)
   if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
     add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)
   endif()
 
-  get_target_property(CUTLASS_FMHA_INCLUDE_DIR cutlass_fmha_headers INTERFACE_INCLUDE_DIRECTORIES)
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
-  get_target_property(CUTLASS_DUAL_GEMM_INCLUDE_DIR cutlass_dual_gemm_headers
-                      INTERFACE_INCLUDE_DIRECTORIES)
+    APPEND PROPERTY INCLUDE_DIRECTORIES
+                    ${CUTLASS_INSTALL_DIR}/examples/41_fused_multi_head_attention)
   set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
-               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_DUAL_GEMM_INCLUDE_DIR})
+               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/45_dual_gemm)
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
     set_property(
       SOURCE
@@ -558,6 +552,10 @@ if(BUILD_CPP_API)
   if(BUILD_CUDA)
     checkdirandappendslash(DIR ${NCCL_LIBRARY_DIR} OUTPUT NCCL_LIBRARY_DIR_APPENDED)
     list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${NCCL_LIBRARY_DIR_APPENDED})
+    if(WITH_CUTLASS)
+      checkdirandappendslash(DIR ${CUTLASS_LIBRARY_DIR} OUTPUT CUTLASS_LIBRARY_DIR_APPENDED)
+      list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${CUTLASS_LIBRARY_DIR_APPENDED})
+    endif()
   endif()
 
   install(
