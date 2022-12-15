@@ -708,24 +708,23 @@ class ProxyModuleList(get_list(ProxyModule)):
             self._oneflow_internal_graphblock__set_origin(origin)
             # MoudleList is a container without forward() method,
 
-        else:
-            if len(origin) > 0:
-                super().__init__(origin)
-                first = origin[0]
-                new_name = "_idx"
-                new_list = []
-                for item in origin:
-                    new_name += "-" + item.to(GraphModule).name
-                    new_list.append(item.to(Module))
-                new_module_list = ModuleList(new_list)
-                self.to(GraphModule)._name_prefix = (
-                    first.to(GraphModule).name_prefix + first.to(GraphModule).name
-                )
-                self.to(GraphModule)._name = new_name
-                self.to(GraphModule)._belonged_graph = first.to(
-                    GraphModule
-                )._belonged_graph
-                self._oneflow_internal_origin__ = new_module_list
+        elif isinstance(origin, list):
+            super().__init__(origin)
+            first = origin[0]
+            new_name = "_idx" 
+            new_list = []
+            for item in origin:
+                new_name += "-" + item.to(GraphModule).name
+                new_list.append(item.to(Module))
+            new_module_list = ModuleList(new_list)
+            self.to(GraphModule)._name_prefix = (
+                first.to(GraphModule).name_prefix + first.to(GraphModule).name
+            )
+            self.to(GraphModule)._name = new_name
+            self.to(GraphModule)._belonged_graph = first.to(
+                GraphModule
+            )._belonged_graph
+            self._oneflow_internal_origin__ = new_module_list
 
 
 class ProxyModuleDict(get_dict(ProxyModule)):
