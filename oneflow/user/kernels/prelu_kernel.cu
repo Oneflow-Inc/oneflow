@@ -464,7 +464,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
 
-    const Shape& left_extended_shape = CreatePreluLeftExtendedShape(ShapeView(x->shape_view()), alpha_size);
+    const Shape& left_extended_shape =
+        CreatePreluLeftExtendedShape(ShapeView(x->shape_view()), alpha_size);
     if (alpha_size == 1) {
       DispatchPreluBackwardSingleAlphaIndex<T>(ctx->stream(), elem_cnt, x->dptr<T>(),
                                                alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
