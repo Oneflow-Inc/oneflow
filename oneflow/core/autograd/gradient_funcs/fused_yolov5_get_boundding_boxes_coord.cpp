@@ -25,7 +25,7 @@ struct FusedGetBounddingBoxesCoordGradCaptureState : public AutoGradCaptureState
   std::vector<bool> requires_grad;
 };
 
-class FusedGetBounddingBoxesCoordGrad
+class FusedYolov5GetBounddingBoxesCoordGrad
     : public OpExprGradFunction<FusedGetBounddingBoxesCoordGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
@@ -54,7 +54,7 @@ class FusedGetBounddingBoxesCoordGrad
     const auto& b2_y2_diff = out_grads.at(7);
 
     in_grads->resize(8);
-    auto result = JUST(functional::FusedGetBounddingBoxesCoordGrad(
+    auto result = JUST(functional::FusedYolov5GetBounddingBoxesCoordGrad(
         b1_x1_diff, b1_x2_diff, b1_y1_diff, b1_y2_diff, b2_x1_diff, b2_x2_diff, b2_y1_diff,
         b2_y2_diff));
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
@@ -66,7 +66,7 @@ class FusedGetBounddingBoxesCoordGrad
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_boundding_boxes_coord",
-                               FusedGetBounddingBoxesCoordGrad);
+                               FusedYolov5GetBounddingBoxesCoordGrad);
 
 }  // namespace one
 }  // namespace oneflow

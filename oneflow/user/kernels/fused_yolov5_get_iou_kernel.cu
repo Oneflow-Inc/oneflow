@@ -47,10 +47,10 @@ __global__ void FusedGetIouBackward(const int n, const T* diou, const T* w1, con
 };  // namespace
 
 template<typename T>
-class FusedGetIouGpuKernel final : public user_op::OpKernel {
+class FusedYolov5GetIouGpuKernel final : public user_op::OpKernel {
  public:
-  FusedGetIouGpuKernel() = default;
-  ~FusedGetIouGpuKernel() = default;
+  FusedYolov5GetIouGpuKernel() = default;
+  ~FusedYolov5GetIouGpuKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -73,21 +73,21 @@ class FusedGetIouGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_IOU_CUDA_KERNEL(dtype)                      \
+#define REGISTER_FUSED_YOLOV5_GET_IOU_CUDA_KERNEL(dtype)               \
   REGISTER_USER_KERNEL("fused_yolov5_get_iou")                         \
-      .SetCreateFn<FusedGetIouGpuKernel<dtype>>()                      \
+      .SetCreateFn<FusedYolov5GetIouGpuKernel<dtype>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("iou", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_IOU_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_IOU_CUDA_KERNEL(half)
-REGISTER_FUSED_GET_IOU_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_IOU_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_IOU_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_IOU_CUDA_KERNEL(double)
 
 template<typename T>
-class FusedGetIouGradGpuKernel final : public user_op::OpKernel {
+class FusedYolov5GetIouGradGpuKernel final : public user_op::OpKernel {
  public:
-  FusedGetIouGradGpuKernel() = default;
-  ~FusedGetIouGradGpuKernel() = default;
+  FusedYolov5GetIouGradGpuKernel() = default;
+  ~FusedYolov5GetIouGradGpuKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -114,14 +114,14 @@ class FusedGetIouGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_IOU_GRAD_CUDA_KERNEL(dtype)                 \
+#define REGISTER_FUSED_YOLOV5_GET_IOU_GRAD_CUDA_KERNEL(dtype)          \
   REGISTER_USER_KERNEL("fused_yolov5_get_iou_grad")                    \
-      .SetCreateFn<FusedGetIouGradGpuKernel<dtype>>()                  \
+      .SetCreateFn<FusedYolov5GetIouGradGpuKernel<dtype>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("diou", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_IOU_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_IOU_GRAD_CUDA_KERNEL(half)
-REGISTER_FUSED_GET_IOU_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_IOU_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_IOU_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_IOU_GRAD_CUDA_KERNEL(double)
 
 }  // namespace oneflow

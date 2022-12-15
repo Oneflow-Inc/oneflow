@@ -13,52 +13,54 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <vector>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-const int32_t INPUT_LEN = 8;
-struct FusedCenterCaptureState : public AutoGradCaptureState {
+const int32_t INPUT_LEN = 4;
+struct FusedCiouAngleCaptureState : public AutoGradCaptureState {
   std::vector<bool> requires_grad;
+  float eps = 1e-8;
 };
 
-class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
+class FusedYolov5GetCiouDiagonalAngleGrad : public OpExprGradFunction<FusedCiouAngleCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(FusedCenterCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedCiouAngleCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
+
     for (int i = 0; i < INPUT_LEN; i++) {
       ctx->requires_grad.push_back(inputs.at(i)->requires_grad());
     }
     for (int i = 0; i < INPUT_LEN; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
 
+    ComposedAttrMap composed_attrs(attrs);
+    ctx->eps = JUST(composed_attrs.GetAttr<float>("eps"));
+
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedCenterCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FusedCiouAngleCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    const auto& rho2_diff = out_grads.at(0);
+    const auto& v_diff = out_grads.at(0);
 
-    const auto& b1_x1 = ctx->SavedTensors().at(0);
-    const auto& b1_x2 = ctx->SavedTensors().at(1);
-    const auto& b2_x1 = ctx->SavedTensors().at(2);
-    const auto& b2_x2 = ctx->SavedTensors().at(3);
-    const auto& b1_y1 = ctx->SavedTensors().at(4);
-    const auto& b1_y2 = ctx->SavedTensors().at(5);
-    const auto& b2_y1 = ctx->SavedTensors().at(6);
-    const auto& b2_y2 = ctx->SavedTensors().at(7);
+    const auto& w1 = ctx->SavedTensors().at(0);
+    const auto& h1 = ctx->SavedTensors().at(1);
+    const auto& w2 = ctx->SavedTensors().at(2);
+    const auto& h2 = ctx->SavedTensors().at(3);
+
+    auto result =
+        JUST(functional::FusedYolov5GetCiouDiagonalAngleGrad(w1, h1, w2, h2, v_diff, ctx->eps));
+    CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
 
     in_grads->resize(INPUT_LEN);
-    auto result = JUST(functional::FusedCenterGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1,
-                                                   b2_y2, rho2_diff));
-
-    CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {
       if (ctx->requires_grad[i]) { in_grads->at(i) = result->at(i); }
     }
@@ -66,7 +68,8 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_center_dist", FusedCenterGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_ciou_diagonal_angle",
+                               FusedYolov5GetCiouDiagonalAngleGrad);
 
 }  // namespace one
 }  // namespace oneflow

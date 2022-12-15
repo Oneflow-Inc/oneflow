@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetIntersectionAreaOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
   const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
   const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
@@ -36,18 +36,18 @@ Maybe<void> FusedGetIntersectionAreaOp::InferLogicalTensorDesc(user_op::InferCon
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y1.shape());
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y2.shape());
 
-  user_op::TensorDesc* inter = ctx->MutOutputTensorDesc("inter", 0);
-  inter->set_is_dynamic(b1_x1.is_dynamic());
-  inter->set_shape(b1_x1.shape());
+  user_op::TensorDesc* rho = ctx->MutOutputTensorDesc("rho2", 0);
+  rho->set_is_dynamic(b1_x1.is_dynamic());
+  rho->set_shape(b1_x1.shape());
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetIntersectionAreaOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetIntersectionAreaOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCenterDistOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetCenterDistOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetIntersectionAreaOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
   const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
   const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
@@ -65,12 +65,12 @@ Maybe<void> FusedGetIntersectionAreaOp::InferDataType(user_op::InferContext* ctx
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
 
-  user_op::TensorDesc* inter = ctx->MutOutputTensorDesc("inter", 0);
-  inter->set_data_type(b1_x1.data_type());
+  user_op::TensorDesc* rho = ctx->MutOutputTensorDesc("rho2", 0);
+  rho->set_data_type(b1_x1.data_type());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetIntersectionAreaOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -82,13 +82,13 @@ Maybe<void> FusedGetIntersectionAreaOp::GetSbp(user_op::SbpContext* ctx) {
         .Split(user_op::OpArg("b2_x2", 0), i)
         .Split(user_op::OpArg("b2_y1", 0), i)
         .Split(user_op::OpArg("b2_y2", 0), i)
-        .Split(user_op::OpArg("inter", 0), i)
+        .Split(user_op::OpArg("rho2", 0), i)
         .Build();
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetIntersectionAreaGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
   const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
   const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
@@ -97,7 +97,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferLogicalTensorDesc(user_op::Infe
   const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
   const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-  const user_op::TensorDesc& inter_diff = ctx->InputTensorDesc("inter_diff", 0);
+  const user_op::TensorDesc& rho2_diff = ctx->InputTensorDesc("rho2_diff", 0);
 
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_x2.shape());
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b1_y1.shape());
@@ -106,7 +106,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferLogicalTensorDesc(user_op::Infe
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_x2.shape());
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y1.shape());
   CHECK_EQ_OR_RETURN(b1_x1.shape(), b2_y2.shape());
-  CHECK_EQ_OR_RETURN(b1_x1.shape(), inter_diff.shape());
+  CHECK_EQ_OR_RETURN(b1_x1.shape(), rho2_diff.shape());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_is_dynamic(b1_x1.is_dynamic());
@@ -143,11 +143,11 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferLogicalTensorDesc(user_op::Infe
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetIntersectionAreaGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetIntersectionAreaGradOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCenterDistGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetCenterDistGradOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetIntersectionAreaGradOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
   const user_op::TensorDesc& b1_x2 = ctx->InputTensorDesc("b1_x2", 0);
   const user_op::TensorDesc& b1_y1 = ctx->InputTensorDesc("b1_y1", 0);
@@ -156,7 +156,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferDataType(user_op::InferContext*
   const user_op::TensorDesc& b2_x2 = ctx->InputTensorDesc("b2_x2", 0);
   const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
-  const user_op::TensorDesc& inter_diff = ctx->InputTensorDesc("inter_diff", 0);
+  const user_op::TensorDesc& rho2_diff = ctx->InputTensorDesc("rho2_diff", 0);
 
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
@@ -165,7 +165,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferDataType(user_op::InferContext*
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
   CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), inter_diff.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), rho2_diff.data_type());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_data_type(b1_x1.data_type());
@@ -194,7 +194,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferDataType(user_op::InferContext*
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetIntersectionAreaGradOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCenterDistGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -206,7 +206,7 @@ Maybe<void> FusedGetIntersectionAreaGradOp::GetSbp(user_op::SbpContext* ctx) {
         .Split(user_op::OpArg("b2_x2", 0), i)
         .Split(user_op::OpArg("b2_y1", 0), i)
         .Split(user_op::OpArg("b2_y2", 0), i)
-        .Split(user_op::OpArg("inter_diff", 0), i)
+        .Split(user_op::OpArg("rho2_diff", 0), i)
         .Split(user_op::OpArg("b1_x1_diff", 0), i)
         .Split(user_op::OpArg("b1_x2_diff", 0), i)
         .Split(user_op::OpArg("b1_y1_diff", 0), i)

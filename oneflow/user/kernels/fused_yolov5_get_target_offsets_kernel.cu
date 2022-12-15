@@ -71,10 +71,10 @@ __global__ void FusedGetTargetOffsetsForward(MOD_FUNCTOR mod_functor,
 }  // namespace
 
 template<typename T>
-class FusedGetTargetOffsetsKernel final : public user_op::OpKernel {
+class FusedYolov5GetTargetOffsetsKernel final : public user_op::OpKernel {
  public:
-  FusedGetTargetOffsetsKernel() = default;
-  ~FusedGetTargetOffsetsKernel() = default;
+  FusedYolov5GetTargetOffsetsKernel() = default;
+  ~FusedYolov5GetTargetOffsetsKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -99,15 +99,15 @@ class FusedGetTargetOffsetsKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(dtype)                \
+#define REGISTER_FUSED_YOLOV5_GET_TARGET_OFFSETS_CUDA_KERNEL(dtype)         \
   REGISTER_USER_KERNEL("fused_yolov5_get_target_offsets")                   \
-      .SetCreateFn<FusedGetTargetOffsetsKernel<dtype>>()                    \
+      .SetCreateFn<FusedYolov5GetTargetOffsetsKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
                        && (user_op::HobDataType("j", 0) == DataType::kBool) \
                        && (user_op::HobDataType("gxy", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_TARGET_OFFSETS_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_TARGET_OFFSETS_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_TARGET_OFFSETS_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_TARGET_OFFSETS_CUDA_KERNEL(half)
 
 }  // namespace oneflow

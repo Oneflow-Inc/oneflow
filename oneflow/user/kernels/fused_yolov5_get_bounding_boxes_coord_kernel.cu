@@ -69,10 +69,10 @@ __global__ void FusedGetBounddingBoxesCoordBackward(
 };  // namespace
 
 template<typename T>
-class FusedGetBounddingBoxesCoordGpuKernel final : public user_op::OpKernel {
+class FusedYolov5GetBounddingBoxesCoordGpuKernel final : public user_op::OpKernel {
  public:
-  FusedGetBounddingBoxesCoordGpuKernel() = default;
-  ~FusedGetBounddingBoxesCoordGpuKernel() = default;
+  FusedYolov5GetBounddingBoxesCoordGpuKernel() = default;
+  ~FusedYolov5GetBounddingBoxesCoordGpuKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -106,21 +106,21 @@ class FusedGetBounddingBoxesCoordGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(dtype)    \
-  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord")       \
-      .SetCreateFn<FusedGetBounddingBoxesCoordGpuKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord")           \
+      .SetCreateFn<FusedYolov5GetBounddingBoxesCoordGpuKernel<dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)     \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(half)
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_CUDA_KERNEL(double)
 
 template<typename T>
-class FusedGetBounddingBoxesCoordGradGpuKernel final : public user_op::OpKernel {
+class FusedYolov5GetBounddingBoxesCoordGradGpuKernel final : public user_op::OpKernel {
  public:
-  FusedGetBounddingBoxesCoordGradGpuKernel() = default;
-  ~FusedGetBounddingBoxesCoordGradGpuKernel() = default;
+  FusedYolov5GetBounddingBoxesCoordGradGpuKernel() = default;
+  ~FusedYolov5GetBounddingBoxesCoordGradGpuKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -155,14 +155,14 @@ class FusedGetBounddingBoxesCoordGradGpuKernel final : public user_op::OpKernel 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord_grad")    \
-      .SetCreateFn<FusedGetBounddingBoxesCoordGradGpuKernel<dtype>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)   \
+#define REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_boundding_boxes_coord_grad")           \
+      .SetCreateFn<FusedYolov5GetBounddingBoxesCoordGradGpuKernel<dtype>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)          \
                        && (user_op::HobDataType("b1_x1_diff", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(half)
-REGISTER_FUSED_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_BOUNDDING_BOXES_COORD_GRAD_CUDA_KERNEL(double)
 
 }  // namespace oneflow

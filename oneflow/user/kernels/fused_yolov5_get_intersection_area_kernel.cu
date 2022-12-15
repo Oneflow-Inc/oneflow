@@ -93,10 +93,10 @@ __global__ void FusedGetIntersectionAreaForward(FUNCTOR functor, const int n, co
 }  // namespace
 
 template<typename T>
-class FusedGetIntersectionAreaKernel final : public user_op::OpKernel {
+class FusedYolov5GetIntersectionAreaKernel final : public user_op::OpKernel {
  public:
-  FusedGetIntersectionAreaKernel() = default;
-  ~FusedGetIntersectionAreaKernel() = default;
+  FusedYolov5GetIntersectionAreaKernel() = default;
+  ~FusedYolov5GetIntersectionAreaKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -124,21 +124,21 @@ class FusedGetIntersectionAreaKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(dtype)        \
+#define REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_CUDA_KERNEL(dtype) \
   REGISTER_USER_KERNEL("fused_yolov5_get_intersection_area")           \
-      .SetCreateFn<FusedGetIntersectionAreaKernel<dtype>>()            \
+      .SetCreateFn<FusedYolov5GetIntersectionAreaKernel<dtype>>()      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("inter", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_INTERSECTION_AREA_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_CUDA_KERNEL(half)
 
 template<typename T>
-class FusedGetIntersectionAreaGradKernel final : public user_op::OpKernel {
+class FusedYolov5GetIntersectionAreaGradKernel final : public user_op::OpKernel {
  public:
-  FusedGetIntersectionAreaGradKernel() = default;
-  ~FusedGetIntersectionAreaGradKernel() = default;
+  FusedYolov5GetIntersectionAreaGradKernel() = default;
+  ~FusedYolov5GetIntersectionAreaGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -178,14 +178,14 @@ class FusedGetIntersectionAreaGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_yolov5_get_intersection_area_grad")      \
-      .SetCreateFn<FusedGetIntersectionAreaGradKernel<dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_intersection_area_grad")           \
+      .SetCreateFn<FusedYolov5GetIntersectionAreaGradKernel<dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
                        && (user_op::HobDataType("b1_x1_diff", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_INTERSECTION_AREA_GRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

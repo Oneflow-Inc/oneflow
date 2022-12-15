@@ -168,10 +168,10 @@ __global__ void FusedCiouAngleBackward(FUNCTOR_BACKWARD functor_backward,
 }  // namespace
 
 template<typename T>
-class FusedGetCiouDiagonalAngleKernel final : public user_op::OpKernel {
+class FusedYolov5GetCiouDiagonalAngleKernel final : public user_op::OpKernel {
  public:
-  FusedGetCiouDiagonalAngleKernel() = default;
-  ~FusedGetCiouDiagonalAngleKernel() = default;
+  FusedYolov5GetCiouDiagonalAngleKernel() = default;
+  ~FusedYolov5GetCiouDiagonalAngleKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -196,21 +196,21 @@ class FusedGetCiouDiagonalAngleKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle")         \
-      .SetCreateFn<FusedGetCiouDiagonalAngleKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle")           \
+      .SetCreateFn<FusedYolov5GetCiouDiagonalAngleKernel<dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)   \
                        && (user_op::HobDataType("v", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_CUDA_KERNEL(half)
 
 template<typename T>
-class FusedGetCiouDiagonalAngleGradKernel final : public user_op::OpKernel {
+class FusedYolov5GetCiouDiagonalAngleGradKernel final : public user_op::OpKernel {
  public:
-  FusedGetCiouDiagonalAngleGradKernel() = default;
-  ~FusedGetCiouDiagonalAngleGradKernel() = default;
+  FusedYolov5GetCiouDiagonalAngleGradKernel() = default;
+  ~FusedYolov5GetCiouDiagonalAngleGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -242,14 +242,14 @@ class FusedGetCiouDiagonalAngleGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle_grad")    \
-      .SetCreateFn<FusedGetCiouDiagonalAngleGradKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_ciou_diagonal_angle_grad")           \
+      .SetCreateFn<FusedYolov5GetCiouDiagonalAngleGradKernel<dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)        \
                        && (user_op::HobDataType("w1_diff", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CIOU_DIAGONAL_ANGLE_GRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

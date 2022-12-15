@@ -1662,30 +1662,6 @@
     Bool align_corners=False, Int64List[3] output_size=None, String data_format="channels_first") => UpsampleTrilinear3DGrad'
   bind_python: False
 
-- name: "fused_yolov5_get_boundding_boxes_coord"
-  signature: "TensorTuple (Tensor x1, Tensor y1, Tensor w1, Tensor h1, Tensor x2, Tensor y2, Tensor w2, Tensor h2) => FusedGetBounddingBoxesCoord"
-  bind_python: True
-
-- name: "fused_yolov5_get_boundding_boxes_coord_grad"
-  signature: "TensorTuple (Tensor b1_x1_diff, Tensor b1_x2_diff, Tensor b1_y1_diff, Tensor b1_y2_diff, Tensor b2_x1_diff, Tensor b2_x2_diff, Tensor b2_y1_diff, Tensor b2_y2_diff) => FusedGetBounddingBoxesCoordGrad"
-  bind_python: False
-
-- name: "fused_yolov5_get_ciou_result"
-  signature: "TensorTuple (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedGetCiouResult"
-  bind_python: True
-
-- name: "fused_yolov5_get_ciou_result_grad"
-  signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
-  bind_python: False
-
-- name: "fused_yolov5_get_iou"
-  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIou"
-  bind_python: True
-
-- name: "fused_yolov5_get_iou_grad"
-  signature: "TensorTuple (Tensor diou, Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIouGrad"
-  bind_python: False
-
 - name: "abs"
   signature: "Tensor (Tensor x) => Abs"
   bind_python: True
@@ -2474,40 +2450,64 @@
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
   bind_python: True
 
+- name: "fused_yolov5_get_boundding_boxes_coord"
+  signature: "TensorTuple (Tensor x1, Tensor y1, Tensor w1, Tensor h1, Tensor x2, Tensor y2, Tensor w2, Tensor h2) => FusedYolov5GetBounddingBoxesCoord"
+  bind_python: True
+
+- name: "fused_yolov5_get_boundding_boxes_coord_grad"
+  signature: "TensorTuple (Tensor b1_x1_diff, Tensor b1_x2_diff, Tensor b1_y1_diff, Tensor b1_y2_diff, Tensor b2_x1_diff, Tensor b2_x2_diff, Tensor b2_y1_diff, Tensor b2_y2_diff) => FusedYolov5GetBounddingBoxesCoordGrad"
+  bind_python: False
+
+- name: "fused_yolov5_get_ciou_result"
+  signature: "TensorTuple (Tensor v, Tensor iou, Tensor rho2, Tensor c2, Float eps) => FusedYolov5GetCiouResult"
+  bind_python: True
+
+- name: "fused_yolov5_get_ciou_result_grad"
+  signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedYolov5GetCiouResultGrad"
+  bind_python: False
+
+- name: "fused_yolov5_get_iou"
+  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedYolov5GetIou"
+  bind_python: True
+
+- name: "fused_yolov5_get_iou_grad"
+  signature: "TensorTuple (Tensor diou, Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedYolov5GetIouGrad"
+  bind_python: False
+
 - name: "fused_yolov5_get_center_dist"
-  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedYolov5GetCenterDist"
   bind_python: True
 
 - name: "fused_yolov5_get_center_dist_grad"
-  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor rho2_diff) => FusedCenterGrad"
+  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor rho2_diff) => FusedYolov5GetCenterDistGrad"
   bind_python: False
 
 - name: "fused_yolov5_get_intersection_area"
-  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedGetIntersectionArea"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedYolov5GetIntersectionArea"
   bind_python: True
 
 - name: "fused_yolov5_get_intersection_area_grad"
-  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor inter_diff) => FusedGetIntersectionAreaGrad"
+  signature: "TensorTuple (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Tensor inter_diff) => FusedYolov5GetIntersectionAreaGrad"
   bind_python: False
 
 - name: "fused_yolov5_get_ciou_diagonal_angle"
-  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Float eps) => FusedGetCiouDiagonalAngle"
+  signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Float eps) => FusedYolov5GetCiouDiagonalAngle"
   bind_python: True
 
 - name: "fused_yolov5_get_ciou_diagonal_angle_grad"
-  signature: "TensorTuple (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor v_diff, Float eps) => FusedGetCiouDiagonalAngleGrad"
+  signature: "TensorTuple (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor v_diff, Float eps) => FusedYolov5GetCiouDiagonalAngleGrad"
   bind_python: False
 
 - name: "fused_yolov5_get_convex_diagonal_squared"
-  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquared"
+  signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedYolov5GetConvexDiagonalSquared"
   bind_python: True
 
 - name: "fused_yolov5_get_convex_diagonal_squared_grad"
-  signature: "TensorTuple (Tensor c2_diff, Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedGetConvexDiagonalSquaredGrad"
+  signature: "TensorTuple (Tensor c2_diff, Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2, Float eps) => FusedYolov5GetConvexDiagonalSquaredGrad"
   bind_python: False
 
 - name: "fused_yolov5_get_target_offsets"
-  signature: "Tensor (Tensor gxy, Tensor gxi, Float g) => FusedGetTargetOffsets"
+  signature: "Tensor (Tensor gxy, Tensor gxi, Float g) => FusedYolov5GetTargetOffsets"
   bind_python: True
 
 - name: "grouped_matmul_bias"

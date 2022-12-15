@@ -25,7 +25,7 @@ struct FusedGetConvexDiagonalSquaredCaptureState : public AutoGradCaptureState {
   float eps = 1e-8;
 };
 
-class FusedGetConvexDiagonalSquaredGrad
+class FusedYolov5GetConvexDiagonalSquaredGrad
     : public OpExprGradFunction<FusedGetConvexDiagonalSquaredCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
@@ -64,7 +64,7 @@ class FusedGetConvexDiagonalSquaredGrad
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
     in_grads->resize(INPUT_LEN);
-    auto result = JUST(functional::FusedGetConvexDiagonalSquaredGrad(
+    auto result = JUST(functional::FusedYolov5GetConvexDiagonalSquaredGrad(
         c2_diff, b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, ctx->eps));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
@@ -79,7 +79,7 @@ class FusedGetConvexDiagonalSquaredGrad
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_convex_diagonal_squared",
-                               FusedGetConvexDiagonalSquaredGrad);
+                               FusedYolov5GetConvexDiagonalSquaredGrad);
 
 }  // namespace one
 }  // namespace oneflow

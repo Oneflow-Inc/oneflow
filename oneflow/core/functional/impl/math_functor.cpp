@@ -3181,9 +3181,9 @@ class FusedWeightedSumFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
-class FusedCenterFunctor {
+class FusedYolov5GetCenterDistFunctor {
  public:
-  FusedCenterFunctor() {
+  FusedYolov5GetCenterDistFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_center_dist")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3210,9 +3210,9 @@ class FusedCenterFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedCenterGradFunctor {
+class FusedYolov5GetCenterDistGradFunctor {
  public:
-  FusedCenterGradFunctor() {
+  FusedYolov5GetCenterDistGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_center_dist_grad")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3248,9 +3248,9 @@ class FusedCenterGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetIntersectionAreaFunctor {
+class FusedYolov5GetIntersectionAreaFunctor {
  public:
-  FusedGetIntersectionAreaFunctor() {
+  FusedYolov5GetIntersectionAreaFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_intersection_area")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3277,9 +3277,9 @@ class FusedGetIntersectionAreaFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetIntersectionAreaGradFunctor {
+class FusedYolov5GetIntersectionAreaGradFunctor {
  public:
-  FusedGetIntersectionAreaGradFunctor() {
+  FusedYolov5GetIntersectionAreaGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_intersection_area_grad")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3315,9 +3315,9 @@ class FusedGetIntersectionAreaGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetBounddingBoxesCoordFunctor {
+class FusedYolov5GetBounddingBoxesCoordFunctor {
  public:
-  FusedGetBounddingBoxesCoordFunctor() {
+  FusedYolov5GetBounddingBoxesCoordFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_boundding_boxes_coord")
                          .Input("x1")
                          .Input("y1")
@@ -3350,9 +3350,9 @@ class FusedGetBounddingBoxesCoordFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetBounddingBoxesCoordGradFunctor {
+class FusedYolov5GetBounddingBoxesCoordGradFunctor {
  public:
-  FusedGetBounddingBoxesCoordGradFunctor() {
+  FusedYolov5GetBounddingBoxesCoordGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_boundding_boxes_coord_grad")
                          .Input("b1_x1_diff")
                          .Input("b1_x2_diff")
@@ -3391,9 +3391,9 @@ class FusedGetBounddingBoxesCoordGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetCiouDiagonalAngleFunctor {
+class FusedYolov5GetCiouDiagonalAngleFunctor {
  public:
-  FusedGetCiouDiagonalAngleFunctor() {
+  FusedYolov5GetCiouDiagonalAngleFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_diagonal_angle")
                          .Input("w1")
                          .Input("h1")
@@ -3416,9 +3416,9 @@ class FusedGetCiouDiagonalAngleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetCiouResultFunctor {
+class FusedYolov5GetCiouResultFunctor {
  public:
-  FusedGetCiouResultFunctor() {
+  FusedYolov5GetCiouResultFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_result")
                          .Input("v")
                          .Input("iou")
@@ -3442,9 +3442,9 @@ class FusedGetCiouResultFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetCiouDiagonalAngleGradFunctor {
+class FusedYolov5GetCiouDiagonalAngleGradFunctor {
  public:
-  FusedGetCiouDiagonalAngleGradFunctor() {
+  FusedYolov5GetCiouDiagonalAngleGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_diagonal_angle_grad")
                          .Input("w1")
                          .Input("h1")
@@ -3472,9 +3472,9 @@ class FusedGetCiouDiagonalAngleGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetCiouResultGradFunctor {
+class FusedYolov5GetCiouResultGradFunctor {
  public:
-  FusedGetCiouResultGradFunctor() {
+  FusedYolov5GetCiouResultGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_ciou_result_grad")
                          .Input("dy")
                          .Input("alpha")
@@ -3498,9 +3498,9 @@ class FusedGetCiouResultGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetIouFunctor {
+class FusedYolov5GetIouFunctor {
  public:
-  FusedGetIouFunctor() {
+  FusedYolov5GetIouFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_iou")
                          .Input("w1")
                          .Input("h1")
@@ -3525,9 +3525,9 @@ class FusedGetIouFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetIouGradFunctor {
+class FusedYolov5GetIouGradFunctor {
  public:
-  FusedGetIouGradFunctor() {
+  FusedYolov5GetIouGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_iou_grad")
                          .Input("diou")
                          .Input("w1")
@@ -3556,9 +3556,9 @@ class FusedGetIouGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetConvexDiagonalSquaredFunctor {
+class FusedYolov5GetConvexDiagonalSquaredFunctor {
  public:
-  FusedGetConvexDiagonalSquaredFunctor() {
+  FusedYolov5GetConvexDiagonalSquaredFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_convex_diagonal_squared")
                          .Input("b1_x1")
                          .Input("b1_x2")
@@ -3590,9 +3590,9 @@ class FusedGetConvexDiagonalSquaredFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetConvexDiagonalSquaredGradFunctor {
+class FusedYolov5GetConvexDiagonalSquaredGradFunctor {
  public:
-  FusedGetConvexDiagonalSquaredGradFunctor() {
+  FusedYolov5GetConvexDiagonalSquaredGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_convex_diagonal_squared_grad")
                          .Input("c2_diff")
                          .Input("b1_x1")
@@ -3630,9 +3630,9 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGetTargetOffsetsFunctor {
+class FusedYolov5GetTargetOffsetsFunctor {
  public:
-  FusedGetTargetOffsetsFunctor() {
+  FusedYolov5GetTargetOffsetsFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_yolov5_get_target_offsets")
                          .Input("gxy")
                          .Input("gxi")
@@ -3768,24 +3768,25 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
-  m.add_functor<impl::TruncFunctor>("Trunc");
-  m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
-  m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
-  m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
-  m.add_functor<impl::FusedGetBounddingBoxesCoordFunctor>("FusedGetBounddingBoxesCoord");
-  m.add_functor<impl::FusedGetBounddingBoxesCoordGradFunctor>("FusedGetBounddingBoxesCoordGrad");
-  m.add_functor<impl::FusedGetCiouDiagonalAngleFunctor>("FusedGetCiouDiagonalAngle");
-  m.add_functor<impl::FusedGetCiouDiagonalAngleGradFunctor>("FusedGetCiouDiagonalAngleGrad");
-  m.add_functor<impl::FusedGetCiouResultFunctor>("FusedGetCiouResult");
-  m.add_functor<impl::FusedGetCiouResultGradFunctor>("FusedGetCiouResultGrad");
-  m.add_functor<impl::FusedGetIntersectionAreaFunctor>("FusedGetIntersectionArea");
-  m.add_functor<impl::FusedGetIntersectionAreaGradFunctor>("FusedGetIntersectionAreaGrad");
-  m.add_functor<impl::FusedGetIouFunctor>("FusedGetIou");
-  m.add_functor<impl::FusedGetIouGradFunctor>("FusedGetIouGrad");
-  m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
-  m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
-      "FusedGetConvexDiagonalSquaredGrad");
-  m.add_functor<FusedGetTargetOffsetsFunctor>("FusedGetTargetOffsets");
+  m.add_functor<TruncFunctor>("Trunc");
+  m.add_functor<FusedWeightedSumFunctor>("FusedWeightedSum");
+  m.add_functor<FusedYolov5GetCenterDistFunctor>("FusedYolov5GetCenterDist");
+  m.add_functor<FusedYolov5GetCenterDistGradFunctor>("FusedYolov5GetCenterDistGrad");
+  m.add_functor<FusedYolov5GetBounddingBoxesCoordFunctor>("FusedYolov5GetBounddingBoxesCoord");
+  m.add_functor<FusedYolov5GetBounddingBoxesCoordGradFunctor>(
+      "FusedYolov5GetBounddingBoxesCoordGrad");
+  m.add_functor<FusedYolov5GetCiouDiagonalAngleFunctor>("FusedYolov5GetCiouDiagonalAngle");
+  m.add_functor<FusedYolov5GetCiouDiagonalAngleGradFunctor>("FusedYolov5GetCiouDiagonalAngleGrad");
+  m.add_functor<FusedYolov5GetCiouResultFunctor>("FusedYolov5GetCiouResult");
+  m.add_functor<FusedYolov5GetCiouResultGradFunctor>("FusedYolov5GetCiouResultGrad");
+  m.add_functor<FusedYolov5GetIntersectionAreaFunctor>("FusedYolov5GetIntersectionArea");
+  m.add_functor<FusedYolov5GetIntersectionAreaGradFunctor>("FusedYolov5GetIntersectionAreaGrad");
+  m.add_functor<FusedYolov5GetIouFunctor>("FusedYolov5GetIou");
+  m.add_functor<FusedYolov5GetIouGradFunctor>("FusedYolov5GetIouGrad");
+  m.add_functor<FusedYolov5GetConvexDiagonalSquaredFunctor>("FusedYolov5GetConvexDiagonalSquared");
+  m.add_functor<FusedYolov5GetConvexDiagonalSquaredGradFunctor>(
+      "FusedYolov5GetConvexDiagonalSquaredGrad");
+  m.add_functor<FusedYolov5GetTargetOffsetsFunctor>("FusedYolov5GetTargetOffsets");
 };
 
 }  // namespace functional

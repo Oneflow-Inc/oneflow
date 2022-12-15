@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetCiouDiagonalAngleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& w1 = ctx->InputTensorDesc("w1", 0);
   const user_op::TensorDesc& h1 = ctx->InputTensorDesc("h1", 0);
   const user_op::TensorDesc& w2 = ctx->InputTensorDesc("w2", 0);
@@ -35,11 +35,11 @@ Maybe<void> FusedGetCiouDiagonalAngleOp::InferLogicalTensorDesc(user_op::InferCo
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetCiouDiagonalAngleOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCiouDiagonalAngleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetCiouDiagonalAngleOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& w1 = ctx->InputTensorDesc("w1", 0);
   const user_op::TensorDesc& h1 = ctx->InputTensorDesc("h1", 0);
   const user_op::TensorDesc& w2 = ctx->InputTensorDesc("w2", 0);
@@ -54,7 +54,7 @@ Maybe<void> FusedGetCiouDiagonalAngleOp::InferDataType(user_op::InferContext* ct
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("w1", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -68,7 +68,8 @@ Maybe<void> FusedGetCiouDiagonalAngleOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const user_op::TensorDesc& w1 = ctx->InputTensorDesc("w1", 0);
   const user_op::TensorDesc& h1 = ctx->InputTensorDesc("h1", 0);
   const user_op::TensorDesc& w2 = ctx->InputTensorDesc("w2", 0);
@@ -99,11 +100,12 @@ Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferLogicalTensorDesc(user_op::Inf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetCiouDiagonalAngleGradOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCiouDiagonalAngleGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return FusedYolov5GetCiouDiagonalAngleGradOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& w1 = ctx->InputTensorDesc("w1", 0);
   const user_op::TensorDesc& h1 = ctx->InputTensorDesc("h1", 0);
   const user_op::TensorDesc& w2 = ctx->InputTensorDesc("w2", 0);
@@ -134,7 +136,7 @@ Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferDataType(user_op::InferContext
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouDiagonalAngleGradOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCiouDiagonalAngleGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& w1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("w1", 0);
   FOR_RANGE(int64_t, i, 0, w1.shape().NumAxes()) {
     ctx->NewBuilder()

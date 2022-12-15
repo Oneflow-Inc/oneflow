@@ -27,7 +27,7 @@ struct FusedGetCiouResultGradCaptureState : public AutoGradCaptureState {
   bool c2_requires_grad = false;
 };
 
-class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradCaptureState> {
+class FusedYolov5GetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
@@ -60,7 +60,7 @@ class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradC
     const auto& c2 = saved_tensors.at(2);
 
     in_grads->resize(4);
-    auto result = JUST(functional::FusedGetCiouResultGrad(dy, alpha, rho2, c2));
+    auto result = JUST(functional::FusedYolov5GetCiouResultGrad(dy, alpha, rho2, c2));
     CHECK_EQ_OR_RETURN(result->size(), 4);
     if (ctx->v_requires_grad && ctx->iou_requires_grad && ctx->rho2_requires_grad
         && ctx->c2_requires_grad) {
@@ -76,7 +76,7 @@ class FusedGetCiouResultGrad : public OpExprGradFunction<FusedGetCiouResultGradC
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_ciou_result", FusedGetCiouResultGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_ciou_result", FusedYolov5GetCiouResultGrad);
 
 }  // namespace one
 }  // namespace oneflow

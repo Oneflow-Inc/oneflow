@@ -60,10 +60,10 @@ __global__ void FusedGetConvexDiagonalSquaredBackward(
 }  // namespace
 
 template<typename T>
-class FusedGetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
+class FusedYolov5GetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
  public:
-  FusedGetConvexDiagonalSquaredKernel() = default;
-  ~FusedGetConvexDiagonalSquaredKernel() = default;
+  FusedYolov5GetConvexDiagonalSquaredKernel() = default;
+  ~FusedYolov5GetConvexDiagonalSquaredKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -90,21 +90,21 @@ class FusedGetConvexDiagonalSquaredKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared")     \
-      .SetCreateFn<FusedGetConvexDiagonalSquaredKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared")          \
+      .SetCreateFn<FusedYolov5GetConvexDiagonalSquaredKernel<dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)      \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_CUDA_KERNEL(half)
 
 template<typename T>
-class FusedGetConvexDiagonalSquaredGradKernel final : public user_op::OpKernel {
+class FusedYolov5GetConvexDiagonalSquaredGradKernel final : public user_op::OpKernel {
  public:
-  FusedGetConvexDiagonalSquaredGradKernel() = default;
-  ~FusedGetConvexDiagonalSquaredGradKernel() = default;
+  FusedYolov5GetConvexDiagonalSquaredGradKernel() = default;
+  ~FusedYolov5GetConvexDiagonalSquaredGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -142,14 +142,14 @@ class FusedGetConvexDiagonalSquaredGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared_grad")   \
-      .SetCreateFn<FusedGetConvexDiagonalSquaredGradKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)    \
+#define REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_yolov5_get_convex_diagonal_squared_grad")          \
+      .SetCreateFn<FusedYolov5GetConvexDiagonalSquaredGradKernel<dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)           \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CONVEX_DIAGOAL_SQUARED_GRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

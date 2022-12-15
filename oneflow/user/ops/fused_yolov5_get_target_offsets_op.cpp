@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetTargetOffsetsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetTargetOffsetsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& gxy = ctx->InputTensorDesc("gxy", 0);
   const user_op::TensorDesc& gxi = ctx->InputTensorDesc("gxi", 0);
 
@@ -35,11 +35,11 @@ Maybe<void> FusedGetTargetOffsetsOp::InferLogicalTensorDesc(user_op::InferContex
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetTargetOffsetsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetTargetOffsetsOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetTargetOffsetsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetTargetOffsetsOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetTargetOffsetsOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetTargetOffsetsOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& gxy = ctx->InputTensorDesc("gxy", 0);
   const user_op::TensorDesc& gxi = ctx->InputTensorDesc("gxi", 0);
 
@@ -47,11 +47,10 @@ Maybe<void> FusedGetTargetOffsetsOp::InferDataType(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* j = ctx->MutOutputTensorDesc("j", 0);
   j->set_data_type(DataType::kBool);
-  // j->set_data_type(gxy.data_type());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetTargetOffsetsOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetTargetOffsetsOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& gxy = ctx->LogicalTensorDesc4InputArgNameAndIndex("gxy", 0);
   FOR_RANGE(int64_t, i, 0, gxy.shape().NumAxes()) {
     if (i != 1) {

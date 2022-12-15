@@ -74,10 +74,10 @@ __global__ void FusedCenterBackward(const int n, const T* b1_x1, const T* b1_x2,
 }  // namespace
 
 template<typename T>
-class FusedCenterKernel final : public user_op::OpKernel {
+class FusedYolov5GetCenterDistKernel final : public user_op::OpKernel {
  public:
-  FusedCenterKernel() = default;
-  ~FusedCenterKernel() = default;
+  FusedYolov5GetCenterDistKernel() = default;
+  ~FusedYolov5GetCenterDistKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -105,21 +105,21 @@ class FusedCenterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(dtype)              \
+#define REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_CUDA_KERNEL(dtype)       \
   REGISTER_USER_KERNEL("fused_yolov5_get_center_dist")                 \
-      .SetCreateFn<FusedCenterKernel<dtype>>()                         \
+      .SetCreateFn<FusedYolov5GetCenterDistKernel<dtype>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("rho2", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CENTER_DIST_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_CUDA_KERNEL(half)
 
 template<typename T>
-class FusedCenterGradKernel final : public user_op::OpKernel {
+class FusedYolov5GetCenterDistGradKernel final : public user_op::OpKernel {
  public:
-  FusedCenterGradKernel() = default;
-  ~FusedCenterGradKernel() = default;
+  FusedYolov5GetCenterDistGradKernel() = default;
+  ~FusedYolov5GetCenterDistGradKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -155,14 +155,14 @@ class FusedCenterGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)         \
+#define REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_GRAD_CUDA_KERNEL(dtype)  \
   REGISTER_USER_KERNEL("fused_yolov5_get_center_dist_grad")            \
-      .SetCreateFn<FusedCenterGradKernel<dtype>>()                     \
+      .SetCreateFn<FusedYolov5GetCenterDistGradKernel<dtype>>()        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("b1_x1", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(float)
-REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(double)
-REGISTER_FUSED_GET_CENTER_DIST_GRAD_CUDA_KERNEL(half)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_GRAD_CUDA_KERNEL(float)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_GRAD_CUDA_KERNEL(double)
+REGISTER_FUSED_YOLOV5_GET_CENTER_DIST_GRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

@@ -24,7 +24,7 @@ struct FusedGetIntersectionAreaCaptureState : public AutoGradCaptureState {
   std::vector<bool> requires_grad;
 };
 
-class FusedGetIntersectionAreaGrad
+class FusedYolov5GetIntersectionAreaGrad
     : public OpExprGradFunction<FusedGetIntersectionAreaCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
@@ -56,8 +56,8 @@ class FusedGetIntersectionAreaGrad
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
     in_grads->resize(INPUT_LEN);
-    auto result = JUST(functional::FusedGetIntersectionAreaGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1,
-                                                                b1_y2, b2_y1, b2_y2, rho2_diff));
+    auto result = JUST(functional::FusedYolov5GetIntersectionAreaGrad(
+        b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, rho2_diff));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {
@@ -67,7 +67,8 @@ class FusedGetIntersectionAreaGrad
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_intersection_area", FusedGetIntersectionAreaGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_intersection_area",
+                               FusedYolov5GetIntersectionAreaGrad);
 
 }  // namespace one
 }  // namespace oneflow
