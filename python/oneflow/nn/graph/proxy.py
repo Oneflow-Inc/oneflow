@@ -21,7 +21,7 @@ import oneflow._C
 import oneflow._oneflow_internal
 from oneflow.framework import graph_build_util
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
@@ -104,7 +104,6 @@ class ProxyModule(Proxy):
             return
         assert isinstance(origin, Module)
         for (n, m) in list(origin.named_children()):
-
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
