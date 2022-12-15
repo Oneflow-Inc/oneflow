@@ -104,7 +104,6 @@ class ProxyModule(Proxy):
             return
         assert isinstance(origin, Module)
         for (n, m) in list(origin.named_children()):
-
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
