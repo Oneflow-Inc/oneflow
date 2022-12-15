@@ -710,7 +710,7 @@ class ProxyModuleList(get_list(ProxyModule)):
         elif isinstance(origin, list):
             super().__init__(origin)
             first = origin[0]
-            new_name = "_idx" 
+            new_name = "_idx"
             new_list = []
             for item in origin:
                 new_name += "-" + item.to(GraphModule).name
@@ -720,9 +720,7 @@ class ProxyModuleList(get_list(ProxyModule)):
                 first.to(GraphModule).name_prefix + first.to(GraphModule).name
             )
             self.to(GraphModule)._name = new_name
-            self.to(GraphModule)._belonged_graph = first.to(
-                GraphModule
-            )._belonged_graph
+            self.to(GraphModule)._belonged_graph = first.to(GraphModule)._belonged_graph
             self._oneflow_internal_origin__ = new_module_list
 
 
