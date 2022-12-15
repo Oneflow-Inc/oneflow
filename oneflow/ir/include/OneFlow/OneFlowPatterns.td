@@ -165,67 +165,6 @@ def FusedScaleTrilPattern2 : Pat<
 >;
 
 def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
-// TODO: check mean and inv_variance are not used
-def NormalizationAddReluPattern : Pattern<
-  /* match */ (
-    OneFlow_ReluOp (
-      OneFlow_Add2Op (
-          OneFlow_NormalizationOp:$results
-            $bn_x,
-            $bn_moving_mean,
-            $bn_moving_variance,
-            $bn_gamma,
-            $bn_beta,
-            $bn__add_to_output, // TODO: check this is none
-            $bn_op_name,
-            $bn_device_tag,
-            $bn_device_name,
-            $bn_scope_symbol_id,
-            $bn_hierarchy,
-            $operand_segment_sizes,
-            $result_segment_sizes,
-            $bn_axis,
-            $bn_epsilon,
-            $bn_training,
-            $bn_momentum
-      ),
-      $addend,
-      $add_op_name,
-      $add_device_tag,
-      $add_device_name,
-      $add_scope_symbol_id,
-      $add_hierarchy
-    ),
-    $relu_op_name,
-    $relu_device_tag,
-    $relu_device_name,
-    $relu_scope_symbol_id,
-    $relu_hierarchy
-  ),
-  /* replace */ [(
-    OneFlow_NormalizationAddReluOp: $fuse_results
-    $bn_x,
-    $addend,
-    (GetFirstValue $bn_moving_mean),
-    (GetFirstValue $bn_moving_variance),
-    $bn_gamma,
-    $bn_beta,
-    $bn_op_name,
-    $bn_device_tag,
-    $bn_device_name,
-    $bn_scope_symbol_id,
-    $bn_hierarchy,
-    /* not used */ $operand_segment_sizes,
-    /* not used */ $result_segment_sizes,
-    $bn_axis,
-    $bn_epsilon,
-    $bn_training,
-    $bn_momentum
-  ),
-  (replaceWithValue $fuse_results__0),
-  ],
-  [(IsTraingTrue $bn_training)]
->;
 
 def IsArg: Constraint<CPred<"$0.dyn_cast<::mlir::BlockArgument>()">, "">;
 def getResultTypes : NativeCodeCall<"$0.getResultTypes()">;
@@ -297,26 +236,6 @@ def FuseConv2DBatchNormPattern : Pat<
     FuseConv2DBatchNorm $conv_2d_op, $batch_norm_op__0
   ),
   []
->;
-
-def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
-
-def DeleteSameDtypeCastOpPattern : Pat<
-  (
-    OneFlow_CastOp : $res
-     $x,
-     $cast_op_name,
-     $cast_device_tag,
-     $cast_device_name,
-     $cast_scope_symbol_id,
-     $cast_hierarchy,
-     $dtype,
-     $pin_memory
-  ),
-  (
-    replaceWithValue $x
-  ),
-  [(IsSameDtype $res, $x)]
 >;
 
 #endif // ONEFLOW_PATTERNS

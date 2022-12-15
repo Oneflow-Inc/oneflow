@@ -371,24 +371,6 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
   return true;
 }
 
-bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after,
-                                         ::mlir::StringAttr data_format) {
-  if (padding_before.size() == 4 && padding_after.size() == 4) {
-    if (padding_before.getValue().equals(padding_after.getValue())) {
-      if (data_format.str() == "channels_first") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-      if (data_format.str() == "channels_last") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-    }
-  }
-  return false;
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -570,13 +552,21 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                      ConvertToString(op.data_typeAttr().getValue())));
       return ::mlir::failure();
     }
-    CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
-        tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
-                      // compiling with gcc and I has no idea why.
-                      // But it works when compiling with clang.
-                      // Maybe temporary objects would be released earlier when using gcc.
-        support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()),
-        CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    auto var_tensor = CHECK_JUST(
+        ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()));
+    if (var_tensor) {
+      support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr(),
+                                         var_tensor);
+    } else {
+      CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
+          tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
+                        // compiling with gcc and I has no idea why.
+                        // But it works when compiling with clang.
+                        // Maybe temporary objects would be released earlier when using gcc.
+          support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(),
+                                             op.device_nameAttr()),
+          CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+    }
     // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
@@ -643,10 +633,6 @@ bool IsInsertTransposeOpBefore(NCHWCompatible op, PatternRewriter& rewriter) {
     }
   }
   return insert_transpose_op_flag;
-}
-
-bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
-  return cast_result.getType() == input.getType();
 }
 
 }  // namespace oneflow
@@ -957,8 +943,8 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   };
 
   std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
-  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
-                                            TypeRange(ArrayRef<Value>(proto.second)));
+  auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(proto.first))),
+                                            TypeRange(ValueRange(ArrayRef<Value>(proto.second))));
   auto func_name = "wrap" + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) {
@@ -1218,8 +1204,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
-  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
-  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
+  populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
