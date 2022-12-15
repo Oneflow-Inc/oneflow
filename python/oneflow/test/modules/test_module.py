@@ -363,12 +363,13 @@ class TestModule(flow.unittest.TestCase):
                     conv_flow1.load_state_dict(
                         flow.load(f.name, map_location=map_location, global_src_rank=0)
                     )
-                test_case.assertTrue(
-                    np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(),
-                        conv_flow1.weight.numpy(),
+                if flow.env.get_rank() == 0:
+                    test_case.assertTrue(
+                        np.array_equal(
+                            conv_torch.weight.detach().cpu().numpy(),
+                            conv_flow1.weight.numpy(),
+                        )
                     )
-                )
 
                 conv_flow2 = flow.nn.Conv2d(3, 3, 3).to_global(
                     all_placement, flow.sbp.broadcast
@@ -381,12 +382,13 @@ class TestModule(flow.unittest.TestCase):
                             "weights"
                         ]
                     )
-                test_case.assertTrue(
-                    np.array_equal(
-                        conv_torch.weight.detach().cpu().numpy(),
-                        conv_flow2.weight.numpy(),
+                if flow.env.get_rank() == 0:
+                    test_case.assertTrue(
+                        np.array_equal(
+                            conv_torch.weight.detach().cpu().numpy(),
+                            conv_flow2.weight.numpy(),
+                        )
                     )
-                )
 
     @flow.unittest.skip_unless_1n1d()
     def test_save_load_module_directly(test_case):
