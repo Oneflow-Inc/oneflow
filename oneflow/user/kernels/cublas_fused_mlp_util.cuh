@@ -95,7 +95,7 @@ cublasComputeType_t GetComputeType(DataType data_type) {
       }
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16:
-      const static bool allow_half_accumulation =
+      const bool allow_half_accumulation =
           ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
       if (allow_half_accumulation) {
         return CUBLAS_COMPUTE_16F;
