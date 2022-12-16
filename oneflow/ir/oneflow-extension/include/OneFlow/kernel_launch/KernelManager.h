@@ -84,6 +84,7 @@ class ResourcesManager final {
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
     if (!is_init_all_) { InitAll(ctx); }
+
     for (const auto& elem : kernel_resources_) {
       auto* kernel = const_cast<user_op::OpKernel*>(elem.reg_ctx_->GetKernel());
       auto* cuda_graph_support = dynamic_cast<user_op::CudaGraphSupport*>(kernel);

@@ -31,8 +31,7 @@ def _test_okl_ops_with_cuda(test_case: flow.unittest.TestCase):
 
         def build(self, x):
             y = flow.relu(x)
-            z = flow.tanh(y)
-            return flow.sort(z)
+            return flow.tanh(y)
 
     x = flow.Tensor([1, -1]).cuda()
     graph_to_run = GraphToRun()
