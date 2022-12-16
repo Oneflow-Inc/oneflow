@@ -71,17 +71,17 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
   bool status_ok = false;
   int64_t skip_warning_times = 1;
   int64_t retry_idx = 0;
-
+  std::lock_guard<std::mutex> lock(lock_);
+  // get valid rank num of rank2host_
   auto GetValidRank2HostSize = [](const std::shared_ptr<std::vector<std::string>>& rank2host) {
     int64_t valid_size = 0;
-    for (int i = 0; i < rank2host->size(); ++i) {
+    for (int64_t i = 0; i < rank2host->size(); ++i) {
       if (rank2host->at(i) == "") { continue; }
       valid_size += 1;
     }
     return valid_size;
   };
 
-  std::lock_guard<std::mutex> lock(lock_);
   for (; retry_idx < rpc_bootsrtap_server_max_retry_times(); ++retry_idx) {
     int64_t valid_size = GetValidRank2HostSize(rank2host_);
     CHECK(valid_size <= world_size_);
