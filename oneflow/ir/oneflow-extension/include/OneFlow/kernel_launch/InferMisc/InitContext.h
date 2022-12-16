@@ -28,12 +28,16 @@ namespace okl {
 class InitContext final : public user_op::KernelCacheContext, public user_op::KernelInitContext {
  public:
   explicit InitContext(RunContext* run_ctx)
-      : run_ctx_(run_ctx), reg_ctx_(run_ctx->GetRegContext()) {}
+      : reg_ctx_(run_ctx->GetRegContext()),
+        stream_(run_ctx->stream()),
+        parallel_ctx_(run_ctx->parallel_ctx()) {}
 
-  ep::Stream* stream() override { return run_ctx_->stream(); }
+  InitContext(RegContext* reg_ctx_, ep::Stream* stream_, const ParallelContext& parallel_ctx_)
+      : reg_ctx_(reg_ctx_), stream_(stream_), parallel_ctx_(parallel_ctx_) {}
 
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
-  const ParallelContext& parallel_ctx() const override { return run_ctx_->parallel_ctx(); }
+  ep::Stream* stream() override { return stream_; }
+  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -57,8 +61,9 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   }
 
  private:
-  RunContext* run_ctx_;
   RegContext* reg_ctx_;
+  ep::Stream* stream_;
+  const ParallelContext& parallel_ctx_;
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
     return reg_ctx_->user_op_conf();

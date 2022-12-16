@@ -41,19 +41,6 @@ class LauncherContext final {
   void* FetchKernel(int index);
   void* FetchRunCtx(int index);
 
-  bool IsCudaGraphSupported() const {
-    for (auto iter : llvm::zip(kernel_vec_, run_ctx_vec_)) {
-      auto* kernel = const_cast<user_op::OpKernel*>(std::get<0>(iter));
-      auto* cuda_graph_support = dynamic_cast<user_op::CudaGraphSupport*>(kernel);
-      if (!cuda_graph_support) { return false; }
-      auto run_ctx = std::get<1>(iter);
-      InitContext init_ctx(run_ctx.get());
-      if (!cuda_graph_support->IsCudaGraphSupported(&init_ctx, run_ctx->FetchState())) {
-        return false;
-      }
-    }
-    return true;
-  }
 
  private:
   std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;

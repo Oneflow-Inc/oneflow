@@ -88,7 +88,7 @@ class KernelLaunchKernel final : public user_op::OpKernel, public user_op::CudaG
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
                             user_op::OpKernelState* state) const override {
-    return dynamic_cast<KernelLaunchState*>(state)->IsCudaGraphSupported();
+    return dynamic_cast<KernelLaunchState*>(state)->IsCudaGraphSupported(ctx);
   }
 
  private:
