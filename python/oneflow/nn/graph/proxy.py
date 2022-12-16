@@ -82,9 +82,9 @@ class Proxy(object):
 class ProxyModule(Proxy):
     def __init__(
         self,
+        origin: Module = None,
         prefix: str = "",
         name: str = "",
-        origin: Module = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Proxy)
@@ -107,11 +107,11 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
+                    m,
                     self.to(GraphModule)._name_prefix
                     + self.to(GraphModule)._name
                     + ".",
                     n,
-                    m,
                     self.to(GraphModule)._belonged_graph,
                 ),
             )
@@ -119,22 +119,22 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(p)(
+                    p,
                     self.to(GraphTensor)._name_prefix
                     + self.to(GraphTensor)._name
                     + ".",
                     n,
-                    p,
                 ),
             )
         for (n, b) in list(origin.named_buffers("", False)):
             self.__setattr__(
                 n,
                 get_proxy_cls(b)(
+                    b,
                     self.to(GraphTensor)._name_prefix
                     + self.to(GraphTensor)._name
                     + ".",
                     n,
-                    b,
                 ),
             )
 
@@ -305,11 +305,11 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 name,
                 get_block_cls(module)(
+                    module,
                     self.to(GraphModule)._name_prefix
                     + self.to(GraphModule)._name
                     + ".",
                     name,
-                    module,
                     self.to(GraphModule)._belonged_graph,
                 ),
             )
@@ -320,9 +320,9 @@ class ProxyModule(Proxy):
         self.__setattr__(
             name,
             get_proxy_cls(param)(
+                param,
                 self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
                 name,
-                param,
             ),
         )
 
@@ -599,9 +599,9 @@ class LazyBuilder(object):
 class ProxyTensor(Proxy):
     def __init__(
         self,
+        origin: Union[Parameter, Tensor] = None,
         prefix: str = "",
         name: str = "",
-        origin: Union[Parameter, Tensor] = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Proxy)
@@ -678,9 +678,9 @@ class ProxyTensor(Proxy):
 class ProxySequential(get_seq(ProxyModule)):
     def __init__(
         self,
+        origin: Sequential = None,
         prefix: str = "",
         name: str = "",
-        origin: Sequential = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
@@ -694,44 +694,42 @@ class ProxySequential(get_seq(ProxyModule)):
 class ProxyModuleList(get_list(ProxyModule)):
     def __init__(
         self,
+        origin: ModuleList = None,
         prefix: str = "",
         name: str = "",
-        origin: ModuleList = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        if isinstance(prefix, str):
+        if isinstance(origin, ModuleList):
             super().__init__()
             self.to(GraphModule)._name_prefix = prefix
             self.to(GraphModule)._name = name
             self.to(GraphModule)._belonged_graph = belonged_graph
             self._oneflow_internal_graphblock__set_origin(origin)
             # MoudleList is a container without forward() method,
-        elif isinstance(prefix, list):
-            super().__init__(prefix)
-            if len(prefix) > 0:
-                first = prefix[0]
-                new_name = "_idx"
-                new_list = []
-                for item in prefix:
-                    new_name += "-" + item.to(GraphModule).name
-                    new_list.append(item.to(Module))
-                new_module_list = ModuleList(new_list)
-                self.to(GraphModule)._name_prefix = (
-                    first.to(GraphModule).name_prefix + first.to(GraphModule).name
-                )
-                self.to(GraphModule)._name = new_name
-                self.to(GraphModule)._belonged_graph = first.to(
-                    GraphModule
-                )._belonged_graph
-                self._oneflow_internal_origin__ = new_module_list
+
+        elif isinstance(origin, list):
+            super().__init__(origin)
+            first = origin[0]
+            new_name = "_idx"
+            new_list = []
+            for item in origin:
+                new_name += "-" + item.to(GraphModule).name
+                new_list.append(item.to(Module))
+            new_module_list = ModuleList(new_list)
+            self.to(GraphModule)._name_prefix = (
+                first.to(GraphModule).name_prefix + first.to(GraphModule).name
+            )
+            self.to(GraphModule)._name = new_name
+            self.to(GraphModule)._belonged_graph = first.to(GraphModule)._belonged_graph
+            self._oneflow_internal_origin__ = new_module_list
 
 
 class ProxyModuleDict(get_dict(ProxyModule)):
     def __init__(
         self,
+        origin: ModuleDict = None,
         prefix: str = "",
         name: str = "",
-        origin: ModuleDict = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
@@ -745,9 +743,9 @@ class ProxyModuleDict(get_dict(ProxyModule)):
 class ProxyParameterList(get_para_list(ProxyModule)):
     def __init__(
         self,
+        origin: ParameterList = None,
         prefix: str = "",
         name: str = "",
-        origin: ParameterList = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
@@ -772,9 +770,9 @@ class ProxyParameterList(get_para_list(ProxyModule)):
 class ProxyParameterDict(get_para_dict(ProxyModule)):
     def __init__(
         self,
+        origin: ParameterDict = None,
         prefix: str = "",
         name: str = "",
-        origin: ParameterDict = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
