@@ -75,7 +75,7 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
         cutlass::library::NumericTypeID::kF16, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kF32, cutlass::library::NumericTypeID::kF32);
 
-    const static bool allow_half_accumulation =
+    const bool allow_half_accumulation =
         ParseBooleanFromEnv("ONEFLOW_CONV_ALLOW_HALF_PRECISION_ACCUMULATION", false);
 
     if (allow_half_accumulation) {
