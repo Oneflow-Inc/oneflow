@@ -37,8 +37,6 @@ def from_torch(torch_tensor):
     The returned tensor and torch tensor share the same memory. 
     
     .. note::
-        Currently only cpu tensor, local tensor is supported.
-
         This function can be used in special data processing stages, torch's some cpu ops can be used. 
 
     Args:
@@ -76,7 +74,7 @@ def to_torch(flow_tensor):
     The returned tensor and oneflow tensor share the same memory. 
     
     .. note::
-        Currently only cpu tensor, local tensor is supported.
+        Currently only local tensor is supported.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -101,8 +99,9 @@ def to_torch(flow_tensor):
     except:
         print_error_msg()
     assert isinstance(flow_tensor, flow.Tensor)
-    assert (
-        flow_tensor.is_cuda == False
-    ), "Only supports conversion of oneflow tensor whose device is cpu, need to call flow_tensor.cpu() first"
-    np_data = flow_tensor.cpu().detach().numpy()
-    return torch.from_numpy(np_data)
+    if flow_tensor.is_global:
+        print(
+            "WARNING: `to_torch` received a global tensor. A PyTorch CPU tensor which is a copy of its data will be returned."
+        )
+        return torch.from_numpy(flow_tensor.numpy())
+    return torch.from_dlpack(flow.to_dlpack(flow_tensor))

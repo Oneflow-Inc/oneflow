@@ -463,11 +463,6 @@ def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
-def _item(self):
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
-
-
 def _new_tensor(
     self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
 ):
@@ -620,7 +615,6 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.item = _item
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
