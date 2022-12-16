@@ -1057,6 +1057,7 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   const auto& op_name = op_node->op().op_name();
   auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
   if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
+  std::cout << "find task node from proto: " << op_name << std::endl;
   int64_t task_id = JUST(MapAt(iter->second.parallel_id2task(), parallel_id)).task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
@@ -1097,6 +1098,8 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node
 
 Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
+  std::cout << "boxing task graph of rank " << current_rank_ << boxing_task_graph_proto_->DebugString() << std::flush;
+  sleep(10);
   for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& pair : pair.second.parallel_id2task()) {
@@ -1106,6 +1109,8 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
       comp_task_node->set_op_node(op_node);
       AddAllocatedNode(comp_task_node);
+      // Note here has no consume regst
+      // Init task node and produce regst
       comp_task_node->InitFromProtoExceptConsumedRegsts(task_proto);
       JUST(task_graph_rebuild_ctx_->AddTaskNode(comp_task_node));
     }
@@ -1120,6 +1125,7 @@ Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
         << "redundant task_id.";
     auto* task_node = JUST(CreateTransportTask::Visit(task_proto.task_type()));
     AddAllocatedNode(task_node);
+    // Init task node and produce regst
     task_node->InitFromProtoExceptConsumedRegsts(transport_task_proto.task_proto());
     JUST(task_graph_rebuild_ctx_->AddTaskNode(task_node));
   }
@@ -1231,7 +1237,9 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
-  JUST(InitRegstDescsConsumers());
+  // This is useless, because consumed_regst_desc_id is empty in BoxingTaskGraph.
+  // JUST(InitRegstDescsConsumers());
+  // Note that tasks added are from BoxingTaskGraph, so they are all boxing related.
   const auto& IsTaskNodeBoxingRelated = MakePredicatorNodeSnapshotted(this);
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -1245,10 +1253,14 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
     }
     return Maybe<void>::Ok();
   }));
+  std::cout << "mark 1 " << std::endl;
+
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
     return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
                            [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
+  std::cout << "mark 2" << std::endl;
+
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
         CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
@@ -1256,11 +1268,15 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
+  std::cout << "mark 3 " << std::endl;
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+
   ForEachNode([&](TaskNode* task_node) {
+    // If this is a boxing related task node, it's produced register and edge has already been created.
     if (IsTaskNodeBoxingRelated(task_node)) { return; }
     task_node->ProduceAllRegstsAndBindEdges();
   });
+  std::cout << "mark 4" << std::endl;
   return Maybe<void>::Ok();
 }
 
