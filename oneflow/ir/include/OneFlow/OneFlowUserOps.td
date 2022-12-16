@@ -5453,7 +5453,6 @@ def OneFlow_TensorConstantOp : OneFlow_BaseOp<"tensor_constant", [NoSideEffect, 
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
     OneFlow_DataType:$dtype,
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp

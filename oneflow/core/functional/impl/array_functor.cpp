@@ -116,12 +116,8 @@ class GlobalTensorConstantFunctor {
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value", "nd_sbp");
-    if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), false, NullOpt);
-    } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), true, NullOpt);
-    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "nd_sbp");
+    attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt);
 
     auto dispatch_constant =
         [&](const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
@@ -173,12 +169,8 @@ class TensorConstantFunctor {
                                                    GetGlobalParallelDescFromDevice(device),
                                                    *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "is_floating_value");
-    if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), false);
-    } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), true);
-    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype");
+    attrs.SetAllAttrs(shape, dtype->data_type());
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
