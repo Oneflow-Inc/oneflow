@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import List, Optional, Union
+import numpy as np
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
@@ -373,8 +374,15 @@ def full_op(
 
     """
     size = _handle_size_arg(size)
+    if not isinstance(fill_value, (int, float, flow.Tensor)):
+        # handle numpy scalar dtype
+        assert isinstance(
+            fill_value.dtype, (np.dtype)
+        ), "fill_value must be python scalar or numpy scalar."
+        fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
+    # TODO: constant kernel originally support scalar fill_value tensor rather than by implicitly converting, cause it brings synchronization overhead
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 

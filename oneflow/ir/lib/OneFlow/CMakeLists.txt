@@ -19,16 +19,27 @@ add_subdirectory(PDLL)
 
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  OKL/OKLDialect.cpp
+  OKL/OKLOps.cpp
+  OKL/OKLTypes.cpp
+  OKL/Conversion/OKLToLLVM.cpp
+  OKL/Conversion/SplitIntoFuncs.cpp
+  OKL/Conversion/FetchFromLauncher.cpp
+  OKL/Conversion/OnlyKeepComputeOps.cpp
+  OKL/Conversion/Conversion.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
+  OneFlowInferReturnTypes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   OneFlowUtils.cpp
+  OneFlowDataTypeConversion.cpp
   UserOpReflection.cpp
+  UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/PTXToCubin.cpp
@@ -36,6 +47,7 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
+  Transform/AggregateComputeOps.cpp
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp

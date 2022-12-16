@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.nn.common_types import _size_2_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class Fold(Module):

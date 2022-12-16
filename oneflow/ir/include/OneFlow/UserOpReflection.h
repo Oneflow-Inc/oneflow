@@ -26,6 +26,22 @@ namespace user_op {
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, size_t valueSize,
+                                            DictionaryAttr attributes,
+                                            std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes);
+
+struct Source {
+  enum {
+    INPUT,
+    OUTPUT,
+    BUFFER,
+    INVALID,
+  } type;
+  int offset;
+};
+Source GetOpSourceByName(Operation* op, const std::string& to_find);
 
 using ArgID = std::pair<std::string, int32_t>;
 
@@ -33,12 +49,15 @@ template<template<typename T> class Trait>
 class ArgIds {
  public:
   explicit ArgIds(Operation* op);
+  ArgIds(llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
   std::vector<ArgID>::const_iterator begin() const { return ids_.begin(); }
   std::vector<ArgID>::const_iterator end() const { return ids_.end(); }
 
  private:
   std::vector<ArgID> ids_;
 };
+
+llvm::Optional<std::string> GetOutputLbn(OpResult result);
 
 }  // namespace user_op
 
