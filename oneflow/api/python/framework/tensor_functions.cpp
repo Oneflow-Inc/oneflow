@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.h"
+#include "oneflow/extension/python/numpy.h"
 
 namespace oneflow {
 namespace one {
@@ -50,14 +52,17 @@ static PyObject* concat_self(PyObject* self, PyObject* args) {
     END_HANDLE_ERRORS                                        \
   }
 
-#define NB_BINARY_FUNC(func_name, bind_func)                 \
-  static PyObject* func_name(PyObject* a, PyObject* b) {     \
-    HANDLE_ERRORS                                            \
-    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                \
-    auto* result = bind_func(NULL, tuple.get(), NULL);       \
-    if (PyErr_Occurred()) { throw py::error_already_set(); } \
-    return result;                                           \
-    END_HANDLE_ERRORS                                        \
+#define NB_BINARY_FUNC(func_name, bind_func)                                     \
+  static PyObject* func_name(PyObject* a, PyObject* b) {                         \
+    HANDLE_ERRORS                                                                \
+    if (PyArray_Check(b)) {                                                      \
+      b = functional::CastToPyObject(functional::LocalTensorSharedNumpyData(b)); \
+    }                                                                            \
+    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                    \
+    auto* result = bind_func(NULL, tuple.get(), NULL);                           \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
+    return result;                                                               \
+    END_HANDLE_ERRORS                                                            \
   }
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
@@ -79,6 +84,9 @@ NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
 static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
+  if (PyArray_Check(b)) {
+    b = functional::CastToPyObject(functional::LocalTensorSharedNumpyData(b));
+  }
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -97,16 +105,19 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   END_HANDLE_ERRORS
 }
 
-#define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                           \
-  static PyObject* func_name(PyObject* a, PyObject* b) {                       \
-    HANDLE_ERRORS                                                              \
-    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
-    PyObjectPtr dict(PyDict_New());                                            \
-    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
-    PyObject* result = bind_func(NULL, tuple.get(), dict.get());               \
-    if (PyErr_Occurred()) { throw py::error_already_set(); }                   \
-    return result;                                                             \
-    END_HANDLE_ERRORS                                                          \
+#define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                             \
+  static PyObject* func_name(PyObject* a, PyObject* b) {                         \
+    HANDLE_ERRORS                                                                \
+    if (PyArray_Check(b)) {                                                      \
+      b = functional::CastToPyObject(functional::LocalTensorSharedNumpyData(b)); \
+    }                                                                            \
+    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                    \
+    PyObjectPtr dict(PyDict_New());                                              \
+    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);   \
+    PyObject* result = bind_func(NULL, tuple.get(), dict.get());                 \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
+    return result;                                                               \
+    END_HANDLE_ERRORS                                                            \
   }
 
 // inplace operators
@@ -759,9 +770,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
