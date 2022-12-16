@@ -42,6 +42,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
   std::thread check_thread_;
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
+  std::mutex lock_;
 };
 
 }  // namespace oneflow

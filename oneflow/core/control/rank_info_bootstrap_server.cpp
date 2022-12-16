@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rank_info_bootstrap_server.h"
+#include <cstddef>
 #include <cstdio>
 #include "grpc/grpc_posix.h"
 
@@ -30,10 +31,16 @@ std::string GetHostFromUri(const std::string& uri) {
   return uri.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
 }
 
-int64_t rpc_bootsrtap_server_check_seconds() {
-  static const int64_t rpc_bootsrtap_server_check_seconds =
-      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_CHECK_SECONDS", 60);
-  return rpc_bootsrtap_server_check_seconds;
+int64_t rpc_bootsrtap_server_sleep_seconds() {
+  static const int64_t rpc_bootsrtap_server_sleep_seconds =
+      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS", 20);
+  return rpc_bootsrtap_server_sleep_seconds;
+}
+
+int64_t rpc_bootsrtap_server_max_retry_times() {
+  static const int64_t rpc_bootsrtap_server_max_retry_times =
+      ParseIntegerFromEnv("ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES", 3);
+  return rpc_bootsrtap_server_max_retry_times;
 }
 
 }  // namespace
@@ -55,30 +62,44 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
   if (bootstrap_conf.rank() == 0) {
-    rank2host_ = std::make_shared<std::vector<std::string>>(1);
+    rank2host_ = std::make_shared<std::vector<std::string>>(world_size_);
     check_thread_ = std::thread(&RankInfoBootstrapServer::CheckServerRpcs, this);
   }
 }
 
 void RankInfoBootstrapServer::CheckServerRpcs() {
   bool status_ok = false;
-  size_t timeout_seconds = rpc_bootsrtap_server_check_seconds();
-  while (timeout_seconds > 0) {
-    CHECK(rank2host_->size() <= world_size_);
-    if (rank2host_->size() == world_size_) {
+  int64_t skip_warning_times = 1;
+  int64_t retry_idx = 0;
+
+  auto GetValidRank2HostSize = [](const std::shared_ptr<std::vector<std::string>>& rank2host) {
+    int64_t valid_size = 0;
+    for (int i = 0; i < rank2host->size(); ++i) {
+      if (rank2host->at(i) == "") { continue; }
+      valid_size += 1;
+    }
+    return valid_size;
+  };
+
+  std::lock_guard<std::mutex> lock(lock_);
+  for (; retry_idx < rpc_bootsrtap_server_max_retry_times(); ++retry_idx) {
+    int64_t valid_size = GetValidRank2HostSize(rank2host_);
+    CHECK(valid_size <= world_size_);
+    if (valid_size == world_size_) {
       status_ok = true;
       break;
     } else {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      timeout_seconds -= 1;
+      if (retry_idx >= skip_warning_times) {
+        LOG(WARNING) << "BootstrapServer not ready, other ranks' rpc server not initialized "
+                        "successfully. Failed at "
+                     << retry_idx + 1 << " times, total ranks(world_size): " << world_size_
+                     << ", ready ranks: " << valid_size;
+      }
+      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
     }
   }
-  if (!status_ok) {
-    LOG(WARNING)
-        << "BootstrapServer not ready, other ranks' rpc server not initialized successfully!"
-        << ", world size: " << world_size_ << ", ready ranks: " << rank2host_->size();
-    LOG(FATAL) << "Grpc failed.";
-  }
+
+  if (!status_ok) { LOG(FATAL) << "Grpc failed."; }
 }
 
 Maybe<const std::vector<std::string>&> RankInfoBootstrapServer::rank2host() const {
@@ -90,6 +111,7 @@ void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* ca
   int64_t rank = call->request().rank();
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
+  std::lock_guard<std::mutex> lock(lock_);
   rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();
