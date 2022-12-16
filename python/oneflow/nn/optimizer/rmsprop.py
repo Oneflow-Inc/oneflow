@@ -17,7 +17,7 @@ import collections
 from typing import Callable, Dict, Iterator, List, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 

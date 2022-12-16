@@ -1,7 +1,8 @@
 #include "OneFlow/OneFlowOps.td"
+#include "OneFlowPDLLUtils.pdll"
 
-Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
-Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
+Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
+Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
 Pattern {
   let rate: Attr;
@@ -32,4 +33,31 @@ Pattern {
   rewrite gelu with{
     replace gelu with CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
   };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let padding_before: Attr;
+  let padding_after: Attr;
+  let data_format: Attr;
+
+  let conv = 
+    op<oneflow.conv2d>(
+      op<oneflow.pad>(x: Value){device_name = device_name, device_tag = device_tag, padding_before = padding_before, padding_after = padding_after}, weight: Value) 
+      {device_name = device_name, device_tag = device_tag, data_format = data_format};
+  IsPaddingCouldBeAssimilatedIntoConv(padding_before, padding_after, data_format);
+  
+  rewrite conv with{
+    let conv2d_and_erase_pad = CreateConv2dAndErasePad(x, weight, padding_before, data_format, conv);
+    replace conv with CopyUserOpAttrs(conv, conv2d_and_erase_pad);
+  };
+}
+
+Pattern {
+  let valueType: Type;
+  let x: Value<valueType>;
+  let cast = op<oneflow.cast>(x) -> (valueType);
+
+  replace cast with x;
 }

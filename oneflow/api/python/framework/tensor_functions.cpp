@@ -303,6 +303,7 @@ DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
 DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
+DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -951,6 +952,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
     {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

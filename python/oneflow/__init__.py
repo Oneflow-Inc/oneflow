@@ -95,6 +95,8 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
+from oneflow._C import logaddexp
+from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import mish
 from oneflow._C import repeat
@@ -209,7 +211,6 @@ from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import masked_fill_
-from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
@@ -308,7 +309,7 @@ from oneflow.framework.dtype import (
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
-from oneflow._C import from_numpy
+from oneflow._C import from_numpy, from_dlpack
 
 from oneflow.autograd import (
     enable_grad,
@@ -340,6 +341,7 @@ import oneflow.utils.tensor
 import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow._oneflow_internal import to_dlpack
 from oneflow.framework.type_tensor import *
 
 from oneflow.framework.tensor import zero_
@@ -349,6 +351,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.equal import equal_op as equal
 from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
@@ -382,6 +385,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.unique import unique_op as unique
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
