@@ -39,7 +39,7 @@ class TensorConstantKernel final : public OpKernel {
     const Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
-    CHECK(value_tensor->shape_view().elem_cnt() == 1)
+    CHECK(value_tensor->shape_view().NumAxes() <= 1 && value_tensor->shape_view().elem_cnt() == 1)
         << "Only scalar tensor as filled value is supported!";
 
     const int64_t elem_cnt = out_tensor->shape_view().elem_cnt();

@@ -78,6 +78,7 @@ class _ConstantBase(Module):
             )
         else:
             if isinstance(self.value, flow.Tensor):
+                assert self.value.ndim <= 1 and self.value.numel()==1, "Only tensor with single element or scalar tensor are supported as value!"
                 res = flow._C.tensor_constant(
                     self.shape, self.value, dtype=self.dtype, device=self.device
                 )
