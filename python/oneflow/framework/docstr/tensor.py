@@ -1115,6 +1115,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.gt_,
+    """Tensor.gt_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.gt`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.log1p,
     """
     See :func:`oneflow.log1p`
