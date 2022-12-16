@@ -17,6 +17,23 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+#define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
+}  // namespace
+
+RankInfoBootstrapClient::~RankInfoBootstrapClient() { StopHeartbeat(); }
+
+void RankInfoBootstrapClient::StopHeartbeat() {
+  bool already_stopped = false;
+  {
+    std::unique_lock<std::mutex> lck(heartbeat_thread_mutex_);
+    already_stopped = heartbeat_thread_stop_;
+    heartbeat_thread_stop_ = true;
+    heartbeat_thread_cv_.notify_all();
+  }
+  if (!already_stopped) { heartbeat_thread_.join(); }
+}
+
 RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_conf) {
   stubs_.reserve(bootstrap_conf.world_size());
   const auto& master_addr = bootstrap_conf.master_addr();
@@ -26,7 +43,29 @@ RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_
   request.set_addr(master_addr.host());
   request.set_rank(bootstrap_conf.rank());
   LoadServer(request, stubs_[0].get());
-  // TODO: use heartbeat mechanism to offline ranks
-}
+
+  heartbeat_thread_stop_ = false;
+  heartbeat_thread_ = std::thread([this]() {
+    std::mt19937 gen(NewRandomSeed());
+    std::uniform_int_distribution<int32_t> sleep_second_dis(7, 13);
+    LoadServerRequest request;
+    LoadServerResponse response;
+    while (true) {
+      const auto wait_duration = std::chrono::seconds(sleep_second_dis(gen));
+      {
+        std::unique_lock<std::mutex> lck(heartbeat_thread_mutex_);
+        const bool stopped = heartbeat_thread_cv_.wait_for(
+            lck, wait_duration, [&]() { return heartbeat_thread_stop_; });
+        if (stopped) { break; }
+      }
+      for (size_t i = 0; i < GetStubSize(); ++i) {
+        grpc::ClientContext client_ctx;
+        GRPC_CHECK(
+            GetStubAt(i)->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
+            << "Machine " << i << " lost";
+      }
+    }
+  });
+}  // namespace oneflow
 
 }  // namespace oneflow

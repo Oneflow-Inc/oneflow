@@ -26,7 +26,7 @@ namespace oneflow {
 class RankInfoBootstrapServer final : public BootstrapServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapServer);
-  ~RankInfoBootstrapServer() override = default;
+  ~RankInfoBootstrapServer() override { check_thread_.join(); }
 
   RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf);
 
