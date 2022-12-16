@@ -15,6 +15,7 @@ limitations under the License.
 """
 import sys
 import traceback
+import oneflow as flow
 
 
 class KeyErrorMessage(str):
@@ -53,3 +54,51 @@ class ExceptionWrapper(object):
             # have message field
             raise self.exc_type(message=msg)
         raise self.exc_type(msg)
+
+
+def _flatten_dense_tensors(tensors):
+    """Flatten dense tensors into a contiguous 1D buffer. Assume tensors are of
+    same dense type.
+
+    Since inputs are dense, the resulting tensor will be a concatenated 1D
+    buffer. Element-wise operation on this buffer will be equivalent to
+    operating individually.
+
+    Args:
+        tensors (Iterable[Tensor]): dense tensors to flatten.
+
+    Returns:
+        A contiguous 1D buffer containing input tensors.
+    """
+    if len(tensors) == 1:
+        return flow._C.flatten(tensors[0])
+    else:
+        flatten_tensors = []
+        for tensor in tensors:
+            flatten_tensors.append(flow.flatten(tensor))
+        return flow.cat(flatten_tensors, 0)
+
+
+def _unflatten_dense_tensors(flat, tensors):
+    """View a flat buffer using the sizes of tensors. Assume that tensors are of
+    same dense type, and that flat is given by _flatten_dense_tensors.
+
+    Args:
+        flat (Tensor): flattened dense tensors to unflatten.
+        tensors (Iterable[Tensor]): dense tensors whose sizes will be used to
+          unflatten flat.
+
+    Returns:
+        Unflattened dense tensors with sizes same as tensors and values from
+        flat.
+    """
+    outputs = []
+    offset = 0
+    for tensor in tensors:
+        numbel = tensor.numel()
+        if numbel == 0:
+            outputs.append(flow.zeros_like(tensor))
+        else:
+            outputs.append(flow.narrow(flat, 0, offset, numbel).view(tensor.size()))
+            offset += numbel
+    return outputs
