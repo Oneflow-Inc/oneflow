@@ -30,6 +30,13 @@ struct ModFunctor {
 };
 
 template<>
+struct ModFunctor<float> {
+  __device__ float Compute(float input_tensor) const {
+    return fmodf(input_tensor, static_cast<float>(1.0));
+  }
+};
+
+template<>
 struct ModFunctor<half> {
   ModFunctor<float> float_functor;
   __device__ half Compute(half input_tensor) const {
@@ -56,6 +63,7 @@ __global__ void FusedGetTargetOffsetsForward(MOD_FUNCTOR mod_functor,
     const T gxi_mod_1 = mod_functor.Compute(gxi_i);
     const bool stats_1 = get_stats_functor.Compute(gxy_i, gxy_mod_1, g);
     const bool stats_2 = get_stats_functor.Compute(gxi_i, gxi_mod_1, g);
+    if (i < rows) { output_tensor[i] = true; }
     if (i % 2 == 0) {
       const int64_t extra_cols = i / 2;
       output_tensor[i - extra_cols + rows] = stats_1;

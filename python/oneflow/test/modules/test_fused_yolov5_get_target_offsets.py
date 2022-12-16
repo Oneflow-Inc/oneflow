@@ -27,7 +27,7 @@ import oneflow.unittest
 def torch_get_target_offsets(gxy, gxi, g):
     j, k = ((gxy % 1 < g) & (gxy > 1)).T
     l, m = ((gxi % 1 < g) & (gxi > 1)).T
-    return torch.stack((j, k, l, m, torch.ones_like(j)))
+    return torch.stack((torch.ones_like(j), j, k, l, m))
 
 
 def _test_fused_get_target_offsets_impl(test_case, device, shape, g):
@@ -53,12 +53,12 @@ def _test_fused_get_target_offsets_impl(test_case, device, shape, g):
     torch_gxy, torch_gxi = torch_x[0] + torch_x[1], torch_x[0] + torch_x[2]
     j = flow._C.fused_yolov5_get_target_offsets(gxy, gxi, g)
     torch_j = torch_get_target_offsets(torch_gxy, torch_gxi, g)
-    test_case.assertTrue((j.cpu().numpy() == torch_j.cpu().numpy()).any())
+    test_case.assertTrue((j.cpu().numpy() == torch_j.cpu().numpy()).all())
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestGetTargetOffsetsModule(flow.unittest.TestCase):
-    def test_fused_get_target_offsets_area(test_case):
+    def test_fused_get_target_offsets(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_get_target_offsets_impl]
         arg_dict["device"] = ["cuda"]

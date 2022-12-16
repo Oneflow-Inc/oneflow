@@ -30,7 +30,7 @@ Maybe<void> FusedYolov5GetTargetOffsetsOp::InferLogicalTensorDesc(user_op::Infer
 
   user_op::TensorDesc* j = ctx->MutOutputTensorDesc("j", 0);
   j->set_is_dynamic(gxy.is_dynamic());
-  j->set_shape(Shape({gxy_shape.At(1) * 2 + 1, gxy_shape.At(0)}));
+  j->set_shape(Shape({5, gxy_shape.At(0)}));
 
   return Maybe<void>::Ok();
 }
@@ -53,13 +53,11 @@ Maybe<void> FusedYolov5GetTargetOffsetsOp::InferDataType(user_op::InferContext* 
 Maybe<void> FusedYolov5GetTargetOffsetsOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& gxy = ctx->LogicalTensorDesc4InputArgNameAndIndex("gxy", 0);
   FOR_RANGE(int64_t, i, 0, gxy.shape().NumAxes()) {
-    if (i != 1) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("gxy", 0), i)
-          .Split(user_op::OpArg("gxi", 0), i)
-          .Split(user_op::OpArg("j", 0), i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("gxy", 0))
+        .Broadcast(user_op::OpArg("gxi", 0))
+        .Broadcast(user_op::OpArg("j", 0))
+        .Build();
   }
   return Maybe<void>::Ok();
 }
