@@ -25,7 +25,7 @@ namespace user_op {
 
 int64_t getThreadNumBlocks(int64_t n) {
   int64_t num_blocks = 1;
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   num_blocks = BlocksNum4ThreadsNum(n);
 #endif
   return num_blocks;

@@ -21,6 +21,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#endif
 
 namespace oneflow {
 
@@ -141,7 +144,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 template<typename T, typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
  public:

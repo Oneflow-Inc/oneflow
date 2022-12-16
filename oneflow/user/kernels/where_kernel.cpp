@@ -259,7 +259,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_XY_KERNEL, DEVICE_TYPE_SE
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
                                          BOOL_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #endif

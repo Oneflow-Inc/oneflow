@@ -63,7 +63,7 @@ REGISTER_VAR_CPU_KERNEL(float)
 REGISTER_VAR_CPU_KERNEL(double)
 #undef REGISTER_VAR_CPU_KERNEL
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);

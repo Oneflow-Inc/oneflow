@@ -50,7 +50,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceType() == device);
 
 REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCUDA)
 #endif
 

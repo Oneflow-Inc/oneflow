@@ -26,12 +26,20 @@ __inline__ __device__ T Nan();
 
 template<>
 __inline__ __device__ float Nan<float>() {
+#ifdef WITH_ROCM
+  return  __int_as_float(0x7fffffffU);
+#else
   return CUDART_NAN_F;
+#endif
 }
 
 template<>
 __inline__ __device__ double Nan<double>() {
+#ifdef WITH_ROCM
+  return __longlong_as_double(0xfff8000000000000ULL);
+#else
   return CUDART_NAN;
+#endif
 }
 }  // namespace
 

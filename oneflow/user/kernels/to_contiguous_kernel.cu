@@ -124,7 +124,7 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
     const size_t ndims = contiguous_dim + 1;
     if (ndims == 0) {
       // 0-dim tensor
-      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize, cudaMemcpyDeviceToDevice,
+      OF_CUDA_CHECK(GPU(MemcpyAsync)(out_dptr, in_dptr, block_size * dsize, GPU(MemcpyDeviceToDevice),
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
       bool is_same = true;
@@ -136,8 +136,8 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
       }
       if (is_same) {
         // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
-        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, element_count * dsize,
-                                      cudaMemcpyDeviceToDevice,
+        OF_CUDA_CHECK(GPU(MemcpyAsync)(out_dptr, in_dptr, element_count * dsize,
+                                      GPU(MemcpyDeviceToDevice),
                                       stream->As<ep::CudaStream>()->cuda_stream()));
       } else {
         if (element_count < GetMaxVal<int32_t>()) {

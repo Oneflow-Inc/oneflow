@@ -72,7 +72,8 @@ ComputeSparseSoftmaxCrossEntropyResult(ep::Stream* stream, const int64_t num_ins
                                        const int64_t num_classes, const int64_t depth,
                                        const int64_t lower_bound, const K* labels, const T* prob,
                                        T* out) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+                                        
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(WITH_ROCM)
   ComputeSparseSoftmaxCrossEntropyResultGpu<half, K>
       <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
          stream->As<ep::CudaStream>()->cuda_stream()>>>(

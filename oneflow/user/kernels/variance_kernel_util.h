@@ -140,7 +140,7 @@ OF_DEVICE_FUNC bool IsNanOut(const VarParam var_param) {
   return (var_param.elem_cnt == 0) || (var_param.elem_cnt == 1 && var_param.unbiased == true);
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
   // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
   if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {

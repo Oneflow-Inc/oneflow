@@ -16,7 +16,12 @@ limitations under the License.
 #include "oneflow/user/kernels/square_sum_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 
 namespace oneflow {
 
@@ -26,7 +31,11 @@ template<typename T, bool ONE_BLOCK>
 __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
   if (threadIdx.x == 0) {
@@ -53,7 +62,11 @@ __global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
     const SquareSumParam<T> param = params.params[i];
     CUDA_1D_KERNEL_LOOP(j, param.count) { t_sum += param.ptr[j] * param.ptr[j]; }
   }
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#else
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
   if (threadIdx.x == 0) { cuda::atomic::Add(y, b_sum); }

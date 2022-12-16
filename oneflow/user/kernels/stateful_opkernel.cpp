@@ -954,7 +954,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
   if (Singleton<profiler::ProfileManager>::Get()) {
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
         const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
@@ -965,7 +965,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
 #endif
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
         [compute_ctx, CalMemorySize]() -> int64_t {
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },

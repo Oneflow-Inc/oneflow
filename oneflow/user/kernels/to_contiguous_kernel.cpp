@@ -119,7 +119,7 @@ class ToContiguousKernel final : public user_op::OpKernel {
                        TO_CONTIGUOUS_COMMON_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 
 REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CUDA_TYPES
 #endif
 

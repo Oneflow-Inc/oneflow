@@ -16,7 +16,12 @@ limitations under the License.
 #include "oneflow/user/kernels/softmax_cross_entropy_kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 
 namespace oneflow {
 namespace user_op {
@@ -42,14 +47,22 @@ __global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num
       result += -label * SafeLog(prob);
     }
     __syncthreads();
+#ifdef WITH_ROCM
+    T row_reduce_result = BlockReduce(temp_storage).Reduce(result, hipcub::Sum());
+#else
     T row_reduce_result = BlockReduce(temp_storage).Reduce(result, cub::Sum());
+#endif
     if (0 == tid) { y[row] = row_reduce_result; }
   }
 }
 
 __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                       const half* x, const half* labels, half* y) {
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<float, kCrossEntropyGpuBlockSize> BlockReduce;
+#else
   typedef cub::BlockReduce<float, kCrossEntropyGpuBlockSize> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   const int tid = threadIdx.x;
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
@@ -63,7 +76,11 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
       result += -label * SafeLog(prob);
     }
     __syncthreads();
+#ifdef WITH_ROCM
+    float row_reduce_result = BlockReduce(temp_storage).Reduce(result, hipcub::Sum());
+#else
     float row_reduce_result = BlockReduce(temp_storage).Reduce(result, cub::Sum());
+#endif
     if (0 == tid) { y[row] = __float2half(row_reduce_result); }
   }
 }
@@ -80,7 +97,7 @@ __global__ void ComputeDiffWithSoftmaxGpu(const int64_t elem_cnt, const int64_t 
 __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int64_t num_classes,
                                               const half* prob, const half* labels, const half* dy,
                                               half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(WITH_ROCM)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t row_id = i / num_classes;
     dx[i] = __hmul(dy[row_id], __hsub(prob[i], labels[i]));
@@ -103,7 +120,7 @@ template<typename T>
 struct CrossEntropyKernelUtil<DeviceType::kCUDA, T> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const T* x, const T* labels, T* y) {
-    OF_CUDA_CHECK(cudaMemsetAsync(y, 0, sizeof(T) * num_instances,
+    OF_CUDA_CHECK(GPU(MemsetAsync)(y, 0, sizeof(T) * num_instances,
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     ComputeEntropyGpu<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
                         stream->As<ep::CudaStream>()->cuda_stream()>>>(num_instances, num_classes,
@@ -124,7 +141,7 @@ struct CrossEntropyKernelUtil<DeviceType::kCUDA, float16> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const float16* x, const float16* labels,
                              float16* y) {
-    OF_CUDA_CHECK(cudaMemsetAsync(y, 0, sizeof(float16) * num_instances,
+    OF_CUDA_CHECK(GPU(MemsetAsync)(y, 0, sizeof(float16) * num_instances,
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     ComputeEntropyGpuHalf<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
                             stream->As<ep::CudaStream>()->cuda_stream()>>>(

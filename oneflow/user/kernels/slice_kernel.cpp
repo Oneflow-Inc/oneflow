@@ -447,7 +447,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 REGISTER_SLICE_KERNEL(DeviceType::kCPU, bfloat16)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
 #if CUDA_VERSION >= 11000
 REGISTER_SLICE_KERNEL(DeviceType::kCUDA, nv_bfloat16)

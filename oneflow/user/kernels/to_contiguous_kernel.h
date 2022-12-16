@@ -99,7 +99,7 @@ struct ToContiguousUtil : ToContiguousUtilBase {
   TO_CONTIGUOUS_COMMON_TYPES OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16) \
       OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #if CUDA_VERSION >= 11000
 #define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE          \
   OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16) \
