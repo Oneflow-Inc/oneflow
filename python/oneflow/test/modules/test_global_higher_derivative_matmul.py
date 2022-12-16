@@ -64,7 +64,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             da.pytorch.detach().cpu().numpy(),
             da.oneflow.detach().numpy(),
-            rtol=1e-3,
+            rtol=1e-5,
             atol=1e-2,
         )
     )
@@ -80,7 +80,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             db.pytorch.detach().cpu().numpy(),
             db.oneflow.detach().numpy(),
-            rtol=1e-2,
+            rtol=1e-5,
             atol=1e-1,
         )
     )
@@ -106,7 +106,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             ddb_pytorch.detach().cpu().numpy(),
             ddb_oneflow.detach().numpy(),
-            rtol=1e-2,
+            rtol=1e-5,
             atol=1e-1,
         )
     )
@@ -114,7 +114,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             dda_pytorch.detach().cpu().numpy(),
             dda_oneflow.detach().numpy(),
-            rtol=1e-2,
+            rtol=1e-5,
             atol=1e-2,
         )
     )
@@ -130,7 +130,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             dgrad_da.pytorch.detach().cpu().numpy(),
             dgrad_da.oneflow.detach().numpy(),
-            rtol=1e-3,
+            rtol=1e-5,
             atol=1e-2,
         )
     )
@@ -146,7 +146,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(
             dgrad_db.pytorch.detach().cpu().numpy(),
             dgrad_db.oneflow.detach().numpy(),
-            rtol=1e-3,
+            rtol=1e-5,
             atol=1e-2,
         )
     )
