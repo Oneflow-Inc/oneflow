@@ -26,6 +26,7 @@ RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_
   request.set_addr(master_addr.host());
   request.set_rank(bootstrap_conf.rank());
   LoadServer(request, stubs_[0].get());
+  // TODO: use heartbeat mechanism to offline ranks
 }
 
 }  // namespace oneflow
