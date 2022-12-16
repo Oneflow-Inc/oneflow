@@ -50,8 +50,8 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    auto strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
     const int n = in->shape_view().At(0);
     const int h = in->shape_view().At(1);
