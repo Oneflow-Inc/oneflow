@@ -30,7 +30,6 @@ def grad_setting_fn(module, param):
             param.grad = flow._C.slice_view_1d_contiguous(
                 bucket_tensor, start, start + param.numel()
             ).view(param.shape)
-            param._is_grad_acc_inplace = True
         return grad
 
     return grad_setting
