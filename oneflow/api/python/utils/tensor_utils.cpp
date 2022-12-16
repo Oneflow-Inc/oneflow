@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
@@ -234,8 +235,12 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   }
 
   Symbol<Device> device = JUST(Device::New(placement->device_tag()));
-  std::shared_ptr<Tensor> local_tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
+  std::shared_ptr<Tensor> local_tensor;
+  {
+    GlobalMode::Guard guard(/* disable global mode */ false);
+    local_tensor =
+        JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
+  }
   JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
 
   Py_DECREF(array);

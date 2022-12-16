@@ -210,6 +210,22 @@ class TestAutograd(flow.unittest.TestCase):
             flow.autograd.backward(y, flow.ones_like(y))
         test_case.assertTrue(np.array_equal(x.grad.numpy(), np.full(random_shape, 2.0)))
 
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_acc_grad_inplace_update(test_case):
+        random_shape = [random(1, 5).to(int).value() for _ in range(4)]
+        x = flow.rand(*random_shape).requires_grad_()
+        y = flow.rand(*random_shape).requires_grad_()
+
+        z = x / (x + y)
+        z.sum().backward()
+        id_x_grad = id(x.grad)
+        id_y_grad = id(y.grad)
+
+        z = x / (x + y)
+        z.sum().backward()
+        test_case.assertEqual(id_x_grad, id(x.grad))
+        test_case.assertEqual(id_y_grad, id(y.grad))
+
 
 if __name__ == "__main__":
     unittest.main()

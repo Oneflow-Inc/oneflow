@@ -289,6 +289,7 @@ struct DevDType<DeviceType::kCUDA, float16> {
 bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsPODAndHalfDataType(DataType data_type);
