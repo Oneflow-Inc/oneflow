@@ -2237,6 +2237,14 @@
   signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
 
+- name: "local_all_gather"
+  signature: "Tensor (Tensor output, Tensor input) => LocalAllGather"
+  bind_python: True
+
+- name: "local_reduce_scatter"
+  signature: "Tensor (Tensor output, Tensor input) => LocalReduceScatter"
+  bind_python: True
+
 - name: "local_reduce"
   signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
   bind_python: True
