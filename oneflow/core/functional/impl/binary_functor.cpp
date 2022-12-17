@@ -15,10 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/binary_functor.h"
-#include <memory>
 
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -33,9 +30,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/sequence_function.h"
-#include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {
 namespace one {
