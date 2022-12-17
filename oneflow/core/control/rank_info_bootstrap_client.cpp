@@ -44,7 +44,6 @@ RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_
   request.set_rank(bootstrap_conf.rank());
   LoadServer(request, stubs_[0].get());
 
-  heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
     std::mt19937 gen(NewRandomSeed());
     std::uniform_int_distribution<int32_t> sleep_second_dis(7, 13);

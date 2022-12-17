@@ -33,7 +33,7 @@ class RankInfoBootstrapClient final : public BootstrapClient {
 
  private:
   std::thread heartbeat_thread_;
-  bool heartbeat_thread_stop_;
+  bool heartbeat_thread_stop_ = false;
   std::mutex heartbeat_thread_mutex_;
   std::condition_variable heartbeat_thread_cv_;
 };
