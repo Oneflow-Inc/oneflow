@@ -116,7 +116,7 @@ add_docstr(
         other (oneflow.Tensor): the target to compare
 
     Returns:
-        A boolean values
+        A boolean value
 
     For example:
 
