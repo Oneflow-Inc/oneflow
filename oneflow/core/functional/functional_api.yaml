@@ -98,7 +98,11 @@
   bind_python: False
 
 - name: "equal"
-  signature:
+  signature: "Bool (Tensor input, Tensor other) => Equal"
+  bind_python: true
+
+- name: "broadcast_equal"
+  signature: 
     [
       "Tensor (Tensor input, Tensor other) => BroadcastEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalEqual",
