@@ -112,13 +112,11 @@ add_docstr(
     `True` if two tensors have the same size and elements, `False` otherwise.
 
     Args:
-
-        - input (oneflow.Tensor): the tensor to compare
-        - other (oneflow.Tensor): the target to compare
+        input (oneflow.Tensor): the tensor to compare
+        other (oneflow.Tensor): the target to compare
 
     Returns:
-
-        - A boolean values
+        A boolean values
 
     For example:
 
