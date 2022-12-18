@@ -67,7 +67,7 @@ def get_tensor_mem(input):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorOffload(flow.unittest.TestCase):
-    def test_tensor_offload_or_load_float32(test_case):
+    def test_tensor_offload_and_load_float32(test_case):
         input = flow.tensor(
             np.random.randn(1024, 1024, 100),
             dtype=flow.float32,
@@ -88,7 +88,7 @@ class TestTensorOffload(flow.unittest.TestCase):
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
-    def test_tensor_offload_or_load_float16(test_case):
+    def test_tensor_offload_and_load_float16(test_case):
         input = flow.tensor(
             np.random.randn(20, 1024, 1024),
             dtype=flow.float16,
