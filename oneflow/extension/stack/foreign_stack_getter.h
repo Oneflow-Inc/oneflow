@@ -28,6 +28,7 @@ class Frame : public intrusive::Base {
  public:
   virtual ~Frame() = default;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
  private:
   intrusive::Ref intrusive_ref_;
 };
@@ -43,4 +44,3 @@ class ForeignStackGetter {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_EXTENSION_STACK_STACK_GETTER_H_
-

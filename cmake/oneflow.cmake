@@ -45,8 +45,7 @@ file(
   "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/extension/*.*"
-  )
+  "${PROJECT_SOURCE_DIR}/oneflow/extension/*.*")
 
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -97,8 +96,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       set(group_this ON)
     endif()
 
-    if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/extension/.*\\.(c|h|cpp)$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/.*\\.(c|h|cpp)$")
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
