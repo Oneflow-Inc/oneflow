@@ -53,7 +53,7 @@ class TestEqual(flow.unittest.TestCase):
         return torch.equal(x, y)
 
     @autotest(n=5, auto_backward=False, check_graph=False)
-    def test_flow_equal_with_random_data(test_case):
+    def test_flow_tensor_equal_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
         x = random_tensor(len(shape), *shape, requires_grad=False).to(device)
