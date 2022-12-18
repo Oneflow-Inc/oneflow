@@ -42,5 +42,6 @@ def test_error_reported_in_thread():
     assert "g()" in stack
     assert "f()" in stack
 
+
 if __name__ == "__main__":
     test_error_reported_in_thread()

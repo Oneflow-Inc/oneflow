@@ -25,12 +25,19 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 def test_error_reported_in_thread():
     # Run a new process to capture the error output
-    p = subprocess.run([sys.executable, "throw_error.py"], capture_output=True, cwd=os.path.dirname(os.path.realpath(__file__)))
+    p = subprocess.run(
+        [sys.executable, "throw_error.py"],
+        capture_output=True,
+        cwd=os.path.dirname(os.path.realpath(__file__)),
+    )
     assert p.returncode != 0
     error_msg = p.stderr.decode("utf-8")
-    assert """File "throw_error.py", line 4, in g
+    assert (
+        """File "throw_error.py", line 4, in g
     flow._C.throw_error(x)
   File "throw_error.py", line 8, in f
     g(x)
   File "throw_error.py", line 11, in <module>
-    f(x)""" in error_msg
+    f(x)"""
+        in error_msg
+    )
