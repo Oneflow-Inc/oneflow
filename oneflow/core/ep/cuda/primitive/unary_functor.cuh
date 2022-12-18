@@ -52,6 +52,19 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, Dst, Src> {
   static constexpr Src beta = static_cast<Src>(0.044714998453855515);
 };
 
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kQuickGelu, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src sigmoid = static_cast<Dst>(static_cast<Src>(1.0) / (static_cast<Src>(1.0) + exp(-src * alpha)));
+    return src * sigmoid;
+  }
+
+ private:
+  static constexpr Src alpha = static_cast<Src>(1.702);
+};
+
 namespace unary_functor_internal {
 
 namespace {
@@ -356,6 +369,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kReciprocalNoNan);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
