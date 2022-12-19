@@ -41,6 +41,7 @@ void DstSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void DstSubsetTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
+  std::cout << "debug task id " << task_id();
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 

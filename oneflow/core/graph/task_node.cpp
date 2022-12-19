@@ -500,6 +500,7 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
   CHECK_NE_OR_RETURN(proto.src_task_id(), proto.dst_task_id()) << "self-loop are not supported";
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.src_task_id()));
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.dst_task_id()));
+  origin_edge_id_ = proto.task_edge_uid();
   lbis_.insert(proto.lbi().begin(), proto.lbi().end());
   for (const auto& pair : proto.name_in_producer2regst_desc_id()) {
     AddRegst(pair.first, JUST(task_graph_rebuild_ctx.RegstDesc4Id(pair.second)));
@@ -508,7 +509,8 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
 }
 
 void TaskEdge::ToProto(TaskEdgeProto* proto) const {
-  proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
+  // proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
+  proto->set_task_edge_uid(edge_id());
   proto->set_src_task_id(src_node()->task_id());
   proto->set_dst_task_id(dst_node()->task_id());
   *proto->mutable_lbi() = {lbis_.begin(), lbis_.end()};
