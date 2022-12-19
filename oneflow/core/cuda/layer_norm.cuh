@@ -17,7 +17,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CUDA_LAYER_NORM_H_
 #define ONEFLOW_CORE_CUDA_LAYER_NORM_H_
 
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include <math_constants.h>
 #include <assert.h>
 
@@ -27,7 +32,11 @@ namespace cuda {
 
 namespace layer_norm {
 
+#ifdef WITH_ROCM
+constexpr int kWarpSize = 64;
+#else
 constexpr int kWarpSize = 32;
+#endif
 
 template<typename T>
 struct SumOp {
@@ -42,14 +51,22 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
+#ifdef WITH_ROCM
+    val = ReductionOp<T>()(val, __shfl_xor(val, mask, thread_group_width));
+#else
     val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask, thread_group_width));
+#endif
   }
   return val;
 }
 
 template<template<typename> class ReductionOp, typename T, int block_size>
 __inline__ __device__ T BlockAllReduce(T val) {
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, block_size> BlockReduce;
+#else
   typedef cub::BlockReduce<T, block_size> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   __shared__ T result_broadcast;
   T result = BlockReduce(temp_storage).Reduce(val, ReductionOp<T>());
@@ -93,26 +110,26 @@ __inline__ __device__ double Rsqrt<double>(double x) {
 }
 
 template<class Func>
-inline cudaError_t GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size,
+inline GPU(Error_t) GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size,
                                 int64_t max_blocks, int64_t waves, int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    if (err != GPU(Success)) { return err; }
   }
   int max_active_blocks;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func,
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(&max_active_blocks, func,
                                                                     block_size, dynamic_smem_size);
   }
   *num_blocks =
       std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * max_active_blocks * waves));
-  return cudaSuccess;
+  return GPU(Success);
 }
 
 template<typename T>
@@ -239,9 +256,15 @@ __inline__ __device__ void WelfordWarpReduce(T thread_mean, T thread_m2, T threa
   *m2 = thread_m2;
   *count = thread_count;
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
+#ifdef WITH_ROCM
+    T b_mean = __shfl_down(*mean, mask, thread_group_width);
+    T b_m2 = __shfl_down(*m2, mask, thread_group_width);
+    T b_count = __shfl_down(*count, mask, thread_group_width);
+#else
     T b_mean = __shfl_down_sync(0xffffffff, *mean, mask, thread_group_width);
     T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask, thread_group_width);
     T b_count = __shfl_down_sync(0xffffffff, *count, mask, thread_group_width);
+#endif
     WelfordCombine(b_mean, b_m2, b_count, mean, m2, count);
   }
 }
@@ -250,9 +273,16 @@ template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ void WelfordWarpAllReduce(T thread_mean, T thread_m2, T thread_count, T* mean,
                                                 T* m2, T* count) {
   WelfordWarpReduce<T, thread_group_width>(thread_mean, thread_m2, thread_count, mean, m2, count);
+#ifdef WITH_ROCM
+  *mean = __shfl(*mean, 0, thread_group_width);
+  *m2 = __shfl(*m2, 0, thread_group_width);
+  *count = __shfl(*count, 0, thread_group_width);
+#else
   *mean = __shfl_sync(0xffffffff, *mean, 0, thread_group_width);
   *m2 = __shfl_sync(0xffffffff, *m2, 0, thread_group_width);
   *count = __shfl_sync(0xffffffff, *count, 0, thread_group_width);
+#endif
+  
 }
 
 template<typename T>
@@ -405,7 +435,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access, bool padding>
-inline cudaError_t LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) LaunchLayerNormWarpImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                            const int64_t rows, const int64_t cols,
                                            const double epsilon, ComputeType* mean,
                                            ComputeType* inv_variance) {
@@ -418,22 +448,22 @@ inline cudaError_t LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE
       (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(
+    GPU(Error_t) err = GetNumBlocks(
         LayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread,
                           min_cols_per_thread, thread_group_width, rows_per_access, padding>,
         block_size, 0, num_blocks, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread, min_cols_per_thread,
                     thread_group_width, rows_per_access, padding>
       <<<grid_dim_x, block_dim, 0, stream>>>(load, store, rows, cols, epsilon, mean, inv_variance);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-inline cudaError_t DispatchLayerNormWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) DispatchLayerNormWarpImplPadding(GPU(Stream_t) stream, LOAD load, STORE store,
                                                     const int64_t rows, const int64_t cols,
                                                     const double epsilon, ComputeType* mean,
                                                     ComputeType* inv_variance) {
@@ -451,10 +481,10 @@ inline cudaError_t DispatchLayerNormWarpImplPadding(cudaStream_t stream, LOAD lo
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarpImplCols(
-    cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
+typename std::enable_if<pack_size == 1, GPU(Error_t)>::type DispatchLayerNormWarpImplCols(
+    GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 0) { return cudaErrorInvalidValue; }
+  if (cols <= 0) { return GPU(ErrorInvalidValue); }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                      \
   else if (cols <= (thread_group_width)*pack_size) {                                             \
     if (rows % 2 == 0) {                                                                         \
@@ -489,15 +519,15 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarp
   DEFINE_ONE_ELIF(32, 28)
 #undef DEFINE_ONE_ELIF
   else {
-    return cudaErrorInvalidValue;
+    return GPU(ErrorInvalidValue);
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarpImplCols(
-    cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
+typename std::enable_if<pack_size == 2, GPU(Error_t)>::type DispatchLayerNormWarpImplCols(
+    GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 0) { return cudaErrorInvalidValue; }
+  if (cols <= 0) { return GPU(ErrorInvalidValue); }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                      \
   else if (cols <= (thread_group_width)*pack_size) {                                             \
     if (rows % 2 == 0) {                                                                         \
@@ -531,13 +561,13 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarp
   DEFINE_ONE_ELIF(32, 28)
 #undef DEFINE_ONE_ELIF
   else {
-    return cudaErrorInvalidValue;
+    return GPU(ErrorInvalidValue);
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchLayerNormWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
     if (cols % 2 == 0 && CanPackAs<LOAD>(load, 2) && CanPackAs<STORE>(store, 2)) {
@@ -551,7 +581,7 @@ struct DispatchLayerNormWarpImplPackSize {
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) DispatchLayerNormWarpImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                              const int64_t rows, const int64_t cols,
                                              const double epsilon, ComputeType* mean,
                                              ComputeType* inv_variance) {
@@ -605,37 +635,37 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-inline cudaError_t LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) LaunchLayerNormBlockSMemImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                                 int smem, const int64_t rows, const int64_t cols,
                                                 const double epsilon, ComputeType* mean,
                                                 ComputeType* inv_variance) {
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err =
+    GPU(Error_t) err =
         GetNumBlocks(LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>,
                      block_size, smem, rows, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols, epsilon, mean,
                                                  inv_variance);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename Func>
-cudaError_t MaximizeDynamicSharedMemorySize(Func func, const int max_smem_size) {
-  cudaFuncAttributes attr{};
-  cudaError_t err = cudaFuncGetAttributes(&attr, func);
-  if (err != cudaSuccess) { return err; }
+GPU(Error_t) MaximizeDynamicSharedMemorySize(Func func, const int max_smem_size) {
+  GPU(FuncAttributes) attr{};
+  GPU(Error_t) err = GPU(FuncGetAttributes)(&attr, func);
+  if (err != GPU(Success)) { return err; }
   constexpr int reserved_smem = 1024;  // 1K
-  return cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize,
+  return GPU(FuncSetAttribute)(func, GPU(FuncAttributeMaxDynamicSharedMemorySize),
                               max_smem_size - attr.sharedSizeBytes - reserved_smem);
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
-    cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
+inline GPU(Error_t) TryDispatchLayerNormBlockSMemImplBlockSize(
+    GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance, bool* success) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
@@ -644,38 +674,38 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
 
   int dev = 0;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
 
   int sm_count = 0;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    if (err != GPU(Success)) { return err; }
   }
 
   static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
-    cudaError_t err =
-        cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
-    if (err != cudaSuccess) { return false; }
+    GPU(Error_t) err =
+        GPU(DeviceGetAttribute)(&max_smem_size, GPU(DevAttrMaxSharedMemoryPerBlockOptin), dev);
+    if (err != GPU(Success)) { return false; }
 
     err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
 
     return true;
   }();
@@ -684,24 +714,24 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_1;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_1,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
         block_size_conf_1, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_1 <= 0) {
     *success = false;
-    return cudaSuccess;
+    return GPU(Success);
   }
 
   int max_active_blocks_conf_4;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_4,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         block_size_conf_4, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
 
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1
@@ -713,11 +743,11 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_3;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_3,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
         block_size_conf_3, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1
       || (max_active_blocks_conf_3 > 0 && rows <= sm_count)) {
@@ -728,11 +758,11 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_2;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_2,
         LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
         block_size_conf_2, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1
       || (max_active_blocks_conf_2 > 0 && rows <= sm_count)) {
@@ -748,7 +778,7 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct TryDispatchLayerNormBlockSMemImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance, bool* success) {
     if (cols % 4 == 0 && CanPackAs<LOAD>(load, 4) && CanPackAs<STORE>(store, 4)) {
@@ -765,7 +795,7 @@ struct TryDispatchLayerNormBlockSMemImplPackSize {
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t TryDispatchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) TryDispatchLayerNormBlockSMemImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                                      const int64_t rows, const int64_t cols,
                                                      const double epsilon, ComputeType* mean,
                                                      ComputeType* inv_variance, bool* success) {
@@ -819,7 +849,7 @@ __global__ void __launch_bounds__(1024)
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline cudaError_t LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) LaunchLayerNormBlockUncachedImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                                     const int64_t rows, const int64_t cols,
                                                     const double epsilon, ComputeType* mean,
                                                     ComputeType* inv_variance) {
@@ -827,19 +857,19 @@ inline cudaError_t LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD lo
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err =
+    GPU(Error_t) err =
         GetNumBlocks(LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>,
                      block_size, 0, rows, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, 0, stream>>>(load, store, rows, cols, epsilon, mean, inv_variance);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchLayerNormBlockUncachedImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
     if (cols % 4 == 0 && CanPackAs<LOAD>(load, 4) && CanPackAs<STORE>(store, 4)) {
@@ -856,7 +886,7 @@ struct DispatchLayerNormBlockUncachedImplPackSize {
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+inline GPU(Error_t) DispatchLayerNormBlockUncachedImpl(GPU(Stream_t) stream, LOAD load, STORE store,
                                                       const int64_t rows, const int64_t cols,
                                                       const double epsilon, ComputeType* mean,
                                                       ComputeType* inv_variance) {
@@ -865,8 +895,8 @@ inline cudaError_t DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD 
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, GPU(Error_t)>::type
+DispatchLayerNorm(GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
   if (cols <= 1024) {
@@ -875,22 +905,22 @@ DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t row
   } else {
     bool dispatch_smem_impl_success;
     {
-      cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
+      GPU(Error_t) err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance,
           &dispatch_smem_impl_success);
-      if (err != cudaSuccess) { return err; }
+      if (err != GPU(Success)) { return err; }
     }
     if (!dispatch_smem_impl_success) {
       return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     }
-    return cudaSuccess;
+    return GPU(Success);
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, GPU(Error_t)>::type
+DispatchLayerNorm(GPU(Stream_t) stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
   return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
@@ -1029,7 +1059,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-inline cudaError_t LaunchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) LaunchLayerNormGradWarpImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                const ComputeType* mean,
                                                const ComputeType* inv_variance, const int64_t rows,
@@ -1043,24 +1073,24 @@ inline cudaError_t LaunchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_
       (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
-    cudaError_t err =
+    GPU(Error_t) err =
         GetNumBlocks(LayerNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                            max_cols_per_thread, min_cols_per_thread,
                                            thread_group_width, rows_per_access>,
                      block_size, 0, num_blocks, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size, max_cols_per_thread,
                         min_cols_per_thread, thread_group_width, rows_per_access>
       <<<grid_dim_x, block_dim, 0, stream>>>(load_x, load_scaled_dy, store, mean, inv_variance,
                                              rows, cols);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
          int rows_per_access>
-inline cudaError_t DispatchLayerNormGradWarpImplPadding(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) DispatchLayerNormGradWarpImplPadding(GPU(Stream_t) stream, LOAD_X load_x,
                                                         LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                         const ComputeType* mean,
                                                         const ComputeType* inv_variance,
@@ -1082,11 +1112,11 @@ inline cudaError_t DispatchLayerNormGradWarpImplPadding(cudaStream_t stream, LOA
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size>
-typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormGradWarpImplCols(
-    cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+typename std::enable_if<pack_size == 1, GPU(Error_t)>::type DispatchLayerNormGradWarpImplCols(
+    GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
     const ComputeType* mean, const ComputeType* inv_variance, const int64_t rows,
     const int64_t cols) {
-  if (cols <= 0) { return cudaErrorInvalidValue; }
+  if (cols <= 0) { return GPU(ErrorInvalidValue); }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                        \
   else if (cols <= (thread_group_width)*pack_size) {                                               \
     if (rows % 2 == 0) {                                                                           \
@@ -1121,13 +1151,13 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormGrad
   DEFINE_ONE_ELIF(32, 28)
 #undef DEFINE_ONE_ELIF
   else {
-    return cudaErrorInvalidValue;
+    return GPU(ErrorInvalidValue);
   }
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
 struct DispatchLayerNormGradWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
     return DispatchLayerNormGradWarpImplCols<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 1>(
@@ -1136,7 +1166,7 @@ struct DispatchLayerNormGradWarpImplPackSize {
 };
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) DispatchLayerNormGradWarpImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                  LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                  const ComputeType* mean,
                                                  const ComputeType* inv_variance,
@@ -1200,7 +1230,7 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int block_size>
-inline cudaError_t LaunchLayerNormGradBlockSMemImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) LaunchLayerNormGradBlockSMemImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                     LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                     const ComputeType* mean,
                                                     const ComputeType* inv_variance, int smem,
@@ -1208,21 +1238,21 @@ inline cudaError_t LaunchLayerNormGradBlockSMemImpl(cudaStream_t stream, LOAD_X 
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE,
+    GPU(Error_t) err = GetNumBlocks(LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE,
                                                               ComputeType, pack_size, block_size>,
                                    block_size, smem, rows, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, smem, stream>>>(load_x, load_scaled_dy, store, mean, inv_variance,
                                                  rows, cols);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size>
-inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
-    cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+inline GPU(Error_t) TryDispatchLayerNormGradBlockSMemImplBlockSize(
+    GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
     const ComputeType* mean, const ComputeType* inv_variance, const int64_t rows,
     const int64_t cols, bool* success) {
   constexpr int block_size_conf_1 = 128;
@@ -1232,42 +1262,42 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
   int dev = 0;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
 
   int sm_count = 0;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    if (err != GPU(Success)) { return err; }
   }
 
   static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
-    cudaError_t err =
-        cudaDeviceGetAttribute(&max_smem_size, cudaDevAttrMaxSharedMemoryPerBlockOptin, dev);
-    if (err != cudaSuccess) { return false; }
+    GPU(Error_t) err =
+        GPU(DeviceGetAttribute)(&max_smem_size, GPU(DevAttrMaxSharedMemoryPerBlockOptin), dev);
+    if (err != GPU(Success)) { return false; }
 
     err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_1>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_2>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_3>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
     err = MaximizeDynamicSharedMemorySize(
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_4>,
         max_smem_size);
-    if (err != cudaSuccess) { return false; }
+    if (err != GPU(Success)) { return false; }
 
     return true;
   }();
@@ -1278,26 +1308,26 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_1;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_1,
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_1>,
         block_size_conf_1, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_1 <= 0) {
     *success = false;
-    return cudaSuccess;
+    return GPU(Success);
   }
 
   int max_active_blocks_conf_4;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_4,
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_4>,
         block_size_conf_4, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1
       || (max_active_blocks_conf_4 > 0 && rows <= sm_count)) {
@@ -1309,12 +1339,12 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_3;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_3,
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_3>,
         block_size_conf_3, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1
       || (max_active_blocks_conf_3 > 0 && rows <= sm_count)) {
@@ -1326,12 +1356,12 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
   int max_active_blocks_conf_2;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks_conf_2,
         LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_2>,
         block_size_conf_2, smem);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1
       || (max_active_blocks_conf_2 > 0 && rows <= sm_count)) {
@@ -1349,7 +1379,7 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
 struct TryDispatchLayerNormGradBlockSMemImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols, bool* success) {
     if (cols % 2 == 0 && CanPackAs<LOAD_X>(load_x, 2)
@@ -1366,7 +1396,7 @@ struct TryDispatchLayerNormGradBlockSMemImplPackSize {
 };
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t TryDispatchLayerNormGradBlockSMemImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) TryDispatchLayerNormGradBlockSMemImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                          LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                          const ComputeType* mean,
                                                          const ComputeType* inv_variance,
@@ -1431,7 +1461,7 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int block_size>
-inline cudaError_t LaunchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) LaunchLayerNormGradBlockUncachedImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                         LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                         const ComputeType* mean,
                                                         const ComputeType* inv_variance,
@@ -1439,28 +1469,28 @@ inline cudaError_t LaunchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOA
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err =
+    GPU(Error_t) err =
         GetNumBlocks(LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType,
                                                     pack_size, block_size>,
                      block_size, 0, rows, waves, &grid_dim_x);
-    if (err != cudaSuccess) { return err; }
+    if (err != GPU(Success)) { return err; }
   }
   LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, 0, stream>>>(load_x, load_scaled_dy, store, mean, inv_variance,
                                               rows, cols);
-  return cudaPeekAtLastError();
+  return GPU(PeekAtLastError)();
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size>
-inline cudaError_t TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
-    cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+inline GPU(Error_t) TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
+    GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
     const ComputeType* mean, const ComputeType* inv_variance, const int64_t rows,
     const int64_t cols) {
   int max_active_blocks = 0;
   constexpr int block_size_conf_1 = 1024;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks,
         LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                        block_size_conf_1>,
@@ -1473,7 +1503,7 @@ inline cudaError_t TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
   }
   constexpr int block_size_conf_2 = 512;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks,
         LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                        block_size_conf_2>,
@@ -1486,7 +1516,7 @@ inline cudaError_t TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
   }
   constexpr int block_size_conf_3 = 256;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
         &max_active_blocks,
         LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                        block_size_conf_3>,
@@ -1505,7 +1535,7 @@ inline cudaError_t TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
 struct DispatchLayerNormGradBlockUncachedImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+  GPU(Error_t) operator()(GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
     if (cols % 2 == 0 && CanPackAs<LOAD_X>(load_x, 2)
@@ -1523,7 +1553,7 @@ struct DispatchLayerNormGradBlockUncachedImplPackSize {
 };
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOAD_X load_x,
+inline GPU(Error_t) DispatchLayerNormGradBlockUncachedImpl(GPU(Stream_t) stream, LOAD_X load_x,
                                                           LOAD_SCALED_DY load_scaled_dy,
                                                           STORE store, const ComputeType* mean,
                                                           const ComputeType* inv_variance,
@@ -1534,8 +1564,8 @@ inline cudaError_t DispatchLayerNormGradBlockUncachedImpl(cudaStream_t stream, L
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchLayerNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, GPU(Error_t)>::type
+DispatchLayerNormGrad(GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                       STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                       const int64_t rows, const int64_t cols) {
   if (cols <= 1024) {
@@ -1544,23 +1574,23 @@ DispatchLayerNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_sc
   } else {
     bool dispatch_smem_impl_success;
     {
-      cudaError_t err =
+      GPU(Error_t) err =
           TryDispatchLayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
               stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols,
               &dispatch_smem_impl_success);
-      if (err != cudaSuccess) { return err; }
+      if (err != GPU(Success)) { return err; }
     }
     if (!dispatch_smem_impl_success) {
       return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     }
-    return cudaSuccess;
+    return GPU(Success);
   }
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchLayerNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, GPU(Error_t)>::type
+DispatchLayerNormGrad(GPU(Stream_t) stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                       STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                       const int64_t rows, const int64_t cols) {
   return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(

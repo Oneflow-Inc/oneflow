@@ -16,7 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CUDA_ATOMIC_H_
 #define ONEFLOW_CORE_CUDA_ATOMIC_H_
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
+
+#ifdef WITH_ROCM
+
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
+
+#else
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -25,6 +32,9 @@ limitations under the License.
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
+
+#endif
+
 namespace oneflow {
 
 namespace cuda {
@@ -203,6 +213,26 @@ __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
 }
 
 #endif  // __CUDA_ARCH__ < 530
+
+#ifdef WITH_ROCM
+
+__device__ __forceinline__ double AddImpl(double* address, double val) {
+  return atomicAdd(address, val);
+}
+
+__device__ __forceinline__ half AddImpl(half* address, half val) { 
+  float address_value = __half2float(*address);
+  return __float2half(atomicAdd(&address_value, __half2float(val))); }
+
+__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+  half2 res;
+  float2 address_value = __half22float2(*address);
+  res.data.x = __float2half(atomicAdd(&address_value.x, __half2float(val.data.x)));
+  res.data.y = __float2half(atomicAdd(&address_value.y, __half2float(val.data.y)));
+  return res;
+}
+
+#endif
 
 }  // namespace internal
 
