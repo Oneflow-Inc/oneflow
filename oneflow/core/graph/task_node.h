@@ -178,6 +178,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   ~TaskEdge() override = default;
 
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
+  bool HasRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
   std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
   const HashSet<LogicalBlobId>& GetLbis() const { return lbis_; }

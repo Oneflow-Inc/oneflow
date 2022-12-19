@@ -299,6 +299,10 @@ RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
+  if (edge->HasRegst(name)) { 
+    std::cout << " out edge from " << edge->src_node()->VisualStr() << " has already bind regst " << name << std::endl;
+    return;
+  }
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
@@ -310,6 +314,7 @@ std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bo
   CHECK_EQ(regst->min_register_num(), min_register_num);
   CHECK_EQ(regst->max_register_num(), max_register_num);
   CHECK_EQ(regst->enable_reuse_mem(), enable_reuse_mem);
+  std::cout << " task node " << VisualStr() << " find regst " << name << std::endl;
   return regst;
 }
 
@@ -400,6 +405,10 @@ std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_produce
   return name_in_producer2regst_.at(name_in_producer);
 }
 
+bool TaskEdge::HasRegst(const std::string& name_in_producer) const {
+  return (name_in_producer2regst_.find(name_in_producer) != name_in_producer2regst_.end());
+}
+
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   CHECK_EQ(name_in_producer2regst_.size(), 1)
       << "edge: " << this << ", src: " << src_node()->task_id();
@@ -415,6 +424,7 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
+  if (HasRegst(name_in_producer)) { return; }
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 

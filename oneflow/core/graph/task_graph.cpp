@@ -1273,7 +1273,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   ForEachNode([&](TaskNode* task_node) {
     // If this is a boxing related task node, it's produced register and edge has already been created.
-    if (IsTaskNodeBoxingRelated(task_node)) { return; }
+    // if (IsTaskNodeBoxingRelated(task_node)) { return; }
     task_node->ProduceAllRegstsAndBindEdges();
   });
   ForEachEdge([&](TaskEdge* edge) {
