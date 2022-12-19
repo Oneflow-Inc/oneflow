@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/mutable_attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/job/global_mode.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -198,11 +201,15 @@ class RandFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRand(shape, GetGlobalParallelDescFromDevice(device),
+                                         *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                         requires_grad));
+    }
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
-          && dtype_val != DataType::kFloat16) {
+      if (!JUST(dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
@@ -242,18 +249,28 @@ class GlobalRandFunctor {
       }
     }
 
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nd_sbp");
     if (LazyMode::is_enabled()) {
       attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                        static_cast<int64_t>(gen->current_seed()), *JUST(GetNdSbpStrList(nd_sbp)));
+                        static_cast<int64_t>(init_seed), *JUST(GetNdSbpStrList(nd_sbp)));
     } else {
+      uint64_t rank_seed = 0;
+      {
+        JUST(BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+        rank_seed =
+            JUST(GetRandomSeedForRank(*placement, *nd_sbp, init_seed, GlobalProcessCtx::Rank()));
+      }
       attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                        static_cast<int64_t>(gen->current_seed()), NullOpt);
+                        static_cast<int64_t>(rank_seed), NullOpt);
+      gen = JUST(MakeGenerator(placement->device_type()));
+      gen->set_current_seed(rank_seed);
     }
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -264,76 +281,40 @@ class GlobalRandFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 class RandNFunctor {
  public:
-  RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = GetDefaultDType()->data_type();
-    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
-        && dtype_val != DataType::kFloat16) {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandN(shape, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
+                                          requires_grad));
+    }
+    if (dtype.has_value() && !JUST(dtype)->is_floating_point()) {
       OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
-
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
-    attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                      static_cast<int64_t>(gen->current_seed()));
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = device;
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
-    JUST(result->set_requires_grad(requires_grad));
-    return result;
+    const auto& out = Optional<one::Tensor>();
+    return Normal(static_cast<double>(0), static_cast<double>(1), shape, out, dtype, device,
+                  generator, requires_grad);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class GlobalRandNFunctor {
  public:
-  GlobalRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = GetDefaultDType()->data_type();
-    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
-        && dtype_val != DataType::kFloat16) {
+    if (dtype.has_value() && !JUST(dtype)->is_floating_point()) {
       OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
-
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed", "nd_sbp");
-    if (LazyMode::is_enabled()) {
-      attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                        static_cast<int64_t>(gen->current_seed()), *JUST(GetNdSbpStrList(nd_sbp)));
-    } else {
-      attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                        static_cast<int64_t>(gen->current_seed()), NullOpt);
-    }
-
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-    JUST(result->set_requires_grad(requires_grad));
-    return result;
+    const auto& out = Optional<one::Tensor>();
+    return GlobalNormal(static_cast<double>(0), static_cast<double>(1), shape, out, placement,
+                        sbp_tuple, dtype, generator, requires_grad);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class NormalFunctor {
@@ -345,12 +326,12 @@ class NormalFunctor {
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    Symbol<DType> dtype = DType::Float();
+    Symbol<DType> dtype = GetDefaultDType();
     if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+      if (!JUST(optional_dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
+      dtype = JUST(optional_dtype);
     }
     Symbol<Device> device = JUST(Device::New("cpu"));
     if (optional_device.has_value()) { device = JUST(optional_device); }
@@ -423,10 +404,10 @@ class GlobalNormalFunctor {
 
     Symbol<DType> dtype = DType::Float();
     if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+      if (!JUST(optional_dtype)->is_floating_point()) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
+      dtype = JUST(optional_dtype);
     }
 
     if (out.has_value()) {
@@ -532,6 +513,11 @@ class RandIntFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandInt(
+          low, high, shape, GetGlobalParallelDescFromDevice(device),
+          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
+    }
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -602,18 +588,26 @@ class GlobalRandIntFunctor {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& nd_sbp = JUST(GetNdSbp(sbp));
+    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed", "nd_sbp");
     if (LazyMode::is_enabled()) {
-      attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(gen->current_seed()),
+      attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(init_seed),
                         *JUST(GetNdSbpStrList(nd_sbp)));
     } else {
-      attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(gen->current_seed()),
-                        NullOpt);
+      uint64_t rank_seed = 0;
+      {
+        JUST(BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+        rank_seed =
+            JUST(GetRandomSeedForRank(*placement, *nd_sbp, init_seed, GlobalProcessCtx::Rank()));
+      }
+      attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(rank_seed), NullOpt);
+      gen = JUST(MakeGenerator(placement->device_type()));
+      gen->set_current_seed(rank_seed);
     }
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -671,6 +665,11 @@ class RandPermFunctor {
   Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalRandPerm(n, GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp())), generator,
+                                             dtype, requires_grad));
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed");
     attrs.SetAllAttrs(n, static_cast<int64_t>(gen->current_seed()));

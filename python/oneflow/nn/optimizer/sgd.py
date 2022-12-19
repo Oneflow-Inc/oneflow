@@ -19,7 +19,7 @@ from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
 
-from .optimizer import Optimizer, ParamGroup
+from ...optim.optimizer import Optimizer, ParamGroup
 
 
 class SGD(Optimizer):

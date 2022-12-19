@@ -52,9 +52,9 @@ from oneflow.nn.graph.util import (
     seq_to_func_return,
     sys_exc_error_msg,
 )
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.optim.optimizer import Optimizer
 
 
 class Graph(object):
@@ -1386,7 +1386,7 @@ class Graph(object):
             raise KeyError('module name can\'t be empty string ""')
 
         self._blocks[name] = get_proxy_cls(module)(
-            "", name, module, weakref.proxy(self)
+            module, "", name, weakref.proxy(self)
         )
 
     def __setattr__(self, name: str, value=None):
