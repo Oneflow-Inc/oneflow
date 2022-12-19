@@ -3004,6 +3004,48 @@ class TopKFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TopKDimFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t k, int32_t dim,
+                                bool largest, bool sorted) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    if (axis == input->ndim() - 1) {
+      if (largest) {
+        (*outputs)[1] = JUST(TopK(input, k, sorted));
+      } else {
+        auto neg_input = JUST(ScalarMul(input, -1, false));
+        (*outputs)[1] = JUST(TopK(neg_input, k, sorted));
+      }
+      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
+      return outputs;
+    } else {
+      std::vector<int32_t> perm;
+      for (int i = 0; i < input->ndim() - 1; i++) {
+        if (i < axis) {
+          perm.push_back(i);
+        } else {
+          perm.push_back(i + 1);
+        }
+      }
+      perm.push_back(axis);
+      auto x = JUST(Transpose(input, perm));
+      if (largest) {
+        (*outputs)[1] = JUST(TopK(x, k, sorted));
+      } else {
+        auto neg_input = JUST(ScalarMul(x, -1, false));
+        (*outputs)[1] = JUST(TopK(neg_input, k, sorted));
+      }
+      std::vector<int32_t> inversed_perm(perm.size());
+      for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
+      (*outputs)[1] = JUST(Transpose((*outputs)[1], inversed_perm));
+      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
+      return outputs;
+    }
+  }
+};
+
 class InTopKFunctor {
  public:
   InTopKFunctor() {
@@ -3820,6 +3862,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
                 impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
+  m.add_functor<impl::TopKDimFunctor>("TopKDim");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");

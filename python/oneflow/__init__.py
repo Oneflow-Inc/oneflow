@@ -142,6 +142,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import topk
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
 from oneflow._C import minimum
@@ -379,7 +380,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
