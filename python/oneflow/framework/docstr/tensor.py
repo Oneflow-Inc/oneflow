@@ -1046,6 +1046,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.lt,
     """
     See :func:`oneflow.lt`
