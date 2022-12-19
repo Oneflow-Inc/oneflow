@@ -55,6 +55,8 @@ def test_tensor_load_h2d(test_case, input, tensor_mem):
 
 
 def get_tensor_mem(input):
+    if input.dim() == 0:
+        return  2
     shape = input.shape
     tensor_size = shape[0] * shape[1] * shape[2]
 
@@ -62,12 +64,15 @@ def get_tensor_mem(input):
         return 4 * tensor_size / 1024 / 1024
     elif input.dtype == oneflow.float16:
         return 2 * tensor_size / 1024 / 1024
+    elif input.dtype == oneflow.int64:
+        return 8 * tensor_size / 1024 / 1024
 
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorOffload(flow.unittest.TestCase):
     def test_tensor_offload_and_load_float32(test_case):
+        flow.cuda.empty_cache()
         input = flow.tensor(
             np.random.randn(1024, 1024, 100),
             dtype=flow.float32,
@@ -89,8 +94,53 @@ class TestTensorOffload(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
     def test_tensor_offload_and_load_float16(test_case):
+        flow.cuda.empty_cache()
         input = flow.tensor(
             np.random.randn(20, 1024, 1024),
+            dtype=flow.float16,
+            device=flow.device("cuda"),
+        )
+        data = input.numpy()
+
+        for i in range(3):
+            input_tensor_mem = get_tensor_mem(input)
+            # test tensor offload
+            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+
+            # data = input.numpy() will raise error here
+
+            # test tensor load
+            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+
+        # test data after tensor load
+        test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+
+    def test_tensor_offload_and_load_int64(test_case):
+        flow.cuda.empty_cache()
+        input = flow.tensor(
+            np.random.randn(20, 1024, 1024),
+            dtype=flow.int64,
+            device=flow.device("cuda"),
+        )
+        data = input.numpy()
+
+        for i in range(3):
+            input_tensor_mem = get_tensor_mem(input)
+            # test tensor offload
+            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+
+            # data = input.numpy() will raise error here
+
+            # test tensor load
+            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+
+        # test data after tensor load
+        test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+
+    def test_tensor_offload_and_load_0dim(test_case):
+        flow.cuda.empty_cache()
+        input = flow.tensor(
+            np.random.randint(1,10),
             dtype=flow.float16,
             device=flow.device("cuda"),
         )
