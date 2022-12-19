@@ -437,16 +437,13 @@ class SyncBatchNormFunction(flow.autograd.Function):
         # batch_norm_gather_stats_with_counts calculates global mean & invstd based on
         # all gathered mean, invstd and count.
         # world_size * (2C + 1)
-        combined_list = [
-            flow.zeros(combined.shape, dtype=combined.dtype, device=combined.device)
-            for _ in range(global_world_size)
-        ]
-        flow.comm.all_gather(combined_list, combined)
-        combined = flow.stack(combined_list, dim=0).reshape(
-            (global_world_size, combined.numel())
-        )
+        combined_size = combined.numel()
+        combined_flat = flow.empty(global_world_size, combined_size,
+                                        dtype=combined.dtype,
+                                        device=combined.device)
+        flow.comm.all_gather_into_tensor(combined_flat, combined)
         # world_size * (2C + 1) -> world_size * C, world_size * C, world_size * 1
-        mean_all, invstd_all, count_all = flow.split(combined, num_channels, dim=1)
+        mean_all, invstd_all, count_all = flow.split(combined_flat, num_channels, dim=1)
 
         # remove stats from empty inputs
         mask = count_all.squeeze(-1) >= 1
