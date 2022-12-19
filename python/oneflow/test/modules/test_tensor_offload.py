@@ -56,7 +56,7 @@ def test_tensor_load_h2d(test_case, input, tensor_mem):
 
 def get_tensor_mem(input):
     if input.dim() == 0:
-        return  2
+        return 2
     shape = input.shape
     tensor_size = shape[0] * shape[1] * shape[2]
 
@@ -140,9 +140,7 @@ class TestTensorOffload(flow.unittest.TestCase):
     def test_tensor_offload_and_load_0dim(test_case):
         flow.cuda.empty_cache()
         input = flow.tensor(
-            np.random.randint(1,10),
-            dtype=flow.float16,
-            device=flow.device("cuda"),
+            np.random.randint(1, 10), dtype=flow.float16, device=flow.device("cuda"),
         )
         data = input.numpy()
 
