@@ -21,8 +21,10 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("cuda_aligned_size", [](size_t size) { return GetCudaAlignedSize(size); });
 }
+#endif
 
 }  // namespace oneflow
