@@ -60,6 +60,8 @@ def _flatten_dense_tensors(tensors):
     """Flatten dense tensors into a contiguous 1D buffer. Assume tensors are of
     same dense type.
 
+    The api is referenced from https://github.com/pytorch/pytorch/blob/master/torch/_utils.py#L437
+
     Since inputs are dense, the resulting tensor will be a concatenated 1D
     buffer. Element-wise operation on this buffer will be equivalent to
     operating individually.
@@ -82,6 +84,8 @@ def _flatten_dense_tensors(tensors):
 def _unflatten_dense_tensors(flat, tensors):
     """View a flat buffer using the sizes of tensors. Assume that tensors are of
     same dense type, and that flat is given by _flatten_dense_tensors.
+
+    The api is referenced from https://github.com/pytorch/pytorch/blob/master/torch/_utils.py#L474
 
     Args:
         flat (Tensor): flattened dense tensors to unflatten.
