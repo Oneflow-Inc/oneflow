@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include <string>
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
@@ -301,6 +302,17 @@ void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
+std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
+                                                     int32_t min_register_num, int32_t max_register_num) const {
+  auto iter = produced_regsts_.find(name);
+  if (iter == produced_regsts_.end()) { return nullptr; }
+  const auto& regst = (iter->second);
+  CHECK_EQ(regst->min_register_num(), min_register_num);
+  CHECK_EQ(regst->max_register_num(), max_register_num);
+  CHECK_EQ(regst->enable_reuse_mem(), enable_reuse_mem);
+  return regst;
+}
+
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem) {
   return ProduceRegst(name, enable_reuse_mem, 1, kMaxRegisterNum);
 }
@@ -308,6 +320,8 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
+  const auto & regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
+  if (regst) { return regst; }
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_data_regst_desc();
   return ProduceRegst(name, enable_reuse_mem, min_register_num, max_register_num, regst_desc_type);

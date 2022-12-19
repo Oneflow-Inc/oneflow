@@ -191,7 +191,6 @@ class RankTaskGraph final : public TaskGraph {
   bool IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) const;
 
  private:
-  using TaskNodePredictor = std::function<bool (oneflow::TaskNode *)>;
   RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
   Maybe<void> Init(const HashSet<std::string>& var_op_names);
@@ -210,9 +209,8 @@ class RankTaskGraph final : public TaskGraph {
   Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByRank(const OpNode* op_node, int64_t rank);
   Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node, int64_t rank);
 
-  Maybe<void> ConnectDataEdges(const OpEdge* op_edge, int64_t rank, const TaskNodePredictor& is_boxing_related);
+  Maybe<void> ConnectDataEdges(const OpEdge* op_edge, int64_t rank);
   Maybe<void> ConnectCtrlEdges(const OpNode* src, const OpNode* dst, int64_t rank);
-  Maybe<void> ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi, const TaskNodePredictor& is_boxing_related);
 
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
   HashMap<int64_t, const TaskProto*> task_id2task_proto_;

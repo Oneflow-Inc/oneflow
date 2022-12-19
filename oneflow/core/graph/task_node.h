@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace std {
 
@@ -153,6 +154,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  private:
   void UpdateTaskId();
+  std::shared_ptr<RegstDesc> GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
+                                             int32_t min_register_num, int32_t max_register_num) const;
 
   int64_t machine_id_;
   int64_t thrd_id_;
@@ -184,6 +187,9 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
 
   void CheckRegstLbiValid() const;
+  bool OutHasBindRegst() const {
+    return !name_in_producer2regst_.empty();
+  }
 
   Maybe<void> InitFromProto(const TaskEdgeProto& proto,
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);

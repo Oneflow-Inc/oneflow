@@ -1161,27 +1161,7 @@ bool RankTaskGraph::ContainRank(const OpNode* op_node, int64_t rank) const {
   return op_node->parallel_desc().HasMachineId(rank);
 }
 
-Maybe<void> RankTaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi, const TaskNodePredictor& is_boxing_related) {
-  if (src_node == dst_node) { return Maybe<void>::Ok(); }
-  for (TaskEdge* out_edge : src_node->out_edges()) {
-    TaskNode* out_node = out_edge->dst_node();
-    if (out_node == dst_node) {
-      out_edge->AddLbi(lbi);
-      return Maybe<void>::Ok();
-    }
-  }
-
-  TaskEdge* connected_edge = NewEdge();
-  connected_edge->AddLbi(lbi);
-  Connect<TaskNode>(src_node, connected_edge, dst_node);
-  if (is_boxing_related(src_node)) {
-    // New edge need to bind the existed register.
-    src_node->BindEdgeWithProducedRegst(connected_edge, "out");
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RankTaskGraph::ConnectDataEdges(const OpEdge* op_edge, int64_t rank, const TaskNodePredictor& is_boxing_related) {
+Maybe<void> RankTaskGraph::ConnectDataEdges(const OpEdge* op_edge, int64_t rank) {
   if (!op_edge->NeedBoxing()) {
     auto* src_task_node = JUST(TryGetRankCompTaskNode(op_edge->src_node(), rank));
     auto* dst_task_node = JUST(TryGetRankCompTaskNode(op_edge->dst_node(), rank));
@@ -1194,7 +1174,7 @@ Maybe<void> RankTaskGraph::ConnectDataEdges(const OpEdge* op_edge, int64_t rank,
                                              << op_edge->dst_node()->op().op_name();
     }
     if (src_task_node != nullptr && dst_task_node != nullptr) {
-      for (const auto& lbi : op_edge->lbis()) { JUST(ConnectWithLbi(src_task_node, dst_task_node, lbi, is_boxing_related)); }
+      for (const auto& lbi : op_edge->lbis()) { ConnectWithLbi(src_task_node, dst_task_node, lbi); }
     }
   }
   return Maybe<void>::Ok();
@@ -1260,7 +1240,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   // This is useless, because consumed_regst_desc_id is empty in BoxingTaskGraph.
   // JUST(InitRegstDescsConsumers());
   // Note that tasks added are from BoxingTaskGraph, so they are all boxing related.
-  const TaskNodePredictor& IsTaskNodeBoxingRelated = MakePredicatorNodeSnapshotted(this);
+  const auto& IsTaskNodeBoxingRelated = MakePredicatorNodeSnapshotted(this);
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
@@ -1277,7 +1257,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
     return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
-                           [&](int64_t rank) { return ConnectDataEdges(op_edge, rank, IsTaskNodeBoxingRelated); });
+                           [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
   std::cout << "mark 2" << std::endl;
 
@@ -1295,6 +1275,11 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
     // If this is a boxing related task node, it's produced register and edge has already been created.
     if (IsTaskNodeBoxingRelated(task_node)) { return; }
     task_node->ProduceAllRegstsAndBindEdges();
+  });
+  ForEachEdge([&](TaskEdge* edge) {
+    if (!edge->OutHasBindRegst()) {
+      std::cout << "not bind regst task " << edge->src_node()->VisualStr() << std::endl;
+    }
   });
   std::cout << "mark 4" << std::endl;
   return Maybe<void>::Ok();
