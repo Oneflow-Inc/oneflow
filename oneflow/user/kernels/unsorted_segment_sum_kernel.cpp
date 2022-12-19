@@ -210,7 +210,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#if CUDA_VERSION >= 11000
+#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 800
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
                                  INDEX_DATA_TYPE_SEQ)

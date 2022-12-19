@@ -41,7 +41,7 @@ namespace oneflow {
   static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
                                                                                 \
  public:                                                                        \
-  static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);          \
+  [[maybe_unused]] static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);          \
                                                                                 \
  public:                                                                        \
   INCREASE_STATIC_COUNTER(field_counter);                                       \

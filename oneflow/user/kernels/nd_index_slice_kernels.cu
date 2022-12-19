@@ -172,7 +172,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ND_INDEX_SLICE_FUNCTORS, (DeviceTyp
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#if defined(__CUDA_BF16_TYPES_EXIST__)
+#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 800
 template<>
 struct DeviceAdd<DeviceType::kCUDA, bfloat16> {
   __device__ __forceinline__ static void Invoke(const bfloat16* x, bfloat16* y) {

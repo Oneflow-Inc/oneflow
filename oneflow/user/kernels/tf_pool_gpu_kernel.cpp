@@ -48,7 +48,7 @@ class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
   GPUPoolOpKernelCache(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
                        const ShapeView& y_shape, const std::string& data_format,
                        const DataType& dtype, const Params3D& params_3d)
-      : dim_(dim), pooling_type_(pooling_type) {
+      : pooling_type_(pooling_type) {
     Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
   }
   ~GPUPoolOpKernelCache() = default;
@@ -107,7 +107,6 @@ class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
   std::unique_ptr<CudnnPoolDesc> pooling_desc_;
-  int32_t dim_;
   std::string pooling_type_;
 };
 
