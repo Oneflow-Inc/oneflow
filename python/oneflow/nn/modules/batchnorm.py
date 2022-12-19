@@ -438,9 +438,12 @@ class SyncBatchNormFunction(flow.autograd.Function):
         # all gathered mean, invstd and count.
         # world_size * (2C + 1)
         combined_size = combined.numel()
-        combined_flat = flow.empty(global_world_size, combined_size,
-                                        dtype=combined.dtype,
-                                        device=combined.device)
+        combined_flat = flow.empty(
+            global_world_size,
+            combined_size,
+            dtype=combined.dtype,
+            device=combined.device,
+        )
         flow.comm.all_gather_into_tensor(combined_flat, combined)
         # world_size * (2C + 1) -> world_size * C, world_size * C, world_size * 1
         mean_all, invstd_all, count_all = flow.split(combined_flat, num_channels, dim=1)
