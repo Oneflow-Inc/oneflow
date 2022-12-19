@@ -73,7 +73,13 @@ class _ConstantBase(Module):
                 assert (
                     self.value.ndim <= 1 and self.value.numel() == 1
                 ), "Only tensor with single element or scalar tensor are supported as value!"
-                res = flow._C.global_tensor_constant(self.shape, self.value, dtype=self.dtype, placement=self.placement, sbp=self.sbp)
+                res = flow._C.global_tensor_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
             else:
                 res = flow._C.global_constant(
                     self.shape,
