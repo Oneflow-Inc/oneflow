@@ -13,19 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+# Just for alignment with pytorch, not really useful
 
+from datetime import timedelta
 
-def equal_op(a, b):
-    # True if two tensors have the same size and elements, False otherwise.
-    if a.shape == b.shape and a.numel() == b.numel():
-        res = flow._C.equal(a, b)
-        return res.all().item()
-    else:
-        return False
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+default_pg_timeout = timedelta(milliseconds=30 * 60 * 1000)

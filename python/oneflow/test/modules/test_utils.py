@@ -33,7 +33,11 @@ def _test_flatten_dense_tensors(test_case, device):
     torch_x_flatten = torch_flatten_dense_tensors([torch_x, torch_x, torch_x])
     x_flatten = _flatten_dense_tensors([x, x, x])
     test_case.assertTrue(np.array_equal(torch_x_flatten.size(), x_flatten.size()))
-    test_case.assertTrue(np.allclose(torch_x_flatten.cpu().numpy(), x_flatten.cpu().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            torch_x_flatten.cpu().numpy(), x_flatten.cpu().numpy(), 1e-05, 1e-05
+        )
+    )
 
 
 def _test_unflatten_dense_tensors(test_case, device):
@@ -52,10 +56,16 @@ def _test_unflatten_dense_tensors(test_case, device):
         flow.utils.tensor.from_torch(torch_x3),
     ]
     torch_outputs = torch_unflatten_dense_tensors(torch_flat, torch_tensors)
-    outputs = _unflatten_dense_tensors(flow.utils.tensor.from_torch(torch_flat), tensors)
+    outputs = _unflatten_dense_tensors(
+        flow.utils.tensor.from_torch(torch_flat), tensors
+    )
     for i in range(len(outputs)):
         test_case.assertTrue(np.array_equal(torch_outputs[i].size(), outputs[i].size()))
-        test_case.assertTrue(np.allclose(torch_outputs[i].cpu().numpy(), outputs[i].cpu().numpy(), 1e-05, 1e-05))
+        test_case.assertTrue(
+            np.allclose(
+                torch_outputs[i].cpu().numpy(), outputs[i].cpu().numpy(), 1e-05, 1e-05
+            )
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
