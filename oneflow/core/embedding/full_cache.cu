@@ -196,7 +196,11 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
        batch_start += global_n_warp * warp_size) {
     const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
     if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     const uint32_t key_offset = batch_start + lane_id;
     if (key_offset < n_keys) {
       const Key key = keys[batch_start + lane_id];
@@ -210,14 +214,22 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
         batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
       }
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     const uint32_t batch_n_missing_t = batch_n_missing[warp_id];
     if (lane_id == 0) {
       const uint32_t old_n_missing =
           cuda::atomic::Add(n_missing, static_cast<uint32_t>(batch_n_missing_t));
       batch_n_missing[warp_id] = old_n_missing;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     if (lane_id < batch_n_missing_t) {
       missing_keys[batch_n_missing[warp_id] + lane_id] = batch_missing_keys[warp_id][lane_id];
       missing_indices[batch_n_missing[warp_id] + lane_id] = batch_missing_indices[warp_id][lane_id];
@@ -231,7 +243,11 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
             cache_values[(row - 1) * value_length + col];
       }
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
   }
 }
 
@@ -271,7 +287,11 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
       batch_row_ids[warp_id][lane_id] = row;
       mask[key_offset] = row > 0;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
       const Index row = batch_row_ids[warp_id][i];
@@ -282,7 +302,11 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
             packed_cache_values[(row - 1) * packed_cols + col];
       }
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
   }
 }
 

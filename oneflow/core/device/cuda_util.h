@@ -286,7 +286,7 @@ int GetCudaDeviceCount();
 
 Maybe<double> GetCUDAMemoryUsed();
 
-hipDeviceProp* GetDeviceProperties(int device_id);
+hipDeviceProp_t* GetDeviceProperties(int device_id);
 
 void SetCudaDeviceIndex(int device_id);
 

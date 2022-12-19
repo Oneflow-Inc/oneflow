@@ -17,26 +17,27 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_GPU_MACRO_H_
 
 #ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+
 #define GPU(str) hip##str
 #define GPURAND(str) hiprand##str
-void SYNCWARP()
+
+__device__ __forceinline__ void TRAP()
 {
-    __syncthreads();
+    asm volatile("s_trap 0;");
 }
-void TRAP()
-{
-    asm volatile("s_trap 0;");}
+
 #else
+#include <cuda.h>
+
 #define GPU(str) cuda##str
 #define GPURAND(str) curand##str
-void SYNCWARP()
-{
-    __syncwarp();
-}
-void TRAP()
+
+__device__ __forceinline__ void TRAP()
 {
     __trap();
 }
+
 #endif
 
 #endif // ONEFLOW_CORE_EP_GPU_MACRO_H_

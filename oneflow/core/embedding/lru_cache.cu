@@ -77,11 +77,19 @@ class WarpMutexAtomicImpl {
         ;
     }
     __threadfence();
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
   }
 
   __device__ void Unlock(const ThreadContext& thread_ctx) {
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     __threadfence();
     if (thread_ctx.lane_id == 0) { atomicExch(&flag_, 0); }
   }
@@ -100,11 +108,19 @@ class WarpMutexSemaphoreImpl {
 
   __device__ void Lock(const ThreadContext& thread_ctx) {
     if (thread_ctx.lane_id == 0) { semaphore_.acquire(); }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
   }
 
   __device__ void Unlock(const ThreadContext& thread_ctx) {
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     if (thread_ctx.lane_id == 0) { semaphore_.release(); }
   }
 
@@ -265,7 +281,11 @@ struct SetContext {
       } else if (thread_ctx.lane_id == insert_way) {
         lane_age = kWarpSize;
       }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     }
     if (insert_way == -1) {
       const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
@@ -277,7 +297,11 @@ struct SetContext {
           lane_age = kWarpSize;
           keys[insert_way] = key;
         }
-        SYNCWARP();
+        #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
       }
     }
     if (insert_way != -1) { ages[thread_ctx.lane_id] = lane_age; }
@@ -300,7 +324,11 @@ struct SetContext {
     } else if (lane_age > 1) {
       lane_age -= 1;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     ages[thread_ctx.lane_id] = lane_age;
     *way = insert_way;
   }
@@ -340,7 +368,11 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     uint32_t n_warp_missing = 0;
     Key warp_missing_key = 0;
     uint32_t warp_missing_index = 0;
@@ -355,7 +387,11 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
           warp_missing_key = key;
           warp_missing_index = key_idx;
         }
-        SYNCWARP();
+        #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
         n_warp_missing += 1;
       } else if (!test_only) {
         set_ctx.Read(cache_ctx, thread_ctx, way, values + key_idx * cache_ctx.line_size);
@@ -364,7 +400,11 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
     if (n_warp_missing > 0) {
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing_keys, n_warp_missing); }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
 #ifdef WITH_ROCM
       base_missing_idx = __shfl(base_missing_idx, 0);
 #else
@@ -374,9 +414,17 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
       }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
   }
 }
 
@@ -397,7 +445,11 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     uint32_t n_warp_missing = 0;
     Key warp_missing_key = 0;
     uint32_t warp_missing_index = 0;
@@ -416,7 +468,11 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
           warp_missing_key = key;
           warp_missing_index = key_idx;
         }
-        SYNCWARP();
+        #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
         n_warp_missing += 1;
       }
       set_ctx.Unlock(thread_ctx);
@@ -424,7 +480,11 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
     if (n_warp_missing > 0) {
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing, n_warp_missing); }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
 #ifdef WITH_ROCM
       base_missing_idx = __shfl(base_missing_idx, 0);
 #else
@@ -434,7 +494,11 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
       }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     }
   }
 }
@@ -457,7 +521,11 @@ __global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* key
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
@@ -468,7 +536,11 @@ __global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* key
       Key evicted_key = 0;
       set_ctx.Evict(cache_ctx, thread_ctx, key, &evicted_way, &evicted_key);
       if (thread_ctx.lane_id == 0) { evicted_keys[key_idx] = evicted_key; }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
       set_ctx.Read(cache_ctx, thread_ctx, evicted_way,
                    evicted_values + cache_ctx.line_size * key_idx);
       set_ctx.Write(cache_ctx, thread_ctx, evicted_way,
@@ -493,7 +565,11 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
       lane_key = cache_ctx.keys[warp_start_key_index + thread_ctx.lane_id];
       lane_age = cache_ctx.ages[warp_start_key_index + thread_ctx.lane_id];
     }
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
     warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
     const int key_count = __popc(__ballot_sync(kFullMask, lane_age != 0));
@@ -505,19 +581,31 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
 #else
     offset = __shfl_sync(kFullMask, offset, 0);
 #endif
-    SYNCWARP();
+    #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
     for (uint32_t i = 0; i < kWarpSize; ++i) {
       const Key key = warp_keys[thread_ctx.warp_id_in_block][i];
       const Key age = warp_ages[thread_ctx.warp_id_in_block][i];
       if (age == 0) { continue; }
       if (thread_ctx.lane_id == 0) { keys[offset] = key; }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
         values[offset * cache_ctx.line_size + j] =
             cache_ctx
                 .lines[static_cast<size_t>(warp_start_key_index + i) * cache_ctx.line_size + j];
       }
-      SYNCWARP();
+      #ifdef WITH_ROCM
+__syncthreads();
+#else
+__syncwarp();
+#endif
       offset += 1;
     }
   }
