@@ -95,10 +95,10 @@ def _unflatten_dense_tensors(flat, tensors):
     outputs = []
     offset = 0
     for tensor in tensors:
-        numbel = tensor.numel()
-        if numbel == 0:
+        numel = tensor.numel()
+        if numel == 0:
             outputs.append(flow.zeros_like(tensor))
         else:
-            outputs.append(flow.narrow(flat, 0, offset, numbel).view(tensor.size()))
-            offset += numbel
+            outputs.append(flow.narrow(flat, 0, offset, numel).view(tensor.size()))
+            offset += numel
     return outputs
