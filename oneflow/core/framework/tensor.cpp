@@ -124,6 +124,7 @@ Maybe<void> LocalTensor::offload() {
 
   // Offload to cpu mem with a cpu tensor implantation
   CHECK_OR_RETURN(is_cuda());
+
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
@@ -219,6 +220,49 @@ Maybe<void> GlobalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
   if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GlobalTensor::offload() {
+  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be offloaded."; }
+  if (is_offloaded_) { LOG(WARNING) << "This tensor has already be offloaded."; }
+
+  // Offload to cpu mem with a cpu tensor implantation
+  CHECK_OR_RETURN(is_cuda());
+  std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
+  auto offloaded_tensor = JUST(functional::Copy(input, "cpu", GlobalProcessCtx::LocalRank(),
+                                                /*pin_memory=*/false));
+  JUST(vm::CurrentRankSync());
+  const auto& detached_tensor =
+      std::dynamic_pointer_cast<GlobalTensor>(JUST(offloaded_tensor->detach()));
+  offloaded_impl_ = detached_tensor->impl_;
+
+  // Release cuda memory, but the meta data is valid.
+  auto eager_blob_obj = JUST(JUST(impl_->cur_rank_phy_tensor())->eager_blob_object());
+  JUST(eager_blob_obj->DeallocateBlobDataPtr());
+
+  is_offloaded_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GlobalTensor::load() {
+  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be loaded."; }
+  if (!is_offloaded_) { LOG(WARNING) << "Only offloaded tensor can be loaded."; }
+
+  CHECK_OR_RETURN(is_cuda());
+
+  // Load cpu to cuda.
+  auto cpu_tensor = std::make_shared<GlobalTensor>(offloaded_impl_);
+  std::shared_ptr<Tensor> input = std::dynamic_pointer_cast<Tensor>(cpu_tensor);
+  auto loaded_tensor = JUST(functional::Copy(input, "cuda", GlobalProcessCtx::LocalRank(),
+                                             /*pin_memory=*/false));
+  JUST(vm::CurrentRankSync());
+  JUST(set_data(loaded_tensor));
+
+  // Release cpu memory.
+  offloaded_impl_.reset();
+
+  is_offloaded_ = false;
   return Maybe<void>::Ok();
 }
 
