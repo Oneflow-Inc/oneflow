@@ -128,7 +128,6 @@ class ParamGroup(object):
             p.grad = (
                 self.params_dict[buf_type].grad_buf[index : index + size].view(shape)
             )
-            p._is_grad_acc_inplace = True
             self.data_ptrs.append(id(p))
 
             self.params_dict[buf_type].index += numel_in_bucket(p)
