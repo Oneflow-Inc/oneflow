@@ -44,5 +44,6 @@ def test_stack_getter():
     assert "g()" in stack
     assert "f()" in stack
 
+
 if __name__ == "__main__":
     test_stack_getter()

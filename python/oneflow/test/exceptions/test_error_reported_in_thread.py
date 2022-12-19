@@ -43,10 +43,13 @@ def test_error_reported_in_thread():
 @flow.unittest.skip_unless_1n1d()
 def test_python_stack_getter_disabled():
     # Run a new process to capture the error output
-    p = subprocess.run([sys.executable, "throw_error.py"], capture_output=True, cwd=os.path.dirname(os.path.realpath(__file__)))
+    p = subprocess.run(
+        [sys.executable, "throw_error.py"],
+        capture_output=True,
+        cwd=os.path.dirname(os.path.realpath(__file__)),
+    )
     assert p.returncode != 0
     error_msg = p.stderr.decode("utf-8")
-    print(error_msg)
     assert "No Python stack available." in error_msg
     assert "ONEFLOW_DEBUG" in error_msg
     assert "ONEFLOW_PYTHON_STACK_GETTER" in error_msg
