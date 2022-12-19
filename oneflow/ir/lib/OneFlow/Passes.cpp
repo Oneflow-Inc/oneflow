@@ -1224,7 +1224,7 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  // patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
