@@ -35,7 +35,7 @@ def test_tensor_offload_d2h(test_case, input, tensor_mem):
     flow.cuda.empty_cache()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cuda to cpu", after_used)
-    # Check 400M cuda memory released
+    # Check tensor_mem cuda memory released
     test_case.assertTrue((before_used - after_used) == tensor_mem)
 
 
@@ -50,7 +50,7 @@ def test_tensor_load_h2d(test_case, input, tensor_mem):
     flow.cuda.empty_cache()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cpu to cuda", after_used)
-    # Check 400M cuda memory allocated
+    # Check tensor_mem cuda memory allocated
     test_case.assertTrue((after_used - before_used) == tensor_mem)
 
 
