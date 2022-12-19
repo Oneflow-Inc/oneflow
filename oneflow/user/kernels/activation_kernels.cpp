@@ -259,12 +259,12 @@ REGISTER_USER_KERNEL("fast_gelu_grad")
 REGISTER_USER_KERNEL("quick_gelu")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<UnaryPrimitiveKernel>(
-        "y", "x", [](user_op::KernelComputeContext* ctx) {
-          const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-          const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-          return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-              ctx->device_type(), ep::primitive::UnaryOp::kQuickGelu, src->data_type(),
-              dst->data_type());
+          "y", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kQuickGelu, src->data_type(),
+                dst->data_type());
           });
     })
     .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kQuickGelu, "y", "x"));
@@ -276,8 +276,8 @@ REGISTER_USER_KERNEL("quick_gelu_grad")
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kQuickGeluBackwardWithDyX, src->data_type(),
-                dst->data_type(), 1 /*max_num_dims*/);
+                ctx->device_type(), ep::primitive::BinaryOp::kQuickGeluBackwardWithDyX, 
+                src->data_type(), dst->data_type(), 1 /*max_num_dims*/);
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kQuickGeluBackwardWithDyX, "dx",

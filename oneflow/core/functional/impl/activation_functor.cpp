@@ -234,7 +234,7 @@ class FastGeluGradFunctor : public BinaryFunctor {
 class QuickGeluFunctor : public UnaryFunctor {
  public:
   QuickGeluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("quick_gelu").Input("x").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu").Input("x").Output("y").Build());
   }
 };
 
