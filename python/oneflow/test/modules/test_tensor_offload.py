@@ -22,7 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def test_tensor_offload_d2h(test_case, input, tensor_mem):
+def _test_tensor_offload_d2h(test_case, input, tensor_mem):
     test_case.assertTrue(not input.is_offloaded())
 
     flow.cuda.empty_cache()
@@ -39,7 +39,7 @@ def test_tensor_offload_d2h(test_case, input, tensor_mem):
     test_case.assertTrue((before_used - after_used) == tensor_mem)
 
 
-def test_tensor_load_h2d(test_case, input, tensor_mem):
+def _test_tensor_load_h2d(test_case, input, tensor_mem):
     test_case.assertTrue(input.is_offloaded())
 
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
@@ -54,7 +54,7 @@ def test_tensor_load_h2d(test_case, input, tensor_mem):
     test_case.assertTrue((after_used - before_used) == tensor_mem)
 
 
-def get_tensor_mem(input):
+def _get_tensor_mem(input):
     if input.dim() == 0:
         return 2
     shape = input.shape
@@ -81,14 +81,14 @@ class TestTensorOffload(flow.unittest.TestCase):
         data = input.numpy()
 
         for i in range(3):
-            input_tensor_mem = get_tensor_mem(input)
+            input_tensor_mem = _get_tensor_mem(input)
             # test tensor offload
-            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+            _test_tensor_offload_d2h(test_case, input, input_tensor_mem)
 
             # data = input.numpy() will raise error here
 
             # test tensor load
-            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+            _test_tensor_load_h2d(test_case, input, input_tensor_mem)
 
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
@@ -103,14 +103,14 @@ class TestTensorOffload(flow.unittest.TestCase):
         data = input.numpy()
 
         for i in range(3):
-            input_tensor_mem = get_tensor_mem(input)
+            input_tensor_mem = _get_tensor_mem(input)
             # test tensor offload
-            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+            _test_tensor_offload_d2h(test_case, input, input_tensor_mem)
 
             # data = input.numpy() will raise error here
 
             # test tensor load
-            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+            _test_tensor_load_h2d(test_case, input, input_tensor_mem)
 
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
@@ -125,14 +125,14 @@ class TestTensorOffload(flow.unittest.TestCase):
         data = input.numpy()
 
         for i in range(3):
-            input_tensor_mem = get_tensor_mem(input)
+            input_tensor_mem = _get_tensor_mem(input)
             # test tensor offload
-            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+            _test_tensor_offload_d2h(test_case, input, input_tensor_mem)
 
             # data = input.numpy() will raise error here
 
             # test tensor load
-            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+            _test_tensor_load_h2d(test_case, input, input_tensor_mem)
 
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
@@ -145,14 +145,36 @@ class TestTensorOffload(flow.unittest.TestCase):
         data = input.numpy()
 
         for i in range(3):
-            input_tensor_mem = get_tensor_mem(input)
+            input_tensor_mem = _get_tensor_mem(input)
             # test tensor offload
-            test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+            _test_tensor_offload_d2h(test_case, input, input_tensor_mem)
 
             # data = input.numpy() will raise error here
 
             # test tensor load
-            test_tensor_load_h2d(test_case, input, input_tensor_mem)
+            _test_tensor_load_h2d(test_case, input, input_tensor_mem)
+
+        # test data after tensor load
+        test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+
+    def test_tensor_offload_and_load_0size(test_case):
+        flow.cuda.empty_cache()
+        input = flow.tensor(
+            np.random.randn(0, 1024, 1024),
+            dtype=flow.float16,
+            device=flow.device("cuda"),
+        )
+        data = input.numpy()
+
+        for i in range(3):
+            input_tensor_mem = 0
+            # test tensor offload
+            _test_tensor_offload_d2h(test_case, input, input_tensor_mem)
+
+            # data = input.numpy() will raise error here
+
+            # test tensor load
+            _test_tensor_load_h2d(test_case, input, input_tensor_mem)
 
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
