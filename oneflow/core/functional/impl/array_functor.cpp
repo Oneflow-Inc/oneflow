@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -115,6 +116,7 @@ class GlobalTensorConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    autograd::AutoGradMode mode(false);
     JUST(CheckDeviceIdsIsValid(placement));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "nd_sbp");
     attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt);
@@ -137,13 +139,10 @@ class GlobalTensorConstantFunctor {
     bool has_partial_parallel =
         std::any_of(sbp_tuple.begin(), sbp_tuple.end(),
                     [](const Symbol<SbpParallel>& sbp) { return sbp->has_partial_sum_parallel(); });
-    // Since the source op does not support Partial, it is necessary to replace Partial
-    // with Broadcast, and then convert it to Partial
+    // The source op does not support Partial
     if (has_partial_parallel) {
-      const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
-      const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
-      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
-                                  /*copy*/ false);
+      return Error::RuntimeError()
+             << "tensor_constant() is an source op which does not support Partial(SBP)";
     } else {
       return dispatch_constant(sbp_tuple);
     }
@@ -161,6 +160,8 @@ class TensorConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
+    autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
       return JUST(functional::GlobalTensorConstant(shape, value, dtype,
                                                    GetGlobalParallelDescFromDevice(device),
