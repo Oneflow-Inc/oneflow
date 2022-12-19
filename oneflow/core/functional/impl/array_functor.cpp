@@ -116,6 +116,7 @@ class GlobalTensorConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     JUST(CheckDeviceIdsIsValid(placement));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "nd_sbp");
