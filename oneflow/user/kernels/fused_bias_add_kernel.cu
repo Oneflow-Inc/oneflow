@@ -40,8 +40,13 @@ struct GeluFunctor<half> {
   }
   __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
     half2 y;
+#ifdef WITH_ROCM
+    y.data.x = __float2half(float_functor.Compute(__half2float(x.data.x), 2 * i));
+    y.data.y = __float2half(float_functor.Compute(__half2float(x.data.y), 2 * i + 1));
+#else
     y.x = __float2half(float_functor.Compute(__half2float(x.x), 2 * i));
     y.y = __float2half(float_functor.Compute(__half2float(x.y), 2 * i + 1));
+#endif
     return y;
   }
 };
@@ -75,8 +80,13 @@ struct MaskAndScaleFunctor<half> {
     char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     half2 h2_scale = __float2half2_rn(scale);
+#ifdef WITH_ROCM
+    one_or_zero_h2.data.x = mask_val.x;
+    one_or_zero_h2.data.y = mask_val.y;
+#else
     one_or_zero_h2.x = mask_val.x;
     one_or_zero_h2.y = mask_val.y;
+#endif
     return __hmul2(__hmul2(x, one_or_zero_h2), h2_scale);
   }
   const bool* mask;
@@ -108,8 +118,13 @@ struct MaskAndScaleAddFunctor<half> {
     char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     half2 h2_scale = __float2half2_rn(scale);
+#ifdef WITH_ROCM
+    one_or_zero_h2.data.x = mask_val.x;
+    one_or_zero_h2.data.y = mask_val.y;
+#else
     one_or_zero_h2.x = mask_val.x;
     one_or_zero_h2.y = mask_val.y;
+#endif
     return __hadd2(__hmul2(__hmul2(x, one_or_zero_h2), h2_scale), addend_h2[i]);
   }
   const bool* mask;
@@ -216,8 +231,13 @@ __global__ void FusedBiasAddGradRowGpuHalf2(FUNCTOR grad_functor, const Index el
     half2 x_i = __hadd2(x_h2[i], bias_h2[i % h2_bias_size]);
     half2 dy_i = dy_h2[i];
     half2 dx_i;
+#ifdef WITH_ROCM
+    dx_i.data.x = grad_functor.Compute(x_i.data.x, dy_i.data.x, 2 * i);
+    dx_i.data.y = grad_functor.Compute(x_i.data.y, dy_i.data.y, 2 * i + 1);
+#else
     dx_i.x = grad_functor.Compute(x_i.x, dy_i.x, 2 * i);
     dx_i.y = grad_functor.Compute(x_i.y, dy_i.y, 2 * i + 1);
+#endif
     dx_h2[i] = dx_i;
   }
 }

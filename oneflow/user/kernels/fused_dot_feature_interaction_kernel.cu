@@ -487,8 +487,13 @@ __device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
 template<>
 __device__ __inline__ void AtomicAdd<half, float, 2>(Pack<half, 2>* address, Pack<float, 2> val) {
   half2 h2_val;
+#ifdef WITH_ROCM
+  h2_val.data.x = static_cast<half>(val.elem[0]);
+  h2_val.data.y = static_cast<half>(val.elem[1]);
+#else
   h2_val.x = static_cast<half>(val.elem[0]);
   h2_val.y = static_cast<half>(val.elem[1]);
+#endif
   cuda::atomic::Add(reinterpret_cast<half2*>(address), h2_val);
 }
 

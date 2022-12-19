@@ -150,8 +150,13 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int
     const half2 prob_h2_i = prob_h2[i];
     const half dy_row = dy[row_id];
     half2 dx_h2_i;
+#ifdef WITH_ROCM
+    dx_h2_i.data.x = __hmul(dy_row, __hsub(prob_h2_i.data.x, static_cast<half>(label == 2 * h2_col_id)));
+    dx_h2_i.data.y = __hmul(dy_row, __hsub(prob_h2_i.data.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+#else
     dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
     dx_h2_i.y = __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+#endif
     dx_h2[i] = dx_h2_i;
   }
 #else

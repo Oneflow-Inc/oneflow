@@ -225,8 +225,13 @@ __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_in
     const IDX inner_idx_1 = inner_idx_0 + 1;
     const half* data_row = data + segment_id_idx * inner_dim_size;
     half2 val;
+#ifdef WITH_ROCM
+    val.data.x = data_row[inner_idx_0];
+    val.data.y = (inner_idx_1 >= inner_dim_size) ? static_cast<half>(0) : data_row[inner_idx_1];
+#else
     val.x = data_row[inner_idx_0];
     val.y = (inner_idx_1 >= inner_dim_size) ? static_cast<half>(0) : data_row[inner_idx_1];
+#endif
     const IDX idx = segment_ids[segment_id_idx];
     const IDX out_h2_offset = idx * h2_inner_dim_size + h2_inner_idx;
     cuda::atomic::Add(out_h2 + out_h2_offset, val);
