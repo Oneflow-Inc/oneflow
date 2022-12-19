@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -390,6 +391,27 @@ class BroadcastEqualFunctor : public BinaryFunctor {
   }
 };
 
+class EqualFunctor {
+ public:
+  EqualFunctor() {
+    broadcast_equal_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<bool> operator()(const std::shared_ptr<one::Tensor>& x,
+                         const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() != *y->shape()) { return false; }
+    if (x->nelement() == 0) { return true; }
+
+    std::shared_ptr<Tensor> output = JUST(
+        ReduceAllWhole(JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_equal_op_, {x, y}, {}))));
+    bool status = JUST(GetItemInScalarTensor<bool>(output));
+    return status;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> broadcast_equal_op_;
+};
+
 class BroadcastNotEqualFunctor : public BinaryFunctor {
  public:
   BroadcastNotEqualFunctor() {
@@ -524,6 +546,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
+  m.add_functor<impl::EqualFunctor>("Equal");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
