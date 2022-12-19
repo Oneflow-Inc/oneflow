@@ -318,17 +318,20 @@ std::string GetStackedErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
+  std::string error_str;
   if (IsInDebugMode()) {
-    return GetStackedErrorString(error);
+    error_str = GetStackedErrorString(error);
   } else {
-    return error->error_proto()->msg();
+    error_str = error->error_proto()->msg();
   }
+  if (error_str.empty()) { error_str = "<No error message>"; }
+  return error_str;
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
   std::string error_str;
-  fmt::format_to(std::back_inserter(error_str), "{} \"{}\"\n",
-                 fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
+  fmt::format_to(std::back_inserter(error_str), "{}: {}\n",
+                 fmt::styled("Error", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
                  GetErrorString(error));
   // Append foreign stack trace (e.g. Python stack trace) when it is available.
   if (ForeignFrameThreadLocalGuard::Current().has_value()) {
@@ -339,6 +342,13 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
                        "Related Python stack trace:\n");
         fmt::format_to(std::back_inserter(error_str), "{}", stack_getter->GetFormattedStack(frame));
+      } else {
+        fmt::format_to(
+            std::back_inserter(error_str),
+            "You can set {} or {} to 1 to get the Python stack of the error.",
+            fmt::styled("ONEFLOW_DEBUG", fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)),
+            fmt::styled("ONEFLOW_PYTHON_STACK_GETTER",
+                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)));
       }
     }
   }

@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+os.environ["ONEFLOW_PYTHON_STACK_GETTER"] = "1"
 import oneflow as flow
 import oneflow.unittest
 
@@ -32,15 +34,15 @@ def g():
 
 
 def f():
-    return flow._oneflow_internal.GetCurrentStack(10)
+    return flow._oneflow_internal.GetCurrentStack()
 
 
 @flow.unittest.skip_unless_1n1d()
-def test_error_reported_in_thread():
+def test_stack_getter():
     stack = h()
     assert "flow._oneflow_internal.GetCurrentStack" in stack
     assert "g()" in stack
     assert "f()" in stack
 
 if __name__ == "__main__":
-    test_error_reported_in_thread()
+    test_stack_getter()

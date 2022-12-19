@@ -25,7 +25,9 @@ class ThrowErrorKernel final : public user_op::OpKernel {
   ~ThrowErrorKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { THROW(RuntimeError); }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    THROW(RuntimeError) << "throw error kernel";
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

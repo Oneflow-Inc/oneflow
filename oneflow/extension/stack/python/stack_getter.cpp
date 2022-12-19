@@ -158,6 +158,9 @@ PyObject* RecordAndEvalFrame(PyFrameObject* frame,
 }
 
 void RegisterPyStackGetter() {
+  if (!IsPythonStackGetterEnabled()) {
+    return;
+  }
   Singleton<ForeignStackGetter>::Delete();
   Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
   EnableCustomEvalFrameForCurrentThread(&RecordAndEvalFrame);
