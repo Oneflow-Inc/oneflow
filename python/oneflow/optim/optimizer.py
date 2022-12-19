@@ -176,15 +176,13 @@ class ParamGroup(object):
 
     @property
     def parameters(self):
-        if self.contiguous_params:
-            return self._contiguous_parameters
         return self._parameters
 
     @property
-    def origin_parameters(self):
-        """original parameters are used when parameters' shape affects the calculation
+    def contiguous_parameters(self):
+        """return contiguous_parameters for fast updating
         """
-        return self._parameters
+        return self._contiguous_parameters
 
 
 class _SourceOpOnlyResourceDependenceMode:
@@ -472,7 +470,7 @@ class Optimizer(object):
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
                 clip_grad_norm_(
-                    param_group.origin_parameters,
+                    param_group.parameters,
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
                     error_if_nonfinite,
