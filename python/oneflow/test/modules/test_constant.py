@@ -210,7 +210,12 @@ class TestConstantModule(flow.unittest.TestCase):
     def test_full_with_scalar_tensor(test_case):
         device = random_device()
         shape = random_tensor(low=0, high=6, requires_grad=False).pytorch.shape
-        y = torch.full(shape, torch.tensor(2.0, requires_grad=random().to(bool)), device=device, requires_grad=True)
+        y = torch.full(
+            shape,
+            torch.tensor(2.0, requires_grad=random().to(bool)),
+            device=device,
+            requires_grad=True,
+        )
         return y
 
     @profile(torch.full)
