@@ -31,6 +31,12 @@ def _test_global_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
+# def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
+#     x1 = flow.tensor(1.0)
+#     x2 = flow.full(shape, x1, placement=placement, sbp=sbp)
+#     test_case.assertEqual(x2.shape, flow.Size(shape))
+#     test_case.assertEqual(x2.sbp, sbp)
+#     test_case.assertEqual(x2.placement, placement)
 
 def _test_graph_full(test_case, shape, placement, sbp):
     class GlobalFullGraph(flow.nn.Graph):
@@ -49,23 +55,17 @@ def _test_graph_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
-def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
-    x = flow.full(shape, flow.tensor(1.0), placement=placement, sbp=sbp)
-    test_case.assertEqual(x.shape, flow.Size(shape))
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
-
-
 def _test_graph_full_tensor_scalar(test_case, shape, placement, sbp):
-    class GlobalFullGraph(flow.nn.Graph):
+    class GlobalFullGraph2(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
+            self.value = flow.tensor(1.0)
 
         def build(self):
-            x = flow.full(shape, flow.tensor(1.0), placement=placement, sbp=sbp)
+            x = flow.full(shape, self.value, placement=placement, sbp=sbp)
             return x
 
-    model = GlobalFullGraph()
+    model = GlobalFullGraph2()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -84,6 +84,7 @@ class TestFullGlobal(flow.unittest.TestCase):
                 ):
                     _test_global_full(test_case, shape, placement, sbp)
                     _test_global_full_tensor_scalar(test_case, shape, placement, sbp)
+
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()

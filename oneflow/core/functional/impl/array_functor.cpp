@@ -111,7 +111,7 @@ class ArgMinFunctor {
 class GlobalTensorConstantFunctor {
  public:
   GlobalTensorConstantFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
