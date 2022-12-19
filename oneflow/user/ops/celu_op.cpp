@@ -41,9 +41,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& x_shape = ctx->InputShape("y", 0);
+  const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  CHECK_OR_RETURN(dy_shape == x_shape);
+  CHECK_OR_RETURN(dy_shape == y_shape);
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
@@ -53,8 +53,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CeluGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+  const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+  FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("dy", 0), i)

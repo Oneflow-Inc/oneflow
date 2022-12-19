@@ -645,7 +645,7 @@
   bind_python: True
 
 - name: "celu_grad"
-  signature: "Tensor (Tensor x, Tensor dy, Double alpha=1.0) => CeluGrad"
+  signature: "Tensor (Tensor y, Tensor dy, Double alpha=1.0) => CeluGrad"
   bind_python: False
 
 - name: "gelu"
@@ -2859,7 +2859,7 @@
   bind_python: False
 
 - name: "celu_grad_grad"
-  signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"
+  signature: "Tensor (Tensor y, Tensor dydx, Double alpha) => CeluGradGrad"
   bind_python: False
 
 - name: "batch_norm_stats"

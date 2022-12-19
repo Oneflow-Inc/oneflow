@@ -120,24 +120,24 @@ def _test_activation_module(test_case, act_type):
             _test_activation_module_with_0dim_data(test_case, act_type, placement, sbp)
 
 
-class TestReLUModule(flow.unittest.TestCase):
-    def test_relu_module(test_case):
-        _test_activation_module(test_case, "relu")
+# class TestReLUModule(flow.unittest.TestCase):
+#     def test_relu_module(test_case):
+#         _test_activation_module(test_case, "relu")
 
 
-class TestReLU6Module(flow.unittest.TestCase):
-    def test_relu6_module(test_case):
-        _test_activation_module(test_case, "relu6")
+# class TestReLU6Module(flow.unittest.TestCase):
+#     def test_relu6_module(test_case):
+#         _test_activation_module(test_case, "relu6")
 
 
-class TestTanh(flow.unittest.TestCase):
-    def test_tanh_module(test_case):
-        _test_activation_module(test_case, "tanh")
+# class TestTanh(flow.unittest.TestCase):
+#     def test_tanh_module(test_case):
+#         _test_activation_module(test_case, "tanh")
 
 
-class TestELUModule(flow.unittest.TestCase):
-    def test_elu_module(test_case):
-        _test_activation_module(test_case, "elu")
+# class TestELUModule(flow.unittest.TestCase):
+#     def test_elu_module(test_case):
+#         _test_activation_module(test_case, "elu")
 
 
 class TestCELUModule(flow.unittest.TestCase):
@@ -145,74 +145,74 @@ class TestCELUModule(flow.unittest.TestCase):
         _test_activation_module(test_case, "celu")
 
 
-class TestGelu(flow.unittest.TestCase):
-    def test_gelu_module(test_case):
-        _test_activation_module(test_case, "gelu")
+# class TestGelu(flow.unittest.TestCase):
+#     def test_gelu_module(test_case):
+#         _test_activation_module(test_case, "gelu")
 
 
-class TestSigmoidModule(flow.unittest.TestCase):
-    def test_sigmoid_module(test_case):
-        _test_activation_module(test_case, "sigmoid")
+# class TestSigmoidModule(flow.unittest.TestCase):
+#     def test_sigmoid_module(test_case):
+#         _test_activation_module(test_case, "sigmoid")
 
 
-class TestHardsigmoidModule(flow.unittest.TestCase):
-    def test_hardsigmoid_module(test_case):
-        _test_activation_module(test_case, "hardsigmoid")
+# class TestHardsigmoidModule(flow.unittest.TestCase):
+#     def test_hardsigmoid_module(test_case):
+#         _test_activation_module(test_case, "hardsigmoid")
 
 
-class TestHardshrinkModule(flow.unittest.TestCase):
-    def test_hardshrink_module(test_case):
-        _test_activation_module(test_case, "hardshrink")
+# class TestHardshrinkModule(flow.unittest.TestCase):
+#     def test_hardshrink_module(test_case):
+#         _test_activation_module(test_case, "hardshrink")
 
 
-class TestLogSigmoidModule(flow.unittest.TestCase):
-    def test_logsigmoid_module(test_case):
-        _test_activation_module(test_case, "logsigmoid")
+# class TestLogSigmoidModule(flow.unittest.TestCase):
+#     def test_logsigmoid_module(test_case):
+#         _test_activation_module(test_case, "logsigmoid")
 
 
-class TestHardswishModule(flow.unittest.TestCase):
-    def test_hardswish_module(test_case):
-        _test_activation_module(test_case, "hardswish")
+# class TestHardswishModule(flow.unittest.TestCase):
+#     def test_hardswish_module(test_case):
+#         _test_activation_module(test_case, "hardswish")
 
 
-class TestHardtanhModule(flow.unittest.TestCase):
-    def test_hardtanh_module(test_case):
-        _test_activation_module(test_case, "hardtanh")
+# class TestHardtanhModule(flow.unittest.TestCase):
+#     def test_hardtanh_module(test_case):
+#         _test_activation_module(test_case, "hardtanh")
 
 
-class TestLeakyReLUModule(flow.unittest.TestCase):
-    def test_leakyrelu_module(test_case):
-        _test_activation_module(test_case, "leakyrelu")
+# class TestLeakyReLUModule(flow.unittest.TestCase):
+#     def test_leakyrelu_module(test_case):
+#         _test_activation_module(test_case, "leakyrelu")
 
 
-class TestMishModule(flow.unittest.TestCase):
-    def test_mish_module(test_case):
-        _test_activation_module(test_case, "mish")
+# class TestMishModule(flow.unittest.TestCase):
+#     def test_mish_module(test_case):
+#         _test_activation_module(test_case, "mish")
 
 
-class TestSiluModule(flow.unittest.TestCase):
-    def test_silu_module(test_case):
-        _test_activation_module(test_case, "silu")
+# class TestSiluModule(flow.unittest.TestCase):
+#     def test_silu_module(test_case):
+#         _test_activation_module(test_case, "silu")
 
 
-class TestSeluModule(flow.unittest.TestCase):
-    def test_selu_module(test_case):
-        _test_activation_module(test_case, "selu")
+# class TestSeluModule(flow.unittest.TestCase):
+#     def test_selu_module(test_case):
+#         _test_activation_module(test_case, "selu")
 
 
-class TestThresholdModule(flow.unittest.TestCase):
-    def test_threshold_module(test_case):
-        _test_activation_module(test_case, "threshold")
+# class TestThresholdModule(flow.unittest.TestCase):
+#     def test_threshold_module(test_case):
+#         _test_activation_module(test_case, "threshold")
 
 
-class TestSoftplusModule(flow.unittest.TestCase):
-    def test_softplus_module(test_case):
-        _test_activation_module(test_case, "softplus")
+# class TestSoftplusModule(flow.unittest.TestCase):
+#     def test_softplus_module(test_case):
+#         _test_activation_module(test_case, "softplus")
 
 
-class TestSoftshrinkModule(flow.unittest.TestCase):
-    def test_softshrink_module(test_case):
-        _test_activation_module(test_case, "softshrink")
+# class TestSoftshrinkModule(flow.unittest.TestCase):
+#     def test_softshrink_module(test_case):
+#         _test_activation_module(test_case, "softshrink")
 
 
 if __name__ == "__main__":
