@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace py = pybind11;
 
@@ -24,6 +25,8 @@ namespace oneflow {
 #ifdef WITH_CUDA
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("cuda_aligned_size", [](size_t size) { return GetCudaAlignedSize(size); });
+
+  m.def("MAX_ALIGNMENT_REQUIREMENT", [](size_t size) { return ep::kMaxAlignmentRequirement; });
 }
 #endif
 
