@@ -952,7 +952,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(auto_backward=False, check_graph=True)
-    def test_sort_tensor_return_values(test_case):
+    def test_sort_tensor_return_type(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         result = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
@@ -1042,7 +1042,7 @@ class TestTensor(flow.unittest.TestCase):
         return y[0], y[1]
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_tensor_topk_return_values(test_case):
+    def test_tensor_topk_return_type(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
         result = x.topk(

@@ -3744,9 +3744,11 @@ class SortFunctor {
     std::string direction("ASCENDING");
     if (descending) { direction.assign("DESCENDING"); }
     if (axis == input->ndim() - 1) {
-      (*outputs)[1] = JUST(ArgSort(input, direction));
-      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
-      return outputs;
+      auto indices = JUST(ArgSort(input, direction));
+      auto values = JUST(DimGather(input, axis, indices, false));
+      (*outputs)[0] = values;
+      (*outputs)[1] = indices;
+
     } else {
       std::vector<int32_t> perm;
       for (int i = 0; i < input->ndim() - 1; i++) {
@@ -3761,10 +3763,13 @@ class SortFunctor {
       auto indices = JUST(ArgSort(x, direction));
       std::vector<int32_t> inversed_perm(perm.size());
       for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
-      (*outputs)[1] = JUST(Transpose(indices, inversed_perm));
-      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
-      return outputs;
+      indices = JUST(Transpose(indices, inversed_perm));
+      auto values = JUST(DimGather(input, axis, indices, false));
+      (*outputs)[0] = values;
+      (*outputs)[1] = indices;
     }
+
+    return outputs;
   }
 };
 
