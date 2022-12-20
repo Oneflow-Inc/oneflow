@@ -66,6 +66,6 @@ if(BUILD_CUDA)
   # add a cache entry if want to use a ccache/sccache wrapped nvcc
   set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE} CACHE STRING "")
   message(STATUS "CMAKE_CUDA_COMPILER: ${CMAKE_CUDA_COMPILER}")
-  set(CMAKE_CUDA_STANDARD 14)
+  set(CMAKE_CUDA_STANDARD 17)
   find_package(CUDNN REQUIRED)
 endif()

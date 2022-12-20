@@ -1,4 +1,5 @@
 # Minimum CMake required
+set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 cmake_minimum_required(VERSION 3.18.0)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
@@ -199,7 +200,7 @@ endif()
 add_definitions(-DRPC_BACKEND_LOCAL)
 message(STATUS "RPC backend enabled: local")
 enable_testing()
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
@@ -249,7 +250,7 @@ if(WIN32)
   # set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
-  set(EXTRA_CXX_FLAGS "-std=c++14 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
+  set(EXTRA_CXX_FLAGS "-Wall -Wno-sign-compare -Wno-unused-function -fPIC")
 
   if(APPLE)
     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations")
