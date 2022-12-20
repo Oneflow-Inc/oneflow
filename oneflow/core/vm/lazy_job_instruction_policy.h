@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/lazy_job_stream_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include <robin_hood.h>
 
 namespace oneflow {
 
@@ -60,9 +61,31 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstDependence(InstructionPolicyUtil::SetInserter(&input_dependences_));
-    ForEachMutDependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
-    ForEachMut2Dependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
+    robin_hood::unordered_flat_map<Dependence*, bool> unique_map;
+    ForEachConstDependence([&](Dependence* compute) {
+      bool& existed = unique_map[compute];
+      if (!existed) {
+        input_dependences_.emplace_back(compute);
+        existed = true;
+      }
+    });
+    unique_map.clear();
+    output_dependences_.reserve(param_blob_objects_->size());
+    unique_map.reserve(param_blob_objects_->size());
+    ForEachMutDependence([&](Dependence* compute) {
+      bool& existed = unique_map[compute];
+      if (!existed) {
+        output_dependences_.emplace_back(compute);
+        existed = true;
+      }
+    });
+    ForEachMut2Dependence([&](Dependence* compute) {
+      bool& existed = unique_map[compute];
+      if (!existed) {
+        output_dependences_.emplace_back(compute);
+        existed = true;
+      }
+    });
   }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
