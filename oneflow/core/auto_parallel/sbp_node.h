@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -66,8 +67,11 @@ class SbpNode final {
 
   // Recompute Computation Cost after adding child nodes in it
   void SummarizeCost();
+  void SummarizeCost2();
   // Compute the weighted sum of the time and memory cost
   void ComputeWeightedCost();
+  // Generate the relationship between this merged node and its components
+  void GenerateComponentRelationship();
   // Determine Final SbpSignature for attachment of this node
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -149,6 +153,9 @@ class SbpNode final {
   double GetWeightedCost(double memory_ratio_search) const {
     return GetWeightedCost(final_sbp_sig_id_, memory_ratio_search);
   }
+  int32_t GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const;
+  // Judge if sbp_node is a port of the current node
+  bool IsComponent(SbpNode* sbp_node) const;
 
   // Setter
   void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }
@@ -212,6 +219,8 @@ class SbpNode final {
   std::vector<int64_t> memory_;
   // The weighted sum of time cost and memory cost
   std::vector<double> weighted_cost_;
+  // Relationship between a merged node and its components
+  HashMap<SbpNode*, std::vector<int32_t>> component2merged_sig_id2component_sig_id_;
 
   // Let one node point to another
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);

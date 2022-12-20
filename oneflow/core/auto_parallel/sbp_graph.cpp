@@ -82,6 +82,28 @@ double SbpGraph::ComputeCost() const {
   return graph_cost_;
 }
 
+double SbpGraph::ComputeWeightedCost() const {
+  // Over all cost under current strategy
+  double graph_cost_ = 0;
+  for (const auto& this_node : node_list_) {
+    int32_t this_id = this_node->final_sbp_sig_id_;
+
+    graph_cost_ += this_node->weighted_cost_[this_id];
+    for (const auto& edge_out : this_node->edges_out_) {
+      graph_cost_ += edge_out->weighted_cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
+    }
+  }
+  return graph_cost_;
+}
+
+// Re-compute weighted cost
+void SbpGraph::ReComputeWeightedCost() {
+  for (const auto& this_node : node_list_) {
+    this_node->ComputeWeightedCost();
+    for (const auto& edge_out : this_node->edges_out_) { edge_out->ComputeWeightedCost(); }
+  }
+}
+
 int64_t SbpGraph::GetMemory() const {
   // Over all memory under current strategy
   int64_t total_memory = 0;

@@ -19,6 +19,7 @@ limitations under the License.
 #include <assert.h>
 #include <algorithm>
 #include <unordered_set>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -58,6 +59,7 @@ class SbpEdge final {
 
   // Update copy cost for type 2 and 3
   void SummarizeCost();
+  void SummarizeCost2();
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool merged_node_is_start_node, bool duplicating_first_node,
                      const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id);

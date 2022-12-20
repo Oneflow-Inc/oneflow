@@ -229,6 +229,42 @@ void SbpNode::SummarizeCost() {
   }
 }
 
+void SbpNode::SummarizeCost2() {
+  if (children_.size() == child_node_sbp_sig_.size()) { return; }
+  int32_t previous_children_size = child_node_sbp_sig_.size();
+  child_node_sbp_sig_.resize(children_.size());
+  // Buffer
+  double min_weighted_sum = 0.0, weighted_sum = 0.0;
+  int32_t min_sbp_child = 0;
+  // Only deal with new children_
+  for (int32_t child = previous_children_size; child < children_.size(); child++) {
+    child_node_sbp_sig_[child].resize(cost_.size());
+
+    for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
+      SbpNode* child_node = children_[child];
+      for (int32_t sbp_child = 0; sbp_child < child_node->cost_.size(); sbp_child++) {
+        if (child_node->edges_in_.size()) {
+          // edge in graph: father -> child
+          weighted_sum = child_node->edges_in_[0]->weighted_cost_[sbp_this][sbp_child]
+                         + child_node->weighted_cost_[sbp_child];
+        } else {
+          // edge in graph: child -> father
+          weighted_sum = child_node->edges_out_[0]->weighted_cost_[sbp_child][sbp_this]
+                         + child_node->weighted_cost_[sbp_child];
+        }
+        // update min_cost with fixed SbpSignature for this node and child node
+        if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
+          min_weighted_sum = weighted_sum;
+          min_sbp_child = sbp_child;
+        }
+      }
+      child_node_sbp_sig_[child][sbp_this] = min_sbp_child;
+      // Add the cost for child node to this node
+      weighted_cost_[sbp_this] += min_weighted_sum;
+    }
+  }
+}
+
 bool SbpNode::EliminateItselfAsChild() {
   if (edges_in_.size() + edges_out_.size() == 1) {
     if (edges_in_.size()) {
@@ -262,6 +298,64 @@ void SbpNode::ComputeWeightedCost() {
       }
     }
   } else {
+    half_node_[0]->ComputeWeightedCost();
+    half_node_[1]->ComputeWeightedCost();
+    // The edge between two half nodes
+    SbpEdge* edge_found = nullptr;
+    bool is_first = false;
+    if (!half_node_[0]->edges_in_.empty()) {
+      edge_found = half_node_[0]->edges_in_[0];
+    } else if (!half_node_[0]->edges_out_.empty()) {
+      edge_found = half_node_[0]->edges_out_[0];
+      is_first = true;
+    }
+    edge_found->ComputeWeightedCost();
+    // Compute the weighted cost form half nodes
+    for (int32_t merged_sig_id = 0; merged_sig_id < merged_sig_id2half_sig_id_.size();
+         merged_sig_id++) {
+      const auto& pair = merged_sig_id2half_sig_id_[merged_sig_id];
+      weighted_cost_[merged_sig_id] =
+          half_node_[0]->weighted_cost_[pair.first] + half_node_[0]->weighted_cost_[pair.second];
+      if (edge_found != nullptr) {
+        weighted_cost_[merged_sig_id] += is_first
+                                             ? edge_found->weighted_cost_[pair.first][pair.second]
+                                             : edge_found->weighted_cost_[pair.second][pair.first];
+      }
+    }
+  }
+  // Compute the weighted cost for children
+  for (auto& child_node : children_) { child_node->ComputeWeightedCost(); }
+  // Compute the weighted cost from children
+  child_node_sbp_sig_.clear();
+  SummarizeCost2();
+}
+
+// Generate the relationship between this merged node and its components
+void SbpNode::GenerateComponentRelationship() {
+  // Do nothing if not merged node or already generated
+  if (half_node_.empty() || !component2merged_sig_id2component_sig_id_.empty()) { return; }
+  // Add the map for two half nodes
+  auto& first_merged2component_id = component2merged_sig_id2component_sig_id_[half_node_[0]];
+  auto& second_merged2component_id = component2merged_sig_id2component_sig_id_[half_node_[1]];
+  int32_t total_sbp_num = weighted_cost_.size();
+  first_merged2component_id.resize(total_sbp_num);
+  second_merged2component_id.resize(total_sbp_num);
+  for (int32_t i = 0; i < total_sbp_num; i++) {
+    first_merged2component_id[i] = merged_sig_id2half_sig_id_[i].first;
+    second_merged2component_id[i] = merged_sig_id2half_sig_id_[i].second;
+  }
+  // Add the map for the half of the half nodes
+  for (int32_t i = 0; i < 2; i++) {
+    half_node_[i]->GenerateComponentRelationship();
+    auto& merged2half_id = component2merged_sig_id2component_sig_id_[half_node_[i]];
+    for (auto& pair : half_node_[i]->component2merged_sig_id2component_sig_id_) {
+      auto& merged2component_id = component2merged_sig_id2component_sig_id_[pair.first];
+      merged2component_id.resize(total_sbp_num);
+      auto& half2component_id = pair.second;
+      for (int32_t merged_id = 0; merged_id < total_sbp_num; merged_id++) {
+        merged2component_id[merged_id] = half2component_id[merged2half_id[merged_id]];
+      }
+    }
   }
 }
 
@@ -797,10 +891,29 @@ const NdSbpSignature& SbpNode::FinalSbpSignature() const {
   return sbp_sig_list_[final_sbp_sig_id_];
 };
 
+int32_t SbpNode::GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const {
+  if (this == component_node) { return merged_id; }
+  CHECK(!component2merged_sig_id2component_sig_id_.empty())
+      << "Check the component before initialization!" << std::endl;
+  return component2merged_sig_id2component_sig_id_.at(component_node).at(merged_id);
+}
+
+// Judge if sbp_node is a port of the current node
+bool SbpNode::IsComponent(SbpNode* sbp_node) const {
+  if (this == sbp_node) { return true; }
+  // If IsComponent() is call before we initialize component2merged_sig_id2component_sig_id_,
+  // we would also return false.
+  // Please do not call GenerateComponentRelationship() at here.
+  // Please see SbpEdge::SummarizeCost() for more details.
+  return component2merged_sig_id2component_sig_id_.find(sbp_node)
+         != component2merged_sig_id2component_sig_id_.end();
+}
+
 double UpdateRatio() {
   int32_t ratio_num = ParseIntegerFromEnv("RatioNum", 0);
   double ratio = 0.0;
-  if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
+  if (ratio_num > 0) { ratio = pow(1.02, ratio_num - 1); }
+  // if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
   // if (ratio_num > 0 && ratio_num < 57) {
   //   ratio = 0.1615 * pow(1.02, ratio_num - 1);
   // } else if (ratio_num >= 57) {

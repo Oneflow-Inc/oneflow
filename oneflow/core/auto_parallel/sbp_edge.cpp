@@ -34,6 +34,9 @@ namespace auto_parallel {
 SbpEdge::SbpEdge(SbpNode* start_node, SbpNode* mid_node, SbpNode* end_node, SbpEdge* first_edge,
                  SbpEdge* second_edge)
     : start_node_(start_node), mid_node_(mid_node), end_node_(end_node) {
+  // The first edge must between start_node and mid_node, but it could be
+  // start_node -> mid_node or mid_node -> start node
+  // Same for the second edge.
   edge_list_.emplace_back(first_edge);
   edge_list_.emplace_back(second_edge);
 };
@@ -154,6 +157,92 @@ void SbpEdge::SummarizeCost() {
   }
 }
 
+void SbpEdge::SummarizeCost2() {
+  // We would need to compute the memory for this elimination
+  int32_t start_node_sbp_size = start_node_->weighted_cost_.size();
+  weighted_cost_.resize(start_node_sbp_size);
+  // Copy cost and memory cost
+  if (mid_node_) {
+    // Buffer
+    int32_t min_sbp_mid = 0;
+    double weighted_cost = 0.0;
+    double min_weighted_cost = 0.0;
+    // Node elimination
+    mid_node_sbp_sig_.resize(start_node_sbp_size);
+    int32_t end_node_sbp_size = end_node_->weighted_cost_.size();
+    int32_t mid_node_sbp_size = mid_node_->weighted_cost_.size();
+    for (int32_t sbp_start = 0; sbp_start < start_node_sbp_size; sbp_start++) {
+      weighted_cost_[sbp_start].resize(end_node_sbp_size);
+      mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
+      for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
+        for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
+          // Add middle node cost
+          weighted_cost = mid_node_->weighted_cost_[sbp_mid];
+          // Add first edge cost
+          if (edge_list_[0]->end_node_ == mid_node_) {
+            weighted_cost += edge_list_[0]->weighted_cost_[start_node_->GetComponentSbpId(
+                sbp_start, edge_list_[0]->start_node_)][sbp_mid];
+          } else {
+            weighted_cost += edge_list_[0]->weighted_cost_[sbp_mid][start_node_->GetComponentSbpId(
+                sbp_start, edge_list_[0]->end_node_)];
+          }
+          // Add second edge cost
+          if (edge_list_[1]->start_node_ == mid_node_) {
+            weighted_cost += edge_list_[1]->weighted_cost_[sbp_mid][end_node_->GetComponentSbpId(
+                sbp_end, edge_list_[1]->end_node_)];
+          } else {
+            weighted_cost += edge_list_[1]->weighted_cost_[end_node_->GetComponentSbpId(
+                sbp_end, edge_list_[1]->start_node_)][sbp_mid];
+          }
+
+          // Compare and look for the minimum cost
+          if (sbp_mid == 0 || weighted_cost < min_weighted_cost) {
+            min_sbp_mid = sbp_mid;
+            min_weighted_cost = weighted_cost;
+          }
+        }
+        // Store the results of the dynamic programming for minimizing the weighted sum
+        weighted_cost_[sbp_start][sbp_end] = min_weighted_cost;
+        mid_node_sbp_sig_[sbp_start][sbp_end] = min_sbp_mid;
+      }
+    }
+  } else {
+    // Edge elimination
+    int32_t end_node_sbp_size = end_node_->weighted_cost_.size();
+    for (int32_t sbp_start = 0; sbp_start < weighted_cost_.size(); sbp_start++) {
+      weighted_cost_[sbp_start].resize(end_node_sbp_size);
+      for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
+        double weighted_cost = 0.0;
+        for (int32_t edge_num = 0; edge_num < edge_list_.size(); edge_num++) {
+          // For normal edge elimination, instead of recomputation with different memory ratio
+          // Either (start_node_ == edge_list_[edge_num]->start_node_
+          // and end_node_ == edge_list_[edge_num]->end_node_) is true
+          // Or (start_node_ == edge_list_[edge_num]->end_node_ and
+          // end_node_ == edge_list_[edge_num]->start_node_) is true.
+          // At this moment, start_node_->component2merged_sig_id2component_sig_id_ is not
+          // initialized. As a result, if start_node_ != edge_list_[edge_num]->start_node_,
+          // IsComponent() would return false immediately.
+          if (start_node_->IsComponent(edge_list_[edge_num]->start_node_)) {
+            weighted_cost +=
+                edge_list_[edge_num]->weighted_cost_  // Of format
+                    [start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->start_node_)]
+                    [end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->end_node_)];
+          } else {
+            // At this moment
+            // start_node_->IsComponent(edge_list_[edge_num]->end_node_)
+            // end_node_->IsComponent(edge_list_[edge_num]->start_node_)
+            weighted_cost +=
+                edge_list_[edge_num]->weighted_cost_  // Of format
+                    [end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->start_node_)]
+                    [start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->end_node_)];
+          }
+        }
+        weighted_cost_[sbp_start][sbp_end] = weighted_cost;
+      }
+    }
+  }
+}
+
 void SbpEdge::DuplicateCost(
     bool merged_node_is_start_node, bool duplicating_first_node,
     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id) {
@@ -217,6 +306,21 @@ void SbpEdge::ComputeWeightedCost() {
         }
       }
     }
+  } else {
+    // Compute the weighted cost for sub components
+    for (auto& sbp_edge : edge_list_) { sbp_edge->ComputeWeightedCost(); }
+    if (mid_node_) { mid_node_->ComputeWeightedCost(); }
+    // Generate relationship if two vertices are merged nodes
+    // For example, we have 4 nodes: A, B, C, D
+    // and two edges: 1: A->B, 2: A->B
+    // We merge the two edges 1 and 2 into 3: A->B.
+    // Then we merge A and C into E and merge B and D into F.
+    // Now the edge 3: E->F has two sub edges: 1: A->B, 2:A->B,
+    // which tell us that the sub edges might have different vertices from the current edge.
+    start_node_->GenerateComponentRelationship();
+    end_node_->GenerateComponentRelationship();
+    // Re-compute the weighted cost
+    SummarizeCost2();
   }
 }
 

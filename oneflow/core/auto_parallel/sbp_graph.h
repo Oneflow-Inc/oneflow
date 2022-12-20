@@ -48,6 +48,9 @@ class SbpGraph final {
 
   // Compute Cost for current strategy
   double ComputeCost() const;
+  double ComputeWeightedCost() const;
+  // Re-compute weighted cost
+  void ReComputeWeightedCost();
 
   // Generate a node
   SbpNode* GenerateNode();
