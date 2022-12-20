@@ -28,18 +28,22 @@ data = input.numpy()
 
 
 flow.cuda.empty_cache()
-# flow.cuda.synchronize(1)
+
 before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
-print("cuda", before_used, flow.cuda.current_device())
+if flow.cuda.current_device() == 0:
+    print("cuda", before_used, flow.cuda.current_device())
 
 input.offload()
 # print(input.is_offloaded(),flow.cuda.current_device())
 flow.cuda.empty_cache()
 
 after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
-print("cuda to cpu", after_used,flow.cuda.current_device())
+
+if flow.cuda.current_device() == 0:
+    print("cuda to cpu", after_used, flow.cuda.current_device())
 # Check tensor_mem cuda memory released
-print("offload",before_used - after_used,flow.cuda.current_device())
+if flow.cuda.current_device() == 0:
+    print("offload", before_used - after_used, flow.cuda.current_device())
 
 
 print("-------------")
@@ -50,6 +54,8 @@ input.load()
 # print(input.is_offloaded(),flow.cuda.current_device())
 flow.cuda.empty_cache()
 after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
-print("cpu to cuda", after_used,flow.cuda.current_device())
+if flow.cuda.current_device() == 0:
+    print("cpu to cuda", after_used, flow.cuda.current_device())
 # Check tensor_mem cuda memory allocated
-print("load",after_used - before_used,flow.cuda.current_device())
+if flow.cuda.current_device() == 0:
+    print("load", after_used - before_used, flow.cuda.current_device())

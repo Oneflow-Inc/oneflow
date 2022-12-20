@@ -124,7 +124,6 @@ Maybe<void> LocalTensor::offload() {
 
   // Offload to cpu mem with a cpu tensor implantation
   CHECK_OR_RETURN(is_cuda());
-
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
