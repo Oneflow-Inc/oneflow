@@ -34,6 +34,9 @@ import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
 
+RESET_SESSION_COUNT = 0
+
+
 def register_test_cases(
     scope: Dict[str, Any],
     directory: str,
@@ -182,7 +185,15 @@ def call(conn=None, cmd=None, msg=None):
     return conn.recv().decode()
 
 
-TestCase = unittest.TestCase
+class TestCase(unittest.TestCase):
+    def tearDown(self):
+        global RESET_SESSION_COUNT
+        reset_session_period = int(
+            os.environ.get("ONEFLOW_TEST_RESET_SESSION_PERIOD", "10")
+        )
+        if RESET_SESSION_COUNT >= reset_session_period:
+            oneflow.framework.session_context.GetDefaultSession().Reset()
+            RESET_SESSION_COUNT = 0
 
 
 def skip_unless(n, d):
