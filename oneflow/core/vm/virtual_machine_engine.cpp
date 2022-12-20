@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 
 namespace oneflow {
 
@@ -306,6 +307,7 @@ std::string DebugDeviceReset(vm::Stream* stream) {
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
+  ForeignFrameThreadLocalGuard guard(instruction->foreign_frame());
   auto* stream = instruction->mut_stream();
   // Prepare
   {
