@@ -309,13 +309,13 @@ void SbpNode::ComputeWeightedCost() {
       edge_found = half_node_[0]->edges_out_[0];
       is_first = true;
     }
-    edge_found->ComputeWeightedCost();
+    if (edge_found != nullptr) { edge_found->ComputeWeightedCost(); }
     // Compute the weighted cost form half nodes
     for (int32_t merged_sig_id = 0; merged_sig_id < merged_sig_id2half_sig_id_.size();
          merged_sig_id++) {
       const auto& pair = merged_sig_id2half_sig_id_[merged_sig_id];
       weighted_cost_[merged_sig_id] =
-          half_node_[0]->weighted_cost_[pair.first] + half_node_[0]->weighted_cost_[pair.second];
+          half_node_[0]->weighted_cost_[pair.first] + half_node_[1]->weighted_cost_[pair.second];
       if (edge_found != nullptr) {
         weighted_cost_[merged_sig_id] += is_first
                                              ? edge_found->weighted_cost_[pair.first][pair.second]
@@ -324,7 +324,11 @@ void SbpNode::ComputeWeightedCost() {
     }
   }
   // Compute the weighted cost for children
-  for (auto& child_node : children_) { child_node->ComputeWeightedCost(); }
+  for (auto& child_node : children_) {
+    child_node->ComputeWeightedCost();
+    for (auto& in_edge : child_node->edges_in_) { in_edge->ComputeWeightedCost(); }
+    for (auto* out_edge : child_node->edges_out_) { out_edge->ComputeWeightedCost(); }
+  }
   // Compute the weighted cost from children
   child_node_sbp_sig_.clear();
   SummarizeCost2();
