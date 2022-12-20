@@ -13,17 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
-
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-Maybe<int64_t> GetDefaultSessionId();
-bool RegsterSessionId(int64_t session_id);
-bool ClearSessionId(int64_t session_id);
+namespace {
+
+class ThrowErrorKernel final : public user_op::OpKernel {
+ public:
+  ThrowErrorKernel() = default;
+  ~ThrowErrorKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    THROW(RuntimeError) << "throw error kernel";
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("throw_error")
+    .SetCreateFn<ThrowErrorKernel>()
+    .SetIsMatchedHob(user_op::HobTrue());
+
+}  // namespace
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_

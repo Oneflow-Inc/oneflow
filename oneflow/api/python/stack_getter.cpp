@@ -13,17 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
-#include "oneflow/core/common/maybe.h"
+#include <utility>
+
+#include "pybind11/pybind11.h"
+
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
+#include "oneflow/extension/stack/python/stack_getter.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<int64_t> GetDefaultSessionId();
-bool RegsterSessionId(int64_t session_id);
-bool ClearSessionId(int64_t session_id);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("RegisterStackGetter", &RegisterPyStackGetter);
+  m.def("GetCurrentStack", []() {
+    auto* stack_getter = Singleton<ForeignStackGetter>::Get();
+    return stack_getter->GetFormattedStack(stack_getter->GetCurrentFrame());
+  });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_

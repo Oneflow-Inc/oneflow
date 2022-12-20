@@ -13,17 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
+#ifndef ONEFLOW_API_PYTHON_CUSTOM_EVAL_FRAME_H_
+#define ONEFLOW_API_PYTHON_CUSTOM_EVAL_FRAME_H_
 
-#include "oneflow/core/common/maybe.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-namespace oneflow {
+#include <Python.h>
 
-Maybe<int64_t> GetDefaultSessionId();
-bool RegsterSessionId(int64_t session_id);
-bool ClearSessionId(int64_t session_id);
+#if PY_VERSION_HEX >= 0x03090000
+typedef PyObject* (*PyFrameEvalFunc)(struct _tstate*, struct _frame*, int);
+#else
+typedef PyObject* (*PyFrameEvalFunc)(struct _frame*, int);
+#endif
+void EnableCustomEvalFrameForCurrentThread(PyFrameEvalFunc eval_func);
 
-}  // namespace oneflow
+#ifdef __cplusplus
+}
+#endif
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
+#endif  // ONEFLOW_API_PYTHON_CUSTOM_EVAL_FRAME_H_

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,39 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
+"""
+import os
 
-#include "oneflow/core/common/maybe.h"
+os.environ["ONEFLOW_PYTHON_STACK_GETTER"] = "1"
+import oneflow as flow
+import oneflow.unittest
 
-namespace oneflow {
 
-Maybe<int64_t> GetDefaultSessionId();
-bool RegsterSessionId(int64_t session_id);
-bool ClearSessionId(int64_t session_id);
+def h():
+    return g()
 
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
+def g():
+    res = f()
+    res = f()
+    res = f()
+    res = f()
+    res = f()
+    res = f()
+    return res
+
+
+def f():
+    return flow._oneflow_internal.GetCurrentStack()
+
+
+@flow.unittest.skip_unless_1n1d()
+def test_stack_getter():
+    stack = h()
+    assert "flow._oneflow_internal.GetCurrentStack" in stack
+    assert "g()" in stack
+    assert "f()" in stack
+
+
+if __name__ == "__main__":
+    test_stack_getter()

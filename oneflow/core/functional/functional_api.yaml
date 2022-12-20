@@ -294,7 +294,7 @@
   signature:
     [
       "Tensor (Tensor input) => Min",
-      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Min",
       "Tensor (Tensor input, Tensor other) => Min",
     ]
   bind_python: True
@@ -303,7 +303,7 @@
   signature:
     [
       "Tensor (Tensor input) => Median",
-      "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
     ]
   bind_python: True
 
@@ -3086,3 +3086,6 @@
   signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
   bind_python: True
 
+- name: "throw_error"
+  signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True

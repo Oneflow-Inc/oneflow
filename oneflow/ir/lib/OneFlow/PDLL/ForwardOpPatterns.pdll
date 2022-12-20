@@ -2,6 +2,17 @@
 #include "OneFlowPDLLUtils.pdll"
 
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
+Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, integer_fill_value: Attr,
+                          is_floating_fill_value: Attr, float_operand: Attr, int_operand: Attr, has_float_operand: Attr, out: Type) -> Op {
+  let floating_scale_value = float_operand;
+  let integer_scale_value = int_operand;
+  let is_floating_scale_value = has_float_operand;
+  let scale_tril_op = op<oneflow.fused_scale_tril>(x){diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value,
+                                                        is_floating_fill_value = is_floating_fill_value, floating_scale_value = floating_scale_value,
+                                                        integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out);
+  return scale_tril_op;
+}
+
 Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
 Pattern {
@@ -97,4 +108,48 @@ Pattern {
   let cast = op<oneflow.cast>(x) -> (valueType);
 
   replace cast with x;
+}
+
+Pattern {
+  let device_name: Attr;
+  let has_float_operand: Attr;
+  let int_operand: Attr;
+  let float_operand: Attr;
+  let diagonal: Attr;
+  let floating_fill_value: Attr;
+  let integer_fill_value: Attr;
+  let is_floating_fill_value: Attr;
+
+  let tril =
+    op<oneflow.tril>(
+      op<oneflow.scalar_mul>(x: Value)
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand,
+        int_operand = int_operand, float_operand = float_operand})
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value,
+        integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value} -> (out: Type);
+
+  replace tril with CopyUserOpAttrs(tril, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value,
+                                      is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
+}
+
+Pattern {
+  let device_name: Attr;
+  let has_float_operand: Attr;
+  let int_operand: Attr;
+  let float_operand: Attr;
+  let diagonal: Attr;
+  let floating_fill_value: Attr;
+  let integer_fill_value: Attr;
+  let is_floating_fill_value: Attr;
+
+  let scalar =
+    op<oneflow.scalar_mul>(
+      op<oneflow.tril>(x: Value)
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value,
+        integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value })
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand,
+        int_operand = int_operand, float_operand = float_operand} -> (out: Type);
+
+  replace scalar with CopyUserOpAttrs(scalar, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value,
+                                        is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
 }
