@@ -13,9 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
-#include "oneflow/ir/include/OneFlow/Extension.h"
-#include <glog/logging.h>
+#include "OneFlow/Extension.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Operation.h"
+#include "OneFlow/kernel_launch/JITEngine.h"
+#include "OneFlow/kernel_launch/RunContext.h"
+
+extern "C" {
+void* oneflow_okl_fetch_run_ctx(void* launcher, int64_t index) {
+  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
+      ->FetchRunCtx(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
+}
+
+void* oneflow_okl_fetch_kernel(void* launcher, int64_t index) {
+  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
+      ->FetchKernel(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
+}
+
+void oneflow_okl_launch(void* run_ctx, void* kernel) {
+  const oneflow::user_op::OpKernel* engine =
+      static_cast<typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>>(kernel);
+
+  oneflow::okl::RunContext* compute_ctx_ =
+      static_cast<typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>>(run_ctx);
+  engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
+}
+}  // extern "C"
 
 namespace oneflow {
 SharedLibs* MutSharedLibPaths() {
@@ -25,14 +51,7 @@ SharedLibs* MutSharedLibPaths() {
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 
-extern "C" {
-void kernel_launch(void* ctx, void* kernel_opaque) {
-  auto kernel = (typename std::tuple_element_t<1, oneflow::TypeKernelLaunchArgs>)kernel_opaque;
-  kernel->Compute((typename std::tuple_element_t<0, oneflow::TypeKernelLaunchArgs>)ctx);
-}
-}  // extern "C"
-
-JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
+oneflow::okl::JITEngine::JITEngine(mlir::ModuleOp module) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {oneflow::SharedLibPaths()->begin(), oneflow::SharedLibPaths()->end()});
   mlir::ExecutionEngineOptions jitOptions;

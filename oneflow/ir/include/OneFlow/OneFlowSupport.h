@@ -34,6 +34,7 @@ namespace oneflow {
 
 namespace support {
 
+const ::oneflow::UserOpDef& getUserOpDef(const std::string& op_type_name);
 static const std::vector<std::string>* inputKeys() {
   static std::vector<std::string> val({"in"});
   return &val;
@@ -49,6 +50,9 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
 std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     const mlir::Attribute& attr, const mlir::Attribute& device_tag,
     const mlir::Attribute& device_name);
+void DenseElementsAttrToTensor(const mlir::Attribute& attr, const mlir::Attribute& device_tag,
+                               const mlir::Attribute& device_name,
+                               std::shared_ptr<::oneflow::one::Tensor>& tensor);
 
 FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type);
 FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::DataType data_type);
