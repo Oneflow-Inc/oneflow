@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
@@ -1235,10 +1234,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
-  // This is useless, because consumed_regst_desc_id is empty in BoxingTaskGraph.
-  // JUST(InitRegstDescsConsumers());
   // Note that tasks added are from BoxingTaskGraph, so they are all boxing related.
-  const auto& IsTaskNodeBoxingRelated = MakePredicatorNodeSnapshotted(this);
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
