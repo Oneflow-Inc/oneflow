@@ -2994,32 +2994,26 @@ class ToDeviceFunctor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
-    attrs.SetAllAttrs(k, sorted);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class TopKDimFunctor {
- public:
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t k, int32_t dim,
                                 bool largest, bool sorted) const {
     auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
+    attrs.SetAllAttrs(k, sorted);
+
     int32_t axis = dim;
     axis = JUST(maybe_wrap_dim(axis, input->ndim()));
     if (axis == input->ndim() - 1) {
       if (largest) {
-        (*outputs)[1] = JUST(TopK(input, k, sorted));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
       } else {
         auto neg_input = JUST(ScalarMul(input, -1, false));
-        (*outputs)[1] = JUST(TopK(neg_input, k, sorted));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
       }
-      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
-      return outputs;
+      values = JUST(DimGather(input, axis, indices, false));
+
     } else {
       std::vector<int32_t> perm;
       for (int i = 0; i < input->ndim() - 1; i++) {
@@ -3032,18 +3026,23 @@ class TopKDimFunctor {
       perm.push_back(axis);
       auto x = JUST(Transpose(input, perm));
       if (largest) {
-        (*outputs)[1] = JUST(TopK(x, k, sorted));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
       } else {
         auto neg_input = JUST(ScalarMul(x, -1, false));
-        (*outputs)[1] = JUST(TopK(neg_input, k, sorted));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
       }
       std::vector<int32_t> inversed_perm(perm.size());
       for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
-      (*outputs)[1] = JUST(Transpose((*outputs)[1], inversed_perm));
-      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
-      return outputs;
+      indices = JUST(Transpose(indices, inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
     }
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
+    return outputs;
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class InTopKFunctor {
@@ -3739,16 +3738,15 @@ class SortFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t dim,
                                 bool descending) const {
     auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
     int32_t axis = dim;
     axis = JUST(maybe_wrap_dim(axis, input->ndim()));
     std::string direction("ASCENDING");
     if (descending) { direction.assign("DESCENDING"); }
     if (axis == input->ndim() - 1) {
-      auto indices = JUST(ArgSort(input, direction));
-      auto values = JUST(DimGather(input, axis, indices, false));
-      (*outputs)[0] = values;
-      (*outputs)[1] = indices;
-
+      indices = JUST(ArgSort(input, direction));
+      values = JUST(DimGather(input, axis, indices, false));
     } else {
       std::vector<int32_t> perm;
       for (int i = 0; i < input->ndim() - 1; i++) {
@@ -3760,15 +3758,14 @@ class SortFunctor {
       }
       perm.push_back(axis);
       auto x = JUST(Transpose(input, perm));
-      auto indices = JUST(ArgSort(x, direction));
+      auto indices_temp = JUST(ArgSort(x, direction));
       std::vector<int32_t> inversed_perm(perm.size());
       for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
-      indices = JUST(Transpose(indices, inversed_perm));
-      auto values = JUST(DimGather(input, axis, indices, false));
-      (*outputs)[0] = values;
-      (*outputs)[1] = indices;
+      indices = JUST(Transpose(indices_temp, inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
     }
-
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
     return outputs;
   }
 };
@@ -3901,7 +3898,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
                 impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
-  m.add_functor<impl::TopKDimFunctor>("TopKDim");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");

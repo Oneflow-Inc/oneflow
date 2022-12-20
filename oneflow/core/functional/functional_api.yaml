@@ -2618,12 +2618,8 @@
   signature: "Tensor (Shape shape, ShapeList shape_list, FloatList value_list, DataType data_type, Bool dynamic_out) => GenTensorBuffer"
   bind_python: True
 
-- name: "top_k"
-  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
-  bind_python: True
-
 - name: "topk"
-  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopKDim"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"
