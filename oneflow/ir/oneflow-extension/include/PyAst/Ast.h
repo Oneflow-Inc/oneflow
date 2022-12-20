@@ -302,10 +302,16 @@ class Compare : public expr {
   };
 
   Compare(shared_ptr<expr> left, vector<cmpop_t> ops, vector<shared_ptr<expr>> comparators)
-      : expr(kCompare), left(std::move(left)), ops(std::move(ops)), comparators(std::move(comparators)) {}
+      : expr(kCompare),
+        left(std::move(left)),
+        ops(std::move(ops)),
+        comparators(std::move(comparators)) {}
 
   Compare(shared_ptr<expr> left, const vector<int>& ops, vector<shared_ptr<expr>> comparators)
-      : expr(kCompare), left(std::move(left)), ops(int2op(ops)), comparators(std::move(comparators)) {}
+      : expr(kCompare),
+        left(std::move(left)),
+        ops(int2op(ops)),
+        comparators(std::move(comparators)) {}
 
   static shared_ptr<Compare> Compare_(shared_ptr<expr> left, vector<int> ops,
                                       vector<shared_ptr<expr>> comparators) {
