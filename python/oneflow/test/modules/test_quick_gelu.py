@@ -46,8 +46,6 @@ def _test_quick_gelu(test_case, device):
     torch_y_sum.backward()
     oneflow_y_sum = oneflow_y.sum()
     oneflow_y_sum.backward()
-    print(oneflow_y_sum, torch_y_sum)
-    print(oneflow_x.grad.sum(), torch_x.grad.sum())
     test_case.assertTrue(
         np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy())
     )
