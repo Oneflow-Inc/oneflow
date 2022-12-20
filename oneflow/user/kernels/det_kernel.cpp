@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/common/eigen_util.h"
 
 namespace oneflow {
@@ -38,10 +37,10 @@ static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
 }  // namespace
 
 template<typename T>
-class CpuDetKernel final : public user_op::OpKernel {
+class DetKernel final : public user_op::OpKernel {
  public:
-  CpuDetKernel() = default;
-  ~CpuDetKernel() = default;
+  DetKernel() = default;
+  ~DetKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -53,44 +52,27 @@ class CpuDetKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
 
-    ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
+    FOR_RANGE(int64_t, i, 0, batch_count) {
+      ConstEigenMatrixMap<T> x_mat(x_ptr + i * matrix_stride, matrix_size, matrix_size);
+      if (x_mat.determinant() == 0) {
+        LOG(FATAL)
+            << "(Batch element " << i
+            << "): the inversion could not be completed because the input matrix is singular.";
+      }
+      T y = x_mat.determinant();
+      *(y_ptr + i) = y;
+    };
 
-    cpu_stream->ParallelFor(
-        0, batch_count,
-        [&](int64_t begin, int64_t end) {
-          std::cout << "begin is : " << begin << std::endl;
-          ConstEigenMatrixMap<T> x_mat(x_ptr + begin, matrix_size, matrix_size);
-          if (x_mat.determinant() == 0) {
-            LOG(FATAL)
-                << "(Batch element " << begin / matrix_stride
-                << "): the inversion could not be completed because the input matrix is singular.";
-          }
-          T y = x_mat.determinant();
-          *(y_ptr + begin / matrix_stride) = y;
-        },
-        matrix_stride);
-
-    // FOR_RANGE(int64_t, i, 0, batch_count) {
-    //   ConstEigenMatrixMap<T> x_mat(x_ptr + i * matrix_stride, matrix_size, matrix_size);
-    //   // EigenMatrixMap<T> y_mat(y_ptr + i * matrix_stride, matrix_size, matrix_size);
-    //   if (x_mat.determinant() == 0) {
-    //     LOG(FATAL)
-    //         << "(Batch element " << i
-    //         << "): the inversion could not be completed because the input matrix is singular.";
-    //   }
-    //   T y = x_mat.determinant();
-    //   *(y_ptr + i) = y;
-    // }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_DET_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("det_cpu").SetCreateFn<CpuDetKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
+#define REGISTER_DET_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("det").SetCreateFn<DetKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                           \
       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_DET_KERNEL(float)
-REGISTER_CPU_DET_KERNEL(double)
+REGISTER_DET_KERNEL(float)
+REGISTER_DET_KERNEL(double)
 
 }  // namespace oneflow

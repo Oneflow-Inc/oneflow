@@ -13,16 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstddef>
-#include <cusolverDn.h>
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
-#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/arange_kernel_util.h"
 
 namespace oneflow {
 
@@ -41,8 +33,11 @@ static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
   return batched_matrices->shape_view().At(num_axes - 2)
          * batched_matrices->shape_view().At(num_axes - 1);
 }
-// OF_CUSOLVER_CHECK(
-//     cusolverDnSgetrf_bufferSize(stream->cusolver_dn_handle(), m, m, LU_ptr, m, &lwork));
+
+static inline size_t PivotStride(const user_op::Tensor* batched_pivot) {
+  const int64_t num_axes = batched_pivot->shape_view().NumAxes();
+  return batched_pivot->shape_view().At(num_axes - 1);
+}
 
 void OFgetrf_bufferSize(ep::Stream* stream, int32_t m, int32_t n, float* dA_array, int32_t lda,
                         int32_t& lwork) {
@@ -69,27 +64,6 @@ void OFgetrf(ep::Stream* stream, int32_t m, int32_t n, double* dA_array, int32_t
 }
 }  // namespace
 
-// void OFgetrfBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
-//                     int* info_array, int batchsize) {
-//   OF_CUBLAS_CHECK(cublasSgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
-//                                       ldda, ipiv_array, info_array, batchsize));
-// }
-// void OFgetrfBatched(ep::Stream* stream, int n, double** dA_array, int ldda, int* ipiv_array,
-//                     int* info_array, int batchsize) {
-//   OF_CUBLAS_CHECK(cublasDgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
-//                                       ldda, ipiv_array, info_array, batchsize));
-// }
-// void OFgetriBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
-//                     float** dC_array, int lddc, int* info_array, int batchsize) {
-//   OF_CUBLAS_CHECK(cublasSgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
-//                                       ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
-// }
-// void OFgetriBatched(ep::Stream* stream, int n, double** dA_array, int ldda, int* ipiv_array,
-//                     double** dC_array, int lddc, int* info_array, int batchsize) {
-//   OF_CUBLAS_CHECK(cublasDgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
-//                                       ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
-// }
-
 namespace user_op {
 
 template<typename T>
@@ -113,6 +87,10 @@ class LUDecompositionKernel final : public user_op::OpKernel {
     T* LU_ptr = LU->mut_dptr<T>();
     int32_t* pivot_ptr = pivot->mut_dptr<int32_t>();
 
+    size_t batch_count = BatchCount(x);
+    size_t matrix_stride = MatrixStride(x);
+    size_t pivot_stride = PivotStride(x);
+
     std::unique_ptr<ep::primitive::Memcpy> memcpy_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
                                                                   ep::primitive::MemcpyKind::kDtoD);
@@ -120,22 +98,32 @@ class LUDecompositionKernel final : public user_op::OpKernel {
                             << ctx->stream()->device_type();
     memcpy_primitive->Launch(stream, LU_ptr, x_ptr, sizeof(T) * x->shape_view().elem_cnt());
 
-    int info = 0;
+    std::vector<int32_t> batched_info(batch_count, -1);
 
-    int32_t* d_info = nullptr; /* error info */
-    int lwork = -1;            /* size of workspace */
-    T* d_work = nullptr;       /* device workspace for getrf */
+    int32_t* batched_d_info = nullptr; /* error info */
+    int32_t lwork = -1;                /* size of workspace */
+    T* d_work = nullptr;               /* device workspace for getrf */
 
-    OF_CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_info), sizeof(int32_t)));
-    OFgetrf_bufferSize(stream, m, m, LU_ptr, m, lwork);
-    OF_CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_work), sizeof(T) * lwork));
-    OFgetrf(stream, m, m, LU_ptr, lda, d_work, pivot_ptr, d_info);
-    OF_CUDA_CHECK(cudaMemcpyAsync(&info, d_info, sizeof(int32_t), cudaMemcpyDeviceToHost,
+    OF_CUDA_CHECK(
+        cudaMalloc(reinterpret_cast<void**>(&batched_d_info), batch_count * sizeof(int32_t)));
+
+    for (size_t batch = 0; batch < batch_count; batch++) {
+      OFgetrf_bufferSize(stream, m, m, LU_ptr, m, lwork);
+      OF_CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_work), sizeof(T) * lwork));
+      OFgetrf(stream, m, m, LU_ptr + batch * matrix_stride, lda, d_work,
+              pivot_ptr + batch * pivot_stride, batched_d_info + batch);
+      OF_CUDA_CHECK(cudaFree(d_work));
+    }
+
+    OF_CUDA_CHECK(cudaMemcpyAsync(batched_info.data(), batched_d_info,
+                                  batch_count * sizeof(int32_t), cudaMemcpyDeviceToHost,
                                   stream->cuda_stream()));
-    CHECK(info >= 0) << "LU decomposition: " << -info << "-th parameter is wrong";
-
-    OF_CUDA_CHECK(cudaFree(d_info));
-    OF_CUDA_CHECK(cudaFree(d_work));
+    for (size_t i = 0; i < batched_info.size(); i++) {
+      int32_t info = batched_info[i];
+      CHECK(info >= 0) << "LU decomposition: " << -info << "-th parameter of batch " << i
+                       << " is wrong";
+    }
+    OF_CUDA_CHECK(cudaFree(batched_d_info));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
