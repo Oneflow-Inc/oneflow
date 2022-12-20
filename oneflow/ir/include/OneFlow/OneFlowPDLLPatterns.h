@@ -23,7 +23,7 @@ namespace oneflow {
 
 void populateForwardOpPatterns(RewritePatternSet& patterns);
 void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populatepopulateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
+void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
 
 }  // namespace oneflow
 

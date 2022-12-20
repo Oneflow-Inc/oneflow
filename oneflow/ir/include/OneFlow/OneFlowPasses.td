@@ -136,4 +136,13 @@ def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
+def FuseConv2DBatchNormOps : Pass<"fuse-conv2d-bn-ops", "ModuleOp"> {
+  let summary = "fuse forward ops";
+  let description = [{
+    fuse forward ops. Usually they are actions after an op.
+  }];
+  let constructor = "mlir::oneflow::createFuseConv2DBatchNormOps()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+}
+
 #endif // ONEFLOW_PASSES
