@@ -199,7 +199,7 @@ jobs:
             build
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu102
+            cu112
             cpu
             cpu-asan-ubsan
             cpu-tsan
@@ -296,7 +296,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
-        if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu112' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
@@ -305,7 +305,7 @@ jobs:
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
           self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: "10.2"
+          cuda-version: "11.2"
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
@@ -351,7 +351,7 @@ jobs:
               body: 'CI failed when running job: Build ${{ matrix.entry }}. PR label automerge has been removed'
             })
       - name: Upload packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@add-pdll-to-checksum
         timeout-minutes: 10
         with:
@@ -362,7 +362,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
           dst-dir: cpack
       - name: Upload whl
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@add-pdll-to-checksum
         timeout-minutes: 10
         with:
