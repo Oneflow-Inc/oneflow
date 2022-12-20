@@ -530,7 +530,8 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
 }
 
 void TaskEdge::ToProto(TaskEdgeProto* proto) const {
-  proto->set_task_edge_uid(edge_id());
+  // proto->set_task_edge_uid(edge_id());
+  proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
   proto->set_src_task_id(src_node()->task_id());
   proto->set_dst_task_id(dst_node()->task_id());
   *proto->mutable_lbi() = {lbis_.begin(), lbis_.end()};

@@ -429,7 +429,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   OF_SESSION_BARRIER();
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
-  LOG(ERROR) << "compile finished.";
+  LOG(INFO) << "rank task graph compile finished.";
   return Maybe<void>::Ok();
 }
 
