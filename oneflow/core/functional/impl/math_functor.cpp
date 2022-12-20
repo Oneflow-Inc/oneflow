@@ -25,11 +25,16 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/profiler/profiler.h"
 
+#include <functional>
+#include <memory>
 #include <sstream>
 #include <bitset>
 
@@ -1776,6 +1781,71 @@ class InvFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class DetFunctor {
+ public:
+  DetFunctor() {
+    det_op_ = CHECK_JUST(one::OpBuilder("det").Input("x").Output("y").Build());
+    lu_decomposition_op_ = CHECK_JUST(
+        one::OpBuilder("lu_decomposition").Input("x").Output("LU").Output("pivot").Build());
+  }
+  Maybe<Tensor> GetPivotDet(const std::shared_ptr<Tensor>& pivot) const {
+    std::shared_ptr<Tensor> arange = nullptr;
+    int64_t end = pivot->shape()->At(pivot->ndim() - 1) + 1;
+    if (pivot->is_local()) {
+      arange = JUST(functional::Arange(1, end, 1, pivot->dtype(), JUST(pivot->device())));
+    } else {
+      auto pivot_nd_sbp = JUST(pivot->nd_sbp());
+      std::vector<Symbol<SbpParallel>> nd_sbp(pivot_nd_sbp->sbp_parallel_size());
+      {
+        for (int i = 0; i < nd_sbp.size(); ++i) { nd_sbp[i] = pivot_nd_sbp->sbp_parallel(i); }
+      }
+      arange = JUST(functional::GlobalArange(1, end, 1, pivot->dtype(),
+                                             JUST(pivot->parallel_desc()), nd_sbp));
+    }
+    return sequence_function(functional::BroadcastNotEqual)
+        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
+          return functional::ReduceSum(x, {-1}, false);
+        })
+        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
+          return functional::ScalarFMod(x, Scalar(2), true);
+        })
+        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
+          return functional::ScalarMul(x, Scalar(-2), true);
+        })
+        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
+          return functional::ScalarAdd(x, Scalar(1), Scalar(1), true);
+        })
+        .call(arange, pivot);
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() < 2) {
+      return Error::RuntimeError() << "linalg.det: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(x->ndim() - 1) != x->dim(x->ndim() - 2)) {
+      return Error::RuntimeError() << "linalg.det: A must be batches of square matrices, "
+                                   << "but they are " << x->dim(x->ndim() - 2) << " by "
+                                   << x->dim(x->ndim() - 1) << " matrices";
+    }
+    if (JUST(x->device())->enum_type() == DeviceType::kCPU) {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*det_op_, {x}, {}));
+    } else if (JUST(x->device())->enum_type() == DeviceType::kCUDA) {
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*lu_decomposition_op_, {x}, {}));
+      auto LU = result->at(0);
+      auto pivot = result->at(1);
+      auto LU_det = JUST(
+          functional::ReduceProd(JUST(functional::Diagonal(LU, 0, -2, -1)), {-1}, false, NullOpt));
+      return functional::Mul(JUST(GetPivotDet(pivot)), LU_det);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Det: Only support cpu and cuda device.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> det_op_;
+  std::shared_ptr<OpExpr> lu_decomposition_op_;
 };
 
 class ClampGradFunctor {
@@ -3580,6 +3650,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
+  m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
