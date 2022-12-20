@@ -120,46 +120,10 @@ void TestPermute3D(DeviceManagerRegistry* registry, const std::set<DeviceType>& 
 
 TEST_F(PrimitiveTest, TestBatchPermute) {
   const int permutation_list[2] = {1, 0};
-  const int32_t dims0[2] = {2, 3};
-  const int32_t dims1[2] = {7, 9};
-  const int32_t dims2[2] = {10, 3};
-  const int32_t dims3[2] = {31, 4};
-  const int32_t dims4[2] = {6, 8};
+  const int32_t dims0[2] = {1024*256, 256};
 
   TestPermute2D<float, DataType::kFloat, 2>(&device_manager_registry_, available_device_types_,
                                             dims0, permutation_list);
-  TestPermute2D<double, DataType::kDouble, 2>(&device_manager_registry_, available_device_types_,
-                                              dims1, permutation_list);
-  TestPermute2D<int32_t, DataType::kInt32, 2>(&device_manager_registry_, available_device_types_,
-                                              dims2, permutation_list);
-  TestPermute2D<int64_t, DataType::kInt64, 2>(&device_manager_registry_, available_device_types_,
-                                              dims3, permutation_list);
-  TestPermute2D<Eigen::half, DataType::kFloat16, 2>(
-      &device_manager_registry_, available_device_types_, dims4, permutation_list);
-}
-
-TEST_F(PrimitiveTest, TestPermute) {
-  const int permutation_list0[3] = {0, 2, 1};
-  const int permutation_list1[3] = {1, 2, 0};
-  const int permutation_list2[3] = {1, 0, 2};
-  const int permutation_list3[3] = {2, 1, 0};
-  const int permutation_list4[3] = {2, 0, 1};
-  const int32_t dims0[3] = {2, 3, 9};
-  const int32_t dims1[3] = {7, 9, 4};
-  const int32_t dims2[3] = {10, 3, 2};
-  const int32_t dims3[3] = {3, 7, 2};
-  const int32_t dims4[3] = {8, 2, 5};
-
-  TestPermute3D<float, DataType::kFloat, 3>(&device_manager_registry_, available_device_types_,
-                                            dims0, permutation_list0);
-  TestPermute3D<double, DataType::kDouble, 3>(&device_manager_registry_, available_device_types_,
-                                              dims1, permutation_list1);
-  TestPermute3D<int32_t, DataType::kInt32, 3>(&device_manager_registry_, available_device_types_,
-                                              dims2, permutation_list2);
-  TestPermute3D<int64_t, DataType::kInt64, 3>(&device_manager_registry_, available_device_types_,
-                                              dims3, permutation_list3);
-  TestPermute3D<Eigen::half, DataType::kFloat16, 3>(
-      &device_manager_registry_, available_device_types_, dims4, permutation_list4);
 }
 
 }  // namespace test
