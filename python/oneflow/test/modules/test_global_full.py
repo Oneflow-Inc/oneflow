@@ -31,12 +31,13 @@ def _test_global_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
-# def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
-#     x1 = flow.tensor(1.0)
-#     x2 = flow.full(shape, x1, placement=placement, sbp=sbp)
-#     test_case.assertEqual(x2.shape, flow.Size(shape))
-#     test_case.assertEqual(x2.sbp, sbp)
-#     test_case.assertEqual(x2.placement, placement)
+def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
+    scalar_sbp = [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    x1 = flow.tensor(1.0, placement=placement, sbp=scalar_sbp)
+    x2 = flow.full(shape, x1, placement=placement, sbp=sbp)
+    test_case.assertEqual(x2.shape, flow.Size(shape))
+    test_case.assertEqual(x2.sbp, sbp)
+    test_case.assertEqual(x2.placement, placement)
 
 def _test_graph_full(test_case, shape, placement, sbp):
     class GlobalFullGraph(flow.nn.Graph):

@@ -116,6 +116,9 @@ class GlobalTensorConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    CHECK_OR_RETURN(value->ndim() <= 1 && value->nelement() == 1)
+        << "Only tensor with single element or scalar tensor are supported as value!";
+    CHECK_OR_RETURN(value->is_global()) << "The value tensor should be global tensor";
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     JUST(CheckDeviceIdsIsValid(placement));
@@ -124,26 +127,24 @@ class GlobalTensorConstantFunctor {
 
     auto dispatch_constant =
         [&](const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
-      if (LazyMode::is_enabled()) {
-        std::vector<std::string> nd_sbp(sbp_tuple.size());
-        {
-          for (int i = 0; i < sbp_tuple.size(); ++i) {
-            nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
-          }
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
         }
-        attrs.SetAttr<5>(nd_sbp);
       }
-      const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
-                                            OpExprInterpContext(attrs, placement, nd_sbp));
+      attrs.SetAttr<2>(nd_sbp);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
     };
     bool has_partial_parallel =
         std::any_of(sbp_tuple.begin(), sbp_tuple.end(),
                     [](const Symbol<SbpParallel>& sbp) { return sbp->has_partial_sum_parallel(); });
     // The source op does not support Partial
     if (has_partial_parallel) {
-      return Error::RuntimeError()
-             << "tensor_constant() is an source op which does not support Partial(SBP)";
+      const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
+      const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
+      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
+                                  /*copy*/ false);
     } else {
       return dispatch_constant(sbp_tuple);
     }
@@ -161,6 +162,8 @@ class TensorConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    CHECK_OR_RETURN(value->ndim() <= 1 && value->nelement() == 1)
+        << "Only tensor with single element or scalar tensor are supported as value!";
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
