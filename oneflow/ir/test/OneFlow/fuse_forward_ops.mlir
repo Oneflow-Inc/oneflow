@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -fuse-forward-only-ops -fuse-into-existing-op -fuse-conv2d-bn-ops -fuse-normalization-ops -canonicalize | FileCheck %s
+// RUN: -fuse-forward-only-ops -fuse-into-existing-op -fuse-normalization-ops -fuse-conv2d-bn-ops -canonicalize | FileCheck %s
 
 module  {
   func.func @Cast_1__FUSE__ScalarMulByTensor_2(%685: tensor<2x64x64x320xf16>, %output_574: tensor<320xf16>, %output_573: tensor<320xf16>) -> tensor<2x64x64x320xf16> {
@@ -123,7 +123,7 @@ module  {
     return %2 : tensor<1x64x112x112xf32>
   }
 
-  //  func.func @GraphToRun_conv_bn_1(%arg0: tensor<1x3x224x224xf32>) -> tensor<1x64x112x112xf32> {
+  //  func.func @GraphToRun_conv_bn_2(%arg0: tensor<1x3x224x224xf32>) -> tensor<1x64x112x112xf32> {
   //     %output = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_Resnet50Graph_0_input.0.0_2", output_lbns = ["_Resnet50Graph_0_input.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [1 : si64, 3 : si64, 224 : si64, 224 : si64]} : (tensor<1x3x224x224xf32>) -> tensor<1x3x224x224xf32>
   //     %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "model.conv1.weight", output_lbns = ["model.conv1.weight/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 18 : i64, shape = [64 : si64, 3 : si64, 7 : si64, 7 : si64]} : () -> tensor<64x3x7x7xf32>
   //     %output_1 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "model.bn1.running_mean", output_lbns = ["model.bn1.running_mean/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 26 : i64, shape = [64 : si64], trainable = false} : () -> tensor<64xf32>
