@@ -284,9 +284,9 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src,
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { 
-    const Src one = static_cast<Src>(1);
+    const Src one = static_cast<Src>(1.0);
     const Src sigmoid = one / (one + exp(-x * alpha));
-    return dy * (sigmoid - alpha * x * (sigmoid * (one - sigmoid)));
+    return dy * (sigmoid + alpha * x * (sigmoid * (one - sigmoid)));
   }
 
  private:
