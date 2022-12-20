@@ -3734,6 +3734,40 @@ class BaddBmmFunctor {
   }
 };
 
+class SortFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t dim,
+                                bool descending) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    std::string direction("ASCENDING");
+    if (descending) { direction.assign("DESCENDING"); }
+    if (axis == input->ndim() - 1) {
+      (*outputs)[1] = JUST(ArgSort(input, direction));
+      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
+      return outputs;
+    } else {
+      std::vector<int32_t> perm;
+      for (int i = 0; i < input->ndim() - 1; i++) {
+        if (i < axis) {
+          perm.push_back(i);
+        } else {
+          perm.push_back(i + 1);
+        }
+      }
+      perm.push_back(axis);
+      auto x = JUST(Transpose(input, perm));
+      auto indices = JUST(ArgSort(x, direction));
+      std::vector<int32_t> inversed_perm(perm.size());
+      for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
+      (*outputs)[1] = JUST(Transpose(indices, inversed_perm));
+      (*outputs)[0] = JUST(DimGather(input, axis, (*outputs)[1], false));
+      return outputs;
+    }
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3885,6 +3919,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UniqueFunctor>("Unique");
   m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
+  m.add_functor<impl::SortFunctor>("Sort");
 };
 
 }  // namespace functional

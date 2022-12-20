@@ -952,6 +952,14 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(auto_backward=False, check_graph=True)
+    def test_sort_tensor_return_values(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        result = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return result.values, result.indices
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False, check_graph=True)
     def test_argsort_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)

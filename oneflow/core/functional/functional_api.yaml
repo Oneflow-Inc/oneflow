@@ -3090,3 +3090,8 @@
   signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
   bind_python: True
 
+- name: "sort"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool descending=False) => Sort"
+  bind_python: True
+  
+

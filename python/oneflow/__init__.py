@@ -232,6 +232,7 @@ from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
+from oneflow._C import sort
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -396,7 +397,6 @@ from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
-from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
