@@ -42,32 +42,58 @@ module  {
     // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.conv2d"(%[[OUT0]], %[[OUT]])
     // CHECK: %[[OUT2:[a-zA-Z0-9_]+]] = "oneflow.output"
     return %output_1 : tensor<2x3x5x6xf32>
-    }
+  }
 
-    func.func @GraphToRun_3(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32> {
-      %output_0 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_3_input.0.0_2", output_lbns = ["_GraphToRun_3_input.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
-      %0 = "oneflow.cast"(%output_0) {device_name = ["0:0"], device_tag = "cpu", dtype = 2 : i32, hierarchy = [1], op_name = "Cast_1", op_type_name = "cast", scope_symbol_id = 65 : i64} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
-      %output_1 = "oneflow.output"(%0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_3_output.0.0_2", output_lbns = ["_GraphToRun_3_output.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
-      // CHECK: func.func @GraphToRun_3(%[[A:[a-zA-Z0-9_]+]]: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32> { 
-      // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.input"(%[[A]]) 
-      // CHECK-NOT: oneflow.cast
-      // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT0]])
-      // CHECK：return %[[OUT]] : tensor<2x3x4x5xf32>
-      return %output_1 : tensor<2x3x4x5xf32>
-    }
+  func.func @GraphToRun_3(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32> {
+    %output_0 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_3_input.0.0_2", output_lbns = ["_GraphToRun_3_input.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+    %0 = "oneflow.cast"(%output_0) {device_name = ["0:0"], device_tag = "cpu", dtype = 2 : i32, hierarchy = [1], op_name = "Cast_1", op_type_name = "cast", scope_symbol_id = 65 : i64} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+    %output_1 = "oneflow.output"(%0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_3_output.0.0_2", output_lbns = ["_GraphToRun_3_output.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+    // CHECK: func.func @GraphToRun_3(%[[A:[a-zA-Z0-9_]+]]: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32> { 
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.input"(%[[A]]) 
+    // CHECK-NOT: oneflow.cast
+    // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT0]])
+    // CHECK：return %[[OUT]] : tensor<2x3x4x5xf32>
+    return %output_1 : tensor<2x3x4x5xf32>
+  }
 
-    func.func @GraphToRun_4(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32> {
-      %output_0 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_4_input.0.0_2", output_lbns = ["_GraphToRun_4_input.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
-      %0 = "oneflow.cast"(%output_0) {device_name = ["0:0"], device_tag = "cpu", dtype = 5 : i32, hierarchy = [1], op_name = "Cast_1", op_type_name = "cast", scope_symbol_id = 65 : i64} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32>
-      %output_1 = "oneflow.output"(%0) {data_type = 5 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_4_output.0.0_2", output_lbns = ["_GraphToRun_4_output.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xi32>) -> tensor<2x3x4x5xi32>
-      // CHECK: func.func @GraphToRun_4(%[[A:[a-zA-Z0-9_]+]]: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32> { 
-      // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.input"(%[[A]]) 
-      // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.cast"(%[[OUT0]]) 
-      // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT1]])
-      // CHECK：return %[[OUT]] : tensor<2x3x4x5xi32>
-      return %output_1 : tensor<2x3x4x5xi32>
-    }
+  func.func @GraphToRun_4(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32> {
+    %output_0 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_4_input.0.0_2", output_lbns = ["_GraphToRun_4_input.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+    %0 = "oneflow.cast"(%output_0) {device_name = ["0:0"], device_tag = "cpu", dtype = 5 : i32, hierarchy = [1], op_name = "Cast_1", op_type_name = "cast", scope_symbol_id = 65 : i64} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32>
+    %output_1 = "oneflow.output"(%0) {data_type = 5 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_4_output.0.0_2", output_lbns = ["_GraphToRun_4_output.0.0_2/out"], scope_symbol_id = 65 : i64, shape = [2 : si64, 3 : si64, 4 : si64, 5 : si64]} : (tensor<2x3x4x5xi32>) -> tensor<2x3x4x5xi32>
+    // CHECK: func.func @GraphToRun_4(%[[A:[a-zA-Z0-9_]+]]: tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xi32> { 
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.input"(%[[A]]) 
+    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.cast"(%[[OUT0]]) 
+    // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT1]])
+    // CHECK：return %[[OUT]] : tensor<2x3x4x5xi32>
+    return %output_1 : tensor<2x3x4x5xi32>
+  }
 
+  func.func @GraphToRun_5() -> tensor<5x5xf32> {
+    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "FreeEagerTensor-1", output_lbns = ["FreeEagerTensor-1/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 12 : i64, shape = [5 : si64, 5 : si64], trainable = false} : () -> tensor<5x5xf32>
+    %0 = "oneflow.scalar_mul"(%output) {device_name = ["@0:0"], device_tag = "cuda", float_operand = -2.300000e+00 : f64, has_float_operand = true, has_int_operand = false, hierarchy = [1], int_operand = 0 : si64, op_name = "scalar_mul-0", scope_symbol_id = 12 : i64} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    %1 = "oneflow.tril"(%0) {device_name = ["@0:0"], device_tag = "cuda", diagonal = -1 : si64, floating_fill_value = 0.000000e+00 : f64, hierarchy = [1], integer_fill_value = 0 : si64, is_floating_fill_value = false, op_name = "tril-2", scope_symbol_id = 12 : i64} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    %output_0 = "oneflow.output"(%1) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_TestFuseScaleTril_0_output.0.0_2", output_lbns = ["_TestFuseScaleTril_0_output.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [5 : si64, 5 : si64]} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    // CHECK: func.func @GraphToRun_5() -> tensor<5x5xf32> { 
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.variable"() 
+    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.fused_scale_tril"(%[[OUT0]]) 
+    // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT1]])
+    // CHECK：return %[[OUT]]
+    return %output_0 : tensor<5x5xf32>
+  }
+
+  func.func @GraphToRun_6() -> tensor<5x5xf32> {
+    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "FreeEagerTensor-1", output_lbns = ["FreeEagerTensor-1/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 66 : i64, shape = [5 : si64, 5 : si64], trainable = false} : () -> tensor<5x5xf32>
+    %0 = "oneflow.tril"(%output) {device_name = ["@0:0"], device_tag = "cuda", diagonal = -1 : si64, floating_fill_value = 0.000000e+00 : f64, hierarchy = [1], integer_fill_value = 0 : si64, is_floating_fill_value = false, op_name = "tril-0", scope_symbol_id = 66 : i64} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    %1 = "oneflow.scalar_mul"(%0) {device_name = ["@0:0"], device_tag = "cuda", float_operand = 2.000000e+00 : f64, has_float_operand = true, has_int_operand = false, hierarchy = [1], int_operand = 0 : si64, op_name = "scalar_mul-2", scope_symbol_id = 66 : i64} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    %output_0 = "oneflow.output"(%1) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_TestFuseTrilScale_1_output.0.0_2", output_lbns = ["_TestFuseTrilScale_1_output.0.0_2/out"], scope_symbol_id = 66 : i64, shape = [5 : si64, 5 : si64]} : (tensor<5x5xf32>) -> tensor<5x5xf32>
+    // CHECK: func.func @GraphToRun_6() -> tensor<5x5xf32> { 
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]] = "oneflow.variable"() 
+    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]] = "oneflow.fused_scale_tril"(%[[OUT0]]) 
+    // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.output"(%[[OUT1]])
+    // CHECK：return %[[OUT]]
+    return %output_0 : tensor<5x5xf32>
+  }
+  
   func.func @GraphToRun_normalization_1(%x: tensor<2x3x224x224xf32>, %moving_mean: tensor<3xf32>, %moving_variance: tensor<3xf32>, %gamma: tensor<3xf32>, %beta: tensor<3xf32>, %addend: tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32> {
     %y, %mean, %inv_variance = "oneflow.normalization"(%x, %moving_mean, %moving_variance, %gamma, %beta) {axis = 1 : si32, device_name = ["@0:0"], device_tag = "cpu", epsilon = 9.99999974E-6 : f32, hierarchy = [1], momentum = 0.899999976 : f32, op_name = "normalization-2", operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>, result_segment_sizes = dense<1> : vector<3xi32>, scope_symbol_id = 12 : i64, training = true} : (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>, tensor<3xf32>) -> (tensor<2x3x224x224xf32>, tensor<3xf32>, tensor<3xf32>)
     %0 = "oneflow.add_n2"(%y, %addend) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "add_n-7", op_type_name = "add_n", scope_symbol_id = 12 : i64} : (tensor<2x3x224x224xf32>, tensor<2x3x224x224xf32>) -> tensor<2x3x224x224xf32>
