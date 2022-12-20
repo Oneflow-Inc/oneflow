@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
-#include <string>
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
@@ -300,7 +299,6 @@ RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   if (edge->HasRegst(name)) { 
-    std::cout << " out edge from " << edge->src_node()->VisualStr() << " has already bind regst " << name << std::endl;
     return;
   }
   edge->AddRegst(name, GetProducedRegst(name));
@@ -314,7 +312,6 @@ std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bo
   CHECK_EQ(regst->min_register_num(), min_register_num);
   CHECK_EQ(regst->max_register_num(), max_register_num);
   CHECK_EQ(regst->enable_reuse_mem(), enable_reuse_mem);
-  std::cout << " task node " << VisualStr() << " find regst " << name << std::endl;
   return regst;
 }
 
@@ -524,7 +521,7 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
   CHECK_NE_OR_RETURN(proto.src_task_id(), proto.dst_task_id()) << "self-loop are not supported";
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.src_task_id()));
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.dst_task_id()));
-  origin_edge_id_ = proto.task_edge_uid();
+  // Note that edge id from proto is ignored.
   lbis_.insert(proto.lbi().begin(), proto.lbi().end());
   for (const auto& pair : proto.name_in_producer2regst_desc_id()) {
     AddRegst(pair.first, JUST(task_graph_rebuild_ctx.RegstDesc4Id(pair.second)));
@@ -533,7 +530,6 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
 }
 
 void TaskEdge::ToProto(TaskEdgeProto* proto) const {
-  // proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
   proto->set_task_edge_uid(edge_id());
   proto->set_src_task_id(src_node()->task_id());
   proto->set_dst_task_id(dst_node()->task_id());

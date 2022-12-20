@@ -48,9 +48,6 @@ class Edge {
   OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() {
     edge_id_ = NewEdgeId();
-    // if (edge_id_ == 1502) {
-    //   CHECK(false);
-    // }
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
@@ -62,9 +59,6 @@ class Edge {
   NodeType* dst_node() const { return dst_node_; }
 
   virtual std::string VisualStr() const { return ""; }
-
- protected:
-  int64_t origin_edge_id_{-1};
 
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);

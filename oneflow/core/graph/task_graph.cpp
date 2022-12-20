@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
@@ -1057,7 +1058,6 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   const auto& op_name = op_node->op().op_name();
   auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
   if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
-  std::cout << "find task node from proto: " << op_name << std::endl;
   int64_t task_id = JUST(MapAt(iter->second.parallel_id2task(), parallel_id)).task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
@@ -1098,8 +1098,6 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node
 
 Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
-  std::cout << "boxing task graph of rank " << current_rank_ << boxing_task_graph_proto_->DebugString() << std::flush;
-  sleep(10);
   for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& pair : pair.second.parallel_id2task()) {
@@ -1253,13 +1251,11 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
     }
     return Maybe<void>::Ok();
   }));
-  std::cout << "mark 1 " << std::endl;
 
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
     return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
                            [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
-  std::cout << "mark 2" << std::endl;
 
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
@@ -1268,20 +1264,14 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
-  std::cout << "mark 3 " << std::endl;
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 
   ForEachNode([&](TaskNode* task_node) {
-    // If this is a boxing related task node, it's produced register and edge has already been created.
-    // if (IsTaskNodeBoxingRelated(task_node)) { return; }
     task_node->ProduceAllRegstsAndBindEdges();
   });
   ForEachEdge([&](TaskEdge* edge) {
-    if (!edge->OutHasBindRegst()) {
-      std::cout << "not bind regst task " << edge->src_node()->VisualStr() << std::endl;
-    }
+    CHECK(edge->OutHasBindRegst()) << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
   });
-  std::cout << "mark 4" << std::endl;
   return Maybe<void>::Ok();
 }
 
