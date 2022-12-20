@@ -31,6 +31,7 @@ def _test_global_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
+
 def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
     scalar_sbp = [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     x1 = flow.tensor(1.0, placement=placement, sbp=scalar_sbp)
