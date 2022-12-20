@@ -52,6 +52,7 @@ def _test_quick_gelu(test_case, device):
         np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy())
     )
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_quick_gelu(test_case):

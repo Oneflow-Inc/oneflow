@@ -40,7 +40,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-
 /*static*/ Maybe<void> QuickGeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);

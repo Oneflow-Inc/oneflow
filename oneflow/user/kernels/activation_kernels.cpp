@@ -276,7 +276,7 @@ REGISTER_USER_KERNEL("quick_gelu_grad")
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kQuickGeluBackwardWithDyX, 
+                ctx->device_type(), ep::primitive::BinaryOp::kQuickGeluBackwardWithDyX,
                 src->data_type(), dst->data_type(), 1 /*max_num_dims*/);
           });
     })

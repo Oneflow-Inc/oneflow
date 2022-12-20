@@ -240,7 +240,7 @@ class QuickGeluFunctor : public UnaryFunctor {
 
 class QuickGeluGradFunctor : public BinaryFunctor {
  public:
-  QuickGeluGradFunctor(){
+  QuickGeluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("quick_gelu_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };

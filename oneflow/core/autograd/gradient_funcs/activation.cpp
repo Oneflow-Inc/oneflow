@@ -146,7 +146,7 @@ class QuickGelu : public OpExprGradFunction<QuickGeluCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::QuickGeluGrad(x, out_grads.at(0)));
+      in_grads->at(0) = JUST(functional::QuickGeluGrad(out_grads.at(0), x));
     }
     return Maybe<void>::Ok();
   }
