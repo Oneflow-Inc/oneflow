@@ -39,6 +39,7 @@ def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
     test_case.assertEqual(x2.sbp, sbp)
     test_case.assertEqual(x2.placement, placement)
 
+
 def _test_graph_full(test_case, shape, placement, sbp):
     class GlobalFullGraph(flow.nn.Graph):
         def __init__(self,):
@@ -85,7 +86,6 @@ class TestFullGlobal(flow.unittest.TestCase):
                 ):
                     _test_global_full(test_case, shape, placement, sbp)
                     _test_global_full_tensor_scalar(test_case, shape, placement, sbp)
-
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
