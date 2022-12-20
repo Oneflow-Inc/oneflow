@@ -61,6 +61,8 @@ class SbpEdge final {
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool merged_node_is_start_node, bool duplicating_first_node,
                      const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id);
+  // Compute the weighted sum of the time and memory cost
+  void ComputeWeightedCost();
   // Determine Final SbpSignature for attachment of this edge
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -162,6 +164,8 @@ class SbpEdge final {
   bool in_memory_support_ = false;
   // The consumed memory for different sbp strategies
   std::vector<std::vector<int64_t>> memory_;
+  // The weighted sum of time cost and memory cost
+  std::vector<std::vector<double>> weighted_cost_;
 };
 
 }  // namespace auto_parallel

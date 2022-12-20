@@ -67,6 +67,9 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
       for (int32_t j = 0; j < second->cost_.size(); j++) {
         const double edge_cost =
             common_edge->start_node_ == first ? common_edge->cost_[i][j] : common_edge->cost_[j][i];
+        const double edge_weighted_cost = common_edge->start_node_ == first
+                                              ? common_edge->weighted_cost_[i][j]
+                                              : common_edge->weighted_cost_[j][i];
         if (edge_cost < GetValidMaxCopyCost()) {
           merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
           cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
@@ -75,6 +78,8 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
                                                                  : common_edge->GetMemory(j, i))
                               + first->GetMemory(i) + second->GetMemory(j));
           }
+          weighted_cost_.emplace_back(edge_weighted_cost + first->weighted_cost_[i]
+                                      + second->weighted_cost_[j]);
         }
       }
     }
@@ -87,6 +92,7 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
         merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
         cost_.emplace_back(first->cost_[i] + second->cost_[j]);
         if (in_memory_support_) { memory_.push_back(first->GetMemory(i) + second->GetMemory(j)); }
+        weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
       }
     }
   }
@@ -218,6 +224,7 @@ void SbpNode::SummarizeCost() {
       // Add the cost for child node to this node
       cost_[sbp_this] += min_cost;
       if (in_memory_support_) { memory_[sbp_this] += min_memory_cost; }
+      weighted_cost_[sbp_this] += min_weighted_sum;
     }
   }
 }
@@ -242,6 +249,20 @@ bool SbpNode::EliminateItselfAsChild() {
   }
   // can not eliminate this node
   return false;
+}
+
+// Compute the weighted sum of the time and memory cost
+void SbpNode::ComputeWeightedCost() {
+  if (half_node_.empty()) {
+    // If this node is not generated from merging, it should have original cost
+    weighted_cost_ = cost_;
+    if (in_memory_support_) {
+      for (int32_t sbp_id = 0; sbp_id < memory_.size(); sbp_id++) {
+        weighted_cost_[sbp_id] += kMemoryRatioDp * memory_[sbp_id];
+      }
+    }
+  } else {
+  }
 }
 
 void SbpNode::FinalizeSbp() {

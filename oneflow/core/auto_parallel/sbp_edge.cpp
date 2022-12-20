@@ -58,6 +58,7 @@ void SbpEdge::SummarizeCost() {
   int32_t start_node_sbp_size = start_node_->cost_.size();
   if (in_memory_support_) { memory_.resize(start_node_sbp_size); }
   cost_.resize(start_node_sbp_size);
+  weighted_cost_.resize(start_node_sbp_size);
   // Copy cost and memory cost
   if (mid_node_) {
     // Buffer
@@ -68,6 +69,8 @@ void SbpEdge::SummarizeCost() {
     double min_copy_cost = 0.0;
     int64_t min_memory_cost = 0;
     int32_t min_sbp_mid = 0;
+    double weighted_cost = 0.0;
+    double min_weighted_cost = 0.0;
     // Node elimination
     mid_node_sbp_sig_.resize(start_node_sbp_size);
     int32_t end_node_sbp_size = end_node_->cost_.size();
@@ -75,27 +78,33 @@ void SbpEdge::SummarizeCost() {
     for (int32_t sbp_start = 0; sbp_start < start_node_sbp_size; sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
       if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
+      weighted_cost_[sbp_start].resize(end_node_sbp_size);
       mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
           copy_cost = mid_node_->cost_[sbp_mid];
           memory_cost = mid_node_->GetMemory(sbp_mid);
+          weighted_cost = mid_node_->weighted_cost_[sbp_mid];
           // Add first edge cost
           if (edge_list_[0]->start_node_ == start_node_) {
             copy_cost += edge_list_[0]->cost_[sbp_start][sbp_mid];
             memory_cost += edge_list_[0]->GetMemory(sbp_start, sbp_mid);
+            weighted_cost += edge_list_[0]->weighted_cost_[sbp_start][sbp_mid];
           } else {
             copy_cost += edge_list_[0]->cost_[sbp_mid][sbp_start];
             memory_cost += edge_list_[0]->GetMemory(sbp_mid, sbp_start);
+            weighted_cost += edge_list_[0]->weighted_cost_[sbp_mid][sbp_start];
           }
           // Add second edge cost
           if (edge_list_[1]->end_node_ == end_node_) {
             copy_cost += edge_list_[1]->cost_[sbp_mid][sbp_end];
             memory_cost += edge_list_[1]->GetMemory(sbp_mid, sbp_end);
+            weighted_cost += edge_list_[1]->weighted_cost_[sbp_mid][sbp_end];
           } else {
             copy_cost += edge_list_[1]->cost_[sbp_end][sbp_mid];
             memory_cost += edge_list_[1]->GetMemory(sbp_end, sbp_mid);
+            weighted_cost += edge_list_[1]->weighted_cost_[sbp_end][sbp_mid];
           }
 
           // Compare and look for the minimum cost
@@ -105,11 +114,13 @@ void SbpEdge::SummarizeCost() {
             min_memory_cost = memory_cost;
             min_weighted_sum = weighted_sum;
             min_sbp_mid = sbp_mid;
+            min_weighted_cost = weighted_cost;
           }
         }
         // Store the results of the dynamic programming for minimizing the weighted sum
         cost_[sbp_start][sbp_end] = min_copy_cost;
         if (in_memory_support_) { memory_[sbp_start][sbp_end] = min_memory_cost; }
+        weighted_cost_[sbp_start][sbp_end] = min_weighted_cost;
         mid_node_sbp_sig_[sbp_start][sbp_end] = min_sbp_mid;
       }
     }
@@ -119,20 +130,25 @@ void SbpEdge::SummarizeCost() {
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
       if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
+      weighted_cost_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         double copy_cost = 0;
         int64_t memory_cost = 0;
+        double weighted_cost = 0.0;
         for (int32_t edge_num = 0; edge_num < edge_list_.size(); edge_num++) {
           if (edge_list_[edge_num]->start_node_ == start_node_) {
             copy_cost += edge_list_[edge_num]->cost_[sbp_start][sbp_end];
             memory_cost += edge_list_[edge_num]->GetMemory(sbp_start, sbp_end);
+            weighted_cost += edge_list_[edge_num]->weighted_cost_[sbp_start][sbp_end];
           } else {
             copy_cost += edge_list_[edge_num]->cost_[sbp_end][sbp_start];
             memory_cost += edge_list_[edge_num]->GetMemory(sbp_end, sbp_start);
+            weighted_cost += edge_list_[edge_num]->weighted_cost_[sbp_end][sbp_start];
           }
         }
         cost_[sbp_start][sbp_end] = copy_cost;
         if (in_memory_support_) { memory_[sbp_start][sbp_end] = memory_cost; }
+        weighted_cost_[sbp_start][sbp_end] = weighted_cost;
       }
     }
   }
@@ -145,30 +161,36 @@ void SbpEdge::DuplicateCost(
   std::vector<std::vector<double>> copy_cost;
   std::vector<std::vector<int32_t>> temp_mid_node_sbp_sig;
   std::vector<std::vector<int64_t>> temp_memory;
+  std::vector<std::vector<double>> weighted_cost;
   if (merged_node_is_start_node) {
     copy_cost.resize(num_sig);
     if (mid_node_) { temp_mid_node_sbp_sig.resize(num_sig); }
+    weighted_cost.resize(num_sig);
     if (in_memory_support_) { temp_memory.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
       const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[i].first
                                                      : merged_sig_id2half_sig_id[i].second;
       copy_cost[i] = cost_[sig_idx];
+      weighted_cost[i] = weighted_cost_[sig_idx];
       if (mid_node_) { temp_mid_node_sbp_sig[i] = mid_node_sbp_sig_[sig_idx]; }
       if (in_memory_support_) { temp_memory[i] = memory_[sig_idx]; }
     }
   } else {
     const int32_t num_start_sig = cost_.size();
     copy_cost.resize(num_start_sig);
+    weighted_cost.resize(num_start_sig);
     if (mid_node_) { temp_mid_node_sbp_sig.resize(num_start_sig); }
     if (in_memory_support_) { temp_memory.resize(num_start_sig); }
     for (int32_t i = 0; i < num_start_sig; i++) {
       copy_cost[i].resize(num_sig);
+      weighted_cost[i].resize(num_sig);
       if (mid_node_) { temp_mid_node_sbp_sig[i].resize(num_sig); }
       if (in_memory_support_) { temp_memory[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
         const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[j].first
                                                        : merged_sig_id2half_sig_id[j].second;
         copy_cost[i][j] = cost_[i][sig_idx];
+        weighted_cost[i][j] = weighted_cost_[i][sig_idx];
         if (mid_node_) { temp_mid_node_sbp_sig[i][j] = mid_node_sbp_sig_[i][sig_idx]; }
         if (in_memory_support_) { temp_memory[i][j] = memory_[i][sig_idx]; }
       }
@@ -176,8 +198,26 @@ void SbpEdge::DuplicateCost(
   }
 
   cost_ = copy_cost;
+  weighted_cost_ = weighted_cost;
   if (mid_node_) { mid_node_sbp_sig_ = temp_mid_node_sbp_sig; }
   if (in_memory_support_) { memory_ = temp_memory; }
+}
+
+// Compute the weighted sum of the time and memory cost
+void SbpEdge::ComputeWeightedCost() {
+  if (edge_list_.empty()) {
+    // If this edge does not contain any sub edges, it should have original cost
+    weighted_cost_ = cost_;
+    if (in_memory_support_) {
+      for (int32_t i = 0; i < memory_.size(); i++) {
+        auto& memory_i = memory_[i];
+        auto& weighted_cost_i = weighted_cost_[i];
+        for (int32_t j = 0; j < memory_[i].size(); j++) {
+          weighted_cost_i[j] += kMemoryRatioDp * memory_i[j];
+        }
+      }
+    }
+  }
 }
 
 void SbpEdge::FinalizeSbp() {

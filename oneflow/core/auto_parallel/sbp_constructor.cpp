@@ -60,6 +60,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
 
   JUST(InitCopyMemoryCost(op_graph));
+  InitWeightedCost();
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
@@ -420,6 +421,13 @@ void SbpConstructor::InitAvailableMemory() {
   available_memory_ = int64_t(free / (first_ratio * second_ratio));
   std::cout << "Free memory: " << free << ", total memory: " << total
             << ", available memory: " << available_memory_ << std::endl;
+}
+
+void SbpConstructor::InitWeightedCost() {
+  for (auto& sbp_node : sbp_graph_.node_list_) {
+    sbp_node->ComputeWeightedCost();
+    for (auto& sbp_edge : sbp_node->edges_in_) { sbp_edge->ComputeWeightedCost(); }
+  }
 }
 
 // Print the graph with SBP in order

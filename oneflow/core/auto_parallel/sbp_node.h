@@ -66,6 +66,8 @@ class SbpNode final {
 
   // Recompute Computation Cost after adding child nodes in it
   void SummarizeCost();
+  // Compute the weighted sum of the time and memory cost
+  void ComputeWeightedCost();
   // Determine Final SbpSignature for attachment of this node
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -208,6 +210,8 @@ class SbpNode final {
   bool in_memory_support_ = false;
   // The consumed memory for different sbp strategies
   std::vector<int64_t> memory_;
+  // The weighted sum of time cost and memory cost
+  std::vector<double> weighted_cost_;
 
   // Let one node point to another
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);

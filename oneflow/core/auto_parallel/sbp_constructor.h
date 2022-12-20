@@ -67,6 +67,7 @@ class SbpConstructor final {
   Maybe<void> ApplyTrunkAlgo();
   Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
   void InitAvailableMemory();
+  void InitWeightedCost();
   // Load logical blob ids onto sbp edges
   void LoadLbi2SbpEdge(const OpGraph& op_graph);
 
