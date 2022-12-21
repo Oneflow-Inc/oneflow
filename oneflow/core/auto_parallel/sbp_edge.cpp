@@ -253,7 +253,7 @@ void SbpEdge::SummarizeCost2() {
             int32_t edge_sbp_end =
                 end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->end_node_);
             memory_cost += edge_list_[edge_num]->GetMemory(edge_sbp_start, edge_sbp_end);
-            weighted_cost += edge_list_[edge_num]->weighted_cost_[edge_sbp_start][edge_sbp_start];
+            weighted_cost += edge_list_[edge_num]->weighted_cost_[edge_sbp_start][edge_sbp_end];
           } else {
             // At this moment
             // start_node_->IsComponent(edge_list_[edge_num]->end_node_)
