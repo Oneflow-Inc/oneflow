@@ -256,6 +256,7 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
+oneflow._oneflow_internal.RegisterStackGetter()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -432,6 +433,7 @@ from oneflow._oneflow_internal import (
     clear_autocast_cache,
 )
 from oneflow.amp.autocast_mode import *
+from oneflow.jit import *
 
 from . import (
     autograd,
