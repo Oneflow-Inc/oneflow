@@ -159,7 +159,7 @@ class Adagrad(Optimizer):
                     "lr_decay": param_group["lr_decay"],
                     "train_step_val": self._state["step"] + 1,
                 }
-                
+
                 if param_group["contiguous_params"]:
                     param_list = param_group.contiguous_parameters
                 else:

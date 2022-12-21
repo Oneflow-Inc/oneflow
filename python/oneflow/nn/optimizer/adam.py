@@ -196,7 +196,7 @@ class Adam(Optimizer):
             "do_bias_correction": param_group["do_bias_correction"],
             "amsgrad": param_group["amsgrad"],
         }
-        
+
         if param_group["contiguous_params"]:
             param_list = param_group.contiguous_parameters
         else:
