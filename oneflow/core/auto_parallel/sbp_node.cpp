@@ -303,12 +303,10 @@ void SbpNode::ComputeWeightedCost() {
     half_node_[1]->ComputeWeightedCost();
     // The edge between two half nodes
     SbpEdge* edge_found = nullptr;
-    bool is_first = false;
     if (!half_node_[0]->edges_in_.empty()) {
       edge_found = half_node_[0]->edges_in_[0];
     } else if (!half_node_[0]->edges_out_.empty()) {
       edge_found = half_node_[0]->edges_out_[0];
-      is_first = true;
     }
     if (edge_found != nullptr) { edge_found->ComputeWeightedCost(); }
     // Compute the weighted cost form half nodes
@@ -318,9 +316,10 @@ void SbpNode::ComputeWeightedCost() {
       weighted_cost_[merged_sig_id] =
           half_node_[0]->weighted_cost_[pair.first] + half_node_[1]->weighted_cost_[pair.second];
       if (edge_found != nullptr) {
-        weighted_cost_[merged_sig_id] += is_first
-                                             ? edge_found->weighted_cost_[pair.first][pair.second]
-                                             : edge_found->weighted_cost_[pair.second][pair.first];
+        // The dimension of weighted cost has been expand for the found edge.
+        // Both the dimension of weighted_cost_ is merged_sig_id2half_sig_id_.size().
+        // The start node and end node is changed to this for the found edge.
+        weighted_cost_[merged_sig_id] += edge_found->weighted_cost_[merged_sig_id][merged_sig_id];
       }
     }
   }
