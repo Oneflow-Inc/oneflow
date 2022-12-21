@@ -2994,8 +2994,8 @@ class ToDeviceFunctor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t k, int32_t dim,
-                                bool largest, bool sorted) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& k,
+                                const int32_t& dim, const bool largest, const bool sorted) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     std::shared_ptr<Tensor> values;
     std::shared_ptr<Tensor> indices;
@@ -3015,25 +3015,16 @@ class TopKFunctor {
       values = JUST(DimGather(input, axis, indices, false));
 
     } else {
-      std::vector<int32_t> perm;
-      for (int i = 0; i < input->ndim() - 1; i++) {
-        if (i < axis) {
-          perm.push_back(i);
-        } else {
-          perm.push_back(i + 1);
-        }
-      }
-      perm.push_back(axis);
-      auto x = JUST(Transpose(input, perm));
+      auto perm = JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
       if (largest) {
         indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
       } else {
         auto neg_input = JUST(ScalarMul(x, -1, false));
         indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
       }
-      std::vector<int32_t> inversed_perm(perm.size());
-      for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
-      indices = JUST(Transpose(indices, inversed_perm));
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices, *inversed_perm));
       values = JUST(DimGather(input, axis, indices, false));
     }
     (*outputs)[0] = values;
@@ -3735,8 +3726,8 @@ class BaddBmmFunctor {
 
 class SortFunctor {
  public:
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t dim,
-                                bool descending) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& dim,
+                                const bool descending) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     std::shared_ptr<Tensor> values;
     std::shared_ptr<Tensor> indices;
@@ -3748,20 +3739,12 @@ class SortFunctor {
       indices = JUST(ArgSort(input, direction));
       values = JUST(DimGather(input, axis, indices, false));
     } else {
-      std::vector<int32_t> perm;
-      for (int i = 0; i < input->ndim() - 1; i++) {
-        if (i < axis) {
-          perm.push_back(i);
-        } else {
-          perm.push_back(i + 1);
-        }
-      }
-      perm.push_back(axis);
-      auto x = JUST(Transpose(input, perm));
+      std::shared_ptr<std::vector<int32_t>> perm =
+          JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
       auto indices_temp = JUST(ArgSort(x, direction));
-      std::vector<int32_t> inversed_perm(perm.size());
-      for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
-      indices = JUST(Transpose(indices_temp, inversed_perm));
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices_temp, *inversed_perm));
       values = JUST(DimGather(input, axis, indices, false));
     }
     (*outputs)[0] = values;
