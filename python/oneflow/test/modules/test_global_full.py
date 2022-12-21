@@ -62,10 +62,9 @@ def _test_graph_full_tensor_scalar(test_case, shape, placement, sbp):
     class GlobalFullGraph2(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
-            self.value = flow.tensor(1.0)
 
         def build(self):
-            x = flow.full(shape, self.value, placement=placement, sbp=sbp)
+            x = flow.full(shape, flow.tensor(1.0, placement=placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]), placement=placement, sbp=sbp)
             return x
 
     model = GlobalFullGraph2()
