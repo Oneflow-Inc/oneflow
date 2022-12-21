@@ -371,6 +371,16 @@ if(BUILD_PYTHON)
   add_dependencies(of_pyext_obj oneflow)
 
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
+  set_target_properties(oneflow_internal
+    APPEND
+    PROPERTY
+    CMAKE_BUILD_RPATH "\\\$ORIGIN/../../nvidia/cublas/lib"
+  )
+  set_target_properties(oneflow_internal
+    APPEND
+    PROPERTY
+    CMAKE_BUILD_RPATH "\\\$ORIGIN/../../nvidia/cudnn/lib"
+  )
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj of_op_schema)

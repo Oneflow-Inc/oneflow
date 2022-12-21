@@ -46,6 +46,8 @@ REQUIRED_PACKAGES = [
     "requests",
     "pillow",
     "rich",
+    "nvidia-cudnn-cu11",
+    "nvidia-cublas-cu11",
 ]
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:
