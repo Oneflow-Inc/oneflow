@@ -1,0 +1,2 @@
+nvidia-cudnn-cu11
+nvidia-cublas-cu11
