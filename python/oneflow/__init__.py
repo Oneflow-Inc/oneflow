@@ -77,6 +77,7 @@ from oneflow._C import amin
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
 from oneflow._C import split
@@ -94,6 +95,8 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
+from oneflow._C import logaddexp
+from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import mish
 from oneflow._C import repeat
@@ -209,7 +212,7 @@ from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import masked_fill_
 from oneflow._C import equal
-from oneflow._C import equal as eq
+from oneflow._C import broadcast_equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
@@ -252,6 +255,7 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
+oneflow._oneflow_internal.RegisterStackGetter()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -306,7 +310,7 @@ from oneflow.framework.dtype import (
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
-from oneflow._C import from_numpy
+from oneflow._C import from_numpy, from_dlpack
 
 from oneflow.autograd import (
     enable_grad,
@@ -338,6 +342,7 @@ import oneflow.utils.tensor
 import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow._oneflow_internal import to_dlpack
 from oneflow.framework.type_tensor import *
 
 from oneflow.framework.tensor import zero_
@@ -380,6 +385,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.unique import unique_op as unique
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
@@ -426,6 +432,7 @@ from oneflow._oneflow_internal import (
     clear_autocast_cache,
 )
 from oneflow.amp.autocast_mode import *
+from oneflow.jit import *
 
 from . import (
     autograd,
