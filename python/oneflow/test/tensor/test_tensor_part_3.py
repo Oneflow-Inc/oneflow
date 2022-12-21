@@ -73,6 +73,10 @@ class TestTensor(flow.unittest.TestCase):
             return y
         return input.scatter(dim, oneof(*_get_indexes(device)), src, reduce=reduce)
 
+    def test_tensor_element_size_api(test_case):
+        x = flow.ones(2, 1, dtype=flow.float)
+        test_case.assertEqual(x.element_size(), 4)
+
 
 if __name__ == "__main__":
     unittest.main()
