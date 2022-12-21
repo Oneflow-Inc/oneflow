@@ -374,12 +374,12 @@ if(BUILD_PYTHON)
   set_property(TARGET oneflow_internal
     APPEND
     PROPERTY
-    CMAKE_BUILD_RPATH "\\\$ORIGIN/../../nvidia/cublas/lib"
+    BUILD_RPATH "\$ORIGIN/../../nvidia/cublas/lib"
   )
   set_property(TARGET oneflow_internal
     APPEND
     PROPERTY
-    CMAKE_BUILD_RPATH "\\\$ORIGIN/../../nvidia/cudnn/lib"
+    BUILD_RPATH "\$ORIGIN/../../nvidia/cudnn/lib"
   )
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
