@@ -16,7 +16,7 @@ limitations under the License.
 import warnings
 import oneflow as flow
 import oneflow._oneflow_internal._C as _C
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class DistributedPariticalFCSample(Module):
