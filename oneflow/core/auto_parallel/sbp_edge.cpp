@@ -158,12 +158,24 @@ void SbpEdge::SummarizeCost() {
 }
 
 void SbpEdge::SummarizeCost2() {
+  // If any sub data structure is in the memory support,
+  // then this edge is in the memory support
+  if (mid_node_ && mid_node_->in_memory_support_) {
+    in_memory_support_ = true;
+  } else {
+    in_memory_support_ = std::any_of(edge_list_.begin(), edge_list_.end(), [](SbpEdge* sbp_edge) {
+      return sbp_edge->in_memory_support_;
+    });
+  }
   // We would need to compute the memory for this elimination
   int32_t start_node_sbp_size = start_node_->weighted_cost_.size();
+  if (in_memory_support_) { memory_.resize(start_node_sbp_size); }
   weighted_cost_.resize(start_node_sbp_size);
   // Copy cost and memory cost
   if (mid_node_) {
     // Buffer
+    int64_t memory_cost = 0;
+    int64_t min_memory_cost = 0;
     int32_t min_sbp_mid = 0;
     double weighted_cost = 0.0;
     double min_weighted_cost = 0.0;
@@ -172,36 +184,47 @@ void SbpEdge::SummarizeCost2() {
     int32_t end_node_sbp_size = end_node_->weighted_cost_.size();
     int32_t mid_node_sbp_size = mid_node_->weighted_cost_.size();
     for (int32_t sbp_start = 0; sbp_start < start_node_sbp_size; sbp_start++) {
+      if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
       weighted_cost_[sbp_start].resize(end_node_sbp_size);
       mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
+          memory_cost = mid_node_->GetMemory(sbp_mid);
           weighted_cost = mid_node_->weighted_cost_[sbp_mid];
           // Add first edge cost
           if (edge_list_[0]->end_node_ == mid_node_) {
-            weighted_cost += edge_list_[0]->weighted_cost_[start_node_->GetComponentSbpId(
-                sbp_start, edge_list_[0]->start_node_)][sbp_mid];
+            int32_t edge_sbp_start =
+                start_node_->GetComponentSbpId(sbp_start, edge_list_[0]->start_node_);
+            memory_cost += edge_list_[0]->GetMemory(edge_sbp_start, sbp_mid);
+            weighted_cost += edge_list_[0]->weighted_cost_[edge_sbp_start][sbp_mid];
           } else {
-            weighted_cost += edge_list_[0]->weighted_cost_[sbp_mid][start_node_->GetComponentSbpId(
-                sbp_start, edge_list_[0]->end_node_)];
+            int32_t edge_sbp_start =
+                start_node_->GetComponentSbpId(sbp_start, edge_list_[0]->end_node_);
+            memory_cost += edge_list_[0]->GetMemory(sbp_mid, edge_sbp_start);
+            weighted_cost += edge_list_[0]->weighted_cost_[sbp_mid][edge_sbp_start];
           }
           // Add second edge cost
           if (edge_list_[1]->start_node_ == mid_node_) {
-            weighted_cost += edge_list_[1]->weighted_cost_[sbp_mid][end_node_->GetComponentSbpId(
-                sbp_end, edge_list_[1]->end_node_)];
+            int32_t edge_sbp_end = end_node_->GetComponentSbpId(sbp_end, edge_list_[1]->end_node_);
+            memory_cost += edge_list_[1]->GetMemory(sbp_mid, edge_sbp_end);
+            weighted_cost += edge_list_[1]->weighted_cost_[sbp_mid][edge_sbp_end];
           } else {
-            weighted_cost += edge_list_[1]->weighted_cost_[end_node_->GetComponentSbpId(
-                sbp_end, edge_list_[1]->start_node_)][sbp_mid];
+            int32_t edge_sbp_end =
+                end_node_->GetComponentSbpId(sbp_end, edge_list_[1]->start_node_);
+            memory_cost += edge_list_[1]->GetMemory(edge_sbp_end, sbp_mid);
+            weighted_cost += edge_list_[1]->weighted_cost_[edge_sbp_end][sbp_mid];
           }
 
           // Compare and look for the minimum cost
           if (sbp_mid == 0 || weighted_cost < min_weighted_cost) {
             min_sbp_mid = sbp_mid;
+            min_memory_cost = memory_cost;
             min_weighted_cost = weighted_cost;
           }
         }
         // Store the results of the dynamic programming for minimizing the weighted sum
+        if (in_memory_support_) { memory_[sbp_start][sbp_end] = min_memory_cost; }
         weighted_cost_[sbp_start][sbp_end] = min_weighted_cost;
         mid_node_sbp_sig_[sbp_start][sbp_end] = min_sbp_mid;
       }
@@ -210,8 +233,10 @@ void SbpEdge::SummarizeCost2() {
     // Edge elimination
     int32_t end_node_sbp_size = end_node_->weighted_cost_.size();
     for (int32_t sbp_start = 0; sbp_start < weighted_cost_.size(); sbp_start++) {
+      if (in_memory_support_) { memory_[sbp_start].resize(end_node_sbp_size); }
       weighted_cost_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
+        int64_t memory_cost = 0;
         double weighted_cost = 0.0;
         for (int32_t edge_num = 0; edge_num < edge_list_.size(); edge_num++) {
           // For normal edge elimination, instead of recomputation with different memory ratio
@@ -223,20 +248,25 @@ void SbpEdge::SummarizeCost2() {
           // initialized. As a result, if start_node_ != edge_list_[edge_num]->start_node_,
           // IsComponent() would return false immediately.
           if (start_node_->IsComponent(edge_list_[edge_num]->start_node_)) {
-            weighted_cost +=
-                edge_list_[edge_num]->weighted_cost_  // Of format
-                    [start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->start_node_)]
-                    [end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->end_node_)];
+            int32_t edge_sbp_start =
+                start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->start_node_);
+            int32_t edge_sbp_end =
+                end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->end_node_);
+            memory_cost += edge_list_[edge_num]->GetMemory(edge_sbp_start, edge_sbp_end);
+            weighted_cost += edge_list_[edge_num]->weighted_cost_[edge_sbp_start][edge_sbp_start];
           } else {
             // At this moment
             // start_node_->IsComponent(edge_list_[edge_num]->end_node_)
             // end_node_->IsComponent(edge_list_[edge_num]->start_node_)
-            weighted_cost +=
-                edge_list_[edge_num]->weighted_cost_  // Of format
-                    [end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->start_node_)]
-                    [start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->end_node_)];
+            int32_t edge_sbp_start =
+                start_node_->GetComponentSbpId(sbp_start, edge_list_[edge_num]->end_node_);
+            int32_t edge_sbp_end =
+                end_node_->GetComponentSbpId(sbp_end, edge_list_[edge_num]->start_node_);
+            memory_cost += edge_list_[edge_num]->GetMemory(edge_sbp_end, edge_sbp_start);
+            weighted_cost += edge_list_[edge_num]->weighted_cost_[edge_sbp_end][edge_sbp_start];
           }
         }
+        if (in_memory_support_) { memory_[sbp_start][sbp_end] = memory_cost; }
         weighted_cost_[sbp_start][sbp_end] = weighted_cost;
       }
     }

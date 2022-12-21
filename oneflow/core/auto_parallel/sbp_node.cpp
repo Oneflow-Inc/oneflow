@@ -233,7 +233,13 @@ void SbpNode::SummarizeCost2() {
   if (children_.size() == child_node_sbp_sig_.size()) { return; }
   int32_t previous_children_size = child_node_sbp_sig_.size();
   child_node_sbp_sig_.resize(children_.size());
+  in_memory_support_ =
+      in_memory_support_
+      || std::any_of(children_.begin() + previous_children_size, children_.end(),
+                     [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
+  if (in_memory_support_) { memory_.resize(cost_.size(), 0); }
   // Buffer
+  int64_t min_memory_cost = 0, memory_cost = 0;
   double min_weighted_sum = 0.0, weighted_sum = 0.0;
   int32_t min_sbp_child = 0;
   // Only deal with new children_
@@ -245,21 +251,27 @@ void SbpNode::SummarizeCost2() {
       for (int32_t sbp_child = 0; sbp_child < child_node->cost_.size(); sbp_child++) {
         if (child_node->edges_in_.size()) {
           // edge in graph: father -> child
+          memory_cost = child_node->edges_in_[0]->GetMemory(sbp_this, sbp_child)
+                        + child_node->GetMemory(sbp_child);
           weighted_sum = child_node->edges_in_[0]->weighted_cost_[sbp_this][sbp_child]
                          + child_node->weighted_cost_[sbp_child];
         } else {
           // edge in graph: child -> father
+          memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
+                        + child_node->GetMemory(sbp_child);
           weighted_sum = child_node->edges_out_[0]->weighted_cost_[sbp_child][sbp_this]
                          + child_node->weighted_cost_[sbp_child];
         }
         // update min_cost with fixed SbpSignature for this node and child node
         if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
+          min_memory_cost = memory_cost;
           min_weighted_sum = weighted_sum;
           min_sbp_child = sbp_child;
         }
       }
       child_node_sbp_sig_[child][sbp_this] = min_sbp_child;
       // Add the cost for child node to this node
+      if (in_memory_support_) { memory_[sbp_this] += min_memory_cost; }
       weighted_cost_[sbp_this] += min_weighted_sum;
     }
   }
@@ -293,6 +305,7 @@ void SbpNode::ComputeWeightedCost() {
     // If this node is not generated from merging, it should have original cost
     // weighted_cost_ = cost_;
     weighted_cost_ = origin_cost_;
+    memory_ = origin_memory_;
     if (in_memory_support_) {
       for (int32_t sbp_id = 0; sbp_id < origin_memory_.size(); sbp_id++) {
         weighted_cost_[sbp_id] += kMemoryRatioDp * origin_memory_[sbp_id];
@@ -313,12 +326,19 @@ void SbpNode::ComputeWeightedCost() {
     for (int32_t merged_sig_id = 0; merged_sig_id < merged_sig_id2half_sig_id_.size();
          merged_sig_id++) {
       const auto& pair = merged_sig_id2half_sig_id_[merged_sig_id];
+      if (in_memory_support_) {
+        memory_[merged_sig_id] =
+            half_node_[0]->GetMemory(pair.first) + half_node_[1]->GetMemory(pair.second);
+      }
       weighted_cost_[merged_sig_id] =
           half_node_[0]->weighted_cost_[pair.first] + half_node_[1]->weighted_cost_[pair.second];
       if (edge_found != nullptr) {
         // The dimension of weighted cost has been expand for the found edge.
         // Both the dimension of weighted_cost_ is merged_sig_id2half_sig_id_.size().
         // The start node and end node is changed to this for the found edge.
+        if (in_memory_support_) {
+          memory_[merged_sig_id] += edge_found->GetMemory(merged_sig_id, merged_sig_id);
+        }
         weighted_cost_[merged_sig_id] += edge_found->weighted_cost_[merged_sig_id][merged_sig_id];
       }
     }
