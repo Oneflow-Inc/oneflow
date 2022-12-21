@@ -1,4 +1,0 @@
-# can't use the auditwheel binary installed by pipx because we want to use it as a module
-auditwheel
-nvidia-cudnn-cu11
-nvidia-cublas-cu11
