@@ -1,0 +1,63 @@
+name: Feature Request
+description: Request/Propose a new OneFlow feature.
+title: "[Feature Request]: "
+labels: [feature-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome feature proposal/request! This template will help us gather the information we need to review the proposal/request.
+  - type: textarea
+    id: background
+    attributes:
+      label: Background and motivation
+      description: Please describe the purpose and value of the new feature here. If the feature is linked to a specific problem, please describe it or put the link here.
+      placeholder: Purpose
+    validations:
+      required: true
+  - type: textarea
+    id: api-proposal
+    attributes:
+      label: API Proposal
+      description: |
+        Please provide the specific public API signature diff that you are proposing. If a new API is not required, please provide the current API related to the feature, or note that there is no related public API.
+      placeholder: API declaration (no method bodies)
+      value: |
+        ```py
+        def new_api(value: Tensor) -> Tensor:
+          pass
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: api-usage
+    attributes:
+      label: API Usage
+      description: |
+        Please provide code examples that highlight how the proposed API additions are meant to be consumed. This will help suggest whether the API has the right shape to be functional, performant and usable.
+        If there is not a new API in step 2, please skip it.
+      placeholder: API usage
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: |
+        Please provide some alternative information of the feature, if any. For example, if you request a feature which depends on a specific device, please provide the device information.
+      placeholder: Alternatives
+    validations:
+      required: false
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: |
+        Please mention any risks that to your knowledge the API proposal might entail, such as breaking changes, performance regressions, etc.
+      placeholder: Risks
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your contributing!
