@@ -39,6 +39,19 @@ parser.register("type", "bool", lambda v: v.lower() == "true")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
+
+
+def get_version():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "version", os.path.join("oneflow", "version.py")
+    )
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m.__version__
+
+
 REQUIRED_PACKAGES = [
     f"numpy>={np.__version__}",
     "protobuf>=3.9.2, <4.0",
@@ -46,9 +59,12 @@ REQUIRED_PACKAGES = [
     "requests",
     "pillow",
     "rich",
-    "nvidia-cudnn-cu11",
-    "nvidia-cublas-cu11",
 ]
+
+if "cu11" in get_version():
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11")
+    REQUIRED_PACKAGES.append("nvidia-cublas-cu11")
+
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:
     REQUIRED_PACKAGES.append("dataclasses")
@@ -76,17 +92,6 @@ def get_oneflow_internal_so_path():
 
 
 package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}
-
-
-def get_version():
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location(
-        "version", os.path.join("oneflow", "version.py")
-    )
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m.__version__
 
 
 setup(
