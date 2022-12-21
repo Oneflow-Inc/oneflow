@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import unittest
 import types
+import warnings
 
 import numpy as np
 
@@ -135,6 +136,62 @@ class TestGraphBlock(flow.unittest.TestCase):
         linear_t_g = LinearTrainGraph()
 
         linear_t_g(x)
+
+    def test_block_with_not_registered_module(test_case):
+        device = "cuda"
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to(device)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+
+        x = flow.tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=flow.float32,
+            device=device,
+            requires_grad=False,
+        )
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.dict = {"lin": linear}
+
+            def forward(self, x):
+                return self._forward_impl(x)
+
+            def _forward_impl(self, x):
+                test_case.assertTrue(isinstance(self.dict["lin"], flow.nn.Module))
+                return self.dict["lin"](x)
+
+        class LinearTrainGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModule()
+
+            def build(self, x):
+                out = self.m(x)
+                out = out.sum()
+                return out
+
+        linear_t_g = LinearTrainGraph()
+
+        with warnings.catch_warnings(record=True) as w:
+          # Here will print:
+          #     UserWarning: Linear(in_features=3, out_features=8, bias=True) is called in a nn.Graph, but not registered into a nn.Graph.
+          linear_t_g(x)
+
+          test_case.assertTrue(len(w) == 1)
+          test_case.assertTrue(issubclass(w[-1].category, UserWarning))
+          test_case.assertTrue("is called in a nn.Graph, but not registered into a nn.Graph" in str(w[-1].message))
 
     def test_block_with_seq_container(test_case):
         class SubModule0(flow.nn.Module):

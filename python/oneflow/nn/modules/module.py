@@ -148,6 +148,8 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
+        if  flow._oneflow_internal.lazy_mode.is_enabled():
+            warnings.warn(self._shallow_repr() + " is called in a nn.Graph, but not registered into a nn.Graph.")
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
