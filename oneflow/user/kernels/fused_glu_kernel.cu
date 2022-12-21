@@ -229,7 +229,7 @@ bool TryDispatchDualGemmImplAccType(ep::CudaStream* stream, const std::string& a
                                     int32_t m, int32_t n, int32_t k, const T* x, const T* w,
                                     const T* v, const T* b, const T* c, T* wx, int32_t wx_stride,
                                     T* vx, int32_t vx_stride, T* y) {
-  const static bool allow_half_precision =
+  const bool allow_half_precision =
       ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
   if (std::is_same<T, half>::value) {
     if (allow_half_precision) {
@@ -285,8 +285,7 @@ bool TryDispatchDualGemmImpl(ep::CudaStream* stream, const std::string& activati
                              int32_t n, int32_t k, const T* x, const T* w, const T* v, const T* b,
                              const T* c, T* wx, int32_t wx_stride, T* vx, int32_t vx_stride, T* y) {
 #ifdef WITH_CUTLASS
-  const static bool enabled =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL", false);
+  const bool enabled = ParseBooleanFromEnv("ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL", false);
   if (enabled) {
     return TryDispatchDualGemmImplArchTag<T>(stream, activation, m, n, k, x, w, v, b, c, wx,
                                              wx_stride, vx, vx_stride, y);

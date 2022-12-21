@@ -63,6 +63,7 @@ MultiClientSessionContext::~MultiClientSessionContext() {
   if (Singleton<MultiClientSessionContext>::Get() != nullptr) {
     Singleton<MultiClientSessionContext>::SetAllocated(nullptr);
   }
+  env_ctx_.reset();
 }
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
@@ -170,7 +171,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
                                              GlobalProcessCtx::NumOfProcessPerNode());
     VLOG(1) << "Finish delete multi client session context." << std::endl;
-    env_ctx_.reset();
     is_inited_ = false;
   }
   return Maybe<void>::Ok();

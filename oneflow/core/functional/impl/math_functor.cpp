@@ -2263,7 +2263,8 @@ class VarianceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    if (!IsFloatingDataType(input->dtype()->data_type())) {
+    if (!(IsFloatingDataType(input->dtype()->data_type())
+          || IsHalfDataType(input->dtype()->data_type()))) {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
     std::vector<int32_t> axis;

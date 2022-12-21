@@ -255,7 +255,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
-    const static bool enable_trt_flash_attn =
+    const bool enable_trt_flash_attn =
         ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", false)
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
@@ -264,9 +264,13 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
         && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
         && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
     const bool is_trt_supported_arch = (arch == 80 || arch == 86 || arch == 89);
+    const int64_t query_head_size = query_hidden_size / num_heads;
+    const bool is_trt_supported_head_size = ((query_head_size == 40) || (query_head_size == 64));
+    // Avoid PackQKV overhead when seq_len is small.
+    const bool is_long_seq_len = query_seq_len >= 512;
     if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
         && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
-        && (query_hidden_size / num_heads == 40) && is_trt_supported_arch && (!causal)) {
+        && is_trt_supported_head_size && is_long_seq_len && is_trt_supported_arch && (!causal)) {
       // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
       // implementation at:
       // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
@@ -278,7 +282,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
       using PackType = Pack<half, pack_size>;
       int count = batch_size * query_seq_len * query_hidden_size * 3 / pack_size;
       PackQkv<PackType><<<(count - 1 + 256) / 256, 256, 0, cuda_stream->cuda_stream()>>>(
-          batch_size, query_seq_len, num_heads, query_hidden_size / num_heads / pack_size,
+          batch_size, query_seq_len, num_heads, query_head_size / pack_size,
           reinterpret_cast<const PackType*>(query->dptr()),
           reinterpret_cast<const PackType*>(key->dptr()),
           reinterpret_cast<const PackType*>(value->dptr()), reinterpret_cast<PackType*>(packed_qkv),
@@ -287,7 +291,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
       nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
           nvinfer1::plugin::getFMHACubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
       run_fmha_v2_api(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
-                      kernels, batch_size, num_heads, query_hidden_size / num_heads, query_seq_len,
+                      kernels, batch_size, num_heads, query_head_size, query_seq_len,
                       cuda_stream->cuda_stream());
       return;
     }
