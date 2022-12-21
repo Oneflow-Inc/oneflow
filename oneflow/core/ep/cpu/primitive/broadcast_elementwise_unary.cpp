@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
@@ -138,6 +139,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
     size_t simplified_num_dims = 0;
+    int permutation_list[kMaxNumDims];
+    int64_t permutation_src_dims[kMaxNumDims];
     int64_t simplified_src_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
     int64_t simplified_src_strides[kMaxNumDims];
@@ -146,6 +149,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
+    bool permutable = inferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_src_dims, 
+                                                    simplified_dst_dims, permutation_list, permutation_src_dims);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
@@ -159,6 +164,13 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       const int64_t dst_stride = simplified_dst_strides[0];
       LaunchTensorFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, src_stride,
                                            attr0, attr1);
+    } else if (permutable) {
+      std::unique_ptr<Permute> permute =
+        NewPrimitive<PermuteFactory>(DeviceType::kCPU, simplified_num_dims);
+
+      //TODO: convert src into dst type, now hardcode to kFloat for simplicity
+      permute->Launch(stream, DataType::kFloat, simplified_num_dims, permutation_src_dims, src_ptr,
+                    permutation_list, dst_ptr);
     } else {
       LaunchGeneral<unary_op, Src, Dst>(
           cpu_stream, dst, src, simplified_num_dims, simplified_dst_dims, simplified_src_dims,
