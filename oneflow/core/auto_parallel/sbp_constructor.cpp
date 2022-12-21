@@ -60,6 +60,9 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
 
   JUST(InitCopyMemoryCost(op_graph));
+  // We need to store the original cost and memory after the initialization (InitComputationCost(),
+  // InitMemory(), InitCopyMemoryCost()) and before the usage of them (InitWeightedCost())
+  sbp_graph_.StoreOriginMemory();
   InitWeightedCost();
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to

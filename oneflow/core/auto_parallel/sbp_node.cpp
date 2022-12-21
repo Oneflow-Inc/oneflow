@@ -291,10 +291,11 @@ bool SbpNode::EliminateItselfAsChild() {
 void SbpNode::ComputeWeightedCost() {
   if (half_node_.empty()) {
     // If this node is not generated from merging, it should have original cost
-    weighted_cost_ = cost_;
+    // weighted_cost_ = cost_;
+    weighted_cost_ = origin_cost_;
     if (in_memory_support_) {
-      for (int32_t sbp_id = 0; sbp_id < memory_.size(); sbp_id++) {
-        weighted_cost_[sbp_id] += kMemoryRatioDp * memory_[sbp_id];
+      for (int32_t sbp_id = 0; sbp_id < origin_memory_.size(); sbp_id++) {
+        weighted_cost_[sbp_id] += kMemoryRatioDp * origin_memory_[sbp_id];
       }
     }
   } else {

@@ -46,6 +46,7 @@ class SbpGraph final {
   // assign 0 to a SbpSignature strategy to avoid randomness
   void SetDefaultSbpSig() const;
 
+  void StoreOriginMemory();
   // Compute Cost for current strategy
   double ComputeCost() const;
   double ComputeWeightedCost() const;

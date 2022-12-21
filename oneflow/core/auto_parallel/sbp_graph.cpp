@@ -68,6 +68,17 @@ void SbpGraph::SetDefaultSbpSig() const {
   for (const auto& this_node : node_list_) { this_node->final_sbp_sig_id_ = 0; }
 };
 
+void SbpGraph::StoreOriginMemory() {
+  // We do not need to store the origin cost and memory for edges
+  // Because the origin cost and memory is the current cost and memory for a bare edge.
+  // For nodes, we need to do so because child elimination would attach the child cost and memory to
+  // the current cost and memory.
+  for (auto& this_node : node_list_) {
+    this_node->origin_cost_ = this_node->cost_;
+    this_node->origin_memory_ = this_node->memory_;
+  }
+}
+
 double SbpGraph::ComputeCost() const {
   // Over all cost under current strategy
   double graph_cost_ = 0;

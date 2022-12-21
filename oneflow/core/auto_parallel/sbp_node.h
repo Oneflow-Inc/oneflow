@@ -181,6 +181,7 @@ class SbpNode final {
   std::vector<NdSbpSignature> sbp_sig_list_;
   // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
   std::vector<double> cost_;
+  std::vector<double> origin_cost_;
 
   // Child node list
   std::vector<SbpNode*> children_;
@@ -217,6 +218,7 @@ class SbpNode final {
   bool in_memory_support_ = false;
   // The consumed memory for different sbp strategies
   std::vector<int64_t> memory_;
+  std::vector<int64_t> origin_memory_;
   // The weighted sum of time cost and memory cost
   std::vector<double> weighted_cost_;
   // Relationship between a merged node and its components
