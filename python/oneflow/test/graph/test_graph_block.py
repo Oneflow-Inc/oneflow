@@ -185,13 +185,16 @@ class TestGraphBlock(flow.unittest.TestCase):
         linear_t_g = LinearTrainGraph()
 
         with warnings.catch_warnings(record=True) as w:
-          # Here will print:
-          #     UserWarning: Linear(in_features=3, out_features=8, bias=True) is called in a nn.Graph, but not registered into a nn.Graph.
-          linear_t_g(x)
+            # Here will print:
+            #     UserWarning: Linear(in_features=3, out_features=8, bias=True) is called in a nn.Graph, but not registered into a nn.Graph.
+            linear_t_g(x)
 
-          test_case.assertTrue(len(w) == 1)
-          test_case.assertTrue(issubclass(w[-1].category, UserWarning))
-          test_case.assertTrue("is called in a nn.Graph, but not registered into a nn.Graph" in str(w[-1].message))
+            test_case.assertTrue(len(w) == 1)
+            test_case.assertTrue(issubclass(w[-1].category, UserWarning))
+            test_case.assertTrue(
+                "is called in a nn.Graph, but not registered into a nn.Graph"
+                in str(w[-1].message)
+            )
 
     def test_block_with_seq_container(test_case):
         class SubModule0(flow.nn.Module):
