@@ -409,39 +409,23 @@ double SbpEdge::GreedyStrategy() {
 }
 
 // Get the minimum element in Cost
-double SbpEdge::GetMinCost() {
+double SbpEdge::GetMinWeightedCost() {
   // used the stored value if pre-computed.
-  if (kMemoryRatioDp == memory_ratio_search4min_cost_ && min_cost_ >= 0) { return min_cost_; }
+  if (kMemoryRatioDp == memory_ratio_search4min_weighted_cost_ && min_weighted_cost_ >= 0) {
+    return min_weighted_cost_;
+  }
   // Check the size of Cost
   CHECK(weighted_cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_cost for corresponding memory ratio
-  min_cost_ = GetWeightedCost();
+  min_weighted_cost_ = GetWeightedCost();
   for (int32_t i = 0; i < weighted_cost_.size(); i++) {
     for (int32_t j = 0; j < weighted_cost_[i].size(); j++) {
-      min_cost_ = std::min(min_cost_, GetWeightedCost(i, j));
+      min_weighted_cost_ = std::min(min_weighted_cost_, GetWeightedCost(i, j));
     }
   }
   // Store current the memory ratio
-  memory_ratio_search4min_cost_ = kMemoryRatioDp;
-  return min_cost_;
-}
-
-// Get the maximum element in Cost
-double SbpEdge::GetMaxCost() const {
-  // used the stored value if pre-computed.
-  // if (max_cost >= 0) return max_cost;
-  // Check the size of Cost
-  CHECK(weighted_cost_.size() > 0) << "Cost not initialized!" << std::endl;
-  // Compute the max_cost
-  double max_cost = -1.0;
-  for (int32_t i = 0; i < weighted_cost_.size(); i++) {
-    for (int32_t j = 0; j < weighted_cost_[i].size(); j++) {
-      if (weighted_cost_[i][j] < GetValidMaxCopyCost() && weighted_cost_[i][j] > max_cost) {
-        max_cost = weighted_cost_[i][j];
-      }
-    }
-  }
-  return max_cost;
+  memory_ratio_search4min_weighted_cost_ = kMemoryRatioDp;
+  return min_weighted_cost_;
 }
 
 // Assemble copy cost

@@ -505,14 +505,14 @@ double SbpNode::EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& nod
     const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
-      curr_cost += this_edge->GetMinCost();
+      curr_cost += this_edge->GetMinWeightedCost();
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
     const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
-      curr_cost += this_edge->GetMinCost();
+      curr_cost += this_edge->GetMinWeightedCost();
     }
   }
   return curr_cost;
