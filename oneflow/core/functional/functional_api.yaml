@@ -3090,4 +3090,6 @@
   signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool descending=False) => Sort"
   bind_python: True
   
-
+- name: "throw_error"
+  signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
