@@ -282,33 +282,33 @@ void SbpEdge::DuplicateCost(
   std::vector<std::vector<int64_t>> temp_memory;
   std::vector<std::vector<double>> weighted_cost;
   if (merged_node_is_start_node) {
-    copy_cost.resize(num_sig);
+    if (edge_list_.empty()) { copy_cost.resize(num_sig); }
     if (mid_node_) { temp_mid_node_sbp_sig.resize(num_sig); }
     weighted_cost.resize(num_sig);
     if (in_memory_support_) { temp_memory.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
       const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[i].first
                                                      : merged_sig_id2half_sig_id[i].second;
-      copy_cost[i] = cost_[sig_idx];
+      if (edge_list_.empty()) { copy_cost[i] = cost_[sig_idx]; }
       weighted_cost[i] = weighted_cost_[sig_idx];
       if (mid_node_) { temp_mid_node_sbp_sig[i] = mid_node_sbp_sig_[sig_idx]; }
       if (in_memory_support_) { temp_memory[i] = memory_[sig_idx]; }
     }
   } else {
-    const int32_t num_start_sig = cost_.size();
-    copy_cost.resize(num_start_sig);
+    const int32_t num_start_sig = weighted_cost_.size();
+    if (edge_list_.empty()) { copy_cost.resize(num_start_sig); }
     weighted_cost.resize(num_start_sig);
     if (mid_node_) { temp_mid_node_sbp_sig.resize(num_start_sig); }
     if (in_memory_support_) { temp_memory.resize(num_start_sig); }
     for (int32_t i = 0; i < num_start_sig; i++) {
-      copy_cost[i].resize(num_sig);
+      if (edge_list_.empty()) { copy_cost[i].resize(num_sig); }
       weighted_cost[i].resize(num_sig);
       if (mid_node_) { temp_mid_node_sbp_sig[i].resize(num_sig); }
       if (in_memory_support_) { temp_memory[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
         const int32_t sig_idx = duplicating_first_node ? merged_sig_id2half_sig_id[j].first
                                                        : merged_sig_id2half_sig_id[j].second;
-        copy_cost[i][j] = cost_[i][sig_idx];
+        if (edge_list_.empty()) { copy_cost[i][j] = cost_[i][sig_idx]; }
         weighted_cost[i][j] = weighted_cost_[i][sig_idx];
         if (mid_node_) { temp_mid_node_sbp_sig[i][j] = mid_node_sbp_sig_[i][sig_idx]; }
         if (in_memory_support_) { temp_memory[i][j] = memory_[i][sig_idx]; }
@@ -316,7 +316,7 @@ void SbpEdge::DuplicateCost(
     }
   }
 
-  cost_ = copy_cost;
+  if (edge_list_.empty()) { cost_ = copy_cost; }
   weighted_cost_ = weighted_cost;
   if (mid_node_) { mid_node_sbp_sig_ = temp_mid_node_sbp_sig; }
   if (in_memory_support_) { memory_ = temp_memory; }
@@ -372,29 +372,29 @@ double SbpEdge::GreedyStrategy() {
   std::unordered_map<int32_t, int32_t> node_list_id2nbh_id = {{start_node_->node_list_id_, 0},
                                                               {end_node_->node_list_id_, 1}};
   // pre-compute and store the current cost between end_node_ and outside.
-  std::vector<double> end_node_out_cost(end_node_->cost_.size());
-  for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
+  std::vector<double> end_node_out_cost(end_node_->weighted_cost_.size());
+  for (int32_t sbp_end = 0; sbp_end < weighted_cost_[0].size(); sbp_end++) {
     end_node_->final_sbp_sig_id_ = sbp_end;
     end_node_out_cost[sbp_end] = end_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // pre-compute and store the current cost between start_node_ and outside.
-  std::vector<double> start_node_out_cost(start_node_->cost_.size());
-  for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
+  std::vector<double> start_node_out_cost(start_node_->weighted_cost_.size());
+  for (int32_t sbp_start = 0; sbp_start < weighted_cost_.size(); sbp_start++) {
     start_node_->final_sbp_sig_id_ = sbp_start;
     start_node_out_cost[sbp_start] = start_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
   double curr_cost = 0.0;
   double min_cost = start_node_out_cost[min_sbp_start] + end_node_out_cost[min_sbp_end]
-                    + cost_[min_sbp_start][min_sbp_end];
+                    + weighted_cost_[min_sbp_start][min_sbp_end];
   double original_cost = min_cost;
 
-  for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-    for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
+  for (int32_t sbp_start = 0; sbp_start < weighted_cost_.size(); sbp_start++) {
+    for (int32_t sbp_end = 0; sbp_end < weighted_cost_[0].size(); sbp_end++) {
       // compute Current Cost for Neighborhood of edge
       end_node_->final_sbp_sig_id_ = sbp_end;
-      curr_cost =
-          start_node_out_cost[sbp_start] + end_node_out_cost[sbp_end] + cost_[sbp_start][sbp_end];
+      curr_cost = start_node_out_cost[sbp_start] + end_node_out_cost[sbp_end]
+                  + weighted_cost_[sbp_start][sbp_end];
       // Find the minimum current cost
       if (curr_cost < min_cost) {
         min_cost = curr_cost;
@@ -431,12 +431,14 @@ double SbpEdge::GetMaxCost() const {
   // used the stored value if pre-computed.
   // if (max_cost >= 0) return max_cost;
   // Check the size of Cost
-  CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
+  CHECK(weighted_cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the max_cost
   double max_cost = -1.0;
-  for (int32_t i = 0; i < cost_.size(); i++) {
-    for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] < GetValidMaxCopyCost() && cost_[i][j] > max_cost) { max_cost = cost_[i][j]; }
+  for (int32_t i = 0; i < weighted_cost_.size(); i++) {
+    for (int32_t j = 0; j < weighted_cost_[i].size(); j++) {
+      if (weighted_cost_[i][j] < GetValidMaxCopyCost() && weighted_cost_[i][j] > max_cost) {
+        max_cost = weighted_cost_[i][j];
+      }
     }
   }
   return max_cost;
@@ -589,12 +591,12 @@ void SbpEdge::InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
 // Set the cut ratio
 double SbpEdge::GetCutRatio() const {
   int32_t num = 0;
-  for (int32_t i = 0; i < cost_.size(); i++) {
-    for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] < GetValidMaxCopyCost()) { num++; }
+  for (int32_t i = 0; i < weighted_cost_.size(); i++) {
+    for (int32_t j = 0; j < weighted_cost_[i].size(); j++) {
+      if (weighted_cost_[i][j] < GetValidMaxCopyCost()) { num++; }
     }
   }
-  return double(num) / double(cost_.size() * cost_[0].size());
+  return double(num) / double(weighted_cost_.size() * weighted_cost_[0].size());
 }
 
 // find the cut ratio
@@ -602,8 +604,8 @@ double SbpEdge::GetCutRatio() const {
 double SbpEdge::FindCutRatio(int32_t threshold) const {
   double cut_ratio = GetCutRatio();
   // lift the cut ratio to 1 to filter out some improper couples to avoid unlimited merging
-  double n = cost_.size();
-  double m = cost_[0].size();
+  double n = weighted_cost_.size();
+  double m = weighted_cost_[0].size();
   double num = cut_ratio * n * m;
   cut_ratio += 0.16 * (n + m) / double(threshold);
   if (num <= n * 2 || num <= m * 2 || (num <= threshold && cut_ratio < 0.51)) {

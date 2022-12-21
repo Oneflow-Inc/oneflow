@@ -469,7 +469,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     // Print debug information for sbp graph
     CHECK(it != op_name2sbp_node_.end());
     const SbpNode* sbp_node = it->second;
-    std::cout << "Computation Cost: " << sbp_node->cost_[sbp_node->final_sbp_sig_id_];
+    std::cout << "Computation Cost: " << sbp_node->weighted_cost_[sbp_node->final_sbp_sig_id_];
     std::cout << ", Min Layer: " << sbp_node->min_layer_ << ", Max Layer: " << sbp_node->max_layer_
               << ", Tributary Layer: " << sbp_node->tributary_layer_
               << ", in trunk: " << sbp_node->on_trunk_

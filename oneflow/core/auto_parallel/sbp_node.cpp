@@ -58,21 +58,14 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   if (common_edge) {
     in_memory_support_ =
         first->in_memory_support_ || second->in_memory_support_ || common_edge->in_memory_support_;
-    double min_cost = GetMaxVal<float>();
-    for (const auto& row : common_edge->cost_) {
-      for (const double& c : row) min_cost = std::min(min_cost, c);
-    }
     // If there is no one case can choose, we will blow up
-    for (int32_t i = 0; i < first->cost_.size(); i++) {
-      for (int32_t j = 0; j < second->cost_.size(); j++) {
-        const double edge_cost =
-            common_edge->start_node_ == first ? common_edge->cost_[i][j] : common_edge->cost_[j][i];
+    for (int32_t i = 0; i < first->weighted_cost_.size(); i++) {
+      for (int32_t j = 0; j < second->weighted_cost_.size(); j++) {
         const double edge_weighted_cost = common_edge->start_node_ == first
                                               ? common_edge->weighted_cost_[i][j]
                                               : common_edge->weighted_cost_[j][i];
-        if (edge_cost < GetValidMaxCopyCost()) {
+        if (edge_weighted_cost < GetValidMaxCopyCost()) {
           merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
-          cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
           if (in_memory_support_) {
             memory_.push_back((common_edge->start_node_ == first ? common_edge->GetMemory(i, j)
                                                                  : common_edge->GetMemory(j, i))
@@ -84,13 +77,13 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
       }
     }
     CHECK(merged_sig_id2half_sig_id_.size() > 0)
-        << "0 size for merge child edge, min cost: " << min_cost;
+        << "0 size for merge two half nodes with common edge!";
   } else {
     in_memory_support_ = first->in_memory_support_ || second->in_memory_support_;
-    for (int32_t i = 0; i < first->cost_.size(); i++) {
-      for (int32_t j = 0; j < second->cost_.size(); j++) {
+    for (int32_t i = 0; i < first->weighted_cost_.size(); i++) {
+      for (int32_t j = 0; j < second->weighted_cost_.size(); j++) {
         merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
-        cost_.emplace_back(first->cost_[i] + second->cost_[j]);
+        weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
         if (in_memory_support_) { memory_.push_back(first->GetMemory(i) + second->GetMemory(j)); }
         weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
       }
@@ -185,7 +178,7 @@ void SbpNode::SummarizeCost() {
       in_memory_support_
       || std::any_of(children_.begin() + previous_children_size, children_.end(),
                      [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
-  if (in_memory_support_) { memory_.resize(cost_.size(), 0); }
+  if (in_memory_support_) { memory_.resize(weighted_cost_.size(), 0); }
   // Buffer
   double min_cost = 0, curr_cost = 0;
   int64_t min_memory_cost = 0, memory_cost = 0;
@@ -193,11 +186,11 @@ void SbpNode::SummarizeCost() {
   int32_t min_sbp_child = 0;
   // Only deal with new children_
   for (int32_t child = previous_children_size; child < children_.size(); child++) {
-    child_node_sbp_sig_[child].resize(cost_.size());
+    child_node_sbp_sig_[child].resize(weighted_cost_.size());
 
-    for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
+    for (int32_t sbp_this = 0; sbp_this < weighted_cost_.size(); sbp_this++) {
       SbpNode* child_node = children_[child];
-      for (int32_t sbp_child = 0; sbp_child < child_node->cost_.size(); sbp_child++) {
+      for (int32_t sbp_child = 0; sbp_child < child_node->weighted_cost_.size(); sbp_child++) {
         if (child_node->edges_in_.size()) {
           // edge in graph: father -> child
           curr_cost =
@@ -237,18 +230,18 @@ void SbpNode::SummarizeCost2() {
       in_memory_support_
       || std::any_of(children_.begin() + previous_children_size, children_.end(),
                      [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
-  if (in_memory_support_) { memory_.resize(cost_.size(), 0); }
+  if (in_memory_support_) { memory_.resize(weighted_cost_.size(), 0); }
   // Buffer
   int64_t min_memory_cost = 0, memory_cost = 0;
   double min_weighted_sum = 0.0, weighted_sum = 0.0;
   int32_t min_sbp_child = 0;
   // Only deal with new children_
   for (int32_t child = previous_children_size; child < children_.size(); child++) {
-    child_node_sbp_sig_[child].resize(cost_.size());
+    child_node_sbp_sig_[child].resize(weighted_cost_.size());
 
-    for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
+    for (int32_t sbp_this = 0; sbp_this < weighted_cost_.size(); sbp_this++) {
       SbpNode* child_node = children_[child];
-      for (int32_t sbp_child = 0; sbp_child < child_node->cost_.size(); sbp_child++) {
+      for (int32_t sbp_child = 0; sbp_child < child_node->weighted_cost_.size(); sbp_child++) {
         if (child_node->edges_in_.size()) {
           // edge in graph: father -> child
           memory_cost = child_node->edges_in_[0]->GetMemory(sbp_this, sbp_child)
@@ -284,13 +277,13 @@ bool SbpNode::EliminateItselfAsChild() {
       SbpNode* father = edges_in_[0]->start_node_;
       father->children_.emplace_back(this);
       CheckAndRemoveFrom<SbpEdge*>(father->edges_out_, edges_in_[0]);
-      father->SummarizeCost();
+      father->SummarizeCost2();
     } else {
       // edge in graph: this_node -> father
       SbpNode* father = edges_out_[0]->end_node_;
       father->children_.emplace_back(this);
       CheckAndRemoveFrom<SbpEdge*>(father->edges_in_, edges_out_[0]);
-      father->SummarizeCost();
+      father->SummarizeCost2();
     }
     // successfully eliminate this node
     return true;
@@ -422,7 +415,7 @@ double SbpNode::GreedyStrategy() {
   double original_cost = EvalNbhCost();
   double min_cost = original_cost;
   int32_t min_sbp = final_sbp_sig_id_;
-  for (int32_t sbp = 0; sbp < cost_.size(); sbp++) {
+  for (int32_t sbp = 0; sbp < weighted_cost_.size(); sbp++) {
     final_sbp_sig_id_ = sbp;
     curr_cost = EvalNbhCost();
     if (curr_cost < min_cost) {
@@ -640,6 +633,8 @@ void SbpNode::LiftMaxLayer(int32_t upper_bound) {
 // Get the minimum element in Cost
 double SbpNode::GetMinCost() const {
   // Check the size of Cost
+  // Can not use weighted cost here since this function is used for find trunk.
+  // We have not initialize weighted cost at this moment
   CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
   return *std::min_element(cost_.begin(), cost_.end());

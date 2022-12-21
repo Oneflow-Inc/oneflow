@@ -85,9 +85,9 @@ double SbpGraph::ComputeCost() const {
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
 
-    graph_cost_ += this_node->cost_[this_id];
+    graph_cost_ += this_node->weighted_cost_[this_id];
     for (const auto& edge_out : this_node->edges_out_) {
-      graph_cost_ += edge_out->cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
+      graph_cost_ += edge_out->weighted_cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
     }
   }
   return graph_cost_;
@@ -150,7 +150,7 @@ int32_t SbpGraph::NodeElimination(SbpNode* this_node) {
     int32_t edges_in_size = this_node->edges_in_.size();
 
     SbpEdge* e = new SbpEdge(two_nodes[0], this_node, two_nodes[1], two_edges[0], two_edges[1]);
-    e->SummarizeCost();
+    e->SummarizeCost2();
     // check and remove the edge_in with new edge in graph
     for (int32_t i = 0; i < edges_in_size; i++) {
       CheckAndRemoveFrom<SbpEdge*>(two_nodes[i]->edges_out_, two_edges[i]);
@@ -260,7 +260,7 @@ int32_t SbpGraph::EdgeElimination(SbpNode* this_node) const {
       // Add the compound edge
       e->edge_list_.emplace_back(this_node->edges_out_[i]);
       this_node->edges_out_[i] = e;
-      e->SummarizeCost();
+      e->SummarizeCost2();
       e->end_node_->edges_in_.emplace_back(e);
     }
   }
@@ -464,7 +464,7 @@ bool SbpGraph::DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
   if (nbh_id == nbh_id2order.size()) { return true; }
   SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
   // Start from B.
-  for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
+  for (int32_t sbp_id = sbp_node->weighted_cost_.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
     if (sbp_node->weighted_cost_[sbp_id]
@@ -564,8 +564,8 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
   std::vector<std::vector<double>> out_nbh_costs(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
-    out_nbh_costs[nbh_id].resize(sbp_node->cost_.size());
-    for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
+    out_nbh_costs[nbh_id].resize(sbp_node->weighted_cost_.size());
+    for (int32_t sbp_id = sbp_node->weighted_cost_.size() - 1; sbp_id >= 0; sbp_id--) {
       sbp_node->final_sbp_sig_id_ = sbp_id;
       out_nbh_costs[nbh_id][sbp_id] = sbp_node->EvalOutNbhCost(node_list_id2nbh_id);
     }
@@ -683,7 +683,7 @@ int32_t SbpGraph::PickAndMerge() {
     int32_t min_sbp_num = 0, curr_sbp_num = 0;
     for (int32_t i = 0; i < node_list_.size(); i++) {
       for (int32_t j = i + 1; j < node_list_.size(); j++) {
-        curr_sbp_num = node_list_[i]->cost_.size() * node_list_[j]->cost_.size();
+        curr_sbp_num = node_list_[i]->weighted_cost_.size() * node_list_[j]->weighted_cost_.size();
         if (curr_sbp_num <= threshold_) {
           node_binary_sets[i].IntersectionTo(node_binary_sets[j], buffer_binary_set);
           curr_comm_edge_num = buffer_binary_set.Total();
