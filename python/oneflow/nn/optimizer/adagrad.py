@@ -120,7 +120,12 @@ class Adagrad(Optimizer):
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 self._state[param]["sum"] = flow.zeros_like(param).fill_(
@@ -154,7 +159,13 @@ class Adagrad(Optimizer):
                     "lr_decay": param_group["lr_decay"],
                     "train_step_val": self._state["step"] + 1,
                 }
-                for param in param_group.parameters:
+                
+                if param_group["contiguous_params"]:
+                    param_list = param_group.contiguous_parameters
+                else:
+                    param_list = param_group.parameters
+
+                for param in param_list:
                     if param.grad is None:
                         continue
                     sum_tensor = self._state[param]["sum"]

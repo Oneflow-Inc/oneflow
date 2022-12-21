@@ -155,7 +155,12 @@ class RMSprop(Optimizer):
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
@@ -193,7 +198,13 @@ class RMSprop(Optimizer):
                     "decay_rate": param_group["alpha"],
                     "l2": param_group["weight_decay"],
                 }
-                for param in param_group.parameters:
+                
+                if param_group["contiguous_params"]:
+                    param_list = param_group.contiguous_parameters
+                else:
+                    param_list = param_group.parameters
+
+                for param in param_list:
                     if param.grad is None:
                         continue
 

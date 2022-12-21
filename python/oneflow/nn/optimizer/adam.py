@@ -148,7 +148,12 @@ class Adam(Optimizer):
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
@@ -191,7 +196,13 @@ class Adam(Optimizer):
             "do_bias_correction": param_group["do_bias_correction"],
             "amsgrad": param_group["amsgrad"],
         }
-        for param in param_group.parameters:
+        
+        if param_group["contiguous_params"]:
+            param_list = param_group.contiguous_parameters
+        else:
+            param_list = param_group.parameters
+
+        for param in param_list:
             if param.grad is None:
                 continue
             if "exp_avg" not in self._state[param]:

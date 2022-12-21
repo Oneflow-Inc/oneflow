@@ -150,6 +150,8 @@ class ParamGroup(object):
             )
 
     def __getitem__(self, key):
+        if key == "contiguous_params":
+            return self._options.get("contiguous_params", False)
         return self._options[key]
 
     def __setitem__(self, key, value):
@@ -340,8 +342,13 @@ class Optimizer(object):
                 raise ValueError(
                     "loaded contiguous_params state doesn't match the optimizer"
                 )
+            
+            if param["contiguous_params"]:
+                param_list = param.contiguous_parameters
+            else:
+                param_list = param.parameters
 
-            if len(param.parameters) != len(saved_param["params"]):
+            if len(param_list) != len(saved_param["params"]):
                 raise ValueError(
                     "loaded state dict contains a parameter group "
                     "that doesn't match the size of optimizer's group"
@@ -352,7 +359,7 @@ class Optimizer(object):
             old_id: p
             for old_id, p in zip(
                 chain.from_iterable((g["params"] for g in saved_groups)),
-                chain.from_iterable((g.parameters for g in groups)),
+                chain.from_iterable((g.parameters if not g["contiguous_params"] else g.contiguous_parameters for g in groups)),
             )
         }
 
@@ -416,16 +423,21 @@ class Optimizer(object):
         start_index = 0
 
         def pack_group(group):
+            if group["contiguous_params"]:
+                param_list = group.contiguous_parameters
+            else:
+                param_list = group.parameters
+
             nonlocal start_index
             packed = {k: v for k, v in group.items() if k not in self._state_not_saved}
             param_mappings.update(
                 {
                     id(p): i
-                    for i, p in enumerate(group.parameters, start_index)
+                    for i, p in enumerate(param_list, start_index)
                     if id(p) not in param_mappings
                 }
             )
-            packed["params"] = [param_mappings[id(p)] for p in group.parameters]
+            packed["params"] = [param_mappings[id(p)] for p in param_list]
             start_index += len(packed["params"])
             return packed
 
@@ -500,7 +512,12 @@ class Optimizer(object):
             it skips the step altogether).
         """
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 param._zero_grad_(set_to_none)
 
     def _parse_input_parameters(self, parameters):
