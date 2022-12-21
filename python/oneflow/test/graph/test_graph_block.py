@@ -396,6 +396,7 @@ class TestGraphBlock(flow.unittest.TestCase):
                     test_case.assertEqual(ck_bool, True)
                 out = self.linear(x)
                 return out
+
         sub_m = SubModule0(10)
         dict_of_m = {"0": sub_m, "1": sub_m}
 
