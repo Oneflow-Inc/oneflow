@@ -76,19 +76,17 @@ class SbpNode final {
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
   // node You should have an initial strategy before running this
-  double GreedyStrategy(double memory_ratio_search);
+  double GreedyStrategy();
   // Evaluate summery of cost between neighborhood and outside nodes
-  double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                        double memory_ratio_search) const;
+  double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the edge cost with a lower order.
   double EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                       const std::vector<int32_t>& nbh_id2order, double memory_ratio_search) const;
+                       const std::vector<int32_t>& nbh_id2order) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
   double EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                          const std::vector<int32_t>& nbh_id2order,
-                          double memory_ratio_search) const;
+                          const std::vector<int32_t>& nbh_id2order) const;
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const;
   // Get the n ring neighborhood of this node
@@ -147,12 +145,8 @@ class SbpNode final {
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
   int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
   int64_t GetMemory() const { return GetMemory(final_sbp_sig_id_); }
-  double GetWeightedCost(int32_t i, double memory_ratio_search) const {
-    return cost_[i] + memory_ratio_search * GetMemory(i);
-  }
-  double GetWeightedCost(double memory_ratio_search) const {
-    return GetWeightedCost(final_sbp_sig_id_, memory_ratio_search);
-  }
+  double GetWeightedCost(int32_t i) const { return weighted_cost_[i]; }
+  double GetWeightedCost() const { return GetWeightedCost(final_sbp_sig_id_); }
   int32_t GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const;
   // Judge if sbp_node is a port of the current node
   bool IsComponent(SbpNode* sbp_node) const;
@@ -228,7 +222,7 @@ class SbpNode final {
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);
 
   // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost(double memory_ratio_search) const;
+  double EvalNbhCost() const;
   // Drop down the maximum layer with the minimum layer from consumer
   void DropMaxLayer(int32_t upper_bound);
   // Drop down the available wait time with the minimum cost from downstream

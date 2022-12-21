@@ -364,7 +364,7 @@ void SbpEdge::FinalizeSbp() {
   for (const auto& this_edge : edge_list_) { this_edge->FinalizeSbp(); }
 }
 
-double SbpEdge::GreedyStrategy(double memory_ratio_search) {
+double SbpEdge::GreedyStrategy() {
   // Sbp combination of the minimum cost
   int32_t min_sbp_start = start_node_->final_sbp_sig_id_,
           min_sbp_end = end_node_->final_sbp_sig_id_;
@@ -375,15 +375,13 @@ double SbpEdge::GreedyStrategy(double memory_ratio_search) {
   std::vector<double> end_node_out_cost(end_node_->cost_.size());
   for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
     end_node_->final_sbp_sig_id_ = sbp_end;
-    end_node_out_cost[sbp_end] =
-        end_node_->EvalOutNbhCost(node_list_id2nbh_id, memory_ratio_search);
+    end_node_out_cost[sbp_end] = end_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // pre-compute and store the current cost between start_node_ and outside.
   std::vector<double> start_node_out_cost(start_node_->cost_.size());
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     start_node_->final_sbp_sig_id_ = sbp_start;
-    start_node_out_cost[sbp_start] =
-        start_node_->EvalOutNbhCost(node_list_id2nbh_id, memory_ratio_search);
+    start_node_out_cost[sbp_start] = start_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
   double curr_cost = 0.0;
@@ -411,20 +409,20 @@ double SbpEdge::GreedyStrategy(double memory_ratio_search) {
 }
 
 // Get the minimum element in Cost
-double SbpEdge::GetMinCost(double memory_ratio_search) {
+double SbpEdge::GetMinCost() {
   // used the stored value if pre-computed.
-  if (memory_ratio_search == memory_ratio_search4min_cost_ && min_cost_ >= 0) { return min_cost_; }
+  if (kMemoryRatioDp == memory_ratio_search4min_cost_ && min_cost_ >= 0) { return min_cost_; }
   // Check the size of Cost
-  CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
+  CHECK(weighted_cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_cost for corresponding memory ratio
-  min_cost_ = GetWeightedCost(memory_ratio_search);
-  for (int32_t i = 0; i < cost_.size(); i++) {
-    for (int32_t j = 0; j < cost_[i].size(); j++) {
-      min_cost_ = std::min(min_cost_, GetWeightedCost(i, j, memory_ratio_search));
+  min_cost_ = GetWeightedCost();
+  for (int32_t i = 0; i < weighted_cost_.size(); i++) {
+    for (int32_t j = 0; j < weighted_cost_[i].size(); j++) {
+      min_cost_ = std::min(min_cost_, GetWeightedCost(i, j));
     }
   }
   // Store current the memory ratio
-  memory_ratio_search4min_cost_ = memory_ratio_search;
+  memory_ratio_search4min_cost_ = kMemoryRatioDp;
   return min_cost_;
 }
 
