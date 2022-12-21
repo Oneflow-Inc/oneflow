@@ -282,14 +282,29 @@ class InplaceDivFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+
+    // NOTE: div operator will cast inputs to float when dtype is integral
     TensorProcessor tensor_processor;
-    if (y->requires_grad()) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x)), y})
-               .Apply());
-    } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple tensor_processor_inputs;
+    {
+      if (tensor_y->requires_grad()) {
+        tensor_processor_inputs.assign({JUST(Identity(tensor_x)), tensor_y});
+      } else {
+        tensor_processor_inputs.assign({tensor_x, tensor_y});
+      }
     }
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
+      tensor_processor.AddInputs(tensor_processor_inputs, DType::Float());
+    } else {
+      tensor_processor.AddInputs(tensor_processor_inputs)
+          .PromoteInputsToCommonDtype(true)
+          .PromoteIntegerInputsToFloatDtype(true);
+    }
+    JUST(tensor_processor.Apply());
+
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
