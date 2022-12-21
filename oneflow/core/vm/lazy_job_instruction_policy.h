@@ -63,28 +63,16 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
         output_dependences_() {
     robin_hood::unordered_flat_map<Dependence*, bool> unique_map;
     ForEachConstDependence([&](Dependence* compute) {
-      bool& existed = unique_map[compute];
-      if (!existed) {
-        input_dependences_.emplace_back(compute);
-        existed = true;
-      }
+      if (unique_map.emplace(compute, true).second) { input_dependences_.emplace_back(compute); }
     });
     unique_map.clear();
     output_dependences_.reserve(param_blob_objects_->size());
     unique_map.reserve(param_blob_objects_->size());
     ForEachMutDependence([&](Dependence* compute) {
-      bool& existed = unique_map[compute];
-      if (!existed) {
-        output_dependences_.emplace_back(compute);
-        existed = true;
-      }
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
     });
     ForEachMut2Dependence([&](Dependence* compute) {
-      bool& existed = unique_map[compute];
-      if (!existed) {
-        output_dependences_.emplace_back(compute);
-        existed = true;
-      }
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
     });
   }
 
