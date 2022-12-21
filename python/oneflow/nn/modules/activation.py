@@ -369,6 +369,7 @@ class GELU(Module):
         else:
             raise NotImplementedError
 
+
 class QuickGELU(Module):
     """
     QuickGELU() -> Tensor
