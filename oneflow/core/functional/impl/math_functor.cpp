@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -25,18 +23,11 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/profiler/profiler.h"
-
-#include <functional>
-#include <memory>
-#include <sstream>
-#include <bitset>
 
 namespace oneflow {
 namespace one {
@@ -1805,18 +1796,10 @@ class DetFunctor {
                                              JUST(pivot->parallel_desc()), nd_sbp));
     }
     return sequence_function(functional::BroadcastNotEqual)
-        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
-          return functional::ReduceSum(x, {-1}, false);
-        })
-        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
-          return functional::ScalarFMod(x, Scalar(2), true);
-        })
-        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
-          return functional::ScalarMul(x, Scalar(-2), true);
-        })
-        .then([](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> const {
-          return functional::ScalarAdd(x, Scalar(1), Scalar(1), true);
-        })
+        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false); })
+        .then([](const auto& x) { return functional::ScalarFMod(x, Scalar(2), true); })
+        .then([](const auto& x) { return functional::ScalarMul(x, Scalar(-2), true); })
+        .then([](const auto& x) { return functional::ScalarAdd(x, Scalar(1), Scalar(1), true); })
         .call(arange, pivot);
   }
 
