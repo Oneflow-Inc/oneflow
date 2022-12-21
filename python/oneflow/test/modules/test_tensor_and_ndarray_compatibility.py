@@ -44,6 +44,7 @@ test_compare_op_list = [
     "!=",
 ]
 
+
 def _test_compute_operator(test_case, shape):
     random_tensor = np.random.randn(*shape)
     x_flow = flow.tensor(random_tensor)
@@ -55,11 +56,10 @@ def _test_compute_operator(test_case, shape):
         z_torch = eval(f"x_torch {op} random_numpy")
         test_case.assertEqual(z_flow.numpy().all(), z_torch.numpy().all())
 
-        #TODO(yzm):Add tests after fixing the inplace op bug
+        # TODO(yzm):Add tests after fixing the inplace op bug
         # exec(f"x_flow {op}= random_numpy")
         # exec(f"x_torch {op}= random_numpy")
         # test_case.asserqual(x_flow.numpy().all(), x_torch.numpy().all())
-
 
 
 def _test_logic_operator(test_case, shape):
@@ -86,7 +86,7 @@ def _test_compare_operator(test_case, shape):
         print(flow_bool_value)
         print(torch_bool_value)
         test_case.assertEqual(flow_bool_value, torch_bool_value)
- 
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorAndNdarrayCompatibility(flow.unittest.TestCase):
@@ -95,10 +95,10 @@ class TestTensorAndNdarrayCompatibility(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         for arg in GenArgDict(arg_dict):
             _test_compute_operator(test_case, **arg)
-            #TODO(yzm):support compare  operator Compatibility
+            # TODO(yzm):support compare  operator Compatibility
             # _test_compare_operator(test_case, **arg)
-            
-            #TODO(yzm):fix the logic op bug
+
+            # TODO(yzm):fix the logic op bug
             # _test_logic_operator(test_case, **arg)
 
 
