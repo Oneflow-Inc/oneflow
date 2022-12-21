@@ -62,7 +62,6 @@ class DetKernel final : public user_op::OpKernel {
       T y = x_mat.determinant();
       *(y_ptr + i) = y;
     };
-
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
