@@ -99,10 +99,9 @@ class LUDecompositionKernel final : public user_op::OpKernel {
     memcpy_primitive->Launch(stream, LU_ptr, x_ptr, sizeof(T) * x->shape_view().elem_cnt());
 
     std::vector<int32_t> batched_info(batch_count, -1);
-
-    int32_t* batched_d_info = nullptr; /* error info */
-    int32_t lwork = -1;                /* size of workspace */
-    T* d_work = nullptr;               /* device workspace for getrf */
+    int32_t* batched_d_info = nullptr;
+    int32_t lwork = -1;
+    T* d_work = nullptr;
 
     OF_CUDA_CHECK(
         cudaMalloc(reinterpret_cast<void**>(&batched_d_info), batch_count * sizeof(int32_t)));
