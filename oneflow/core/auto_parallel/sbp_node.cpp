@@ -83,7 +83,6 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
     for (int32_t i = 0; i < first->weighted_cost_.size(); i++) {
       for (int32_t j = 0; j < second->weighted_cost_.size(); j++) {
         merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
-        weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
         if (in_memory_support_) { memory_.push_back(first->GetMemory(i) + second->GetMemory(j)); }
         weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
       }
