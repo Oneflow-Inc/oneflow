@@ -123,7 +123,7 @@ class FastGeLU : public BaseActivation {
 };
 
 struct QuickGeluCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class QuickGelu : public OpExprGradFunction<QuickGeluCaptureState> {
