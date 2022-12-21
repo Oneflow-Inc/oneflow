@@ -325,6 +325,62 @@ class TestGraphBlock(flow.unittest.TestCase):
         # print(module_dict_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
+    def test_block_with_dict_container_nto1(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self, out):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, out, False)
+
+            def forward(self, x):
+                if graph_build_util.lazy_mode.is_enabled():
+                    scope = scope_util.current_scope()
+                    scope_proto = graph_build_util.scope_to_proto(scope)
+                    ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                    test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+        sub_m = SubModule0(10)
+        dict_of_m = {"0": sub_m, "1": sub_m}
+
+        class ModuleDictModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+            def forward(self, x):
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        class ModuleDictGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+                # NOTE: ModuleDict doesn't have config.
+                # self.linears.to(GraphModule).activation_checkpointing = True
+                for k, _ in self.linears.items():
+                    self.linears[k].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
+
+            def build(self, x):
+                # ModuleDict can act as an iterable, or get using key
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        module_dict_m = ModuleDictModule()
+        module_dict_g = ModuleDictGraph()
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = module_dict_m(input)
+        output_g = module_dict_g(input)
+        print(module_dict_g)
+
+        # print(module_dict_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
     def test_block_with_para_list_container(test_case):
         list_of_p = [flow.nn.Parameter(flow.randn(10, 10)) for i in range(2)]
 
