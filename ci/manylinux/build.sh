@@ -8,6 +8,7 @@ ${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simpl
 cd python
 
 function clean_artifacts {
+    git config --global --add safe.directory ${ONEFLOW_CI_SRC_DIR}
     git clean -nXd -e \!dist -e \!dist/**
     git clean -fXd -e \!dist -e \!dist/**
 }
