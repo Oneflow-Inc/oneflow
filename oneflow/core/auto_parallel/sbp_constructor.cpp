@@ -34,6 +34,15 @@ namespace auto_parallel {
 
 double kMemoryRatio = UpdateRatio();
 
+namespace {
+
+// kMemoryRatio increase by this rate at each time.
+const double kMemoryIncreaseRatio = 2.0;
+// The ceil of kMemoryRatio.
+const double kMaxMemoryRatio = 22.0;
+
+}  // namespace
+
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
   return Maybe<void>::Ok();
@@ -93,12 +102,26 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
     ori_cost = sbp_graph_.ComputeCost();
     LOG(INFO) << "Greedy cost: " << ori_cost;
   }
-  sbp_graph_.GreedyStrategy(4);
+
+  int32_t step = 1;
+  while (true) {
+    sbp_graph_.GreedyStrategy(4);
+    double curr_memory = sbp_graph_.GetMemory();
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "The " << step << "-th try, memory ratio: " << kMemoryRatio
+                << ", memory: " << curr_memory
+                << ", total cost: " << sbp_graph_.ComputeWeightedCost() << std::endl;
+    }
+    if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
+    kMemoryRatio = std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio);
+    step++;
+    sbp_graph_.ReComputeWeightedCost();
+  }
   sbp_graph_.FinalizeSbp();
 
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
-  if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
+  // if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
