@@ -16,7 +16,7 @@ Pattern {
 
   rewrite normalization with{
     let conv2d_bn = CreateConv2DBatchNorm(epsilon, conv, normalization);
-    replace normalization with conv2d_bn;
+    replace normalization with CopyUserOpAttrs(normalization, conv2d_bn);
   };
   
 }

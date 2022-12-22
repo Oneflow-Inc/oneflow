@@ -189,15 +189,14 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
   for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
   auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
-  reshape_op_attrs.set(
-      "shape",
-      ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(ArrayRef<int64_t>(bn_gamma_new_shape),
-                                                             [&](int64_t v) -> Attribute {
-                                                               return rewriter.getI64IntegerAttr(v);
-                                                             }))));
-  auto reshape_op =
-      rewriter.create<oneflow::ReshapeOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-                                          SmallVector<Value, 4>({div_op.z()}), reshape_op_attrs);
+  reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
+                                                        ArrayRef<int64_t>(bn_gamma_new_shape),
+                                                        [&](int64_t v) -> Attribute {
+                                                          return rewriter.getI64IntegerAttr(v);
+                                                        }))));
+  auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
+      conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
+      reshape_op_attrs);
 
   auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
       conv_op->getLoc(), conv_op->getResultTypes(),
