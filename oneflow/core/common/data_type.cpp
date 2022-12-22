@@ -46,6 +46,15 @@ bool IsFloatingDataType(DataType data_type) {
   }
 #undef FLOATING_CASE
 }
+bool IsHalfDataType(DataType data_type) {
+  switch (data_type) {
+#define HALF_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(HALF_CASE, FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef HALF_CASE
+}
 bool IsPODDataType(DataType data_type) {
   switch (data_type) {
 #define POD_CASE(type_cpp, type_proto) \
@@ -77,7 +86,8 @@ bool IsSupportRequireGradDataType(DataType data_type) {
   switch (data_type) {
 #define REQUIRE_GRAD_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(REQUIRE_GRAD_CASE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(REQUIRE_GRAD_CASE,
+                         FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef REQUIRE_GRAD_CASE
@@ -128,6 +138,58 @@ size_t GetSizeOfDataType(DataType data_type) {
     case kTensorBuffer: return sizeof(TensorBuffer);
     default: LOG(FATAL) << "invalid data_type: " << DataType_Name(data_type);
   }
+}
+
+int64_t GetIntMaxVal(DataType datatype) {
+#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<int64_t>(GetMaxVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetIntMaxVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
+}
+
+int64_t GetIntMinVal(DataType datatype) {
+#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<int64_t>(GetMinVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetIntMinVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
+}
+
+double GetFloatMaxVal(DataType datatype) {
+#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<double>(GetMaxVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetFloatMaxVal(DataType)";
+  }
+#undef SWITCH_FLOAT_TYPE
+}
+
+double GetFloatMinVal(DataType datatype) {
+#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<double>(GetMinVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetFloatMinVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
 }
 
 namespace {

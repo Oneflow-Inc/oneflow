@@ -72,6 +72,10 @@ class TestExpm1Module(flow.unittest.TestCase):
         y = torch.expm1(input)
         return y
 
+    @profile(torch.expm1)
+    def profile_expm1(test_case):
+        torch.expm1(torch.ones(100000))
+
 
 if __name__ == "__main__":
     unittest.main()

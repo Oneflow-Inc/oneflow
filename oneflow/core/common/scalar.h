@@ -29,28 +29,28 @@ class Scalar {
   Scalar() : Scalar(int32_t(0)) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
 
   template<typename T, typename std::enable_if<
                            std::is_integral<T>::value && std::is_signed<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
 
   template<typename T,
            typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value
                                        && !std::is_same<T, bool>::value,
                                    int>::type = 0>
-  Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
 
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.d = value}, active_tag_(HAS_D) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.d = value}, active_tag_(HAS_D) {}
 
   template<typename T, typename std::enable_if<!std::is_same<T, Scalar>::value, int>::type = 0>
-  Scalar& operator=(const T& value) {
+  OF_DEVICE_FUNC Scalar& operator=(const T& value) {
     *this = Scalar(value);
     return *this;
   }
 
-  Scalar& operator=(const Scalar& other) {
+  OF_DEVICE_FUNC Scalar& operator=(const Scalar& other) {
     value_ = other.value_;
     active_tag_ = other.active_tag_;
     return *this;
@@ -78,10 +78,10 @@ class Scalar {
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
 
-  Scalar operator+(const Scalar& other);
-  Scalar operator-(const Scalar& other);
-  Scalar operator*(const Scalar& other);
-  Scalar operator/(const Scalar& other);
+  Scalar operator+(const Scalar& other) const;
+  Scalar operator-(const Scalar& other) const;
+  Scalar operator*(const Scalar& other) const;
+  Scalar operator/(const Scalar& other) const;
 
   Scalar& operator+=(const Scalar& other);
   Scalar& operator-=(const Scalar& other);

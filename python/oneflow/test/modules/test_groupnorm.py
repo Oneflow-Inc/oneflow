@@ -255,6 +255,52 @@ def _test_groupnorm_backward(test_case, device):
     )
 
 
+def _test_groupnorm_backward_fp16(test_case, device):
+    input_arr = np.array(
+        [
+            [
+                [
+                    [-0.8791, 0.2553, 0.7403, -0.2859],
+                    [0.8006, -1.7701, -0.9617, 0.1705],
+                    [0.2842, 1.7825, 0.3365, -0.8525],
+                ],
+                [
+                    [0.7332, -0.0737, 0.7245, -0.6551],
+                    [1.4461, -0.1827, 0.9737, -2.1571],
+                    [0.4657, 0.7244, 0.3378, 0.1775],
+                ],
+            ],
+            [
+                [
+                    [1.8896, 1.8686, 0.1896, 0.9817],
+                    [-0.0671, 1.5569, 1.1449, 0.0086],
+                    [-0.9468, -0.0124, 1.3227, -0.6567],
+                ],
+                [
+                    [-0.8472, 1.3012, -1.1065, 0.9348],
+                    [1.0346, 1.5703, 0.2419, -0.7048],
+                    [0.6957, -0.4523, -0.8819, 1.0164],
+                ],
+            ],
+        ],
+        dtype=np.float16,
+    )
+    x = flow.tensor(
+        input_arr, dtype=flow.float16, device=flow.device(device), requires_grad=True
+    )
+    m = (
+        flow.nn.GroupNorm(num_groups=1, num_channels=2)
+        .to(device=flow.device(device))
+        .to(flow.float16)
+    )
+    y = m(x)
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-03, 1e-03)
+    )
+
+
 def _test_groupnorm_backward_3d(test_case, device):
     input_arr = np.array(
         [
@@ -327,6 +373,101 @@ def _test_groupnorm_backward_3d(test_case, device):
     )
 
 
+def _test_groupnorm_backward_3d_fp16(test_case, device):
+    input_arr = np.array(
+        [
+            [
+                [
+                    [
+                        [1.04569761, 0.22863248, 1.42439335, 1.62249689],
+                        [-0.80578825, -0.27276461, 1.04556507, 0.56864134],
+                        [-1.24085419, -1.23960097, 0.33451416, -1.84820402],
+                    ],
+                    [
+                        [-1.511261, 1.06157517, -0.26715858, -1.32888141],
+                        [1.17976881, -0.07931171, 0.33910684, -1.93458573],
+                        [-1.72659647, 0.79049652, 0.39102785, -1.16264882],
+                    ],
+                ],
+                [
+                    [
+                        [0.30067973, -1.2912226, -0.61508225, 0.56454001],
+                        [0.87074187, -1.69257376, 0.36119148, -0.31014289],
+                        [0.20776964, 1.26195488, -1.37122193, -0.17945234],
+                    ],
+                    [
+                        [-0.31112407, -0.80682631, 0.8233194, 0.6384975],
+                        [0.57617527, 0.45505028, 1.68286151, -1.09590744],
+                        [-1.18127546, -1.07529277, 0.52779943, 1.21755926],
+                    ],
+                ],
+            ],
+            [
+                [
+                    [
+                        [-0.12832351, 1.05625455, -0.23253249, -0.64747611],
+                        [-0.00738123, -1.41390089, -1.92664144, -0.21427625],
+                        [-0.94631219, -0.86493989, 0.21026905, 0.24989732],
+                    ],
+                    [
+                        [1.3859182, 1.72002107, 0.50091892, 1.04198896],
+                        [0.71694594, 1.66417023, -1.63030052, 0.77182641],
+                        [0.71545083, 1.96458366, -1.99031931, 1.3196714],
+                    ],
+                ],
+                [
+                    [
+                        [1.80091702, 0.02834973, 0.82259214, -1.05597501],
+                        [-0.58212207, 0.44205949, -0.14740003, -0.994508],
+                        [1.14678114, -0.39196097, 1.2554798, -0.41829324],
+                    ],
+                    [
+                        [-1.0153903, -0.25755713, -1.81756333, -1.06781159],
+                        [1.79680841, -1.9107133, -0.64325796, -1.94640775],
+                        [1.30671156, 1.20445339, -1.26262901, -0.79494188],
+                    ],
+                ],
+            ],
+        ],
+        dtype=np.float16,
+    )
+    x = flow.tensor(
+        input_arr, dtype=flow.float16, device=flow.device(device), requires_grad=True
+    )
+    m = (
+        flow.nn.GroupNorm(num_groups=2, num_channels=2, affine=False)
+        .to(device=flow.device(device))
+        .to(flow.float16)
+    )
+    y = m(x)
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-03, 1e-03)
+    )
+
+
+def _test_groupnorm_nhwc(test_case, shape, num_groups):
+    (n, c, h, w) = shape
+    x = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=shape).astype(np.float32)
+    ).to("cuda")
+    gamma = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=(c)).astype(np.float32)
+    ).to("cuda")
+    beta = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=(c)).astype(np.float32)
+    ).to("cuda")
+    y = flow._C.group_norm(x, gamma, beta, True, num_groups, 1e-5)
+    x_nhwc = x.permute(0, 2, 3, 1).contiguous()
+    y_nhwc = flow._C.group_norm(
+        x_nhwc, gamma, beta, True, num_groups, 1e-5, "channels_last"
+    )
+    test_case.assertTrue(
+        np.allclose(y_nhwc.permute(0, 3, 1, 2).numpy(), y, 1e-03, 1e-03)
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestGroupNorm(flow.unittest.TestCase):
     def test_groupnorm(test_case):
@@ -338,6 +479,19 @@ class TestGroupNorm(flow.unittest.TestCase):
             _test_groupnorm_backward_3d,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_groupnorm_grad_fp16(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_groupnorm_backward_fp16,
+            _test_groupnorm_backward_3d_fp16,
+        ]
+        # cpu test will raise error: var only support floating point dtypes
+        # https://github.com/Oneflow-Inc/oneflow/issues/9559
+        # arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -356,6 +510,10 @@ class TestGroupNorm(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_groupnorm_nhwc(test_case):
+        _test_groupnorm_nhwc(test_case, (16, 64, 128, 128), 32)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,17 @@ namespace oneflow {
 
 namespace {
 
+template<typename Context>
+std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+}
+
+auto MemsetPrimitiveExists() {
+  return hob::make_custom("MemsetPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMemsetPrimitive(&ctx).operator bool();
+  });
+}
+
 Maybe<Symbol<NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
   NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
@@ -87,7 +98,6 @@ class EagerSymmetricSToPOpKernelCache final : public user_op::OpKernelCache {
 
 }  // namespace
 
-template<DeviceType device_type>
 class EagerSymmetricSToPKernel final : public user_op::OpKernel {
  public:
   EagerSymmetricSToPKernel() = default;
@@ -106,6 +116,8 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     auto* kernel_cache = dynamic_cast<const EagerSymmetricSToPOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
+    auto primitive = NewMemsetPrimitive(ctx);
+    CHECK(primitive);  // NOLINT
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& out_shape_view = out->shape_view();
@@ -113,24 +125,16 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
     const void* in_ptr = in->dptr();
     void* out_ptr = out->mut_dptr();
 
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        out_shape_view.elem_cnt() * GetSizeOfDataType(out->data_type()));
-
+    primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
+                      out_shape_view.elem_cnt() * GetSizeOfDataType(out->data_type()));
     const auto& tensor_slice_copier = kernel_cache->tensor_slice_copier();
     tensor_slice_copier->Copy(ctx->stream(), out_ptr, in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(device) \
-  REGISTER_USER_KERNEL("eager_symmetric_s_to_p")       \
-      .SetCreateFn<EagerSymmetricSToPKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device);
-
-REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCPU)
-
-#if defined(WITH_CUDA)
-REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_USER_KERNEL("eager_symmetric_s_to_p")
+    .SetCreateFn<EagerSymmetricSToPKernel>()
+    .SetIsMatchedHob(MemsetPrimitiveExists() == true);
 
 }  // namespace oneflow

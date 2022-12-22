@@ -5,7 +5,7 @@ if(WITH_MLIR_CUDA_CODEGEN)
 endif(WITH_MLIR_CUDA_CODEGEN)
 
 set(ONEFLOW_OP_GROUPS
-    "ASSIGN;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE;ONE_EMBEDDING"
+    "ASSIGN;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE;ONE_EMBEDDING;LINEAR_ALGEBRA;SYSTEM;MLIR_JIT"
 )
 
 foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
@@ -15,13 +15,31 @@ foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
+add_subdirectory(PDLL)
+
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  OKL/OKLDialect.cpp
+  OKL/OKLOps.cpp
+  OKL/OKLTypes.cpp
+  OKL/Conversion/OKLToLLVM.cpp
+  OKL/Conversion/SplitIntoFuncs.cpp
+  OKL/Conversion/FetchFromLauncher.cpp
+  OKL/Conversion/OnlyKeepComputeOps.cpp
+  OKL/Conversion/Conversion.cpp
+  SBP/SBPDialect.cpp
+  SBP/SBPAttributes.cpp
+  SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
+  OneFlowInferReturnTypes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
+  OneFlowUtils.cpp
+  OneFlowDataTypeConversion.cpp
+  UserOpReflection.cpp
+  UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/PTXToCubin.cpp
@@ -29,7 +47,14 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
+  Transform/AggregateComputeOps.cpp
+  Transform/CSEWithAttributesIgnored.cpp
+  Transform/GroupMatMulOps.cpp
+  Transform/AutoNHWCOps.cpp
+  TransposeHelpers.cpp
   Passes.cpp
+  OneFlowCanonicalizers.cpp
+  OneFlowRewrites.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
@@ -46,6 +71,7 @@ oneflow_add_mlir_dialect_library(
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIROneFlowPDLLPatterns
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)

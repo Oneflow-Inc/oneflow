@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/mirrored_parallel.proto";
+import "oneflow/core/job/local_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
 import "oneflow/core/job/module_conf.proto";
 
@@ -10,7 +10,7 @@ message ScopeProto {
   required int64 device_parallel_desc_symbol_id = 30;
   required int64 host_parallel_desc_symbol_id = 40; 
   optional bool enable_cpu_alternative_op = 41 [default = true];
-  required OptMirroredParallel opt_mirrored_parallel_conf = 50;
+  required OptLocalParallel opt_local_parallel_conf = 50;
   repeated string scope_op_name_prefixes = 60;
   optional int64 parent_scope_symbol_id = 70;
   required int64 session_id = 80;

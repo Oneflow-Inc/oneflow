@@ -17,12 +17,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 
-#include <list>
-#include <vector>
-#include <memory>
 #include <functional>
-#include "oneflow/core/common/util.h"
+#include <list>
+#include <memory>
+#include <vector>
+
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -56,10 +59,14 @@ class FunctionNode {
   }
   const std::string& name() const { return name_; }
 
+  const std::shared_ptr<Scope>& scope() const { return scope_; }
+  void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
+
  protected:
+  friend class GraphTask;
   explicit FunctionNode(const std::string& name,
                         const std::shared_ptr<BackwardFunction>& backward_fn)
-      : name_(name), backward_fn_(backward_fn) {}
+      : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
 
   const std::string name_;
   std::vector<std::shared_ptr<FunctionNode>> next_functions_;
@@ -70,6 +77,9 @@ class FunctionNode {
 
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<BackwardFunction> backward_fn_;
+
+  // The execution scope
+  std::shared_ptr<Scope> scope_;
 };
 
 class AutogradEngine {
@@ -130,13 +140,26 @@ class GraphTask final {
   Maybe<void> ComputeDependencies();
   Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
   Maybe<void> Apply(bool save_grad_for_leaf);
+  std::shared_ptr<TensorTuple> GetCapturedGrads() const { return captured_grads_; }
+  Maybe<void> WriteGraphToDotFile(const std::string& file_name) const;
 
  private:
+  class ExecInfo {
+   public:
+    ExecInfo() = default;
+
+    int32_t dependencies = 0;
+    bool need_execute = false;
+    // Used in autograd.grad interface, to record which grad of tensor will be captured.
+    // The pair means: <output index of this Node, the index of captured_grads_ to be saved>
+    std::unique_ptr<std::vector<std::pair<size_t, size_t>>> capture_indices;
+  };
+
   bool retain_graph_;
   bool create_graph_;
   std::vector<FunctionNode*> roots_;
-  HashMap<FunctionNode*, int> dependencies_;
-  HashSet<FunctionNode*> need_execute_;
+  HashMap<FunctionNode*, ExecInfo> grad_fn2exec_info_;
+  std::shared_ptr<TensorTuple> captured_grads_;
 };
 
 class GraphAutogradEngine final : public AutogradEngine {

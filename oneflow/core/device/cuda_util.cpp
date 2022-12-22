@@ -183,6 +183,10 @@ Maybe<double> GetCUDAMemoryUsed() {
 
   int deviceCount = 0;
   cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if (error_id != cudaSuccess) {
+    return Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :"
+                                 << cudaGetErrorString(error_id);
+  }
 
   CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
 
@@ -199,6 +203,26 @@ Maybe<double> GetCUDAMemoryUsed() {
   return (total_memory - free_memory);
 }
 
+static std::once_flag prop_init_flag;
+static std::vector<cudaDeviceProp> device_props;
+
+void InitDevicePropVectorSize() {
+  int device_count = GetCudaDeviceCount();
+  device_props.resize(device_count);
+}
+
+void InitDeviceProperties(int device_id) {
+  std::call_once(prop_init_flag, InitDevicePropVectorSize);
+  cudaDeviceProp prop{};
+  OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_id));
+  device_props[device_id] = prop;
+}
+
+cudaDeviceProp* GetDeviceProperties(int device_id) {
+  InitCudaContextOnce(device_id);
+  return &device_props[device_id];
+}
+
 void InitCudaContextOnce(int device_id) {
   static int device_count = GetCudaDeviceCount();
   static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
@@ -207,6 +231,7 @@ void InitCudaContextOnce(int device_id) {
   std::call_once(init_flags[device_id], [&]() {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
+    InitDeviceProperties(device_id);
   });
 }
 

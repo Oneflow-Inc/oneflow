@@ -18,7 +18,7 @@ import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 
@@ -176,6 +176,8 @@ class Adagrad(Optimizer):
             epsilon = param_group["eps"]
 
             optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
             optimizer_conf.adagrad_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )

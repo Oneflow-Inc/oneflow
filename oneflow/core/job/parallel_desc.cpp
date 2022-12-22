@@ -385,6 +385,17 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
+ParallelConf GenParallelConfOfCpuOnAllRanks() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  int64_t node_size = GlobalProcessCtx::NodeSize();
+  int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+  for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+    parallel_conf.add_device_name(std::to_string(node_id) + ":0-" + std::to_string(device_num - 1));
+  }
+  return parallel_conf;
+}
+
 namespace {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
@@ -477,6 +488,14 @@ Maybe<void> RawCheckDeviceIdsIsValid(Symbol<ParallelDesc> placement) {
   return Maybe<void>::Ok();
 }
 
+Maybe<Symbol<ParallelDesc>> RawGetParallelDescOfThisRank(const std::string& device_tag) {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device_tag);
+  parallel_conf.add_device_name(std::to_string(GlobalProcessCtx::Rank()) + ":"
+                                + std::to_string(GlobalProcessCtx::LocalRank()));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -488,6 +507,8 @@ decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, 
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
 decltype(TxtStringToPlacement) TxtStringToPlacement =
     DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+decltype(GetParallelDescOfThisRank) GetParallelDescOfThisRank =
+    DECORATE(&RawGetParallelDescOfThisRank, ThreadLocalCopiable);
 decltype(CheckDeviceIdsIsValid) CheckDeviceIdsIsValid =
     DECORATE(&RawCheckDeviceIdsIsValid, ThreadLocal);
 

@@ -73,8 +73,18 @@ def _test_where_scalar(test_case, device):
     y = 2.0
     condition = flow.tensor(np.array([1]), dtype=flow.int32)
     of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.float32)
     np_out = np.array([0.5])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+    flow.set_default_dtype(flow.double)
+    of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.double)
+    flow.set_default_dtype(flow.float16)
+    of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.float16)
+    flow.set_default_dtype(flow.bfloat16)
+    of_out = flow.where(condition, x, y)
+    test_case.assertTrue(of_out.dtype == flow.bfloat16)
 
 
 def _test_where_dim4(test_case, device):
@@ -191,6 +201,14 @@ def _test_where_x_y_none(test_case, device):
         )
 
 
+def _test_where_scalar(test_case, device):
+    x = flow.randn(5, 5)
+    y = flow.where(x > 0, x, 0.0)
+    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+    y = flow.where(x > 0, 0.0, x)
+    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestWhere(flow.unittest.TestCase):
     def test_where(test_case):
@@ -204,6 +222,7 @@ class TestWhere(flow.unittest.TestCase):
             _test_where_broadcast_backward,
             _test_where_broadcast_x_backward,
             _test_where_x_y_none,
+            _test_where_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

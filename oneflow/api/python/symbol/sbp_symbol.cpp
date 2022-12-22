@@ -90,8 +90,8 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
   py::class_<Symbol<SbpParallel>, std::shared_ptr<Symbol<SbpParallel>>>(m, "sbp",
                                                                         py::dynamic_attr())
-      .def("__str__", &api::SbpToString)
-      .def("__repr__", &api::SbpToString)
+      .def("__str__", &api::ApiSbpToString)
+      .def("__repr__", &api::ApiSbpToString)
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def("_ToAttrStr",

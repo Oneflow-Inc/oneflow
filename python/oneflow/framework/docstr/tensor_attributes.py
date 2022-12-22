@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
-from oneflow.framework.docstr.utils import add_docstr
+from oneflow.framework.docstr.utils import add_docstr, reset_docstr
 
 oneflow.device.__doc__ = r"""
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/tensor_attributes.html#torch.torch.device.
-
     A :class:`oneflow.device` is an object representing the device on which a :class:`oneflow.Tensor` is or will be allocated.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/tensor_attributes.html#torch.torch.device.
+    
     The :class:`oneflow.device` contains a device type ('cpu' or 'cuda') and optional device ordinal for the device type. If the 
     device ordinal is not present, this object will always represent the current device for the device type.
 
@@ -91,6 +91,29 @@ oneflow.placement.__doc__ = r"""
         oneflow.placement(type="cuda", ranks=[[0, 1], [2, 3]])
         
     """
+
+reset_docstr(
+    oneflow.placement.all,
+    r"""
+    oneflow.placement.all(device_type) -> oneflow.placement
+
+    Returns a placement that contains all available devices.
+
+    Args:
+        device_type (str): cuda or cpu
+
+    For examples:
+
+    .. code-block:: python
+
+        # Runs on 4 ranks
+        import oneflow as flow
+
+        p = flow.placement.all("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
+        p = flow.placement.all("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
+
+    """,
+)
 
 oneflow.sbp.sbp.__doc__ = r"""
     A ``oneflow.sbp`` is an object representing that how the data of the global tensor is distributed across the ranks of the ``Tensor`` placement.

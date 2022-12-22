@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <iomanip>
+#include <string>
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 
 #ifdef WITH_CUDA
@@ -78,8 +80,15 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
           << ", key = {" << key << "}\n";
 }
 
-bool NeedUnifiedNcclCommInit(const std::string& op_type_name) {
-  return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(op_type_name);
+bool NeedUnifiedNcclCommInit(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(
+        op_conf.user_conf().op_type_name());
+  } else {
+    // Please check the .h file for hard-coding of the name
+    return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(
+        kSystemOpPrefix + std::to_string(op_conf.op_type_case()));
+  }
 }
 
 }  // namespace
@@ -169,9 +178,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
       continue;
     }
     const auto& op_conf = op_attr->op_conf();
-    if (!op_conf.has_user_conf()) { continue; }
-    if (!NeedUnifiedNcclCommInit(op_conf.user_conf().op_type_name())) { continue; }
-
+    if (!NeedUnifiedNcclCommInit(op_conf)) { continue; }
     if (!op_attr->has_parallel_conf_signature()) { continue; }
     if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
 

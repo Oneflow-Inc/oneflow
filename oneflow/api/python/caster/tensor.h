@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_CASTER_TENSOR_H_
+#define ONEFLOW_API_PYTHON_CASTER_TENSOR_H_
+
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/caster/common.h"
@@ -100,3 +103,5 @@ struct type_caster<std::shared_ptr<const oneflow::one::Parameter>>
 
 }  // namespace detail
 }  // namespace pybind11
+
+#endif  // ONEFLOW_API_PYTHON_CASTER_TENSOR_H_

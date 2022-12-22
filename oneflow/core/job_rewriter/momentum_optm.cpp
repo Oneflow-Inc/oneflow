@@ -58,8 +58,14 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Input("learning_rate", optimizer_conf.learning_rate_lbn())
       .Input("momentum", GenLogicalBlobName(op_name, momentum_var.variable_conf().out()))
       .Attr<float>("beta", optimizer_conf.momentum_conf().beta())
+      .Attr<float>("dampening", optimizer_conf.momentum_conf().dampening())
+      .Attr<bool>("nesterov", optimizer_conf.momentum_conf().nesterov())
+      .Attr<bool>("maximize", optimizer_conf.momentum_conf().maximize())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  if (optimizer_conf.has_lr_scale()) {
+    momentum_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
   SetDynamicLossScaleSkipIf(ctx, &momentum_update_op_builder);
   user_op::UserOpConfWrapper momentum_update_op = momentum_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {momentum_update_op.op_conf()});

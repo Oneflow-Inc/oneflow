@@ -52,4 +52,15 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)
 
+template<DeviceType device_type, typename IN_T, typename OUT_T>
+void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size_ptr) {
+  if (*input_ptr == GetZeroVal<IN_T>()) {
+    *output_size_ptr = GetZeroVal<OUT_T>();
+  } else {
+    *output_size_ptr = GetOneVal<OUT_T>();
+  }
+}
+
+INSTANTIATE_SET_OUTPUT_SIZE_FOR_DEVICE(DeviceType::kCPU)
+
 }  // namespace oneflow

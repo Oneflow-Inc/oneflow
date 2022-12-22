@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
+
+class Stream;
+
 namespace one {
 
 class Tensor;
@@ -29,6 +32,12 @@ namespace view {
 bool IsEnvViewDisabled();
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
+
+static bool IsOverlappingMemorys(const std::vector<int64_t>& sizes,
+                                 const std::vector<int64_t>& strides);
+
+static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
+                              const std::vector<int64_t>& strides, int64_t storage_offset);
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset);
@@ -49,14 +58,19 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
-                     const std::vector<int32_t>& expand_shape);
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape);
 
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length);
 
-Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
-                        const std::vector<int32_t>& stride, const int32_t& storage_offset);
+Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
+                            const std::shared_ptr<one::Tensor>& input,
+                            const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                            const int64_t& storage_offset);
+
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
+                        const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                        const int64_t& storage_offset);
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 
@@ -67,7 +81,11 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
                        const int32_t dim1, const int32_t dim2);
 
 }  // namespace view
+
+Maybe<void> Touch(std::shared_ptr<Tensor> input, Symbol<Stream> stream);
+
 }  // namespace one
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_

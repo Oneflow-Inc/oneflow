@@ -191,13 +191,13 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const Shape& out_shape = ctx->OutputShape("out", 0);                                      \
         const size_t x_bytes =                                                                    \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));      \
         const size_t y_bytes =                                                                    \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));      \
         const size_t cond_bytes =                                                                 \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));      \
         return x_bytes + y_bytes + cond_bytes;                                                    \
       });
 
@@ -209,11 +209,11 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const Shape& out_shape = ctx->OutputShape("out", 0);                                      \
         const size_t y_bytes =                                                                    \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));      \
         const size_t cond_bytes =                                                                 \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));      \
         return y_bytes + cond_bytes;                                                              \
       });
 
@@ -225,11 +225,11 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const Shape& out_shape = ctx->OutputShape("out", 0);                                      \
         const size_t x_bytes =                                                                    \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));      \
         const size_t cond_bytes =                                                                 \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+            GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));      \
         return x_bytes + cond_bytes;                                                              \
       });
 
@@ -255,9 +255,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_Y_KERNEL, DEVICE_TYPE_SEQ
                                          BOOL_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_XY_KERNEL, DEVICE_TYPE_SEQ,
-                                 OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
-                                         BOOL_DATA_TYPE_SEQ,
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
+                                     OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
+                                         OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+                                             BOOL_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ,

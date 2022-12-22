@@ -36,7 +36,7 @@ namespace one {
 
 class Tensor;
 class TensorArg;
-class MirroredTensor;
+class LocalTensor;
 
 class AutogradMeta final {
  public:
@@ -46,6 +46,8 @@ class AutogradMeta final {
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
   const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
+  // get current grad processed by hooks
+  Maybe<Tensor> current_grad_value() const;
   bool is_grad_acc_inplace() const { return is_grad_acc_inplace_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
@@ -104,8 +106,8 @@ class TensorInfo final {
   std::shared_ptr<const Shape> shape_;
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
-  Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;  // for global tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for global tensor
 };
 
 }  // namespace one

@@ -133,6 +133,7 @@ class TensorSource : public TraitBase<ConcreteType, TensorSource> {
   static StringRef getDataTypeAttrName() { return "data_type"; }
   static StringRef getIsDynamicAttrName() { return "is_dynamic"; }
   static StringRef getNdSbpAttrName() { return "nd_sbp"; }
+  static StringRef getSbpAttrName() { return "parallel"; }
 
   static LogicalResult verifyTrait(Operation* op) {
     if (!op->hasAttrOfType<ArrayAttr>(getShapeAttrName())) {

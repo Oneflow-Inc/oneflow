@@ -50,7 +50,7 @@ class DynamicReshapeOp final : public Operator {
       CHECK_EQ_OR_RETURN(in->shape().elem_cnt() % product, 0);
       out_dim_vec.at(inferred_axis) = in->shape().elem_cnt() / product;
     }
-    out->mut_shape() = Shape(out_dim_vec);
+    out->set_shape(Shape(out_dim_vec));
     CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), out->shape().elem_cnt());
     return Maybe<void>::Ok();
   }
@@ -65,7 +65,7 @@ class DynamicReshapeOp final : public Operator {
     *out = *in;
     DimVector out_dim_vec(conf.shape().dim().begin(), conf.shape().dim().end());
     if (parallel_ctx->parallel_num() > 1) {
-      // consistent strategy
+      // global strategy
       //   ONLY support sbp: S(0); and -1 must at axis 0
       const auto& out_sbp_it = sbp_signature->bn_in_op2sbp_parallel().find("out");
       CHECK_OR_RETURN(out_sbp_it != sbp_signature->bn_in_op2sbp_parallel().end());
@@ -96,7 +96,7 @@ class DynamicReshapeOp final : public Operator {
       CHECK_EQ_OR_RETURN(in->shape().elem_cnt() % product, 0);
       out_dim_vec.at(inferred_axis) = in->shape().elem_cnt() / product;
     }
-    out->mut_shape() = Shape(out_dim_vec);
+    out->set_shape(Shape(out_dim_vec));
     CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), out->shape().elem_cnt());
     return Maybe<void>::Ok();
   }
@@ -104,7 +104,7 @@ class DynamicReshapeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
@@ -144,7 +144,7 @@ class DynamicReshapeLikeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)

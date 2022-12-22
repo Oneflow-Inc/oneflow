@@ -33,14 +33,35 @@ enum Penalty4PartialInConsumerTag : int {
   kStrict = 3   // Not allow a transfer to P
 };
 
-void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, P, P, B, S1, P)
+// partial ratio = 2 * 4 * 5 * 8
+int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
+                              const ParallelDesc& producer_parallel_desc);
 
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, B, P, B, S1, P)
+// broadcast ratio = 4 * 9
+int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
+                                const ParallelDesc& consumer_parallel_desc);
+
+void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_hierarchy,
+                    NdSbp* reduced_nd_sbp, const Shape& logical_shape);
+void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd_sbps,
+                     Shape* reduced_hierarchy, const std::vector<NdSbp*>& reduced_nd_sbps,
+                     const Shape& logical_shape);
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
+                    const Shape& logical_shape);
+
+void InOutParallelDimReduce(const Shape& in_hierarchy, const Shape& out_hierarchy,
+                            const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
+                            Shape* reduced_in_hierarchy, Shape* reduced_out_hierarchy,
+                            NdSbp* reduced_in_nd_sbp, NdSbp* reduced_out_nd_sbp,
+                            const Shape& logical_shape);
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
-                            NdSbp* reduced_out_nd_sbp);
+                            NdSbp* reduced_out_nd_sbp, const Shape& logical_shape);
 
 double GetValidMaxCopyCost();
 
@@ -52,7 +73,8 @@ void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp
                        int32_t sbp_axis);
 
 void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const SbpSignatureList& sbp_sig_list,
+                          const Shape& hierarchy,
+                          const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
 // Compute storage for given NdSbp
@@ -94,7 +116,16 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
                                const ParallelDesc& producer_parallel_desc,
-                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp,
+                               const Shape& logical_shape);
+
+// The transfer ratio for general basic communication
+// Cost = ratio * data amount
+double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
+                                      const NdSbp& consumer_sbp_parallel,
+                                      const BlobDesc& logical_blob_desc,
+                                      const ParallelDesc& producer_parallel_desc,
+                                      const ParallelDesc& consumer_parallel_desc);
 
 }  // namespace oneflow
 

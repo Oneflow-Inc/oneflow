@@ -1,11 +1,19 @@
 oneflow.nn.init
-===================================
-Operators for initialization
-----------------------------------
-.. currentmodule:: oneflow.nn.init
+===============
 
-.. autofunction:: oneflow.nn.init.xavier_uniform_
-.. autofunction:: oneflow.nn.init.xavier_normal_
-.. autofunction:: oneflow.nn.init.kaiming_uniform_
-.. autofunction:: oneflow.nn.init.kaiming_normal_
-.. autofunction:: oneflow.nn.init.orthogonal_
+.. The documentation is referenced from: 
+   https://pytorch.org/docs/1.10/nn.init.html
+
+.. currentmodule:: oneflow.nn.init
+.. autofunction:: calculate_gain
+.. autofunction:: uniform_
+.. autofunction:: normal_
+.. autofunction:: constant_
+.. autofunction:: ones_
+.. autofunction:: zeros_
+.. autofunction:: xavier_uniform_
+.. autofunction:: xavier_normal_
+.. autofunction:: kaiming_uniform_
+.. autofunction:: kaiming_normal_
+.. autofunction:: trunc_normal_
+.. autofunction:: orthogonal_

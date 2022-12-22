@@ -44,6 +44,12 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
+        shape = flow.Size((2, 3))
+        tensor = flow.Tensor(shape)
+        flow.nn.init.eye_(tensor)
+        test_case.assertTrue(tensor.dtype == flow.float32)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.eye(2, 3)))
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_deepcopy(test_case):
         shape = (2, 3)
@@ -151,30 +157,40 @@ class TestTensor(flow.unittest.TestCase):
         return input.gather(dim, index)
 
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
-        shape = (2, 3, 4, 5)
-        x = tensor_creator(*shape)
-        np_ones = np.ones(x.shape)
-        np_zeros = np.zeros(x.shape)
-        random_fill_val = 923.53
-        x.fill_(random_fill_val)
-        test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
-        flow.nn.init.ones_(x)
-        test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
-        flow.nn.init.zeros_(x)
-        test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
-        flow.nn.init.constant_(x, random_fill_val)
-        test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
-        z = tensor_creator(5, 4, 3, 2)
-        flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
-        flow.nn.init.kaiming_uniform_(z)
-        z.requires_grad_()
-        flow.nn.init.xavier_normal_(z)
-        flow.nn.init.xavier_uniform_(z)
-        flow.nn.init.orthogonal_(z)
+        for dtype in [flow.float32, flow.float16]:
+            shape = (2, 3, 4, 5)
+            x = tensor_creator(*shape).to(dtype)
+            np_ones = np.ones(x.shape)
+            np_zeros = np.zeros(x.shape)
+            random_fill_val = 2.0
+            x.fill_(random_fill_val)
+            test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+            flow.nn.init.ones_(x)
+            test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
+            flow.nn.init.zeros_(x)
+            test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
+            flow.nn.init.constant_(x, random_fill_val)
+            test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+            z = tensor_creator(5, 4, 3, 2)
+            flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
+            flow.nn.init.kaiming_uniform_(z)
+            z.requires_grad_()
+            flow.nn.init.xavier_normal_(z, flow.nn.init.calculate_gain("relu"))
+            flow.nn.init.xavier_uniform_(z, flow.nn.init.calculate_gain("relu"))
+            flow.nn.init.xavier_normal_(
+                z, flow.nn.init.calculate_gain("leaky_relu", 0.2)
+            )
+            flow.nn.init.xavier_uniform_(
+                z, flow.nn.init.calculate_gain("leaky_relu", 0.2)
+            )
+            flow.nn.init.trunc_normal_(z, mean=0.0, std=1.0, a=-2.0, b=2.0)
+            flow.nn.init.normal_(z, mean=0.0, std=1.0)
+            flow.nn.init.orthogonal_(z)
+
         x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
-        random_fill_val = -51
+        random_fill_val = -2
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         flow.nn.init.ones_(x)
@@ -188,23 +204,75 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
+    def _test_non_contiguous_tensor_init_methods(test_case, tensor_creator, get_numpy):
+        shape = (8, 8)
+        x = flow.zeros(shape)
+        sliced_x = x[::2, 1::2]
+        not_sliced_x = x[1::2, ::2]
+        random_fill_val = 923.53
+        np_zeros = np.zeros((4, 4))
+        # ones
+        flow.nn.init.ones_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.ones((4, 4))))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # constant
+        flow.nn.init.constant_(sliced_x, random_fill_val)
+        test_case.assertTrue(
+            np.allclose(get_numpy(sliced_x), np.ones((4, 4)) * random_fill_val)
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # eye
+        flow.nn.init.eye_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.eye(4)))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_normal_
+        flow.nn.init.kaiming_normal_(
+            sliced_x, a=0.1, mode="fan_out", nonlinearity="relu"
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_uniform_
+        flow.nn.init.kaiming_uniform_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_normal_ with relu gain
+        flow.nn.init.xavier_normal_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_uniform_ with relu gain
+        flow.nn.init.xavier_uniform_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # trunc_normal_
+        flow.nn.init.trunc_normal_(sliced_x, mean=0.0, std=1.0, a=-2.0, b=2.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # normal_
+        flow.nn.init.normal_(sliced_x, mean=0.0, std=1.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # orthogonal_
+        flow.nn.init.orthogonal_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+
     @flow.unittest.skip_unless_1n1d()
     def test_local_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
-        )
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
+            test_case._test_non_contiguous_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
 
     @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(
-                *args,
-                **kwargs,
-                sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", range(2))
-            ),
-            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
-        )
+    def test_global_tensor_init_methods(test_case):
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(
+                    *args,
+                    **kwargs,
+                    sbp=flow.sbp.broadcast,
+                    placement=flow.placement(device, range(2))
+                ),
+                lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
+            )
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_with_single_int(test_case):
@@ -442,7 +510,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z.numpy(), 5 * np.ones(z.shape)))
 
     @flow.unittest.skip_unless_1n1d()
-    def test_mirrored_tensor_and_op(test_case):
+    def test_local_tensor_and_op(test_case):
         x1 = flow.Tensor([[1.0, 2.0]])
         test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
@@ -553,16 +621,25 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5)
+    @autotest(n=5, auto_backward=False)
     def test_setitem_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
+        x = random_tensor(low=0, high=0, ndim=1, dim0=16, requires_grad=False).to(
+            device
+        )
         y = random_tensor(low=-2, high=2, ndim=1, dim0=16).to(device)
         idx = random_tensor(
             low=0, high=15, ndim=1, dim0=20, dtype=int, requires_grad=False
         ).to(device)
-        z = y[idx]
-        x[idx] = z
+
+        getitem_of = y.oneflow[idx.oneflow]
+        getitem_torch = y.pytorch[idx.pytorch]
+        test_case.assertTrue(
+            np.allclose(getitem_of.numpy(), getitem_torch.detach().cpu().numpy())
+        )
+
+        x.oneflow[idx.oneflow] = getitem_of
+        x.pytorch[idx.pytorch] = getitem_torch
         return x
 
     @flow.unittest.skip_unless_1n1d()
@@ -756,6 +833,24 @@ class TestTensor(flow.unittest.TestCase):
         y = x.argmax(dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_max_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.max(dim)
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_min_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.min(dim)
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
     def test_tensor_tanh_with_random_data(test_case):
@@ -887,6 +982,12 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return x.log2()
+
+    @autotest(n=5)
+    def test_log10_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log10()
 
     @autotest(n=5)
     def test_neg_tensor_with_random_data(test_case):
@@ -1155,27 +1256,35 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_constructor(test_case):
         x = flow.tensor([1, 2, 3])
         test_case.assertTrue(np.array_equal(x.numpy(), [1, 2, 3]))
-        test_case.assertEquals(x.dtype, flow.int64)
+        test_case.assertEqual(x.dtype, flow.int64)
         x = flow.tensor([1.0, 2.0, 3.0])
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
-        test_case.assertEquals(x.dtype, flow.float32)
+        test_case.assertEqual(x.dtype, flow.float32)
         x = flow.tensor([1.0, 2.0, 3.0], dtype=flow.float64)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
-        test_case.assertEquals(x.dtype, flow.float64)
+        test_case.assertEqual(x.dtype, flow.float64)
         np_arr = np.array([1, 2, 3])
         x = flow.tensor(np_arr)
         test_case.assertTrue(np.array_equal(x.numpy(), [1, 2, 3]))
-        test_case.assertEquals(x.dtype, flow.int64)
+        test_case.assertEqual(x.dtype, flow.int64)
         np_arr = np.array([1, 2, 3], dtype=np.float64)
         x = flow.tensor(np_arr)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
-        test_case.assertEquals(x.dtype, flow.float64)
+        test_case.assertEqual(x.dtype, flow.float64)
         x = flow.tensor(np_arr, dtype=flow.float32)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
-        test_case.assertEquals(x.dtype, flow.float32)
+        test_case.assertEqual(x.dtype, flow.float32)
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
-        test_case.assertEquals(x.dtype, flow.int8)
+        test_case.assertEqual(x.dtype, flow.int8)
+        x = flow.tensor([flow.tensor([1, 2])] * 3, dtype=flow.float32)
+        test_case.assertTrue(np.array_equal(x.numpy(), [[1, 2], [1, 2], [1, 2]]))
+        test_case.assertEqual(x.dtype, flow.float32)
+
+    def test_tensor_contains_magic_method(test_case):
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        y = 1 in x
+        test_case.assertEqual(y, True)
 
     @profile(torch.Tensor.fill_)
     def profile_fill_(test_case):

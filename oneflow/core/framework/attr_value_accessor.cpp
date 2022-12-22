@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {

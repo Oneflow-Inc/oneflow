@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/ndarray/ndarray_assign_core.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 
 namespace oneflow {
 
@@ -44,6 +46,17 @@ struct XpuNdarrayAssign<
     CHECK(y.shape() == x.shape());
     if (x.ptr() == y.ptr()) { return; }
     Memcpy<device_type>(stream, y.ptr(), x.ptr(), y.shape().ElemNum() * sizeof(T));
+  }
+
+  static void AssignNanSum(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x) {
+    CHECK(y.shape() == x.shape());  // NOLINT
+    CHECK_EQ(device_type, stream->device_type()) << "Device type mismatch";
+    std::unique_ptr<ep::primitive::ElementwiseUnary> primitive =
+        ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+            device_type, ep::primitive::UnaryOp::kNanAssign, GetDataType<T>(), GetDataType<T>());
+    CHECK(primitive) << "Can not create NanSum primitive for device type " << device_type;
+    primitive->Launch(stream, x.ptr(), y.ptr(), y.shape().ElemNum());
   }
 };
 

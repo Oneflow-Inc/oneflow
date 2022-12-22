@@ -7,7 +7,7 @@ inputs:
     default: "10.2"
   python_version:
     description: "python_version"
-    default: "3.6"
+    default: "3.8"
   extra_flags:
     description: "flags like --xla"
     default: ""

@@ -395,6 +395,7 @@ class PersistentTableImpl : public PersistentTable {
   PosixFile writable_key_file_;
   uint64_t writable_key_file_chunk_id_;
   PosixFileLockGuard lock_;
+  bool read_only_;
 };
 
 template<typename Key, typename Engine>
@@ -405,14 +406,19 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
       physical_block_size_(options.physical_block_size),
       logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
-      writable_key_file_chunk_id_(-1) {
+      writable_key_file_chunk_id_(-1),
+      read_only_(options.read_only) {
   const uint64_t capacity_hint = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT", options.capacity_hint);
   if (capacity_hint > 0) { row_id_mapping_.reserve(capacity_hint); }
   PosixFile::RecursiveCreateDirectory(options.path, 0755);
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
-  lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  if (read_only_) {
+    CHECK(!init) << "The table must be initialized in read only mode";
+  } else {
+    lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  }
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
   CHECK_GE(target_chunk_size, logical_block_size_);
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
@@ -442,7 +448,8 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
   for (auto& chunk : chunks) {
     if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
     CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
-    PosixFile value_file(chunk.second, O_RDWR | O_DIRECT, 0644);
+    const int flags = read_only_ ? (O_RDONLY | O_DIRECT) : (O_RDWR | O_DIRECT);
+    PosixFile value_file(chunk.second, flags, 0644);
     value_files_.at(chunk.first) = std::move(value_file);
   }
   if (!value_files_.empty()) {
@@ -523,6 +530,7 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
                                                  const void* blocks) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_) / num_values_per_block_;
   const uint32_t num_padded_keys = num_blocks * num_values_per_block_;
@@ -579,6 +587,7 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
                                            const void* values) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
   if (value_size_ == logical_block_size_
@@ -656,6 +665,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   PosixFile::RecursiveCreateDirectory(SnapshotDirPath(name), 0755);
   std::ofstream list_ofs(SnapshotListFilePath(name));
@@ -704,6 +714,11 @@ template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     const std::string& name, const std::function<void(Iterator* iter)>& Hook) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
+  int mmap_flags = MAP_SHARED;
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_SNAPSHOT_LOAD_MAP_POPULATE",
+                          true)) {
+    mmap_flags |= MAP_POPULATE;
+  }
   const std::string snapshot_base = SnapshotDirPath(name);
   const std::string snapshot_list = SnapshotListFilePath(name);
   row_id_mapping_.clear();
@@ -716,9 +731,9 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
-    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
+    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ, mmap_flags);
     PosixFile key_file(KeyFilePath(chunk_id), O_RDONLY, 0644);
-    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ);
+    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ, mmap_flags);
     const uint64_t* indices = static_cast<const uint64_t*>(mapped_index.ptr());
     const Key* keys = static_cast<const Key*>(mapped_key.ptr());
     const uint64_t chunk_start_index = chunk_id * num_values_per_chunk_;
@@ -728,7 +743,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     }
     if (Hook) {
       PosixFile value_file(ValueFilePath(chunk_id), O_RDONLY, 0644);
-      PosixMappedFile mapped_value(std::move(value_file), value_file.Size(), PROT_READ);
+      PosixMappedFile mapped_value(std::move(value_file), value_file.Size(), PROT_READ, mmap_flags);
       ChunkIteratorImpl<Key> chunk_iterator(value_size_, logical_block_size_, num_values_per_block_,
                                             num_values_per_chunk_, chunk_id, n_entries, keys,
                                             indices, mapped_value.ptr());

@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
@@ -30,10 +32,6 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   }
   // Initialize boxing collector
   BoxingCollector boxing_collector;
-  // We assemble the boxing table from S(0) to S(5).
-  // Those splitting in higher axes are considered in the customized boxing.
-  constexpr int32_t kRegularMaxSplitAxes = 6;
-  JUST(boxing_collector.Init(kRegularMaxSplitAxes));
   std::vector<NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations

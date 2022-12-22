@@ -27,6 +27,8 @@ limitations under the License.
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -52,15 +54,63 @@ std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
   return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
 }
 
-void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+namespace {
+
+void SetVariableOpNamesForVariableAndRepeatRegst(Plan* plan) {
+  // NOTE(chengcheng): set variable_op_name before set separated header because var regst alway
+  //  separated.
+  HashMap<int64_t, std::string> regst_id2var_name;
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const auto& op_conf =
+          PlanUtil::GetOpAttribute(plan, task->job_id(),
+                                   task->exec_sequence().exec_node(0).kernel_conf())
+              .op_conf();
+      if (op_conf.has_variable_conf()) {
+        RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+        regst_id2var_name.emplace(regst->regst_desc_id(), op_conf.name());
+        regst->set_variable_op_name(op_conf.name());
+      }
+    }
+  }
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->task_type() == TaskType::kRepeat) {
+      RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+      CHECK(regst->has_force_inplace_consumed_regst_desc_id());
+      int64_t force_inplace_regst_id = regst->force_inplace_consumed_regst_desc_id();
+      auto var_name_it = regst_id2var_name.find(force_inplace_regst_id);
+      if (var_name_it != regst_id2var_name.end()) {
+        regst->set_variable_op_name(var_name_it->second);
+        VLOG(3) << " set var op name to repeat regst : " << regst->DebugString();
+      }
+    }
+  }
+}
+
+}  // namespace
+
+void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+  SetVariableOpNamesForVariableAndRepeatRegst(plan);
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
         regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
+      }
+
+      RtRegstDesc rt_regst_desc(*regst_desc);
+      int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+      if (regst_separated_size > 0) {
+        int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
+        regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
       }
     }
   }
@@ -86,9 +136,9 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     // NOTE(chengcheng):
     //   only reused mem in cuda device.
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
-    if (mem_block->mem_case().has_host_mem()) { continue; }
+    if (memory::IsHostMem(mem_block->mem_case())) { continue; }
     int64_t mem_zone_uid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+        memory::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
     if (it == mzuid2mem_blocks.end()) {
       it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
@@ -188,6 +238,94 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
+void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
+  if (job.logical_chain_groups_size() == 0) { return; }
+  HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    int64_t machine_id = task->machine_id();
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+    int64_t logical_chain_id = task->task_set_info().chain_id();
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        auto* rank2blocks = &(logical_chain_id2machine_id2mem_block_id[logical_chain_id]);
+        if (rank2blocks->find(machine_id) == rank2blocks->end()) {
+          rank2blocks->emplace(machine_id, mem_block_id);
+        } else {
+          CHECK_EQ(rank2blocks->at(machine_id), mem_block_id);
+        }
+      }
+    }
+  }
+
+  HashMap<int64_t, int64_t> mem_block_id2merged_mem_block_id;
+  for (const auto& logical_chain_group : job.logical_chain_groups()) {
+    CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
+    int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
+    CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+          != logical_chain_id2machine_id2mem_block_id.end());
+    const auto& merged_rank2block =
+        logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
+    for (int64_t i = 1; i < logical_chain_group.logical_chain_id_list_size(); ++i) {
+      int64_t this_logical_chain_id = logical_chain_group.logical_chain_id_list(i);
+      // NOTE(chengcheng): merge mem block id by each rank
+      CHECK(logical_chain_id2machine_id2mem_block_id.find(this_logical_chain_id)
+            != logical_chain_id2machine_id2mem_block_id.end());
+      const auto& this_rank2block =
+          logical_chain_id2machine_id2mem_block_id.at(this_logical_chain_id);
+      for (const auto& pair : this_rank2block) {
+        int64_t this_machine_id = pair.first;
+        int64_t this_mem_block_id = pair.second;
+        CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
+        CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
+                  .second);
+        VLOG(2) << " merge mem_block_id: " << this_mem_block_id << " to " << merged_mem_block_id;
+      }
+    }
+  }
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        if (mem_block_id2merged_mem_block_id.find(mem_block_id)
+            != mem_block_id2merged_mem_block_id.end()) {
+          // merge mem_block_id
+          int64_t merged_mem_block_id = mem_block_id2merged_mem_block_id.at(mem_block_id);
+          regst_desc->set_mem_block_id(merged_mem_block_id);
+          const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
+          CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
+          const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+          std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+          VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
+                  << merged_mem_block_id;
+        }
+      }
+    }
+  }
+}
+
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     Plan* plan, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
@@ -218,7 +356,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
     CHECK_NE(mem_block_offset, -1);
-    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
 
     std::string var_name;
     bool is_variable_regst = IsVariableRegst(task, &var_name);
@@ -235,7 +372,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+    auto mem_block_it = mem_block_id2mem_block.find(mem_block_id);
+    if (mem_block_it == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
       mem_block.add_job_id(job_id);
@@ -252,34 +390,56 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
                 .second);
     } else {
-      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
-      CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
+      MemBlockProto* mem_block = mem_block_it->second.get();
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
-      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      if (mem_block->enable_reuse_mem()) {
+        mem_block->set_mem_size(
+            std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      } else {
+        CHECK_EQ(mem_block->mem_size(), regst_main_size);
+        CHECK_EQ(mem_block_offset, 0);
+      }
+      if (is_variable_regst) {
+        mem_block->set_variable_op_name(var_name);
+        mem_block->set_is_separated_header(false);
+      }
     }
 
     if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
-      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
-      MemBlockProto mem_block;
-      mem_block.set_mem_block_id(separated_mem_block_id);
-      mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
-      mem_block.set_enable_reuse_mem(false);
-      mem_block.set_mem_size(regst_separated_size);
-      mem_block.set_thrd_id_hint(thrd_id);
-      if (is_variable_regst) {
-        mem_block.set_variable_op_name(var_name);
-        mem_block.set_is_separated_header(true);
+      CHECK(regst_desc->has_separated_header_mem_block_id()) << regst_desc->DebugString();
+      int64_t separated_mem_block_id = regst_desc->separated_header_mem_block_id();
+      CHECK_NE(separated_mem_block_id, -1);
+      if (mem_block_id2mem_block.find(separated_mem_block_id) == mem_block_id2mem_block.end()) {
+        MemBlockProto mem_block;
+        mem_block.set_mem_block_id(separated_mem_block_id);
+        mem_block.add_job_id(job_id);
+        mem_block.set_machine_id(machine_id);
+        *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
+        mem_block.set_enable_reuse_mem(false);
+        mem_block.set_mem_size(regst_separated_size);
+        mem_block.set_thrd_id_hint(thrd_id);
+        if (is_variable_regst) {
+          mem_block.set_variable_op_name(var_name);
+          mem_block.set_is_separated_header(true);
+        }
+        CHECK(mem_block_id2mem_block
+                  .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                  .second);
+      } else {
+        MemBlockProto* mem_block = mem_block_id2mem_block.at(separated_mem_block_id).get();
+        CHECK_EQ(mem_block->job_id(0), job_id);
+        CHECK_EQ(mem_block->machine_id(), machine_id);
+        CHECK(mem_block->mem_case() == memory::GetPinnedHostMemoryCase(regst_desc->mem_case()));
+        CHECK_EQ(mem_block->enable_reuse_mem(), false);
+        CHECK_EQ(mem_block->mem_size(), regst_separated_size);
+        if (is_variable_regst) {
+          mem_block->set_variable_op_name(var_name);
+          mem_block->set_is_separated_header(true);
+        }
       }
-      CHECK(mem_block_id2mem_block
-                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
-                .second);
     }
   };
 
@@ -346,8 +506,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
-        CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+        CHECK(header_mem_block.mem_case() == memory::GetPinnedHostMemoryCase(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
@@ -658,8 +817,22 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         CHECK_EQ(in_regst_desc->mem_block_offset(), 0);
         CHECK_EQ(regst_desc->mem_block_offset(), 0);
         CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+        CHECK(in_regst_desc->mem_case() == regst_desc->mem_case());
+        RtRegstDesc in_regst_rt(*in_regst_desc);
+        RtRegstDesc regst_rt(*regst_desc);
+        CHECK_EQ(in_regst_rt.TotalByteSize4AllRegst(), regst_rt.TotalByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalMainByteSize4AllRegst(), regst_rt.TotalMainByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalSeparatedHeaderByteSize4AllRegst(),
+                 regst_rt.TotalSeparatedHeaderByteSize4AllRegst());
         regst_desc->set_mem_block_id(in_regst_desc->mem_block_id());
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
+        if (in_regst_desc->has_separated_header_mem_block_id()) {
+          CHECK(regst_desc->has_separated_header_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              in_regst_desc->separated_header_mem_block_id());
+        }
+        VLOG(3) << " set force inplace from " << regst_desc->DebugString() << " to "
+                << in_regst_desc->DebugString();
       }
     }
   }
@@ -1110,9 +1283,9 @@ namespace {
 struct MemBlockMemoryInfo {
   int64_t mem_block_id;
   int64_t mem_block_mem_size;
-  bool is_reused;
-  std::vector<std::string> ordered_op_names;
-  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1), is_reused(false) {}
+  int64_t regst_num;
+  std::vector<int64_t> ordered_regst_desc_id;
+  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1), regst_num(-1) {}
 };
 
 struct ChunkMemoryInfo {
@@ -1128,6 +1301,7 @@ struct RankDeviceMemoryInfo {
   ChunkMemoryInfo chunk_info;
   int64_t total_mem_size;
   int64_t not_reused_mem_size;
+  std::vector<int64_t> not_reused_mem_block_ids;
   int64_t eager_variable_total_mem_size;
   std::vector<int64_t> eager_variable_mem_block_ids;
   RankDeviceMemoryInfo()
@@ -1151,14 +1325,13 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
                                                              RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
+  HashMap<int64_t, const RegstDescProto*> regst_desc_id2regst;
 
   for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
     int64_t rank_id = chunk.machine_id();
     auto& info = rank_device_memory_infos[rank_id];
     info.rank_id = rank_id;
-    if (chunk.mem_case().has_device_cuda_mem()) {
-      info.device_id = chunk.mem_case().device_cuda_mem().device_id();
-    }
+    if (!memory::IsHostMem(chunk.mem_case())) { info.device_id = chunk.mem_case().device_id(); }
     info.total_mem_size += chunk.mem_size();
     info.chunk_info.chunk_id = chunk.chunk_id();
     info.chunk_info.chunk_mem_size = chunk.mem_size();
@@ -1171,19 +1344,18 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     info.mem_block_id = mem_block_id;
     info.mem_block_mem_size = mem_block.mem_size();
     auto& rank_memory_info = rank_device_memory_infos.at(mem_block.machine_id());
-    if (mem_block.mem_case().has_device_cuda_mem()) {
+    if (!memory::IsHostMem(mem_block.mem_case())) {
       if (mem_block.has_chunk_id()) {
         rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
-        info.is_reused = true;
       } else {
-        rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
-        info.is_reused = false;
-        rank_memory_info.not_reused_mem_size += mem_block.mem_size();
-        rank_memory_info.total_mem_size += mem_block.mem_size();
         if (mem_block.has_variable_op_name()) {
           rank_memory_info.eager_variable_mem_block_ids.push_back(mem_block_id);
           rank_memory_info.eager_variable_total_mem_size += mem_block.mem_size();
+        } else {
+          rank_memory_info.not_reused_mem_block_ids.push_back(mem_block_id);
+          rank_memory_info.not_reused_mem_size += mem_block.mem_size();
         }
+        rank_memory_info.total_mem_size += mem_block.mem_size();
       }
     }
   }
@@ -1193,9 +1365,9 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
       const auto& regst = pair.second;
       if (regst.regst_desc_type().has_data_regst_desc()
           && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
-        const auto data_regst = regst.regst_desc_type().data_regst_desc();
-        std::string op_name = data_regst.lbi2blob_desc(0).lbi().op_name();
-        mem_block_id2info.at(regst.mem_block_id()).ordered_op_names.push_back(op_name);
+        mem_block_id2info.at(regst.mem_block_id())
+            .ordered_regst_desc_id.push_back(regst.regst_desc_id());
+        regst_desc_id2regst.emplace(regst.regst_desc_id(), &regst);
       }
     }
   }
@@ -1209,40 +1381,84 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   for (auto& rank_memory_info : rank_device_memory_infos) {
     std::sort(rank_memory_info.chunk_info.mem_block_ids.begin(),
               rank_memory_info.chunk_info.mem_block_ids.end(), CompMemBlock);
-    LOG(INFO) << " Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
+    std::sort(rank_memory_info.not_reused_mem_block_ids.begin(),
+              rank_memory_info.not_reused_mem_block_ids.end(), CompMemBlock);
+    std::sort(rank_memory_info.eager_variable_mem_block_ids.begin(),
+              rank_memory_info.eager_variable_mem_block_ids.end(), CompMemBlock);
+    LOG(INFO) << "\n Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
               << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
               << B2MiB(rank_memory_info.total_mem_size)
-              << " MiB ] device memory. \n In general, Chunk id: "
+              << " MiB ] device memory. \n   In general, Chunk id: "
               << rank_memory_info.chunk_info.chunk_id << "  memory is [ "
               << B2MiB(rank_memory_info.chunk_info.chunk_mem_size)
-              << " MiB ]; \n Memory out of Chunk is  [ "
+              << " MiB ] with mem_block_num = " << rank_memory_info.chunk_info.mem_block_ids.size()
+              << "\n        Unreused memory not eager var is  [ "
               << B2MiB(rank_memory_info.not_reused_mem_size)
-              << " MiB ]; and in particular: Eager Variable Tensor total memory is [ "
-              << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
+              << " MiB ] with mem_block_num = " << rank_memory_info.not_reused_mem_block_ids.size()
+              << "\n        Eager Variable Tensor total memory is [ "
+              << B2MiB(rank_memory_info.eager_variable_total_mem_size)
+              << " MiB ] with mem_block_num = "
+              << rank_memory_info.eager_variable_mem_block_ids.size() << "\n";
   }
+
+  auto Vlog3ForMemBlockDetails = [&](int64_t device_id, const std::vector<int64_t>& mem_block_ids,
+                                     const std::string& prefix) {
+    for (int64_t mem_block_id : mem_block_ids) {
+      CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
+      const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
+      if (mem_block_info.ordered_regst_desc_id.size() != 1) { continue; }
+      const auto* regst = regst_desc_id2regst.at(mem_block_info.ordered_regst_desc_id.at(0));
+      const auto& data_regst = regst->regst_desc_type().data_regst_desc();
+      const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+      std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+      const auto& blob_desc = lbi2blob_desc_pair.blob_desc();
+      VLOG(3) << "In Device: " << device_id << " Memblock id: " << mem_block_id << prefix
+              << " size: " << B2MiB(mem_block_info.mem_block_mem_size)
+              << " MiB, name: " << tensor_name << "\nshape: " << Shape(blob_desc.shape()).ToString()
+              << " ,dtype: " << DataType_Name(blob_desc.data_type());
+    }
+  };
 
   for (const auto& rank_memory_info : rank_device_memory_infos) {
     int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
     int64_t device_id = rank_memory_info.device_id;
-    int64_t not_reuse_size = rank_memory_info.not_reused_mem_size;
-    VLOG(2) << " For detail: Chunk id: " << chunk_id << " has "
-            << rank_memory_info.chunk_info.mem_block_ids.size() << " MemBlocks"
-            << " not reused size = " << B2MiB(not_reuse_size);
+    VLOG(2) << "========================= "
+            << "In Device : " << device_id << " Chunk Memory info details:";
     for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
       CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
       const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
       VLOG(2) << "     In Device: " << device_id << " Chunk id: " << chunk_id
               << " MemBlock id: " << mem_block_id
-              << " has num = " << mem_block_info.ordered_op_names.size()
-              << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size)
-              << " is reused " << mem_block_info.is_reused;
-      for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-        VLOG(3) << "         In Device: " << device_id << " Chunk id: " << chunk_id
-                << " In MemBlock id: " << mem_block_id << " order: " << i << " is reused "
-                << mem_block_info.is_reused
-                << " op_name: " << mem_block_info.ordered_op_names.at(i);
+              << " has num = " << mem_block_info.ordered_regst_desc_id.size()
+              << " tensor with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
+      for (int64_t i = 0; i < mem_block_info.ordered_regst_desc_id.size(); ++i) {
+        const auto* regst = regst_desc_id2regst.at(mem_block_info.ordered_regst_desc_id.at(i));
+        const auto& data_regst = regst->regst_desc_type().data_regst_desc();
+        const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+        std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+        const auto& blob_desc = lbi2blob_desc_pair.blob_desc();
+        std::string alloc_order = "inplaced";
+        if (regst->has_alloc_before_actor()) {
+          alloc_order = std::to_string(regst->alloc_before_actor());
+        }
+        std::string free_order = "inplaced";
+        if (regst->has_free_after_actor()) {
+          free_order = std::to_string(regst->free_after_actor());
+        }
+        VLOG(3) << "In Chunk id: " << chunk_id << ", MemBlock id: " << mem_block_id
+                << " Order: " << i
+                << " ,duration: " << (regst->free_after_actor() - regst->alloc_before_actor() + 1)
+                << " ,size: " << B2MiB(BlobDesc(blob_desc).AlignedTotalByteSize())
+                << " MiB, name: " << tensor_name
+                << "\nshape: " << Shape(blob_desc.shape()).ToString()
+                << " ,dtype: " << DataType_Name(blob_desc.data_type())
+                << " ,alloc_order: " << alloc_order << " ,free_order: " << free_order;
       }
     }
+
+    Vlog3ForMemBlockDetails(device_id, rank_memory_info.not_reused_mem_block_ids, " Unreused ");
+    Vlog3ForMemBlockDetails(device_id, rank_memory_info.eager_variable_mem_block_ids,
+                            " EagerVariable ");
   }
 }
 
@@ -1287,8 +1503,20 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
         << " regst_id2proto cannot find: " << regst_id;
     const RegstDescProto& regst = regst_id2proto.at(regst_id);
     ret += " regst_num: " + std::to_string(regst.register_num());
-    std::string mem = ", cpu ";
-    if (regst.mem_case().has_device_cuda_mem()) { mem = ", cuda "; }
+    std::string mem;
+    switch (regst.mem_case().device_type()) {
+      case DeviceType::kCPU: {
+        mem = ", cpu ";
+        break;
+      }
+      case DeviceType::kCUDA: {
+        mem = ", cuda ";
+        break;
+      }
+      default: {
+        UNIMPLEMENTED() << "Unsupported device_type " << regst.mem_case().device_type();
+      }
+    }
     ret += mem;
     if (regst.regst_desc_type().has_data_regst_desc()) {
       const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();

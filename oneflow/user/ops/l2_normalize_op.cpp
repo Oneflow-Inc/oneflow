@@ -20,16 +20,15 @@ namespace oneflow {
 
 /* static */ Maybe<void> L2NormalizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  Shape* square_x_sum_shape = ctx->OutputShape("square_x_sum", 0);
   const int32_t axis = ctx->Attr<int32_t>("axis");
   const float epsilon = ctx->Attr<float>("epsilon");
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, x_shape.NumAxes());
   CHECK_GT_OR_RETURN(epsilon, 0);
-  *y_shape = x_shape;
-  *square_x_sum_shape = x_shape;
-  square_x_sum_shape->Set(axis, 1);
+  ctx->SetOutputShape("y", 0, x_shape);
+  Shape square_x_sum_shape = x_shape;
+  square_x_sum_shape.Set(axis, 1);
+  ctx->SetOutputShape("square_x_sum", 0, square_x_sum_shape);
   return Maybe<void>::Ok();
 }
 
@@ -53,8 +52,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  DataType x_dtype = ctx->InputDType("x", 0);
+  DataType square_x_sum_dtype = x_dtype;
+  if (x_dtype == DataType::kFloat16 || x_dtype == DataType::kBFloat16) {
+    square_x_sum_dtype = DataType::kFloat;
+  }
+  ctx->SetOutputDType("square_x_sum", 0, square_x_sum_dtype);
+  ctx->SetOutputDType("y", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +66,6 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& square_x_sum_shape = ctx->InputShape("square_x_sum", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
   const int32_t axis = ctx->Attr<int32_t>("axis");
   const float epsilon = ctx->Attr<float>("epsilon");
   CHECK_EQ_OR_RETURN(dy_shape, y_shape);
@@ -76,7 +79,7 @@ namespace oneflow {
       CHECK_EQ_OR_RETURN(square_x_sum_shape.At(i), dy_shape.At(i));
     }
   }
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -101,30 +104,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("y", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("square_x_sum", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("y", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("l2_normalize")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("l2_normalize_grad")
-                .Input("y", op.output("y", 0))
-                .Input("square_x_sum", op.output("square_x_sum", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("dx")
-                .Attr("axis", op.attr<int32_t>("axis"))
-                .Attr("epsilon", op.attr<float>("epsilon"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -1,0 +1,51 @@
+#include "OneFlowPDLLUtils.pdll"
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let axis: Attr;
+  let epsilon: Attr;
+  let training = attr<"true : bool">;
+  let momentum: Attr;
+  let x: Value;
+  let moving_mean: Value;
+  let moving_variance: Value;
+  let gamma: Value;
+  let beta: Value;
+  let addend: Value;
+  let normalization = op<oneflow.normalization>(x, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag} -> (y: Type, mean: Type, inv_variance: Type);
+  let relu =
+    op<oneflow.relu>(
+      op<oneflow.add_n2>(normalization.0, addend) {device_name = device_name, device_tag = device_tag})
+      {device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite relu with{
+    let fused_bn = CopyUserOpAttrs(normalization, op<oneflow.normalization_add_relu>(x, addend, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 1]> : vector<6xi32>">, result_segment_sizes = attr<"dense<[1, 1, 1, 1]> : vector<4xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag});
+    replace relu with fused_bn.0;
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let axis: Attr;
+  let epsilon: Attr;
+  let training = attr<"true : bool">;
+  let momentum: Attr;
+  let x: Value;
+  let moving_mean: Value;
+  let moving_variance: Value;
+  let gamma: Value;
+  let beta: Value;
+  let addend: Value;
+  let normalization = op<oneflow.normalization_infer>(x, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag} -> (y: Type);
+  let relu =
+    op<oneflow.relu>(
+      op<oneflow.add_n2>(normalization.0, addend) {device_name = device_name, device_tag = device_tag})
+      {device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite relu with{
+    let fused_bn = CopyUserOpAttrs(normalization, op<oneflow.normalization_add_relu>(x, addend, moving_mean, moving_variance, gamma, beta) {operand_segment_sizes = attr<"dense<[1, 1, 1, 1, 1, 1]> : vector<6xi32>">, result_segment_sizes = attr<"dense<[1, 1, 1, 1]> : vector<4xi32>">, axis = axis, epsilon = epsilon, training = training, momentum = momentum, device_name = device_name, device_tag = device_tag});
+    replace relu with fused_bn.0;
+  };
+}

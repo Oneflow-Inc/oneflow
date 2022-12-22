@@ -56,7 +56,12 @@ class Blob final {
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_; }
-  char* mut_header_ptr() { return header_ptr_; }
+  [[deprecated(
+      "\"mut_header_ptr\" will be removed in Bolb. Please avoid to use this method whenever "
+      "possible. Almost all methods of `mut_header_ptr` are also in `Blob`.")]] char*
+  mut_header_ptr() {
+    return header_ptr_;
+  }
   char* mut_contiguous_header_ptr();
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
@@ -91,6 +96,7 @@ class Blob final {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
+
   // shape
   const Shape& static_shape() const { return blob_desc_->shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
@@ -100,6 +106,7 @@ class Blob final {
     return mut_shape_view_.get();
   }
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+
   // stride
   const Stride& stride() const { return blob_desc_->stride(); }
 

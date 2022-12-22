@@ -36,6 +36,7 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape) {
 }
 
 void MutShapeView::set_shape(ShapeView shape) {
+  if (shape.ptr() == mut_ptr() && shape.NumAxes() == NumAxes()) { return; }
   CHECK_EQ(NumAxes(), shape.NumAxes());
   std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), mut_ptr());
 }

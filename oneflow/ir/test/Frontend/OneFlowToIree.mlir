@@ -1,6 +1,7 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
 // RUN: -lower-oneflow-to-tosa \
+// RUN: -tosa-make-broadcastable \
 // RUN: -verify-diagnostics -o - \
 // RUN: | python3 -m iree.compiler.tools.scripts.ireec \
 // RUN: --iree-input-type=tosa \
@@ -60,7 +61,7 @@ oneflow.job @test_variable() -> tensor<64x3x7x7xf32>
         device_name = ["@0:0"],
         device_tag = "cpu",
         hierarchy = [1],
-        nd_sbp = ["B"],
+        parallel = #sbp.parallel<[] -> [#sbp.B]>,
         op_name = "fw.model.conv1.weight",
         output_lbns = ["fw.model.conv1.weight/out"],
         scope_symbol_id = 4611686018427432959 : i64,
@@ -164,23 +165,6 @@ oneflow.job @test_conv2d(%arg0: tensor<1x3x224x224xf32>, %arg1: tensor<5x3x1x1xf
         strides = [1 : si32, 1 : si32]
     } : (tensor<1x3x224x224xf32>, tensor<5x3x1x1xf32>) -> tensor<1x5x224x224xf32>
     oneflow.return %res : tensor<1x5x224x224xf32>
-}
-
-
-oneflow.job @test_flatten(%arg0: tensor<4x3x2x1xf32>) -> tensor<4x6x1xf32>
-{
-    %res = "oneflow.flatten"(%arg0)
-    {
-        device_name = ["@0:0"],
-        device_tag = "cpu",
-        end_dim = 2 : si32,
-        hierarchy = [1],
-        op_name = "",
-        output_lbns = [""],
-        scope_symbol_id = 4611686018431217663 : i64,
-        start_dim = 1 : si32
-    } : (tensor<4x3x2x1xf32>) -> tensor<4x6x1xf32>
-    oneflow.return %res : tensor<4x6x1xf32>
 }
 
 

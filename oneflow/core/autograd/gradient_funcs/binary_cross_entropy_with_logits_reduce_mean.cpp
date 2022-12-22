@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyWithLogitsReduceMeanCaptureState : public AutoGradCaptureState {
-  bool requires_grad = false;
-  bool has_pos_weight = false;
+  bool input_requires_grad = false;
+  bool target_requires_grad = false;
 };
 
 class BinaryCrossEntropyWithLogitsReduceMean
@@ -34,25 +34,19 @@ class BinaryCrossEntropyWithLogitsReduceMean
                       const AttrMap& attrs) const override;
   Maybe<void> Apply(const BinaryCrossEntropyWithLogitsReduceMeanCaptureState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
 };
 
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "fw_op_expr should not be null. ";
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Capture(
     BinaryCrossEntropyWithLogitsReduceMeanCaptureState* ctx, const TensorTuple& inputs,
     const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
+  ctx->input_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
+  ctx->target_requires_grad = JUST(VectorAt(inputs, 1))->requires_grad();
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));  // input
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // target
   return Maybe<void>::Ok();
@@ -61,14 +55,20 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Capture(
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Apply(
     const BinaryCrossEntropyWithLogitsReduceMeanCaptureState* ctx, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "out_grads size should be equal to 1. ";
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& dy = JUST(VectorAt(out_grads, 0));
   const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
   const auto& target = JUST(VectorAt(ctx->SavedTensors(), 1));
-  in_grads->resize(ctx->SavedTensors().size());
-  JUST(VectorAt(*in_grads, 0)) =
-      JUST(functional::BinaryCrossEntropyWithLogitsReduceMeanLossGrad(dy, input, target));
+  in_grads->resize(2);
+
+  if (ctx->input_requires_grad) {
+    (*in_grads)[0] =
+        JUST(functional::BinaryCrossEntropyWithLogitsReduceMeanLossGrad(dy, input, target));
+  }
+  if (ctx->target_requires_grad) {
+    (*in_grads)[1] =
+        JUST(functional::BinaryCrossEntropyWithLogitsReduceMeanLossTargetGrad(dy, input, target));
+  }
   return Maybe<void>::Ok();
 }
 

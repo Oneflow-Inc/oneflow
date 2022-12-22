@@ -22,14 +22,14 @@ namespace vm {
 
 void DependenceAccess::__Init__() {
   clear_instruction();
-  clear_mirrored_object();
+  clear_dependence();
 }
 
-void DependenceAccess::__Init__(Instruction* instruction, MirroredObject* mirrored_object,
+void DependenceAccess::__Init__(Instruction* instruction, Dependence* dependence,
                                 OperandAccessType access_type) {
   __Init__();
   set_instruction(instruction);
-  set_mirrored_object(mirrored_object);
+  set_dependence(dependence);
   set_access_type(access_type);
 }
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -83,7 +84,7 @@ void TaskNode::set_thrd_id(int64_t val) {
 }
 
 void TaskNode::set_chain_id(int64_t val) {
-  CHECK_EQ(chain_id_, -1);
+  CHECK(!IsValidChainId(chain_id_));
   chain_id_ = val;
 }
 
@@ -203,7 +204,6 @@ bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_reg
 
 void TaskNode::ToProto(TaskProto* task_proto) const {
   // Step1: process some scalar items.
-  CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
@@ -308,20 +308,19 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 }
 
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
-  } else {
-    UNIMPLEMENTED();
-  }
+  mem_case->set_device_type(device_type());
+  mem_case->set_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        stream_id().device_id().device_index());
-  }
+  // When a node located on non-cpu device consumes a cpu regst,
+  // the regst memory should be pinned on host memory (locked page memory).
+  // When the regst is not on host, skip pinning
+  if (!memory::IsHostMem(*mem_case)) { return; }
+  // When the node is located on host, skip pinning
+  if (device_type() == DeviceType::kCPU) { return; }
+  mem_case->set_pinned_device_type(device_type());
+  mem_case->set_pinned_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::ConsumeRegst(const std::string& name) {

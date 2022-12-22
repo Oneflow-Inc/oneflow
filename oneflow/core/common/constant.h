@@ -24,6 +24,7 @@ static const int64_t kInvalidSessionId = -1;
 static const std::string kNoPassTag = "";
 static const std::string kMainOp = "main_op";
 static const int64_t kMaxSplitAxis = 6;
+constexpr size_t kMaxNumDims = 8;
 static const std::string kAsymmetricCodeErrorMsg =
     "Maybe executing different code in different ranks, please check if the code is branched and "
     "operates on the global tensor.";
