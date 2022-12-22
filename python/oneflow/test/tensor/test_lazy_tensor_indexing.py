@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+import oneflow.framework.session_context as session_ctx
 
 
 def get_graph_output(*args, func):
@@ -910,10 +911,6 @@ def _test_bool_indices(test_case, placement):
 
 class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
-    @unittest.skip(
-        "TODO(wyg, zwx): test these cases after supporting clear session interface to avoid"
-        "geting 'stream_id.h:33 Check failed: stream_index <= kMaxStreamIndex (4096 vs. 4095)' error"
-    )
     def test_global_slice(test_case):
         for placement in all_placement():
             for _ in range(5):
@@ -935,6 +932,8 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                 # TODO: cpu variable don't support common net
                 if not placement.type == "cpu":
                     _test_setitem_scalars(test_case, placement)
+
+                session_ctx.GetDefaultSession().Reset()
 
     @globaltest
     def test_bool_indices(test_case):
