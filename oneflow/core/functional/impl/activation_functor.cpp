@@ -712,7 +712,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
   m.add_functor<impl::FastGeluFunctor>("FastGelu");
   m.add_functor<impl::FastGeluGradFunctor>("FastGeluGrad");
-  m.add_functor<impl::QuickGeluFunctor>("QuickGelu");
+  m.add_functor<impl::QuickGeluFunctor>("QuickGELU");
   m.add_functor<impl::QuickGeluGradFunctor>("QuickGeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
