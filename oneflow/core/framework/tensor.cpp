@@ -231,7 +231,7 @@ Maybe<void> GlobalTensor::offload() {
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   auto offloaded_tensor = JUST(functional::Copy(input, "cpu", GlobalProcessCtx::LocalRank(),
                                                 /*pin_memory=*/false));
-  JUST(vm::CurrentRankSync());
+  JUST(vm::ClusterSync());
   const auto& detached_tensor =
       std::dynamic_pointer_cast<GlobalTensor>(JUST(offloaded_tensor->detach()));
   offloaded_impl_ = detached_tensor->impl_;
@@ -255,7 +255,7 @@ Maybe<void> GlobalTensor::load() {
   std::shared_ptr<Tensor> input = std::dynamic_pointer_cast<Tensor>(cpu_tensor);
   auto loaded_tensor = JUST(functional::Copy(input, "cuda", GlobalProcessCtx::LocalRank(),
                                              /*pin_memory=*/false));
-  JUST(vm::CurrentRankSync());
+  JUST(vm::ClusterSync());
   JUST(set_data(loaded_tensor));
 
   // Release cpu memory.
