@@ -40,6 +40,9 @@ namespace {
 const double kMemoryIncreaseRatio = 2.0;
 // The ceil of kMemoryRatio.
 const double kMaxMemoryRatio = 22.0;
+// If the current memory > available memory * kImpossibleRatio,
+// then it is impossible to reduce the memory to an acceptable size
+const double kImpossibleRatio = 1.4;
 
 }  // namespace
 
@@ -114,7 +117,11 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
     }
     if (ParseBooleanFromEnv("NoAdaptive", false)) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
-    kMemoryRatio = std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio);
+    if (curr_memory > available_memory_ * kImpossibleRatio) {
+      kMemoryRatio = kMaxMemoryRatio;
+    } else {
+      kMemoryRatio = std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio);
+    }
     step++;
     sbp_graph_.ReComputeWeightedCost();
   }
