@@ -478,8 +478,8 @@ class RandomUnstructured(BasePruningMethod):
         if nparams_toprune != 0:  # k=0 not supported by flow.kthvalue
             # prob = flow.rand_like(t)
             prob = flow.rand(t.size(),dtype=t.dtype,device=t.device)
-            topk,temp = flow.topk(prob.view(-1), k=nparams_toprune)
-            mask.view(-1)[temp] = 0
+            topk = flow.topk(prob.view(-1), k=nparams_toprune)
+            mask.view(-1)[topk.indices] = 0
 
         return mask
 
@@ -535,9 +535,10 @@ class L1Unstructured(BasePruningMethod):
         if nparams_toprune != 0:  # k=0 not supported by flow.kthvalue
             # largest=True --> top k; largest=False --> bottom k
             # Prune the smallest k
-            topk,temp = flow.topk(flow.abs(t).view(-1), k=nparams_toprune, largest=False)
+            
+            topk = flow.topk(flow.abs(t).view(-1), k=nparams_toprune, largest=False)
             # topk will have .indices and .values
-            mask.view(-1)[temp] = 0
+            mask.view(-1)[topk.indices] = 0
 
         return mask
 
@@ -743,7 +744,8 @@ class LnStructured(BasePruningMethod):
         norm = _compute_norm(t, self.n, self.dim)
         # largest=True --> top k; largest=False --> bottom k
         # Keep the largest k channels along dim=self.dim
-        topk,temp = flow.topk(norm, k=nparams_tokeep, largest=True)
+        
+        topk = flow.topk(norm, k=nparams_tokeep, largest=True)
         # topk will have .indices and .values
 
         # Compute binary mask by initializing it to all 0s and then filling in
@@ -765,7 +767,8 @@ class LnStructured(BasePruningMethod):
         if nparams_toprune == 0:  # k=0 not supported by flow.kthvalue
             mask = default_mask
         else:
-            mask = make_mask(t, self.dim, temp)
+          
+            mask = make_mask(t, self.dim, topk.indices)
             mask *= default_mask.to(dtype=mask.dtype)
 
         return mask
