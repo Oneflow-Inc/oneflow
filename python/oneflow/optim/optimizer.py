@@ -91,6 +91,8 @@ class ParamGroup(object):
 
     def _make_contiguous_params(self, parameters):
         def numel_in_bucket(tensor: flow.Tensor):
+            assert flow.is_floating_point(tensor), "contiguous params should be float tensor"
+
             def align(x: int, unit_size: int):
                 return (x + (unit_size - 1)) // unit_size * unit_size
 
@@ -98,7 +100,7 @@ class ParamGroup(object):
             # 4 is the bytes of a float number
             # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
             # avoid this hardcoded "512"
-            return align(tensor.numel(), 512 // 4)
+            return align(tensor.numel(), 512 // (flow.finfo(p.dtype).bits // 8))
 
         for p in parameters["params"]:
             buf_type = (p.dtype, p.device)
