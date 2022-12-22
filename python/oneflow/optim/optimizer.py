@@ -91,7 +91,9 @@ class ParamGroup(object):
 
     def _make_contiguous_params(self, parameters):
         def numel_in_bucket(tensor: flow.Tensor):
-            assert flow.is_floating_point(tensor), "contiguous params should be float tensor"
+            assert flow.is_floating_point(
+                tensor
+            ), "contiguous params should be float tensor"
 
             def align(x: int, unit_size: int):
                 return (x + (unit_size - 1)) // unit_size * unit_size
