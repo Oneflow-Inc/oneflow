@@ -64,7 +64,6 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
         }
         // generate kernel from oneflow.{compute op}
         ::oneflow::okl::RegContext reg_ctx(reg_op);
-
         auto* kernel = const_cast<OpKernel*>(reg_ctx.GetKernel());
 
         // check whether cuda graph support is base class
@@ -83,7 +82,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    const auto tag_name = "cuda_support";
+    const auto tag_name = "cuda_graph_support";
     // check whether this op is okl init context function  op
     if (op.getSymName().str() != "okl_init_context") { return failure(); }
     // check whether this op has been taged before
@@ -93,15 +92,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
 
     // set cuda graph support tag on init_context and compute function ops
     op->setAttr(tag_name, rewriter.getBoolAttr(outcome));
-    if (auto module_op = op->getParentOfType<ModuleOp>()) {
-      if (auto compute_func = module_op.lookupSymbol("okl_compute")) {
-        compute_func->setAttr(tag_name, rewriter.getBoolAttr(outcome));
-        return success();
-      }
-    }
-    // tagging is not completed successfully
-    op->emitError("Tag cuda graph pass: tagging is not completed successfully");
-    return failure();
+    return success();
   }
 };
 

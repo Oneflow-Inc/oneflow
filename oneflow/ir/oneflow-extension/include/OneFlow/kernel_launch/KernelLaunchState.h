@@ -27,7 +27,6 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "OneFlow/kernel_launch/JITEngine.h"
 #include "OneFlow/kernel_launch/LauncherContext.h"
-#include "OneFlow/kernel_launch/KernelManager.h"
 
 namespace oneflow {
 namespace okl {
@@ -48,17 +47,19 @@ class KernelLaunchState final : public user_op::OpKernelState {
   void DoCompute(user_op::KernelComputeContext* ctx);
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
-    // TODO: some kernel need to be operated once.
-    if (!resources_manager_) {
-      resources_manager_ = std::make_shared<ResourcesManager>(module_->clone(), ctx);
+    const auto tag_name = "cuda_graph_support";
+    if (auto func = module_->lookupSymbol("okl_init_context")) {
+      if (auto is_supported =
+              func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
+        return is_supported;
+      }
     }
-    return resources_manager_->IsCudaGraphSupported(ctx);
+    return false;
   }
 
  private:
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;
-  std::shared_ptr<ResourcesManager> resources_manager_{};
   std::shared_ptr<LauncherContext> launcher_context_{};
   std::shared_ptr<JITEngine> engine_{};
   void LazyInitLauncher(user_op::KernelComputeContext* ctx);

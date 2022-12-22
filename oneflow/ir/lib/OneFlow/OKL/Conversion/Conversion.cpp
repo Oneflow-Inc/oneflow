@@ -24,6 +24,8 @@ limitations under the License.
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Pass/PassManager.h"
 #include "oneflow/ir/include/OneFlow/OneFlowUtils.h"
+
+#include <glog/logging.h>
 namespace mlir {
 namespace okl {
 
@@ -34,16 +36,14 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
   pm.addPass(oneflow::createLowerToOKLPass());                 // lower-to-okl
   pm.addPass(createSplitIntoFuncsPass());                      // split-into-funcs
   pm.addPass(createFetchFromLauncherPass());                   // fetch-from-launcher
+  pm.addPass(createTagCudaGraphSupportPass());                 // tag-cuda-graph-support
   oneflow::CheckEnableIRPrinting(pm);
   return pm.run(module);
 }
 
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
-#ifdef WITH_CUDA_GRAPHS
-  pm.addPass(createCudaGraphSupportPass());        // tag-cuda-graph-support
-#endif                                               // WITH_CUDA_GRAPHS
-  pm.addPass(createOnlyKeepComputeOpsPass());  // only-keep-compute-ops
+  pm.addPass(createOnlyKeepComputeOpsPass());        // only-keep-compute-ops
   pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr
   pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
