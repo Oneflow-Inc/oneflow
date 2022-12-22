@@ -112,6 +112,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
                 << ", memory: " << curr_memory
                 << ", total cost: " << sbp_graph_.ComputeWeightedCost() << std::endl;
     }
+    if (ParseBooleanFromEnv("NoAdaptive", false)) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     kMemoryRatio = std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio);
     step++;
