@@ -93,6 +93,7 @@ jobs:
           retry-failed-build: true
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' }}
+          use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
             3.7
             3.8
