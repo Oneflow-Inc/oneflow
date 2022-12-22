@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/runtime_register_desc.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -570,18 +569,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     remain_task_nums[list_classifier] -= execution_list.size();
     // Set the order and then remove from the execution list
     for (auto* node : execution_list) {
-      if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Executing " << node->VisualStr()
-                  << ", mem inc: " << task_node2topo_struct[node].memory_increment << std::endl;
-      }
       SetOrderInGraph(node);
       finish_execution(node);
-    }
-    if (GlobalProcessCtx::Rank() == 0) {
-      for (auto& waiting_node : waiting_list) {
-        std::cout << waiting_node->memory_increment << ", ";
-      }
-      std::cout << std::endl;
     }
   };
 
@@ -607,15 +596,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
                              / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
                      remain_task_nums[TaskClassifier::kWaitingMainComputation]
                          / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
-        if (GlobalProcessCtx::Rank() == 0) {
-          std::cout << "We are going to execute n num: " << computation_num << ", wait comp: "
-                    << waiting_lists[TaskClassifier::kWaitingMainComputation].size()
-                    << ", wait over: " << waiting_lists[TaskClassifier::kWaitingOverlapNode].size()
-                    << ", remain comp: "
-                    << remain_task_nums[TaskClassifier::kWaitingMainComputation]
-                    << ", remain over: " << remain_task_nums[TaskClassifier::kWaitingOverlapNode]
-                    << std::endl;
-        }
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
@@ -630,24 +610,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
       }
     } else {
       execute(TaskClassifier::kRunASAP, waiting_lists[TaskClassifier::kRunASAP].size());
-    }
-  }
-
-  // test debug
-  if (GlobalProcessCtx::Rank() == 0) {
-    for (auto& node : *ordered_task_nodes) {
-      std::cout << node->VisualStr() << ", order: " << node->order_in_graph() << " (^_^)"
-                << std::endl;
-      node->ForEachNodeOnInEdge([&](TaskNode* in) {
-        std::cout << "Pre: " << in->VisualStr() << ", order: " << in->order_in_graph() << std::endl;
-      });
-    }
-
-    std::cout << "After cast_f2h: " << std::endl;
-    for (int32_t i = 0; i < ordered_task_nodes->size() - 1; i++) {
-      if (ordered_task_nodes->at(i)->VisualStr().find("cast_f2h") != std::string::npos) {
-        std::cout << ordered_task_nodes->at(i + 1)->VisualStr() << std::endl;
-      }
     }
   }
 }
