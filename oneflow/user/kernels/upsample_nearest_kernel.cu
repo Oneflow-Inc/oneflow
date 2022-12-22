@@ -103,7 +103,9 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
+    // cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
+    fastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), elem_cnt,
+                  static_cast<T>(dy_dptr[index]), true);
   }
 }
 
