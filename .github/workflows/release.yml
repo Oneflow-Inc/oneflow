@@ -96,8 +96,6 @@ jobs:
           python-versions: |
             3.7
             3.8
-            3.9
-            3.10
       - uses: Oneflow-Inc/get-oneflow@nv-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
