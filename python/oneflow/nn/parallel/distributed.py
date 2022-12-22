@@ -102,9 +102,7 @@ def DistributedDataParallel(
 
         # tensor memory should be align to 512 bytes for cuda operations,
         # 4 is the bytes of a float number
-        # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
-        # avoid this hardcoded "512"
-        return align(tensor.numel(), 512 // 4)
+        return align(tensor.numel(), flow._oneflow_internal.max_alignment_size() // 4)
 
     offset_in_bucket = 0
     with flow.no_grad():
