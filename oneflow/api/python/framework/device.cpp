@@ -40,8 +40,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
       .def(py::self == py::self)
       .def(py::hash(py::self));
-  
-  m.def("max_alignment_size", []() { return ep::kMaxAlignmentRequirement; }, py::return_value_policy::copy);
+
+  m.def(
+      "max_alignment_size", []() { return ep::kMaxAlignmentRequirement; },
+      py::return_value_policy::copy);
 }
 
 }  // namespace oneflow
