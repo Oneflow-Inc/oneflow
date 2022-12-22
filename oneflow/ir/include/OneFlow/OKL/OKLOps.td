@@ -236,4 +236,9 @@ def LowerOKLToLLVMCallPass : Pass<"lower-okl-to-llvm-call", "ModuleOp"> {
   let constructor = "mlir::okl::createLowerOKLToLLVMCallPass()";
 }
 
+def TagCudaGraphSupportPass : Pass<"tag-cuda-graph-support", "ModuleOp"> {
+  let summary = "tag cuda graph support according to child ops";
+  let constructor = "mlir::okl::createTagCudaGraphSupportPass()";
+}
+
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS

@@ -27,6 +27,8 @@ std::unique_ptr<mlir::Pass> createLowerLauncherToLLVMPtrPass();
 // lower okl ops to llvm.call @{callee in liboneflow.so}
 std::unique_ptr<mlir::Pass> createLowerOKLToLLVMCallPass();
 
+// tag {okl.cuda_graph_support} according to its child ops
+std::unique_ptr<mlir::Pass> createTagCudaGraphSupportPass();
 }  // namespace okl
 }  // namespace mlir
 

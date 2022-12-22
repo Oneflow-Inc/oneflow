@@ -40,7 +40,10 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
 
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
-  pm.addPass(createOnlyKeepComputeOpsPass());        // only-keep-compute-ops
+#ifdef WITH_CUDA_GRAPHS
+  pm.addPass(createCudaGraphSupportPass());        // tag-cuda-graph-support
+#endif                                               // WITH_CUDA_GRAPHS
+  pm.addPass(createOnlyKeepComputeOpsPass());  // only-keep-compute-ops
   pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr
   pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
