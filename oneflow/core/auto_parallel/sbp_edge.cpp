@@ -29,6 +29,8 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+extern double kMemoryRatio;
+
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
 SbpEdge::SbpEdge(SbpNode* start_node, SbpNode* mid_node, SbpNode* end_node, SbpEdge* first_edge,
@@ -111,7 +113,7 @@ void SbpEdge::SummarizeCost() {
           }
 
           // Compare and look for the minimum cost
-          weighted_sum = copy_cost + kMemoryRatioDp * memory_cost;
+          weighted_sum = copy_cost + kMemoryRatio * memory_cost;
           if (sbp_mid == 0 || weighted_sum < min_weighted_sum) {
             min_copy_cost = copy_cost;
             min_memory_cost = memory_cost;
@@ -332,7 +334,7 @@ void SbpEdge::ComputeWeightedCost() {
         auto& memory_i = memory_[i];
         auto& weighted_cost_i = weighted_cost_[i];
         for (int32_t j = 0; j < memory_[i].size(); j++) {
-          weighted_cost_i[j] += kMemoryRatioDp * memory_i[j];
+          weighted_cost_i[j] += kMemoryRatio * memory_i[j];
         }
       }
     }
@@ -411,7 +413,7 @@ double SbpEdge::GreedyStrategy() {
 // Get the minimum element in Cost
 double SbpEdge::GetMinWeightedCost() {
   // used the stored value if pre-computed.
-  if (kMemoryRatioDp == memory_ratio_search4min_weighted_cost_ && min_weighted_cost_ >= 0) {
+  if (kMemoryRatio == memory_ratio4min_weighted_cost_ && min_weighted_cost_ >= 0) {
     return min_weighted_cost_;
   }
   // Check the size of Cost
@@ -424,7 +426,7 @@ double SbpEdge::GetMinWeightedCost() {
     }
   }
   // Store current the memory ratio
-  memory_ratio_search4min_weighted_cost_ = kMemoryRatioDp;
+  memory_ratio4min_weighted_cost_ = kMemoryRatio;
   return min_weighted_cost_;
 }
 

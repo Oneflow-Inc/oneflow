@@ -34,6 +34,10 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+// In dynamic programming, we can not minimize a vector (copy cost, memory cost)
+// Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
+extern double kMemoryRatio;
+
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
 SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
@@ -203,7 +207,7 @@ void SbpNode::SummarizeCost() {
           memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
                         + child_node->GetMemory(sbp_child);
         }
-        weighted_sum = curr_cost + kMemoryRatioDp * memory_cost;
+        weighted_sum = curr_cost + kMemoryRatio * memory_cost;
         // update min_cost with fixed SbpSignature for this node and child node
         if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
           min_cost = curr_cost;
@@ -300,7 +304,7 @@ void SbpNode::ComputeWeightedCost() {
     memory_ = origin_memory_;
     if (in_memory_support_) {
       for (int32_t sbp_id = 0; sbp_id < origin_memory_.size(); sbp_id++) {
-        weighted_cost_[sbp_id] += kMemoryRatioDp * origin_memory_[sbp_id];
+        weighted_cost_[sbp_id] += kMemoryRatio * origin_memory_[sbp_id];
       }
     }
   } else {
@@ -924,8 +928,8 @@ bool SbpNode::IsComponent(SbpNode* sbp_node) const {
 double UpdateRatio() {
   int32_t ratio_num = ParseIntegerFromEnv("RatioNum", 0);
   double ratio = 0.0;
-  if (ratio_num > 0) { ratio = pow(1.02, ratio_num - 1); }
-  // if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
+  // if (ratio_num > 0) { ratio = pow(1.02, ratio_num - 1); }
+  if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
   // if (ratio_num > 0 && ratio_num < 57) {
   //   ratio = 0.1615 * pow(1.02, ratio_num - 1);
   // } else if (ratio_num >= 57) {

@@ -32,6 +32,8 @@ namespace oneflow {
 
 namespace auto_parallel {
 
+double kMemoryRatio = UpdateRatio();
+
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
   return Maybe<void>::Ok();

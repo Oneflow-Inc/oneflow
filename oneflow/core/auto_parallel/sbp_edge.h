@@ -155,7 +155,7 @@ class SbpEdge final {
   double min_weighted_cost_ = -1.0;
   // If consider memory, each GetMinWeightedCost would have a memory_ratio_search
   // Use the stored value for the same memory_ratio_search
-  double memory_ratio_search4min_weighted_cost_ = -1.0;
+  double memory_ratio4min_weighted_cost_ = -1.0;
 
   // The produced blob belongs to the support of the total memory
   bool in_memory_support_ = false;

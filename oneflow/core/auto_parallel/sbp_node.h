@@ -231,11 +231,6 @@ class SbpNode final {
 
 double UpdateRatio();
 
-// In dynamic programming, we can not minimize a vector (copy cost, memory cost)
-// Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
-// Memory ratio for dynamic programming only, we have different memory ratio for searching strategy
-static double kMemoryRatioDp = UpdateRatio();
-
 }  // namespace auto_parallel
 }  // namespace oneflow
 
