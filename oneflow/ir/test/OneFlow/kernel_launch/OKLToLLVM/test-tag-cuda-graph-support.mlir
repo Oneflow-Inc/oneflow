@@ -24,6 +24,7 @@ module {
     "okl.launch"(%1, %3) : (!okl.run_ctx, !okl.kernel) -> ()
     return
   }
+// CHECK: func.func @okl_init_context(%arg0: !okl.launcher_ctx) attributes {cuda_graph_support = true} {
   func.func @okl_init_context(%arg0: !okl.launcher_ctx) {
     %0 = "okl.build_reg_ctx"() ({
       %6 = "okl.get_tensor_from_arg"(%arg0) {index = 0 : i32, tensor_type = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
