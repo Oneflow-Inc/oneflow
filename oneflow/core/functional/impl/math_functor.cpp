@@ -3272,7 +3272,7 @@ class StftFunctor {
       }
       input_tensor = JUST(functional::View(input_tensor, Shape(view_shape)));
     }
-
+    
     int32_t batch = input_tensor->shape()->At(0);
     int32_t len = input_tensor->shape()->At(1);
     int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
@@ -3292,8 +3292,7 @@ class StftFunctor {
                               JUST(VectorAt(strides, 1))},
                              0));
 
-    auto temp_tensor = JUST(functional::Empty(Shape{n_fft}, input->dtype(), JUST(input->device()),
-                                              /*pin_memory=*/false));
+    std::shared_ptr<Tensor> temp_tensor;
     if (window.has_value()) {
       temp_tensor = JUST(window);
       CHECK_OR_RETURN(temp_tensor->shape()->NumAxes() == 1
