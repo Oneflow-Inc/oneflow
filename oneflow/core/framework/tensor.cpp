@@ -122,7 +122,7 @@ Maybe<void> LocalTensor::offload() {
   if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be offloaded."; }
   if (is_offloaded_) { LOG(WARNING) << "This tensor has already be offloaded."; }
 
-  // Offload to cpu mem with a cpu tensor implantation
+  // Offload to cpu mem with a cpu tensor implantation.
   CHECK_OR_RETURN(is_cuda());
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
@@ -226,7 +226,7 @@ Maybe<void> GlobalTensor::offload() {
   if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be offloaded."; }
   if (is_offloaded_) { LOG(WARNING) << "This tensor has already be offloaded."; }
 
-  // Offload to cpu mem with a cpu tensor implantation
+  // Offload to cpu mem with a cpu tensor implantation.
   CHECK_OR_RETURN(is_cuda());
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   auto offloaded_tensor = JUST(functional::Copy(input, "cpu", GlobalProcessCtx::LocalRank(),
