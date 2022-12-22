@@ -126,7 +126,7 @@ struct QuickGeluCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
 };
 
-class QuickGelu : public OpExprGradFunction<QuickGeluCaptureState> {
+class QuickGeLU : public OpExprGradFunction<QuickGeluCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
@@ -603,7 +603,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("threshold", Threshold);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softplus", Softplus);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink", SoftShrink);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fast_gelu", FastGeLU);
-REGISTER_OP_EXPR_GRAD_FUNCTION("quick_gelu", QuickGelu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("quick_gelu", QuickGeLU);
 
 }  // namespace one
 }  // namespace oneflow
