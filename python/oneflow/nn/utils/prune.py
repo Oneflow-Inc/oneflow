@@ -1394,6 +1394,6 @@ def _compute_norm(t, n, dim):
     aa=np.array(aa).reshape(bb)
     aa=flow.tensor(aa)
 
-    norm=a
+    norm=aa
     #-------------------------------------------------------
     return norm
