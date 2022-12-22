@@ -200,7 +200,7 @@ class LAMB(Optimizer):
                 else:
                     kwargs["l2"] = param_group["weight_decay"]
                     kwargs["weight_decay"] = 0.0
-                    
+
                 if param_group["contiguous_params"]:
                     param_list = param_group.contiguous_parameters
                 else:

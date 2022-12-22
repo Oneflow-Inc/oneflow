@@ -344,7 +344,7 @@ class Optimizer(object):
                 raise ValueError(
                     "loaded contiguous_params state doesn't match the optimizer"
                 )
-            
+
             if param["contiguous_params"]:
                 param_list = param.contiguous_parameters
             else:
@@ -361,7 +361,14 @@ class Optimizer(object):
             old_id: p
             for old_id, p in zip(
                 chain.from_iterable((g["params"] for g in saved_groups)),
-                chain.from_iterable((g.parameters if not g["contiguous_params"] else g.contiguous_parameters for g in groups)),
+                chain.from_iterable(
+                    (
+                        g.parameters
+                        if not g["contiguous_params"]
+                        else g.contiguous_parameters
+                        for g in groups
+                    )
+                ),
             )
         }
 

@@ -198,7 +198,7 @@ class RMSprop(Optimizer):
                     "decay_rate": param_group["alpha"],
                     "l2": param_group["weight_decay"],
                 }
-                
+
                 if param_group["contiguous_params"]:
                     param_list = param_group.contiguous_parameters
                 else:
