@@ -952,6 +952,14 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(auto_backward=False, check_graph=True)
+    def test_sort_tensor_return_type(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        result = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return result.values, result.indices
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False, check_graph=True)
     def test_argsort_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
@@ -1032,6 +1040,18 @@ class TestTensor(flow.unittest.TestCase):
             sorted=constant(True),
         )
         return y[0], y[1]
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_tensor_topk_return_type(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        result = x.topk(
+            random(low=1, high=8).to(int),
+            dim=random(low=1, high=4).to(int),
+            largest=random_bool(),
+            sorted=constant(True),
+        )
+        return result.values, result.indices
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_fmod_element_with_random_data(test_case):
