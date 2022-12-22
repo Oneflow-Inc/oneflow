@@ -7,14 +7,15 @@ Pattern {
   let moving_variance: Value;
   let gamma: Value;
   let beta: Value;
+  let epsilonAttr: Attr;
 
   let conv = op<oneflow.conv2d>(x: Value, weight: Value)
   {device_name = device_name, device_tag = device_tag};
 
-  let normalization = op<oneflow.normalization_infer>(conv, moving_mean, moving_variance, gamma, beta) {device_name = device_name, device_tag = device_tag} -> (y: Type);
+  let normalization = op<oneflow.normalization_infer>(conv, moving_mean, moving_variance, gamma, beta) {device_name = device_name, device_tag = device_tag, epsilonAttr = epsilonAttr} -> (y: Type);
 
   rewrite normalization with{
-    let conv2d_bn = CreateConv2DBatchNorm(conv, normalization);
+    let conv2d_bn = CreateConv2DBatchNorm(x, weight, moving_variance, gamma, beta, moving_mean, epsilonAttr, conv, normalization);
     replace normalization with conv2d_bn;
   };
   

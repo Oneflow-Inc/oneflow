@@ -12,7 +12,7 @@ Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, in
   return scale_tril_op;
 }
 
-Rewrite CreateConv2DBatchNorm(conv: Op, bn: Op) -> Op;
+Rewrite CreateConv2DBatchNorm(in: Value, weight: Value, moving_variance: Value, gamma: Value, beta: Value, moving_mean: Value, epsilonAttr:Attr, conv: Op, bn: Op) -> Op;
 
 Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 
