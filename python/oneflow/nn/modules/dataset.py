@@ -25,7 +25,7 @@ import oneflow._oneflow_internal._C as _C
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.scope_util import current_scope
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 import oneflow.framework.id_util as id_util
 
@@ -1055,7 +1055,7 @@ class OneRecReader(Module):
             batch_size=10,
             shuffle=True,
             shuffle_mode="batch",
-            placement=flow.env.all_device_placement("cpu") ,
+            placement=flow.placement.all("cpu") ,
             sbp=[flow.sbp.split(0)],
         )
         readdata_2 = onerec_reader2()

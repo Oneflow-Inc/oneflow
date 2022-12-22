@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -20,9 +21,11 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -104,6 +107,85 @@ class ArgMinFunctor {
         .call(x);
   }
 };
+
+class GlobalTensorConstantFunctor {
+ public:
+  GlobalTensorConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
+                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    CHECK_OR_RETURN(value->ndim() <= 1 && value->nelement() == 1)
+        << "Only tensor with single element or scalar tensor are supported as value!";
+    CHECK_OR_RETURN(value->is_global()) << "The value tensor should be global tensor";
+    // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
+    autograd::AutoGradMode mode(false);
+    JUST(CheckDeviceIdsIsValid(placement));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "nd_sbp");
+    attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt);
+
+    auto dispatch_constant =
+        [&](const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
+        }
+      }
+      attrs.SetAttr<2>(nd_sbp);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
+    };
+    bool has_partial_parallel =
+        std::any_of(sbp_tuple.begin(), sbp_tuple.end(),
+                    [](const Symbol<SbpParallel>& sbp) { return sbp->has_partial_sum_parallel(); });
+    // The source op does not support Partial
+    if (has_partial_parallel) {
+      const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
+      const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
+      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
+                                  /*copy*/ false);
+    } else {
+      return dispatch_constant(sbp_tuple);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TensorConstantFunctor {
+ public:
+  TensorConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_constant").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::shared_ptr<one::Tensor>& value,
+                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    CHECK_OR_RETURN(value->ndim() <= 1 && value->nelement() == 1)
+        << "Only tensor with single element or scalar tensor are supported as value!";
+    // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
+    autograd::AutoGradMode mode(false);
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalTensorConstant(shape, value, dtype,
+                                                   GetGlobalParallelDescFromDevice(device),
+                                                   *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype");
+    attrs.SetAllAttrs(shape, dtype->data_type());
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value},
+                                            OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {value}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GlobalConstantFunctor {
  public:
   GlobalConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
@@ -161,6 +243,11 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalConstant(shape, value, dtype,
+                                             GetGlobalParallelDescFromDevice(device),
+                                             *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value");
     if (IsIntegralDataType(dtype->data_type())) {
@@ -185,12 +272,21 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+    if (GlobalMode::is_enabled()) {
+      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
+                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+    }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -2893,13 +2989,20 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
-        << Error::RuntimeError()
-        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
     if (input->is_global()) {
-      std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      if (!device_.has_value()) {
+        std::string device_type = JUST(input->parallel_desc())->device_tag();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      } else {
+        if (!GlobalMode::is_enabled()) {
+          CHECK_OR_RETURN(!device_.has_value())
+              << Error::RuntimeError()
+              << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+              << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+        }
+        std::string device_type = device_.value_or(Symbol<Device>())->type();
+        return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      }
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -2971,10 +3074,42 @@ class ToDeviceFunctor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& k,
+                                const int32_t& dim, const bool largest, const bool sorted) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
     attrs.SetAllAttrs(k, sorted);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    if (axis == input->ndim() - 1) {
+      if (largest) {
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+      } else {
+        auto neg_input = JUST(ScalarMul(input, -1, false));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
+      }
+      values = JUST(DimGather(input, axis, indices, false));
+
+    } else {
+      auto perm = JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
+      if (largest) {
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
+      } else {
+        auto neg_input = JUST(ScalarMul(x, -1, false));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
+      }
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices, *inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
+    }
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
+    return outputs;
   }
 
  private:
@@ -3544,11 +3679,167 @@ class BinCountFunctor {
   std::shared_ptr<OpExpr> weight_op_;
 };
 
+class UniqueFunctor {
+ public:
+  UniqueFunctor() {
+    op_ = CHECK_JUST(
+        OpBuilder("unique").Input("x").Output("y").Output("idx").Output("num_unique").Build());
+  };
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
+    DataType out_idx = dtype->data_type();
+    attrs.SetAllAttrs(out_idx);
+    std::shared_ptr<TensorTuple> output = JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    int64_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
+    {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
+    }
+    return functional::Slice(output->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1},
+                             false);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UniqueWithCountsFunctor {
+ public:
+  UniqueWithCountsFunctor() {
+    unique_op_ = CHECK_JUST(
+        OpBuilder("unique").Input("x").Output("y").Output("idx").Output("num_unique").Build());
+    unique_with_counts_op_ = CHECK_JUST(OpBuilder("unique_with_counts")
+                                            .Input("x")
+                                            .Output("y")
+                                            .Output("idx")
+                                            .Output("num_unique")
+                                            .Output("count")
+                                            .Build());
+  };
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, bool return_inverse,
+                                bool return_counts, const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
+    attrs.SetAllAttrs(dtype->data_type());
+    std::shared_ptr<TensorTuple> output;
+    if (return_counts) {
+      output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *unique_with_counts_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    } else {
+      output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *unique_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
+    }
+
+    int64_t num_unique = 0;
+    std::shared_ptr<Tensor> num_unique_tensor = output->at(2);
+    {
+      if (num_unique_tensor->is_global()) {
+        num_unique_tensor = JUST(GlobalToLocal(num_unique_tensor, false));
+      }
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &num_unique, eager_blob_object->dptr(),
+                       GetSizeOfDataType(dtype->data_type()), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(num_unique_tensor, callback, "const"));
+    }
+    auto result = std::make_shared<TensorTuple>();
+    const auto& y = JUST(
+        functional::Slice(output->at(0), /*start=*/{0}, /*end=*/{num_unique}, /*step=*/{1}, false));
+    result->emplace_back(y);
+    if (return_inverse) {
+      result->emplace_back(JUST(functional::Reshape(output->at(1), *x->shape())));
+    }
+    if (return_counts) {
+      const auto count = JUST(functional::Slice(output->at(3), /*start=*/{0}, /*end=*/{num_unique},
+                                                /*step=*/{1}, false));
+      result->emplace_back(count);
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> unique_op_;
+  std::shared_ptr<OpExpr> unique_with_counts_op_;
+};
+
+class BaddBmmFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& batch1,
+                           const std::shared_ptr<one::Tensor>& batch2, const double& beta,
+                           const double& alpha) const {
+    const int32_t batch1_ndim = batch1->ndim();
+    const int32_t batch2_ndim = batch2->ndim();
+    CHECK_EQ_OR_RETURN(batch1_ndim, 3) << Error::RuntimeError() << "batch1 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch2_ndim, 3) << Error::RuntimeError() << "batch2 must be a 3D tensor";
+    CHECK_EQ_OR_RETURN(batch1->dim(0), batch2->dim(0))
+        << Error::RuntimeError() << "batch1 and batch2 must have same number of batches, got ,"
+        << batch1->dim(0) << " and " << batch2->dim(0);
+    CHECK_EQ_OR_RETURN(batch1->dim(2), batch2->dim(1))
+        << "Incompatible matrix sizes for bmm (" << batch1->dim(1) << "x" << batch1->dim(2)
+        << " and " << batch2->dim(1) << "x" << batch2->dim(2) << ")";
+
+    if (beta == 0.0) {
+      // In stable diffsion, the beta param is always 0.0, so we can avoid use add and mul op to
+      // optimize speed and bandwidth in cuda.
+      return JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha));
+    } else {
+      // TODO(add a fuse kernel to optimize speed and bancwidth in cuda)
+      return JUST(
+          functional::Add(JUST(functional::ScalarMul(beta, input)),
+                          JUST(functional::BatchMatMul(batch1, batch2, false, false, alpha)),
+                          /*alpha=*/1.0, /*inplace=*/false));
+    }
+  }
+};
+
+class SortFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& dim,
+                                const bool descending) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    std::string direction("ASCENDING");
+    if (descending) { direction.assign("DESCENDING"); }
+    if (axis == input->ndim() - 1) {
+      indices = JUST(ArgSort(input, direction));
+      values = JUST(DimGather(input, axis, indices, false));
+    } else {
+      std::shared_ptr<std::vector<int32_t>> perm =
+          JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
+      auto indices_temp = JUST(ArgSort(x, direction));
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices_temp, *inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
+    }
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
+    return outputs;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
+  m.add_functor<impl::GlobalTensorConstantFunctor>("GlobalTensorConstant");
+  m.add_functor<impl::TensorConstantFunctor>("TensorConstant");
   m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
@@ -3691,6 +3982,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BinCountFunctor>("BinCount");
   m.add_functor<impl::IndexAddFunctor>("IndexAdd");
   m.add_functor<impl::IndexAddInplaceFunctor>("IndexAddInplace");
+  m.add_functor<impl::UniqueFunctor>("Unique");
+  m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
+  m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
+  m.add_functor<impl::SortFunctor>("Sort");
 };
 
 }  // namespace functional

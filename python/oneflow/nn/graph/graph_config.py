@@ -246,6 +246,10 @@ class GraphConfig(object):
             #  effects.
             nccl_config.enable_use_compute_stream(True)
 
+            # TODO(chengcheng): hotfix.(just for now), logical chain has some bugs in OneEmmbedding,
+            #  just using logical chain in acc on.
+            os.environ["ENABLE_LOGICAL_CHAIN"] = "true"
+
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.
 
@@ -311,7 +315,7 @@ class GraphConfig(object):
         Under the forth configuration, the straighten algorithm would try to run the cpu nodes and gpu nodes alternately.
         Such procedure would reduce the gaps of the execution on gpus.
         It might speed up the training by 2%.
-        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically. 
+        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
         """
         assert (
             mode == "Disable"
@@ -327,6 +331,17 @@ class GraphConfig(object):
             self.proto.straighten_algorithm_tag_in_task_graph = 3
         else:
             self.proto.straighten_algorithm_tag_in_task_graph = 4
+
+    def enable_compress_memory(self, mode: bool = True):
+        """If true, then the graph will try its best to find the minimum memory allocation strategy.
+        This process might take several minutes for a small graph and half an hour for a large one.
+        The compressed memory would be closed to the lower bound of the peak memory.
+        It benefits a lot if you need to train a lot of batches.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_compress_memory = mode
 
     def enable_auto_parallel(self, mode: bool = True):
         """If true, then graph will use the auto parallel algorithm to select a parallelism strategy.
