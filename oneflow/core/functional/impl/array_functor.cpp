@@ -3074,10 +3074,42 @@ class ToDeviceFunctor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& k,
+                                const int32_t& dim, const bool largest, const bool sorted) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
     attrs.SetAllAttrs(k, sorted);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    if (axis == input->ndim() - 1) {
+      if (largest) {
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+      } else {
+        auto neg_input = JUST(ScalarMul(input, -1, false));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
+      }
+      values = JUST(DimGather(input, axis, indices, false));
+
+    } else {
+      auto perm = JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
+      if (largest) {
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
+      } else {
+        auto neg_input = JUST(ScalarMul(x, -1, false));
+        indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {neg_input}, attrs));
+      }
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices, *inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
+    }
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
+    return outputs;
   }
 
  private:
@@ -3772,6 +3804,35 @@ class BaddBmmFunctor {
   }
 };
 
+class SortFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& dim,
+                                const bool descending) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    std::shared_ptr<Tensor> values;
+    std::shared_ptr<Tensor> indices;
+    int32_t axis = dim;
+    axis = JUST(maybe_wrap_dim(axis, input->ndim()));
+    std::string direction("ASCENDING");
+    if (descending) { direction.assign("DESCENDING"); }
+    if (axis == input->ndim() - 1) {
+      indices = JUST(ArgSort(input, direction));
+      values = JUST(DimGather(input, axis, indices, false));
+    } else {
+      std::shared_ptr<std::vector<int32_t>> perm =
+          JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto x = JUST(Transpose(input, *perm));
+      auto indices_temp = JUST(ArgSort(x, direction));
+      auto inversed_perm = JUST(GetInversedPerm(*perm));
+      indices = JUST(Transpose(indices_temp, *inversed_perm));
+      values = JUST(DimGather(input, axis, indices, false));
+    }
+    (*outputs)[0] = values;
+    (*outputs)[1] = indices;
+    return outputs;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3924,6 +3985,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UniqueFunctor>("Unique");
   m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
+  m.add_functor<impl::SortFunctor>("Sort");
 };
 
 }  // namespace functional
