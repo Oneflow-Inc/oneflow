@@ -49,7 +49,7 @@ class TestStft(flow.unittest.TestCase):
     )
     def test_stft_with_1D_random_data(test_case):
         min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
-        if min_cuda_version < 11:
+        if min_cuda_version < 11:  # cufft is only supported in CUDA 11.0 and above
             device = cpu_device()
         else:
             device = random_device()

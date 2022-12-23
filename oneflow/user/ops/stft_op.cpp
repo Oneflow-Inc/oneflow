@@ -74,4 +74,9 @@ const Shape InferOutputShape(const Shape& in_shape, bool onesided = true,
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<double> StftOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
+  // TODO: add ComputeComplexityFun
+  return 0.0;
+}
+
 }  // namespace oneflow

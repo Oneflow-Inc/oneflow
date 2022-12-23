@@ -3272,7 +3272,7 @@ class StftFunctor {
       }
       input_tensor = JUST(functional::View(input_tensor, Shape(view_shape)));
     }
-    
+
     int32_t batch = input_tensor->shape()->At(0);
     int32_t len = input_tensor->shape()->At(1);
     int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
@@ -3303,7 +3303,7 @@ class StftFunctor {
     }
     if (new_win_length < n_fft) {
       temp_tensor = JUST(functional::Fill(temp_tensor, 0));
-      auto left = (n_fft - new_win_length) / 2;
+      const int64_t left = (n_fft - new_win_length) / 2;
 
       if (window.has_value()) {
         // TODO(yzm):Copy the window matrix to the defined range,such as
@@ -3311,8 +3311,13 @@ class StftFunctor {
         //      functional::AssignLocalTensor(JUST(functional::Narrow(temp_tensor, 0,
         //      left,new_win_length)), window);
         //'''
+        // Remove the following check after support
+        CHECK_OR_RETURN(false) << Error::RuntimeError()
+                               << "The following conditions are not currently supported: "
+                                  "win_length<n_fft and the window function is customized";
       } else {
-        JUST(functional::Fill(JUST(functional::Narrow(temp_tensor, 0, left, new_win_length)), 1.0));
+        temp_tensor = JUST(
+            functional::Fill(JUST(functional::Narrow(temp_tensor, 0, left, new_win_length)), 1.0));
       }
     }
 

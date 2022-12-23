@@ -34,7 +34,6 @@ struct CuFFtParams {
   int32_t output_strides[max_rank + 1];
   int32_t* rank;
   int32_t batch;
-  CuFFtParams() = default;
   CuFFtParams(int32_t dims, int32_t* r, const Stride& in_strides, const Stride& out_strides,
               const Shape& in_shape, const Shape& out_shape, int32_t b)
       : ndim(dims), rank(r), batch(b) {
