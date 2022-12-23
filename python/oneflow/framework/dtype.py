@@ -49,7 +49,13 @@ def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
-    oneflow.bool: bool,
+    # np.bool is deprecated, the alternatives are bool and np.bool_
+    # We use np.bool_ here to work with the following code:
+    #
+    # >> x = np.array([1, 2, 3], dtype=bool)
+    # >> assert x.dtype == np.bool_
+    # >> flow.framework.dtype.convert_numpy_dtype_to_oneflow_dtype(x.dtype)
+    oneflow.bool: np.bool_,
     oneflow.float: np.float32,
     oneflow.float16: np.float16,
     oneflow.float32: np.float32,
