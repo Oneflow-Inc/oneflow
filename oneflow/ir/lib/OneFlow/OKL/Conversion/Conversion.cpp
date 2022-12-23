@@ -25,7 +25,6 @@ limitations under the License.
 #include "mlir/Pass/PassManager.h"
 #include "oneflow/ir/include/OneFlow/OneFlowUtils.h"
 
-#include <glog/logging.h>
 namespace mlir {
 namespace okl {
 

@@ -69,10 +69,27 @@ class AggregateComputeOpsPass : public AggregateComputeOpsPassBase<AggregateComp
   }
 };
 
+class AggregateCudaGraphSupportOpsPass : public AggregateCudaGraphSupportOpsPassBase<AggregateCudaGraphSupportOpsPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    // TODO: realize cuda graph aggregation pattern
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createAggregateComputeOpsPass() {
   return std::make_unique<AggregateComputeOpsPass>();
+}
+
+std::unique_ptr<Pass> createAggregateCudaGraphSupportOpsPass() {
+  return std::make_unique<AggregateCudaGraphSupportOpsPass>();
 }
 
 }  // namespace oneflow

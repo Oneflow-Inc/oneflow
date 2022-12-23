@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/UserOpReflection.h"
-#include "OneFlow/Transform/AggregateComputeOps.h"
+#include "OneFlow/Transform/AggregateOps.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -829,6 +829,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
+#ifdef WITH_CUDA_GRAPHS
+    pm.addPass(createAggregateCudaGraphSupportOpsPass());
+#endif
     pm.addPass(createWrapOpsToKernelLaunchPass());
   }
   pm.addPass(createCanonicalizerPass());
