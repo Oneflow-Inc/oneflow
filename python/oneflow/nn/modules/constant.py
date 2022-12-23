@@ -69,17 +69,37 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.global_constant(
-                self.shape,
-                self.value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=self.sbp,
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.global_tensor_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
+            else:
+                res = flow._C.global_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
         else:
-            res = flow._C.constant(
-                self.shape, self.value, dtype=self.dtype, device=self.device
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.tensor_constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
+            else:
+                res = flow._C.constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
         res.requires_grad = self.requires_grad
         return res
 
@@ -382,7 +402,6 @@ def full_op(
         fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
-    # TODO: constant kernel originally support scalar fill_value tensor rather than by implicitly converting, cause it brings synchronization overhead
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 

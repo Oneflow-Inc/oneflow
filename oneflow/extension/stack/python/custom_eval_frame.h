@@ -23,7 +23,7 @@ extern "C" {
 #include <Python.h>
 
 #if PY_VERSION_HEX >= 0x03090000
-typedef PyObject* (*PyFrameEvalFunc)(struct _tstate*, struct _frame*, int);
+typedef PyObject* (*PyFrameEvalFunc)(struct _ts*, struct _frame*, int);
 #else
 typedef PyObject* (*PyFrameEvalFunc)(struct _frame*, int);
 #endif
