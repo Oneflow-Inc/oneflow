@@ -34,8 +34,7 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      COMPUTE_PLATFORM: cu112
-      CUDA_VERSION: "11.2"
+      COMPUTE_PLATFORM: cu117
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: ${{ matrix.entry }}/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: ${{ matrix.entry }}/${{ github.ref }}
@@ -55,7 +54,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
+      - uses: Oneflow-Inc/get-oneflow@nv-wheels
         name: Build manylinux
         id: build-cuda
         with:
@@ -66,7 +65,6 @@ jobs:
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
           self-hosted: true
-          cuda-version: ${{ env.CUDA_VERSION }}
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: true
