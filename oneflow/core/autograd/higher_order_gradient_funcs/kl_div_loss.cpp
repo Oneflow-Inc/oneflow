@@ -61,10 +61,8 @@ Maybe<void> KLDivLossGradGrad::Capture(KLDivLossGradGradCaptureState* ctx,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->log_target = JUST(composed_attrs.GetAttr<bool>("log_target"));
 
-  if (ctx->grad_requires_grad) {
-    ctx->input_index = ctx->SaveTensorForBackward(inputs[1]);   // input
-    ctx->target_index = ctx->SaveTensorForBackward(inputs[2]);  // target
-  }
+  ctx->input_index = ctx->SaveTensorForBackward(inputs[1]);   // input
+  ctx->target_index = ctx->SaveTensorForBackward(inputs[2]);  // target
 
   return Maybe<void>::Ok();
 }
@@ -80,6 +78,12 @@ Maybe<void> KLDivLossGradGrad::Apply(const KLDivLossGradGradCaptureState* ctx,
   }
   if (ctx->input_requires_grad) { (*in_grads)[1] = JUST(functional::ZerosLike(out_grads[0])); }
   if (ctx->target_requires_grad) { (*in_grads)[2] = JUST(functional::ZerosLike(out_grads[0])); }
+  //// In pytorch 1.13 the higher derivative grad is fixed, which will cause difference here
+  // if (ctx->target_requires_grad) {
+  //   if (ctx->log_target) (*in_grads)[2] =
+  //   JUST(functional::Mul(JUST(functional::Negative(JUST(functional::Exp(target)))),
+  //   out_grads[0])); else (*in_grads)[2] = JUST(functional::Negative(out_grads[0]));
+  // }
 
   return Maybe<void>::Ok();
 }
