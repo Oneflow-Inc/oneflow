@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 
@@ -138,6 +139,9 @@ Maybe<void> LocalTensor::offload() {
   auto eager_blob_obj = JUST(JUST(impl_->mut_eager_local_tensor_impl())->eager_blob_object());
   JUST(eager_blob_obj->DeallocateBlobDataPtr());
 
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
   is_offloaded_ = true;
   return Maybe<void>::Ok();
 }
@@ -239,6 +243,9 @@ Maybe<void> GlobalTensor::offload() {
   // Release cuda memory, but the meta data is valid.
   auto eager_blob_obj = JUST(JUST(impl_->cur_rank_phy_tensor())->eager_blob_object());
   JUST(eager_blob_obj->DeallocateBlobDataPtr());
+
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
 
   is_offloaded_ = true;
   return Maybe<void>::Ok();
