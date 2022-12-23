@@ -1273,14 +1273,19 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
-                        if local_rtol < 0:
-                            global_rtol = local_rtol = (
-                                1e-3 if x.dtype == torch.float16 else 1e-4
-                            )
-                        if local_atol < 0:
-                            global_atol = local_atol = (
-                                1e-4 if x.dtype == torch.float16 else 1e-5
-                            )
+                        if hasattr(x, 'dtype'):
+                            if local_rtol < 0:
+                                global_rtol = local_rtol = (
+                                    1e-3 if x.dtype == torch.float16 else 1e-4
+                                )
+                            if local_atol < 0:
+                                global_atol = local_atol = (
+                                    1e-4 if x.dtype == torch.float16 else 1e-5
+                                )
+                        else:
+                            global_rtol = local_rtol = 1e-4
+                            global_atol = local_atol = 1e-5
+                        
                         test_case.assertTrue(
                             check_equality(
                                 x,
