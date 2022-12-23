@@ -120,8 +120,14 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
 }
 
 Maybe<void> LocalTensor::offload() {
-  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be offloaded."; }
-  if (is_offloaded_) { LOG(WARNING) << "This tensor has already be offloaded."; }
+  if (!is_cuda()) {
+    LOG(WARNING) << "Only cuda tensor can be offloaded.";
+    return Maybe<void>::Ok();
+  }
+  if (is_offloaded_) {
+    LOG(WARNING) << "This tensor has already be offloaded.";
+    return Maybe<void>::Ok();
+  }
 
   // Offload to cpu mem with a cpu tensor implantation.
   CHECK_OR_RETURN(is_cuda());
@@ -147,8 +153,14 @@ Maybe<void> LocalTensor::offload() {
 }
 
 Maybe<void> LocalTensor::load() {
-  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be loaded."; }
-  if (!is_offloaded_) { LOG(WARNING) << "Only offloaded tensor can be loaded."; }
+  if (!is_cuda()) {
+    LOG(WARNING) << "Only cuda tensor can be loaded.";
+    return Maybe<void>::Ok();
+  }
+  if (!is_offloaded_) {
+    LOG(WARNING) << "Only offloaded tensor can be loaded.";
+    return Maybe<void>::Ok();
+  }
 
   CHECK_OR_RETURN(is_cuda());
   // Load cpu to cuda.
@@ -227,8 +239,14 @@ Maybe<void> GlobalTensor::set_data(const std::shared_ptr<Tensor>& other) {
 }
 
 Maybe<void> GlobalTensor::offload() {
-  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be offloaded."; }
-  if (is_offloaded_) { LOG(WARNING) << "This tensor has already be offloaded."; }
+  if (!is_cuda()) {
+    LOG(WARNING) << "Only cuda tensor can be offloaded.";
+    return Maybe<void>::Ok();
+  }
+  if (is_offloaded_) {
+    LOG(WARNING) << "This tensor has already be offloaded.";
+    return Maybe<void>::Ok();
+  }
 
   // Offload to cpu mem with a cpu tensor implantation.
   CHECK_OR_RETURN(is_cuda());
@@ -252,8 +270,14 @@ Maybe<void> GlobalTensor::offload() {
 }
 
 Maybe<void> GlobalTensor::load() {
-  if (!is_cuda()) { LOG(WARNING) << "Only cuda tensor can be loaded."; }
-  if (!is_offloaded_) { LOG(WARNING) << "Only offloaded tensor can be loaded."; }
+  if (!is_cuda()) {
+    LOG(WARNING) << "Only cuda tensor can be loaded.";
+    return Maybe<void>::Ok();
+  }
+  if (!is_offloaded_) {
+    LOG(WARNING) << "Only offloaded tensor can be loaded.";
+    return Maybe<void>::Ok();
+  }
 
   CHECK_OR_RETURN(is_cuda());
 
