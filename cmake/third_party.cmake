@@ -137,6 +137,7 @@ endif()
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
 
 if(BUILD_CUDA)
+  # Always use third_party/cub for Clang CUDA in case of compatibility issues
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA" AND CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
     if(CMAKE_CXX_STANDARD LESS 14)
       add_definitions(-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT)
