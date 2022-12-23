@@ -25,6 +25,8 @@ import oneflow.unittest
 class TestNpDtypeConverter(flow.unittest.TestCase):
     def test_np_dtype_converter(test_case):
         for flow_dtype in flow.dtypes():
+            if flow_dtype in [flow.record, flow.tensor_buffer, flow.bfloat16]:
+                continue
             np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(flow_dtype)
             test_case.assertEqual(
                 flow.framework.dtype.convert_numpy_dtype_to_oneflow_dtype(np_dtype),
