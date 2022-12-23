@@ -124,7 +124,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   // TODO(chengcheng): set inplace hint for cpu regst
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
-  // PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
+  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
   return Maybe<void>::Ok();

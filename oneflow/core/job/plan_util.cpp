@@ -273,8 +273,11 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   for (const auto& logical_chain_group : job.logical_chain_groups()) {
     CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
     int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
-    CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
-          != logical_chain_id2machine_id2mem_block_id.end());
+    if (logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+        == logical_chain_id2machine_id2mem_block_id.end()) {
+      // Skip when do rank compile and this logical chain group is not related with this rank.
+      continue;
+    }
     const auto& merged_rank2block =
         logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
     for (int64_t i = 1; i < logical_chain_group.logical_chain_id_list_size(); ++i) {
@@ -315,12 +318,14 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
           // merge mem_block_id
           int64_t merged_mem_block_id = mem_block_id2merged_mem_block_id.at(mem_block_id);
           regst_desc->set_mem_block_id(merged_mem_block_id);
-          const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
-          CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
-          const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
-          std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
-          VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
-                  << merged_mem_block_id;
+          if (VLOG_IS_ON(3)) {
+            const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
+            CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
+            const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+            std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+            VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
+                    << merged_mem_block_id;
+          }
         }
       }
     }
