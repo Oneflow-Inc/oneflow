@@ -375,8 +375,8 @@ class EluGradGrad : public OpExprGradFunction<EluGradGradCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<void> Capture(EluGradGradCaptureState* ctx, const TensorTuple& inputs,
-                              const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(EluGradGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     // x, dy
     CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
 
