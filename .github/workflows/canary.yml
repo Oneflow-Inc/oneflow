@@ -70,6 +70,7 @@ jobs:
           docker-run-use-lld: true
           retry-failed-build: true
           clean-ccache: true
+          compute-platform: ${{ env.COMPUTE_PLATFORM }}
           python-versions: |
             3.7
             3.8
