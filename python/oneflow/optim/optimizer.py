@@ -99,10 +99,8 @@ class ParamGroup(object):
                 return (x + (unit_size - 1)) // unit_size * unit_size
 
             # tensor memory should be align to 512 bytes for cuda operations,
-            # 4 is the bytes of a float number
-            # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
-            # avoid this hardcoded "512"
-            return align(tensor.numel(), 512 // (flow.finfo(p.dtype).bits // 8))
+            # align size depends on floating type
+            return align(tensor.numel(), flow._oneflow_internal.max_alignment_size() // (flow.finfo(p.dtype).bits // 8))
 
         for p in parameters["params"]:
             buf_type = (p.dtype, p.device)
