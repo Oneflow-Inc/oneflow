@@ -44,7 +44,6 @@ def _test_global_tensor_offload_d2h(test_case, input, tensor_mem):
     input.offload()
     test_case.assertTrue(input.is_offloaded())
     test_case.assertEqual(input.placement.type, "cuda")
-    flow._oneflow_internal.eager.ClusterSync()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cuda to cpu", after_used)
     # Check global_tensor_mem cuda memory released
@@ -76,7 +75,6 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
     input.load()
     test_case.assertTrue(not input.is_offloaded())
     test_case.assertEqual(input.placement.type, "cuda")
-    flow._oneflow_internal.eager.ClusterSync()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cpu to cuda", after_used)
     # Check global_tensor_mem cuda memory allocated
