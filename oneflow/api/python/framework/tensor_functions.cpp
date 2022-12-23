@@ -35,17 +35,19 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
 using functional::PyObjectPtr;
-
-static PyObject* concat_self(PyObject* self, PyObject* args) {
+namespace {
+PyObject* concat_self(PyObject* self, PyObject* args) {
   PyObjectPtr self_tuple(PyTuple_Pack(1, self));
   PyObject* tuple = PySequence_Concat(self_tuple.get(), args);
   CHECK_OR_THROW(tuple != NULL);
   return tuple;
 }
 
-static PyObject* compatible_with_ndarray_obj(PyObject* self, PyObject* other) {
+PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
   if (PyArray_Check(other)) {
     const auto& tensor = PyTensor_Unpack(self);
+    CHECK_OR_THROW(!tensor->is_cuda())
+        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
     if (tensor->is_global()) {
       Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
       auto ndsbp = ASSERT(tensor->nd_sbp());
@@ -60,6 +62,8 @@ static PyObject* compatible_with_ndarray_obj(PyObject* self, PyObject* other) {
   return other;
 }
 
+}  // namespace
+
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
     HANDLE_ERRORS                                            \
@@ -73,8 +77,7 @@ static PyObject* compatible_with_ndarray_obj(PyObject* self, PyObject* other) {
 #define NB_BINARY_FUNC(func_name, bind_func)                 \
   static PyObject* func_name(PyObject* a, PyObject* b) {     \
     HANDLE_ERRORS                                            \
-    std::cout << "NB_BINARY_FUNC" << std::endl;              \
-    b = compatible_with_ndarray_obj(a, b);                   \
+    b = ndarray_judgment_and_compatibility(a, b);            \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                \
     auto* result = bind_func(NULL, tuple.get(), NULL);       \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
@@ -101,7 +104,7 @@ NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
 static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
-  b = compatible_with_ndarray_obj(a, b);
+  b = ndarray_judgment_and_compatibility(a, b);
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -123,7 +126,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
 #define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                           \
   static PyObject* func_name(PyObject* a, PyObject* b) {                       \
     HANDLE_ERRORS                                                              \
-    b = compatible_with_ndarray_obj(a, b);                                     \
+    b = ndarray_judgment_and_compatibility(a, b);                              \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
