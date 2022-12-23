@@ -5,6 +5,7 @@ export PATH=/usr/lib/llvm-15/bin:/usr/lib64/ccache:/root/.local/bin:$PATH
 cd ${ONEFLOW_CI_SRC_DIR}
 ${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r ci/fixed-dev-requirements.txt
 cd python
+git config --global --add safe.directory ${ONEFLOW_CI_SRC_DIR}
 git clean -nXd -e \!dist -e \!dist/**
 git clean -fXd -e \!dist -e \!dist/**
 
