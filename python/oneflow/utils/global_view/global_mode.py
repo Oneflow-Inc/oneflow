@@ -72,11 +72,11 @@ class global_mode(internal_global_view.global_mode):
         else:
             super().__init__(enabled, placement, sbp)
 
-    def __enter__(self, guard_obj):
-        super().__enter__(guard_obj)
+    def __enter__(self):
+        pass
 
-    def __exit__(self, guard_obj, type, value, traceback):
-        super().__exit__(guard_obj, type, value, traceback)
+    def __exit__(self, type, value, traceback):
+        pass
 
 
 class current_global_mode(internal_global_view.current_global_mode):
