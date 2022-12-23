@@ -122,6 +122,36 @@ class FastGeLU : public BaseActivation {
   }
 };
 
+struct QuickGeluCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+};
+
+class QuickGeLU : public OpExprGradFunction<QuickGeluCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(QuickGeluCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const QuickGeluCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::QuickGeluGrad(out_grads.at(0), x));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
 class HardSigmoid : public BaseActivation {
  public:
   Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
@@ -573,6 +603,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("threshold", Threshold);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softplus", Softplus);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink", SoftShrink);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fast_gelu", FastGeLU);
+REGISTER_OP_EXPR_GRAD_FUNCTION("quick_gelu", QuickGeLU);
 
 }  // namespace one
 }  // namespace oneflow

@@ -115,6 +115,28 @@ add_docstr(
 
 
 add_docstr(
+    oneflow._C.quick_gelu,
+    r"""
+    quick_gelu(x: Tensor) -> Tensor 
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    See    
+    :class:`~oneflow.nn.QuickGELU` for more details.
+ 
+    """,
+)
+
+add_docstr(
     oneflow._C.softmax,
     r"""
     softmax(x: Tensor, dim: int) -> Tensor 
