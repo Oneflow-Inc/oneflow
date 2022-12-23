@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/device/cuda_util.h"
-
+#include "oneflow/core/common/mem_util.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -94,6 +94,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+  m.def("GetCPUMemoryUsed", &GetCPUMemoryUsed);
   m.def(
       "_get_device_properties",
       [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
