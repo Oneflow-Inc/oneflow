@@ -51,12 +51,7 @@ def _test_compute_operator(test_case, shape):
     x_flow = flow.tensor(random_tensor)
     x_torch = torch.tensor(random_tensor)
     random_numpy = np.random.randn(*shape)
-
-    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-
-
-
+    
     for op in test_compute_op_list:
         if op in ["**","//","%"]:
             random_tensor=np.random.randint(1,100,size=shape)
