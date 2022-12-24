@@ -266,6 +266,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 

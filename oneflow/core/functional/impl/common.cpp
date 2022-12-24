@@ -283,6 +283,27 @@ Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root) {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::vector<int32_t>> GetPermWhenTransposeAxisToLastDim(const int32_t& ndim,
+                                                              const int32_t& axis) {
+  auto wrap_dim = JUST(maybe_wrap_dim(axis, ndim));
+  std::vector<int32_t> perm(ndim);
+  for (int i = 0; i < ndim - 1; i++) {
+    if (i < wrap_dim) {
+      perm[i] = i;
+    } else {
+      perm[i] = i + 1;
+    }
+  }
+  perm[ndim - 1] = wrap_dim;
+  return perm;
+}
+
+Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm) {
+  std::vector<int32_t> inversed_perm(perm.size());
+  for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
+  return inversed_perm;
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
