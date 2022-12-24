@@ -105,10 +105,12 @@ class SbpEdge final {
   // Constant getter
   SbpNode* GetEndNode() const { return end_node_; }
   int64_t GetMemory(int32_t i, int32_t j) const { return in_memory_support_ ? memory_[i][j] : 0; }
+  // Get the current memory with the current sbp signature index
   int64_t GetMemory() const {
     return GetMemory(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
   }
   double GetWeightedCost(int32_t i, int32_t j) const { return weighted_cost_[i][j]; }
+  // Get the current weighted cost with the current sbp signature index
   double GetWeightedCost() const {
     return GetWeightedCost(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
   }

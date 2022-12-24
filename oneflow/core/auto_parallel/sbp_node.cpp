@@ -183,58 +183,6 @@ void SbpNode::SummarizeCost() {
                      [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
   if (in_memory_support_) { memory_.resize(weighted_cost_.size(), 0); }
   // Buffer
-  double min_cost = 0, curr_cost = 0;
-  int64_t min_memory_cost = 0, memory_cost = 0;
-  double min_weighted_sum = 0.0, weighted_sum = 0.0;
-  int32_t min_sbp_child = 0;
-  // Only deal with new children_
-  for (int32_t child = previous_children_size; child < children_.size(); child++) {
-    child_node_sbp_sig_[child].resize(weighted_cost_.size());
-
-    for (int32_t sbp_this = 0; sbp_this < weighted_cost_.size(); sbp_this++) {
-      SbpNode* child_node = children_[child];
-      for (int32_t sbp_child = 0; sbp_child < child_node->weighted_cost_.size(); sbp_child++) {
-        if (child_node->edges_in_.size()) {
-          // edge in graph: father -> child
-          curr_cost =
-              child_node->edges_in_[0]->cost_[sbp_this][sbp_child] + child_node->cost_[sbp_child];
-          memory_cost = child_node->edges_in_[0]->GetMemory(sbp_this, sbp_child)
-                        + child_node->GetMemory(sbp_child);
-        } else {
-          // edge in graph: child -> father
-          curr_cost =
-              child_node->edges_out_[0]->cost_[sbp_child][sbp_this] + child_node->cost_[sbp_child];
-          memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
-                        + child_node->GetMemory(sbp_child);
-        }
-        weighted_sum = curr_cost + kMemoryRatio * memory_cost;
-        // update min_cost with fixed SbpSignature for this node and child node
-        if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
-          min_cost = curr_cost;
-          min_memory_cost = memory_cost;
-          min_weighted_sum = weighted_sum;
-          min_sbp_child = sbp_child;
-        }
-      }
-      child_node_sbp_sig_[child][sbp_this] = min_sbp_child;
-      // Add the cost for child node to this node
-      cost_[sbp_this] += min_cost;
-      if (in_memory_support_) { memory_[sbp_this] += min_memory_cost; }
-      weighted_cost_[sbp_this] += min_weighted_sum;
-    }
-  }
-}
-
-void SbpNode::SummarizeCost2() {
-  if (children_.size() == child_node_sbp_sig_.size()) { return; }
-  int32_t previous_children_size = child_node_sbp_sig_.size();
-  child_node_sbp_sig_.resize(children_.size());
-  in_memory_support_ =
-      in_memory_support_
-      || std::any_of(children_.begin() + previous_children_size, children_.end(),
-                     [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
-  if (in_memory_support_) { memory_.resize(weighted_cost_.size(), 0); }
-  // Buffer
   int64_t min_memory_cost = 0, memory_cost = 0;
   double min_weighted_sum = 0.0, weighted_sum = 0.0;
   int32_t min_sbp_child = 0;
@@ -280,13 +228,13 @@ bool SbpNode::EliminateItselfAsChild() {
       SbpNode* father = edges_in_[0]->start_node_;
       father->children_.emplace_back(this);
       CheckAndRemoveFrom<SbpEdge*>(father->edges_out_, edges_in_[0]);
-      father->SummarizeCost2();
+      father->SummarizeCost();
     } else {
       // edge in graph: this_node -> father
       SbpNode* father = edges_out_[0]->end_node_;
       father->children_.emplace_back(this);
       CheckAndRemoveFrom<SbpEdge*>(father->edges_in_, edges_out_[0]);
-      father->SummarizeCost2();
+      father->SummarizeCost();
     }
     // successfully eliminate this node
     return true;
@@ -347,7 +295,7 @@ void SbpNode::ComputeWeightedCost() {
   }
   // Compute the weighted cost from children
   child_node_sbp_sig_.clear();
-  SummarizeCost2();
+  SummarizeCost();
 }
 
 // Generate the relationship between this merged node and its components
@@ -925,6 +873,7 @@ bool SbpNode::IsComponent(SbpNode* sbp_node) const {
          != component2merged_sig_id2component_sig_id_.end();
 }
 
+// TODO: Switch to three fixed types of memory ratio.
 double UpdateRatio() {
   int32_t ratio_num = ParseIntegerFromEnv("RatioNum", 0);
   double ratio = 0.0;

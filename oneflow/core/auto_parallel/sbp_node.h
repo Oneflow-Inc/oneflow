@@ -67,7 +67,6 @@ class SbpNode final {
 
   // Recompute Computation Cost after adding child nodes in it
   void SummarizeCost();
-  void SummarizeCost2();
   // Compute the weighted sum of the time and memory cost
   void ComputeWeightedCost();
   // Generate the relationship between this merged node and its components
@@ -144,8 +143,10 @@ class SbpNode final {
   const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
   const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
   int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
+  // Get the current memory with the current sbp signature index
   int64_t GetMemory() const { return GetMemory(final_sbp_sig_id_); }
   double GetWeightedCost(int32_t i) const { return weighted_cost_[i]; }
+  // Get the current weighted cost with the current sbp signature index
   double GetWeightedCost() const { return GetWeightedCost(final_sbp_sig_id_); }
   int32_t GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const;
   // Judge if sbp_node is a port of the current node
@@ -214,6 +215,9 @@ class SbpNode final {
   std::vector<int64_t> memory_;
   std::vector<int64_t> origin_memory_;
   // The weighted sum of time cost and memory cost
+  // More specifically, weighted cost = time cost + kMemoryRatio * memory;
+  // We do not add any weight for the time cost since we need to judge if a cost is less than
+  // GetValidMaxCopyCost().
   std::vector<double> weighted_cost_;
   // Relationship between a merged node and its components
   HashMap<SbpNode*, std::vector<int32_t>> component2merged_sig_id2component_sig_id_;
