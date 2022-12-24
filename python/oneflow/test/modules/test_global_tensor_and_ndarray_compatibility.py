@@ -32,6 +32,8 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 import numpy as np
 
+np.random.seed(233)
+
 test_compute_op_list = [
     "+",
     # "-",
