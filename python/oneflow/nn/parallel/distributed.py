@@ -30,7 +30,6 @@ def grad_setting_fn(module, param):
             param.grad = flow._C.slice_view_1d_contiguous(
                 bucket_tensor, start, start + param.numel()
             ).view(param.shape)
-            param._is_grad_acc_inplace = True
         return grad
 
     return grad_setting
@@ -103,9 +102,7 @@ def DistributedDataParallel(
 
         # tensor memory should be align to 512 bytes for cuda operations,
         # 4 is the bytes of a float number
-        # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
-        # avoid this hardcoded "512"
-        return align(tensor.numel(), 512 // 4)
+        return align(tensor.numel(), flow._oneflow_internal.max_alignment_size() // 4)
 
     offset_in_bucket = 0
     with flow.no_grad():

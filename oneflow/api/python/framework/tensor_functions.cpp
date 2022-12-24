@@ -275,6 +275,7 @@ DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
 DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
 DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
+DIRECT_PASS_FUNC(PyTensorObject_equal, functional::equal)
 DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal)
 DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less)
 DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal)
@@ -922,6 +923,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1054,7 +1056,7 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
       if (self == Py_None || other == Py_None) return Py_False;
-      return functional::equal(NULL, tuple.get(), NULL);
+      return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
     case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
