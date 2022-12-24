@@ -84,6 +84,21 @@ struct UpdateScalarFunctor {
   OF_DEVICE_FUNC static void apply(const T x, T* y) { *y = x; }
 };
 
+#ifdef WITH_ROCM
+#define INSTANTIATE_DIM_SCATTER_SCARLAR_CPU_FUNCTORS(device_type, opt)         \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;  
+#else
 #define INSTANTIATE_DIM_SCATTER_SCARLAR_CPU_FUNCTORS(device_type, opt)         \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
@@ -99,6 +114,7 @@ struct UpdateScalarFunctor {
   template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
   template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, float16, int64_t, opt>;
+#endif
 
 #define INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(device_type, opt)        \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \

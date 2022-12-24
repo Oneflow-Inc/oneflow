@@ -44,7 +44,11 @@ __inline__ __device__ double Nan<double>() {
 
 template<>
 __inline__ __device__ half Nan<half>() {
+#ifdef WITH_ROCM
+  return half(__int_as_float(0x7fffffffU));
+#else
   return half(CUDART_NAN_F);
+#endif
 }
 
 #if CUDA_VERSION >= 11000

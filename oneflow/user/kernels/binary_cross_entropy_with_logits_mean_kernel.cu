@@ -45,26 +45,26 @@ struct DefaultComputeType<half> {
 };
 
 template<class Func>
-inline cudaError_t GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size,
+inline GPU(Error_t) GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size,
                                 int64_t max_blocks, int64_t waves, int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
+    if (err != GPU(Success)) { return err; }
   }
   int max_active_blocks;
   {
-    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func,
+    GPU(Error_t) err = GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(&max_active_blocks, func,
                                                                     block_size, dynamic_smem_size);
   }
   *num_blocks =
       std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * max_active_blocks * waves));
-  return cudaSuccess;
+  return GPU(Success);
 }
 
 template<typename T>

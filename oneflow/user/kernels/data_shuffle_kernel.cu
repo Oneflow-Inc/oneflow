@@ -348,12 +348,12 @@ inline GPU(Error_t) GetWarpImplNumBlocks(int64_t block_size, int64_t max_blocks,
   }
   int sm_count;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPU(DevAttrMaxThreadsPerMultiProcessor), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPUMaxThreadsPerMultiProcessor, dev);
     if (err != GPU(Success)) { return err; }
   }
   *num_blocks =

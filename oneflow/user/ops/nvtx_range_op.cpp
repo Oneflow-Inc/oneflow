@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 /* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));

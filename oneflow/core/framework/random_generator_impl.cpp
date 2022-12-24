@@ -332,7 +332,7 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   const auto& callback = [&](ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     OF_CUDA_CHECK(
-        hipMemcpy(eager_blob_object->mut_dptr(), curand_states_, state_size, cudaMemcpyDefault));
+        hipMemcpy(eager_blob_object->mut_dptr(), curand_states_, state_size, hipMemcpyDefault));
     memcpy(static_cast<uint8_t*>(eager_blob_object->mut_dptr()) + state_size, &seed_,
            sizeof(int64_t));
   };

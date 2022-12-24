@@ -506,7 +506,7 @@ struct PoolGpuKernelUtil {
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
         gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr(x->data_type()),
         gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr(x->data_type()),
-        gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->mut_dptr()));
+        gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->mut_dptr(), 0));
   }
 
   static void BWCompute(user_op::KernelComputeContext* ctx,

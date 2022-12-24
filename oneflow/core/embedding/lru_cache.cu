@@ -247,7 +247,11 @@ struct SetContext {
     const Key lane_key = keys[thread_ctx.lane_id];
     const int lane_age = ages[thread_ctx.lane_id];
     const bool lane_hit = (lane_key == key && lane_age != 0);
+#ifdef WITH_ROCM
+    const unsigned hit_mask = __ballot(lane_hit);
+#else
     const unsigned hit_mask = __ballot_sync(kFullMask, lane_hit);
+#endif
     if (hit_mask != 0) {
       return __ffs(static_cast<int>(hit_mask)) - 1;
     } else {
@@ -268,7 +272,11 @@ struct SetContext {
     int insert_way = -1;
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
+#ifdef WITH_ROCM
+    const unsigned hit_mask = __ballot(lane_key == key && lane_age != 0);
+#else
     const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key && lane_age != 0);
+#endif
     if (hit_mask != 0) {
       insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
 #ifdef WITH_ROCM
@@ -288,7 +296,11 @@ __syncwarp();
 #endif
     }
     if (insert_way == -1) {
-      const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
+#ifdef WITH_ROCM
+    const unsigned valid_mask = __ballot(lane_age != 0);
+#else
+    const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
+#endif
       if (valid_mask != kFullMask) {
         insert_way = __popc(static_cast<int>(valid_mask));
         if (lane_age > 0) {
@@ -312,7 +324,12 @@ __syncwarp();
                         const ThreadContext& thread_ctx, Key key, int* way, Key* evicted_key) {
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
+#ifdef WITH_ROCM
+    const int insert_way = __ffs(static_cast<int>(__ballot(lane_age == 1))) - 1;
+#else
     const int insert_way = __ffs(__ballot_sync(kFullMask, lane_age == 1)) - 1;
+#endif
+    
 #ifdef WITH_ROCM
     *evicted_key = __shfl(lane_key, insert_way);
 #else
@@ -572,7 +589,12 @@ __syncwarp();
 #endif
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
     warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
+#ifdef WITH_ROCM
+    const int key_count = __popc(static_cast<int>(__ballot(lane_age != 0)));
+#else
     const int key_count = __popc(__ballot_sync(kFullMask, lane_age != 0));
+#endif
+    
     if (key_count == 0) { continue; }
     uint32_t offset = 0;
     if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }

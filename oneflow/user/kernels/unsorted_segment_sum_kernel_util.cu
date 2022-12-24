@@ -46,7 +46,7 @@ __device__ __forceinline__ bool IsZero<nv_bfloat16>(nv_bfloat16 v) {
 template<>
 __device__ __forceinline__ bool IsZero<half2>(half2 v) {
 #ifdef WITH_ROCM
-  return v.data.x == static_cast<half>(0) && v.data.y == static_cast<half>(0);
+  return static_cast<half>(v.data.x) == static_cast<half>(0) && static_cast<half>(v.data.y) == static_cast<half>(0);
 #else
   return v.x == static_cast<half>(0) && v.y == static_cast<half>(0);
 #endif  

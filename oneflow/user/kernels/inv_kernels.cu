@@ -35,6 +35,28 @@ static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
          * batched_matrices->shape_view().At(num_axes - 1);
 }
 
+#ifdef WITH_ROCM
+void OFgetrfBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
+                    int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(hipblasSgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, info_array, batchsize));
+}
+void OFgetrfBatched(ep::Stream* stream, int n, double** dA_array, int ldda, int* ipiv_array,
+                    int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(hipblasDgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, info_array, batchsize));
+}
+void OFgetriBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
+                    float** dC_array, int lddc, int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(hipblasSgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
+void OFgetriBatched(ep::Stream* stream, int n, double** dA_array, int ldda, int* ipiv_array,
+                    double** dC_array, int lddc, int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(hipblasDgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
+#else
 void OFgetrfBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
                     int* info_array, int batchsize) {
   OF_CUBLAS_CHECK(cublasSgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
@@ -55,6 +77,7 @@ void OFgetriBatched(ep::Stream* stream, int n, double** dA_array, int ldda, int*
   OF_CUBLAS_CHECK(cublasDgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
                                       ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
 }
+#endif
 
 }  // namespace
 

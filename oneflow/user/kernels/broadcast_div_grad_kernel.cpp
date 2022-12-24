@@ -89,7 +89,7 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif

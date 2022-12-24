@@ -22,8 +22,9 @@ limitations under the License.
 #include <hipcub/hipcub.hpp>
 #else
 #include <cub/cub.cuh>
-#endif
 #include <math_constants.h>
+#endif
+
 #include <assert.h>
 
 namespace oneflow {
@@ -119,7 +120,7 @@ inline GPU(Error_t) GetNumBlocks(Func func, int64_t block_size, size_t dynamic_s
   }
   int sm_count;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
   int max_active_blocks;
@@ -660,11 +661,21 @@ inline GPU(Error_t) LaunchLayerNormBlockSMemImpl(GPU(Stream_t) stream, LOAD load
 template<typename Func>
 GPU(Error_t) MaximizeDynamicSharedMemorySize(Func func, const int max_smem_size) {
   GPU(FuncAttributes) attr{};
+#ifdef WITH_ROCM
+  GPU(Error_t) err = GPU(FuncGetAttributes)(&attr, (const void*)func);
+#else
   GPU(Error_t) err = GPU(FuncGetAttributes)(&attr, func);
+#endif
   if (err != GPU(Success)) { return err; }
   constexpr int reserved_smem = 1024;  // 1K
+#ifdef WITH_ROCM
+  return GPU(FuncSetAttribute)((const void*)func, GPU(FuncAttributeMaxDynamicSharedMemorySize),
+                              max_smem_size - attr.sharedSizeBytes - reserved_smem);
+#else
   return GPU(FuncSetAttribute)(func, GPU(FuncAttributeMaxDynamicSharedMemorySize),
                               max_smem_size - attr.sharedSizeBytes - reserved_smem);
+#endif
+  
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
@@ -684,14 +695,14 @@ inline GPU(Error_t) TryDispatchLayerNormBlockSMemImplBlockSize(
 
   int sm_count = 0;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
 
   static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
     GPU(Error_t) err =
-        GPU(DeviceGetAttribute)(&max_smem_size, GPU(DevAttrMaxSharedMemoryPerBlockOptin), dev);
+        GPU(DeviceGetAttribute)(&max_smem_size, GPUMaxSharedMemoryPerBlockOptin, dev);
     if (err != GPU(Success)) { return false; }
 
     err = MaximizeDynamicSharedMemorySize(
@@ -1272,14 +1283,14 @@ inline GPU(Error_t) TryDispatchLayerNormGradBlockSMemImplBlockSize(
 
   int sm_count = 0;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
 
   static const bool max_smem_configed = [=]() {
     int max_smem_size = 0;
     GPU(Error_t) err =
-        GPU(DeviceGetAttribute)(&max_smem_size, GPU(DevAttrMaxSharedMemoryPerBlockOptin), dev);
+        GPU(DeviceGetAttribute)(&max_smem_size, GPUMaxSharedMemoryPerBlockOptin, dev);
     if (err != GPU(Success)) { return false; }
 
     err = MaximizeDynamicSharedMemorySize(

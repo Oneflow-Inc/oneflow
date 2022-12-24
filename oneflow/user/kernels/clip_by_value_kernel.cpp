@@ -54,7 +54,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
   return integral;
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 template<>
 half GetDtypeMatchedValue(double floating, int64_t integral) {
 #if CUDA_VERSION >= 11000
@@ -248,7 +248,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 REGISTER_CLIP_KERNELS(DeviceType::kCPU, (float16, DataType::kFloat16))
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_CLIP_KERNELS(DeviceType::kCUDA, (half, DataType::kFloat16))
 #endif  // WITH_CUDA
 

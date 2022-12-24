@@ -214,7 +214,7 @@ class StreamCtx {
     CudaCurrentDeviceGuard guard(device_id_);
     int priority;
     OF_CUDA_CHECK(GPU(DeviceGetStreamPriorityRange)(nullptr, &priority));
-    OF_CUDA_CHECK(GPU(StreamCreateWithPriority)(&stream_, cudaStreamNonBlocking, priority));
+    OF_CUDA_CHECK(GPU(StreamCreateWithPriority)(&stream_, GPU(StreamNonBlocking), priority));
     OF_CUDA_CHECK(GPU(Malloc)(&fusion_buffer_, fusion_buffer_size_));
     cb_event_poller_ = std::thread(&StreamCtx::PollEvent, this);
   }
@@ -242,7 +242,7 @@ class StreamCtx {
 
   void AddCallback(const std::function<void()>& callback) {
     GPU(Event_t) event;
-    OF_CUDA_CHECK(GPU(EventCreateWithFlags)(&event, cudaEventDisableTiming));
+    OF_CUDA_CHECK(GPU(EventCreateWithFlags)(&event, GPU(EventDisableTiming)));
     OF_CUDA_CHECK(GPU(EventRecord)(event, stream_));
     CHECK_EQ(cb_event_chan_.Send(std::make_pair(event, callback)), kChannelStatusSuccess);
   }

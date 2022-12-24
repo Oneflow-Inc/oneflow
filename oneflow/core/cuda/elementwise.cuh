@@ -22,6 +22,7 @@ limitations under the License.
 #include <cuda_runtime.h>
 #endif
 
+#include "oneflow/core/ep/include/gpu_macro.h"
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
@@ -43,12 +44,12 @@ inline GPU(Error_t) GetNumBlocks(int64_t n, int* num_blocks) {
   }
   int sm_count;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPU(DevAttrMaxThreadsPerMultiProcessor), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPUMaxThreadsPerMultiProcessor, dev);
     if (err != GPU(Success)) { return err; }
   }
   *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,

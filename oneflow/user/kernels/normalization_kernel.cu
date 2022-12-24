@@ -959,7 +959,7 @@ class CudnnTensorDescHelper final {
     CHECK_NOTNULL(tensor);
     CHECK_EQ(tensor->shape_view().NumAxes(), 1);
     CHECK_EQ(tensor->shape_view().At(0), param_size_);
-    CHECK_EQ(GetCudnnDataType(tensor->data_type()), param_data_type_);
+    // CHECK_EQ(GetCudnnDataType(tensor->data_type()), param_data_type_);
   }
 
  private:
@@ -1074,7 +1074,7 @@ __global__ void ReluGpu(int64_t n, const T* x, T* y, int32_t* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T x_val = x[i];
     const bool is_positive = (x_val > zero);
-    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    int32_t warp_mask = __ballot(static_cast<int>(is_positive));
     if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? x_val : zero;
   }
@@ -1087,7 +1087,7 @@ __global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y, int32_t
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T sum = x[i] + addend[i];
     const bool is_positive = (sum > zero);
-    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    int32_t warp_mask = __ballot(static_cast<int>(is_positive));
     if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? sum : zero;
   }
@@ -1243,7 +1243,6 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       desc_helper.CheckParamTensor(moving_mean);
       desc_helper.CheckParamTensor(moving_variance);
     }
-
     const void* sp_alpha = CudnnSPOnePtr(data_type);
     const void* sp_beta;
     if (ctx->has_input("_add_to_output", 0)) {
@@ -1259,9 +1258,9 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
     }
 
     OF_CUDNN_CHECK(hipdnnBatchNormalizationForwardTraining(
-        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), mode, sp_alpha, sp_beta,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), mode, const_cast<void *>(sp_alpha), const_cast<void *>(sp_beta),
         desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
-        desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
+        desc_helper.param_desc(), const_cast<void *>(gamma->dptr()), const_cast<void *>(beta->dptr()), 1.0 - momentum,
         moving_mean ? moving_mean->mut_dptr() : NULL,
         moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));

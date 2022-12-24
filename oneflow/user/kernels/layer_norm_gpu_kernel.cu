@@ -219,7 +219,7 @@ int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
   int dev;
   OF_CUDA_CHECK(GPU(GetDevice)(&dev));
   int sm_count;
-  OF_CUDA_CHECK(GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev));
+  OF_CUDA_CHECK(GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev));
   int num_blocks = max_active_blocks * sm_count * waves;
   int grid_dim_y = std::min(max_grid_dim_y, static_cast<int>(num_blocks / grid_dim_x));
   return std::max(grid_dim_y, 1);
@@ -319,7 +319,11 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     const double epsilon = ctx->Attr<double>("epsilon");
+#ifdef WITH_ROCM
+    CHECK_GE(epsilon, HIPDNN_BN_MIN_EPSILON);
+#else
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
+#endif
     const int64_t num_instances = mean->shape_view().elem_cnt();
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     const T* gamma_ptr = nullptr;

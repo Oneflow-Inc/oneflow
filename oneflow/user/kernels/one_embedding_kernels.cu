@@ -335,11 +335,11 @@ __global__ void InitValueKernel(uint64_t seed, const int32_t line_size,
     if (initializer.type == InitializerType::kUniform) {
       const float low = initializer.uniform_param.low;
       const float high = initializer.uniform_param.high;
-      value = curand_uniform(&state) * (high - low) + low;
+      value = GPURAND(_uniform)(&state) * (high - low) + low;
     } else if (initializer.type == InitializerType::kNormal) {
       const float mean = initializer.normal_param.mean;
       const float std = initializer.normal_param.std;
-      value = curand_normal(&state) * std + mean;
+      value = GPURAND(_normal)(&state) * std + mean;
     } else if (initializer.type == InitializerType::kConstant) {
       value = initializer.constant_param.value;
     } else {
@@ -425,11 +425,11 @@ __global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed, const 
         if (initializer.type == InitializerType::kUniform) {
           const float low = initializer.uniform_param.low;
           const float high = initializer.uniform_param.high;
-          value = curand_uniform(&state) * (high - low) + low;
+          value = GPURAND(_uniform)(&state) * (high - low) + low;
         } else if (initializer.type == InitializerType::kNormal) {
           const float mean = initializer.normal_param.mean;
           const float std = initializer.normal_param.std;
-          value = curand_normal(&state) * std + mean;
+          value = GPURAND(_normal)(&state) * std + mean;
         } else if (initializer.type == InitializerType::kConstant) {
           value = initializer.constant_param.value;
         } else {

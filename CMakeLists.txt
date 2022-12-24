@@ -43,6 +43,7 @@ endif()
 if (BUILD_ROCM)
   # Search for rocm in common locations
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm)
+  set(CMAKE_MODULE_PATH "${ROCM_PATH}/hip/cmake" ${CMAKE_MODULE_PATH})
 endif()
 
 set(ONEFLOW_CURRENT_VERSION 0.8.1.dev CACHE STRING "")

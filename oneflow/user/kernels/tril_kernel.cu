@@ -68,8 +68,8 @@ __global__ void TrilWarpProcessRowGpu<half>(const int64_t total_rows, const int6
       const half2 x_val = x_h2[idx];
       half2 y_val;
 #ifdef WITH_ROCM
-      y_val.data.x = (2 * col) > row + diagonal ? fill : x_val.data.x;
-      y_val.data.y = (2 * col + 1) > row + diagonal ? fill : x_val.data.y;
+      y_val.data.x = (2 * col) > row + diagonal ? static_cast<half>(fill) : static_cast<half>(x_val.data.x);
+      y_val.data.y = (2 * col + 1) > row + diagonal ? static_cast<half>(fill) : static_cast<half>(x_val.data.y);
 #else
       y_val.x = (2 * col) > row + diagonal ? fill : x_val.x;
       y_val.y = (2 * col + 1) > row + diagonal ? fill : x_val.y;
@@ -128,8 +128,8 @@ __global__ void FusedScaleTrilWarpProcessRowGpu<half>(const int64_t total_rows,
       const half2 scaled_x = __hmul2(h2_scale, x_h2[idx]);
       half2 y_val;
 #ifdef WITH_ROCM
-      y_val.data.x = (2 * col) > row + diagonal ? fill : scaled_x.data.x;
-      y_val.data.y = (2 * col + 1) > row + diagonal ? fill : scaled_x.data.y;
+      y_val.data.x = (2 * col) > row + diagonal ? static_cast<half>(fill) : static_cast<half>(scaled_x.data.x);
+      y_val.data.y = (2 * col + 1) > row + diagonal ? static_cast<half>(fill) : static_cast<half>(scaled_x.data.y);
 #else
       y_val.x = (2 * col) > row + diagonal ? fill : scaled_x.x;
       y_val.y = (2 * col + 1) > row + diagonal ? fill : scaled_x.y;

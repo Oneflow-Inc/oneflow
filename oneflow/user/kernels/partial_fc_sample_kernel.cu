@@ -172,7 +172,9 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   }
   ~DistributedPartialFcSampleOpKernelState() {
     GPU(Error_t) ret = GPU(Free)(curand_states_);
-    if (ret != GPU(ErrorCudartUnloading)) { OF_CUDA_CHECK(ret); }
+#ifdef WITH_CUDA
+    if (ret != cudaErrorCudartUnloading) { OF_CUDA_CHECK(ret); }
+#endif
   };
 
   int64_t lower() const { return lower_; }

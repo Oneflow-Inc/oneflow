@@ -23,8 +23,8 @@ limitations under the License.
 #else
 #include <cuda.h>
 #include <cub/cub.cuh>
-#endif
 #include <math_constants.h>
+#endif
 #include <assert.h>
 
 #if CUDA_VERSION >= 11000
@@ -56,7 +56,11 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
+#ifdef WITH_ROCM
+    val = ReductionOp<T>()(val, __shfl_xor(val, mask));
+#else
     val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
+#endif
   }
   return val;
 }
@@ -156,12 +160,12 @@ inline GPU(Error_t) GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t
   }
   int sm_count;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPU(DevAttrMultiProcessorCount), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
     if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPU(DevAttrMaxThreadsPerMultiProcessor), dev);
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPUMaxThreadsPerMultiProcessor, dev);
     if (err != GPU(Success)) { return err; }
   }
   *num_blocks =

@@ -351,7 +351,7 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   auto sp_beta = GetCublasScalarParameter(beta, compute_type);
   OF_CUBLAS_CHECK(hipblasGemmBatchedEx(
       stream->As<ep::CudaStream>()->cublas_handle(), HIPBLAS_OP_T, HIPBLAS_OP_N, problem.n, problem.m,
-      problem.k, &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, problem.k, ptr_arr, data_type,
+      problem.k, &sp_alpha, (const void**)(ptr_arr + kMaxProblemBatch), data_type, problem.k, (const void**)ptr_arr, data_type,
       problem.k, &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, problem.n, params.n,
       compute_type, HIPBLAS_GEMM_DEFAULT));
 }

@@ -191,7 +191,7 @@ size_t GetConsumerCount(const TaskProto& task) {
   return consumer_cnt;
 }
 
-#if defined(WITH_CUDA_GRAPHS) || deined(WITH_ROCM_GRAPHS)
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
 
 bool IsCUDAGraphSupported(const Kernel* kernel) {
   auto* user_kernel = dynamic_cast<const UserKernel*>(kernel);
@@ -229,7 +229,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
-#if defined(WITH_CUDA_GRAPHS) || deined(WITH_ROCM_GRAPHS)
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
       auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
       if (cuda_stream != nullptr && kernel_conf.all_blobs_are_static()
           && IsCUDAGraphSupported(kernel_info_[0]->kernel.get())) {
@@ -472,7 +472,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   inline void LaunchKernel() {
-#if defined(WITH_CUDA_GRAPHS) || deined(WITH_ROCM_GRAPHS)
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
     bool is_capturing = false;
     if (cuda_graph_exec_[0]) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
@@ -489,7 +489,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     }
 #endif
     kernel_info_[0]->kernel->Launch(this);
-#if defined(WITH_CUDA_GRAPHS) || deined(WITH_ROCM_GRAPHS)
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
     if (cuda_graph_exec_[0] && is_capturing) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       cuda_stream->EndGraphCapture(cuda_graph_exec_[0].get());
@@ -598,7 +598,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::function<void()> return_inplace_consumed_fn_[inplace];
   Thread* thread_;
   std::unique_ptr<KernelInfo> kernel_info_[exec_kernel];
-#if defined(WITH_CUDA_GRAPHS) || deined(WITH_ROCM_GRAPHS)
+#if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
   std::unique_ptr<ep::CudaGraphExecutable> cuda_graph_exec_[exec_kernel];
 #endif
   ActorContext* actor_ctx_;

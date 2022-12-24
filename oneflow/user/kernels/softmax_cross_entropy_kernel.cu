@@ -33,7 +33,11 @@ constexpr int64_t kCrossEntropyGpuBlockSize = 128;
 template<typename T>
 __global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num_classes,
                                   const T* x, const T* labels, T* y) {
+#ifdef WITH_ROCM
+  typedef hipcub::BlockReduce<T, kCrossEntropyGpuBlockSize> BlockReduce;
+#else
   typedef cub::BlockReduce<T, kCrossEntropyGpuBlockSize> BlockReduce;
+#endif
   __shared__ typename BlockReduce::TempStorage temp_storage;
   const int tid = threadIdx.x;
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {

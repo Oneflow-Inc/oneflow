@@ -21,8 +21,9 @@ limitations under the License.
 #include <hipcub/hipcub.hpp>
 #else
 #include <cub/cub.cuh>
-#endif
 #include <device_launch_parameters.h>
+#endif
+
 #include "oneflow/core/common/permutation_iterator.h"
 #include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
 

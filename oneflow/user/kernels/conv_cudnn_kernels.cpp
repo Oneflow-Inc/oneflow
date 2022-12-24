@@ -643,11 +643,11 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const void* beta = nullptr;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      // CHECK_EQ(add_to_output->data_type(), out->data_type());
-      // CHECK_EQ(add_to_output->shape_view(), out->shape_view());
-      // Memcpy<DeviceType::kCUDA>(
-      //     ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
-      //     add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = CudnnSPOnePtr(in->data_type());
     } else {
       beta = CudnnSPZeroPtr(in->data_type());

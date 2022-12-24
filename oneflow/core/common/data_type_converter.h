@@ -354,8 +354,8 @@ struct ConvertIntInt<Out, In, false, true> {
     return cuda_round_helper(__saturatef(value * (1.0f / GetMaxVal<In>())) * GetMaxVal<Out>());
 #else
     return value < 0 ? 0 : ConvertNorm(value);
-  }
 #endif
+  }
   };
 
   // Converts between integral types

@@ -45,6 +45,23 @@ constexpr int kDimGatherMaxDimCount = 8;
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
+#ifdef WITH_ROCM
+#define INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(device_type, opt)           \
+  template struct DimScatterFunctor<device_type, bool, int32_t, opt>;    \
+  template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
+  template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, bool, int64_t, opt>;    \
+  template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterFunctor<device_type, double, int64_t, opt>;  
+#else
 #define INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(device_type, opt)           \
   template struct DimScatterFunctor<device_type, bool, int32_t, opt>;    \
   template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
@@ -62,6 +79,7 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
   template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int64_t, opt>;  \
   template struct DimScatterFunctor<device_type, float16, int64_t, opt>;
+#endif
 
 #define INSTANTIATE_DIM_SCATTER_CUDA_FUNCTORS(device_type, opt)          \
   template struct DimScatterFunctor<device_type, bool, int32_t, opt>;    \

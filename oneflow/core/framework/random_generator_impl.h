@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/ep/include/gpu_macro.h"
 #ifdef WITH_CUDA
 #include <curand.h>
 #include <curand_kernel.h>

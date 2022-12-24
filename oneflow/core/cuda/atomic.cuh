@@ -205,7 +205,7 @@ __device__ __forceinline__ nv_bfloat162 AddImpl(nv_bfloat162* address, nv_bfloat
 
 #endif  // __CUDA_ARCH__ >= 800
 
-#if __CUDA_ARCH__ < 530
+#if (__CUDA_ARCH__ < 530) && !defined(WITH_ROCM)
 
 __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
   TRAP();

@@ -93,7 +93,7 @@ TEST_F(PrimitiveTest, TestFill) {
 #endif  // CUDA_VERSION >= 11000
 #endif  // WITH_CUDA
 #ifdef WITH_ROCM
-  TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
+  // TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
 #endif  // WITH_ROCM
   TestFill<DataType::kBool, bool>(&device_manager_registry_, available_device_types_, 1024);
 }

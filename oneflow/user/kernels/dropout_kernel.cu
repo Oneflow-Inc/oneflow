@@ -143,7 +143,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
   RandPack4 rand_uniform_pack4;
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
+    rand_uniform_pack4.storage = GPURAND(_uniform4)(&state);
 
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
@@ -170,7 +170,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
-    const float rand_uniform = curand_uniform(&state);
+    const float rand_uniform = GPURAND(_uniform)(&state);
     const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     T tmp_float_mask = static_cast<float>(mask_val);
@@ -210,7 +210,7 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
 
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
+    rand_uniform_pack4.storage = GPURAND(_uniform4)(&state);
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     H2Pack<T> x_vec{};
     x_vec.pack_storage.storage = *x_load;
@@ -251,11 +251,15 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
-    const float rand_uniform = curand_uniform(&state);
+    const float rand_uniform = GPURAND(_uniform)(&state);
     const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     float tmp_half_mask = static_cast<float>(mask_val);
+#ifdef WITH_ROCM
+    T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask) * static_cast<T>(h2_scale.data.x);
+#else
     T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask) * h2_scale.x;
+#endif
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
@@ -289,7 +293,7 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
     if (grid_loop_rand_state == 0) {
-      rand_uniform_pack4.storage = curand_uniform4(&state);
+      rand_uniform_pack4.storage = GPURAND(_uniform4)(&state);
       grid_loop_rand_state ^= 1;
     } else {
       // Use the last two random numbers we generated in previous iteration.
@@ -320,7 +324,7 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
-    const float rand_uniform = curand_uniform(&state);
+    const float rand_uniform = GPURAND(_uniform)(&state);
     const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     double tmp_tail_out = tail_x[global_thread_id] * mask_val * scale;

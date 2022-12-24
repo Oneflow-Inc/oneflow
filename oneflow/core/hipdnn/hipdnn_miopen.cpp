@@ -1059,7 +1059,7 @@ hipdnnStatus_t hipdnnSetTensor4dDescriptor(hipdnnTensorDescriptor_t tensorDesc,
                                            int c, int h, int w) {
 
     miopenDataType_t miDT;
-    CHECK_HIPDNN(hipTensorFormatSupported(format));
+    //CHECK_HIPDNN(hipTensorFormatSupported(format));
     CHECK_HIPDNN(hipTomiopenDataType(dataType, &miDT));
     CHECK_MIO(miopenSet4dTensorDescriptor((miopenTensorDescriptor_t)tensorDesc,
                                           miDT, n, c, h, w));
@@ -1287,7 +1287,7 @@ hipdnnStatus_t hipdnnSetFilter4dDescriptor(hipdnnFilterDescriptor_t filterDesc,
                                            int k, int c, 
                                            int h, int w) {
     miopenDataType_t miDT;
-    CHECK_HIPDNN(hipTensorFormatSupported(format));
+    //CHECK_HIPDNN(hipTensorFormatSupported(format));
     CHECK_HIPDNN(hipTomiopenDataType(dataType, &miDT));
     CHECK_MIO(miopenSet4dTensorDescriptor((miopenTensorDescriptor_t)filterDesc,
                                           miDT, k, c, h, w));

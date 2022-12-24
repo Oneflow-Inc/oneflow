@@ -403,7 +403,11 @@ class GroupNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     const double epsilon = ctx->Attr<double>("epsilon");
     const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
+#ifdef WITH_ROCM
+    CHECK_GE(epsilon, HIPDNN_BN_MIN_EPSILON);
+#else
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
+#endif
     const int64_t num_instances = mean->shape_view().elem_cnt();  // N*num_groups
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     const int64_t batch_size = x->shape_view().At(0);

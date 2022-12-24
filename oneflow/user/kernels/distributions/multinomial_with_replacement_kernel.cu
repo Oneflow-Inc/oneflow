@@ -75,7 +75,7 @@ __global__ void sampleMultinomialWithReplacement(uint64_t seed, uint64_t offset,
          sample += blockDim.x * gridDim.x) {
       // we are losing 3 out of 4 generated numbers but it's ok
       // this kernel is not very efficient anyway
-      auto rand = curand_uniform4(&state);
+      auto rand = GPURAND(_uniform4)(&state);
       T r = static_cast<T>(rand.x);
 
       // Find the bucket that a uniform sample lies in

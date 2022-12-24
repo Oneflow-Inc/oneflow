@@ -403,7 +403,7 @@ Maybe<double> GetCUDAMemoryUsed() {
 }
 
 static std::once_flag prop_init_flag;
-static std::vector<hipDeviceProp> device_props;
+static std::vector<hipDeviceProp_t> device_props;
 
 void InitDevicePropVectorSize() {
   int device_count = GetCudaDeviceCount();
@@ -412,12 +412,12 @@ void InitDevicePropVectorSize() {
 
 void InitDeviceProperties(int device_id) {
   std::call_once(prop_init_flag, InitDevicePropVectorSize);
-  hipDeviceProp prop{};
+  hipDeviceProp_t prop{};
   OF_CUDA_CHECK(hipGetDeviceProperties(&prop, device_id));
   device_props[device_id] = prop;
 }
 
-hipDeviceProp* GetDeviceProperties(int device_id) {
+hipDeviceProp_t* GetDeviceProperties(int device_id) {
   InitCudaContextOnce(device_id);
   return &device_props[device_id];
 }

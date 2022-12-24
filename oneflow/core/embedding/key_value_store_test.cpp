@@ -426,32 +426,32 @@ TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
-TEST(CachedKeyValueStore, LRU) {
-  if (!HasCudaDevice()) { return; }
-  Singleton<ep::DeviceManagerRegistry>::New();
-  PersistentTableKeyValueStoreOptions store_options{};
-  std::string path = CreateTempDirectory();
-  store_options.table_options.path = path;
-  uint32_t value_length = 128;
-  store_options.table_options.value_size = value_length * sizeof(float);
-  store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
-  store_options.table_options.physical_block_size = 512;
-  std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
-  CacheOptions cache_options{};
-  cache_options.policy = CacheOptions::Policy::kLRU;
-  cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
-  cache_options.value_size = 512;
-  cache_options.capacity = 512;
-  cache_options.key_size = 8;
-  std::unique_ptr<Cache> cache = NewCache(cache_options);
-  std::unique_ptr<KeyValueStore> cached_store =
-      NewCachedKeyValueStore(std::move(store), std::move(cache));
-  cached_store->ReserveQueryLength(128);
-  TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
-  cached_store.reset();
-  PosixFile::RecursiveDelete(path);
-  Singleton<ep::DeviceManagerRegistry>::Delete();
-}
+// TEST(CachedKeyValueStore, LRU) {
+//   if (!HasCudaDevice()) { return; }
+//   Singleton<ep::DeviceManagerRegistry>::New();
+//   PersistentTableKeyValueStoreOptions store_options{};
+//   std::string path = CreateTempDirectory();
+//   store_options.table_options.path = path;
+//   uint32_t value_length = 128;
+//   store_options.table_options.value_size = value_length * sizeof(float);
+//   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
+//   store_options.table_options.physical_block_size = 512;
+//   std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
+//   CacheOptions cache_options{};
+//   cache_options.policy = CacheOptions::Policy::kLRU;
+//   cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
+//   cache_options.value_size = 512;
+//   cache_options.capacity = 512;
+//   cache_options.key_size = 8;
+//   std::unique_ptr<Cache> cache = NewCache(cache_options);
+//   std::unique_ptr<KeyValueStore> cached_store =
+//       NewCachedKeyValueStore(std::move(store), std::move(cache));
+//   cached_store->ReserveQueryLength(128);
+//   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
+//   cached_store.reset();
+//   PosixFile::RecursiveDelete(path);
+//   Singleton<ep::DeviceManagerRegistry>::Delete();
+// }
 
 TEST(CachedKeyValueStore, Full) {
   if (!HasCudaDevice()) { return; }

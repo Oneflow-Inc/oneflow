@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-XpuShape::XpuShape(const int64_t dim[], int num_axes) {
+OF_DEVICE_FUNC XpuShape::XpuShape(const int64_t dim[], int num_axes) {
   num_axes_ = num_axes;
   int i = 0;
   for (; i < num_axes_; ++i) { dim_[i] = dim[i]; }

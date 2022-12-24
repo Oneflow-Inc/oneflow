@@ -62,16 +62,16 @@ void RegisterCudaDeviceProperties(py::module& m) {
 #ifdef WITH_ROCM
 
 void RegisterCudaDeviceProperties(py::module& m) {
-  py::class_<hipDeviceProp>(m, "_CudaDeviceProperties", py::module_local())
+  py::class_<hipDeviceProp_t>(m, "_CudaDeviceProperties", py::module_local())
       .def(py::init<>())
-      .def_readonly("name", &hipDeviceProp::name)
-      .def_readonly("major", &hipDeviceProp::major)
-      .def_readonly("minor", &hipDeviceProp::minor)
-      .def_readonly("is_multi_gpu_board", &hipDeviceProp::isMultiGpuBoard)
-      .def_readonly("is_integrated", &hipDeviceProp::integrated)
-      .def_readonly("multi_processor_count", &hipDeviceProp::multiProcessorCount)
-      .def_readonly("total_memory", &hipDeviceProp::totalGlobalMem)
-      .def("__repr__", [](const hipDeviceProp& prop) {
+      .def_readonly("name", &hipDeviceProp_t::name)
+      .def_readonly("major", &hipDeviceProp_t::major)
+      .def_readonly("minor", &hipDeviceProp_t::minor)
+      .def_readonly("is_multi_gpu_board", &hipDeviceProp_t::isMultiGpuBoard)
+      .def_readonly("is_integrated", &hipDeviceProp_t::integrated)
+      .def_readonly("multi_processor_count", &hipDeviceProp_t::multiProcessorCount)
+      .def_readonly("total_memory", &hipDeviceProp_t::totalGlobalMem)
+      .def("__repr__", [](const hipDeviceProp_t& prop) {
         std::ostringstream stream;
         stream << "_CudaDeviceProperties(name='" << prop.name << "', major=" << prop.major
                << ", minor=" << prop.minor
@@ -134,7 +134,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
   m.def(
       "_get_device_properties",
-      [](int device) -> hipDeviceProp* { return GetDeviceProperties(device); },
+      [](int device) -> hipDeviceProp_t* { return GetDeviceProperties(device); },
       py::return_value_policy::reference);
 #endif  // WITH_ROCM
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);

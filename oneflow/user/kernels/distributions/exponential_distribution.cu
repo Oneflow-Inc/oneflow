@@ -66,7 +66,7 @@ __global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel
                      * gridDim.x * unroll_factor;
   for (int32_t linear_index = idx; linear_index < rounded_size;
        linear_index += blockDim.x * gridDim.x * unroll_factor) {
-    double2 rand = curand_uniform2_double(&state);
+    double2 rand = GPURAND(_uniform2_double)(&state);
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
       int li = linear_index + blockDim.x * gridDim.x * ii;
@@ -99,7 +99,7 @@ __global__ void distribution_elementwise_grid_stride_kernel_float(int32_t numel,
                      * gridDim.x * unroll_factor;
   for (int32_t linear_index = idx; linear_index < rounded_size;
        linear_index += blockDim.x * gridDim.x * unroll_factor) {
-    float4 rand = curand_uniform4(&state);
+    float4 rand = GPURAND(_uniform4)(&state);
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
       int li = linear_index + blockDim.x * gridDim.x * ii;

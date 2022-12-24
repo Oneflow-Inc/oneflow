@@ -17,7 +17,9 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-
+#ifdef WITH_ROCM
+#include <hip/hip_fp16.h>
+#endif
 namespace oneflow {
 namespace user_op {
 class ArangeOpKernelCache final : public user_op::OpKernelCache {
@@ -127,9 +129,12 @@ class ArangeKernel final : public OpKernel {
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA)
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 REGISTER_ARANGE_KERNELS_WITH_CUDA_HALF(DeviceType::kCUDA);
+#endif
+#if defined(WITH_ROCM)
+REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
 }  // namespace user_op
 }  // namespace oneflow
