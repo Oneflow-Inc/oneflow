@@ -84,13 +84,13 @@ void RegisterCudaDeviceProperties(py::module& m) {
 #endif  // WITH_ROCM
 
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
+  JUST(env->init_is_normal_exit(is_normal_exit));
+  SetShuttingDown(true);
   if (is_normal_exit) {
     JUST(vm::ClusterSync());
     auto* vm = JUST(SingletonMaybe<VirtualMachine>());
     JUST(vm->CloseVMThreads());
   }
-  JUST(env->init_is_normal_exit(is_normal_exit));
-  SetShuttingDown(true);
   return Maybe<void>::Ok();
 }
 

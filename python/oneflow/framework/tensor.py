@@ -62,7 +62,7 @@ def _eq(self, other):
     elif self is None or other is None:
         return False
     else:
-        return flow._C.equal(self, other)
+        return flow._C.broadcast_equal(self, other)
 
 
 def _cuda(self, device: Union[int, str, flow.device] = None):
