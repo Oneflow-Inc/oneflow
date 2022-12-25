@@ -51,26 +51,27 @@ def _test_compute_operator(test_case, shape):
     x_flow = flow.tensor(random_tensor)
     x_torch = torch.tensor(random_tensor)
     random_numpy = np.random.randn(*shape)
-    
+
     for op in test_compute_op_list:
-        if op in ["**","//","%"]:
-            random_tensor=np.random.randint(1,100,size=shape)
-            random_numpy = np.random.randint(1,10,size=shape)
+        if op in ["**", "//", "%"]:
+            random_tensor = np.random.randint(1, 100, size=shape)
+            random_numpy = np.random.randint(1, 10, size=shape)
         else:
             random_tensor = np.random.randn(*shape)
             random_numpy = np.random.randn(*shape)
 
         x_flow = flow.tensor(random_tensor)
         x_torch = torch.tensor(random_tensor)
-          
+
         z_flow = eval(f"x_flow {op} random_numpy")
         z_torch = eval(f"x_torch {op} random_numpy")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
-    
-        # TODO(yzm):Add tests after fixing the inplace op bug
-        # exec(f"x_flow {op}= random_numpy")
-        # exec(f"x_torch {op}= random_numpy")
-        # test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy(), 1e-05, 1e-05))
+
+        #TODO:support for "+=" compatibility
+        if op not in ["**,+"]:
+            exec(f"x_flow {op}= random_numpy")
+            exec(f"x_torch {op}= random_numpy")
+            test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy(), 1e-05, 1e-05))
 
 
 def _test_logic_operator(test_case, shape):
@@ -104,7 +105,7 @@ class TestTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     def test_op_compatibility(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        
+
         for arg in GenArgDict(arg_dict):
             _test_compute_operator(test_case, **arg)
             # TODO(yzm):support compare  operator Compatibility

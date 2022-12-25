@@ -36,39 +36,36 @@ np.random.seed(233)
 
 test_compute_op_list = [
     "+",
-    # "-",
-    # "*",
-    # "/",
-    # "**",
-    # "//",
-    # "%",
+    "-",
+    "*",
+    "/",
+    "**",
+    "//",
+    "%",
 ]
 
 
 def do_test_compute_op(test_case, ndim, placement, sbp):
-    dims = [random(1, 2) * 2 for i in range(ndim)]
-    x = random_tensor(ndim, *dims,dtype=int,low=0,high=5)
+    dims = [random(1, 5) * 2 for i in range(ndim)]
+    x = random_tensor(ndim, *dims, dtype=int, low=0, high=5)
     x = x.to_global(placement=placement, sbp=sbp)
+    x=x.to("cpu")
     flow_input = x.oneflow.detach()
     torch_input = x.pytorch.detach()
-    random_numpy =  np.random.randint(1,5)
 
     for op in test_compute_op_list:
+        if op not in ["**"]:
+            random_numpy = np.random.randint(1,30000,size=list(flow_input.shape))
+        else:
+            random_numpy = np.random.randint(1,5,size=list(flow_input.shape))
+
         z_flow = eval(f"flow_input {op} random_numpy")
         z_torch = eval(f"torch_input {op} random_numpy")
-        print("z_flow:",z_flow)
-        print("z_torch:",z_torch)
-        print("flow_input:",flow_input)
-        print("torch_input:",torch_input)
-        print(random_numpy)
-        print(op)
-        print("\n")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
-
 
 class TestGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_div(test_case):
+    def test_compatibility(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
