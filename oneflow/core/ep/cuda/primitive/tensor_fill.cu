@@ -53,7 +53,7 @@ __global__ void TensorFillGpu(T* dst, const T* value, size_t count) {
 }
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack != 0), void>::type LaunchPackTensorFill(cudaStream_t stream, T* dst,
+typename std::enable_if<(pack != 0), void>::type LaunchPackTensorFill(GPU(Stream_t) stream, T* dst,
                                                                       const T* value,
                                                                       size_t count) {
   TensorFillGpu<T, pack>
@@ -61,14 +61,14 @@ typename std::enable_if<(pack != 0), void>::type LaunchPackTensorFill(cudaStream
 }
 
 template<typename T, size_t pack>
-typename std::enable_if<(pack == 0), void>::type LaunchPackTensorFill(cudaStream_t stream, T* dst,
+typename std::enable_if<(pack == 0), void>::type LaunchPackTensorFill(GPU(Stream_t) stream, T* dst,
                                                                       const T* value,
                                                                       size_t count) {
   LOG(FATAL) << "wrong alignment";
 }
 
 template<typename T>
-void LaunchTensorFill(cudaStream_t stream, T* dst, const T* value, size_t count) {
+void LaunchTensorFill(GPU(Stream_t) stream, T* dst, const T* value, size_t count) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
   if (uintptr % 16 == 0) {
     LaunchPackTensorFill<T, 16 / sizeof(T)>(stream, dst, value, count);
@@ -91,7 +91,7 @@ class TensorFillImpl : public TensorFill {
   ~TensorFillImpl() override = default;
 
   void Launch(Stream* stream, const void* src, void* dst, size_t count) override {
-    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
+    GPU(Stream_t) cuda_stream = stream->As<CudaStream>()->cuda_stream();
     const T* value = reinterpret_cast<const T*>(src);
     LaunchTensorFill<T>(cuda_stream, reinterpret_cast<T*>(dst), value, count);
   }
