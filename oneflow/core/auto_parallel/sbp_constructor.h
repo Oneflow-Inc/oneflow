@@ -63,7 +63,7 @@ class SbpConstructor final {
   Maybe<void> FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
-  Maybe<void> InitCopyMemoryCost(const OpGraph& op_graph);
+  Maybe<void> InitCopyAndMemoryCost(const OpGraph& op_graph);
   Maybe<void> ApplyTrunkAlgo();
   Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
   void InitAvailableMemory();

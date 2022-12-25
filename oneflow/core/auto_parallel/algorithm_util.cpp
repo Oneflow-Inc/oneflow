@@ -40,6 +40,8 @@ void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& inver
 // 17 divide by 4 give us 5, 4, 4, 4
 // The normal quotient would take the smaller one 4,
 // but the ceil quotient would take the larger one 5.
-int64_t CeilQuotient(int64_t dividend, int64_t divisor) { return (dividend - 1) / divisor + 1; }
+int64_t CeilQuotient(int64_t dividend, int64_t divisor) {
+  return (dividend + divisor - 1) / divisor;
+}
 
 }  // namespace oneflow

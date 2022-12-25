@@ -73,9 +73,9 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
 
-  JUST(InitCopyMemoryCost(op_graph));
+  JUST(InitCopyAndMemoryCost(op_graph));
   // We need to store the original cost and memory after the initialization (InitComputationCost(),
-  // InitMemory(), InitCopyMemoryCost()) and before the usage of them (InitWeightedCost())
+  // InitMemory(), InitCopyAndMemoryCost()) and before the usage of them (InitWeightedCost())
   sbp_graph_.StoreOriginMemory();
   InitWeightedCost();
   // TODO:  Set all the sbp signature id to be 0 for initialization.
@@ -293,7 +293,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
 }
 
 // Init copy cost and memory for edges
-Maybe<void> SbpConstructor::InitCopyMemoryCost(const OpGraph& op_graph) {
+Maybe<void> SbpConstructor::InitCopyAndMemoryCost(const OpGraph& op_graph) {
   bool nccl_not_use_compute_stream = !nccl_use_compute_stream_;
   // Compute copy cost for sbp edges
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -318,7 +318,7 @@ Maybe<void> SbpConstructor::InitCopyMemoryCost(const OpGraph& op_graph) {
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitCopyMemoryCost(use_sbp_collector_, nccl_not_use_compute_stream);
+    sbp_node_consumer->InitCopyAndMemoryCost(use_sbp_collector_, nccl_not_use_compute_stream);
   });
   return Maybe<void>::Ok();
 }

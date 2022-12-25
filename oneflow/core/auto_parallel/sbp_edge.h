@@ -19,7 +19,6 @@ limitations under the License.
 #include <assert.h>
 #include <algorithm>
 #include <unordered_set>
-#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -88,8 +87,8 @@ class SbpEdge final {
   double GetMinWeightedCost();
 
   // Assemble copy and partial cost
-  void InitCopyMemoryCost(const std::string& ibn, bool use_sbp_collector,
-                          bool nccl_not_use_compute_stream);
+  void InitCopyAndMemoryCost(const std::string& ibn, bool use_sbp_collector,
+                             bool nccl_not_use_compute_stream);
   // Assemble memory cost
   void InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
                         const std::vector<int32_t>& id2count,

@@ -431,8 +431,8 @@ double SbpEdge::GetMinWeightedCost() {
 }
 
 // Assemble copy cost
-void SbpEdge::InitCopyMemoryCost(const std::string& ibn, bool use_sbp_collector,
-                                 bool nccl_not_use_compute_stream) {
+void SbpEdge::InitCopyAndMemoryCost(const std::string& ibn, bool use_sbp_collector,
+                                    bool nccl_not_use_compute_stream) {
   std::vector<int64_t> consumer_nd_sbp_sig2memory;
   if (nccl_not_use_compute_stream) {
     in_memory_support_ = true;
