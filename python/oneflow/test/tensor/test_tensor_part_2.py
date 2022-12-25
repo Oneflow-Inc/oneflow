@@ -865,15 +865,19 @@ class TestTensor(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_floordiv_elementwise_tensor_with_random_data(test_case):
         device = random_device()
-        input = random_tensor(ndim=2, dim0=4, dim1=8).to(device)
-        other = random_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+        # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+        input = random_tensor(ndim=2, dim0=4, dim1=8, low=0, high=10).to(device)
+        other = random_tensor(ndim=2, dim0=4, dim1=8, low=0, high=10).to(device)
         y = input.floor_divide(other)
         return y
 
     @autotest(auto_backward=False)
     def test_scalar_floordiv_tensor_with_random_data(test_case):
         device = random_device()
-        input = random_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+        # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+        input = random_tensor(ndim=2, dim0=4, dim1=8, low=0, high=10).to(device)
         other = random().to(int)
         y = input.floor_divide(other)
         return y
