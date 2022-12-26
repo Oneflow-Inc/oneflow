@@ -84,11 +84,28 @@ class TestSort(flow.unittest.TestCase):
         y = torch.sort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y[0], y[1]
 
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_sort_return_type_with_random_data_(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        result = torch.sort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
+        return result.values, result.indices
+
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_sort_bool_with_random_data(test_case):
         x = random_tensor(ndim=4).to(device="cpu", dtype=torch.bool)
         y = torch.sort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y[0], y[1]
+
+    @autotest(n=10, auto_backward=False, check_graph=True)
+    def test_sort_return_type_bool_with_random_data(test_case):
+        x = random_tensor(ndim=4).to(device="cpu", dtype=torch.bool)
+        result = torch.sort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
+        return result.values, result.indices
 
 
 if __name__ == "__main__":

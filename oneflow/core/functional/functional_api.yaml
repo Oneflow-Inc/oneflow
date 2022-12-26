@@ -668,6 +668,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
   bind_python: False
 
+- name: "quick_gelu"
+  signature: "Tensor (Tensor x) => QuickGelu"
+  bind_python: True
+
+- name: "quick_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -845,6 +853,14 @@
 
 - name: "cast"
   signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
+  bind_python: True
+
+- name: "global_tensor_constant"
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorConstant"
+  bind_python: True
+
+- name: "tensor_constant"
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Device device=None) => TensorConstant"
   bind_python: True
 
 - name: "constant"
@@ -2618,8 +2634,8 @@
   signature: "Tensor (Shape shape, ShapeList shape_list, FloatList value_list, DataType data_type, Bool dynamic_out) => GenTensorBuffer"
   bind_python: True
 
-- name: "top_k"
-  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+- name: "topk"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"
@@ -3086,3 +3102,10 @@
   signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
   bind_python: True
 
+- name: "sort"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool descending=False) => Sort"
+  bind_python: True
+  
+- name: "throw_error"
+  signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
