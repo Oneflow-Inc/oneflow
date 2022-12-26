@@ -173,7 +173,11 @@ Maybe<void> LocalTensor::load() {
   JUST(set_data(loaded_tensor));
 
   // Release cpu memory.
+  cpu_tensor.reset();
+  input.reset();
   offloaded_impl_.reset();
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
 
   is_offloaded_ = false;
   return Maybe<void>::Ok();
@@ -290,7 +294,11 @@ Maybe<void> GlobalTensor::load() {
   JUST(set_data(loaded_tensor));
 
   // Release cpu memory.
+  cpu_tensor.reset();
+  input.reset();
   offloaded_impl_.reset();
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
 
   is_offloaded_ = false;
   return Maybe<void>::Ok();

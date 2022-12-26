@@ -176,6 +176,24 @@ class TestTensorOffload(flow.unittest.TestCase):
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
+    def test_tensor_offload_and_load_cpu(test_case):
+        input = flow.tensor(
+            np.random.randn(1024, 1024, 100),
+            dtype=flow.float32,
+            device=flow.device("cuda"),
+        )
+        tensor_mem = _get_tensor_mem(input)
+
+        before_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        input.offload()
+        after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        test_case.assertTrue(after_used > before_used)
+
+        cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        input.load()
+        after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        test_case.assertTrue(after_used < cur_used)
+
 
 if __name__ == "__main__":
     unittest.main()

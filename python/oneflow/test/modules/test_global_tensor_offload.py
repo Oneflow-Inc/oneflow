@@ -105,7 +105,7 @@ def _get_specific_global_tensor_mem(placement, sbp):
 class TestGlobalTensorOffload(flow.unittest.TestCase):
     @globaltest
     @flow.unittest.skip_unless_1n2d()
-    def test_tensor_offload_and_load_2d(test_case):
+    def test_global_tensor_offload_and_load_2d(test_case):
         for i in range(5):
             placement = flow.placement("cuda", ranks=[0, 1])
             for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
@@ -119,7 +119,7 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
 
     @globaltest
     @flow.unittest.skip_unless_1n4d()
-    def test_tensor_offload_and_load_4d(test_case):
+    def test_global_tensor_offload_and_load_4d(test_case):
         for i in range(5):
             placement = flow.placement("cuda", ranks=[0, 1, 2, 3])
             for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
@@ -130,6 +130,27 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 tensor_mem = _get_specific_global_tensor_mem(placement, sbp)
                 _test_global_tensor_offload_d2h(test_case, input, tensor_mem)
                 _test_global_tensor_load_h2d(test_case, input, tensor_mem)
+
+    @globaltest
+    @flow.unittest.skip_unless_1n2d()
+    def test_global_tensor_offload_and_load_2d_cpu(test_case):
+        flow.cuda.empty_cache()
+        for i in range(5):
+            placement = flow.placement("cuda", ranks=[0, 1])
+            for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
+                input = flow.randn(
+                    1024, 1024, 100, dtype=flow.float32, placement=placement, sbp=sbp
+                )
+
+                before_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                input.offload()
+                after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                test_case.assertTrue(after_used > before_used)
+
+                cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                input.load()
+                after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                test_case.assertTrue(after_used < cur_used)
 
 
 if __name__ == "__main__":
