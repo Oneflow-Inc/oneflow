@@ -63,7 +63,7 @@ def do_test_compute_op(test_case, ndim, placement, sbp):
         z_torch = eval(f"torch_input {op} random_numpy")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
 
-class TestGlobal(flow.unittest.TestCase):
+class TestGlobalTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     @globaltest
     def test_compatibility(test_case):
         # random ndim in range [1,4]
