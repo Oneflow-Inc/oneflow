@@ -65,7 +65,7 @@ def do_test_compute_op(test_case, ndim, placement, sbp):
 
 class TestGlobalTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     @globaltest
-    def test_compatibility(test_case):
+    def test_tensor_and_ndarray_compatibility(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
