@@ -40,7 +40,7 @@ enum TaskClassifier : int {
 };
 
 // The difference between a descending order and its corresponding ascending order
-const int kDiff4AscendDescend = 100;
+static const int kDiff4AscendDescend = 100;
 
 class TopoStruct {
  public:
@@ -93,7 +93,7 @@ class TopoStruct {
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
-StraightenAlgorithmTag sat;
+static StraightenAlgorithmTag sat;
 
 // NOTE: Leave these code for debugging in the future
 // static std::vector<StraightenOrder> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
@@ -101,7 +101,7 @@ StraightenAlgorithmTag sat;
 //                                                        ParseIntegerFromEnv("Parameter2", 3)});
 // The best parameter set for saving time is {102, 100}
 // The best parameter set for saving memory is {3, 0}
-std::vector<StraightenOrder> decide_parameters;
+static std::vector<StraightenOrder> decide_parameters;
 
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,

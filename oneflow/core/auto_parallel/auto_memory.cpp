@@ -57,9 +57,9 @@ class TopoStruct {
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
-StraightenAlgorithmTag sat;
+static StraightenAlgorithmTag sat;
 
-std::vector<StraightenOrder> decide_parameters;
+static std::vector<StraightenOrder> decide_parameters;
 
 bool IsProducedRegisterReusable(const Operator& op) {
   // The repeat, acc, pack and unpack operators have non-reusable registers

@@ -37,7 +37,7 @@ namespace oneflow {
 
 namespace {
 
-bool disable_middle_node = false;
+static bool disable_middle_node = false;
 
 void DfsSetNdSbp(const std::vector<SbpParallel>& id2sbp_parallel, int32_t depth, int32_t max_depth,
                  NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
