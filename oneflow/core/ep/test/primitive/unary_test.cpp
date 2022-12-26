@@ -36,29 +36,21 @@ template<UnaryOp unary_op, DataType src_data_type, typename Src, DataType dst_da
          typename Dst>
 void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
                                    const std::set<DeviceType>& device_types) {
-  const std::vector<int> num_src_axes = {1, 4, 1};
-  const std::vector<int> num_dst_axes = {4, 4, 1};
+  const std::vector<int> num_src_axes = {4};
+  const std::vector<int> num_dst_axes = {4};
 
-  const std::vector<std::vector<int64_t>> a_dims_vec = {{1, 1, 1, 1}, {1, 1, 1024*256, 256}, {1, 1, 1, 1}};
-  const std::vector<std::vector<int64_t>> broadcast_dims_vec = {
-      {2, 3, 2, 4}, {1, 1, 1024*256, 256}, {1, 1, 1, 1}};
-  const std::vector<std::vector<int64_t>> a_broadcasts_vec = {
-      {2, 3, 2, 4}, {1, 1, 1, 1}, {1, 1, 1, 1}};
+  const std::vector<std::vector<int64_t>> a_dims_vec = {{1, 1, 1024*256, 256}};
+  const std::vector<std::vector<int64_t>> broadcast_dims_vec = {{1, 1, 1024*256, 256}};
+  const std::vector<std::vector<int64_t>> a_broadcasts_vec = {{1, 1, 1, 1}};
 
   const std::vector<std::vector<int64_t>> a_strides_vec = {
-      {0, 0, 0, 0},
-      {a_dims_vec[1][1] * a_dims_vec[1][2] * a_dims_vec[1][3], a_dims_vec[1][2] * a_dims_vec[1][3],
-       a_dims_vec[1][3], 1},
-      {0, 0, 0, 0}};
+      {a_dims_vec[0][1] * a_dims_vec[0][2] * a_dims_vec[0][3], a_dims_vec[0][2] * a_dims_vec[0][3],
+       a_dims_vec[0][3], 1},};
   const std::vector<std::vector<int64_t>> c_strides_vec = {
       {broadcast_dims_vec[0][1] * broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3],
-       broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3], broadcast_dims_vec[0][3], 1},
-      {broadcast_dims_vec[1][1] * broadcast_dims_vec[1][2] * broadcast_dims_vec[1][3],
-       broadcast_dims_vec[1][2] * broadcast_dims_vec[1][3], 1,
-       broadcast_dims_vec[1][2]},
-      {0, 0, 0, 0}};
+       broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3], 1, broadcast_dims_vec[0][2]}};
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 1; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
     const std::vector<int64_t>& c_dims = broadcast_dims_vec[i];
     const Eigen::array<int64_t, 4> a_broadcast = {a_broadcasts_vec[i][0], a_broadcasts_vec[i][1],
@@ -78,8 +70,6 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
         std::accumulate(c_dims.begin(), c_dims.end(), 1, std::multiplies<int64_t>());
     const int64_t c_size = c_count * sizeof(Dst);
     const int64_t broadcast_a_size = broadcast_a.size() * sizeof(Dst);
-
-    printf("%ld %ld\n", c_size, broadcast_a_size);
 
     ASSERT_TRUE(c_size == broadcast_a_size);
 

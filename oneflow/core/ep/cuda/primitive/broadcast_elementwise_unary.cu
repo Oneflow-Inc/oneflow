@@ -35,7 +35,7 @@ template<size_t max_pack_size, typename Src, typename Dst>
 size_t GetPackSize(size_t num_dims, const int64_t* src_dims, const void* src,
                    const int64_t* dst_dims, const void* dst) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
-  for (size_t pack_size = max_pack_size; pack_size > 2; pack_size /= 2) {
+  for (size_t pack_size = max_pack_size; pack_size >= 2; pack_size /= 2) {
     bool is_src_supported = IsPackSizeSupported<Src>(pack_size, num_dims, src_dims, src);
     bool is_dst_supported = IsPackSizeSupported<Dst>(pack_size, num_dims, dst_dims, dst);
     if (is_src_supported && is_dst_supported) { return pack_size; }
@@ -211,10 +211,10 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
-  if (src_enable_pack && dst_enable_pack) {
+  /*if (src_enable_pack && dst_enable_pack) {
     pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims, src,
                                                     simplified_dst_dims, dst);
-  }
+  }*/
   bool continuous_output = true;
   for (int i = simplified_num_dims - 1; i >= 0; i--) {
     if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
@@ -341,20 +341,9 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        simplified_dst_strides);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
-    if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
-      const int64_t elem_cnt = simplified_dst_dims[0];
-      LaunchFill<unary_op, Src, Dst>(cuda_stream, dst, src, elem_cnt, attr0, attr1);
-    } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
-               && simplified_dst_strides[0] == 1) {
-      const int64_t elem_cnt = simplified_src_dims[0];
-      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
-      OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
-          functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
-    } else {
-      LaunchWithSimplified<unary_op, Src, Dst>(
-          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
-          simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
-    }
+    LaunchWithSimplified<unary_op, Src, Dst>(
+        cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
+        simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
   }
 
  protected:
