@@ -18,6 +18,10 @@ import os
 import sys
 import collections
 
+# https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
+if "CUDA_MODULE_LOADING" not in os.environ:
+    os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+
 import oneflow._oneflow_internal
 
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
