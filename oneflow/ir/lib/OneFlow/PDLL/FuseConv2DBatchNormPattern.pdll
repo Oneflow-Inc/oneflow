@@ -9,8 +9,7 @@ Pattern {
   let gamma: Value;
   let beta: Value;
 
-  let conv = op<oneflow.conv2d>(x: Value, weight: Value)
-  {device_name = device_name, device_tag = device_tag};
+  let conv = op<oneflow.conv2d>(x: Value, weight: Value){device_name = device_name, device_tag = device_tag};
 
   let normalization = op<oneflow.normalization_infer>(conv, moving_mean, moving_variance, gamma, beta) {device_name = device_name, device_tag = device_tag, epsilon = epsilon} -> (y: Type);
 

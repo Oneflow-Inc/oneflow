@@ -159,15 +159,15 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   float epsilon_attr = epsilon.cast<FloatAttr>().getValueAsDouble();
   add_op_attrs.set("float_operand", rewriter.getF64FloatAttr(epsilon_attr));
   auto add_op = rewriter.create<oneflow::ScalarAddOp>(
-      conv_op->getLoc(), conv_op->getResultTypes(),
+      conv_op->getLoc(), conv_op.out().getType(),
       SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
 
-  auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+  auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op.out().getType(),
                                                   SmallVector<Value, 4>({add_op.out()}),
                                                   GetUserOpCommonAttrs(ctx, "sqrt"));
 
   auto div_op = rewriter.create<oneflow::BroadcastDivOp>(
-      conv_op->getLoc(), conv_op->getResultTypes(),
+      conv_op->getLoc(), conv_op.out().getType(),
       SmallVector<Value, 4>({bn_op.gamma(), sqrt_op.y()}), GetUserOpCommonAttrs(ctx, "div"));
 
   auto bn_gamma_variable_op =
@@ -195,11 +195,11 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
                                                           return rewriter.getI64IntegerAttr(v);
                                                         }))));
   auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
-      conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
+      conv_op->getLoc(), conv_op.out().getType(), SmallVector<Value, 4>({div_op.z()}),
       reshape_op_attrs);
 
   auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
-      conv_op->getLoc(), conv_op->getResultTypes(),
+      conv_op->getLoc(), conv_op.out().getType(),
       SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
       GetUserOpCommonAttrs(ctx, "multiply"));
   operands.push_back(mul_op.z());
@@ -207,11 +207,11 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   // deal with bias
   if (!conv_op.bias()) {
     auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
-        conv_op->getLoc(), conv_op->getResultTypes(),
+        conv_op->getLoc(), conv_op.out().getType(),
         SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
         GetUserOpCommonAttrs(ctx, "multiply_bias"));
     auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
-        conv_op->getLoc(), conv_op->getResultTypes(),
+        conv_op->getLoc(), conv_op.out().getType(),
         SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
         GetUserOpCommonAttrs(ctx, "sub_bias"));
     operands.push_back(sub_op_bias.z());
@@ -221,7 +221,7 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   }
 
   auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
-      conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
+      conv_op->getLoc(), conv_op.out().getType(), operands, attributes);
 
   return new_conv_op;
 }
