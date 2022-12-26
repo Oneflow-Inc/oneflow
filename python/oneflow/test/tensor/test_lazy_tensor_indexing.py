@@ -913,7 +913,7 @@ class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
     def test_global_slice(test_case):
         for placement in all_placement():
-            for _ in range(5):
+            for _ in range(2):
                 _test_basic_slice(test_case, placement)
                 _test_advanced_indexing(test_case, placement, dtype=flow.float32)
                 _test_combined_indexing(test_case, placement, dtype=flow.float32)

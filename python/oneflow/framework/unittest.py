@@ -189,7 +189,7 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         global RESET_SESSION_COUNT
         reset_session_period = int(
-            os.environ.get("ONEFLOW_TEST_RESET_SESSION_PERIOD", "10")
+            os.environ.get("ONEFLOW_TEST_RESET_SESSION_PERIOD", "1")
         )
         if RESET_SESSION_COUNT >= reset_session_period:
             oneflow.framework.session_context.GetDefaultSession().Reset()
