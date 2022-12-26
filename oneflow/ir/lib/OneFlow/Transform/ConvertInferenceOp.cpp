@@ -32,15 +32,6 @@ class PreConvertInferenceOpPass : public PreConvertInferenceOpPassBase<PreConver
   }
 };
 
-class ConvertInferenceOpPass : public ConvertInferenceOpPassBase<ConvertInferenceOpPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    oneflow::populateConvertInferenceOp(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
 class PostConvertInferenceOpPass
     : public PostConvertInferenceOpPassBase<PostConvertInferenceOpPass> {
   void runOnOperation() override {
@@ -59,10 +50,6 @@ namespace oneflow {
 
 std::unique_ptr<Pass> createPreConvertInferenceOpPass() {
   return std::make_unique<PreConvertInferenceOpPass>();
-}
-
-std::unique_ptr<Pass> createConvertInferenceOpPass() {
-  return std::make_unique<ConvertInferenceOpPass>();
 }
 
 std::unique_ptr<Pass> createPostConvertInferenceOpPass() {

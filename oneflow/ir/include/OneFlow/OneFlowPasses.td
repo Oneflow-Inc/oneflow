@@ -71,11 +71,6 @@ def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
   let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
 }
 
-def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
-  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
-  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
-}
-
 def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
   let summary = "Convert variable ir op to variable op after contant folding.";
   let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";

@@ -60,7 +60,6 @@ void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
 
 void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
-void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow

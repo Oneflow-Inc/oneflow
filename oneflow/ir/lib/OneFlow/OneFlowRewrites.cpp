@@ -129,6 +129,11 @@ static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Va
                                    attributes);
 }
 
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -139,10 +144,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                      return StringAttr::get(ctx, v);
                                                                    }))));
   return attrs;
-}
-IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
-  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
-                          APInt(64, value, /*isSigned=*/true));
 }
 static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute epsilon, Operation* conv, Operation* bn) {
   auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv);
@@ -228,7 +229,6 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
 
   return new_conv_op;
 }
-
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,
