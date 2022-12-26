@@ -419,7 +419,7 @@ def _sort(self, dim: int = -1, descending: bool = False):
 
 
 def _type_as(self, target):
-    return self.to(dtype=target.dtype)
+    return self.to(dtype=target.dtype, device=target.device)
 
 
 def _where(self, x=None, y=None):
