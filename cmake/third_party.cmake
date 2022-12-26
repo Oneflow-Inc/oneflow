@@ -198,6 +198,7 @@ if (BUILD_ROCM)
                                                ${HIPCUB_INCLUDE_DIRS}
                                                "${ROCM_PATH}/hiprand/include"
                                                "${ROCM_PATH}/rocrand/include"
+                                               "${ROCM_PATH}/roctracer/include"
                                                ${MIOPEN_INCLUDE_DIRS}
                                                ${RCCL_INCLUDE_DIRS})
   message(STATUS "ONEFLOW_THIRD_PARTY_INCLUDE_DIRS: ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS}")
