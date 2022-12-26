@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 std::unique_ptr<mlir::Pass> createLowerToOKLPass();
 std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchPass();
+std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchWithCudaGraphSupportPass();
 std::unique_ptr<mlir::Pass> createExtractKernelLaunchTensorPass();
 std::unique_ptr<mlir::Pass> createTrimReturnAsVoidPass();
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();

@@ -72,6 +72,21 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   }
 };
 
+class WrapOpsToKernelLaunchWithCudaGraphSupportPass
+    : public WrapOpsToKernelLaunchWithCudaGraphSupportPassBase<
+          WrapOpsToKernelLaunchWithCudaGraphSupportPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateWrapOpsToKernelLaunchPasses(patterns, true);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 class ExtractKernelLaunchTensorPass
     : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
@@ -251,6 +266,10 @@ class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizati
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
+}
+
+std::unique_ptr<Pass> createWrapOpsToKernelLaunchWithCudaGraphSupportPass() {
+  return std::make_unique<WrapOpsToKernelLaunchWithCudaGraphSupportPass>();
 }
 
 std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {

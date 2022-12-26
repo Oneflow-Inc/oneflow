@@ -52,6 +52,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
     }
     return reg_op;
   }
+
   static LogicalResult CheckChild(func::FuncOp func) {
     using namespace ::oneflow::user_op;
     for (auto& op : func->getRegion(0).front()) {

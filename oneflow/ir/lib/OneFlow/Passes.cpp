@@ -102,6 +102,8 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 #include <algorithm>
 #include <memory>
@@ -1092,8 +1094,17 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
 };
 
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
-  explicit KernelLaunchPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+  KernelLaunchPattern(mlir::MLIRContext* context, bool with_cuda_graph_support)
+      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0),
+        with_cuda_graph_support_(with_cuda_graph_support) {}
+
+  static bool IsOpCudaGraphSupport(mlir::Operation* op) {
+    ::oneflow::okl::RegContext reg_ctx(op);
+    auto* kernel = const_cast<::oneflow::user_op::OpKernel*>(reg_ctx.GetKernel());
+    if (dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel)) { return true; }
+    return false;
+  }
+
   mlir::LogicalResult matchAndRewrite(oneflow::Job op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto& ops = op->getRegion(0).front();
@@ -1106,17 +1117,32 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
     };
     int name_index = 0;
     std::vector<Operation*> wrap_ops;
+    bool is_cuda_graph_support_this_block = false;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
           || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
         CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
         continue;
       }
-      wrap_ops.push_back(&(*op_it));
+      if (with_cuda_graph_support_) {
+        bool is_cuda_graph_support_this_op = IsOpCudaGraphSupport(&(*op_it));
+        if (is_cuda_graph_support_this_block != is_cuda_graph_support_this_op) {
+          CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+          is_cuda_graph_support_this_block = is_cuda_graph_support_this_op;
+          wrap_ops.push_back(&(*op_it));
+        } else {
+          wrap_ops.push_back(&(*op_it));
+        }
+      } else {
+        wrap_ops.push_back(&(*op_it));
+      }
     }
     CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
     return success();
   }
+
+ private:
+  bool with_cuda_graph_support_;
 };
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
@@ -1195,8 +1221,9 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
 }
 
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<KernelLaunchPattern>(patterns.getContext());
+void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
+                                         bool with_cuda_graph_support) {
+  patterns.add<KernelLaunchPattern>(patterns.getContext(), with_cuda_graph_support);
 }
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());

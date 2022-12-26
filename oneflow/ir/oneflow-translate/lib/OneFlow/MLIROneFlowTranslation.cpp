@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -831,8 +832,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(createAggregateComputeOpsPass());
 #ifdef WITH_CUDA_GRAPHS
     pm.addPass(createAggregateCudaGraphSupportOpsPass());
-#endif
+    pm.addPass(createWrapOpsToKernelLaunchWithCudaGraphSupportPass());
+#else
     pm.addPass(createWrapOpsToKernelLaunchPass());
+#endif
   }
   pm.addPass(createCanonicalizerPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {
