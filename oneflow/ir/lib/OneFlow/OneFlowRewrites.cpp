@@ -140,7 +140,10 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                    }))));
   return attrs;
 }
-
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
 static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute epsilon, Operation* conv, Operation* bn) {
   auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv);
   auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn);
@@ -192,7 +195,7 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
                                                         ArrayRef<int64_t>(bn_gamma_new_shape),
                                                         [&](int64_t v) -> Attribute {
-                                                          return rewriter.getI64IntegerAttr(v);
+                                                          return getSI64IntegerAttr(rewriter,v);
                                                         }))));
   auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
       conv_op->getLoc(), conv_op.out().getType(), SmallVector<Value, 4>({div_op.z()}),
@@ -226,10 +229,6 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   return new_conv_op;
 }
 
-IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
-  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
-                          APInt(64, value, /*isSigned=*/true));
-}
 
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,

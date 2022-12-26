@@ -382,7 +382,10 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                    }))));
   return attrs;
 }
-
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
 ::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
                                                           OpResult conv_result,
                                                           OpResult bn_result) {
@@ -400,7 +403,8 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
       // deal with weight
       auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
       add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
-      add_op_attrs.set("float_operand", bn_op.epsilonAttr());
+
+      add_op_attrs.set("float_operand", rewriter.getF64FloatAttr(bn_op.epsilonAttr().getValueAsDouble()));
       auto add_op = rewriter.create<oneflow::ScalarAddOp>(
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
@@ -435,7 +439,7 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
       reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
                                                             ArrayRef<int64_t>(bn_gamma_new_shape),
                                                             [&](int64_t v) -> Attribute {
-                                                              return rewriter.getI64IntegerAttr(v);
+                                                              return getSI64IntegerAttr(rewriter,v);
                                                             }))));
       auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
           conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
