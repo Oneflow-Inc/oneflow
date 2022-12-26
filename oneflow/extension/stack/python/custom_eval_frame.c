@@ -17,6 +17,8 @@ limitations under the License.
 // see https://bugs.python.org/issue23644 for why this file is written
 // as .c instead of .cpp
 
+#include "oneflow/extension/stack/python/custom_eval_frame.h"
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <frameobject.h>
