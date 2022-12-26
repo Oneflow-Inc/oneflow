@@ -243,26 +243,31 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
   });
   if (res.wasInterrupted())  // contains duplicate operations
     return;
-  auto graph_pdl = build_pdl_from_oneflow_op(graph);
-  if (verify(graph_pdl, true).succeeded()) {
-  } else {
-    llvm::errs() << "Error verifying pdl\n";
-  }
-  // get existing rewrites, check if the new graph can be infered
-  auto fp = fingerprint(graph);
-  if (D.count(fp)) {
-    // check
-    auto old_graph = D[fp];
-    if (can_be_infered_from_existing_rewrites(graph_pdl, old_graph)) {
-      // pass
-    } else {
-      // new rewrite found! add
-      rewrites.emplace_back(old_graph, graph_pdl);
+  [&] {
+    auto graph_pdl = build_pdl_from_oneflow_op(graph);
+    if (graph_pdl == nullptr) return;  // trivial graph, do nothing and fall back to next iteration
+    graph_pdl->print(llvm::dbgs() << "Debug. pdl: ");
+    if (verify(graph_pdl, true).failed()) {
+      llvm::errs() << "Error verifying pdl\n";
+      abort();
     }
-  } else {
-    // add
-    D[fp] = graph_pdl;
-  }
+    // get existing rewrites, check if the new graph can be infered
+    auto fp = fingerprint(graph);
+    if (D.count(fp)) {
+      // check
+      auto old_graph = D[fp];
+      if (can_be_infered_from_existing_rewrites(graph_pdl, old_graph)) {
+        // pass
+      } else {
+        // new rewrite found! add
+        rewrites.emplace_back(old_graph, graph_pdl);
+      }
+    } else {
+      // add
+      D[fp] = graph_pdl;
+    }
+  }();
+
   if (depth >= 2) return;
   dfs_broadcast_binary_ops<
 #define GET_OP_LIST
@@ -278,39 +283,59 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
 }
 
 ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
-  // FIXME: start from pdl.pattern
-  auto builder = this->builder;  // copy a new builder
+  int line{};
   static int graph_index{};
+  graph_index++;
+
+  std::function<Location()> loc = [this, &line]() {
+    return Loc("pdl-" + std::to_string(graph_index) + ".mlir", line++, 0);
+  };
+  auto builder = this->builder;  // copy a new builder
+
+  auto new_pdl_module = ModuleOp::create(loc());
+  builder.setInsertionPointToEnd(&new_pdl_module.getBodyRegion().getBlocks().back());
+
+  auto pat = builder.create<pdl::PatternOp>(loc());
+  assert(pat.body().getBlocks().size() == 1 and "hello?");
+  builder.setInsertionPointToEnd(&pat.body().getBlocks().back());
+
   // go over the operands
   BlockAndValueMapping bav{};
-  auto new_pdl_module = ModuleOp::create(FileLineColLoc::get(
-      builder.getStringAttr("pdl-" + std::to_string(graph_index++) + ".mlir"), 0, 0));
   // set insertion point
-  builder.setInsertionPointToEnd(&new_pdl_module.getBodyRegion().getBlocks().back());
-  auto loc = new_pdl_module.getLoc();
   // clone graph to the new pdl module
   assert(graph->getNumRegions() == 1);
   for (Block& block : graph.getBodyRegion().getBlocks()) {
     for (Operation& op : block.getOperations()) {
-      if (llvm::isa<FrozenVariableOp>(op)) {
+      if (auto frozen = llvm::dyn_cast<FrozenVariableOp>(op)) {
+        if (frozen->use_empty()) continue;
         // create pdl operand op
-        auto pdlop = builder.create<OperandOp>(loc);
-        bav.map(op.getResult(0), pdlop);  // can this compile?
-        loc = pdlop->getLoc();
+        auto pdlop = builder.create<OperandOp>(loc());
+        bav.map(frozen, pdlop);
       } else {
         // normal op, create operation op
         SmallVector<Value> pdl_operands;
         for (auto operand : op.getOperands()) { pdl_operands.push_back(bav.lookup(operand)); }
         // TODO: fill type ranges
-        // auto tyty = pdl::TypeType();
-        // auto typeop = builder.create<pdl::TypeOp>(loc, tyty, nullptr);
-        auto pdlop =
-            builder.create<OperationOp>(loc, op.getResultTypes(), pdl_operands, op.getAttrs());
+        NamedAttrList attrs;
+        attrs.set("attributeNames", builder.getArrayAttr({}));
+        attrs.set("operand_segment_sizes",
+                  builder.getI32VectorAttr({static_cast<int>(pdl_operands.size()), 0, 0}));
+        // attrs_copy.
+        auto op_ty = pdl::OperationType::Base::get(context);
+        auto pdlop = builder.create<OperationOp>(loc(), op_ty, pdl_operands, attrs);
         // what if the original op has multiple results? pdl OperationOp is OneResult??
-        for (auto result : op.getResults()) { bav.map(result, pdlop->getResult(0)); }
-        loc = pdlop->getLoc();
+        int idx{};
+        auto vt = pdl::ValueType::Base::get(context);
+
+        for (auto result : op.getResults()) {
+          bav.map(result, builder.create<pdl::ResultOp>(loc(), vt, pdlop, idx));
+        }
       }
     }
+  }
+  if (pat.body().getBlocks().front().empty()) {
+    new_pdl_module->destroy();
+    return nullptr;
   }
   return new_pdl_module;
 }
