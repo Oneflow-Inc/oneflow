@@ -216,4 +216,3 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 #endif // ONEFLOW_OPS
-
