@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace py = pybind11;
 
@@ -39,6 +40,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
       .def(py::self == py::self)
       .def(py::hash(py::self));
+
+  m.def(
+      "max_alignment_size", []() { return ep::kMaxAlignmentRequirement; },
+      py::return_value_policy::copy);
 }
 
 }  // namespace oneflow
