@@ -38,25 +38,25 @@ add_docstr(
         >>> import numpy as np
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> input = flow.Tensor(x)
-        >>> (values, indices) = flow.sort(input)
-        >>> values
+        >>> result = flow.sort(input)
+        >>> result.values
         tensor([[1., 2., 3., 7., 8.],
                 [1., 2., 3., 4., 9.]], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([[0, 4, 1, 3, 2],
                 [0, 4, 3, 2, 1]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.sort(input, descending=True)
-        >>> values
+        >>> result = flow.sort(input, descending=True)
+        >>> result.values
         tensor([[8., 7., 3., 2., 1.],
                 [9., 4., 3., 2., 1.]], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([[2, 3, 1, 4, 0],
                 [1, 2, 3, 4, 0]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.sort(input, dim=0)
-        >>> values
+        >>> result = flow.sort(input, dim=0)
+        >>> result.values
         tensor([[1., 3., 4., 3., 2.],
                 [1., 9., 8., 7., 2.]], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([[0, 0, 1, 1, 0],
                 [1, 1, 0, 0, 1]], dtype=oneflow.int32)
  
