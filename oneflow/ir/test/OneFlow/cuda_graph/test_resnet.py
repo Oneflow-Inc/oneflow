@@ -40,6 +40,7 @@ def _test_okl_resnet(test_case):
     x = x.cuda()
     resnet.to("cuda")
 
+    eager_res = resnet(x)
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -50,12 +51,10 @@ def _test_okl_resnet(test_case):
             return self.resnet(x)
 
     graph_to_run = GraphToRun()
-    
-    warm = 1
-    batch = 10
-    for _ in range(warm):
-        for i in range(batch):
-            lazy_res = graph_to_run(x)
+    lazy_res = graph_to_run(x)
+    test_case.assertTrue(
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-4)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
