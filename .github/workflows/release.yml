@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-pdll-to-checksum
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@nv-wheels
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -46,6 +46,7 @@ jobs:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
             cu118
+            cu117
             cu116
             cu112
             cu102
@@ -75,7 +76,7 @@ jobs:
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
+      - uses: Oneflow-Inc/get-oneflow@nv-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -93,12 +94,13 @@ jobs:
           retry-failed-build: true
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' }}
+          use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
             3.7
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-pdll-to-checksum
+      - uses: Oneflow-Inc/get-oneflow@nv-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
