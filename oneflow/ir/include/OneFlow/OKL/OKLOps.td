@@ -237,7 +237,7 @@ def LowerOKLToLLVMCallPass : Pass<"lower-okl-to-llvm-call", "ModuleOp"> {
 }
 
 def TagCudaGraphSupportPass : Pass<"tag-cuda-graph-support", "ModuleOp"> {
-  let summary = "tag cuda graph support according to child ops";
+  let summary = "tag cuda graph support according to its wrapped ops";
   let constructor = "mlir::okl::createTagCudaGraphSupportPass()";
 }
 
