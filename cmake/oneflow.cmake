@@ -322,6 +322,16 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
+if (BUILD_ROCM)
+  # AMD compiler fails to compile these three files with '-O1/2/3'.
+  # The value of `COMPILE_OPTIONS` target property is added after CMAKE_<LANG>_FLAGS_<CONFIG>,
+  # so '-O0' will override '-O1/2/3'.
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/user/kernels/median_with_indices_kernel.cu
+                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/radix_sort_top_k_kernel.cu
+                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_sort_kernel.cu
+                              PROPERTIES COMPILE_OPTIONS "-O0")
+endif()
+
 if(BUILD_CUDA)
   string(JOIN "," CUDA_REAL_ARCHS ${CUDA_REAL_ARCHS_LIST})
   set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/core/hardware/cuda_device_descriptor.cpp
