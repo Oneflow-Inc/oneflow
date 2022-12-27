@@ -28,14 +28,14 @@ namespace {
 // launch bounds used for kernels
 const uint32_t block_size_bound = 256;
 const uint32_t grid_size_bound = 4;
-// number of randoms given by distributions like curand_uniform4, curand_uniform2_double
-// used in calculating philox offset.
-const uint32_t curand4_engine_calls = 4;
 
 std::tuple<uint64_t, dim3, dim3> calc_execution_policy(int64_t total_elements,
                                                        ep::CudaStream* stream) {
   const uint64_t numel = static_cast<uint64_t>(total_elements);
   const uint32_t block_size = block_size_bound;
+  // number of randoms given by distributions like curand_uniform4, curand_uniform2_double
+  // used in calculating philox offset.
+  const uint32_t curand4_engine_calls = 4;
   const uint32_t unroll = curand4_engine_calls;
   dim3 dim_block(block_size);
   dim3 grid((numel + block_size - 1) / block_size);
@@ -50,12 +50,11 @@ std::tuple<uint64_t, dim3, dim3> calc_execution_policy(int64_t total_elements,
   return std::make_tuple(counter_offset, grid, dim_block);
 }
 
-template<typename T, typename ComputeType>
+template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel, uint64_t seed,
                                                                    uint64_t offset, ComputeType mean,
                                                                    ComputeType std, T* out_ptr) {
-  int32_t unroll_factor = 2;
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
@@ -76,12 +75,11 @@ __global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel
   }
 }
 
-template<typename T, typename ComputeType>
+template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__ void distribution_elementwise_grid_stride_kernel_float(int32_t numel, uint64_t seed,
                                                                   uint64_t offset,  ComputeType mean,
                                                                   ComputeType std, T* out_ptr) {
-  int32_t unroll_factor = 4;
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
@@ -129,11 +127,11 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
 
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (std::is_same<T, double>::value) {
-    distribution_elementwise_grid_stride_kernel_double<T, ComputeType><<<
+    distribution_elementwise_grid_stride_kernel_double<T, ComputeType, 2><<<
       grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_), dptr);
   } else {
-    distribution_elementwise_grid_stride_kernel_float<T, ComputeType><<<
+    distribution_elementwise_grid_stride_kernel_float<T, ComputeType, 4><<<
       grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_), dptr);
   }
