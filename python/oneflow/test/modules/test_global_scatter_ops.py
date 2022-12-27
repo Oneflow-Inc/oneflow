@@ -32,7 +32,7 @@ def _test_scatter_random_data(test_case, placement):
     )
     index = (
         torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp=random_sbp(placement, max_dim=2),)
     )
     dim = random(0, 2).to(int).value()
@@ -46,7 +46,7 @@ def _test_scatter_scalar_random_data(test_case, placement):
     )
     index = (
         torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp=random_sbp(placement, max_dim=2),)
     )
     dim = random(0, 2).to(int).value()
@@ -63,7 +63,7 @@ def _test_scatter_add_random_data(test_case, placement):
     )
     index = (
         torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp=random_sbp(placement, max_dim=2),)
     )
     dim = random(0, 2).to(int).value()

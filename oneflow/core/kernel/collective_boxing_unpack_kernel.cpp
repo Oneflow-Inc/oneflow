@@ -36,6 +36,8 @@ void CollectiveBoxingUnpackKernel::ForwardDataContent(KernelContext* ctx) const 
   const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
   const int64_t num_ranks = unpack_conf.num_ranks();
   const Shape logical_shape(unpack_conf.logical_shape());
+  // skip 0size tensor boxing
+  if (logical_shape.elem_cnt() == 0) { return; }
   const bool need_transpose = !((unpack_conf.src_sbp_parallel().has_split_parallel()
                                  && unpack_conf.src_sbp_parallel().split_parallel().axis() == 0)
                                 || unpack_conf.src_sbp_parallel().has_broadcast_parallel()

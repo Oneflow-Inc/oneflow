@@ -115,7 +115,7 @@ def _test_fused_get_center_dist_impl(test_case, device, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGetBounddingBoxesCoordModule(flow.unittest.TestCase):
+class TestGetCenterDistModule(flow.unittest.TestCase):
     def test_fused_get_center_dist(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_get_center_dist_impl]

@@ -963,8 +963,7 @@ class DualObject:
                             )
                 else:
                     oneflow = oneflow.to_global(
-                        placement=flow.env.all_device_placement("cpu"),
-                        sbp=[flow.sbp.broadcast,],
+                        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,],
                     )
             if testing:
                 dual_modules_to_test.append(self)
@@ -1328,7 +1327,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:
@@ -1359,7 +1358,7 @@ def choice_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:

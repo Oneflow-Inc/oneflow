@@ -248,6 +248,7 @@ DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
 DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
 DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
+DIRECT_PASS_FUNC(PyTensorObject_equal, functional::equal)
 DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal)
 DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less)
 DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal)
@@ -303,6 +304,7 @@ DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
 DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
+DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -784,8 +786,6 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
 
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
-  auto tensor = PyTensor_Unpack(self);
-  std::shared_ptr<Tensor> value_tensor;
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
       << Error::TypeError() << "tensor_setitem(): argument 'index' must be index, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(item)));
@@ -794,6 +794,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
   const auto& index_item = functional::PyUnpackTensorIndex(item);
 
+  auto tensor = PyTensor_Unpack(self);
   // NOTE: use masked_fill_(local,global) to avoid D2H in TensorSetItem if index is bool tensor
   if (functional::PyScalarCheck(value) && index_item.size() == 1 && index_item[0].IsTensor()) {
     const auto& index_tensor = index_item[0].tensor();
@@ -805,35 +806,41 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     }
   }
 
-  if (tensor->is_global()) {
-    Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
-    auto ndsbp = ASSERT(tensor->nd_sbp());
-    std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
-                                         ASSERT(MakeBroadcastSbpParallel()));
-    if (functional::PyScalarCheck(value)) {
-      Scalar value_scalar = functional::PyUnpackScalar(value);
-      value_tensor = ASSERT_PTR(
-          functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
+  std::shared_ptr<Tensor> value_tensor;
+  {
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
+      auto ndsbp = ASSERT(tensor->nd_sbp());
+      std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
+                                           ASSERT(MakeBroadcastSbpParallel()));
+      if (functional::PyScalarCheck(value)) {
+        Scalar value_scalar = functional::PyUnpackScalar(value);
+        value_tensor = ASSERT_PTR(
+            functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
+      } else {
+        value_tensor = PyTensor_Unpack(value);
+        CHECK_OR_THROW(value_tensor->is_global())
+            << Error::RuntimeError()
+            << "tensor_setitem(): value must be a global tensor when self is global";
+        value_tensor = ASSERT_PTR(
+            functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false));
+      }
     } else {
-      value_tensor = PyTensor_Unpack(value);
-      CHECK_OR_THROW(value_tensor->is_global())
-          << Error::RuntimeError()
-          << "tensor_setitem(): value must be a global tensor when self is global";
-      value_tensor =
-          ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false));
-    }
-  } else {
-    if (functional::PyScalarCheck(value)) {
-      Scalar value_scalar = functional::PyUnpackScalar(value);
-      value_tensor = ASSERT_PTR(
-          functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
-    } else {
-      value_tensor = PyTensor_Unpack(value);
-      CHECK_OR_THROW(value_tensor->is_local())
-          << Error::RuntimeError()
-          << "tensor_setitem(): value must be a local tensor when self is local";
-      Optional<Symbol<Device>> device = ASSERT(tensor->device());
-      value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
+      if (functional::PyScalarCheck(value)) {
+        // NOTE: initialize value_tensor in eager mode
+        LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled=*/false);
+        Scalar value_scalar = functional::PyUnpackScalar(value);
+        value_tensor = ASSERT_PTR(functional::Constant(Shape({}), value_scalar, tensor->dtype(),
+                                                       ASSERT(tensor->device())));
+      } else {
+        value_tensor = PyTensor_Unpack(value);
+        CHECK_OR_THROW(value_tensor->is_local())
+            << Error::RuntimeError()
+            << "tensor_setitem(): value must be a local tensor when self is local";
+        Optional<Symbol<Device>> device = ASSERT(tensor->device());
+        value_tensor =
+            ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
+      }
     }
   }
   ASSERT(functional::TensorSetItem(tensor, index_item, value_tensor));
@@ -889,6 +896,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -946,6 +954,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
     {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -1020,7 +1029,7 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
       if (self == Py_None || other == Py_None) return Py_False;
-      return functional::equal(NULL, tuple.get(), NULL);
+      return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
     case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);

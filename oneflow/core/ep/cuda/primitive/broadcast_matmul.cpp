@@ -57,6 +57,7 @@ cudaDataType_t GetCudaDataType(DataType data_type) {
 union CublasScalarParameter {
   double d;
   float s;
+  half h;
 };
 
 CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
@@ -65,6 +66,8 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t com
     sp.d = scalar.Value<double>();
   } else if (compute_type == CUDA_R_32F) {
     sp.s = scalar.Value<float>();
+  } else if (compute_type == CUDA_R_16F) {
+    sp.h = static_cast<half>(scalar.Value<float>());
   } else {
     UNIMPLEMENTED();
   }
@@ -75,7 +78,15 @@ cudaDataType_t GetComputeType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
-    case kFloat16: return CUDA_R_32F;
+    case kFloat16: {
+      const bool allow_half_accumulation =
+          ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+      if (allow_half_accumulation) {
+        return CUDA_R_16F;
+      } else {
+        return CUDA_R_32F;
+      }
+    }
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUDA_R_32F;
 #endif  // CUDA_VERSION >= 11000

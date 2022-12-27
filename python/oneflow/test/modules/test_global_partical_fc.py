@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestParitalFC(flow.unittest.TestCase):
     @globaltest
     def test_parital_fc(test_case):
-        placement = flow.env.all_device_placement("cuda")
+        placement = flow.placement.all("cuda")
         w = flow.randn(5000, 128, placement=placement, sbp=flow.sbp.split(0))
         label = flow.randint(
             0, 5000, (512,), placement=placement, sbp=flow.sbp.split(0)

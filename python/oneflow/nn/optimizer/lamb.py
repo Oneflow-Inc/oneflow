@@ -17,7 +17,7 @@ from typing import Callable, Dict, Iterator, List, Union, Tuple
 
 import math
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 
 
