@@ -46,10 +46,10 @@ size_t GetPackSize(size_t num_dims, const int64_t* src_dims, const void* src,
 
 template<typename Src, typename Dst, size_t max_dims, typename IndexType>
 struct BroadcastElementwiseUnaryParams {
-  IndexToOffsetWithStrideCalculator<IndexType, max_dims> src_index_to_offset_helper;
   OffsetToIndexWithStrideCalculator<IndexType, max_dims> dst_offset_to_index_helper;
-  IndexToOffsetWithStrideCalculator<IndexType, max_dims> dst_index_to_offset_helper;
   size_t num_dims;
+  int64_t src_strides[max_dims];
+  int64_t dst_strides[max_dims];
   IndexType src_index_mask[max_dims];
   IndexType count{};
   const Src* src{};
@@ -82,32 +82,40 @@ template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_si
          typename IndexType>
 __global__ void BroadcastElementwiseUnaryGpu(
     BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
-  using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
+ using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
   using StorePack = cuda::elementwise::Packed<Dst, pack_size>;
   const LoadPack* src = reinterpret_cast<const LoadPack*>(params.src);
   StorePack* dst = reinterpret_cast<StorePack*>(params.dst);
 
-  IndexType src_index[max_dims];
-  IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
+  const int64_t* src_strides = params.src_strides;
+  const int64_t* dst_strides = params.dst_strides;
   auto functor = UnaryFunctor<DeviceType::kCUDA, op, Dst, Src>(params.attr0, params.attr1);
 
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
-    params.dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
+    IndexType src_offset = 0;
+    IndexType dst_offset = 0;
+    IndexType remaining = offset;
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
-      if (i < num_dims) { src_index[i] = params.src_index_mask[i] * dst_index[i]; }
+      if (i < num_dims - 1) { 
+        IndexType dst_index = params.dst_offset_to_index_helper.divides(remaining, i);
+        remaining = remaining - params.dst_offset_to_index_helper.mul(dst_index, i);
+        dst_offset += dst_index * dst_strides[i];
+        src_offset += params.src_index_mask[i] * dst_index * src_strides[i];
+      } else if (i == num_dims - 1) {
+        dst_offset += remaining * dst_strides[i];
+        src_offset += params.src_index_mask[i] * remaining * src_strides[i]; 
+      } else {
+        break;
+      }
     }
-    const IndexType src_offset =
-        params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
+
+    
     LoadPack src_pack = src[src_offset];
     StorePack dst_pack;
 #pragma unroll
     for (int j = 0; j < pack_size; ++j) { dst_pack.elem[j] = functor(src_pack.elem[j]); }
-    IndexType dst_offset = offset;
-    if (!params.dst_is_contiguous) {
-      dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
-    }
     // printf("dst_index(%d, %d, %d, %d) dst_index %d\n", dst_offet, dst_index);
     dst[dst_offset] = dst_pack;
   }
@@ -120,13 +128,13 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
                   const int64_t* dst_strides, Dst* dst, bool continuous_output, Scalar attr0,
                   Scalar attr1, size_t count) {
   BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params;
-  for (size_t i = 0; i < num_dims; ++i) { params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1; }
-  params.src_index_to_offset_helper =
-      IndexToOffsetWithStrideCalculator<IndexType, max_dims>(src_strides, num_dims);
+ for (size_t i = 0; i < num_dims; ++i) { 
+    params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1; 
+    params.src_strides[i] = src_strides[i];
+    params.dst_strides[i] = dst_strides[i];
+    }
   params.dst_offset_to_index_helper =
       OffsetToIndexWithStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
-  params.dst_index_to_offset_helper =
-      IndexToOffsetWithStrideCalculator<IndexType, max_dims>(dst_strides, num_dims);
   params.num_dims = num_dims;
   params.src = src;
   params.dst = dst;
