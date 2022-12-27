@@ -49,19 +49,20 @@ def do_test_compute_op(test_case, ndim, placement, sbp):
     dims = [random(1, 5) * 2 for i in range(ndim)]
     x = random_tensor(ndim, *dims, dtype=int, low=0, high=5)
     x = x.to_global(placement=placement, sbp=sbp)
-    x=x.to("cpu")
+    x = x.to("cpu")
     flow_input = x.oneflow.detach()
     torch_input = x.pytorch.detach()
 
     for op in test_compute_op_list:
         if op not in ["**"]:
-            random_numpy = np.random.randint(1,30000,size=list(flow_input.shape))
+            random_numpy = np.random.randint(1, 30000, size=list(flow_input.shape))
         else:
-            random_numpy = np.random.randint(1,5,size=list(flow_input.shape))
+            random_numpy = np.random.randint(1, 5, size=list(flow_input.shape))
 
         z_flow = eval(f"flow_input {op} random_numpy")
         z_torch = eval(f"torch_input {op} random_numpy")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
+
 
 class TestGlobalTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     @globaltest

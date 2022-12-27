@@ -67,11 +67,13 @@ def _test_compute_operator(test_case, shape):
         z_torch = eval(f"x_torch {op} random_numpy")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
 
-        #TODO:support for "+=" compatibility
+        # TODO:support for "+=" compatibility
         if op not in ["**,+"]:
             exec(f"x_flow {op}= random_numpy")
             exec(f"x_torch {op}= random_numpy")
-            test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy(), 1e-05, 1e-05))
+            test_case.assertTrue(
+                np.allclose(z_flow.numpy(), z_torch.numpy(), 1e-05, 1e-05)
+            )
 
 
 def _test_logic_operator(test_case, shape):
