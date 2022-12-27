@@ -226,6 +226,7 @@ Tensor class reference
     Tensor.dtype 
     Tensor.element_size
     Tensor.eq
+    Tensor.equal
     Tensor.erf
     Tensor.erfc
     Tensor.erfinv
@@ -382,3 +383,4 @@ Tensor class reference
     Tensor.isclose
     Tensor.allclose
     Tensor.broadcast_to
+    Tensor.unique

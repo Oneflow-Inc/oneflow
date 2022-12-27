@@ -906,7 +906,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
-        placement = flow.env.all_device_placement("cpu")
+        placement = flow.placement.all("cpu")
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
@@ -916,7 +916,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
 
-        placement = flow.env.all_device_placement("cuda")
+        placement = flow.placement.all("cuda")
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 

@@ -30,7 +30,6 @@ def grad_setting_fn(module, param):
             param.grad = flow._C.slice_view_1d_contiguous(
                 bucket_tensor, start, start + param.numel()
             ).view(param.shape)
-            param._is_grad_acc_inplace = True
         return grad
 
     return grad_setting
@@ -66,7 +65,11 @@ def allreduce_fn(module, param):
 
 
 def DistributedDataParallel(
-    module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 10
+    module: "flow.nn.Module",
+    *,
+    broadcast_buffers: bool = True,
+    broadcast_parameters: bool = True,
+    bucket_size: int = 10
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
     if parse_boolean_from_env("ONEFLOW_DISABLE_VIEW", False):
@@ -75,13 +78,14 @@ def DistributedDataParallel(
         )
         bucket_size = 1
     world_size = flow.env.get_world_size()
-    with flow.no_grad():
-        for x in module.parameters():
-            requires_grad = x.requires_grad
-            flow._C.comm_broadcast(x, inplace=True)
-            # TODO: fix the bug that x's requires_grad is discarded
-            # after flow._C.comm_broadcast
-            x.requires_grad_(requires_grad)
+    if broadcast_parameters:
+        with flow.no_grad():
+            for x in module.parameters():
+                requires_grad = x.requires_grad
+                flow._C.comm_broadcast(x, inplace=True)
+                # TODO: fix the bug that x's requires_grad is discarded
+                # after flow._C.comm_broadcast
+                x.requires_grad_(requires_grad)
 
     all_grad_size = sum([x.numel() for x in module.parameters()])
     if all_grad_size > 0:

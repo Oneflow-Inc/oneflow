@@ -1100,9 +1100,12 @@ add_docstr(
         ...    [ 0.3180, -0.6993,  1.0436,  0.0438,  0.2270],
         ...    [-0.2751,  0.7303,  0.2192,  0.3321,  0.2488],
         ...    [ 1.0778, -1.9510,  0.7048,  0.4742, -0.7125]])
-        >>> flow.median(a, 1)
-        (tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32), tensor([1, 4, 4, 3], dtype=oneflow.int64))
-    
+        >>> result=flow.median(a, 1)
+        >>> result.values
+        tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 4, 4, 3], dtype=oneflow.int64)
+        
     ..
         Feature Stage of Operator [index_select].
         - Maintainer List [@simonJJJ]

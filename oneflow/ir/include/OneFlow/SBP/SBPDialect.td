@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
-#define ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
+#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT
+#define ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT
 
 include "mlir/IR/OpBase.td"
 
@@ -34,4 +34,4 @@ def SBP_Dialect : Dialect {
     let useDefaultAttributePrinterParser = 1;
 }
 
-#endif // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
+#endif // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT

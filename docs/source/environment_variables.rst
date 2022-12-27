@@ -70,7 +70,7 @@ The default value is empty, but will load ``libibverbs.so.1``, ``libibverbs.so``
 
 Enable ``debug`` mode, ``ONEFLOW_DEBUG`` can do. 
 
-If ``debug`` mode is on, it will output different ``prototxt`` and ``dot``. The automatically inserted boxing information will be printed to the log file under eager global mode.
+If ``debug`` mode is on, it will output more INFO level logs, different ``prototxt`` and ``dot`` to files. The automatically inserted boxing information will be printed to the log file under eager global mode.
 
 Values accepted
 ^^^^^^^^^^^^^^^
