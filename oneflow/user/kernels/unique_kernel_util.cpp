@@ -28,8 +28,15 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
   static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes, bool sorted) {
+    std::vector<int64_t> sorted_idx(n);
+    std::iota(sorted_idx.begin(), sorted_idx.end(), 0);
+    if (sorted) {
+      std::sort(sorted_idx.begin(), sorted_idx.end(),
+                [&in](size_t a, size_t b) { return in[a] < in[b]; });
+    }
+
     HashMap<KEY, IDX> map;
-    FOR_RANGE(int64_t, i, 0, n) {
+    for (int64_t i : sorted_idx) {
       KEY in_i = in[i];
       auto it = map.find(in_i);
       if (it == map.end()) {
@@ -45,31 +52,8 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
       }
     }
     *num_unique = map.size();
-
-    if (sorted) {
-      /*HashMap cannot be sorted, here the key is sorted using the auxiliary Vector.
-      After that the index correction of the output is performed.*/
-      IDX index_now = 0;
-      std::vector<KEY> map_keys(map.size());
-      for (auto it = map.begin(); it != map.end(); ++it) {
-        map_keys[index_now] = it->first;
-        if (count != nullptr) { count[index_now] = 0; }
-        index_now++;
-      }
-      std::sort(map_keys.begin(), map_keys.end());
-
-      for (int i = 0; i < map.size(); i++) { map[map_keys[i]] = i; }
-
-      FOR_RANGE(int64_t, i, 0, n) {
-        KEY in_i = in[i];
-        auto it = map.find(in_i);
-        IDX idx = it->second;
-        idx_out[i] = idx;
-        unique_out[idx] = in_i;
-        if (count != nullptr) { count[idx] += 1; }
-      }
-    }
   }
+
   static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes) {
     *workspace_size_in_bytes = 1;
