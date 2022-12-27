@@ -1389,6 +1389,8 @@ hipdnnStatus_t hipdnnSetConvolutionNdDescriptor(
                         << arrayLength << std::flush);
 
     int pad_h, pad_w, u, v, d_h, d_w;
+    miopenConvolutionMode_t miConvMode;
+    CHECK_HIPDNN(hipTomiopenConvolutionMode(mode,&miConvMode));
 
     hipdnnConvolutionDescriptor_t convDesc_cast =
                                     ((structConvDesc_t*)(convDesc))->descriptor;
@@ -1418,10 +1420,15 @@ hipdnnStatus_t hipdnnSetConvolutionNdDescriptor(
         v = filterStrideA[1];
         d_h = dilationA[0];
         d_w = dilationA[1];
-        CHECK_MIO(miopenInitConvolutionDescriptor(
-                                    (miopenConvolutionDescriptor_t)convDesc_cast,
-                                    miopenConvolution, pad_h,
-                                    pad_w, u, v, d_h, d_w) );
+        // CHECK_MIO(miopenInitConvolutionDescriptor(
+        //                             (miopenConvolutionDescriptor_t)convDesc_cast,
+        //                             miopenConvolution, pad_h,
+        //                             pad_w, u, v, d_h, d_w) );
+
+        CHECK_MIO(miopenInitConvolutionNdDescriptor((miopenConvolutionDescriptor_t)convDesc_cast,
+                                       arrayLength, const_cast<int*>(padA), const_cast<int*>(filterStrideA),
+                                       const_cast<int*>(dilationA), miConvMode));
+
         // Populate the map container with key being newly created 2Ddescriptor
         // and value a 3 dim array with index mapping as
         // 0-pad, 1-stride and 2-dilation
@@ -2994,13 +3001,17 @@ hipdnnStatus_t hipdnnSetFilterNdDescriptor(
     HIPDNN_OPEN_LOG_C("ENTER hipdnnSetFilterNdDescriptor " << filterDesc
                                                            << std::flush);
 
-    int strideA[nbDims - 1];
+    // int strideA[nbDims - 1];
+    int strideA[nbDims];
 
     for (int k = nbDims - 1; k >= 0; k--) {
         strideA[k] = (k != nbDims - 1) ? strideA[k + 1] * filterDimA[k + 1] : 1;
     }
     CHECK_HIPDNN(hipTomiopenDataType(dataType, &moDT));
-    int strideDimA[nbDims - 1];
+    // int strideDimA[nbDims - 1];
+
+    int strideDimA[nbDims];
+    
     for (int k = nbDims - 1; k >= 0; k--) {
         strideDimA[k] =
             (k != nbDims - 1) ? strideDimA[k + 1] * filterDimA[k + 1] : 1;
