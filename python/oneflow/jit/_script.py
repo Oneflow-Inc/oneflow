@@ -28,3 +28,14 @@ def script(
         "The oneflow.jit.script interface is just to align the torch.jit.script interface and has no practical significance."
     )
     return obj
+
+
+def ignore(drop=False, **kwargs):
+    warnings.warn(
+        "The oneflow.jit.ignore interface is just to align the torch.jit.ignore interface and has no practical significance."
+    )
+
+    def decorator(fn):
+        return fn
+
+    return decorator
