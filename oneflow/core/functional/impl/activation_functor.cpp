@@ -231,6 +231,20 @@ class FastGeluGradFunctor : public BinaryFunctor {
   }
 };
 
+class QuickGeluFunctor : public UnaryFunctor {
+ public:
+  QuickGeluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu").Input("x").Output("y").Build());
+  }
+};
+
+class QuickGeluGradFunctor : public BinaryFunctor {
+ public:
+  QuickGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
 class GluFunctor {
  public:
   GluFunctor() {}
@@ -698,6 +712,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
   m.add_functor<impl::FastGeluFunctor>("FastGelu");
   m.add_functor<impl::FastGeluGradFunctor>("FastGeluGrad");
+  m.add_functor<impl::QuickGeluFunctor>("QuickGelu");
+  m.add_functor<impl::QuickGeluGradFunctor>("QuickGeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
