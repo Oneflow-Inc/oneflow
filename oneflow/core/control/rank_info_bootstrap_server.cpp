@@ -99,7 +99,6 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
                      << retry_idx + 1 << " times, total ranks(world_size): " << world_size_
                      << ", ready ranks: " << valid_size;
       }
-      printf("\n RankInfoBootstrapServer::CheckServerRpcs() >>>> times:%d fail!", int(retry_idx));
       conv_.wait(lock);
       std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
     }
