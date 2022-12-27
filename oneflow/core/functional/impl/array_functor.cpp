@@ -3733,7 +3733,6 @@ class UniqueWithCountsFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx", "sorted");
     attrs.SetAllAttrs(dtype->data_type(), sorted);
     std::shared_ptr<TensorTuple> output;
-
     if (return_counts) {
       output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *unique_with_counts_op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));

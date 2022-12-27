@@ -34,15 +34,15 @@ def _test_unique_unsorted(test_case, device, return_inverse, return_counts):
     input = input.to(device).to(dtype)
     oneflow_output = flow.unique(
         input.oneflow,
+        sorted=False,
         return_inverse=return_inverse,
         return_counts=return_counts,
-        sorted=False,
     )
     torch_output = torch_ori.unique(
         input.pytorch,
+        sorted=False,
         return_inverse=return_inverse,
         return_counts=return_counts,
-        sorted=False,
     )
 
     if not return_inverse and not return_counts:
@@ -91,15 +91,15 @@ def _test_unique_sorted(test_case, device, return_inverse, return_counts):
     input = input.to(device).to(dtype)
     oneflow_output = flow.unique(
         input.oneflow,
+        sorted=True,
         return_inverse=return_inverse,
         return_counts=return_counts,
-        sorted=True,
     )
     torch_output = torch_ori.unique(
         input.pytorch,
+        sorted=True,
         return_inverse=return_inverse,
         return_counts=return_counts,
-        sorted=True,
     )
 
     if not return_inverse and not return_counts:

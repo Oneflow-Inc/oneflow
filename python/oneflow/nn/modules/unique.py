@@ -17,7 +17,7 @@ import oneflow as flow
 
 
 def unique_op(
-    input, *, sorted=True, return_inverse=False, return_counts=False, dtype=flow.int
+    input, sorted=True, return_inverse=False, return_counts=False, dtype=flow.int
 ):
     r"""
     Returns the unique elements of the input tensor.

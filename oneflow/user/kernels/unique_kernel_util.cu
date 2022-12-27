@@ -44,7 +44,9 @@ struct UniqueKernelUtil<DeviceType::kCUDA, KEY, IDX> {
 template<typename KEY, typename IDX>
 void UniqueKernelUtil<DeviceType::kCUDA, KEY, IDX>::Unique(
     ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out, IDX* idx_out,
-    void* workspace, int64_t workspace_size_in_bytes, const bool sorted) {
+    void* workspace, int64_t workspace_size_in_bytes,
+    const bool
+        sorted /* not used, always return sorted output in CUDA,it`s the same as torch.unique*/) {
   OF_CUDA_CHECK((cuda::unique::Launch<KEY, IDX>(kUniqueFlag, n, in, unique_out, num_unique, idx_out,
                                                 nullptr, workspace, workspace_size_in_bytes,
                                                 stream->As<ep::CudaStream>()->cuda_stream())));
@@ -53,7 +55,9 @@ void UniqueKernelUtil<DeviceType::kCUDA, KEY, IDX>::Unique(
 template<typename KEY, typename IDX>
 void UniqueKernelUtil<DeviceType::kCUDA, KEY, IDX>::UniqueWithCounts(
     ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out, IDX* idx_out,
-    IDX* count, void* workspace, int64_t workspace_size_in_bytes, const bool sorted) {
+    IDX* count, void* workspace, int64_t workspace_size_in_bytes,
+    const bool
+        sorted /* not used, always return sorted output in CUDA,it`s the same as torch.unique*/) {
   OF_CUDA_CHECK((cuda::unique::Launch<KEY, IDX>(
       kUniqueWithCountsFlag, n, in, unique_out, num_unique, idx_out, count, workspace,
       workspace_size_in_bytes, stream->As<ep::CudaStream>()->cuda_stream())));

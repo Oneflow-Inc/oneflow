@@ -26,10 +26,10 @@ def _test_unique_unsorted(test_case, placement, sbp):
         placement=placement, sbp=sbp
     )
     oneflow_output = flow.unique(
-        input.oneflow, return_inverse=True, return_counts=True, sorted=False
+        input.oneflow, sorted=False, return_inverse=True, return_counts=True
     )
     torch_output = torch_ori.unique(
-        input.pytorch, return_inverse=True, return_counts=True, sorted=False
+        input.pytorch, sorted=False, return_inverse=True, return_counts=True
     )
 
     oneflow_result, oneflow_indices, oneflow_counts = oneflow_output
@@ -62,10 +62,10 @@ def _test_unique_sorted(test_case, placement, sbp):
         placement=placement, sbp=sbp
     )
     oneflow_output = flow.unique(
-        input.oneflow, return_inverse=True, return_counts=True, sorted=True
+        input.oneflow, sorted=True, return_inverse=True, return_counts=True
     )
     torch_output = torch_ori.unique(
-        input.pytorch, return_inverse=True, return_counts=True, sorted=True
+        input.pytorch, sorted=True, return_inverse=True, return_counts=True
     )
 
     oneflow_result, oneflow_indices, oneflow_counts = oneflow_output

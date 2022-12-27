@@ -30,10 +30,8 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes, const bool sorted) {
     HashMap<KEY, IDX> map;
-
     FOR_RANGE(int64_t, i, 0, n) {
       KEY in_i = in[i];
-
       auto it = map.find(in_i);
       if (it == map.end()) {
         IDX idx = map.size();
@@ -53,7 +51,6 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
       /*HashMap cannot be sorted, here the key is sorted using the auxiliary Vector.
       After that the index correction of the output is performed.*/
       IDX index_now = 0;
-
       std::vector<KEY> map_keys(map.size());
       for (auto it = map.begin(); it != map.end(); ++it) {
         map_keys[index_now] = it->first;
