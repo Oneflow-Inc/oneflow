@@ -18,7 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetConvexDiagonalSquaredOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
 
   user_op::TensorDesc* c2 = ctx->MutOutputTensorDesc("c2", 0);
@@ -28,11 +29,12 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::InferLogicalTensorDesc(user_op::Inf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetConvexDiagonalSquaredOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return FusedYolov5GetConvexDiagonalSquaredOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
 
   user_op::TensorDesc* c2 = ctx->MutOutputTensorDesc("c2", 0);
@@ -40,7 +42,7 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::InferDataType(user_op::InferContext
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -58,7 +60,7 @@ Maybe<void> FusedGetConvexDiagonalSquaredOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
 
@@ -97,12 +99,12 @@ Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferPhysicalTensorDesc(
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredGradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  return FusedGetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(ctx);
+  return FusedYolov5GetConvexDiagonalSquaredGradOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->InputTensorDesc("b1_x1", 0);
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
@@ -132,7 +134,7 @@ Maybe<void> FusedGetConvexDiagonalSquaredGradOp::InferDataType(user_op::InferCon
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetConvexDiagonalSquaredGradOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetConvexDiagonalSquaredGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1.shape().NumAxes()) {
     ctx->NewBuilder()

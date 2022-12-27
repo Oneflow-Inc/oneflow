@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 
@@ -25,25 +24,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def torch_fused_get_convex_diagonal_squared(
-    b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, eps
-):
-    cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)
-    ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)
-    c2 = cw ** 2 + ch ** 2 + eps
-    return c2
+def torch_get_intersection_area(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2):
+    return (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) * (
+        torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)
+    ).clamp(0)
 
 
-def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
+def _test_fused_get_intersection_area_impl(test_case, device, shape):
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
             np.allclose(
                 a.detach().cpu().numpy(), b.detach().cpu().numpy(), rtol=rtol, atol=atol
             ),
-            f"\na\n{a.detach().cpu().numpy()}\n{'-' * 80}\nb:\n{b.detach().cpu().numpy()}\n{'*' * 80}\ndiff:\n{a.detach().cpu().numpy() - b.detach().cpu().numpy()}",
+            f"\na\n{a.detach().cpu().numpy()}\n{'-' * 80}\nb:\n{b.detach().cpu().numpy()}\n{'*' * 80}\ndiff:\n{a.detach().cpu().numpy() - b.detach().cpu().numpy()}\n",
         )
 
-    eps = 1e-8
     x = []
     torch_x = []
     for _ in range(8):
@@ -91,10 +86,10 @@ def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
         torch_x[6],
         torch_x[7],
     )
-    c2 = flow._C.fused_get_convex_diagonal_squared(
-        b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, eps
+    inter = flow._C.fused_yolov5_get_intersection_area(
+        b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2
     )
-    torch_c2 = torch_fused_get_convex_diagonal_squared(
+    torch_inter = torch_get_intersection_area(
         torch_b1_x1,
         torch_b1_x2,
         torch_b2_x1,
@@ -103,12 +98,11 @@ def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
         torch_b1_y2,
         torch_b2_y1,
         torch_b2_y2,
-        eps,
     )
-    compare(c2, torch_c2)
+    compare(inter, torch_inter)
 
-    c2.sum().backward()
-    torch_c2.sum().backward()
+    inter.sum().backward()
+    torch_inter.sum().backward()
     compare(b1_x1.grad, torch_b1_x1.grad)
     compare(b1_x2.grad, torch_b1_x2.grad)
     compare(b2_x1.grad, torch_b2_x1.grad)
@@ -120,10 +114,10 @@ def _test_fused_get_convex_diagonal_squared_impl(test_case, device, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGetCenterDistModule(flow.unittest.TestCase):
-    def test_fused_get_convex_diagonal_squared(test_case):
+class TestGetIntersectionAreaModule(flow.unittest.TestCase):
+    def test_fused_get_inter_intersection_area(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_fused_get_convex_diagonal_squared_impl]
+        arg_dict["test_fun"] = [_test_fused_get_intersection_area_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(583, 1), (759, 1), (1234, 1)]
         for arg in GenArgList(arg_dict):

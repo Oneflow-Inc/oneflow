@@ -18,7 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->InputTensorDesc("x1", 0);
   Shape x1_shape = x1.shape();
 
@@ -57,11 +58,12 @@ Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::Infer
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetBounddingBoxesCoordOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return FusedYolov5GetBounddingBoxesCoordOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->InputTensorDesc("x1", 0);
 
   user_op::TensorDesc* b1_x1 = ctx->MutOutputTensorDesc("b1_x1", 0);
@@ -91,7 +93,7 @@ Maybe<void> FusedGetBounddingBoxesCoordOp::InferDataType(user_op::InferContext* 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
   FOR_RANGE(int64_t, i, 0, x1.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -116,7 +118,8 @@ Maybe<void> FusedGetBounddingBoxesCoordOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1_diff = ctx->InputTensorDesc("b1_x1_diff", 0);
 
   user_op::TensorDesc* x1_diff = ctx->MutOutputTensorDesc("x1_diff", 0);
@@ -154,11 +157,12 @@ Maybe<void> FusedGetBounddingBoxesCoordGradOp::InferLogicalTensorDesc(user_op::I
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetBounddingBoxesCoordGradOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetBounddingBoxesCoordGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return FusedYolov5GetBounddingBoxesCoordGradOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordGradOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b1_x1_diff = ctx->InputTensorDesc("b1_x1_diff", 0);
 
   user_op::TensorDesc* x1_diff = ctx->MutOutputTensorDesc("x1_diff", 0);
@@ -188,7 +192,7 @@ Maybe<void> FusedGetBounddingBoxesCoordGradOp::InferDataType(user_op::InferConte
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetBounddingBoxesCoordGradOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetBounddingBoxesCoordGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& b1_x1_diff =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("b1_x1_diff", 0);
   FOR_RANGE(int64_t, i, 0, b1_x1_diff.shape().NumAxes()) {

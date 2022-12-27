@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedGetCiouResultOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
 
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
@@ -32,11 +32,11 @@ Maybe<void> FusedGetCiouResultOp::InferLogicalTensorDesc(user_op::InferContext* 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouResultOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetCiouResultOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCiouResultOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetCiouResultOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetCiouResultOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
 
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
@@ -48,7 +48,7 @@ Maybe<void> FusedGetCiouResultOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouResultOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& v = ctx->LogicalTensorDesc4InputArgNameAndIndex("v", 0);
   FOR_RANGE(int64_t, i, 0, v.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -63,7 +63,7 @@ Maybe<void> FusedGetCiouResultOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouResultGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
 
   user_op::TensorDesc* dv = ctx->MutOutputTensorDesc("dv", 0);
@@ -85,11 +85,11 @@ Maybe<void> FusedGetCiouResultGradOp::InferLogicalTensorDesc(user_op::InferConte
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouResultGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedGetCiouResultGradOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedYolov5GetCiouResultGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedYolov5GetCiouResultGradOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedGetCiouResultGradOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
 
   user_op::TensorDesc* dv = ctx->MutOutputTensorDesc("dv", 0);
@@ -107,7 +107,7 @@ Maybe<void> FusedGetCiouResultGradOp::InferDataType(user_op::InferContext* ctx) 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedGetCiouResultGradOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedYolov5GetCiouResultGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes()) {
     ctx->NewBuilder()

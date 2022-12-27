@@ -20,30 +20,39 @@ namespace oneflow {
 namespace one {
 
 const int32_t INPUT_LEN = 8;
-struct FusedCenterCaptureState : public AutoGradCaptureState {
+struct FusedGetConvexDiagonalSquaredCaptureState : public AutoGradCaptureState {
   std::vector<bool> requires_grad;
+  float eps = 1e-8;
 };
 
-class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
+class FusedYolov5GetConvexDiagonalSquaredGrad
+    : public OpExprGradFunction<FusedGetConvexDiagonalSquaredCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+  Maybe<void> Init(const OpExpr& op) override {
+    const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
 
-  Maybe<void> Capture(FusedCenterCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedGetConvexDiagonalSquaredCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), INPUT_LEN);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     for (int i = 0; i < INPUT_LEN; i++) {
       ctx->requires_grad.push_back(inputs.at(i)->requires_grad());
     }
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->eps = JUST(composed_attrs.GetAttr<float>("eps"));
     for (int i = 0; i < INPUT_LEN; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
 
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedCenterCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const FusedGetConvexDiagonalSquaredCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    const auto& rho2_diff = out_grads.at(0);
+    const auto& c2_diff = out_grads.at(0);
 
     const auto& b1_x1 = ctx->SavedTensors().at(0);
     const auto& b1_x2 = ctx->SavedTensors().at(1);
@@ -55,8 +64,8 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
     in_grads->resize(INPUT_LEN);
-    auto result = JUST(functional::FusedCenterGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1,
-                                                   b2_y2, rho2_diff));
+    auto result = JUST(functional::FusedYolov5GetConvexDiagonalSquaredGrad(
+        c2_diff, b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2, ctx->eps));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {
@@ -64,9 +73,13 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
     }
     return Maybe<void>::Ok();
   }
+
+ private:
+  AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_get_center_dist", FusedCenterGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_yolov5_get_convex_diagonal_squared",
+                               FusedYolov5GetConvexDiagonalSquaredGrad);
 
 }  // namespace one
 }  // namespace oneflow
