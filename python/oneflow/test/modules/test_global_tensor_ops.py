@@ -34,7 +34,9 @@ def _test_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
     test_case.assertEqual(input.dtype, target.dtype)
 
 
-def _test_local_to_global_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
+def _test_local_to_global_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
     np_input = np.random.rand(*shape)
     input = random_tensor(ndim=len(shape)).oneflow.to_local()
     target = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
@@ -44,7 +46,9 @@ def _test_local_to_global_type_as(test_case, shape, src_dtype, tgt_dtype, placem
     test_case.assertEqual(input.sbp, target.sbp)
 
 
-def _test_global_to_local_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
+def _test_global_to_local_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
     target = random_tensor(ndim=len(shape)).to(random_device()).oneflow.to_local()
