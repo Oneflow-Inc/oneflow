@@ -94,7 +94,9 @@ void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
     cudnn_conf->set_cudnn_conv_force_bwd_filter_algo(job_conf.cudnn_conv_force_bwd_filter_algo());
   }
   if (job_conf.has_cudnn_conv_heuristic_search_algo()) {
-    cudnn_conf->set_cudnn_conv_heuristic_search_algo(job_conf.cudnn_conv_heuristic_search_algo());
+    cudnn_conf->set_cudnn_conv_heuristic_search_algo(
+        job_conf.cudnn_conv_heuristic_search_algo()
+        && ParseBooleanFromEnv("ENABLE_CUDNN_CONV_HEURISTIC_SEARCH_ALGO", true));
   }
   if (job_conf.has_cudnn_conv_use_deterministic_algo_only()) {
     cudnn_conf->set_cudnn_conv_use_deterministic_algo_only(
