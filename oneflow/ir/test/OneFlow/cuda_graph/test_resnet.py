@@ -21,12 +21,10 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
-# TODO(peihong): extract MLIR ir env variables into a single module to control.
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "0"
-# os.environ["ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH"] = "1"
-# os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+os.environ["ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH"] = "1"
 
 import unittest
 import numpy as np
@@ -55,20 +53,9 @@ def _test_okl_resnet(test_case):
     
     warm = 1
     batch = 10
-    # epoch = 20
     for _ in range(warm):
         for i in range(batch):
             lazy_res = graph_to_run(x)
-
-    # outcome = 0
-    # for i in range(epoch):
-    #     tick = time.time()
-    #     for _ in range(batch):
-    #         lazy_res = graph_to_run(x)
-    #     tick = (time.time() - tick)/batch
-    #     print(f'{i}: {tick}')
-    #     outcome += tick
-    # print(f'avg: {outcome/epoch}')
 
 
 @flow.unittest.skip_unless_1n1d()
