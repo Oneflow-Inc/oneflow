@@ -20,13 +20,19 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/maybe.h"
+#include <condition_variable>
 
 namespace oneflow {
 
 class RankInfoBootstrapServer final : public BootstrapServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapServer);
-  ~RankInfoBootstrapServer() override { check_thread_.join(); }
+  ~RankInfoBootstrapServer() override {
+    if (check_thread_.joinable()) {
+      conv_.notify_all();
+      check_thread_.join();
+    }
+  }
 
   RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf);
 
@@ -43,6 +49,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
   std::mutex lock_;
+  std::condition_variable conv_;
 };
 
 }  // namespace oneflow
