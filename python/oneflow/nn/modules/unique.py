@@ -16,7 +16,9 @@ limitations under the License.
 import oneflow as flow
 
 
-def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.int):
+def unique_op(
+    input, *, sorted=True, return_inverse=False, return_counts=False, dtype=flow.int
+):
     r"""
     Returns the unique elements of the input tensor.
 
@@ -24,6 +26,7 @@ def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.in
 
     Args:
         input (Tensor): The input tensor.
+        sorted (bool): Whether to sort the unique elements in ascending order before returning as output.
         return_inverse (bool): Whether to also return the indices for where elements in the original input ended up in the returned unique list.
         return_counts (bool): Whether to also return the counts for each unique element.
         dtype (flow.dtype): Dtype of the returned indices and counts.
@@ -49,23 +52,26 @@ def unique_op(input, *, return_inverse=False, return_counts=False, dtype=flow.in
         >>> import oneflow as flow
         >>> x = flow.tensor([3, 1, 2, 0 ,2])
         >>> flow.unique(x)
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
+        >>> flow.unique(x, sorted=False)
         tensor([3, 1, 2, 0], dtype=oneflow.int64)
         >>> results, indices = flow.unique(x, return_inverse=True)
         >>> indices
-        tensor([0, 1, 2, 3, 2], dtype=oneflow.int32)
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
         >>> results, counts = flow.unique(x, return_counts=True)
         >>> counts
         tensor([1, 1, 2, 1], dtype=oneflow.int32)
         >>> results, indices = flow.unique(x, return_inverse=True, dtype=flow.long)
         >>> indices
-        tensor([0, 1, 2, 3, 2], dtype=oneflow.int64)
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int64)
 
     """
     if not return_inverse and not return_counts:
-        return flow._C.unique(input, dtype=dtype)
+        return flow._C.unique(input, sorted, dtype=dtype)
     else:
         return flow._C.unique(
             input,
+            sorted,
             return_inverse=return_inverse,
             return_counts=return_counts,
             dtype=dtype,

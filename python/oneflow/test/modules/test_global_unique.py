@@ -21,13 +21,15 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_unique(test_case, placement, sbp):
+def _test_unique_unsorted(test_case, placement, sbp):
     input = random_tensor(ndim=1, dim0=64, high=20).to_global(
         placement=placement, sbp=sbp
     )
-    oneflow_output = flow.unique(input.oneflow, return_inverse=True, return_counts=True)
+    oneflow_output = flow.unique(
+        input.oneflow, return_inverse=True, return_counts=True, sorted=False
+    )
     torch_output = torch_ori.unique(
-        input.pytorch, return_inverse=True, return_counts=True
+        input.pytorch, return_inverse=True, return_counts=True, sorted=False
     )
 
     oneflow_result, oneflow_indices, oneflow_counts = oneflow_output
@@ -55,12 +57,40 @@ def _test_unique(test_case, placement, sbp):
     )
 
 
+def _test_unique_sorted(test_case, placement, sbp):
+    input = random_tensor(ndim=1, dim0=64, high=20).to_global(
+        placement=placement, sbp=sbp
+    )
+    oneflow_output = flow.unique(
+        input.oneflow, return_inverse=True, return_counts=True, sorted=True
+    )
+    torch_output = torch_ori.unique(
+        input.pytorch, return_inverse=True, return_counts=True, sorted=True
+    )
+
+    oneflow_result, oneflow_indices, oneflow_counts = oneflow_output
+    torch_result, torch_indices, torch_counts = torch_output
+
+    test_case.assertTrue(
+        np.allclose(
+            oneflow_result.to_local().numpy(), torch_result.detach().cpu().numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(oneflow_indices.numpy(), torch_indices.detach().cpu().numpy(),)
+    )
+    test_case.assertTrue(
+        np.allclose(oneflow_counts.numpy(), torch_counts.detach().cpu().numpy(),)
+    )
+
+
 class TestUniqueModule(flow.unittest.TestCase):
     @globaltest
     def test_unique(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement):
-                _test_unique(test_case, placement, sbp)
+                _test_unique_unsorted(test_case, placement, sbp)
+                _test_unique_sorted(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

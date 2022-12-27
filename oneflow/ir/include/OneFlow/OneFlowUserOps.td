@@ -5973,7 +5973,8 @@ def OneFlow_UniqueOp : OneFlow_BaseOp<"unique", [NoSideEffect, NoGrad, DeclareOp
     OneFlow_Tensor:$num_unique
   );
   let attrs = (ins
-    OneFlow_DataType:$out_idx
+    OneFlow_DataType:$out_idx,
+    DefaultValuedAttr<BoolAttr, "true">:$sorted
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -5992,7 +5993,8 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
     OneFlow_Tensor:$count
   );
   let attrs = (ins
-    OneFlow_DataType:$out_idx
+    OneFlow_DataType:$out_idx,
+    DefaultValuedAttr<BoolAttr, "true">:$sorted
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
