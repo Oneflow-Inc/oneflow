@@ -24,6 +24,7 @@ os.environ["ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH"] = "1"
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_okl_ops_with_cuda(test_case: flow.unittest.TestCase):
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -40,7 +41,6 @@ def _test_okl_ops_with_cuda(test_case: flow.unittest.TestCase):
         lazy_relu = graph_to_run(x)
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestOKLOps(flow.unittest.TestCase):
     @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
@@ -50,4 +50,3 @@ class TestOKLOps(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
