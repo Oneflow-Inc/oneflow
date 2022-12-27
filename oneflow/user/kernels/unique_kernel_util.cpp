@@ -20,15 +20,14 @@ namespace oneflow {
 template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
   static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
-                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes,
-                     const bool sorted) {
+                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes, bool sorted) {
     UniqueKernelUtil<DeviceType::kCPU, KEY, IDX>::UniqueWithCounts(
         stream, n, in, num_unique, unique_out, idx_out, nullptr, workspace, workspace_size_in_bytes,
         sorted);
   }
   static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
-                               int64_t workspace_size_in_bytes, const bool sorted) {
+                               int64_t workspace_size_in_bytes, bool sorted) {
     HashMap<KEY, IDX> map;
     FOR_RANGE(int64_t, i, 0, n) {
       KEY in_i = in[i];
