@@ -50,8 +50,8 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    auto strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
     const int n = in->shape_view().At(0);
     const int h = in->shape_view().At(1);
@@ -75,7 +75,7 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
         cutlass::library::NumericTypeID::kF16, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kF32, cutlass::library::NumericTypeID::kF32);
 
-    const static bool allow_half_accumulation =
+    const bool allow_half_accumulation =
         ParseBooleanFromEnv("ONEFLOW_CONV_ALLOW_HALF_PRECISION_ACCUMULATION", false);
 
     if (allow_half_accumulation) {

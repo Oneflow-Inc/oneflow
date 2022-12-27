@@ -98,7 +98,11 @@
   bind_python: False
 
 - name: "equal"
-  signature:
+  signature: "Bool (Tensor input, Tensor other) => Equal"
+  bind_python: true
+
+- name: "broadcast_equal"
+  signature: 
     [
       "Tensor (Tensor input, Tensor other) => BroadcastEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalEqual",
@@ -290,7 +294,7 @@
   signature:
     [
       "Tensor (Tensor input) => Min",
-      "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Min",
       "Tensor (Tensor input, Tensor other) => Min",
     ]
   bind_python: True
@@ -299,7 +303,7 @@
   signature:
     [
       "Tensor (Tensor input) => Median",
-      "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
     ]
   bind_python: True
 
@@ -664,6 +668,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
   bind_python: False
 
+- name: "quick_gelu"
+  signature: "Tensor (Tensor x) => QuickGelu"
+  bind_python: True
+
+- name: "quick_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -841,6 +853,14 @@
 
 - name: "cast"
   signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
+  bind_python: True
+
+- name: "global_tensor_constant"
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorConstant"
+  bind_python: True
+
+- name: "tensor_constant"
+  signature: "Tensor (Shape shape, Tensor value, *, DataType dtype, Device device=None) => TensorConstant"
   bind_python: True
 
 - name: "constant"
@@ -2229,6 +2249,14 @@
   signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
 
+- name: "local_all_gather"
+  signature: "Tensor (Tensor output, Tensor input) => LocalAllGather"
+  bind_python: True
+
+- name: "local_reduce_scatter"
+  signature: "Tensor (Tensor output, Tensor input) => LocalReduceScatter"
+  bind_python: True
+
 - name: "local_reduce"
   signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
   bind_python: True
@@ -2606,8 +2634,8 @@
   signature: "Tensor (Shape shape, ShapeList shape_list, FloatList value_list, DataType data_type, Bool dynamic_out) => GenTensorBuffer"
   bind_python: True
 
-- name: "top_k"
-  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+- name: "topk"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"
@@ -3074,3 +3102,10 @@
   signature: "Tensor (TensorTuple in, FloatList weights, Float alpha=1.0) => FusedWeightedSum"
   bind_python: True
 
+- name: "sort"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool descending=False) => Sort"
+  bind_python: True
+  
+- name: "throw_error"
+  signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True

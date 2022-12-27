@@ -568,16 +568,6 @@ static int PyTensorObject_set_grad(PyObject* self, PyObject* grad, void* unused)
   END_HANDLE_ERRORS_RET(-1)
 }
 
-static PyObject* PyTensorObject__is_grad_acc_inplace(PyObject* self, void* unused) {
-  return functional::CastToPyObject(PyTensor_Unpack(self)->autograd_meta()->is_grad_acc_inplace());
-}
-
-static int PyTensorObject_set__is_grad_acc_inplace(PyObject* self, PyObject* is_inplace,
-                                                   void* unused) {
-  PyTensor_Unpack(self)->mut_autograd_meta()->set_is_grad_acc_inplace(is_inplace);
-  return 0;
-}
-
 static PyObject* PyTensorObject_data(PyObject* self, void* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(PyTensor_Unpack(self)->data()));
@@ -665,8 +655,6 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},
-    {PYGETSET_NAME("_is_grad_acc_inplace"), (getter)PyTensorObject__is_grad_acc_inplace,
-     (setter)PyTensorObject_set__is_grad_acc_inplace, NULL, NULL},
     {PYGETSET_NAME("data"), (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL,
      NULL},
     {PYGETSET_NAME("grad_fn"), (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},

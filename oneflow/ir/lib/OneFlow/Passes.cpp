@@ -1226,8 +1226,6 @@ void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
   patterns.add<KernelLaunchPattern>(patterns.getContext(), with_cuda_graph_support);
 }
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FusedScaleTrilPattern>(patterns.getContext());
-  patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);

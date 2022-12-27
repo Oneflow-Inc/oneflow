@@ -203,12 +203,14 @@ Communication collectives
 
         all_reduce
         all_gather
+        all_gather_into_tensor
         all_to_all
         broadcast
         barrier
         gather
         reduce
         reduce_scatter
+        reduce_scatter_tensor
         recv
         scatter
         send
