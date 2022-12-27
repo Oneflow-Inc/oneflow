@@ -68,7 +68,7 @@ def _test_compute_operator(test_case, shape):
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
 
         # TODO:support for "+=" compatibility
-        if op not in ["**,+"]:
+        if op not in ["**","+"]:
             exec(f"x_flow {op}= random_numpy")
             exec(f"x_torch {op}= random_numpy")
             test_case.assertTrue(
