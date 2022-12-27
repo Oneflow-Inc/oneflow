@@ -57,12 +57,11 @@ RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_
             lck, wait_duration, [&]() { return heartbeat_thread_stop_; });
         if (stopped) { break; }
       }
-      for (size_t i = 0; i < GetStubSize(); ++i) {
-        grpc::ClientContext client_ctx;
-        GRPC_CHECK(
-            GetStubAt(i)->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
-            << "Machine " << i << " lost";
-      }
+
+      // only connect rank 0
+      grpc::ClientContext client_ctx;
+      GRPC_CHECK(GetStubAt(0)->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
+          << "rank 0 lost";
     }
   });
 }  // namespace oneflow
