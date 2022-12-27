@@ -48,10 +48,11 @@ class GlobalMode {
         : prev_mode_(GlobalMode::is_enabled()),
           prev_nd_sbp_(GlobalMode::nd_sbp()),
           prev_parallel_desc_(GlobalMode::parallel_desc()) {
-      CHECK(enabled);
       GlobalMode::set_enabled(enabled);
-      GlobalMode::set_nd_sbp(nd_sbp);
-      GlobalMode::set_parallel_desc(parallel_desc);
+      if (enabled) {
+        GlobalMode::set_nd_sbp(nd_sbp);
+        GlobalMode::set_parallel_desc(parallel_desc);
+      }
     }
     ~Guard() {
       GlobalMode::set_enabled(prev_mode_);
