@@ -23,8 +23,6 @@ namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createAggregateComputeOpsPass();
 
-std::unique_ptr<mlir::Pass> createAggregateCudaGraphSupportOpsPass();
-
 }  // namespace oneflow
 }  // namespace mlir
 

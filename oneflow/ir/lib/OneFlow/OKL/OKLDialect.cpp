@@ -53,7 +53,6 @@ void OKLDialect::initialize() {
 
 void registerOneFlowPasses() {
   mlir::registerAggregateComputeOpsPassPass();
-  mlir::registerAggregateCudaGraphSupportOpsPassPass();
   mlir::registerWrapOpsToKernelLaunchWithCudaGraphSupportPassPass();
   mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerExtractKernelLaunchTensorPassPass();

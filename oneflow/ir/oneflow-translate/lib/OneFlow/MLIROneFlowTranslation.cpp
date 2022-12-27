@@ -831,7 +831,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
 #ifdef WITH_CUDA_GRAPHS
-    pm.addPass(createAggregateCudaGraphSupportOpsPass());
     pm.addPass(createWrapOpsToKernelLaunchWithCudaGraphSupportPass());
 #else
     pm.addPass(createWrapOpsToKernelLaunchPass());
