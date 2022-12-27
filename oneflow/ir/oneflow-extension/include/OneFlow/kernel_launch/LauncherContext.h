@@ -41,7 +41,6 @@ class LauncherContext final {
   void* FetchKernel(int index);
   void* FetchRunCtx(int index);
 
-
  private:
   std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;
   std::vector<RegContextResource> reg_ctx_vec_;

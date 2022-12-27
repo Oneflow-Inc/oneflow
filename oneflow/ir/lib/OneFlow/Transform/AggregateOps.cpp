@@ -69,13 +69,11 @@ class AggregateComputeOpsPass : public AggregateComputeOpsPassBase<AggregateComp
   }
 };
 
-
 }  // namespace
 
 std::unique_ptr<Pass> createAggregateComputeOpsPass() {
   return std::make_unique<AggregateComputeOpsPass>();
 }
-
 
 }  // namespace oneflow
 }  // namespace mlir
