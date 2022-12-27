@@ -15,7 +15,7 @@ limitations under the License.
 """
 from oneflow.utils.global_view.to_global import to_global
 from oneflow.utils.global_view.to_local import to_local
-from oneflow._oneflow_internal.global_view import global_mode, current_global_mode
+from oneflow.utils.global_view.global_mode import global_mode, current_global_mode
 
 __all__ = [
     "to_global",
