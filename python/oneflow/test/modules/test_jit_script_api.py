@@ -36,11 +36,21 @@ def _test_jit_script_api(test_case):
     test_case.assertTrue(x.size(), y.size())
 
 
+def _test_jit_ignore_api(test_case):
+    @flow.jit.ignore
+    def add2(x):
+        return x + x
+
+    x = flow.randn(2, 3)
+    y = add2(x)
+    test_case.assertTrue(x.size(), y.size())
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestJitScriptApi(flow.unittest.TestCase):
     def test_jit_script(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_jit_script_api]
+        arg_dict["test_fun"] = [_test_jit_script_api, _test_jit_ignore_api]
         for arg in GenArgList(arg_dict):
             arg[0](test_case)
 
