@@ -278,6 +278,5 @@ std::unique_ptr<Pass> createFuseNormalizationOps() {
   return std::make_unique<FuseNormalizationOpsPass>();
 }
 
-
 }  // namespace oneflow
 }  // namespace mlir
