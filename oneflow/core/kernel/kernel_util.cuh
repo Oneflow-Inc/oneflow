@@ -50,7 +50,8 @@ OF_DEVICE_FUNC T SafeLog(T x) {
 __device__ __forceinline__ half SafeLog(half x) { return hlog(MaxWithLogThreshold(x)); }
 #endif
 
-// FastAtomicAdd is referenced from https://github.com/pytorch/pytorch/blob/396c3b1d88d7624938a2bb0b287f2a19f1e89bb4/aten/src/ATen/native/cuda/KernelUtils.cuh#L29
+// FastAtomicAdd is referenced from
+// https://github.com/pytorch/pytorch/blob/396c3b1d88d7624938a2bb0b287f2a19f1e89bb4/aten/src/ATen/native/cuda/KernelUtils.cuh#L29
 #if defined(__CUDACC__)
 template<typename T, typename IndexT,
          typename std::enable_if<std::is_same<half, T>::value>::type* = nullptr>
