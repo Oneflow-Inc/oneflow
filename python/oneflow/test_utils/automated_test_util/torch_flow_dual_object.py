@@ -24,6 +24,7 @@ import gc
 import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import profiler as auto_profiler
+from oneflow.test_utils.test_util import type_name_to_flow_type
 
 flow.backends.cudnn.deterministic = True
 
@@ -44,6 +45,7 @@ from .generators import (
     Nothing,
     generator,
     random_pytorch_tensor,
+    random_pytorch_dtype,
     choice_pytorch_tensor,
     rng,
 )
@@ -1340,6 +1342,15 @@ def random_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
+def random_dtype(seq_names):
+    pytorch_dtype = random_pytorch_dtype(seq_names).value()
+    if pytorch_dtype is None:
+        flow_dtype = None
+    else:
+        flow_dtype = type_name_to_flow_type[pytorch_dtype.__str__().split(".")[-1]]
+    return GetDualObject("DualDType", pytorch_dtype, flow_dtype)
+
+
 def choice_tensor(
     a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
 ):
@@ -1371,4 +1382,4 @@ def choice_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor", "random_dtype", "choice_tensor"]

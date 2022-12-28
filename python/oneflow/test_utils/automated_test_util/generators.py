@@ -405,6 +405,48 @@ class gpu_device(generator):
         return random_util.choice(["cuda"])
 
 
+@data_generator(torch.dtype)
+class random_pytorch_dtype(generator):
+    none_dtype_seq = [None]
+    bool_dtype_seq = [torch.bool]
+    floating_dtype_seq = [torch.float, torch.double]
+    half_dtype_seq = [torch.half]
+    bfloat16_dtype_seq = [torch.bfloat16]
+    signed_int_dtype_seq = [torch.int8, torch.int32, torch.int64]
+    unsigned_int_dtype_seq = [torch.uint8]
+    int_dtype_seq = [torch.int8, torch.int32, torch.int64]
+    image_dtype_seq = [torch.uint8, torch.float]
+    index_dtype_seq = [torch.int32, torch.int64]
+    arithmetic_dtype_seq = [*floating_dtype_seq, *int_dtype_seq]
+    pod_dtype_seq = [*arithmetic_dtype_seq, *unsigned_int_dtype_seq, *bool_dtype_seq]
+    all_dtype_seq = [*arithmetic_dtype_seq, torch.half, torch.bfloat16]
+
+    seq_name_to_seq = {
+        "None": none_dtype_seq,
+        "bool": bool_dtype_seq,
+        "float": floating_dtype_seq,
+        "half": half_dtype_seq,
+        "bfloat16": bfloat16_dtype_seq,
+        "signed": signed_int_dtype_seq,
+        "unsigned": unsigned_int_dtype_seq,
+        "int": int_dtype_seq,
+        "image": image_dtype_seq,
+        "index": index_dtype_seq,
+        "arithmetic": arithmetic_dtype_seq,
+        "pod": pod_dtype_seq,
+        "all": all_dtype_seq,
+    }
+
+    def __init__(self, seq_names):
+        super().__init__([])
+        self.data_type_seq = [
+            dtype for name in seq_names for dtype in self.seq_name_to_seq[name]
+        ]
+
+    def _calc_value(self):
+        return random_util.choice(self.data_type_seq)
+
+
 class all_placement(generator):
     def __init__(self):
         super().__init__([])
@@ -577,6 +619,7 @@ __all__ = [
     "random_pytorch_tensor",
     "random_bool",
     "random_device",
+    "random_pytorch_dtype",
     "cpu_device",
     "gpu_device",
     "random_placement",

@@ -24,6 +24,9 @@ from collections import OrderedDict
 
 def _test_finfo(test_case, dtype):
     # test finfo without input params
+    import ipdb
+
+    ipdb.set_trace()
     if dtype is None:
         finfo = torch.finfo()
     else:
@@ -58,8 +61,9 @@ class TestIInfo(flow.unittest.TestCase):
     @autotest(n=3, check_graph=False)
     def test_finfo_min(test_case):
         # TODO(WangYi): support bf16
-        for dtype in [None, torch.float16, torch.float32, torch.float64]:
-            _test_finfo(test_case, dtype)
+        # for dtype in [None, torch.float16, torch.float32, torch.float64]:
+        dtype = random_dtype(["None", "float", "half"])
+        _test_finfo(test_case, dtype)
 
 
 if __name__ == "__main__":
