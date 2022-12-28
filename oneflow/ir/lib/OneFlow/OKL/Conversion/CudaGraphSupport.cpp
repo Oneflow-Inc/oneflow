@@ -84,7 +84,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    const auto tag_name = "cuda_graph_support";
+    const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
     // check whether this op is okl init context function  op
     if (op.getSymName().str() != SplitIntoFuncsName::Instance().create_func) { return failure(); }
     // check whether this op has been taged before

@@ -29,6 +29,12 @@ std::unique_ptr<mlir::Pass> createLowerOKLToLLVMCallPass();
 
 // tag {okl.cuda_graph_support} according to its wrapped ops
 std::unique_ptr<mlir::Pass> createTagCudaGraphSupportPass();
+
+namespace cuda_graph_support {
+
+static const auto TAG_NAME = "cuda_graph_support";
+
+}
 }  // namespace okl
 }  // namespace mlir
 
