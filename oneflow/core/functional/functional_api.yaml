@@ -422,6 +422,10 @@
   signature: "Tensor (Tensor dy, Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStridedGrad"
   bind_python: False
 
+- name: "as_strided_"
+  signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => InplaceAsStrided"
+  bind_python: True
+
 - name: "select"
   signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
   bind_python: True

@@ -998,9 +998,6 @@ class SqueezeFunctor {
 
 class InplaceSqueezeFunctor {
  public:
-  InplaceSqueezeFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
-  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim) const {
     JUST(CheckInplaceValid(input));
@@ -1022,18 +1019,12 @@ class InplaceSqueezeFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axes");
     attrs.SetAllAttrs(squeeze_dims);
 
-    if (view::IsViewApplicable(input)) {
-      return view::Squeeze(input, squeeze_dims);
-    } else {
-      auto outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = input;
-      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
-      return (*outputs)[0];
-    }
-  }
+    CHECK_OR_RETURN(view::IsViewApplicable(input))
+        << "inplace squeeze(tensor.squeeze_) only support in eager local mode!";
 
- private:
-  std::shared_ptr<OpExpr> op_;
+    JUST(view::InplaceSqueeze(input, squeeze_dims));
+    return input;
+  }
 };
 
 class RollFunctor {

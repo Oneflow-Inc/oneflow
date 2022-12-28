@@ -117,6 +117,23 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
+Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset) {
+  const auto* tensor_impl = JUST(input->mut_eager_local_tensor_impl());
+  const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
+  Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+      target_shape, target_stride, input->dtype()->data_type(), JUST(input->device())));
+
+  bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
+  std::shared_ptr<EagerLocalTensorImpl> new_tensor_impl =
+      std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()), storage_offset,
+                                             /*is_leaf=*/!requires_grad);
+  JUST(new_tensor_impl->InitEagerBlobObject(
+      new_tensor_meta, JUST(JUST(input->eager_blob_object())->compute_local_dep_object())));
+  JUST(JUST(input->AsLocalTensor())->set_impl(new_tensor_impl));
+  return Maybe<void>::Ok();
+}
+
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
   Stride target_stride(target_shape);
   return Reshape(input, target_shape, target_stride);
@@ -285,6 +302,49 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                                                  &outputs));
   }
   return output;
+}
+
+Maybe<void> InplaceSqueeze(const std::shared_ptr<Tensor>& input,
+                           const std::vector<int32_t>& squeeze_dims) {
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const int64_t ndim = shape->NumAxes();
+
+  const int target_ndim = ndim - squeeze_dims.size();
+  DimVector target_dim_vec(target_ndim);
+  Stride target_stride_vec(target_ndim);
+
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (find(squeeze_dims.begin(), squeeze_dims.end(), i) == squeeze_dims.end()) {
+        target_dim_vec[cnt] = shape->At(i);
+        target_stride_vec[cnt] = strides->at(i);
+        cnt++;
+      }
+    }
+  }
+
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
+  JUST(view::InplaceView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
+
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::Reshape(
+          JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
+    TensorTuple outputs{input};
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::inplace_squeeze_backward", backward_fn,
+                                                 {input}, &outputs));
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape) {
@@ -536,6 +596,33 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
                                                  &outputs));
   }
   return output;
+}
+
+Maybe<void> InplaceAsStrided(const std::shared_ptr<one::Tensor>& input,
+                             const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                             const int64_t& storage_offset) {
+  DimVector dim_vec;
+  dim_vec.insert(dim_vec.end(), sizes.begin(), sizes.end());
+  Shape target_shape(dim_vec);
+  Stride stride(strides.begin(), strides.end());
+  JUST(view::InplaceView(input, target_shape, stride, storage_offset));
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      (*in_grads)[0] = JUST(AsStridedGrad(out_grads[0], input, sizes, strides, storage_offset));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
+    TensorTuple outputs{input};
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::inplace_as_strided_backward", backward_fn,
+                                                 {input}, &outputs));
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {

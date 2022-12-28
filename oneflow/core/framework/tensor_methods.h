@@ -45,6 +45,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset);
 
+Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset);
+
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape);
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
@@ -57,6 +60,9 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
+
+Maybe<void> InplaceSqueeze(const std::shared_ptr<Tensor>& input,
+                           const std::vector<int32_t>& squeeze_dims);
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape);
 
@@ -71,6 +77,10 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
 Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
                         const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
                         const int64_t& storage_offset);
+
+Maybe<void> InplaceAsStrided(const std::shared_ptr<one::Tensor>& input,
+                             const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                             const int64_t& storage_offset);
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 
