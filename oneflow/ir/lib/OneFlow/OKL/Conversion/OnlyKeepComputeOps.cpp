@@ -52,7 +52,7 @@ struct OnlyKeepComputeOpPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : mlir::OpRewritePattern<func::FuncOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.getSymName() != SplitIntoFuncsName::Instance().run_func) {
+    if (op.getSymName() != function::CREATE_FUNC_NAME) {
       rewriter.eraseOp(op);
       return success();
     }

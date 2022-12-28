@@ -45,7 +45,7 @@ KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx
 
 void KernelLaunchState::DoCompute(user_op::KernelComputeContext* ctx) {
   if (!launcher_context_) { LazyInitLauncher(ctx); }
-  engine_->Run(mlir::okl::SplitIntoFuncsName::Instance.run_func, launcher_context_.get());
+  engine_->Run(mlir::okl::function::COMPUTE_FUNC_NAME.str(), launcher_context_.get());
 }
 
 void KernelLaunchState::LazyInitLauncher(user_op::KernelComputeContext* ctx) {

@@ -50,8 +50,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
     const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
-    if (const auto func =
-            module_->lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func)) {
+    if (const auto func = module_->lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME)) {
       if (const auto is_supported =
               func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
         return is_supported;

@@ -40,7 +40,7 @@ static int GetOpIndex(mlir::Operation* op, int index) {
 LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
                                  mlir::ModuleOp module)
     : module_(module) {
-  auto func = module.lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func);
+  auto func = module.lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME);
   auto context = func->getContext();
 
   auto& ops = func->getRegion(0).front();

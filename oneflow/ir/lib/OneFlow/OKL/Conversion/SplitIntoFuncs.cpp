@@ -83,8 +83,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       SmallVector<func::FuncOp> res;
       auto index = 0;
       for (auto resources : new_ops) {
-        auto func_name =
-            SplitIntoFuncsName::Instance().prefix_resources.str() + std::to_string(index++);
+        auto func_name = function::PREFIX_RESOURCES_NAME.str() + std::to_string(index++);
         auto func_type = rewriter.getFunctionType(
             TypeRange{LauncherContextType::get(rewriter.getContext())},
             TypeRange{std::vector<Type>(resources.size(), resources[0]->getResult(0).getType())});
@@ -114,8 +113,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto resource_funcs = declare_resource_funcs();
 
     rewriter.setInsertionPointAfter(func);
-    auto new_func = rewriter.create<func::FuncOp>(
-        func.getLoc(), SplitIntoFuncsName::Instance().create_func, launcher_to_void_func);
+    auto new_func = rewriter.create<func::FuncOp>(func.getLoc(), function::CREATE_FUNC_NAME,
+                                                  launcher_to_void_func);
     new_func.getBody().emplaceBlock();
     new_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
     rewriter.setInsertionPointToStart(&new_func.getBody().front());
@@ -130,8 +129,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.create<func::ReturnOp>(func.getLoc());
 
     rewriter.setInsertionPointAfter(func);
-    auto compute_func = rewriter.create<func::FuncOp>(
-        func.getLoc(), SplitIntoFuncsName::Instance().run_func, launcher_to_void_func);
+    auto compute_func = rewriter.create<func::FuncOp>(func.getLoc(), function::COMPUTE_FUNC_NAME,
+                                                      launcher_to_void_func);
     compute_func.getBody().emplaceBlock();
     compute_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()),
                                        func->getLoc());
@@ -144,8 +143,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (const auto& op : compute_ops) { compute_block.clone(*op, compute_mapping); }
 
     rewriter.setInsertionPointAfter(func);
-    auto del_func = rewriter.create<func::FuncOp>(
-        func.getLoc(), SplitIntoFuncsName::Instance().delete_func, launcher_to_void_func);
+    auto del_func = rewriter.create<func::FuncOp>(func.getLoc(), function::DELETE_FUNC_NAME,
+                                                  launcher_to_void_func);
     del_func.getBody().emplaceBlock();
     del_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
     auto del_launcher_ctx = del_func.getBody().getArgument(0);
@@ -166,15 +165,13 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : mlir::OpRewritePattern<func::FuncOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    SmallVector<StringLiteral> legal_func_list{SplitIntoFuncsName::Instance().create_func,
-                                               SplitIntoFuncsName::Instance().delete_func,
-                                               SplitIntoFuncsName::Instance().run_func};
+    SmallVector<StringLiteral> legal_func_list{
+        function::CREATE_FUNC_NAME, function::DELETE_FUNC_NAME, function::COMPUTE_FUNC_NAME};
     if (std::find(legal_func_list.begin(), legal_func_list.end(), op.getSymName())
         != legal_func_list.end()) {
       return success();
     }
-    if (op.getSymName().find(SplitIntoFuncsName::Instance().prefix_resources)
-        != std::string::npos) {
+    if (op.getSymName().find(function::PREFIX_RESOURCES_NAME) != std::string::npos) {
       return success();
     }
 

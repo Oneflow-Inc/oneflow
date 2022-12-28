@@ -58,7 +58,7 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
   mlir::LogicalResult matchAndRewrite(func::CallOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     // this pattern only replace func.call @get_resources_type_{X}
-    auto prefix = SplitIntoFuncsName::Instance().prefix_resources;
+    auto prefix = function::PREFIX_RESOURCES_NAME;
     if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
 
     // if the result number equals to zero, it means this kind of resources is not needed in this

@@ -39,9 +39,7 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
     exit(1);
   }
 
-  auto& ops = module->lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func)
-                  ->getRegion(0)
-                  .front();
+  auto& ops = module->lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME)->getRegion(0).front();
 
   size_t max_size = 0;
   for (auto& op : ops) {
