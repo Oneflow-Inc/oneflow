@@ -18,19 +18,17 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import torch as ori_torch
+import torch
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
-
 
 @flow.unittest.skip_unless_1n1d()
 class Test_Copy_module(flow.unittest.TestCase):
     def test_copy_broadcast_tensor(test_case):
-        torch_base_grid = ori_torch.zeros(1, 2, 2, 3)
+        torch_base_grid = torch.zeros(1, 2, 2, 3)
         flow_base_grid = flow.zeros(1, 2, 2, 3)
-        torch_x_grid = ori_torch.ones(2)
+        torch_x_grid = torch.ones(2)
         flow_x_grid = flow.ones(2)
         torch_base_grid[..., 0].copy_(torch_x_grid)
         flow_base_grid[..., 0].copy_(flow_x_grid)
@@ -68,8 +66,8 @@ class Test_Copy_module(flow.unittest.TestCase):
         x = flow.tensor(np_arr)
         y = flow.tensor(np_arr, dtype=flow.int)
         y.copy_(x)
-        a = ori_torch.tensor(np_arr)
-        b = ori_torch.tensor(np_arr, dtype=ori_torch.int)
+        a = torch.tensor(np_arr)
+        b = torch.tensor(np_arr, dtype=torch.int)
         test_case.assertTrue(np.array_equal(y.numpy(), b.cpu().numpy()))
 
 
