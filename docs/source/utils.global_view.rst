@@ -10,4 +10,6 @@ Some global view Ops
 
     to_global
     to_local
+    global_mode
+    current_global_mode
 
