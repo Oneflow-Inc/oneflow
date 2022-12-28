@@ -52,9 +52,10 @@ std::tuple<uint64_t, dim3, dim3> calc_execution_policy(int64_t total_elements,
 
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
-__global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel, uint64_t seed,
-                                                                   uint64_t offset, ComputeType mean,
-                                                                   ComputeType std, T* out_ptr) {
+__global__
+    void distribution_elementwise_grid_stride_kernel_double(int32_t numel, uint64_t seed,
+                                                            uint64_t offset, ComputeType mean,
+                                                            ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
@@ -78,7 +79,7 @@ __global__ void distribution_elementwise_grid_stride_kernel_double(int32_t numel
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__ void distribution_elementwise_grid_stride_kernel_float(int32_t numel, uint64_t seed,
-                                                                  uint64_t offset,  ComputeType mean,
+                                                                  uint64_t offset, ComputeType mean,
                                                                   ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
@@ -127,13 +128,15 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
 
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (std::is_same<T, double>::value) {
-    distribution_elementwise_grid_stride_kernel_double<T, ComputeType, 2><<<
-      grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_), dptr);
+    distribution_elementwise_grid_stride_kernel_double<T, ComputeType, 2>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
+            dptr);
   } else {
-    distribution_elementwise_grid_stride_kernel_float<T, ComputeType, 4><<<
-      grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_), dptr);
+    distribution_elementwise_grid_stride_kernel_float<T, ComputeType, 4>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
+            dptr);
   }
 }
 
