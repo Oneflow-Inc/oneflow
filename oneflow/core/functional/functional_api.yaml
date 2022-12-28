@@ -668,6 +668,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
   bind_python: False
 
+- name: "quick_gelu"
+  signature: "Tensor (Tensor x) => QuickGelu"
+  bind_python: True
+
+- name: "quick_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -3065,6 +3073,11 @@
   bind_python: True
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
+  bind_python: True
+
+- name: "stft"
+  signature: 
+    'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
   bind_python: True
 
 - name: "isclose"
