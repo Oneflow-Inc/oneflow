@@ -33,15 +33,15 @@ namespace one {
 using functional::PyObjectPtr;
 
 #define INT_TYPE INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
-// TODO(WangYi): support bf16
-#define FLOAT_TYPE FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+#define FLOAT_TYPE FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ
 
 PyObject* PyGetMaxVal(DataType datatype) {
 #define GET_INT_MAX_VAL(cpp_type, of_datatype) \
   case of_datatype:                            \
-    return PyLong_FromLong(GetMaxVal<DataTypeToType<of_datatype>>());
+    return PyLong_FromLong(std::numeric_limits<DataTypeToType<of_datatype>>::max());
 #define GET_FLOAT_MAX_VAL(cpp_type, of_datatype) \
-  case of_datatype: return PyFloat_FromDouble(GetMaxVal<DataTypeToType<of_datatype>>());
+  case of_datatype:                              \
+    return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<of_datatype>>::max());
 
   switch (datatype) {
     OF_PP_FOR_EACH_TUPLE(GET_INT_MAX_VAL, INT_TYPE);
@@ -56,9 +56,10 @@ PyObject* PyGetMaxVal(DataType datatype) {
 PyObject* PyGetMinVal(DataType datatype) {
 #define GET_INT_MIN_VAL(cpp_type, of_datatype) \
   case of_datatype:                            \
-    return PyLong_FromLong(GetMinVal<DataTypeToType<of_datatype>>());
+    return PyLong_FromLong(std::numeric_limits<DataTypeToType<of_datatype>>::lowest());
 #define GET_FLOAT_MIN_VAL(cpp_type, of_datatype) \
-  case of_datatype: return PyFloat_FromDouble(GetMinVal<DataTypeToType<of_datatype>>());
+  case of_datatype:                              \
+    return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<of_datatype>>::lowest());
 
   switch (datatype) {
     OF_PP_FOR_EACH_TUPLE(GET_INT_MIN_VAL, INT_TYPE);
@@ -135,9 +136,6 @@ static PyObject* PyFInfo_new(PyTypeObject* self, PyObject* args, PyObject* kwarg
       << Error::TypeError()
       << "oneflow.finfo() requires a float input type. Use oneflow.iinfo to handle '"
       << self->dtype->name() << "' ";
-  // TODO (wangyi): support bfloat16
-  CHECK_OR_THROW(self->dtype->data_type() != kBFloat16)
-      << Error::TypeError() << "bfloat16 is not supported yet by oneflow.finfo";
   return (PyObject*)self;
   END_HANDLE_ERRORS
 }
