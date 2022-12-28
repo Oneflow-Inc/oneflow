@@ -13,6 +13,81 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipfft.h>
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/kernel/kernel.h"
+
+namespace oneflow {
+namespace {
+
+constexpr int max_rank = 3;
+
+struct CuFFtParams {
+  int32_t ndim;
+  int32_t output_shape[max_rank + 1];
+  int32_t input_shape[max_rank + 1];
+  int32_t input_strides[max_rank + 1];
+  int32_t output_strides[max_rank + 1];
+  int32_t* rank;
+  int32_t batch;
+  CuFFtParams(int32_t dims, int32_t* r, const Stride& in_strides, const Stride& out_strides,
+              const Shape& in_shape, const Shape& out_shape, int32_t b)
+      : ndim(dims), rank(r), batch(b) {
+    std::copy(in_strides.begin(), in_strides.end(), input_strides);
+    std::copy(out_strides.begin(), out_strides.end(), output_strides);
+    std::copy(in_shape.begin(), in_shape.end(), input_shape);
+    std::copy(out_shape.begin(), out_shape.end(), output_shape);
+  }
+};
+
+template<typename T, typename C>
+class CuFFtConfig {
+ public:
+  CuFFtConfig(const CuFFtConfig&) = delete;
+  CuFFtConfig& operator=(CuFFtConfig const&) = delete;
+
+  explicit CuFFtConfig(CuFFtParams& params) {
+    infer_cufft_type_();
+    hipfftPlanMany(&plan_handle_, params.ndim, params.rank, params.input_shape,
+                  params.input_strides[0], params.input_strides[1], params.output_shape,
+                  params.output_strides[0], params.output_strides[1], exectype_, params.batch);
+  }
+
+  void excute_plan(const T* in, C* out) {
+    switch (exectype_) {
+      case HIPFFT_R2C: hipfftExecR2C(plan_handle_, (hipfftReal*)in, (hipfftComplex*)out); break;
+
+      case HIPFFT_D2Z:
+        hipfftExecD2Z(plan_handle_, (hipfftDoubleReal*)in, (hipfftDoubleComplex*)out);
+        break;
+      default: break;
+    }
+  }
+
+ private:
+  // infer representing the FFT type(暂时只支持R2C,D2Z)
+  void infer_cufft_type_() {
+    bool isDouble = std::is_same<double, T>::value;
+    if (isDouble) {
+      exectype_ = HIPFFT_D2Z;
+    } else {
+      exectype_ = HIPFFT_R2C;
+    }
+  }
+
+  hipfftHandle plan_handle_;
+  hipfftType exectype_;
+};
+
+}  // namespace
+
+}  // namespace oneflow
+
+#else
 
 #include <cufft.h>
 #include <cufftXt.h>
@@ -86,3 +161,4 @@ class CuFFtConfig {
 }  // namespace
 
 }  // namespace oneflow
+#endif
