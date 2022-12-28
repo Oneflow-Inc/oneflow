@@ -46,7 +46,7 @@ test_compute_op_list = [
 
 
 def do_test_compute_op(test_case, ndim, placement, sbp):
-    dims = [random(1, 5) * 2 for i in range(ndim)]
+    dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims, dtype=int, low=0, high=5)
     x = x.to_global(placement=placement, sbp=sbp)
     x = x.to("cpu")
@@ -62,7 +62,6 @@ def do_test_compute_op(test_case, ndim, placement, sbp):
         z_flow = eval(f"flow_input {op} random_numpy")
         z_torch = eval(f"torch_input {op} random_numpy")
         test_case.assertTrue(np.allclose(z_flow.numpy(), z_torch.numpy()))
-
 
 class TestGlobalTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     @globaltest
