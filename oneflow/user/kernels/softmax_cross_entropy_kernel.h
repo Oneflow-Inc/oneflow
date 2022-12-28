@@ -57,9 +57,9 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const auto num_axes = label->shape().NumAxes();
-    const int64_t num_instances = label->shape().Count(0, num_axes - 1);
-    const int64_t num_classes = label->shape().At(num_axes - 1);
+    const auto num_axes = label->shape_view().NumAxes();
+    const int64_t num_instances = label->shape_view().Count(0, num_axes - 1);
+    const int64_t num_classes = label->shape_view().At(num_axes - 1);
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
@@ -93,12 +93,12 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t num_instances = dy->shape().elem_cnt();
-    CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = dy->shape_view().elem_cnt();
+    CHECK_EQ(prob->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prob->shape_view().elem_cnt() / num_instances;
 
     CrossEntropyKernelUtil<device_type, T>::ComputeDiffWithSoftmax(
-        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
+        ctx->stream(), prediction_diff->shape_view().elem_cnt(), num_classes, prob->dptr<T>(),
         label->dptr<T>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

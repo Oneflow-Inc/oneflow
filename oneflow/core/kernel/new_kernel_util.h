@@ -15,8 +15,8 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
-
-#include "oneflow/core/kernel/util/interface_bridge.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
@@ -28,9 +28,6 @@ namespace ep {
 class Stream;
 
 }
-
-template<DeviceType deivce_type>
-struct NewKernelUtil : public BlasIf<deivce_type> {};
 
 template<DeviceType device_type>
 void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz) {

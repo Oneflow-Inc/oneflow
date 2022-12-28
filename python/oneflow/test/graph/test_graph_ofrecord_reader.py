@@ -90,9 +90,6 @@ class TestOFRecordReaderGraph(oneflow.unittest.TestCase):
         reader_g = GraphReader()
         image, label = reader_g()
 
-        print(image)
-        print(label)
-
 
 if __name__ == "__main__":
     unittest.main()

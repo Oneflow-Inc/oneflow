@@ -35,8 +35,8 @@ class TupleIdentityKernel final : public user_op::OpKernel {
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       const DataType data_type = in_i->data_type();
       CHECK_EQ(out_i->data_type(), data_type);
-      const ShapeView& shape = in_i->shape();
-      CHECK_EQ(out_i->shape(), shape);
+      const ShapeView& shape = in_i->shape_view();
+      CHECK_EQ(out_i->shape_view(), shape);
       Memcpy<device_type>(ctx->stream(), out_i->mut_dptr(), in_i->dptr(),
                           shape.elem_cnt() * GetSizeOfDataType(data_type));
     }

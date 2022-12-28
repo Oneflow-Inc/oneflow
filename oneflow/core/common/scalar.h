@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <type_traits>
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -28,47 +29,47 @@ class Scalar {
   Scalar() : Scalar(int32_t(0)) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
 
   template<typename T, typename std::enable_if<
                            std::is_integral<T>::value && std::is_signed<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
 
   template<typename T,
            typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value
                                        && !std::is_same<T, bool>::value,
                                    int>::type = 0>
-  Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
 
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_{.d = value}, active_tag_(HAS_D) {}
+  OF_DEVICE_FUNC Scalar(const T& value) : value_{.d = value}, active_tag_(HAS_D) {}
 
   template<typename T, typename std::enable_if<!std::is_same<T, Scalar>::value, int>::type = 0>
-  Scalar& operator=(const T& value) {
+  OF_DEVICE_FUNC Scalar& operator=(const T& value) {
     *this = Scalar(value);
     return *this;
   }
 
-  Scalar& operator=(const Scalar& other) {
+  OF_DEVICE_FUNC Scalar& operator=(const Scalar& other) {
     value_ = other.value_;
     active_tag_ = other.active_tag_;
     return *this;
   }
 
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
-  Maybe<T> As() const {
+  OF_DEVICE_FUNC T As() const {
     switch (active_tag_) {
       case HAS_B: return static_cast<T>(value_.b);
       case HAS_S: return static_cast<T>(value_.s);
       case HAS_U: return static_cast<T>(value_.u);
       case HAS_D: return static_cast<T>(value_.d);
-      default: UNIMPLEMENTED_THEN_RETURN() << "The scalar has not been initialized.";
+      default: assert(false); return 0;
     }
   }
 
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
-  T Value() const {
-    return CHECK_JUST(As<T>());
+  OF_DEVICE_FUNC T Value() const {
+    return As<T>();
   }
 
   bool IsBool() const { return active_tag_ == HAS_B; }
@@ -77,10 +78,10 @@ class Scalar {
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
 
-  Scalar operator+(const Scalar& other);
-  Scalar operator-(const Scalar& other);
-  Scalar operator*(const Scalar& other);
-  Scalar operator/(const Scalar& other);
+  Scalar operator+(const Scalar& other) const;
+  Scalar operator-(const Scalar& other) const;
+  Scalar operator*(const Scalar& other) const;
+  Scalar operator/(const Scalar& other) const;
 
   Scalar& operator+=(const Scalar& other);
   Scalar& operator-=(const Scalar& other);

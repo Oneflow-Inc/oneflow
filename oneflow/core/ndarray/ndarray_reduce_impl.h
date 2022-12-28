@@ -56,7 +56,11 @@ struct NdarrayNoReduce<device_type, T, binary_func,
   }
   static void Reduce(ep::Stream* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
-    XpuNdarrayAssign<device_type, RetT>::Assign(ctx, y, x);
+    if (std::is_same<binary_func<T>, BinaryFuncNanSum<T>>()) {
+      XpuNdarrayAssign<device_type, RetT>::AssignNanSum(ctx, y, x);
+    } else {
+      XpuNdarrayAssign<device_type, RetT>::Assign(ctx, y, x);
+    }
   }
 };
 

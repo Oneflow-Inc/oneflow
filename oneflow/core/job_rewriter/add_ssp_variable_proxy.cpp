@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
-#include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -46,7 +45,18 @@ class AddSspVariableProxyPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
     HashMap<LogicalBlobId, std::pair<std::string, std::string>> var2ref_value_pair;
     HashSet<OpNode*> var_consumers;
-    JUST(ForEachTrainableVarOpNode(op_graph, [&](OpNode* op_node) -> Maybe<void> {
+    HashSet<std::string> trainable_variable_op_names;
+    const Job& job = job_builder->job();
+    for (const auto& optimizer_conf : job.job_conf().train_conf().optimizer_conf()) {
+      for (const auto& variable_op_name : optimizer_conf.variable_op_names()) {
+        trainable_variable_op_names.insert(variable_op_name);
+      }
+    }
+    auto IsTrainableVarOp = [&](const OperatorConf& op_conf) {
+      if (!op_conf.has_variable_conf()) { return false; }
+      return trainable_variable_op_names.count(op_conf.name()) > 0;
+    };
+    JUST(ForEachTrainableVarOpNode(op_graph, IsTrainableVarOp, [&](OpNode* op_node) -> Maybe<void> {
       op_node->ForEachNodeOnOutEdge([&](OpNode* consumer) { var_consumers.insert(consumer); });
       const auto& old_var_out_lbi = op_node->op().BnInOp2Lbi("out");
       return AddSspVarProxyOp(op_node, job_builder, &var2ref_value_pair[old_var_out_lbi].first,
@@ -69,17 +79,16 @@ class AddSspVariableProxyPass final : public JobPass {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> ForEachTrainableVarOpNode(const OpGraph& op_graph,
-                                        const std::function<Maybe<void>(OpNode*)>& DoEach) const {
-    std::function<bool(OpNode*)> NeedBackwardOp;
-    JUST(MakePredicatorNeedBackwardOp(op_graph, &NeedBackwardOp));
+  Maybe<void> ForEachTrainableVarOpNode(
+      const OpGraph& op_graph, const std::function<bool(const OperatorConf&)>& IsTrainableVarOp,
+      const std::function<Maybe<void>(OpNode*)>& DoEach) const {
     const auto& IsSspVarProxy = [](const OperatorConf& op_conf) {
       return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "ssp_variable_proxy";
     };
     JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
       const auto& op_conf = op_node->op().op_conf();
       CHECK_OR_RETURN(!IsSspVarProxy(op_conf)) << "AddSspVariableProxy can not be applied twice";
-      if (op_conf.has_variable_conf() && NeedBackwardOp(op_node)) { return DoEach(op_node); }
+      if (IsTrainableVarOp(op_conf)) { return DoEach(op_node); }
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -115,14 +124,14 @@ class AddSspVariableProxyPass final : public JobPass {
   }
 
   Maybe<bool> IsInOptimizerPass(int64_t scope_symbol_id) const {
-    const auto& scope = JUST(Global<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    const auto& scope = JUST(Singleton<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
     return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
   }
 
   Maybe<void> AddSspVarProxyOp(const LogicalBlobId& old_var_out_lbi, int64_t scope_symbol_id,
                                JobBuilder* job_builder, std::string* ref_lbn,
                                std::string* value_lbn) const {
-    const Scope& scope = JUST(Global<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    const Scope& scope = JUST(Singleton<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
     int64_t buffer_size = 0;
     {
       int64_t num_stages = scope.Int64("ssp_num_stages");

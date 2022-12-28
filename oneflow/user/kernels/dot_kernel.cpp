@@ -47,7 +47,7 @@ class DotKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = x->shape().elem_cnt();
+    int64_t n = x->shape_view().elem_cnt();
     auto primitive = NewMatmulPrimitive(ctx);
 
     primitive->Launch(ctx->stream(), 1, 1, n, 1, x->dptr(), y->dptr(), 0, out->mut_dptr());

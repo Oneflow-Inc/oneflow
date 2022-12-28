@@ -33,17 +33,19 @@ namespace oneflow {
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
-  user_op::TensorDesc* loss_desc = ctx->OutputTensorDesc("loss", 0);
-  *loss_desc->mut_shape() = prediction_desc.shape();
-  *loss_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
+  user_op::TensorDesc* loss_desc = ctx->MutOutputTensorDesc("loss", 0);
+  loss_desc->set_shape(prediction_desc.shape());
+  loss_desc->set_is_dynamic(prediction_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("loss", 0) = ctx->InputDType("prediction", 0);
+  ctx->SetOutputDType("loss", 0, ctx->InputDType("prediction", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::ModifyInputArg(
@@ -71,11 +73,15 @@ namespace oneflow {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& loss_diff_desc = ctx->InputTensorDesc("loss_diff", 0);
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
-  CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape());
-  user_op::TensorDesc* prediction_diff = ctx->OutputTensorDesc("prediction_diff", 0);
-  *prediction_diff->mut_shape() = prediction_desc.shape();
-  *prediction_diff->mut_is_dynamic() = prediction_desc.is_dynamic();
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
+  CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of loss_diff " << loss_diff_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
+  user_op::TensorDesc* prediction_diff = ctx->MutOutputTensorDesc("prediction_diff", 0);
+  prediction_diff->set_shape(prediction_desc.shape());
+  prediction_diff->set_is_dynamic(prediction_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferPhysicalTensorDesc(
@@ -83,7 +89,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prediction", 0);
+  ctx->SetOutputDType("prediction_diff", 0, ctx->InputDType("prediction", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::ModifyInputArg(
@@ -93,21 +99,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("sigmoid_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("sigmoid_cross_entropy_grad")
-                .Input("prediction", op.input("prediction", 0))
-                .Input("label", op.input("label", 0))
-                .Input("loss_diff", op.GetGradTensorWithOpOutput("loss", 0))
-                .Output("prediction_diff")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 }  // namespace oneflow

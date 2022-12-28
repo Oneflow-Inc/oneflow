@@ -59,7 +59,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int64_t num_axes = x->shape().NumAxes();
+    const int64_t num_axes = x->shape_view().NumAxes();
     const std::string& padding = ctx->Attr<std::string>("padding");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -67,13 +67,13 @@ class SamePaddingKernel final : public user_op::OpKernel {
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     std::vector<int64_t> padding_before(num_axes, 0);
     const size_t idx_offset = IdxOffset(data_format);
-    const int32_t num_spatial_dims = x->shape().NumAxes() - 2;
+    const int32_t num_spatial_dims = x->shape_view().NumAxes() - 2;
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CHECK_JUST(CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i),
-                                 dilation_rate.at(i), strides.at(i), &padding_small,
-                                 &padding_large));
+      CHECK_JUST(CalcSamePadding(x->shape_view().At(idx_offset + i), kernel_size.at(i),  // NOLINT
+                                 dilation_rate.at(i), strides.at(i), &padding_small,     // NOLINT
+                                 &padding_large));                                       // NOLINT
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -81,20 +81,20 @@ class SamePaddingKernel final : public user_op::OpKernel {
       } else {
         UNIMPLEMENTED();
       }
-      CHECK_EQ(y->shape().At(idx_offset + i),
-               x->shape().At(idx_offset + i) + padding_small + padding_large);
+      CHECK_EQ(y->shape_view().At(idx_offset + i),
+               x->shape_view().At(idx_offset + i) + padding_small + padding_large);
     }
     CHECK_EQ(padding_before.size(), num_axes);
     std::unique_ptr<ep::primitive::Fill> fill_primitive = NewFillPrimitive(ctx);
     CHECK(fill_primitive);
-    fill_primitive->Launch(ctx->stream(), y->mut_dptr(), Scalar(0), y->shape().elem_cnt());
+    fill_primitive->Launch(ctx->stream(), y->mut_dptr(), Scalar(0), y->shape_view().elem_cnt());
     DimVector src_pos_vec(num_axes, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
     copy_nd_primitive->Launch(ctx->stream(), x->data_type(), num_axes, y->mut_dptr(),
-                              y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
-                              src_pos_vec.data(), x->shape().ptr());
+                              y->shape_view().ptr(), dst_pos_vec.data(), x->dptr(),
+                              x->shape_view().ptr(), src_pos_vec.data(), x->shape_view().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -112,7 +112,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t num_axes = dy->shape().NumAxes();
+    const int64_t num_axes = dy->shape_view().NumAxes();
     const std::string& padding = ctx->Attr<std::string>("padding");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -120,13 +120,13 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     std::vector<int64_t> padding_before(num_axes, 0);
     const size_t idx_offset = IdxOffset(data_format);
-    const int32_t num_spatial_dims = dy->shape().NumAxes() - 2;
+    const int32_t num_spatial_dims = dy->shape_view().NumAxes() - 2;
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CHECK_JUST(CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i),
-                                 dilation_rate.at(i), strides.at(i), &padding_small,
-                                 &padding_large));
+      CHECK_JUST(CalcSamePadding(dx->shape_view().At(idx_offset + i), kernel_size.at(i),  // NOLINT
+                                 dilation_rate.at(i), strides.at(i), &padding_small,      // NOLINT
+                                 &padding_large));                                        // NOLINT
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -134,16 +134,16 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
       } else {
         UNIMPLEMENTED();
       }
-      CHECK_EQ(dy->shape().At(idx_offset + i),
-               dx->shape().At(idx_offset + i) + padding_small + padding_large);
+      CHECK_EQ(dy->shape_view().At(idx_offset + i),
+               dx->shape_view().At(idx_offset + i) + padding_small + padding_large);
     }
     DimVector dst_pos_vec(num_axes, 0);
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
     std::unique_ptr<ep::primitive::CopyNd> primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(), dx->shape().ptr(),
-                      dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
-                      dx->shape().ptr());
+    primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(),
+                      dx->shape_view().ptr(), dst_pos_vec.data(), dy->dptr(),
+                      dy->shape_view().ptr(), src_pos_vec.data(), dx->shape_view().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

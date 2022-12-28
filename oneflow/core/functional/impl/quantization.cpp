@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -40,15 +41,14 @@ class MinMaxObserverFunctor {
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
-                                const std::string quantization_formula,
+                                const std::string& quantization_formula,
                                 const int32_t& quantization_bit,
-                                const std::string quantization_scheme,
-                                const bool per_layer_quantization) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    JUST(attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization));
+                                const std::string& quantization_scheme,
+                                const bool& per_layer_quantization) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
+                                                 "quantization_scheme", "per_layer_quantization");
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme,
+                      per_layer_quantization);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
 
@@ -71,18 +71,17 @@ class MovingAverageMinMaxObserverFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& current_train_step,
                                 const std::shared_ptr<one::Tensor>& moving_max,
-                                const std::shared_ptr<one::Tensor>& moving_min, const bool training,
-                                const std::string quantization_formula,
-                                const int64_t& stop_update_after_iters,
+                                const std::shared_ptr<one::Tensor>& moving_min,
+                                const bool& training, const int64_t& stop_update_after_iters,
+                                const std::string& quantization_formula,
                                 const int32_t& quantization_bit,
-                                const std::string quantization_scheme, const float momentum) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("training", training));
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    JUST(attrs.SetAttr<float>("momentum", momentum));
+                                const std::string& quantization_scheme,
+                                const float& momentum) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("training", "quantization_formula",
+                                                 "stop_update_after_iters", "quantization_bit",
+                                                 "quantization_scheme", "momentum");
+    attrs.SetAllAttrs(training, quantization_formula, stop_update_after_iters, quantization_bit,
+                      quantization_scheme, momentum);
     return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {in, current_train_step, moving_max, moving_min}, attrs);
   }
@@ -104,12 +103,11 @@ class FakeQuantizationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& scale,
                            const std::shared_ptr<one::Tensor>& zero_point,
-                           const std::string quantization_formula, const int32_t& quantization_bit,
-                           const std::string quantization_scheme) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+                           const std::string& quantization_formula, const int32_t& quantization_bit,
+                           const std::string& quantization_scheme) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
+                                                 "quantization_scheme");
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 
@@ -132,10 +130,9 @@ class QuantizationFunctor {
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string quantization_formula, const int32_t& quantization_bit,
                            const std::string quantization_scheme) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
+                                                 "quantization_scheme");
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 

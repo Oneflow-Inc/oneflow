@@ -28,20 +28,23 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SortOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SortOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SortOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SortOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                          const user_op::UserOpConfWrapper& op_conf) {
   const std::string& direction = op_conf.attr<std::string>("direction");
-  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
+      << Error::RuntimeError()
+      << "The input direction parameter value is expected to be ASCENDING or DESCENDING, "
+      << "but found it to be " << direction;
   return Maybe<void>::Ok();
 }
 

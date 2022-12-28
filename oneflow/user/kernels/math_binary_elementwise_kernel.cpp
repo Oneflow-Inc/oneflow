@@ -34,7 +34,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     const T* x = tensor_x->dptr<T>();
     const T* y = tensor_y->dptr<T>();
     T* z = tensor_z->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
 
@@ -62,7 +62,7 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     const T* y = tensor_y->dptr<T>();
     const T* dz = tensor_dz->dptr<T>();
     T* dx = tensor_dx->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
   }
@@ -86,7 +86,7 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
     const T* y = tensor_y->dptr<T>();
     const T* dz = tensor_dz->dptr<T>();
     T* dy = tensor_dy->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); }
   }
@@ -117,7 +117,8 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_BINARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv),
+                                 OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv)
+                                     OF_PP_MAKE_TUPLE_SEQ("truncdiv", TruncDiv),
                                  INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

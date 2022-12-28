@@ -55,6 +55,11 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (op_reg_result->same_output_regst_num > 0) {
       mem_block_num = op_reg_result->same_output_regst_num;
     }
+    if (IsClassRegistered<std::string, RuntimeRegstNum4OpSameOutputBlob>(op_type_name)) {
+      std::unique_ptr<RuntimeRegstNum4OpSameOutputBlob> ptr;
+      ptr.reset(NewObj<std::string, RuntimeRegstNum4OpSameOutputBlob>(op_type_name));
+      mem_block_num = *ptr;
+    }
     if (op_type_name == "identity_buffer") {
       mem_block_num = user_op::UserOpConfWrapper(sole_op->op_conf()).attr<int64_t>("buffer_size");
     }

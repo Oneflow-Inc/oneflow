@@ -19,11 +19,14 @@ limitations under the License.
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/job/local_parallel.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+namespace auto_parallel {
+class SbpConstructor;
+}
 
 class OpEdge;
 class OpGraph;
@@ -55,6 +58,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
  private:
   friend class OpGraph;
   friend class OpEdge;
+  friend class auto_parallel::SbpConstructor;
 
   // Setters
   Operator* mut_op() { return op_.get(); }
@@ -126,7 +130,12 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   Maybe<void> Init(const Job& job);
 
+  // Print the graph with SBP in order
+  void PrintSBPGraphDebugInfo() const;
+
  private:
+  friend class auto_parallel::SbpConstructor;
+
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
@@ -134,7 +143,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeNdSbpSignature(OpNode* op_node, const NdSbpSignature& nd_sbp_sig_conf) const;
-  Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
+  Maybe<void> InferOpNodeLocalSignature(OpNode* op_node, bool is_local_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;

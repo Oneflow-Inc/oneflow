@@ -70,12 +70,14 @@ int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_nu
 
 std::string GenPortKey(int64_t machine_id) { return "EpollPort/" + std::to_string(machine_id); }
 void PushPort(int64_t machine_id, uint16_t port) {
-  Global<CtrlClient>::Get()->PushKV(GenPortKey(machine_id), std::to_string(port));
+  Singleton<CtrlClient>::Get()->PushKV(GenPortKey(machine_id), std::to_string(port));
 }
-void ClearPort(int64_t machine_id) { Global<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id)); }
+void ClearPort(int64_t machine_id) {
+  Singleton<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id));
+}
 uint16_t PullPort(int64_t machine_id) {
   uint16_t port = 0;
-  Global<CtrlClient>::Get()->PullKV(
+  Singleton<CtrlClient>::Get()->PullKV(
       GenPortKey(machine_id), [&](const std::string& v) { port = oneflow_cast<uint16_t>(v); });
   return port;
 }
@@ -121,7 +123,7 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) {
 }
 
 EpollCommNet::EpollCommNet() : CommNetIf() {
-  pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
+  pollers_.resize(Singleton<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
@@ -129,8 +131,8 @@ EpollCommNet::EpollCommNet() : CommNetIf() {
 
 void EpollCommNet::InitSockets() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
-  auto this_machine = Global<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
-  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->process_ranks().size();
+  auto this_machine = Singleton<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
+  int64_t total_machine_num = Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();
   size_t poller_idx = 0;
@@ -146,8 +148,8 @@ void EpollCommNet::InitSockets() {
   {
     if (this_machine.data_port_agent() != -1) {
       this_listen_port = this_machine.data_port_agent();
-    } else if (Global<EnvDesc>::Get()->data_port() != -1) {
-      this_listen_port = Global<EnvDesc>::Get()->data_port();
+    } else if (Singleton<EnvDesc>::Get()->data_port() != -1) {
+      this_listen_port = Singleton<EnvDesc>::Get()->data_port();
     }
   }
   CHECK_EQ(SockListen(listen_sockfd, &this_listen_port, total_machine_num), 0);
@@ -162,7 +164,7 @@ void EpollCommNet::InitSockets() {
       continue;
     }
     uint16_t peer_port = PullPort(peer_id);
-    auto peer_machine = Global<ResourceDesc, ForSession>::Get()->machine(peer_id);
+    auto peer_machine = Singleton<ResourceDesc, ForSession>::Get()->machine(peer_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     const int val = 1;

@@ -28,6 +28,7 @@ namespace oneflow {
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
+  static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunk4Plan(Plan* plan);
   static void GenMemBlockAndChunkWithVariableOpNames4Plan(
@@ -39,6 +40,7 @@ struct PlanUtil {
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
   static void GenRegisterHint(Plan* plan);
+  static void GenLightPlan(Plan* plan, const std::string& plan_name);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
   static const oneflow::OpAttribute& GetOpAttribute(const Plan* plan, int64_t job_id,
                                                     const oneflow::KernelConf& kernel_conf);

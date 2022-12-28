@@ -28,11 +28,11 @@ struct ReshapeCaptureState : public AutoGradCaptureState {
   DimVector input_shape_vec;
 };
 
-class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
+class ReshapeGrad : public OpExprGradFunction<ReshapeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     return Maybe<void>::Ok();
   }
 
@@ -51,7 +51,34 @@ class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reshape", ReshapeOpExprGrad);
+class ReshapeLikeGrad : public OpExprGradFunction<ReshapeCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(ReshapeCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
+    CHECK_OR_RETURN(!inputs.at(1)->requires_grad())
+        << "ReshapeLikeOp's input[1] need not requires_grad.";
+    ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const ReshapeCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+    Shape shape(ctx->input_shape_vec);
+    in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), shape));
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("reshape", ReshapeGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reshape_like", ReshapeLikeGrad);
 
 }  // namespace one
 }  // namespace oneflow

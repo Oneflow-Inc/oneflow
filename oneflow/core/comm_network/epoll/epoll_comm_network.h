@@ -36,7 +36,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
 
-  friend class Global<EpollCommNet>;
+  friend class Singleton<EpollCommNet>;
   EpollCommNet();
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);

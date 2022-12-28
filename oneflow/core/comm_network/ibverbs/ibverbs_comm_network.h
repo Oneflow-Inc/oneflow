@@ -43,7 +43,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   void RecvActorMsg(const ActorMsg& msg);
 
  private:
-  friend class Global<IBVerbsCommNet>;
+  friend class Singleton<IBVerbsCommNet>;
   IBVerbsCommNet();
 
   IBVerbsMemDesc* NewMemDesc(void* ptr, size_t byte_size) override {

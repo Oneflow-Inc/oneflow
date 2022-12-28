@@ -68,9 +68,9 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
 
@@ -147,13 +147,13 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prob->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prob->shape_view().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        ctx->stream(), prediction_diff->shape_view().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -187,9 +187,9 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prob->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prob->shape_view().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
@@ -199,7 +199,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       lower_bound = kernel_cache->lower();
     }
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
-        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        ctx->stream(), prediction_diff->shape_view().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

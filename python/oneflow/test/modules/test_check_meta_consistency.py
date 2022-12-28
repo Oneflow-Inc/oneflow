@@ -27,7 +27,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
+class TestGlobalCastModule_1n2d(flow.unittest.TestCase):
     def test_check_meta_consistency(test_case):
         if os.getenv("RANK") == "0":
             x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)

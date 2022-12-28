@@ -28,10 +28,10 @@ class CpuMedianWithIndicesKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const int64_t num_axes = in->shape().NumAxes();
-    const int64_t size = in->shape().elem_cnt();
+    const int64_t num_axes = in->shape_view().NumAxes();
+    const int64_t size = in->shape_view().elem_cnt();
     if (size == 0) return;
-    const int64_t stride = in->shape().At(num_axes - 1);
+    const int64_t stride = in->shape_view().At(num_axes - 1);
     const int64_t instance_num = size / stride;
     user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -39,12 +39,12 @@ class CpuMedianWithIndicesKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kCPU>(ctx->stream(), tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
                              size * sizeof(T));
     const int64_t thread_num =
-        std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
+        std::min(instance_num, (int64_t)Singleton<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, thread_num);
     BlockingCounter bc(thread_num);
     FOR_RANGE(int64_t, thread_id, 0, thread_num) {
       const Range range = bs.At(thread_id);
-      Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+      Singleton<ThreadPool>::Get()->AddWork([=, &bc]() {
         FOR_RANGE(int64_t, i, range.begin(), range.end()) {
           T* in_ptr = tmp_buffer->mut_dptr<T>() + i * stride;
           T* val_ptr = values->mut_dptr<T>() + i;

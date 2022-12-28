@@ -24,9 +24,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class InstructionMsg;
+class Instruction;
 
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
+Maybe<void> Run(vm::InstructionList* instruction_list);
+Maybe<void> ClusterSync();
+Maybe<void> CurrentRankSync();
 
 }  // namespace vm
 }  // namespace oneflow

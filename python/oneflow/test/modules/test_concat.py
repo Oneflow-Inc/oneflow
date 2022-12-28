@@ -38,6 +38,40 @@ def _test_concat_origin(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+def _test_concat_with_empty_input(test_case, device):
+    input1 = flow.Tensor().to(flow.device(device))
+    input2 = flow.tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out1 = flow.cat([input1, input2], dim=0)
+    of_out2 = flow.cat([input2, input1], dim=0)
+    of_out3 = flow.cat([input1, input2, input1, input1], dim=0)
+
+    torch_input1 = torch.Tensor().to(torch.device(device))
+    torch_input2 = torch.tensor(
+        np.random.randn(2, 6, 5, 3), dtype=torch.float32, device=torch.device(device)
+    )
+    torch_out1 = torch.cat((torch_input1, torch_input2), 0)
+    torch_out2 = torch.cat((torch_input2, torch_input1), 0)
+    torch_out3 = torch.cat((torch_input1, torch_input2, torch_input1, torch_input1), 0)
+
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out1.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out2.numpy(), torch_out2.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out3.numpy(), torch_out3.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out2.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out3.detach().cpu().numpy())
+    )
+
+
 def _test_concat_with_axis_one(test_case, device):
     input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
@@ -119,22 +153,34 @@ def _test_concat_grad_and_no_grad(test_case, device):
     )
 
 
+def _test_concat_single_input_type(test_case, device):
+    torch_list = [torch.Tensor([1, 1, 9, 1])]
+    torch_list = [t.to(dtype=torch.int64, device=device) for t in torch_list]
+
+    flow_list = [flow.Tensor([1, 1, 9, 1])]
+    flow_list = [t.to(dtype=flow.int64, device=device) for t in flow_list]
+    flow_cat_list = flow.cat(flow_list)
+    test_case.assertTrue(flow_cat_list.dtype is oneflow.int64)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_concat_origin,
+            _test_concat_with_empty_input,
             _test_concat_with_axis_one,
             _test_concat_with_three_tensor,
             _test_concat_with_three_tensor_backward,
             _test_concat_grad_and_no_grad,
+            _test_concat_single_input_type,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cat_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
@@ -160,7 +206,7 @@ class TestModule(flow.unittest.TestCase):
             input_list.append(y)
         return torch.cat(tuple(input_list), random(0, 2).to(int))
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_concat_with_input_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, 2, 4).to(device)
@@ -168,7 +214,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.cat((x, y), dim=2)
         return z
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_concat_with_output_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 0, 2, 4).to(device)
@@ -177,17 +223,23 @@ class TestModule(flow.unittest.TestCase):
         z = torch.cat((x, y), dim=dim)
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_cat_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device, torch.bool)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_cat_only_one_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, random(0, 3)).to(device)
         return torch.cat((x,), 0)
+
+    @profile(torch.cat)
+    def profile_cat(test_case):
+        input = torch.ones(100, 100)
+        torch.cat((input, input), dim=0)
+        torch.cat((input, input), dim=1)
 
 
 if __name__ == "__main__":

@@ -152,9 +152,9 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   }
 };
 
-#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(T) \
-  template struct ToContiguousUtil<DeviceType::kCUDA, T>;
+#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(cpp_type, data_type) \
+  template struct ToContiguousUtil<DeviceType::kCUDA, cpp_type>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA,
-                     TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
+                     TO_CONTIGUOUS_COMMON_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 
 }  // namespace oneflow

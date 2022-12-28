@@ -43,6 +43,22 @@ def get_compile_flags() -> List[str]:
     return flags
 
 
+def get_liboneflow_link_flags() -> List[str]:
+    oneflow_python_module_path = get_lib()
+    # path in a pip release
+    oneflow_python_libs_path = f"{oneflow_python_module_path}.libs"
+    # path in a cmake build dir
+    if not os.path.exists(oneflow_python_libs_path):
+        from oneflow.version import __cmake_project_binary_dir__
+
+        oneflow_python_libs_path = __cmake_project_binary_dir__
+    return [
+        f"-L{oneflow_python_libs_path}",
+        f"-l:oneflow",
+        f"-l:of_protoobj",
+    ]
+
+
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
@@ -61,18 +77,6 @@ def with_cuda() -> bool:
 
 def get_cuda_version() -> int:
     return oneflow._oneflow_internal.flags.cuda_version()
-
-
-def with_xla() -> bool:
-    return oneflow._oneflow_internal.flags.with_xla()
-
-
-def with_openvino() -> bool:
-    return oneflow._oneflow_internal.flags.with_openvino()
-
-
-def with_tensorrt() -> bool:
-    return oneflow._oneflow_internal.flags.with_tensorrt()
 
 
 def has_rpc_backend_grpc() -> bool:

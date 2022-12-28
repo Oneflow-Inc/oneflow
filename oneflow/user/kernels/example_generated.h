@@ -561,7 +561,7 @@ struct Tensor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DATA_TYPE = 6,
     VT_DATA = 8
   };
-  const flatbuffers::Vector<int32_t>* shape() const {
+  const flatbuffers::Vector<int32_t>* shape_view() const {
     return GetPointer<const flatbuffers::Vector<int32_t>*>(VT_SHAPE);
   }
   onerec::example::TensorData data_type() const {
@@ -612,7 +612,7 @@ struct Tensor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_SHAPE)
-           && verifier.VerifyVector(shape()) && VerifyField<uint8_t>(verifier, VT_DATA_TYPE)
+           && verifier.VerifyVector(shape_view()) && VerifyField<uint8_t>(verifier, VT_DATA_TYPE)
            && VerifyOffset(verifier, VT_DATA) && VerifyTensorData(verifier, data(), data_type())
            && verifier.EndTable();
   }

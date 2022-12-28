@@ -14,6 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+r"""
+Get the nested attribute given the owning object and attribute chain.
+
+For example, if we want to get `resource.collective_boxing_conf.nccl_num_streams`
+
+we can call `get_nested_attribute(resource, ["collective_boxing_conf", "nccl_num_streams"])
+"""
+
+
+def get_nested_attribute(owning_object, attrs_chain):
+    if not isinstance(attrs_chain, list):
+        if isinstance(attrs_chain, str):
+            attrs_chain = [attrs_chain]
+        else:
+            assert False, (
+                "attrs_chain should be either a string or a list, but get "
+                + str(type(attrs_chain))
+            )
+
+    last_attr = owning_object
+    for att in attrs_chain:
+        assert hasattr(last_attr, att), (
+            repr(last_attr) + " does not have attribute " + att + " !"
+        )
+        last_attr = getattr(last_attr, att)
+    return last_attr
+
 
 def SetProtoAttrValue(attr_value, py_value, default_attr_value):
     if default_attr_value.HasField("at_bool"):

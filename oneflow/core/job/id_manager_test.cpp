@@ -40,36 +40,35 @@ EnvProto GetEnvProto() {
 Resource GetResource() {
   Resource ret;
   ret.set_machine_num(10);
-  ret.set_gpu_device_num(8);
   ret.set_cpu_device_num(5);
   ret.set_comm_net_worker_num(4);
   return ret;
 }
 
 void New() {
-  Global<EnvDesc>::New(GetEnvProto());
-  Global<ProcessCtx>::New();
-  Global<ProcessCtx>::Get()->mutable_ctrl_addr()->Add();
-  Global<ProcessCtx>::Get()->set_rank(0);
-  Global<ProcessCtx>::Get()->set_node_size(1);
-  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
-  Global<IDMgr>::New();
+  Singleton<EnvDesc>::New(GetEnvProto());
+  Singleton<ProcessCtx>::New();
+  Singleton<ProcessCtx>::Get()->mutable_ctrl_addr()->Add();
+  Singleton<ProcessCtx>::Get()->set_rank(0);
+  Singleton<ProcessCtx>::Get()->set_node_size(1);
+  Singleton<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<IDMgr>::New();
 }
 
 void Delete() {
-  Global<IDMgr>::Delete();
-  Global<ProcessCtx>::Delete();
-  Global<ResourceDesc, ForSession>::Delete();
-  Global<EnvDesc>::Delete();
+  Singleton<IDMgr>::Delete();
+  Singleton<ProcessCtx>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
+  Singleton<EnvDesc>::Delete();
 }
 
 }  // namespace
 
 TEST(IDMgr, compile_regst_desc_id) {
   New();
-  ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 2);
+  ASSERT_EQ(Singleton<IDMgr>::Get()->NewRegstDescId(), 0);
+  ASSERT_EQ(Singleton<IDMgr>::Get()->NewRegstDescId(), 1);
+  ASSERT_EQ(Singleton<IDMgr>::Get()->NewRegstDescId(), 2);
   Delete();
 }
 

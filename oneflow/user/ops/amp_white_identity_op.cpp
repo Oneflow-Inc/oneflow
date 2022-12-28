@@ -20,9 +20,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> AmpWhiteIdentityOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  *out->mut_shape() = in.shape();
-  *out->mut_is_dynamic() = in.is_dynamic();
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_shape(in.shape());
+  out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -41,25 +41,33 @@ namespace oneflow {
 
 /* static */ Maybe<void> AmpWhiteIdentityOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("amp_white_identity")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("amp_white_identity")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> AmpBlackIdentityOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_shape(in.shape());
+  out->set_is_dynamic(in.is_dynamic());
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AmpBlackIdentityOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AmpBlackIdentityOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_data_type(in.data_type());
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

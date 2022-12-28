@@ -26,9 +26,9 @@ TEST(CpuConcatVarNdarray, two_elem_concat) {
   std::vector<int32_t> buffer{-1, -1};
   std::vector<int32_t> expected{0, 1};
   CpuNdarrayBuilder<int32_t, 1> ndarray;
-  auto x0 = ndarray.Var({1LL}, x0_data.data());
-  auto x1 = ndarray.Var({1LL}, x1_data.data());
-  ndarray.Var({2LL}, buffer.data()).CopyFrom(ndarray.Concatenate({x0, x1}));
+  auto x0 = ndarray.Var(Shape{1LL}, x0_data.data());
+  auto x1 = ndarray.Var(Shape{1LL}, x1_data.data());
+  ndarray.Var(Shape{2LL}, buffer.data()).CopyFrom(ndarray.Concatenate({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 2), 0);
 }
 
@@ -37,9 +37,9 @@ TEST(CpuConcatVarNdarray, two_elem_concat_assign) {
   std::vector<int32_t> x1_data{-1};
   std::vector<int32_t> buffer{0, 1};
   CpuNdarrayBuilder<int32_t, 1> ndarray;
-  auto x0 = ndarray.Var({1LL}, x0_data.data());
-  auto x1 = ndarray.Var({1LL}, x1_data.data());
-  ndarray.Concatenate({x0, x1}).CopyFrom(ndarray.Var({2LL}, buffer.data()));
+  auto x0 = ndarray.Var(Shape{1LL}, x0_data.data());
+  auto x1 = ndarray.Var(Shape{1LL}, x1_data.data());
+  ndarray.Concatenate({x0, x1}).CopyFrom(ndarray.Var(Shape{2LL}, buffer.data()));
   ASSERT_EQ(x0_data[0], 0);
   ASSERT_EQ(x1_data[0], 1);
 }
@@ -61,9 +61,9 @@ TEST(CpuConcatVarNdarray, 2d_concat) {
  std::vector<int32_t> buffer(10, -1);
   // clang-format on
   CpuNdarrayBuilder<int32_t, 2> ndarray;
-  auto x0 = ndarray.Var({2LL, 3LL}, x0_data.data());
-  auto x1 = ndarray.Var({2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<1>({x0, x1}));
+  auto x0 = ndarray.Var(Shape{2LL, 3LL}, x0_data.data());
+  auto x1 = ndarray.Var(Shape{2LL, 2LL}, x1_data.data());
+  ndarray.Var(Shape{2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<1>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 10), 0);
 }
 
@@ -85,9 +85,9 @@ TEST(CpuConcatVarNdarray, 2d_concat_assign) {
  };
   // clang-format on
   CpuNdarrayBuilder<int32_t, 2> ndarray;
-  auto x = ndarray.Var({2LL, 5LL}, x_data.data());
-  auto y0 = ndarray.Var({2LL, 3LL}, y0_buffer.data());
-  auto y1 = ndarray.Var({2LL, 2LL}, y1_buffer.data());
+  auto x = ndarray.Var(Shape{2LL, 5LL}, x_data.data());
+  auto y0 = ndarray.Var(Shape{2LL, 3LL}, y0_buffer.data());
+  auto y1 = ndarray.Var(Shape{2LL, 2LL}, y1_buffer.data());
   ndarray.template Concatenate<1>({y0, y1}).CopyFrom(x);
   ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * 6), 0);
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4), 0);
@@ -119,9 +119,10 @@ TEST(CpuConcatVarNdarray, 3d_concat) {
  std::vector<int32_t> buffer(20, -1);
   // clang-format on
   CpuNdarrayBuilder<int32_t, 3> ndarray;
-  auto x0 = ndarray.Var({2LL, 2LL, 3LL}, x0_data.data());
-  auto x1 = ndarray.Var({2LL, 2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
+  auto x0 = ndarray.Var(Shape{2LL, 2LL, 3LL}, x0_data.data());
+  auto x1 = ndarray.Var(Shape{2LL, 2LL, 2LL}, x1_data.data());
+  ndarray.Var(Shape{2LL, 2LL, 5LL}, buffer.data())
+      .CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
 }
 
@@ -152,9 +153,9 @@ TEST(CpuConcatVarNdarray, 3d_concat_assign) {
  std::vector<int32_t> y1_buffer(2*2*2, -1);
   // clang-format on
   CpuNdarrayBuilder<int32_t, 3> ndarray;
-  auto x = ndarray.Var({2LL, 2LL, 5LL}, x_data.data());
-  auto y0 = ndarray.Var({2LL, 2LL, 3LL}, y0_buffer.data());
-  auto y1 = ndarray.Var({2LL, 2LL, 2LL}, y1_buffer.data());
+  auto x = ndarray.Var(Shape{2LL, 2LL, 5LL}, x_data.data());
+  auto y0 = ndarray.Var(Shape{2LL, 2LL, 3LL}, y0_buffer.data());
+  auto y1 = ndarray.Var(Shape{2LL, 2LL, 2LL}, y1_buffer.data());
   ndarray.template Concatenate<2>({y0, y1}).CopyFrom(x);
   ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * y0_expected.size()), 0);
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * y1_expected.size()), 0);

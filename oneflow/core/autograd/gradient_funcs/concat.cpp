@@ -42,7 +42,7 @@ class Concat : public OpExprGradFunction<ConcatCaptureState> {
 
 Maybe<void> Concat::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -61,7 +61,7 @@ Maybe<void> Concat::Capture(ConcatCaptureState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(ctx->input_num);
   TensorTuple like(ctx->input_num);
   for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
@@ -69,7 +69,9 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
     in_grads->at(0) = out_grads.at(0);
   } else {
     const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
-    CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
+    CHECK_EQ_OR_RETURN(results->size(), ctx->input_num)
+        << Error::RuntimeError() << "The size of results (" << results->size()
+        << ") must match the size of inputs (" << ctx->input_num << ")";
 
     for (int i = 0; i < ctx->input_num; ++i)
       if (ctx->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }

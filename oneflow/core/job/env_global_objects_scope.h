@@ -45,6 +45,12 @@ class EnvGlobalObjectsScope final {
   Optional<bool> is_normal_exit_;
 };
 
+Maybe<void> InitRDMA();
+
+Maybe<bool> RDMAIsInitialized();
+
+Maybe<void> DestoryRDMA();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_CLUSTER_OBJECTS_SCOPE_H_

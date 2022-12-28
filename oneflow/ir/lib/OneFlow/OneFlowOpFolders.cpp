@@ -16,6 +16,7 @@ limitations under the License.
 #include <functional>
 #include <memory>
 #include <vector>
+#include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/OneFlowOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -43,6 +44,24 @@ StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
   return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
 }
 
+bool MLIRDataTypesAreSame(const std::vector<DataType>& data_types) {
+  if (data_types.empty() || data_types.size() == 1) { return true; }
+  bool result = true;
+  const auto first_data_type = data_types[0];
+  for (size_t i = 1; i < data_types.size(); ++i) { result &= (first_data_type == data_types[i]); }
+  return result;
+}
+
+bool DictionaryAttrsHaveSameDataType(const std::vector<mlir::DictionaryAttr>& attrs) {
+  std::vector<DataType> data_types;
+  for (const auto& attr : attrs) {
+    data_types.push_back(attr.get(OpTrait::TensorSource<void>::getDataTypeAttrName())
+                             .cast<DataTypeAttr>()
+                             .getValue());
+  }
+  return MLIRDataTypesAreSame(data_types);
+}
+
 OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
                        const std::function<MaybeTensor(const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
@@ -51,10 +70,13 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto attrs = NamedAttrList(attr_dict);
   const auto tensor = support::DenseElementsAttrToTensor(
-      attr_dict.get("value"), attr_dict.get("device_tag"), attr_dict.get("device_name"));
+      attr_dict.get("value"), attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr()),
+      attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr()));
   const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
+            attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
   return attrs.getDictionary(ctx);
 }
@@ -65,19 +87,29 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
+  if (!DictionaryAttrsHaveSameDataType({lhs_attr_dict, rhs_attr_dict})) {
+    llvm::errs()
+        << "Input tensors should have same data type in binary operation of constant folding."
+        << "\n";
+    return nullptr;
+  }
 
   auto attrs = NamedAttrList(lhs_attr_dict);
-  const auto lhs_tensor = support::DenseElementsAttrToTensor(lhs_attr_dict.get("value"),
-                                                             lhs_attr_dict.get("device_tag"),
-                                                             lhs_attr_dict.get("device_name"));
-  const auto rhs_tensor = support::DenseElementsAttrToTensor(rhs_attr_dict.get("value"),
-                                                             rhs_attr_dict.get("device_tag"),
-                                                             rhs_attr_dict.get("device_name"));
+  const auto lhs_tensor = support::DenseElementsAttrToTensor(
+      lhs_attr_dict.get("value"),
+      lhs_attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr()),
+      lhs_attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr()));
+  const auto rhs_tensor = support::DenseElementsAttrToTensor(
+      rhs_attr_dict.get("value"),
+      rhs_attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr()),
+      rhs_attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr()));
 
   const auto result = f(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
+            lhs_attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
   return attrs.getDictionary(ctx);
 }
@@ -88,6 +120,7 @@ OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
   NamedAttrList attrs;
   attrs.set(valueAttrName(), valueAttr());
   attrs.set(op_nameAttrName(), op_nameAttr());
+  attrs.set(data_typeAttrName(), data_typeAttr());
   attrs.set(device_tagAttrName(), device_tagAttr());
   attrs.set(device_nameAttrName(), device_nameAttr());
   attrs.set(scope_symbol_idAttrName(), scope_symbol_idAttr());
@@ -130,7 +163,7 @@ OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, functional::Sqrt);
 }
 
-OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastMulOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, functional::Mul);
 }
 

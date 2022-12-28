@@ -97,10 +97,12 @@ class GpuUnfoldTensorKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     std::vector<int32_t> out_shape;
-    out_shape.resize(out->shape().NumAxes());
-    for (int i = 0; i < out->shape().NumAxes(); ++i) { out_shape[i] = out->shape().At(i); }
+    out_shape.resize(out->shape_view().NumAxes());
+    for (int i = 0; i < out->shape_view().NumAxes(); ++i) {
+      out_shape[i] = out->shape_view().At(i);
+    }
     const int32_t in_dims = in_shape.NumAxes();
     const int32_t out_dims = out_shape.size();
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
@@ -123,7 +125,7 @@ class GpuUnfoldTensorKernel final : public user_op::OpKernel {
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int32_t out_size = out->shape().elem_cnt();
+    const int32_t out_size = out->shape_view().elem_cnt();
 
     STRIDES out_stride_cuda;
     for (int i = 0; i < out_dims; ++i) { out_stride_cuda.val[i] = out_stride[i]; }
@@ -161,7 +163,7 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* din = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     const int32_t in_dims = in_shape.NumAxes();
     std::vector<int32_t> din_stride(in_dims, 1);
     for (int32_t i = in_dims - 2; i >= 0; --i) {
@@ -169,8 +171,10 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
     }
 
     std::vector<int32_t> dout_shape;
-    dout_shape.resize(dout->shape().NumAxes());
-    for (int i = 0; i < dout->shape().NumAxes(); ++i) { dout_shape[i] = dout->shape().At(i); }
+    dout_shape.resize(dout->shape_view().NumAxes());
+    for (int i = 0; i < dout->shape_view().NumAxes(); ++i) {
+      dout_shape[i] = dout->shape_view().At(i);
+    }
 
     const int32_t dout_dims = dout_shape.size();
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
@@ -193,8 +197,8 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
 
     const T* dout_ptr = dout->dptr<T>();
     T* din_ptr = din->mut_dptr<T>();
-    const int32_t dout_size = dout->shape().elem_cnt();
-    const int32_t din_size = din->shape().elem_cnt();
+    const int32_t dout_size = dout->shape_view().elem_cnt();
+    const int32_t din_size = din->shape_view().elem_cnt();
 
     GpuUnfoldTensorGradFunctor<T>()(ctx->stream(), dout_ptr, dout_stride_cuda, dout_shape_cuda,
                                     dout_dims, dout_size, din_size, din_ptr);

@@ -43,11 +43,11 @@ NodeDeviceDescriptorManager::NodeDeviceDescriptorManager() {
   if (impl_->nodes.size() > 1) {
     std::string serialized_local_node;
     local->Serialize(&serialized_local_node);
-    Global<CtrlClient>::Get()->PushKV(MakeNodeDeviceDescriptorRpcKey(impl_->rank),
-                                      serialized_local_node);
+    Singleton<CtrlClient>::Get()->PushKV(MakeNodeDeviceDescriptorRpcKey(impl_->rank),
+                                         serialized_local_node);
     for (int64_t i = 0; i < impl_->nodes.size(); ++i) {
       if (i == impl_->rank) { continue; }
-      Global<CtrlClient>::Get()->PullKV(
+      Singleton<CtrlClient>::Get()->PullKV(
           MakeNodeDeviceDescriptorRpcKey(i), [&](const std::string& serialized) {
             impl_->nodes.at(i) = NodeDeviceDescriptor::Deserialize(serialized);
           });

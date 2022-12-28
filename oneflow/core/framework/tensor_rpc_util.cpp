@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <memory>
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
+#include "oneflow/core/framework/sync_symbol_global_tensor_meta.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/synced_symbol_map.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
@@ -35,7 +35,7 @@ struct FlatTensorConsistency;
 class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
   CheckConsistencyAsyncTransportCtx(const TransportToken& transport_token,
-                                    Symbol<one::ConsistentTensorMeta> tensor_meta,
+                                    Symbol<one::GlobalTensorMeta> tensor_meta,
                                     const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                                     const TransportToken& tensor_transport_token)
       : AsyncTransportCtx(transport_token),
@@ -54,7 +54,7 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
   Maybe<void> Check() const;
 
  private:
-  Symbol<one::ConsistentTensorMeta> tensor_meta_;
+  Symbol<one::GlobalTensorMeta> tensor_meta_;
   Optional<Symbol<NdSbp>> consumer_nd_sbp_constraint_;
   TransportToken tensor_transport_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
@@ -69,7 +69,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     return consistency;
   }
   static Maybe<FlatTensorConsistency> New(
-      Symbol<one::ConsistentTensorMeta> tensor_meta,
+      Symbol<one::GlobalTensorMeta> tensor_meta,
       const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
       const TransportToken& tensor_transport_token) {
     const auto& consistency = std::make_shared<FlatTensorConsistency>();
@@ -78,18 +78,18 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     return consistency;
   }
 
-  Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
+  Maybe<void> Check(Symbol<one::GlobalTensorMeta> tensor_meta,
     const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                     const TransportToken& tensor_transport_token) {
     const auto& this_synced_tensor_meta =
-        JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
+        JUST(SyncedSymbolMap<one::GlobalTensorMeta>::Symbol4SyncedSymbolId(
             this->synced_tensor_meta_symbol_id()));
     CHECK_OR_RETURN(this_synced_tensor_meta == tensor_meta);
     CHECK_EQ_OR_RETURN(consumer_nd_sbp_constraint.has_value(),
                        this->has_consumer_nd_sbp_constraint_symbol_id());
     if (this->has_consumer_nd_sbp_constraint_symbol_id()) {
       const auto& that_rank_constaint =
-          JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
+          JUST(SyncedSymbolMap<one::GlobalTensorMeta>::Symbol4SyncedSymbolId(
             this->consumer_nd_sbp_constraint_symbol_id()))->nd_sbp();
       const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint);
       CHECK_OR_RETURN(this_rank_constaint == that_rank_constaint);
@@ -99,11 +99,11 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   }
 
  private:
-  Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
+  Maybe<void> Init(Symbol<one::GlobalTensorMeta> tensor_meta,
     const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                    const TransportToken& tensor_transport_token) {
-    this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
-        tensor_meta, &SyncSymbolConsistentTensorMeta)));
+    this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::GlobalTensorMeta>::FindOrSync(
+        tensor_meta, &SyncSymbolGlobalTensorMeta)));
     if (consumer_nd_sbp_constraint.has_value()) {
       const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint);
       this->set_consumer_nd_sbp_constraint_symbol_id(
@@ -161,7 +161,7 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckTensorConsistency));
-  const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
+  const auto& tensor_meta = JUST(tensor.global_tensor_meta());
   const auto& constaint = JUST(tensor.consumer_nd_sbp_constraint());
   const TransportToken& tensor_transport_token = JUST(tensor.transport_token());
   const auto& ctx = std::make_shared<CheckConsistencyAsyncTransportCtx>(

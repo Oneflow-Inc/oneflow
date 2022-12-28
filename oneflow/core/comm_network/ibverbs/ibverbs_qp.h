@@ -54,7 +54,8 @@ class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq);
+  IBVerbsQP(ibv_context*, ibv_pd*, const struct ibv_port_attr&, uint8_t port_num, ibv_cq* send_cq,
+            ibv_cq* recv_cq);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -90,6 +91,7 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   size_t read_block_size_;
+  int32_t mtu_;
 };
 
 }  // namespace oneflow

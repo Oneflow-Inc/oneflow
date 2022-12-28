@@ -29,8 +29,8 @@ class GatherNd : public OpExprGradFunction<GatherNdCaptureState> {
 
   Maybe<void> Capture(GatherNdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // params
@@ -41,7 +41,7 @@ class GatherNd : public OpExprGradFunction<GatherNdCaptureState> {
 
   Maybe<void> Apply(const GatherNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
     if (ctx->requires_grad) {
       const auto& params = ctx->SavedTensors().at(0);

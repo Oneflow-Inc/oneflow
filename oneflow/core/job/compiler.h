@@ -29,7 +29,7 @@ class Compiler final {
   Compiler() = default;
   ~Compiler() = default;
 
-  void Compile(Job*, Plan*, bool need_job_complete) const;
+  void Compile(Job*, Plan*) const;
 };
 
 }  // namespace oneflow

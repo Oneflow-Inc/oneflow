@@ -111,7 +111,10 @@ def _test_linear_graph_train_with_lr_sch(
 
         def one_iter():
             of_graph_out = linear_t_g(x)
-            return of_graph_out.numpy(), linear_t_g.linear.weight.origin.numpy()
+            return (
+                of_graph_out.numpy(),
+                linear_t_g.linear.weight.to(flow.Tensor).numpy(),
+            )
 
         check_list = []
         for i in range(iter_num):
@@ -183,7 +186,7 @@ class TestGraphLRs(flow.unittest.TestCase):
             of_sgd = flow.optim.SGD(parameters, lr=0.001)
 
             lr = flow.optim.lr_scheduler.PolynomialLR(
-                of_sgd, steps=10, end_learning_rate=0.00001, power=2, cycle=True
+                of_sgd, decay_batch=10, end_learning_rate=0.00001, power=2, cycle=True
             )
             return of_sgd, lr
 

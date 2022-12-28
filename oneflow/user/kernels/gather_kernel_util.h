@@ -34,7 +34,7 @@ struct GatherKernelUtilImpl final {
                       const Shape& flat_in_shape, T* out, int64_t offset);
 };
 
-#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ
+#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)
 #define GATHER_INDEX_TYPE_SEQ INDEX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 
 }  // namespace oneflow

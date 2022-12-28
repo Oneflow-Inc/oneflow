@@ -88,8 +88,8 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
-    int64_t record_num = in_blob->shape().At(0);
-    int64_t sample_elem_cnt = out_blob->shape().Count(1);
+    int64_t record_num = in_blob->shape_view().At(0);
+    int64_t sample_elem_cnt = out_blob->shape_view().Count(1);
     CHECK(record_num > 0);
     const OFRecord* records = in_blob->dptr<OFRecord>();
     T* out_dptr = out_blob->mut_dptr<T>();
@@ -134,10 +134,10 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(out->shape(), in->shape());
+    CHECK_EQ(out->shape_view(), in->shape_view());
     CHECK_EQ(in->data_type(), DataType::kOFRecord);
     CHECK_EQ(out->data_type(), DataType::kTensorBuffer);
-    const int64_t num_instances = in->shape().elem_cnt();
+    const int64_t num_instances = in->shape_view().elem_cnt();
     const auto* records = in->dptr<OFRecord>();
     auto* buffers = out->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");
@@ -223,10 +223,10 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = out_blob->shape().At(0);
+    int64_t record_num = out_blob->shape_view().At(0);
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    CHECK_EQ(out_blob->shape_view(), in_blob->shape_view());
     const OFRecord* records = in_blob->dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");
@@ -256,10 +256,10 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = out_blob->shape().At(0);
+    int64_t record_num = out_blob->shape_view().At(0);
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    CHECK_EQ(out_blob->shape_view(), in_blob->shape_view());
     const OFRecord* records = in_blob->dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");

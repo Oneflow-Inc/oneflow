@@ -44,7 +44,7 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
     : job_conf_(job_conf), job_id_(job_id), symbol_id_(NullOpt) {
   CHECK_JUST(Init());
-  Global<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
+  Singleton<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
 }
 
 Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
@@ -72,28 +72,11 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {
-  Global<JobDesc>::New(job_conf, job_id);
+  Singleton<JobDesc>::New(job_conf, job_id);
 }
 
-GlobalJobDescScope::~GlobalJobDescScope() { Global<JobDesc>::Delete(); }
+GlobalJobDescScope::~GlobalJobDescScope() { Singleton<JobDesc>::Delete(); }
 
-const JobDesc& GlobalJobDesc() { return *Global<JobDesc>::Get(); }
-
-bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info) {
-  for (const auto& pair : inter_user_job_info.output_or_var_op_name2pull_job_name()) {
-    if (pair.second == job_name) { return true; }
-  }
-  return false;
-}
-
-bool IsPushJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info) {
-  for (const auto& pair : inter_user_job_info.input_or_var_op_name2push_job_name()) {
-    if (pair.second == job_name) { return true; }
-  }
-  if (job_name == inter_user_job_info.global_model_init_job_name()) { return true; }
-  if (job_name == inter_user_job_info.global_model_load_job_name()) { return true; }
-  if (job_name == inter_user_job_info.global_model_save_job_name()) { return true; }
-  return false;
-}
+const JobDesc& GlobalJobDesc() { return *Singleton<JobDesc>::Get(); }
 
 }  // namespace oneflow

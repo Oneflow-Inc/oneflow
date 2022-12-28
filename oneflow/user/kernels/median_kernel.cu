@@ -32,12 +32,12 @@ class CudaMedianKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int32_t instance_size = in->shape().elem_cnt();
+    const int32_t instance_size = in->shape_view().elem_cnt();
     const size_t sort_tensor_buffer_bytes = GetCudaAlignedSize(instance_size * sizeof(T));
     SortKeysAscending(
         in->dptr<T>(), 1, instance_size,
         reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + sort_tensor_buffer_bytes),
-        tmp_buffer->shape().elem_cnt() - sort_tensor_buffer_bytes, tmp_buffer->mut_dptr<T>(),
+        tmp_buffer->shape_view().elem_cnt() - sort_tensor_buffer_bytes, tmp_buffer->mut_dptr<T>(),
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr<T>(),
                               tmp_buffer->mut_dptr<T>() + (instance_size - 1) / 2, sizeof(T));

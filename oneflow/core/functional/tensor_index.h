@@ -109,6 +109,8 @@ class TensorIndex : public std::vector<detail::IndexItem> {
   using std::vector<detail::IndexItem>::vector;
 };
 
+bool IsMaskTensor(const std::shared_ptr<Tensor>& tensor);
+
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
@@ -123,8 +125,12 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
                                   const TensorIndex& index);
 
-Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
-                                               TensorTuple& tensor_indices);
+Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                         TensorTuple& tensor_indices);
+
+Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
+                                          const TensorTuple& indices,
+                                          const std::shared_ptr<Tensor>& value);
 
 }  // namespace functional
 }  // namespace one

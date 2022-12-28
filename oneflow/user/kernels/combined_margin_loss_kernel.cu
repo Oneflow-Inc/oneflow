@@ -129,20 +129,21 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
     if (cache != nullptr) {
       auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(x->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      CHECK_EQ(x->shape_view().Count(1), kernel_cache->upper() - kernel_cache->lower());
       lower_bound = kernel_cache->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
-      GpuForward<T, K, true><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock,
-                               0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
-          theta->mut_dptr<T>());
+      GpuForward<T, K, true>
+          <<<BlocksNum4ThreadsNum(x->shape_view().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              x->shape_view().elem_cnt(), x->shape_view().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(),
+              y->mut_dptr<T>(), theta->mut_dptr<T>());
     } else {
       GpuForward<T, K, false>
-          <<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+          <<<BlocksNum4ThreadsNum(x->shape_view().elem_cnt()), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
+              x->shape_view().elem_cnt(), x->shape_view().Count(1), lower_bound, static_cast<T>(m1),
               static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(),
               y->mut_dptr<T>(), theta->mut_dptr<T>());
     }
@@ -187,23 +188,23 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
     if (cache != nullptr) {
       auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(dy->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      CHECK_EQ(dy->shape_view().Count(1), kernel_cache->upper() - kernel_cache->lower());
       lower_bound = kernel_cache->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
       GpuBackward<T, K, true>
-          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+          <<<BlocksNum4ThreadsNum(dy->shape_view().elem_cnt()), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
-              theta->dptr<T>(), dx->mut_dptr<T>());
+              dy->shape_view().elem_cnt(), dy->shape_view().Count(1), lower_bound,
+              static_cast<T>(m1), static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(),
+              label->dptr<K>(), theta->dptr<T>(), dx->mut_dptr<T>());
     } else {
       GpuBackward<T, K, false>
-          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+          <<<BlocksNum4ThreadsNum(dy->shape_view().elem_cnt()), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
-              theta->dptr<T>(), dx->mut_dptr<T>());
+              dy->shape_view().elem_cnt(), dy->shape_view().Count(1), lower_bound,
+              static_cast<T>(m1), static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(),
+              label->dptr<K>(), theta->dptr<T>(), dx->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -57,7 +57,7 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
     nd_sbps = itertools.product(
         itertools.product(sbps, sbps), itertools.product(sbps, sbps)
     )
-    shape = (32, 96, 64)
+    shape = (8, 8, 16)
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
@@ -76,7 +76,7 @@ def _test_eager_boxing_1d_special_split_axis(
         flow.sbp.broadcast,
         flow.sbp.partial_sum,
     ]
-    shape = (16, 16, 5, 7)
+    shape = (4, 4, 5, 7)
     in_placement = flow.placement(type=in_device, ranks=in_device_list)
     out_placement = flow.placement(type=out_device, ranks=out_device_list)
     rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
@@ -96,7 +96,7 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     nd_sbps = itertools.product(
         itertools.product(sbps, sbps), itertools.product(sbps, sbps)
     )
-    shape = (8, 16, 4, 8, 12)
+    shape = (4, 8, 4, 8, 4)
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
@@ -112,7 +112,7 @@ class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
     @globaltest
     def test_eager_boxing_normal_1d_exhaustive_testing(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(12, 12), (18, 24), (15, 17)]
+        arg_dict["shape"] = [(4, 4), (6, 8), (5, 7)]
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]

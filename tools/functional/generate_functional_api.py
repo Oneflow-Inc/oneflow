@@ -123,13 +123,45 @@ pybind_source_fmt = (
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/python_arg_parser.h"
 #include "oneflow/api/python/functional/python_frame.h"
+#include "oneflow/api/python/functional/python_return_types.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
 
+namespace {{
+// This return type template code is referenced from:
+// https://github.com/pytorch/pytorch/blob/master/tools/autograd/gen_python_functions.py
+using oneflow::one::functional::returned_structseq_repr;
+{2}
+
+std::unordered_map<std::string, PyTypeObject*>& get_namedtuple_types_map() {{
+  static std::unordered_map<std::string, PyTypeObject*> namedtuple_types_map = {{
+{3}
+  }};
+  return namedtuple_types_map;
+}}
+
+PyTypeObject* get_namedtuple(const std::string& name) {{
+  static auto& namedtuple_types_map = get_namedtuple_types_map();
+  return namedtuple_types_map[name];
+}}
+
+}} // namespace
+
+
 namespace oneflow {{
 namespace one {{
 namespace functional {{
+
+PyObject* WrapTensorTuple(const TensorTuple& tensortuple,
+                           const std::string& name) {{
+  PyObjectPtr r(PyStructSequence_New(get_namedtuple(name)));
+  if (!r) {{ throw py::error_already_set(); }}
+  for (int i = 0; i < tensortuple.size(); ++i) {{
+    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple[i]));
+  }}
+  return r.release();
+}}
 {0}
 }}  // namespace functional
 }}  // namespace one

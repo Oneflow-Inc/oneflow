@@ -30,7 +30,7 @@ class ActorMsgBus final {
   void SendMsgWithoutCommNet(const ActorMsg& msg);
 
  private:
-  friend class Global<ActorMsgBus>;
+  friend class Singleton<ActorMsgBus>;
   ActorMsgBus() = default;
   HashMap<std::pair<int64_t, int64_t>, int64_t>
       regst_desc_id_dst_actor_id2comm_net_sequence_number_;

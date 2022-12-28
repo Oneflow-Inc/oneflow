@@ -42,7 +42,7 @@ class Unsqueeze : public OpExprGradFunction<UnsqueezeCaptureState> {
 
 Maybe<void> Unsqueeze::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -62,7 +62,7 @@ Maybe<void> Unsqueeze::Capture(UnsqueezeCaptureState* ctx, const TensorTuple& in
 Maybe<void> Unsqueeze::Apply(const UnsqueezeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   in_grads->resize(1);
   if (LazyMode::is_enabled()) {

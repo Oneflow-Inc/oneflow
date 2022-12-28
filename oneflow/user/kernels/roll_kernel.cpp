@@ -36,11 +36,11 @@ class CpuRollKernel final : public user_op::OpKernel {
     SHAPE new_shape{};
     SHIFTS new_shifts{};
     int32_t num_axes = 0;
-    computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
+    computeParams(in->shape_view(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int32_t size = out->shape().elem_cnt();
+    const int32_t size = out->shape_view().elem_cnt();
 
     STRIDE stride{};
     initStride(stride, new_shape, num_axes);

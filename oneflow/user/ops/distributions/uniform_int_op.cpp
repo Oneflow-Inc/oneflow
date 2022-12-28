@@ -20,13 +20,12 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> UniformIntOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("out", 0);
   const Shape& shape = ctx->Attr<Shape>("shape");
   DimVector dim_vec;
   if (shape.NumAxes() > 0) {
     dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
   }
-  *out_shape = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -35,10 +34,11 @@ namespace oneflow {
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   const Shape& logical_shape = ctx->Attr<Shape>("shape");
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  const Shape& physical_shape =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+  const auto tensor_slice_view =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+  const Shape& physical_shape = tensor_slice_view.shape();
 
-  *ctx->OutputShape("out", 0) = physical_shape;
+  ctx->SetOutputShape("out", 0, physical_shape);
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +55,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> UniformIntOp::InferDataType(user_op::InferContext* ctx) {
   auto dtype = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("out", 0) = dtype;
+  ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
 }
 

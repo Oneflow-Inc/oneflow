@@ -71,7 +71,7 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
 class KeyValueStoreOptions final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreOptions);
-  KeyValueStoreOptions(std::string json_serialized) {
+  explicit KeyValueStoreOptions(const std::string& json_serialized) {
     auto json_object = nlohmann::json::parse(json_serialized);
 
     CHECK(json_object.contains("key_type_size"));
@@ -80,6 +80,12 @@ class KeyValueStoreOptions final {
 
     CHECK(json_object.contains("value_type_size"));
     CHECK(json_object["value_type_size"].is_number());
+    std::string value_type_name = json_object["value_type"];
+    if (value_type_name == "oneflow.float" || value_type_name == "oneflow.float32") {
+      value_type_ = DataType::kFloat;
+    } else {
+      UNIMPLEMENTED();
+    }
     value_type_size_ = json_object["value_type_size"].get<int64_t>();
 
     CHECK(json_object.contains("parallel_num"));
@@ -104,6 +110,7 @@ class KeyValueStoreOptions final {
       for (int i = 0; i < caches.size(); ++i) {
         cache_options_.at(i).key_size = key_type_size_;
         cache_options_.at(i).value_size = value_type_size_ * line_size_;
+        cache_options_.at(i).value_type = value_type_;
         ParseCacheOptions(caches.at(i), &cache_options_.at(i));
       }
     }
@@ -144,6 +151,7 @@ class KeyValueStoreOptions final {
   ~KeyValueStoreOptions() = default;
   int64_t KeyTypeSize() const { return key_type_size_; }
   int64_t ValueTypeSize() const { return value_type_size_; }
+  DataType ValueType() const { return value_type_; }
   const std::string& Name() const { return name_; }
   int64_t LineSize() const { return line_size_; }
   const std::vector<CacheOptions>& GetCachesOptions() const { return cache_options_; }
@@ -160,6 +168,7 @@ class KeyValueStoreOptions final {
  private:
   int64_t key_type_size_;
   int64_t value_type_size_;
+  DataType value_type_;
   std::string name_;
   int64_t line_size_;
   std::vector<std::string> persistent_table_paths_;

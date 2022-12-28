@@ -37,7 +37,7 @@ class BufferMgr final {
   }
 
  private:
-  friend class Global<BufferMgr>;
+  friend class Singleton<BufferMgr>;
   BufferMgr() = default;
 
   HashMap<std::string, std::unique_ptr<Buffer<T>>> name2buffer_;
@@ -70,23 +70,13 @@ inline std::string GetOutputCriticalSectionCallbackBufferName(const std::string&
   return prefix + job_name;
 }
 
-inline std::string GetForeignInputBufferName(const std::string& job_name) {
-  static const std::string prefix = "ForeignInput-";
-  return prefix + job_name;
-}
-
-inline std::string GetForeignOutputBufferName(const std::string& job_name) {
-  static const std::string prefix = "ForeignOutput-";
-  return prefix + job_name;
-}
-
 inline std::string GetInputBufferName(const std::string& job_name, const std::string& op_name) {
-  static const std::string prefix = "ForeignInput-";
+  static const std::string prefix = "Input-";
   return prefix + job_name + "-" + op_name;
 }
 
 inline std::string GetOutputBufferName(const std::string& job_name, const std::string& op_name) {
-  static const std::string prefix = "ForeignOutput-";
+  static const std::string prefix = "Output-";
   return prefix + job_name + "-" + op_name;
 }
 

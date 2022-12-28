@@ -30,12 +30,17 @@ class TestAbsModule(flow.unittest.TestCase):
         y = torch.abs(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_abs_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.abs(x)
         return y
+
+    @profile(torch.abs)
+    def profile_abs(test_case):
+        torch.abs(torch.ones(1, 128, 28, 28))
+        torch.abs(torch.ones(16, 128, 28, 28))
 
 
 if __name__ == "__main__":

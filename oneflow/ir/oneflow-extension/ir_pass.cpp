@@ -16,7 +16,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
+#include "OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
@@ -70,7 +70,9 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     is_updated_ = true;
   }
   void DumpLog(const std::string& filename, const std::string& content) override {
-    TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    if (IsInDebugMode()) {
+      TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
+    }
   }
 
   const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
@@ -110,19 +112,6 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
   }
 
-  AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
-    user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
-    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-    return op_def.GetAttrType(attr_name);
-  }
-
-  UserOpDef GetUserOpDef(const std::string& op_type_name) const {
-    const user_op::OpRegistryResult* val =
-        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-    CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-    return val->op_def;
-  }
-
   void QueryLogicalBlob(
       const std::string& lbn,
       std::function<void(const int64_t* shape_begin, const int64_t* shape_end, DataType dt)> cb)
@@ -157,25 +146,48 @@ bool IRRoundTrip<ir_pass_type>::IsEnabled(const JobPassCtx& ctx) const {
   return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
 }
 
+void SortJob(Job& job) {
+  auto* ops = job.mutable_net()->mutable_op();
+  std::sort(ops->begin(), ops->end(),
+            [](const oneflow::OperatorConf& l, const oneflow::OperatorConf& r) {
+              return l.name() < r.name();
+            });
+}
+
 template<IRPassType ir_pass_type>
 Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
+  Job job_before{};
+  job_before.CopyFrom(*job);
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
-      ->Write(*job);
+  SortJob(job_before);
+  if (IsInDebugMode()) {
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
+        ->Write(job_before);
+  }
   mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;
   });
-  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
-      ->Write(*job);
+  if (IsInDebugMode()) {
+    Job job_after{};
+    job_after.CopyFrom(*job);
+    SortJob(job_after);
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
+        ->Write(job_after);
+  }
   return Maybe<void>::Ok();
 }
 
 template class IRRoundTrip<kBeforeAD>;
 template class IRRoundTrip<kAfterAD>;
+
+Maybe<std::string> ConvertJobToTosaIR(Job* job) {
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  return ::mlir::oneflow::ConvertJobToTosaIR(job_wrapper);
+}
 
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   // TODO: check path is valid dir
@@ -183,6 +195,12 @@ Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> ConvertJobToIR(Job* job) {
+  if (IsInDebugMode()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  return ::mlir::oneflow::ConvertJobToIR(job_wrapper);
 }
 
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {

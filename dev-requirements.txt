@@ -13,4 +13,5 @@ pillow
 dataclasses; python_version<"3.7"
 cmakelang==0.6.13
 pytest-xdist
-prettytable
+rich
+portalocker

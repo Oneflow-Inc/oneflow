@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
@@ -22,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -81,7 +85,7 @@ Maybe<void> BuildDstSubsetTickOpAndParallelConf(const HashSet<LogicalBlobId>& ti
   }
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
   JUST(job_builder->AddOp(parallel_conf, *dst_subset_tick_op));
@@ -96,7 +100,7 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
   dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
       src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
-  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
+  const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
   HashMap<int64_t, std::string> machine_id2gather_tick_in_lbns;
   for (int64_t machine_id : process_ranks) {
     ParallelConf parallel_conf;
@@ -161,7 +165,7 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
   src_subset_tick_op->mutable_src_subset_tick_conf()->set_out("out");
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
   JUST(job_builder->AddOp(parallel_conf, *src_subset_tick_op));
@@ -171,7 +175,7 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
 Maybe<void> CreateSourceTicksAndSrcSubsetTick(
     OperatorConf* src_subset_tick_op, JobBuilder* job_builder,
     const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc) {
-  for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
@@ -406,7 +410,7 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
     const HashSet<const OpNode*>& op_nodes, const std::vector<std::string>& lbi_producer_op_names,
     JobBuilder* job_builder) {
   auto* critical_section =
-      Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
+      Singleton<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
   {
     auto* io_cs = critical_section->mutable_input_output_critical_section();
     *io_cs->mutable_lbi_producer_op_name() = {lbi_producer_op_names.begin(),
@@ -449,8 +453,8 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
-                                         const std::string& src_op_name) {
+Maybe<void> MultiClientAddOneWaitAndSendIdsOp(JobBuilder* job_builder, int64_t machine_id,
+                                              const OperatorConf& src_op_consumer) {
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
@@ -472,21 +476,7 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
 
   // connect wait_and_send_ids to tick op which was connected to the src tick op
   OperatorConf tick_op_conf;
-  bool find_src_tick_consumer_tick = false;
-  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
-    // skip if the op is not a tick op
-    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
-    for (const auto& ibn : op.input_bns()) {
-      const auto& input_lbi = op.BnInOp2Lbi(ibn);
-      if (input_lbi.op_name() == src_op_name) {
-        CHECK_OR_RETURN(!find_src_tick_consumer_tick);
-        tick_op_conf.CopyFrom(op.op_conf());
-        find_src_tick_consumer_tick = true;
-      }
-    }
-    return Maybe<void>::Ok();
-  }));
-  CHECK_OR_RETURN(find_src_tick_consumer_tick);
+  tick_op_conf.CopyFrom(src_op_consumer);
   CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
   CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
   tick_op_conf.mutable_tick_conf()->clear_tick();
@@ -494,8 +484,46 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
       GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
   JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
 
-  // erase the src tick op
-  job_builder->DelOps({src_op_name});
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientAddWaitAndSendIds(
+    JobBuilder* job_builder, const HashMap<int64_t, std::string>& machine_id2src_op_name) {
+  // Prepare the consumer tick op for each Source op
+  HashMap<std::string, OperatorConf> src_op_name2solo_consumer_tick_op;
+  HashSet<std::string> src_op_names;
+  for (const auto& pair : machine_id2src_op_name) {
+    CHECK_OR_RETURN(src_op_names.insert(pair.second).second)
+        << " duplicated src op name " << pair.second;
+  }
+  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
+    // skip if the op is not a tick op
+    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
+    for (const auto& ibn : op.input_bns()) {
+      const auto& input_lbi = op.BnInOp2Lbi(ibn);
+      if (src_op_names.count(input_lbi.op_name()) == 0) { continue; }
+      auto insert_pair =
+          src_op_name2solo_consumer_tick_op.emplace(input_lbi.op_name(), op.op_conf());
+      CHECK_OR_RETURN(insert_pair.second)
+          << " Duplicated src op name " << input_lbi.op_name() << " old op "
+          << insert_pair.first->second.DebugString() << " new op " << op.op_conf().DebugString();
+    }
+    return Maybe<void>::Ok();
+  }));
+
+  // Replace Source op with WaitAndSendIds op
+  for (const auto& pair : machine_id2src_op_name) {
+    auto tick_op_iter = src_op_name2solo_consumer_tick_op.find(pair.second);
+    CHECK_OR_RETURN(tick_op_iter != src_op_name2solo_consumer_tick_op.end())
+        << "Can't find consumer tick op of source op name " << pair.second << " machine id "
+        << pair.first;
+    JUST(MultiClientAddOneWaitAndSendIdsOp(job_builder, pair.first, tick_op_iter->second));
+  }
+
+  // Delete Source op
+  std::vector<std::string> src_op_name_vec{src_op_names.begin(), src_op_names.end()};
+  job_builder->DelOps(src_op_name_vec);
+
   return Maybe<void>::Ok();
 }
 
@@ -586,9 +614,8 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
   }
   {
     JobBuilder job_builder(job);
-    for (const auto& pair : machine_id2src_op_name) {
-      JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
-    }
+    JUST(MultiClientAddWaitAndSendIds(&job_builder, machine_id2src_op_name));
+
     for (const auto& pair : machine_id2sink_op_name) {
       JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
     }

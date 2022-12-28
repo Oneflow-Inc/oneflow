@@ -415,7 +415,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_system_proxy", default=False, action="store_true", required=False
     )
-    parser.add_argument("--xla", default=False, action="store_true", required=False)
     parser.add_argument("--mlir", default=False, action="store_true", required=False)
     parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
@@ -454,10 +453,6 @@ if __name__ == "__main__":
         extra_oneflow_cmake_args += " -DBUILD_CUDA=ON"
     cuda_versions = args.cuda_version.split(",")
     cuda_versions = [v.strip() for v in cuda_versions]
-    if args.xla:
-        extra_oneflow_cmake_args += " -DWITH_XLA=ON"
-    else:
-        extra_oneflow_cmake_args += " -DWITH_XLA=Off"
     if args.mlir:
         extra_oneflow_cmake_args += " -DWITH_MLIR=ON"
     else:
@@ -480,11 +475,6 @@ if __name__ == "__main__":
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args
                 ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
                 enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
-            if args.xla and args.cpu:
-                # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
-                enforced_oneflow_cmake_args += (
-                    ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
-                )
             extra_docker_args = args.extra_docker_args
             if not args.container_name:
                 args.container_name = f"manylinux-build-run-by-{getpass.getuser()}"
@@ -522,8 +512,6 @@ if __name__ == "__main__":
                     args.dry,
                 )
             bash_args = ""
-            if args.xla:
-                bash_args = "-l"
             bash_wrap = ""
             if args.gcc4:
                 bash_wrap = "gcc --version"
@@ -546,8 +534,6 @@ gcc --version
             else:
                 cache_dir = os.path.join(os.getcwd(), "manylinux2014-build-cache")
                 sub_dir = cuda_version
-                if args.xla:
-                    sub_dir += "-xla"
                 if args.mlir:
                     sub_dir += "-mlir"
                 if args.gcc4:

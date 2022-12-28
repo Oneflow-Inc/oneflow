@@ -40,9 +40,9 @@ class OFRecordParser final : public Parser<TensorBuffer> {
       auto& sample = batch_data[i];
       CHECK(dptr[i].ParseFromArray(sample.data(), sample.nbytes()));
     });
-    if (batch_data.size() != out_tensor->shape().elem_cnt()) {
-      CHECK_EQ(out_tensor->mut_shape().NumAxes(), 1);
-      out_tensor->mut_shape().Set(0, batch_data.size());
+    if (batch_data.size() != out_tensor->shape_view().elem_cnt()) {
+      CHECK_EQ(out_tensor->mut_shape_view().NumAxes(), 1);
+      out_tensor->mut_shape_view().Set(0, batch_data.size());
     }
   }
 };

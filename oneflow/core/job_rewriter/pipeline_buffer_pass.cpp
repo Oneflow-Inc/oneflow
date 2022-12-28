@@ -39,7 +39,11 @@ class PipelineBufferPass final : public JobPass {
     return Apply(op_graph, &job_builder);
   }
 
-  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    // Pipeline optimization depends on gradient accumulatioin.
+    return ctx.job_desc().IsTrain()
+           && ctx.job_desc().job_conf().num_gradient_accumulation_steps() > 1;
+  }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
@@ -47,8 +51,8 @@ class PipelineBufferPass final : public JobPass {
 const std::string kBufferOpNamePrefix = "System-Pipeline-Buffer-Op_";
 
 const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
@@ -224,11 +228,6 @@ void TryInsertOrUseBufferOpBothSrcDst(
 }
 
 Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  // Pipeline optimization depends on gradient accumulatioin.
-  if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
-    return Maybe<void>::Ok();
-  }
-
   int64_t max_stage_id = 0;
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) {
@@ -293,7 +292,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       if (src_node->parallel_desc().device_type() == DeviceType::kCPU
           && dst_node->parallel_desc().device_type() == DeviceType::kCUDA) {
-        if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
+        if (src_stage_id == 0 && dst_stage_id == max_stage_id) {
           TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, &buffer_op_name2op_conf,
                                           &buffer_op_name2parallel_conf, &mut_op_name2conf);
           return;

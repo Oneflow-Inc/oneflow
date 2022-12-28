@@ -43,6 +43,8 @@ class JobBuilder final {
     return job_->mutable_job_parallel_view_conf();
   }
 
+  MergedLogicalChainIdGroup* add_logical_chain_groups() { return job_->add_logical_chain_groups(); }
+
   Maybe<const OperatorConf&> OpConf4OpName(const std::string& op_name) const;
   Maybe<OperatorConf*> MutableOpConf4OpName(const std::string& op_name);
 
@@ -81,6 +83,7 @@ class JobBuilder final {
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
                                   const ParallelConf& parallel_conf);
+  void AddOpToModuleConf(const OperatorConf& op_conf);
 
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;

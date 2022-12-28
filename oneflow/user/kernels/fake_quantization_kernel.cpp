@@ -90,10 +90,10 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     if (quantization_formula == "google") {
       int64_t outer_num = 1;
-      int64_t inner_num = in->shape().elem_cnt();
-      if (scale->shape().elem_cnt() > 1) {  // per-channel quantization
-        outer_num = in->shape().At(0);
-        inner_num = in->shape().Count(1);
+      int64_t inner_num = in->shape_view().elem_cnt();
+      if (scale->shape_view().elem_cnt() > 1) {  // per-channel quantization
+        outer_num = in->shape_view().At(0);
+        inner_num = in->shape_view().Count(1);
       }
 
       if (quantization_scheme == "symmetric") {
@@ -114,7 +114,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
       }
     } else if (quantization_formula == "cambricon") {
       FakeQuantizationPerLayerCambricon(in_ptr, scale_ptr[0], quantization_bit,
-                                        in->shape().elem_cnt(), out_ptr);
+                                        in->shape_view().elem_cnt(), out_ptr);
     } else {
       UNIMPLEMENTED();
     }

@@ -31,7 +31,7 @@ namespace oneflow {
     CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                     && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t N = in_tensor.shape().At(0);
   int64_t H = ctx->Attr<int64_t>("crop_h");
   int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -42,9 +42,9 @@ namespace oneflow {
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1);
   std::string output_layout = ctx->Attr<std::string>("output_layout");
   if (output_layout == "NCHW") {
-    *out_tensor->mut_shape() = Shape({N, C, H, W});
+    out_tensor->set_shape(Shape({N, C, H, W}));
   } else if (output_layout == "NHWC") {
-    *out_tensor->mut_shape() = Shape({N, H, W, C});
+    out_tensor->set_shape(Shape({N, H, W, C}));
   } else {
     return Error::CheckFailedError() << "output_layout: " << output_layout << " is not supported";
   }
@@ -64,18 +64,24 @@ namespace oneflow {
 /* static */ Maybe<void> CropMirrorNormalizeFromTensorbufferOp::InferDataType(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(in_tensor.data_type());
   bool has_mirror = ctx->has_input("mirror", 0);
   if (has_mirror) {
     const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
+    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8)
+        << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+        << DataType_Name(mirror_tensor.data_type());
   }
 
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
-                     DataType::kFloat);  // only support float now; for float16 in future
-  *out_tensor->mut_data_type() = output_dtype;
+                     DataType::kFloat)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(output_dtype);  // only support float now; for float16 in future
+  out_tensor->set_data_type(output_dtype);
 
   return Maybe<void>::Ok();
 }
@@ -89,7 +95,7 @@ namespace oneflow {
     CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                     && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t N = in_tensor.shape().At(0);
   int64_t H = ctx->Attr<int64_t>("crop_h");
   int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -106,9 +112,9 @@ namespace oneflow {
   }
   std::string output_layout = ctx->Attr<std::string>("output_layout");
   if (output_layout == "NCHW") {
-    *out_tensor->mut_shape() = Shape({N, C, H, W});
+    out_tensor->set_shape(Shape({N, C, H, W}));
   } else if (output_layout == "NHWC") {
-    *out_tensor->mut_shape() = Shape({N, H, W, C});
+    out_tensor->set_shape(Shape({N, H, W, C}));
   } else {
     return Error::CheckFailedError() << "output_layout: " << output_layout << " is not supported";
   }
@@ -128,24 +134,30 @@ namespace oneflow {
 
 /* static */ Maybe<void> CropMirrorNormalizeFromUint8Op::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8);
+  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kUInt8) << ", but got "
+      << DataType_Name(in_tensor.data_type());
   bool has_mirror = ctx->has_input("mirror", 0);
   if (has_mirror) {
     const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
+    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8)
+        << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+        << DataType_Name(mirror_tensor.data_type());
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
-                     DataType::kFloat);  // only support float now; for float16 in future
-  *out_tensor->mut_data_type() = output_dtype;
+                     DataType::kFloat)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(output_dtype);  // only support float now; for float16 in future
+  out_tensor->set_data_type(output_dtype);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> CoinFlipOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  *out_tensor->mut_shape() = Shape({batch_size});
+  out_tensor->set_shape(Shape({batch_size}));
   return Maybe<void>::Ok();
 }
 
@@ -156,9 +168,10 @@ namespace oneflow {
   const Shape logical_shape = Shape({batch_size});
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
-  const Shape& physical_shape =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
-  *ctx->OutputShape("out", 0) = physical_shape;
+  const auto tensor_slice_view =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+  const Shape& physical_shape = tensor_slice_view.shape();
+  ctx->SetOutputShape("out", 0, physical_shape);
   return Maybe<void>::Ok();
 }
 
@@ -201,16 +214,16 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CoinFlipOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  *out_tensor->mut_data_type() = DataType::kInt8;
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
+  out_tensor->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ImageRandomCropOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  *out_tensor->mut_shape() = in_tensor.shape();
-  *out_tensor->mut_is_dynamic() = in_tensor.is_dynamic();
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
+  out_tensor->set_shape(in_tensor.shape());
+  out_tensor->set_is_dynamic(in_tensor.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -233,7 +246,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageRandomCropOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
-  *ctx->OutputDType("out", 0) = in_tensor.data_type();
+  ctx->SetOutputDType("out", 0, in_tensor.data_type());
   return Maybe<void>::Ok();
 }
 

@@ -22,7 +22,7 @@ import oneflow as flow
 
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 _tensor_or_tensors = Union[Tensor, Iterable[Tensor]]
@@ -94,7 +94,7 @@ def clip_grad_norm_(
     if parameters[0].is_global:
         assert all(
             [p.is_global for p in parameters]
-        ), "All parameters must be consistent tensor."
+        ), "All parameters must be global tensor."
         sbp_broadcast = [flow.sbp.broadcast for _ in parameters[0].sbp]
         param0_placement = parameters[0].placement
         if norm_type == float("inf"):

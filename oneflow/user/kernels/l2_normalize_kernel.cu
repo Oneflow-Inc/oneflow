@@ -16,32 +16,34 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include <cub/cub.cuh>
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
 namespace {
 
-template<typename T>
+template<typename T, typename ComputeType>
 __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
-                                   const T epsilon, const T* in, T* square_x_sum, T* out) {
-  using BlockReduce = cub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
+                                   const ComputeType epsilon, const T* in,
+                                   ComputeType* square_x_sum, T* out) {
+  using BlockReduce = cub::BlockReduce<ComputeType, ep::CudaStream::kDefaultBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
-    T sum = GetZeroVal<T>();
+    ComputeType sum = GetZeroVal<ComputeType>();
     const int32_t offset = (i / d) * d * c + (i % d);
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
-      const T x = in[offset + j * d];
+      const ComputeType x = static_cast<ComputeType>(in[offset + j * d]);
       sum += x * x;
     }
-    const T reduce_sum = BlockReduce(temp_storage).Sum(sum);
+    const ComputeType reduce_sum = BlockReduce(temp_storage).Sum(sum);
     if (threadIdx.x == 0) { square_x_sum[i] = reduce_sum; }
     __syncthreads();
 
-    const T inv_norm = rsqrtf(fmaxf(square_x_sum[i], epsilon));
+    const ComputeType inv_norm = rsqrtf(fmaxf(square_x_sum[i], epsilon));
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
       const int32_t index = offset + j * d;
-      out[index] = inv_norm * in[index];
+      out[index] = static_cast<T>(inv_norm * static_cast<ComputeType>(in[index]));
     }
   }
 }
@@ -97,11 +99,13 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
     const float epsilon = ctx->Attr<float>("epsilon");
     int32_t axis = ctx->Attr<int32_t>("axis");
-    int32_t c = x->shape().At(axis);
-    int32_t n = x->shape().elem_cnt() / c;
-    int32_t d = x->shape().Count(axis + 1);
-    RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
-                    x->dptr<T>(), square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
+    int32_t c = x->shape_view().At(axis);
+    int32_t n = x->shape_view().elem_cnt() / c;
+    int32_t d = x->shape_view().Count(axis + 1);
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+    RUN_CUDA_KERNEL((L2NormalizeForward<T, ComputeType>), ctx->stream(), n, n, c, d,
+                    static_cast<ComputeType>(epsilon), x->dptr<T>(),
+                    square_x_sum->mut_dptr<ComputeType>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -112,7 +116,9 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(half)
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(double)
 
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
@@ -129,9 +135,9 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float epsilon = ctx->Attr<float>("epsilon");
     int32_t axis = ctx->Attr<int32_t>("axis");
-    int32_t c = dy->shape().At(axis);
-    int32_t n = dy->shape().elem_cnt() / c;
-    int32_t d = dy->shape().Count(axis + 1);
+    int32_t c = dy->shape_view().At(axis);
+    int32_t n = dy->shape_view().elem_cnt() / c;
+    int32_t d = dy->shape_view().Count(axis + 1);
     RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
                     y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(), dx->mut_dptr<T>());
   }
@@ -145,5 +151,6 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(double)
 
 }  // namespace oneflow

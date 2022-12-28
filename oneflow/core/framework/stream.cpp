@@ -15,66 +15,66 @@ limitations under the License.
 */
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/framework/stream_mgr.h"
+#include "oneflow/core/vm/stream_get_allocator_stream_type.h"
 
 namespace oneflow {
 
-namespace {
+Stream::Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid)
+    : device_(device), stream_type_(stream_type), thread_uid_(thread_uid), unique_stream_id_(-1) {}
 
-intrusive::shared_ptr<LocalDepObject> RawGetStaticGlobalTransportLocalDepObject() {
-  return intrusive::make_shared<LocalDepObject>();
+Maybe<void> Stream::Init(size_t unique_stream_id) {
+  unique_stream_id_ = unique_stream_id;
+  return Maybe<void>::Ok();
 }
 
-intrusive::shared_ptr<LocalDepObject> RawNewComputeDepObject(Symbol<Device>, StreamRole) {
-  return intrusive::make_shared<LocalDepObject>();
+/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type,
+                                                size_t thread_uid) {
+  std::shared_ptr<Stream> stream(new Stream(device, stream_type, thread_uid));
+  return JUST(SingletonMaybe<StreamMgr>())
+      ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
+        JUST(stream->Init(unique_stream_id));
+        return SymbolOf(*stream);
+      });
 }
 
-}  // namespace
-
-LocalDepObject* GetStaticGlobalTransportLocalDepObject() {
-  static constexpr auto* GetLocalDepObject =
-      DECORATE(&RawGetStaticGlobalTransportLocalDepObject, StaticGlobalCopiable);
-  return GetLocalDepObject().Mutable();
-}
-
-Stream::Stream(Symbol<Device> device, StreamRole stream_role)
-    : device_(device),
-      stream_role_(stream_role),
-      schedule_local_dep_object_(nullptr),
-      transport_local_dep_object_(NullOpt) {
-  static constexpr auto* GetComputeDep = DECORATE(&RawNewComputeDepObject, StaticGlobalCopiable);
-  schedule_local_dep_object_ = GetComputeDep(device, stream_role).Mutable();
-  if (StreamRoleSwitch<IsCommNetStream>(stream_role)) {
-    transport_local_dep_object_ = GetStaticGlobalTransportLocalDepObject();
-  }
+/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type,
+                                             size_t thread_uid) {
+  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocalCopiable);
+  return Make(device, stream_type, thread_uid);
 }
 
 namespace {
 
-Symbol<Stream> RawNewStream(Symbol<Device> device, StreamRole stream_role) {
-  return SymbolOf(Stream(device, stream_role));
-}
-
-Symbol<Stream> RawGetDefaultStreamByDevice(Symbol<Device> device) {
-  return Stream::New(device, StreamRole::kCompute);
+Maybe<Symbol<Stream>> RawGetDefaultStreamByDevice(Symbol<Device> device) {
+  return Stream::New(device, StreamType::kCompute);
 }
 
 Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parallel_desc) {
   return RawGetDefaultStreamByDevice(JUST(GetTensorDevice(parallel_desc)));
 }
 
+Maybe<Symbol<Stream>> RawGetAllocatorStream(Symbol<Stream> stream) {
+  StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream->stream_type()));
+  if (allocator_stream_type == stream->stream_type()) { return stream; }
+  return Stream::New(stream->device(), allocator_stream_type, stream->thread_uid());
+}
+
 }  // namespace
 
-decltype(Stream::New) Stream::New = DECORATE(&RawNewStream, ThreadLocal);
+int64_t Stream::kDefaultStreamThreadUid = 0;
 
 decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
     DECORATE(&RawGetDefaultStreamByDevice, ThreadLocal);
 
 decltype(GetDefaultStreamByPlacement) GetDefaultStreamByPlacement =
     DECORATE(&RawGetDefaultStreamByPlacement, ThreadLocal);
+
+decltype(GetAllocatorStream) GetAllocatorStream = DECORATE(&RawGetAllocatorStream, ThreadLocal);
 
 }  // namespace oneflow

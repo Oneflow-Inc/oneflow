@@ -98,6 +98,20 @@ class TestMaxModule(flow.unittest.TestCase):
         y = random_tensor(ndim, *b_dims, dtype=int).to(device)
         return torch.max(x, y)
 
+    @autotest(n=3, auto_backward=True, check_graph=True)
+    def test_max_with_diff_size(test_case):
+        x = flow.rand(1, 1, 4, requires_grad=True)
+        y = flow.rand(1, 4, requires_grad=True)
+        x = random_tensor(3, 1, 1, 4)
+        y = random_tensor(2, 1, 4)
+        return torch.max(x, y)
+
+    @autotest(n=3, auto_backward=False)
+    def test_max_return_type(test_case):
+        x = random_tensor(3, 4)
+        result = x.max(1)
+        return result.values, result.indices
+
 
 if __name__ == "__main__":
     unittest.main()

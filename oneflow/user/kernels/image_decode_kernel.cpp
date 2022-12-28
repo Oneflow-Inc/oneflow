@@ -69,15 +69,15 @@ class ImageDecodeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in_tensor->shape().elem_cnt(), out_tensor->shape().elem_cnt());
-    CHECK_GT(in_tensor->shape().elem_cnt(), 0);
+    CHECK_EQ(in_tensor->shape_view().elem_cnt(), out_tensor->shape_view().elem_cnt());
+    CHECK_GT(in_tensor->shape_view().elem_cnt(), 0);
 
     const TensorBuffer* in_img_buf = in_tensor->dptr<TensorBuffer>();
     TensorBuffer* out_img_buf = out_tensor->mut_dptr<TensorBuffer>();
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     const DataType data_type = ctx->Attr<DataType>("data_type");
 
-    MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop(in_tensor->shape_view().elem_cnt(), [&](size_t i) {
       DecodeImage(in_img_buf[i], out_img_buf + i, color_space, data_type);
     });
   }

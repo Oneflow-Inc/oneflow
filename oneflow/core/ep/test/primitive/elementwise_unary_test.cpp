@@ -62,7 +62,7 @@ void EigenElementwise(FunctorT functor, Src* src, Dst* dst, const size_t elem_cn
 template<typename Src, typename Dst, DataType SrcType, DataType DstType,
          ep::primitive::UnaryOp unary_op, template<typename A, typename B> class FunctorClass>
 void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
-                     const size_t elem_cnt) {
+                     const size_t elem_cnt, Scalar attr0 = Scalar(), Scalar attr1 = Scalar()) {
   for (const auto& device_type : device_types) {
     auto device = registry->GetDevice(device_type, 0);
     using EigenSrcVec = Eigen::Matrix<Src, 1, Eigen::Dynamic>;
@@ -82,7 +82,7 @@ void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>
 
     ep::test::StreamGuard stream(device.get());
     std::unique_ptr<ElementwiseUnary> elementwise_primitive = NewPrimitive<ElementwiseUnaryFactory>(
-        device_type, unary_op, /*src_type=*/SrcType, /*dst_type=*/DstType);
+        device_type, unary_op, /*src_type=*/SrcType, /*dst_type=*/DstType, attr0, attr1);
     ASSERT_TRUE(elementwise_primitive.operator bool());
     std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
     std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);

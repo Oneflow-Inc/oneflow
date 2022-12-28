@@ -43,7 +43,22 @@ def _run_functional_doctest(
     for (name, fun) in r:
         if fun.__doc__ is not None:
             test = parser.get_doctest(fun.__doc__, {}, __name__, __file__, 0)
-            runner.run(test)
+            try:
+                runner.run(test)
+            except doctest.DocTestFailure as e:
+                print(f"\nGot error result in the docstring of {name}")
+                print(f"got output: {e.got}")
+                raise e
+            except doctest.UnexpectedException as e:
+                print(f"\nGot UnexpectedException in the docstring of {name}")
+                raise e.exc_info[1]
+
+    if not raise_on_error:
+        test_case.assertEqual(
+            runner.failures,
+            0,
+            f"{runner.summarize()}, please turn on raise_on_error to see more details",
+        )
 
 
 @flow.unittest.skip_unless_1n1d()

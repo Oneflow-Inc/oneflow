@@ -322,8 +322,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* sampled_weight = ctx->Tensor4ArgNameAndIndex("sampled_weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int64_t batch_size = label->shape().At(0);
-    const int64_t num_classes = weight->shape().At(0);
+    const int64_t batch_size = label->shape_view().At(0);
+    const int64_t num_classes = weight->shape_view().At(0);
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     TmpBufferManager<K> buffer_manager(tmp_buffer->mut_dptr(), num_classes, batch_size,
                                        parallel_num);
@@ -355,7 +355,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
     GatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Forward(
         ctx->stream(), buffer_manager.CubSortValuesOutPtr(), num_sample, weight->dptr<T>(),
-        Shape({1, num_classes, weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(), 0);
+        Shape({1, num_classes, weight->shape_view().Count(1)}), sampled_weight->mut_dptr<T>(), 0);
 
     MapLabel<K>(ctx->stream(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
                 buffer_manager.GetCubTmpStorageSize(), label->dptr<K>(),
@@ -406,11 +406,11 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
     Memcpy<DeviceType::kCUDA>(ctx->stream(), boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
                               sampled_weight_diff->dptr<void>(),
-                              sampled_weight_diff->shape().elem_cnt()
+                              sampled_weight_diff->shape_view().elem_cnt()
                                   * GetSizeOfDataType(sampled_weight_diff->data_type()));
     Memcpy<DeviceType::kCUDA>(
         ctx->stream(), boxing_disabled_sampled_label->mut_dptr<void>(), sampled_label->dptr<void>(),
-        sampled_label->shape().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
+        sampled_label->shape_view().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

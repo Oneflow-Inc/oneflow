@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
@@ -151,8 +151,8 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
     const std::string& output_layout = ctx->Attr<std::string>("output_layout");
     float* out_dptr = out_blob->mut_dptr<float>();
     const uint8_t* in_dptr = in_blob->dptr<uint8_t>();
-    const ShapeView& in_shape = in_blob->shape();
-    const ShapeView& out_shape = out_blob->shape();
+    const ShapeView& in_shape = in_blob->shape_view();
+    const ShapeView& out_shape = out_blob->shape_view();
     CHECK_EQ(in_shape.NumAxes(), 4);
     CHECK_EQ(out_shape.NumAxes(), 4);
     int32_t elem_cnt = out_shape.elem_cnt();

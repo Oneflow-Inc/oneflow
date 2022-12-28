@@ -21,10 +21,11 @@ namespace ep {
 namespace primitive {
 namespace broadcast_elementwise_binary {
 
-#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY(               \
-    binary_op, src_data_type_pair, dst_data_type_pair)                                \
-  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary< \
-      binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>();
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY(                       \
+    binary_op, src_data_type_pair, dst_data_type_pair)                                        \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<         \
+      binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>( \
+      Scalar attr0, Scalar attr1);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY,
                                  BINARY_COMPARISION_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,

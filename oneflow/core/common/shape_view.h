@@ -16,78 +16,46 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_SHAPE_VIEW_H_
 #define ONEFLOW_CORE_REGISTER_SHAPE_VIEW_H_
 
+#include "oneflow/core/common/array_ref.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
 class ShapeProto;
 class Shape;
 
-template<typename DimT>
-class ShapeViewBase {
+class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
  public:
-  using DimType = DimT;
-  ShapeViewBase(DimType* ptr, int64_t num_axes) : ptr_(ptr), num_axes_(num_axes) {}
-  ShapeViewBase(const ShapeViewBase& rhs) = default;
-  ~ShapeViewBase() = default;
+  ShapeView() = default;
+  // NOLINTNEXTLINE
+  ShapeView(const ShapeProto& shape_proto)
+      : ArrayRef<int64_t>(shape_proto.dim().data(), shape_proto.dim_size()){};
+  // NOLINTNEXTLINE
+  ShapeView(const Shape& shape)
+      : ArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
 
-  int64_t NumAxes() const { return num_axes_; }
-  int64_t At(int64_t index) const;
-  int64_t Count(int64_t begin_axis) const;
-  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
-  int64_t elem_cnt() const;
-  const DimType* ptr() const { return ptr_; }
+  using ArrayRef<DimType>::ArrayRef;
 
-  bool operator==(const ShapeViewBase& rhs) const;
-  std::string ToString() const;
+  const DimType* ptr() const { return this->data(); }
+
   void ToDimVector(DimVector* dim_vec) const;
   void ToShape(Shape* shape) const;
-
-  void set_ptr(DimType* ptr) { ptr_ = ptr; }
-
- protected:
-  DimType* dim_ptr() const { return ptr_; }
-
- private:
-  DimType* ptr_;
-  int64_t num_axes_;
 };
 
-class ShapeView final : public ShapeViewBase<const int64_t> {
+std::ostream& operator<<(std::ostream& out, ShapeView shape);
+
+class MutShapeView final : public MutableArrayRef<int64_t>, public MutShapeMixIn<MutShapeView> {
  public:
-  ShapeView() : ShapeViewBase<const int64_t>(nullptr, 0) {}
-  ShapeView(const int64_t* ptr, int64_t num_axes) : ShapeViewBase<const int64_t>(ptr, num_axes) {}
-  ShapeView(const ShapeProto& shape_proto);
-  ShapeView(const Shape& shape);
-  ShapeView(const ShapeView& rhs) = default;
-  ~ShapeView() = default;
+  using MutableArrayRef<DimType>::MutableArrayRef;
+  // NOLINTNEXTLINE
+  MutShapeView(Shape& shape)
+      : MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
+
+  int64_t* mut_ptr() const { return this->data(); }
+
+  void set_shape(ShapeView shape);
 };
-
-std::ostream& operator<<(std::ostream& out, const ShapeView& shape);
-
-class MutShapeView final : public ShapeViewBase<int64_t> {
- public:
-  MutShapeView() : ShapeViewBase<int64_t>(nullptr, 0) {}
-  MutShapeView(int64_t* ptr, int64_t num_axes) : ShapeViewBase<int64_t>(ptr, num_axes) {}
-  MutShapeView(const MutShapeView& rhs) = default;
-  ~MutShapeView() = default;
-
-  int64_t* mut_ptr() const { return dim_ptr(); }
-  void Set(int64_t axis, int64_t val);
-
-  void set_shape(const Shape& val);
-  void set_shape(const ShapeView& shape);
-};
-
-template<typename DimT>
-bool ShapeViewBase<DimT>::operator==(const ShapeViewBase<DimT>& rhs) const {
-  if (this->NumAxes() != rhs.NumAxes()) { return false; }
-  FOR_RANGE(int, i, 0, this->NumAxes()) {
-    if (At(i) != rhs.At(i)) { return false; }
-  }
-  return true;
-}
 
 }  // namespace oneflow
 

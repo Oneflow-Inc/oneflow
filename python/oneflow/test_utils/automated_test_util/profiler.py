@@ -20,9 +20,11 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple
 import torch
 import oneflow as flow
 import oneflow.support.env_var_util
-import oneflow.test_utils.automated_test_util.torch_flow_dual_object as dual_object_module
+from oneflow.test_utils.automated_test_util import (
+    torch_flow_dual_object as dual_object_module,
+)
 
-__all__ = ["profile", "set_profiler_hook", "profile_dual_object"]
+__all__ = ["profile", "set_profiler_hook", "profile_dual_object", "profiled_framework"]
 
 
 def compose(*fs):
@@ -59,8 +61,8 @@ class ProfResult:
 
 WARMUP_NUM = int(os.getenv("ONEFLOW_PROFILE_WARMUP_NUM", 10))
 RUN_NUM = int(os.getenv("ONEFLOW_PROFILE_RUN_NUM", 1000))
-PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_form_env(
-    "ONEFLOW_PROFILE_PRINT_RESULT", True
+PROF_VERBOSE = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_VERBOSE", False
 )
 END_TO_END = "end-to-end"
 
@@ -93,7 +95,7 @@ def run_torch(
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(
             f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
@@ -102,7 +104,7 @@ def run_torch(
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(prof.key_averages().table(row_limit=10))
     return ProfResult(
         prof,
@@ -144,16 +146,19 @@ def run_flow(
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(
             f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
-    with flow.profiler.profile(activities=activities) as prof:
+    with flow.profiler.profile(
+        activities=activities,
+        record_bandwidth_for_cuda=flow.profiler.ProfilerActivity.CUDA in activities,
+    ) as prof:
         with flow.profiler.record_function(END_TO_END):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(prof.key_averages())
     return ProfResult(
         prof,
@@ -191,29 +196,35 @@ def profile_dual_object(op):
 
         result = []
         for hardware_info in _hardware_info_list:
-            result.append(
-                run_flow(
-                    flow_op,
-                    flow_args,
-                    flow_kwargs,
-                    *hardware_info,
-                    op_name,
-                    args_description,
-                    additional_description,
+            if "oneflow" in profiled_framework:
+                result.append(
+                    run_flow(
+                        flow_op,
+                        flow_args,
+                        flow_kwargs,
+                        *hardware_info,
+                        op_name,
+                        args_description,
+                        additional_description,
+                    )
                 )
-            )
+            else:
+                result.append(None)
         for hardware_info in _hardware_info_list:
-            result.append(
-                run_torch(
-                    torch_op,
-                    torch_args,
-                    torch_kwargs,
-                    *hardware_info,
-                    op_name,
-                    args_description,
-                    additional_description,
+            if "pytorch" in profiled_framework:
+                result.append(
+                    run_torch(
+                        torch_op,
+                        torch_args,
+                        torch_kwargs,
+                        *hardware_info,
+                        op_name,
+                        args_description,
+                        additional_description,
+                    )
                 )
-            )
+            else:
+                result.append(None)
         return _profiler_hook(result)
 
     return profiled_op
@@ -222,6 +233,7 @@ def profile_dual_object(op):
 HardwareInfo = Tuple[str, Optional[int]]  # (device_type, num_threads)
 _hardware_info_list: List[HardwareInfo] = [("cpu", 1), ("cuda", None)]
 _profiler_hook: Callable[[List[ProfResult]], Any] = lambda x: x
+profiled_framework: List[str] = ["oneflow", "pytorch"]
 
 
 def set_hardware_info_list(hardware_info_list: List[HardwareInfo]) -> None:

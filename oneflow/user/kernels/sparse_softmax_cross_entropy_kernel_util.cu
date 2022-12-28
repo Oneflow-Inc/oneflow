@@ -47,13 +47,13 @@ __inline__ __device__ half Exp<half>(half x) {
 #endif
 }
 
-template<typename T, typename K>
+template<typename T, typename K, typename IndexType>
 __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes,
                                const int64_t depth, const int64_t lower_bound, const T* prob,
                                const K* labels, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    const int32_t row_id = i / num_classes;
-    const int32_t col_id = i - row_id * num_classes;
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_instances) {
+    const IndexType row_id = i / num_classes;
+    const IndexType col_id = i - row_id * num_classes;
     assert(labels[row_id] >= 0);
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
@@ -65,13 +65,13 @@ __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_cl
   }
 }
 
-template<typename K>
+template<typename K, typename IndexType>
 __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                    const int64_t depth, const int64_t lower_bound, const half* prob,
                                    const K* labels, const half* dy, half* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    const int32_t row_id = i / num_classes;
-    const int32_t col_id = i - row_id * num_classes;
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_instances) {
+    const IndexType row_id = i / num_classes;
+    const IndexType col_id = i - row_id * num_classes;
     assert(labels[row_id] >= 0);
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
@@ -90,9 +90,16 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCUDA, T, K> {
   static void ComputeDiff(ep::Stream* stream, const int64_t num_instances,
                           const int64_t num_classes, const int64_t depth, const int64_t lower_bound,
                           const T* prob, const K* labels, const T* dy, T* dx) {
-    ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        num_instances, num_classes, depth, lower_bound, prob, labels, dy, dx);
+    if (num_instances < GetMaxVal<int32_t>() / 2) {
+      ComputeDiffGpu<T, K, int32_t><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock,
+                                      0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, prob, labels, dy, dx);
+    } else {
+      // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
+      ComputeDiffGpu<T, K, int64_t><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock,
+                                      0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, prob, labels, dy, dx);
+    }
   }
 };
 
@@ -101,10 +108,17 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCUDA, float16, K> {
   static void ComputeDiff(ep::Stream* stream, const int64_t num_instances,
                           const int64_t num_classes, const int64_t depth, const int64_t lower_bound,
                           const float16* prob, const K* labels, const float16* dy, float16* dx) {
-    ComputeDiffGpuHalf<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                         stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob), labels,
-        reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    if (num_instances < GetMaxVal<int32_t>() / 2) {
+      ComputeDiffGpuHalf<K, int32_t><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock,
+                                       0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+          labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    } else {
+      ComputeDiffGpuHalf<K, int64_t><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock,
+                                       0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+          labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    }
   }
 };
 

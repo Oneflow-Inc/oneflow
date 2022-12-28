@@ -36,7 +36,7 @@ class DevVmDepObjectConsumeModeGuard {
       : prev_mode_(*CurrentDevVmDepObjectConsumeMode()) {
     *CurrentDevVmDepObjectConsumeMode() = mode;
   }
-  ~DevVmDepObjectConsumeModeGuard() { *CurrentDevVmDepObjectConsumeMode() = prev_mode_; }
+  ~DevVmDepObjectConsumeModeGuard() { *CurrentDevVmDepObjectConsumeMode() = prev_mode_; }  // NOLINT
 
  private:
   DevVmDepObjectConsumeMode prev_mode_;

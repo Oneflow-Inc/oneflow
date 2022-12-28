@@ -37,7 +37,7 @@ class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarCaptureState>
 
 Maybe<void> TensorScalarAddOrSub::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -96,7 +96,7 @@ class TensorScalarMul : public OpExprGradFunction<TensorScalarCaptureState> {
 
 Maybe<void> TensorScalarMul::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -144,7 +144,7 @@ class TensorScalarDiv : public OpExprGradFunction<TensorScalarCaptureState> {
 
 Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 

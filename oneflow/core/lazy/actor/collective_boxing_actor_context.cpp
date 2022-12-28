@@ -47,7 +47,7 @@ void CollectiveBoxingActorContext::Schedule(RequestHandle* handle, const void* s
     CHECK(status.IsOk());
     this->SetCompleted(schedule_id);
   };
-  Global<Scheduler>::Get()->Schedule(handle, request);
+  Singleton<Scheduler>::Get()->Schedule(handle, request);
   scheduled_count_ += 1;
 }
 

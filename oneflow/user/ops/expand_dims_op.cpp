@@ -31,13 +31,12 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 
 /* static */ Maybe<void> ExpandDimsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
   const int32_t axis =
       TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
 
   auto dim_vec = in_shape.dim_vec();
   dim_vec.insert(dim_vec.begin() + axis, 1);
-  *out_shape = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -65,25 +64,8 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 }
 
 /* static */ Maybe<void> ExpandDimsOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("expand_dims")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("reshape_like")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("like", op.input("in", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -96,9 +96,10 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCUDA>>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int32_t batch_size = y->shape().At(0);
+    const int32_t batch_size = y->shape_view().At(0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufferManager buf_manager(batch_size, static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
+    TmpBufferManager buf_manager(batch_size,
+                                 static_cast<int32_t>(tmp_buffer->shape_view().elem_cnt()),
                                  tmp_buffer->mut_dptr<void>());
     random_generator->Mutable()->Uniform(batch_size, buf_manager.RandomValuePtr());
     InitializeIndices<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
@@ -118,8 +119,8 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
-      const Shape* y_shape = ctx->OutputShape("y", 0);
-      const int32_t batch_size = y_shape->At(0);
+      const Shape& y_shape = ctx->OutputShape("y", 0);
+      const int32_t batch_size = y_shape.At(0);
 
       const int32_t random_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));
       const int32_t sorted_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));

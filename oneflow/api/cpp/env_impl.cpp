@@ -24,7 +24,7 @@ limitations under the License.
 #include <random>
 #include <type_traits>
 #include "oneflow/api/cpp/env_impl.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
@@ -42,7 +42,7 @@ namespace of = oneflow;
 
 namespace {  // for inltialize
 
-inline bool IsEnvInited() { return of::Global<of::EnvGlobalObjectsScope>::Get() != nullptr; }
+inline bool IsEnvInited() { return of::Singleton<of::EnvGlobalObjectsScope>::Get() != nullptr; }
 
 bool HasEnvVar(const std::string& key) {
   const char* value = getenv(key.c_str());
@@ -107,6 +107,9 @@ void CompleteEnvProto(of::EnvProto& env_proto) {
   if (HasEnvVar("GLOG_logbuflevel")) {
     cpp_logging_conf->set_logbuflevel(GetEnvVar("GLOG_logbuflevel", -1));
   }
+  if (HasEnvVar("GLOG_minloglevel")) {
+    cpp_logging_conf->set_minloglevel(GetEnvVar("GLOG_minloglevel", -1));
+  }
 }
 }  // namespace
 
@@ -119,15 +122,15 @@ OneFlowEnv::OneFlowEnv() {
   of::ConfigProto config_proto;
   config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
   const int64_t session_id = of::NewSessionId();
-  CHECK_JUST(of::RegsiterSession(session_id));
   config_proto.set_session_id(session_id);
-
+  CHECK(of::RegsterSessionId(session_id));
   session_ctx_ = std::make_shared<of::MultiClientSessionContext>(env_ctx_);
   CHECK_JUST(session_ctx_->TryInit(config_proto));
 }
 
 OneFlowEnv::~OneFlowEnv() {
   session_ctx_.reset();
+  CHECK(of::ClearSessionId(CHECK_JUST(of::GetDefaultSessionId())));
   env_ctx_.reset();
 }
 

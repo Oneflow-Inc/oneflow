@@ -17,18 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_H_
 
 #include <functional>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
-
-namespace vm {
-class MirroredObject;
-}
-using LocalDepObject = vm::MirroredObject;
 
 class Stream final {
  public:
@@ -37,35 +32,43 @@ class Stream final {
   ~Stream() = default;
 
   bool operator==(const Stream& that) const {
-    return this->device() == that.device() && this->stream_role() == that.stream_role();
+    return this->device() == that.device() && this->stream_type() == that.stream_type()
+           && this->thread_uid() == that.thread_uid();
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
-  Stream(Symbol<Device> device, StreamRole stream_role);
-
-  static Symbol<Stream> (*New)(Symbol<Device> device, StreamRole stream_role);
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type) {
+    return New(device, stream_type, kDefaultStreamThreadUid);
+  }
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type,
+                                   size_t thread_uid);
 
   Symbol<Device> device() const { return device_; }
-  StreamRole stream_role() const { return stream_role_; }
+  StreamType stream_type() const { return stream_type_; }
+  size_t thread_uid() const { return thread_uid_; }
+  size_t unique_stream_id() const { return unique_stream_id_; }
 
-  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
-    return transport_local_dep_object_;
-  }
+  static int64_t kDefaultStreamThreadUid;
 
  private:
-  Symbol<Device> device_;
-  StreamRole stream_role_;
+  Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
 
-  LocalDepObject* schedule_local_dep_object_;
-  Optional<LocalDepObject*> transport_local_dep_object_;
+  static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamType stream_type,
+                                      size_t thread_uid);
+
+  Maybe<void> Init(size_t unique_stream_id);
+
+  Symbol<Device> device_;
+  StreamType stream_type_;
+  size_t thread_uid_;
+  size_t unique_stream_id_;
 };
 
-LocalDepObject* GetStaticGlobalTransportLocalDepObject();
-
-extern Symbol<Stream> (*GetDefaultStreamByDevice)(Symbol<Device>);
+extern Maybe<Symbol<Stream>> (*GetDefaultStreamByDevice)(Symbol<Device>);
 class ParallelDesc;
 extern Maybe<Symbol<Stream>> (*GetDefaultStreamByPlacement)(Symbol<ParallelDesc>);
+
+extern Maybe<Symbol<Stream>> (*GetAllocatorStream)(Symbol<Stream>);
 
 }  // namespace oneflow
 
@@ -74,8 +77,7 @@ template<>
 struct hash<oneflow::Stream> final {
   size_t operator()(const oneflow::Stream& stream) const {
     using namespace oneflow;
-    return std::hash<Symbol<Device>>()(stream.device())
-           ^ std::hash<StreamRole>()(stream.stream_role());
+    return Hash(stream.device(), stream.stream_type(), stream.thread_uid());
   }
 };
 

@@ -23,7 +23,7 @@ import gc
 
 import numpy as np
 import oneflow as flow
-import oneflow.test_utils.automated_test_util.profiler as auto_profiler
+from oneflow.test_utils.automated_test_util import profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
@@ -65,9 +65,10 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
+vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
-extra_input_tensor = set()
+extra_input_tensor = []
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -250,6 +251,8 @@ def check_eager_graph_tensor(eager_res, graph_res):
             equal_nan=True,
         )
         return equality_res
+    else:
+        return True
 
 
 # NOTE(lixiang): Deepcopy the input parameters in order to correctly test the inplace version of the op.
@@ -273,8 +276,12 @@ def get_args_copy(args, kwargs):
 def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print(f"\033[1;33m============= {mode} ================\033[1;33m")
     print(f"\033[1;33mEnter {func} function\033[1;33m")
-    if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
-        print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    try:
+        if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
+            print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    except:
+        if flow.is_tensor(oneflow):
+            print(f"\033[1;33m{oneflow}\033[1;33m")
     if args is not None:
         print(f"\033[1;33m{args}\033[1;33m")
     if kwargs is not None:
@@ -283,6 +290,15 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print(f"\033[1;33mLeave {func} function\033[1;33m")
     print(f"\033[1;37m\033[1;37m")
     print("\n\n")
+
+
+# NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
+#   There is no oneflow_kwargs["device"] case for graph global test.
+def get_global_test_device(oneflow_args):
+    if isinstance(oneflow_args[0], flow.Tensor):
+        return oneflow_args[0].placement.type
+    else:
+        return oneflow_args[0][0].placement.type
 
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
@@ -310,7 +326,11 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
-                if isinstance(res, (list, tuple)):
+                if isinstance(self.test_module.to(flow.nn.Module), flow.nn.LSTMCell):
+                    res = res[0] + res[1]
+                elif isinstance(self.test_module.to(flow.nn.Module), flow.nn.LSTM):
+                    res = res[0].sum() + res[1][0].sum() + res[1][1].sum()
+                elif isinstance(res, (tuple, list)):
                     res = res[0]
                 res = res.sum()
                 res.backward()
@@ -371,6 +391,9 @@ def get_functional_graph_res(
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
+        # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+        elif is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+            test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
             test_g_res = test_g()
@@ -396,7 +419,11 @@ def get_tensor_graph_res(
 
     if verbose:
         get_fake_program_more_detail(
-            oneflow, "nn.Graph", "get_tensor_graph_res", oneflow_args, oneflow_kwargs
+            oneflow,
+            "nn.Graph",
+            "get_tensor_graph_res",
+            tensor_graph_args,
+            tensor_graph_kwargs,
         )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
@@ -407,16 +434,20 @@ def get_tensor_graph_res(
             return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
 
     try:
-        test_g = TestGraphOfTensorMethod()
-        test_g_res = test_g()
+        # Set test_g_res = None, check_eager_graph_tensor will return True, the purpose is to temporarily skip the Graph global test on cpu.
+        if is_global() and (get_global_test_device((oneflow,)) == "cpu"):
+            test_g_res = None
+        else:
+            test_g = TestGraphOfTensorMethod()
+            test_g_res = test_g()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(
                 oneflow,
                 "nn.Graph",
                 "get_tensor_graph_res",
-                oneflow_args,
-                oneflow_kwargs,
+                tensor_graph_args,
+                tensor_graph_kwargs,
             )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
@@ -464,8 +495,12 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(
                 graph_train_oneflow, oneflow, verbose, oneflow_args, *args
             )
-            # When testing module methods, kwargs are not considered.
-            test_g_res = test_g(*graph_args)
+            # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+            if is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+                test_g_res = oneflow_res
+            else:
+                # When testing module methods, kwargs are not considered.
+                test_g_res = test_g(*graph_args)
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
         # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -577,22 +612,50 @@ def get_pytorch_oneflow_res(
         pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
 
         if isinstance(pytorch_res, torch_original.Tensor):
-            if (
-                hasattr(pytorch, "__name__")
-                and pytorch.__name__ == "to"
-                and (
-                    (len(pytorch_args) > 0 and pytorch_args[0] == "cpu")
-                    or (len(pytorch_kwargs) > 0 and pytorch_kwargs["device"] == "cpu")
-                )
-            ):
-                extra_input_tensor.add(pytorch_res)
-            elif (
-                len(pytorch_args) > 0
-                and isinstance(pytorch_args[0], torch_original.Tensor)
-                and id(pytorch_args[0]) == id(pytorch_res)
-            ):
-                extra_input_tensor.add(pytorch_res)
-            else:
+            call_flag = True
+            source_flag = True
+            for x in pytorch_args:
+                if isinstance(x, (tuple, list)):
+                    for y in x:
+                        if torch_original.is_tensor(y):
+                            source_flag = False
+                            if (
+                                id(pytorch_res) == id(y)
+                                and pytorch_res.device.type == y.device.type
+                            ):
+                                call_flag = False
+                                break
+                elif torch_original.is_tensor(x):
+                    source_flag = False
+                    if (
+                        id(pytorch_res) == id(x)
+                        and pytorch_res.device.type == x.device.type
+                    ):
+                        call_flag = False
+                        break
+            for x in pytorch_kwargs.values():
+                if isinstance(x, (tuple, list)):
+                    for y in x:
+                        if torch_original.is_tensor(y):
+                            source_flag = False
+                            if (
+                                id(pytorch_res) == id(y)
+                                and pytorch_res.device.type == y.device.type
+                            ):
+                                call_flag = False
+                                break
+                elif torch_original.is_tensor(x):
+                    source_flag = False
+                    if (
+                        id(pytorch_res) == id(x)
+                        and pytorch_res.device.type == x.device.type
+                    ):
+                        call_flag = False
+                        break
+            if source_flag and pytorch.__name__ != "to":
+                call_tensor_id.append(id(pytorch_res))
+                extra_input_tensor.append(pytorch_res)
+            elif call_flag:
                 call_tensor_id.append(id(pytorch_res))
 
     except Exception as e:
@@ -636,7 +699,11 @@ def get_pytorch_oneflow_tensor_res(
     try:
         pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
         if isinstance(pytorch_res, torch_original.Tensor):
-            call_tensor_id.append(id(pytorch_res))
+            if (
+                id(pytorch_res) != id(pytorch_method.__self__)
+                or pytorch_res.device.type == pytorch_method.__self__.device.type
+            ):
+                call_tensor_id.append(id(pytorch_res))
     except Exception as e:
         if align_exception:
             try:
@@ -777,7 +844,7 @@ def note_print_kwargs(x, y, end=True):
             print(f"\033[32m{x}={y}\033[0m", end="")
 
 
-def print_note_fake_program():
+def print_note_fake_program(detail=False):
     code_len = len(note_pytorch_method_names)
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
@@ -800,6 +867,58 @@ def print_note_fake_program():
                     x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len
                 )
         print(f"\033[32m)\033[0m")
+    if detail:
+        print(
+            f"\033[32m-----------------------------------------------------------\033[0m"
+        )
+        unique_vis_tensor = []
+        flag_vis_input_tensor = [False for _ in range(len(vis_tensor))]
+        for i in range(len(vis_tensor)):
+            if flag_vis_input_tensor[i] == True:
+                continue
+            unique_vis_tensor.append(vis_tensor[i])
+            flag_vis_input_tensor[i] = True
+            for j in range(i + 1, len(vis_tensor)):
+                if (
+                    id(vis_tensor[i]) == id(vis_tensor[j])
+                    and flag_vis_input_tensor[j] == False
+                ):
+                    flag_vis_input_tensor[j] = True
+        unique_extra_tensor = []
+        flag_vis_extra_tensor = [False for _ in range(len(extra_input_tensor))]
+        for i in range(len(extra_input_tensor)):
+            if flag_vis_extra_tensor[i] == True:
+                continue
+            unique_extra_tensor.append(extra_input_tensor[i])
+            flag_vis_extra_tensor[i] = True
+            for j in range(i + 1, len(extra_input_tensor)):
+                if (
+                    id(extra_input_tensor[i]) == id(extra_input_tensor[j])
+                    and flag_vis_extra_tensor[j] == False
+                ):
+                    flag_vis_extra_tensor[j] = True
+
+        print(
+            f"\033[32mThis program has {len(unique_extra_tensor) + len(unique_vis_tensor)} input tensor: \033[0m"
+        )
+        for input_tensor in iter(unique_extra_tensor):
+            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+            print(f"\033[32m{input_tensor}\033[0m")
+            print(
+                f"\033[32m-----------------------------------------------------------\033[0m"
+            )
+        for input_tensor in iter(unique_vis_tensor):
+            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+            print(f"\033[32m{input_tensor}\033[0m")
+            print(
+                f"\033[32m-----------------------------------------------------------\033[0m"
+            )
+        if vis_parameters:
+            print(
+                f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+            )
+            for name, param in vis_parameters.items():
+                print(f"\033[32m{name}: {param}\033[0m")
 
 
 def clear_note_fake_program():
@@ -807,6 +926,7 @@ def clear_note_fake_program():
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
+    vis_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
@@ -835,15 +955,15 @@ class DualObject:
                     for (k, v) in oneflow_state_dict.items():
                         if v.is_global:
                             t = getattr(oneflow, k)
+                            new = t.to_global(placement=v.placement, sbp=v.sbp)
+                            if isinstance(t, flow.nn.Parameter):
+                                new = flow.nn.Parameter(new)
                             setattr(
-                                oneflow,
-                                k,
-                                t.to_global(placement=v.placement, sbp=v.sbp),
+                                oneflow, k, new,
                             )
                 else:
                     oneflow = oneflow.to_global(
-                        placement=flow.env.all_device_placement("cpu"),
-                        sbp=[flow.sbp.broadcast,],
+                        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,],
                     )
             if testing:
                 dual_modules_to_test.append(self)
@@ -885,7 +1005,10 @@ class DualObject:
                 oneflow_attr is None
             ), f"pytorch value is None for attr {key}, but oneflow is not."
             return None
-        new_name = f"{self.name}.{key}"
+        if self.name == "":
+            new_name = key
+        else:
+            new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
@@ -944,7 +1067,7 @@ def check_tensor_equality(
 ):
     if torch_tensor.grad is not None:
         if flow_tensor.grad is None:
-            print_note_fake_program()
+            print_note_fake_program(detail=True)
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
@@ -953,7 +1076,7 @@ def check_tensor_equality(
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
-            print_note_fake_program()
+            print_note_fake_program(detail=True)
             print("---------Grad Shape--------")
             print(torch_grad.shape)
             print(flow_grad.shape)
@@ -971,7 +1094,7 @@ def check_tensor_equality(
         equality_res = equality_res and (torch_numpy.dtype == oneflow_numpy.dtype)
 
     if equality_res == False:
-        print_note_fake_program()
+        print_note_fake_program(detail=True)
         print("---------Tensor Shape--------")
         print(torch_tensor.shape)
         print(flow_tensor.shape)
@@ -1004,7 +1127,7 @@ def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
             if check_dtype:
                 equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
             if equality_res == False:
-                print_note_fake_program()
+                print_note_fake_program(detail=True)
                 print("---------Tensor Shape--------")
                 print(a[i].shape)
                 print(b[i].shape)
@@ -1033,8 +1156,8 @@ def autotest(
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    if check_graph == "ValidatedFlase":
-        # check graph is intentionally closed and threre is a validated reason.
+    if check_graph == "ValidatedFalse":
+        # check graph is intentionally closed and there is a validated reason.
         check_graph = False
 
     def deco(f):
@@ -1107,6 +1230,7 @@ def autotest(
                                         dtype=x.pytorch.dtype,
                                         device=x.pytorch.device,
                                     )
+                                    call_tensor_id.append(id(pytorch_tensor))
                                     diff_output = GetDualObject(
                                         "unused", pytorch_tensor, flow_tensor
                                     )
@@ -1136,6 +1260,13 @@ def autotest(
                             )
                         )
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
+
+                for x in dual_objects_to_test:
+                    if (
+                        isinstance(x.pytorch, torch_original.Tensor)
+                        and id(x.pytorch) not in call_tensor_id
+                    ):
+                        vis_tensor.append(x.pytorch)
 
                 # check eager
                 for x in dual_objects_to_test:
@@ -1196,7 +1327,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:
@@ -1227,7 +1358,7 @@ def choice_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            placement=flow.env.all_device_placement("cpu"),
+            placement=flow.placement.all("cpu"),
             sbp=flow.sbp.broadcast,
         )
     else:
@@ -1239,5 +1370,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("torch", torch_original, flow)
+torch = GetDualObject("", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]

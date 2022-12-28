@@ -41,8 +41,8 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = input_tensor->shape().elem_cnt();
-    CHECK_EQ(output_tenor->shape().elem_cnt(), elem_cnt);
+    const int64_t elem_cnt = input_tensor->shape_view().elem_cnt();
+    CHECK_EQ(output_tenor->shape_view().elem_cnt(), elem_cnt);
     if (input_tensor->data_type() == output_tenor->data_type()
         && input_tensor->dptr() == output_tenor->dptr()) {
       return;

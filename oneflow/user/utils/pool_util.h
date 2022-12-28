@@ -21,8 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
+typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
+typedef small_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class Params3D {
  public:
@@ -56,6 +56,22 @@ class Params3D {
   int64_t batch_num_;
   int64_t channel_num_;
 };
+
+enum class Get3DVecType { kPad, kNonPad };
+
+template<Get3DVecType get_3d_vec_type = Get3DVecType::kNonPad>
+std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
+  std::vector<int32_t> vec;
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
+    if (index < 0) {
+      vec.emplace_back(static_cast<int32_t>(get_3d_vec_type));  // kPad -> 0, kNonPad -> 1
+    } else {
+      vec.emplace_back(original_vec.at(index));
+    }
+  }
+  return vec;
+}
 
 }  // namespace oneflow
 

@@ -21,7 +21,7 @@ namespace oneflow {
 
 std::unique_ptr<ActorBase> NewActor(ActorContext* actor_ctx) {
   ActorBase* rptr = NewObj<int32_t, ActorBase>(actor_ctx->task_proto().task_type());
-  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
+  const auto& job_descs = *Singleton<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(actor_ctx->task_proto().job_id()), actor_ctx);
   return std::unique_ptr<ActorBase>(rptr);
 }

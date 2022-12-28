@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/blob_desc.pb.h"
@@ -36,38 +37,36 @@ class BlobDesc final {
   //  Segmentation fault with unknown reason.
   BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
   BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic);
-  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
-           DataType dtype, bool is_dynamic);
+  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, bool is_dynamic);
 
   BlobDesc(const Shape& shape, DataType dtype);
   BlobDesc(const Shape& shape, const Stride& stride, DataType dtype);
-  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
-           DataType dtype);
+  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype);
   explicit BlobDesc(DataType dtype);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
   BlobDesc& operator=(const BlobDesc&);
 
-  const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
-  const Stride& stride() const { return *CHECK_NOTNULL(stride_.get()); }
-  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
-  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
-  Shape& mut_shape() { return *CHECK_NOTNULL(mut_shape_ptr().get()); }
-  Stride& mut_stride() { return *CHECK_NOTNULL(mut_stride_ptr().get()); }
-  void set_shape(const Shape& shape) { *CHECK_NOTNULL(mut_shape_ptr().get()) = shape; }
-  void set_stride(const Stride& stride) {
-    std::shared_ptr<Stride> stride_ptr(new Stride(stride));
-    this->stride_ = stride_ptr;
+  const Shape& shape() const {
+    CHECK(shape_.operator bool());
+    return *shape_;
   }
+  const Stride& stride() const {
+    CHECK(stride_.operator bool());
+    return *stride_;
+  }
+  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_.shared_from_symbol(); }
+  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_.shared_from_symbol(); }
+
+  void set_shape(const Shape& shape) { this->shape_ = SymbolOf(shape); }
+  void set_stride(const Stride& stride) { this->stride_ = SymbolOf(stride); }
 
   DataType data_type() const { return data_type_; }
-  DataType* mut_data_type() { return &data_type_; }
-  void set_data_type(DataType val) { data_type_ = val; }
+  void set_data_type(DataType data_type) { data_type_ = data_type; }
 
   bool is_dynamic() const { return is_dynamic_; }
-  void set_is_dynamic(bool);
-  bool* mut_is_dynamic() { return &is_dynamic_; }
+  void set_is_dynamic(bool is_dynamic);
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
@@ -81,12 +80,8 @@ class BlobDesc final {
   size_t AlignedTotalByteSize() const;
 
  private:
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const Stride> stride_;
-  std::shared_ptr<Shape> mut_shape_ptr() const { return std::const_pointer_cast<Shape>(shape_); }
-  std::shared_ptr<Stride> mut_stride_ptr() const {
-    return std::const_pointer_cast<Stride>(stride_);
-  }
+  Symbol<Shape> shape_;
+  Symbol<Stride> stride_;
   DataType data_type_;
   bool is_dynamic_;
 };

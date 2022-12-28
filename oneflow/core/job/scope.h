@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/symbol.h"
@@ -52,10 +51,11 @@ class Scope final {
   Maybe<int64_t> GetParallelDescSymbolId(const OperatorConf& op_conf) const;
   Maybe<Symbol<ParallelDesc>> GetParallelDesc(const OperatorConf& op_conf) const;
 
-  const OptMirroredParallel& opt_mirrored_parallel_conf() const {
-    return scope_proto_.opt_mirrored_parallel_conf();
+  const OptLocalParallel& opt_local_parallel_conf() const {
+    return scope_proto_.opt_local_parallel_conf();
   }
   const ScopeProto& scope_proto() const { return scope_proto_; }
+  const ScopeProto& data() const { return scope_proto_; }
 
 #define DEFINE_SCOPE_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {         \

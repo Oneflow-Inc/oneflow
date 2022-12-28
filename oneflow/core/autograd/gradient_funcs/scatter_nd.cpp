@@ -29,8 +29,8 @@ class ScatterNd : public OpExprGradFunction<ScatterNdCaptureState> {
 
   Maybe<void> Capture(ScatterNdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(1)->requires_grad();
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // indices
@@ -40,7 +40,7 @@ class ScatterNd : public OpExprGradFunction<ScatterNdCaptureState> {
 
   Maybe<void> Apply(const ScatterNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
     if (ctx->requires_grad) {
       const auto& indices = ctx->SavedTensors().at(0);

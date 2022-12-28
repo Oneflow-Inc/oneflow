@@ -41,14 +41,17 @@ class FixPipelineStageIdPass final : public JobPass {
     return Apply(op_graph, &job_builder);
   }
 
-  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().IsTrain()
+           && ctx.job_desc().job_conf().num_gradient_accumulation_steps() > 1;
+  }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
 const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
@@ -85,9 +88,6 @@ Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id
 }
 
 Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
-    return Maybe<void>::Ok();
-  }
   int64_t max_stage_id = 0;
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) {

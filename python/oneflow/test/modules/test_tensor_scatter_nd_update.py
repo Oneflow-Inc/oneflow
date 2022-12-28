@@ -37,6 +37,28 @@ def _test_tensor_scatter_nd_update(test_case, device):
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
 
 
+def _test_tensor_scatter_nd_update_with_non_contiguous_input(test_case, device):
+    # non-contiguous tensor with shape (2, 3, 4)
+    origin = flow.tensor(
+        np.ones((4, 3, 2)), dtype=flow.float, device=flow.device(device)
+    ).permute(2, 1, 0)
+    # indices with shape (3, 2)
+    indices = flow.tensor(
+        np.array([[0, 0], [1, 0], [1, 1]]), dtype=flow.int, device=flow.device(device)
+    )
+    # non-contiguous update with shape (3, 4)
+    update = flow.tensor(
+        np.zeros((4, 3)), dtype=flow.float, device=flow.device(device)
+    ).T
+    output = flow.tensor_scatter_nd_update(origin, indices, update)
+
+    np_res = np.ones((2, 3, 4))
+    np_res[0, 0] = 0
+    np_res[1, 0] = 0
+    np_res[1, 1] = 0
+    test_case.assertTrue(np.array_equal(output.numpy(), np_res))
+
+
 def _test_tensor_scatter_nd_update_t(test_case, device):
     origin = flow.tensor(
         np.arange(15).reshape(5, 3), dtype=flow.float, device=flow.device(device)
@@ -92,6 +114,7 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_tensor_scatter_nd_update,
+            _test_tensor_scatter_nd_update_with_non_contiguous_input,
             _test_tensor_scatter_nd_update_t,
             _test_tensor_scatter_nd_update_backward,
         ]
