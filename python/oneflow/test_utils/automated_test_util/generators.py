@@ -439,6 +439,7 @@ class random_pytorch_dtype(generator):
 
     def __init__(self, seq_names):
         super().__init__([])
+        # concat related dtype_seq for name in seq_names
         self.data_type_seq = [
             dtype for name in seq_names for dtype in self.seq_name_to_seq[name]
         ]
