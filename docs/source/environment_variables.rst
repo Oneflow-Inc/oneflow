@@ -471,12 +471,3 @@ Add a prefix to the name of the named host thread in the profiling context to fa
 Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``empty``
-
-`ENABLE_CUDNN_CONV_HEURISTIC_SEARCH_ALGO <https://github.com/Oneflow-Inc/oneflow/blob/v0.8.0/oneflow/core/job/resource_desc.cpp#L99>`_
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Whether enable cudnn conv operatioin to use heuristic search algorithm.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``true``
