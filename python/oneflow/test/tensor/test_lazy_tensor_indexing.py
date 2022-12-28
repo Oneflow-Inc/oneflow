@@ -912,8 +912,8 @@ def _test_bool_indices(test_case, placement):
 class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
     @unittest.skip(
-    "TODO(wyg, zwx): test these cases after supporting clear session interface to avoid"
-    "geting 'stream_id.h:33 Check failed: stream_index <= kMaxStreamIndex (4096 vs. 4095)' error"
+        "TODO(wyg, zwx): test these cases after supporting clear session interface to avoid"
+        "geting 'stream_id.h:33 Check failed: stream_index <= kMaxStreamIndex (4096 vs. 4095)' error"
     )
     def test_global_slice(test_case):
         for placement in all_placement():
