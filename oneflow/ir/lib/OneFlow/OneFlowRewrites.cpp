@@ -145,7 +145,8 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                    }))));
   return attrs;
 }
-static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute epsilon, Operation* conv, Operation* bn) {
+static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute epsilon,
+                                        Operation* conv, Operation* bn) {
   auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv);
   auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn);
   auto ctx = rewriter.getContext();
@@ -163,8 +164,8 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   float epsilon_attr = epsilon.cast<FloatAttr>().getValueAsDouble();
   add_op_attrs.set("float_operand", rewriter.getF64FloatAttr(epsilon_attr));
   auto add_op = rewriter.create<oneflow::ScalarAddOp>(
-      conv_op->getLoc(), conv_op.out().getType(),
-      SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
+      conv_op->getLoc(), conv_op.out().getType(), SmallVector<Value, 4>({bn_op.moving_variance()}),
+      add_op_attrs);
 
   auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op.out().getType(),
                                                   SmallVector<Value, 4>({add_op.out()}),
@@ -176,31 +177,32 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
 
   auto bn_gamma_variable_op =
       llvm::dyn_cast<oneflow::FrozenVariableOp>(bn_op.gamma().getDefiningOp());
-  if (!bn_gamma_variable_op) {
-    emitError(conv_op.getLoc()) << "Gamma of batchnorm should be a FrozenVariableOp.";
-  }
+
+  CHECK(bn_gamma_variable_op) << "Gamma of batchnorm should be a FrozenVariableOp.";
+
   auto bn_gamma_shape =
       bn_gamma_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
 
   auto conv_weight_variable_op =
       llvm::dyn_cast<oneflow::FrozenVariableOp>(conv_op.weight().getDefiningOp());
-  if (!conv_weight_variable_op) {
-    emitError(conv_op.getLoc()) << "Weight of conv2d should be a FrozenVariableOp.";
-  }
+
+  CHECK(conv_weight_variable_op) << "Weight of conv2d should be a FrozenVariableOp.";
+
   auto conv_weight_shape =
       conv_weight_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
 
   std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
   for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
   auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
-  reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
-                                                        ArrayRef<int64_t>(bn_gamma_new_shape),
-                                                        [&](int64_t v) -> Attribute {
-                                                          return getSI64IntegerAttr(rewriter,v);
-                                                        }))));
-  auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
-      conv_op->getLoc(), conv_op.out().getType(), SmallVector<Value, 4>({div_op.z()}),
-      reshape_op_attrs);
+  reshape_op_attrs.set(
+      "shape",
+      ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
+                              ArrayRef<int64_t>(bn_gamma_new_shape), [&](int64_t v) -> Attribute {
+                                return getSI64IntegerAttr(rewriter, v);
+                              }))));
+  auto reshape_op =
+      rewriter.create<oneflow::ReshapeOp>(conv_op->getLoc(), conv_op.out().getType(),
+                                          SmallVector<Value, 4>({div_op.z()}), reshape_op_attrs);
 
   auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
       conv_op->getLoc(), conv_op.out().getType(),
@@ -209,23 +211,20 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   operands.push_back(mul_op.z());
 
   // deal with bias
-  if (!conv_op.bias()) {
-    auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
-        conv_op->getLoc(), conv_op.out().getType(),
-        SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
-        GetUserOpCommonAttrs(ctx, "multiply_bias"));
-    auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
-        conv_op->getLoc(), conv_op.out().getType(),
-        SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
-        GetUserOpCommonAttrs(ctx, "sub_bias"));
-    operands.push_back(sub_op_bias.z());
-  } else {
-    emitError(conv_op.getLoc())
-        << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
-  }
+  CHECK(!conv_op.bias()) << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
 
-  auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
-      conv_op->getLoc(), conv_op.out().getType(), operands, attributes);
+  auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
+      conv_op->getLoc(), conv_op.out().getType(),
+      SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
+      GetUserOpCommonAttrs(ctx, "multiply_bias"));
+  auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
+      conv_op->getLoc(), conv_op.out().getType(),
+      SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
+      GetUserOpCommonAttrs(ctx, "sub_bias"));
+  operands.push_back(sub_op_bias.z());
+
+  auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op.out().getType(),
+                                                        operands, attributes);
 
   return new_conv_op;
 }
