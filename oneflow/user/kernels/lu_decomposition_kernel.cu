@@ -20,6 +20,7 @@ namespace oneflow {
 
 namespace {
 
+#if CUDA_VERSION >= 11000
 static inline size_t BatchCount(const user_op::Tensor* batched_matrices) {
   size_t result = 1;
   for (size_t i = 0; i < batched_matrices->shape_view().NumAxes() - 2; i++) {
@@ -134,6 +135,7 @@ class LUDecompositionKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_LU_DECOMPOSITION_KERNEL(float)
+#endif
 
 }  // namespace user_op
 }  // namespace oneflow

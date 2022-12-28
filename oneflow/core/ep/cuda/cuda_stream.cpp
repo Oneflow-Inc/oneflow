@@ -168,12 +168,14 @@ CudaStream::CudaStream(CudaDevice* device)
   }
 #endif  // CUBLAS_VERSION >= 11000
   // cusolver_dn_handle
+#if CUDA_VERSION >= 11000
   OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
   OF_CUSOLVER_CHECK(cusolverDnSetStream(cusolver_dn_handle_, cuda_stream_));
   workspace_size_ =
       ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
       * 1024 * 1024;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
+#endif
 #if CUBLAS_VERSION >= 11200
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
@@ -188,7 +190,9 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#if CUDA_VERSION >= 11000
   OF_CUSOLVER_CHECK(cusolverDnDestroy(cusolver_dn_handle_));
+#endif
 #if CUDA_VERSION >= 10010
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
 #endif
@@ -235,7 +239,9 @@ cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
 
+#if CUDA_VERSION >= 11000
 cusolverDnHandle_t CudaStream::cusolver_dn_handle() const { return cusolver_dn_handle_; }
+#endif
 
 #if CUDA_VERSION >= 10010
 cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }
