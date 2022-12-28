@@ -48,8 +48,8 @@ __global__ void UpsampleNearest1DBackward(const int64_t elem_cnt, const T* dy_dp
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
     const int64_t dx_h = GetNearestInputIndex(h, scale_factor, in_height);
-    fastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h), elem_cnt,
-                  static_cast<T>(dy_dptr[index]), true);
+    FastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h), elem_cnt,
+                  static_cast<T>(dy_dptr[index]));
   }
 }
 
@@ -103,8 +103,8 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
-    fastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), elem_cnt,
-                  static_cast<T>(dy_dptr[index]), true);
+    FastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), elem_cnt,
+                  static_cast<T>(dy_dptr[index]));
   }
 }
 
@@ -162,8 +162,8 @@ __global__ void UpsampleNearest3DBackward(const int64_t elem_cnt, const T* dy_dp
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
     const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
-    fastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w), elem_cnt,
-                  static_cast<T>(dy_dptr[index]), true);
+    FastAtomicAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w), elem_cnt,
+                  static_cast<T>(dy_dptr[index]));
   }
 }
 
