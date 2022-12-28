@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/kernel_launch/InferMisc/InferContext.h"
 #include "OneFlow/kernel_launch/TmpBufferManager.h"
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Casting.h"
@@ -38,7 +39,9 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
     exit(1);
   }
 
-  auto& ops = module->lookupSymbol("okl_init_context")->getRegion(0).front();
+  auto& ops = module->lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func)
+                  ->getRegion(0)
+                  .front();
 
   size_t max_size = 0;
   for (auto& op : ops) {

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OneFlowDialect.h"
@@ -48,7 +49,8 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
     const auto tag_name = "cuda_graph_support";
-    if (const auto func = module_->lookupSymbol("okl_init_context")) {
+    if (const auto func =
+            module_->lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func)) {
       if (const auto is_supported =
               func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
         return is_supported;

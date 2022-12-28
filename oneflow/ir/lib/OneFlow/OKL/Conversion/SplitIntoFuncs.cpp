@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
@@ -83,7 +84,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       auto index = 0;
       for (auto resources : new_ops) {
         auto func_name =
-            SplitIntoFuncsPattern::prefix_get_resources_.str() + std::to_string(index++);
+            SplitIntoFuncsName::Instance().prefix_resources.str() + std::to_string(index++);
         auto func_type = rewriter.getFunctionType(
             TypeRange{LauncherContextType::get(rewriter.getContext())},
             TypeRange{std::vector<Type>(resources.size(), resources[0]->getResult(0).getType())});
@@ -113,8 +114,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto resource_funcs = declare_resource_funcs();
 
     rewriter.setInsertionPointAfter(func);
-    auto new_func =
-        rewriter.create<func::FuncOp>(func.getLoc(), new_ops_func_, launcher_to_void_func);
+    auto new_func = rewriter.create<func::FuncOp>(
+        func.getLoc(), SplitIntoFuncsName::Instance().create_func, launcher_to_void_func);
     new_func.getBody().emplaceBlock();
     new_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
     rewriter.setInsertionPointToStart(&new_func.getBody().front());
@@ -129,8 +130,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.create<func::ReturnOp>(func.getLoc());
 
     rewriter.setInsertionPointAfter(func);
-    auto compute_func =
-        rewriter.create<func::FuncOp>(func.getLoc(), compute_ops_func_, launcher_to_void_func);
+    auto compute_func = rewriter.create<func::FuncOp>(
+        func.getLoc(), SplitIntoFuncsName::Instance().run_func, launcher_to_void_func);
     compute_func.getBody().emplaceBlock();
     compute_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()),
                                        func->getLoc());
@@ -143,8 +144,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (const auto& op : compute_ops) { compute_block.clone(*op, compute_mapping); }
 
     rewriter.setInsertionPointAfter(func);
-    auto del_func =
-        rewriter.create<func::FuncOp>(func.getLoc(), del_ops_func_, launcher_to_void_func);
+    auto del_func = rewriter.create<func::FuncOp>(
+        func.getLoc(), SplitIntoFuncsName::Instance().delete_func, launcher_to_void_func);
     del_func.getBody().emplaceBlock();
     del_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
     auto del_launcher_ctx = del_func.getBody().getArgument(0);
@@ -165,12 +166,15 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : mlir::OpRewritePattern<func::FuncOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    SmallVector<StringLiteral> legal_func_list{new_ops_func_, del_ops_func_, compute_ops_func_};
+    SmallVector<StringLiteral> legal_func_list{SplitIntoFuncsName::Instance().create_func,
+                                               SplitIntoFuncsName::Instance().delete_func,
+                                               SplitIntoFuncsName::Instance().run_func};
     if (std::find(legal_func_list.begin(), legal_func_list.end(), op.getSymName())
         != legal_func_list.end()) {
       return success();
     }
-    if (op.getSymName().find(SplitIntoFuncsPattern::prefix_get_resources_) != std::string::npos) {
+    if (op.getSymName().find(SplitIntoFuncsName::Instance().prefix_resources)
+        != std::string::npos) {
       return success();
     }
 
@@ -200,15 +204,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     return SplitIntoFuncs(op, rewriter);
   }
-
-  static const StringLiteral new_ops_func_, del_ops_func_, compute_ops_func_, prefix_get_resources_;
 };
-
-// define the name of split functions
-const StringLiteral SplitIntoFuncsPattern::new_ops_func_ = "okl_init_context",
-                    SplitIntoFuncsPattern::del_ops_func_ = "okl_recycle",
-                    SplitIntoFuncsPattern::compute_ops_func_ = "okl_compute",
-                    SplitIntoFuncsPattern::prefix_get_resources_ = "get_resources_type_";
 
 namespace {
 struct SplitIntoFuncsPass : public SplitIntoFuncsPassBase<SplitIntoFuncsPass> {

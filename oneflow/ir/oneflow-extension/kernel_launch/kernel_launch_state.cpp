@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -43,7 +45,7 @@ KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx
 
 void KernelLaunchState::DoCompute(user_op::KernelComputeContext* ctx) {
   if (!launcher_context_) { LazyInitLauncher(ctx); }
-  engine_->Run("okl_compute", launcher_context_.get());
+  engine_->Run(mlir::okl::SplitIntoFuncsName::Instance.run_func, launcher_context_.get());
 }
 
 void KernelLaunchState::LazyInitLauncher(user_op::KernelComputeContext* ctx) {

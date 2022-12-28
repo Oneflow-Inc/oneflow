@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
@@ -51,7 +52,7 @@ struct OnlyKeepComputeOpPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : mlir::OpRewritePattern<func::FuncOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.getSymName() != "okl_compute") {
+    if (op.getSymName() != SplitIntoFuncsName::Instance().run_func) {
       rewriter.eraseOp(op);
       return success();
     }

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
@@ -58,7 +58,7 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
   mlir::LogicalResult matchAndRewrite(func::CallOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     // this pattern only replace func.call @get_resources_type_{X}
-    auto prefix = "get_resources_type_";
+    auto prefix = SplitIntoFuncsName::Instance().prefix_resources;
     if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
 
     // if the result number equals to zero, it means this kind of resources is not needed in this

@@ -24,6 +24,21 @@ namespace okl {
 // split okl dialect with single function into different functions according lifetime.
 std::unique_ptr<mlir::Pass> createSplitIntoFuncsPass();
 
+class SplitIntoFuncsName final {
+  SplitIntoFuncsName() {}
+
+ public:
+  const StringLiteral create_func = "okl_init_context";
+  const StringLiteral delete_func = "okl_recycle";
+  const StringLiteral run_func = "okl_compute";
+  const StringLiteral prefix_resources = "get_resources_type_";
+
+  static SplitIntoFuncsName& Instance() {
+    static SplitIntoFuncsName instance;
+    return instance;
+  }
+};
+
 }  // namespace okl
 }  // namespace mlir
 

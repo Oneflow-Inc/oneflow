@@ -20,6 +20,7 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/kernel_launch/RegContext.h"
 #include "OneFlow/kernel_launch/RunContext.h"
 #include "OneFlow/kernel_launch/LauncherContext.h"
@@ -39,7 +40,7 @@ static int GetOpIndex(mlir::Operation* op, int index) {
 LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
                                  mlir::ModuleOp module)
     : module_(module) {
-  auto func = module.lookupSymbol("okl_init_context");
+  auto func = module.lookupSymbol(mlir::okl::SplitIntoFuncsName::Instance().create_func);
   auto context = func->getContext();
 
   auto& ops = func->getRegion(0).front();
