@@ -31,7 +31,7 @@ const StringLiteral DELETE_FUNC_NAME = "okl_recycle";
 const StringLiteral COMPUTE_FUNC_NAME = "okl_compute";
 const StringLiteral PREFIX_RESOURCES_NAME = "get_resources_type_";
 
-}  // namespace func
+}  // namespace function
 
 }  // namespace okl
 }  // namespace mlir
