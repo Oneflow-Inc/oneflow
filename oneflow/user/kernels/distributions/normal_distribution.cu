@@ -29,7 +29,7 @@ namespace {
 const uint32_t block_size_bound = 256;
 const uint32_t grid_size_bound = 4;
 
-std::tuple<uint64_t, dim3, dim3> calc_execution_policy(int64_t total_elements,
+std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
                                                        ep::CudaStream* stream) {
   const uint64_t numel = static_cast<uint64_t>(total_elements);
   const uint32_t block_size = block_size_bound;
@@ -53,7 +53,7 @@ std::tuple<uint64_t, dim3, dim3> calc_execution_policy(int64_t total_elements,
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__
-    void distribution_elementwise_grid_stride_kernel_double(int32_t numel, uint64_t seed,
+    void DistributionElementwiseGridStrideKernelDouble(int32_t numel, uint64_t seed,
                                                             uint64_t offset, ComputeType mean,
                                                             ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -78,7 +78,7 @@ __global__
 
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
-__global__ void distribution_elementwise_grid_stride_kernel_float(int32_t numel, uint64_t seed,
+__global__ void DistributionElementwiseGridStrideKernelFloat(int32_t numel, uint64_t seed,
                                                                   uint64_t offset, ComputeType mean,
                                                                   ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -113,7 +113,7 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
 
   ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
-  auto execution_policy = calc_execution_policy(elem_cnt, cuda_stream);
+  auto execution_policy = CalcExecutionPolicy(elem_cnt, cuda_stream);
 
   auto counter_offset = std::get<0>(execution_policy);
   auto grid = std::get<1>(execution_policy);
@@ -128,12 +128,12 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
 
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (std::is_same<T, double>::value) {
-    distribution_elementwise_grid_stride_kernel_double<T, ComputeType, 2>
+    DistributionElementwiseGridStrideKernelDouble<T, ComputeType, 2>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
             dptr);
   } else {
-    distribution_elementwise_grid_stride_kernel_float<T, ComputeType, 4>
+    DistributionElementwiseGridStrideKernelFloat<T, ComputeType, 4>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
             dptr);
