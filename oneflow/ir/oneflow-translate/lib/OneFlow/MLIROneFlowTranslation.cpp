@@ -819,6 +819,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (!job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
+    pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
   if (!job_wrapper.IsLastIRPass()

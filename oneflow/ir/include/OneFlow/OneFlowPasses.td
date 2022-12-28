@@ -71,6 +71,12 @@ def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
   let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
 }
 
+def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
+  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
+  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+}
+
 def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
   let summary = "Convert variable ir op to variable op after contant folding.";
   let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
@@ -128,15 +134,6 @@ def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {
     fuse forward ops. Usually they are actions after an op.
   }];
   let constructor = "mlir::oneflow::createFuseNormalizationOps()";
-  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
-}
-
-def FuseConv2DBatchNormOps : Pass<"fuse-conv2d-bn-ops", "ModuleOp"> {
-  let summary = "fuse forward ops";
-  let description = [{
-    fuse forward ops. Usually they are actions after an op.
-  }];
-  let constructor = "mlir::oneflow::createFuseConv2DBatchNormOps()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 

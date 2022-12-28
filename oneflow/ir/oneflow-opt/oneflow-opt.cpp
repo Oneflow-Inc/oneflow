@@ -70,7 +70,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerFuseForwardOpsPass();
   mlir::registerFuseIntoExistingOpPassPass();
   mlir::registerFuseNormalizationOpsPass();
-  mlir::registerFuseConv2DBatchNormOpsPass();
+  mlir::registerConvertInferenceOpPassPass();
   mlir::registerGroupMatMulPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::okl::OKLDialect>();

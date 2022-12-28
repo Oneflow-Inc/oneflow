@@ -247,15 +247,6 @@ class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizati
   }
 };
 
-class FuseConv2DBatchNormOpsPass : public FuseConv2DBatchNormOpsBase<FuseConv2DBatchNormOpsPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateFuseConv2DBatchNormPattern(patterns);
-    rewrites::populateRewrites(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
 }  // namespace
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
@@ -286,9 +277,7 @@ std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwa
 std::unique_ptr<Pass> createFuseNormalizationOps() {
   return std::make_unique<FuseNormalizationOpsPass>();
 }
-std::unique_ptr<Pass> createFuseConv2DBatchNormOps() {
-  return std::make_unique<FuseConv2DBatchNormOpsPass>();
-}
+
 
 }  // namespace oneflow
 }  // namespace mlir

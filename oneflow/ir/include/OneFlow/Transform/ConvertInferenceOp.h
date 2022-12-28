@@ -24,6 +24,8 @@ namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createPreConvertInferenceOpPass();
 
+std::unique_ptr<mlir::Pass> createConvertInferenceOpPass();
+
 std::unique_ptr<mlir::Pass> createPostConvertInferenceOpPass();
 
 }  // namespace oneflow

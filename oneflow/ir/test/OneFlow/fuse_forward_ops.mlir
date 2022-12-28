@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -fuse-forward-only-ops -fuse-into-existing-op -fuse-normalization-ops -fuse-conv2d-bn-ops -canonicalize | FileCheck %s
+// RUN: -fuse-forward-only-ops -fuse-into-existing-op -fuse-normalization-ops -convert-inference-op -canonicalize | FileCheck %s
 
 module  {
   func.func @Cast_1__FUSE__ScalarMulByTensor_2(%685: tensor<2x64x64x320xf16>, %output_574: tensor<320xf16>, %output_573: tensor<320xf16>) -> tensor<2x64x64x320xf16> {
@@ -115,7 +115,7 @@ module  {
   }
 
   func.func @GraphToRun_conv_bn_1(%arg0: tensor<1x3x224x224xf32>, %moving_mean: tensor<64xf32>, %moving_variance: tensor<64xf32>, %beta: tensor<64xf32>) -> tensor<1x64x112x112xf32> {
-    %output = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_Resnet50Graph_0_input.0.0_2", output_lbns = ["_Resnet50Graph_0_input.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [1 : si64, 3 : si64, 224 : si64, 224 : si64]} : (tensor<1x3x224x224xf32>) -> tensor<1x3x224x224xf32>
+    %output = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_conv_bn_1_input.0.0_2", output_lbns = ["_conv_bn_1_input.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [1 : si64, 3 : si64, 224 : si64, 224 : si64]} : (tensor<1x3x224x224xf32>) -> tensor<1x3x224x224xf32>
     %0 = "oneflow.variable_ir"() {value = dense<1.0> : tensor<64x3x7x7xf32> ,data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "model.conv1.weight", output_lbns = ["model.conv1.weight/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 18 : i64, shape = [64 : si64, 3 : si64, 7 : si64, 7 : si64], nd_sbp = ["B"]} : () -> tensor<64x3x7x7xf32>
     %gamma = "oneflow.variable_ir"() {value = dense<1.0> : tensor<64xf32> ,data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "model.bn.gamma", output_lbns = ["model.bn.gamma/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 18 : i64, shape = [64 : si64], nd_sbp = ["B"]} : () -> tensor<64xf32>
     %1 = "oneflow.conv2d"(%output, %0) {data_format = "channels_first", device_name = ["@0:0"], device_tag = "cuda", dilation_rate = [1 : si32, 1 : si32], filters = 64 : si32, groups = 1 : si32, hierarchy = [1], kernel_size = [7 : si32, 7 : si32], op_name = "model.conv1-conv2d-0", operand_segment_sizes = dense<[1, 1, 0, 0]> : vector<4xi32>, padding_before = [3 : si32, 3 : si32], scope_symbol_id = 21 : i64, strides = [2 : si32, 2 : si32]} : (tensor<1x3x224x224xf32>, tensor<64x3x7x7xf32>) -> tensor<1x64x112x112xf32>

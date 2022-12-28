@@ -1113,7 +1113,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
   populateNormalizationOpPatterns(patterns);
-  populateFuseConv2DBatchNormPattern(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
@@ -1132,6 +1131,10 @@ void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
 
 void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceVariablePattern>(patterns.getContext());
+}
+
+void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
+  populateFuseConv2DBatchNormPattern(patterns);
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {

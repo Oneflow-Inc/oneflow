@@ -30,7 +30,6 @@ std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 std::unique_ptr<mlir::Pass> createGroupMatMul();
 std::unique_ptr<mlir::Pass> createFuseForwardOps();
 std::unique_ptr<mlir::Pass> createFuseNormalizationOps();
-std::unique_ptr<mlir::Pass> createFuseConv2DBatchNormOps();
 
 }  // namespace oneflow
 

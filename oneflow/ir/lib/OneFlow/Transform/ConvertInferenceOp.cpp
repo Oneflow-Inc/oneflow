@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "OneFlow/OneFlowPatternUtils.h"
 
 using namespace mlir;
 
@@ -28,6 +29,16 @@ class PreConvertInferenceOpPass : public PreConvertInferenceOpPassBase<PreConver
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
     oneflow::populatePreConvertInferenceOp(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class ConvertInferenceOpPass : public ConvertInferenceOpPassBase<ConvertInferenceOpPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    oneflow::populateConvertInferenceOp(patterns);
+    oneflow::rewrites::populateRewrites(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -50,6 +61,10 @@ namespace oneflow {
 
 std::unique_ptr<Pass> createPreConvertInferenceOpPass() {
   return std::make_unique<PreConvertInferenceOpPass>();
+}
+
+std::unique_ptr<Pass> createConvertInferenceOpPass() {
+  return std::make_unique<ConvertInferenceOpPass>();
 }
 
 std::unique_ptr<Pass> createPostConvertInferenceOpPass() {
