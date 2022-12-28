@@ -875,6 +875,40 @@ class MedianWithIndicesFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ModeFunctor {
+ public:
+  ModeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("mode").Input("input").Output("values").Output("indices").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool keepdim) const {
+    int32_t axis = dim;
+    const int64_t ndim = x->ndim();
+    axis = JUST(maybe_wrap_dim(axis, ndim));
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
+    if (axis != ndim - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceProdFunctor {
  public:
   ReduceProdFunctor() {
@@ -2222,8 +2256,8 @@ class StandardDeviationFunctor {
 
       when we are in the last sqrt,
       if the value in the radical is <= 0, it may cause the result gradient to appear
-      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are different.
-      Use abs(absolute value) can keep it consistent with pytorch:
+      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are
+      different. Use abs(absolute value) can keep it consistent with pytorch:
 
       const auto& abs = JUST(functional::Abs(sub));
       return functional::Sqrt(abs);
@@ -2682,12 +2716,12 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
   }
 
   // we now work with the following permutations / shapes.
-  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
-  // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
-  // "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro, summed, ro"
-  // permuted with rpermutation and the three flattened then the permuted output is a view of
-  // bmm(left, right) finally, opermutation reverts the permutation to the original order of
-  // dimensions
+  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output
+  // -> permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions
+  // left: "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro,
+  // summed, ro" permuted with rpermutation and the three flattened then the permuted output is a
+  // view of bmm(left, right) finally, opermutation reverts the permutation to the original order
+  // of dimensions
   std::vector<int32_t> out_size;
   for (auto& d : lro) out_size.push_back(left->shape()->At(d));
   for (auto& d : lo) out_size.push_back(left->shape()->At(d));

@@ -3114,3 +3114,7 @@
 - name: "throw_error"
   signature: "Tensor (Tensor input) => ThrowError"
   bind_python: True
+
+- name: "mode"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
+  bind_python: True
