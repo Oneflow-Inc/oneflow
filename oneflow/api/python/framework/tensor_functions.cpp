@@ -17,7 +17,6 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
-#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
