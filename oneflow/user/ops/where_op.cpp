@@ -123,21 +123,51 @@ Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
   const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, x_shape, y_shape));
-  for (const auto& vaild_split_dim : *vaild_split_dims) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
-        .Split(user_op::OpArg("x", 0), std::get<1>(vaild_split_dim))
-        .Split(user_op::OpArg("y", 0), std::get<2>(vaild_split_dim))
-        .Split(user_op::OpArg("out", 0), std::get<3>(vaild_split_dim))
-        .Build();
+  Shape broadcast_shape = *JUST(GetBroadcastShape(x_shape, y_shape));
+  broadcast_shape = *JUST(GetBroadcastShape(broadcast_shape, cond_shape));
+  const size_t ndim = broadcast_shape.size();
+
+  std::vector<user_op::OpArg> broadcast_args;
+  std::vector<user_op::OpArg> split_args;
+  std::vector<int> split_dims;
+  broadcast_args.reserve(3);
+  split_args.reserve(3);
+  split_dims.reserve(3);
+
+  auto CheckArgCanSplit = [&](std::string&& arg_name, const int dim, const Shape& shape) {
+    size_t ddiff = ndim - shape.size();
+    int dim_size = (dim >= ddiff) ? shape[dim - ddiff] : 1;
+    if (dim_size == 1) {
+      broadcast_args.emplace_back(std::forward<decltype(arg_name)>(arg_name), 0);
+    } else {
+      split_args.emplace_back(std::forward<decltype(arg_name)>(arg_name), 0);
+      split_dims.push_back(dim - ddiff);
+    }
+  };
+
+  for (int i = 0; i < ndim; ++i) {
+    if (broadcast_shape[i] == 1) { continue; }
+    broadcast_args.clear();
+    split_args.clear();
+    split_dims.clear();
+    CheckArgCanSplit("x", i, x_shape);
+    CheckArgCanSplit("y", i, y_shape);
+    CheckArgCanSplit("condition", i, cond_shape);
+
+    auto builder = ctx->NewBuilder();
+    builder.Broadcast(broadcast_args);
+    for (int i = 0; i < split_args.size(); ++i) { builder.Split(split_args[i], split_dims[i]); }
+    builder.Split(user_op::OpArg("out", 0), i);
+    builder.Build();
   }
+
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("condition", 0))
       .PartialSum(user_op::OpArg("x", 0))
       .PartialSum(user_op::OpArg("y", 0))
       .PartialSum(user_op::OpArg("out", 0))
       .Build();
+
   return Maybe<void>::Ok();
 }
 
