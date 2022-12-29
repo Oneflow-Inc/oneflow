@@ -150,7 +150,7 @@ int32_t SbpGraph::NodeElimination(SbpNode* this_node) {
     int32_t edges_in_size = this_node->edges_in_.size();
 
     SbpEdge* e = new SbpEdge(two_nodes[0], this_node, two_nodes[1], two_edges[0], two_edges[1]);
-    e->SummarizeCost2();
+    e->SummarizeCost();
     // check and remove the edge_in with new edge in graph
     for (int32_t i = 0; i < edges_in_size; i++) {
       CheckAndRemoveFrom<SbpEdge*>(two_nodes[i]->edges_out_, two_edges[i]);
@@ -260,7 +260,7 @@ int32_t SbpGraph::EdgeElimination(SbpNode* this_node) const {
       // Add the compound edge
       e->edge_list_.emplace_back(this_node->edges_out_[i]);
       this_node->edges_out_[i] = e;
-      e->SummarizeCost2();
+      e->SummarizeCost();
       e->end_node_->edges_in_.emplace_back(e);
     }
   }
