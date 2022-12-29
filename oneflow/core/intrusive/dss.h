@@ -317,9 +317,9 @@ namespace oneflow {
   struct __DssFieldType__<field_counter, Enabled> {                                                \
     using type = field_type;                                                                       \
   };                                                                                               \
-  static const int OF_PP_CAT(field, kDssFieldNumber) = field_counter;                              \
+  [[maybe_unused]] static const int OF_PP_CAT(field, kDssFieldNumber) = field_counter;             \
   using OF_PP_CAT(field, DssFieldType) = field_type;                                               \
-  static const int OF_PP_CAT(field, kDssFieldOffset) =                                             \
+  [[maybe_unused]] static const int OF_PP_CAT(field, kDssFieldOffset) =                            \
       __DssAccumulatedAlignedSize4Counter__<field_counter>::value;
 
 #define _DSS_END(field_counter, dss_type, type)                                         \
