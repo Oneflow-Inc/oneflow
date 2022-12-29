@@ -4938,6 +4938,32 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfac
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    Optional<OneFlow_Tensor>:$window
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$n_fft,
+    DefaultValuedAttr<SI32Attr, "0">:$hop_length,
+    DefaultValuedAttr<SI32Attr, "0">:$win_length,
+    DefaultValuedAttr<BoolAttr, "true">:$center,
+    DefaultValuedAttr<StrAttr, "\"reflect\"">:$pad_mode,
+    DefaultValuedAttr<BoolAttr, "false">:$normalized,
+    DefaultValuedAttr<BoolAttr, "false">:$onesided,
+    DefaultValuedAttr<BoolAttr, "false">:$return_complex
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
+}
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
@@ -5987,7 +6013,8 @@ def OneFlow_UniqueOp : OneFlow_BaseOp<"unique", [NoSideEffect, NoGrad, DeclareOp
     OneFlow_Tensor:$num_unique
   );
   let attrs = (ins
-    OneFlow_DataType:$out_idx
+    OneFlow_DataType:$out_idx,
+    DefaultValuedAttr<BoolAttr, "true">:$sorted
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6006,7 +6033,8 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
     OneFlow_Tensor:$count
   );
   let attrs = (ins
-    OneFlow_DataType:$out_idx
+    OneFlow_DataType:$out_idx,
+    DefaultValuedAttr<BoolAttr, "true">:$sorted
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
