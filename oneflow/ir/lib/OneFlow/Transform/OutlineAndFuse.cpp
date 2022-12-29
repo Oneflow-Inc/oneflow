@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -77,8 +78,13 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   }
 
  private:
-  Option<std::string> wrap_ops_mode_{
-      *this, "mode", llvm::cl::desc("the mode of this pass to wrap ops"), llvm::cl::init("normal")};
+  Option<std::string> wrap_ops_mode_{*this, "mode",
+                                     llvm::cl::desc("the mode of this pass to wrap ops"),
+#ifdef WITH_CUDA_GRAPHS
+                                     llvm::cl::init(wrap_mode::CUDA_GRAPH)};
+#else
+                                     llvm::cl::init(wrap_mode::NORMAL)};
+#endif
 };
 
 class ExtractKernelLaunchTensorPass
