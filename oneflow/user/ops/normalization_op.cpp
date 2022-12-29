@@ -134,10 +134,6 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     // assume cudnn is enabled
     CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
 #endif
-#ifdef WITH_ROCM
-    // assume cudnn is enabled
-    CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), HIPDNN_BN_MIN_EPSILON);
-#endif
     const auto& x = ctx->InputTensorDesc("x", 0);
     const auto data_type = x.data_type();
     const Shape& x_shape = x.shape();
@@ -444,10 +440,6 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
 #ifdef WITH_CUDA
   // assume cudnn is enabled
   CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
-#endif
-#ifdef WITH_ROCM
-  // assume cudnn is enabled
-  CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), HIPDNN_BN_MIN_EPSILON);
 #endif
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const Shape& x_shape = x.shape();
