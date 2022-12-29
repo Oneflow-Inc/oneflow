@@ -705,9 +705,9 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
-  Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<bool> is_offloaded() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> offload() override;
+  Maybe<void> load() override;
+  Maybe<bool> is_offloaded() override { return is_offloaded_; }
 
   Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<GlobalTensor> AsGlobalTensor() override {
@@ -716,6 +716,8 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 
  private:
   std::shared_ptr<GlobalTensorImpl> impl_;
+  std::shared_ptr<GlobalTensorImpl> offloaded_impl_;
+  bool is_offloaded_{false};
 };
 
 }  // namespace one

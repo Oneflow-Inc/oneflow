@@ -25,14 +25,12 @@ import oneflow.unittest
 def _test_tensor_offload_d2h(test_case, input, tensor_mem):
     test_case.assertTrue(not input.is_offloaded())
 
-    flow.cuda.empty_cache()
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cuda", before_used)
 
     input.offload()
     test_case.assertTrue(input.is_offloaded())
     test_case.assertEqual(input.device, flow.device("cuda"))
-    flow.cuda.empty_cache()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cuda to cpu", after_used)
     # Check tensor_mem cuda memory released
@@ -47,7 +45,6 @@ def _test_tensor_load_h2d(test_case, input, tensor_mem):
     input.load()
     test_case.assertTrue(not input.is_offloaded())
     test_case.assertEqual(input.device, flow.device("cuda"))
-    flow.cuda.empty_cache()
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cpu to cuda", after_used)
     # Check tensor_mem cuda memory allocated
@@ -178,6 +175,24 @@ class TestTensorOffload(flow.unittest.TestCase):
 
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+
+    def test_tensor_offload_and_load_cpu(test_case):
+        input = flow.tensor(
+            np.random.randn(1024, 1024, 100),
+            dtype=flow.float32,
+            device=flow.device("cuda"),
+        )
+        tensor_mem = _get_tensor_mem(input)
+
+        before_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        input.offload()
+        after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        test_case.assertTrue(after_used > before_used)
+
+        cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        input.load()
+        after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        test_case.assertTrue(after_used < cur_used)
 
 
 if __name__ == "__main__":
