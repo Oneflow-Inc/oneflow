@@ -62,7 +62,7 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
           << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
           << " ms\n";
   if (GlobalProcessCtx::Rank() == 0) {
-    sbp_constructor.PrintSBPGraphDebugInfo();
+    // sbp_constructor.PrintSBPGraphDebugInfo();
     JUST(sbp_constructor.CheckSbpAgreement(*job));
   }
   return Maybe<void>::Ok();

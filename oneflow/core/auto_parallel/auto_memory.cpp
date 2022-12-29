@@ -210,9 +210,8 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
 
   // Decide which node should run first
   InitDecideParameters(sat, &decide_parameters);
-  // TODO: Switch to VLOG(3) later
-  std::cout << "Straightening order in sbp graph: " << std::endl;
-  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << std::endl; }
+  VLOG(3) << "Straightening order in sbp graph: ";
+  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 
   // Order in the waiting sets
   struct comp {
@@ -281,11 +280,6 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
         id2count[index] = id2consumer_topo_structs[index].size();
       }
     }
-    // TODO: Move to memory initialization
-    // else {
-    //   // Any non-reusable blobs belongs to the support of the maximum memory blob set
-    //   topo_struct->sbp_node->SetInMemorySupport(true);
-    // }
   };
   // Blobs die, decrease count and memory
   auto KillBlobs = [&](TopoStruct* topo_struct) {

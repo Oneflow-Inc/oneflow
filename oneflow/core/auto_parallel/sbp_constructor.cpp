@@ -476,8 +476,8 @@ void SbpConstructor::InitAvailableMemory() {
   // Thus, this 161MB should not be added to the free memory.
   // We still use "available memory = free / ratio" instead of "free / ratio + 161MB".
   available_memory_ = int64_t(free / (first_ratio * second_ratio));
-  std::cout << "Free memory: " << free << ", total memory: " << total
-            << ", available memory: " << available_memory_ << std::endl;
+  LOG(INFO) << "Free memory: " << free << ", total memory: " << total
+            << ", available memory: " << available_memory_;
 }
 
 void SbpConstructor::InitWeightedCost() {

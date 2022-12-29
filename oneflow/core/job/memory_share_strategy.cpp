@@ -425,19 +425,16 @@ void MemoryShareStrategy::AdaptivelyUpdateOffset(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime,
     size_t lower_bound, size_t* mem_block_size,
     HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
-  std::cout << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound
-            << std::endl;
+  VLOG(3) << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound;
   if (*mem_block_size > lower_bound) {
-    std::cout << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound
-              << std::endl;
     UpdateMaxIteration(*mem_block_size, lower_bound);
-    std::cout << "max iteration step: " << max_iteration_step_ << std::endl;
+    VLOG(3) << "max iteration step: " << max_iteration_step_;
     if (max_iteration_step_ > 0) {
       StealCompactPosition(*regst_desc2offset, mem_reused_regst2size, register2lifetime);
       UpdateOffset(mem_block_size, regst_desc2offset);
     }
   }
-  std::cout << "After, memory size: " << *mem_block_size << std::endl;
+  VLOG(3) << "After compression, memory size: " << *mem_block_size;
 }
 
 // Set the offset of registers to minimize the total memory
