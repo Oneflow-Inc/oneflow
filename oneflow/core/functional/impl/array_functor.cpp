@@ -967,10 +967,7 @@ class InplaceUnsqueezeFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     JUST(CheckInplaceValid(input));
-    int32_t expand_dim = dim;
-    const int32_t ndim = input->shape()->NumAxes();
-    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
-
+    const int64_t expand_dim = JUST(maybe_wrap_dim(dim, input->shape()->NumAxes() + 1));
     CHECK_OR_RETURN(view::IsViewApplicable(input))
         << "inplace unsqueeze(tensor.unsqueeze_) only support in eager local mode!";
 
