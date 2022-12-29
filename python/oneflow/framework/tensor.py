@@ -418,15 +418,6 @@ def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
 
-def _type_as(self, target):
-    if self.is_local and target.is_local:
-        return self.to(dtype=target.dtype, device=target.device)
-    elif self.is_global and target.is_local:
-        return self.to_local().to(dtype=target.dtype, device=target.device)
-    elif target.is_global:
-        return self.to(dtype=target.dtype).to_global(target.placement, target.sbp)
-
-
 def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
@@ -621,7 +612,6 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.sort = _sort
-    Tensor.type_as = _type_as
     Tensor.tolist = _tolist
     Tensor.topk = _topk
     Tensor.nms = _nms
