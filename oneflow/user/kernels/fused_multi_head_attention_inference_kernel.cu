@@ -290,9 +290,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
       nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
           nvinfer1::plugin::getFMHAFlashCubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
-      nvinfer1::plugin::runFMHFAKernel(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
-                      kernels, batch_size, num_heads, query_head_size, query_seq_len,
-                      cuda_stream->cuda_stream());
+      nvinfer1::plugin::runFMHFAKernel(
+          packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch, kernels,
+          batch_size, num_heads, query_head_size, query_seq_len, cuda_stream->cuda_stream());
       return;
     }
 
