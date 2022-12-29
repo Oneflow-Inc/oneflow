@@ -33,6 +33,8 @@ os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+
+
 def _test_fuse_conv_bn(test_case, with_cuda):
     data = flow.randn(1, 3, 224, 224)
     if with_cuda:
