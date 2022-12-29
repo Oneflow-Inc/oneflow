@@ -21,9 +21,9 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
-#include "OneFlow/kernel_launch/RegContext.h"
-#include "OneFlow/kernel_launch/RunContext.h"
-#include "OneFlow/kernel_launch/LauncherContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "OneFlow/OKL/Kernel/RunContext.h"
+#include "OneFlow/OKL/Kernel/LauncherContext.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace oneflow {

@@ -19,8 +19,8 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
-#include "OneFlow/kernel_launch/JITEngine.h"
-#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/OKL/Kernel/JITEngine.h"
+#include "OneFlow/OKL/Kernel/RunContext.h"
 
 extern "C" {
 void* oneflow_okl_fetch_run_ctx(void* launcher, int64_t index) {

@@ -28,6 +28,14 @@ oneflow_add_mlir_dialect_library(
   OKL/Conversion/OnlyKeepComputeOps.cpp
   OKL/Conversion/CudaGraphSupport.cpp
   OKL/Conversion/Conversion.cpp
+  OKL/Kernel/InferContext.cpp
+  OKL/Kernel/KernelLaunchOp.cpp
+  OKL/Kernel/KernelLaunchState.cpp
+  OKL/Kernel/LauncherContext.cpp
+  OKL/Kernel/RegContext.cpp
+  OKL/Kernel/RunContext.cpp
+  OKL/Kernel/TmpBufferManager.cpp
+  OKL/Kernel/JITOpInfer.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp

@@ -24,9 +24,9 @@ limitations under the License.
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "OneFlow/kernel_launch/JITEngine.h"
-#include "OneFlow/kernel_launch/LauncherContext.h"
-#include "OneFlow/kernel_launch/KernelLaunchState.h"
+#include "OneFlow/OKL/Kernel/JITEngine.h"
+#include "OneFlow/OKL/Kernel/LauncherContext.h"
+#include "OneFlow/OKL/Kernel/KernelLaunchState.h"
 
 namespace oneflow {
 namespace okl {

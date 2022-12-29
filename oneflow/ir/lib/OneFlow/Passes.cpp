@@ -103,7 +103,7 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 #include <algorithm>
@@ -1153,15 +1153,11 @@ struct KernelLaunchWithCudaGraphPattern : public mlir::OpRewritePattern<oneflow:
         CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
         continue;
       }
-      if (with_cuda_graph_support_) {
-        bool is_cuda_graph_support_this_op = IsOpCudaGraphSupport(&(*op_it));
-        if (is_cuda_graph_support_this_block != is_cuda_graph_support_this_op) {
-          CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
-          is_cuda_graph_support_this_block = is_cuda_graph_support_this_op;
-          wrap_ops.push_back(&(*op_it));
-        } else {
-          wrap_ops.push_back(&(*op_it));
-        }
+      bool is_cuda_graph_support_this_op = IsOpCudaGraphSupport(&(*op_it));
+      if (is_cuda_graph_support_this_block != is_cuda_graph_support_this_op) {
+        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+        is_cuda_graph_support_this_block = is_cuda_graph_support_this_op;
+        wrap_ops.push_back(&(*op_it));
       } else {
         wrap_ops.push_back(&(*op_it));
       }
@@ -1169,9 +1165,6 @@ struct KernelLaunchWithCudaGraphPattern : public mlir::OpRewritePattern<oneflow:
     CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
     return success();
   }
-
- private:
-  bool with_cuda_graph_support_;
 };
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {

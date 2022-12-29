@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/op_kernel.h"
-#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/OKL/Kernel/RunContext.h"
 
 namespace oneflow {
 namespace okl {

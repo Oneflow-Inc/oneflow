@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_LAUNCHER_CONTEXT_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_LAUNCHER_CONTEXT_H_
 
-#include "OneFlow/kernel_launch/InferMisc/InitContext.h"
+#include "OneFlow/OKL/Kernel/InferMisc/InitContext.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,8 +25,8 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
-#include "OneFlow/kernel_launch/RegContext.h"
-#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "OneFlow/OKL/Kernel/RunContext.h"
 
 namespace oneflow {
 namespace okl {

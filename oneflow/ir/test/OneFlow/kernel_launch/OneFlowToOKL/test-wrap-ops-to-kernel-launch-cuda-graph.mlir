@@ -2,8 +2,7 @@
 // RUN: -wrap-ops-to-kernel-launch="mode=cuda_graph" \
 // RUN: | FileCheck %s
 
-// CHECK:  func.func @wrap1
-// CHECK:  func.func @wrap0
+// CHECK: func.func @wrap1
 
 module {
   oneflow.job @GraphToRun_0(%arg0: tensor<2xf32>) -> (tensor<2xsi32>, tensor<2xf32>) {

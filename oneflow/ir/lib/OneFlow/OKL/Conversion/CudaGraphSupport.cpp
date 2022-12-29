@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
