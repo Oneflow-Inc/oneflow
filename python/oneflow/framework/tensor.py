@@ -192,8 +192,10 @@ def _new_zeros(
 def _squeeze_inplace(self, dim=None):
     return flow._C.squeeze_(self, dim=dim)
 
+
 def _unsqueeze_inplace(self, dim=None):
     return flow._C.unsqueeze_(self, dim=dim)
+
 
 def _new_full(
     self,
