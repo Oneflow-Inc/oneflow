@@ -1113,6 +1113,7 @@ class InplaceAsStridedFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
                            const int64_t& storage_offset) const {
+    JUST(CheckInplaceValid(input));
     CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
     for (size_t i = 0; i < size.size(); i++) {
       CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
