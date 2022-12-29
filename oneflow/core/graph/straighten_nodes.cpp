@@ -373,7 +373,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
   } else {
-    // sat == StraightenAlgorithmTag::kDisable
+    // sat == StraightenAlgorithmTag::kDisableStraighten
     decide_parameters->push_back(StraightenOrder::kLayerAscend);
   }
 }

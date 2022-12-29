@@ -898,7 +898,7 @@ void TaskGraph::DecideExecutionOrder() {
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
       GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisable
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisableStraighten
       || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
           && GlobalProcessCtx::WorldSize() == 1)) {
     SetOrderInGraphForEachNode();

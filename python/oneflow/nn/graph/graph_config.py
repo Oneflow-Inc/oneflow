@@ -387,6 +387,46 @@ class GraphConfig(object):
         """
         self.proto.enable_auto_parallel_sbp_collector = mode
 
+    def enable_auto_memory(self, mode: str = "AdaptiveMemory"):
+        r""" Whether we use a parallelism strategy with less memory
+
+        Auto memory strategy 1: Disable
+        Disable auto memory in auto parallel.
+        Ignore the memory and try our best to speed up the training.
+
+        Auto memory strategy 2: SlightMemoryDown
+        Try to decrease the memory while maintaining the throughput.
+
+        Auto memory strategy 3: ModerateMemoryDown
+        Decrease the memory, throughput might or might not be affected.
+        Similar to data parallelism + ZeRO.
+
+        Auto memory strategy 4: HeavyMemoryDown
+        Try our best to decrease the memory, ignoring the throughput.
+
+        Auto memory strategy 5: AdaptiveMemory
+        Use normal auto parallelism without consideration of memory while we have enough memory.
+        Gradually decrease the memory to avoid out of memory while we have inadequate memory.
+        Always try to find the highest throughput under the current limitation of memory.
+        """
+        assert (
+            mode == "Disable"
+            or mode == "SlightMemoryDown"
+            or mode == "ModerateMemoryDown"
+            or mode == "HeavyMemoryDown"
+            or mode == "AdaptiveMemory"
+        )
+        if mode == "Disable":
+            self.proto.enable_auto_memory = 1
+        elif mode == "SlightMemoryDown":
+            self.proto.enable_auto_memory = 2
+        elif mode == "ModerateMemoryDown":
+            self.proto.enable_auto_memory = 3
+        elif mode == "HeavyMemoryDown":
+            self.proto.enable_auto_memory = 4
+        else:
+            self.proto.enable_auto_memory = 5
+
     def enable_multi_tensor_update(self, mode: bool = True):
         """
         Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead.
