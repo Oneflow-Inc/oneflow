@@ -873,20 +873,5 @@ bool SbpNode::IsComponent(SbpNode* sbp_node) const {
          != component2merged_sig_id2component_sig_id_.end();
 }
 
-// TODO: Switch to three fixed types of memory ratio.
-double UpdateRatio() {
-  int32_t ratio_num = ParseIntegerFromEnv("RatioNum", 0);
-  double ratio = 0.0;
-  // if (ratio_num > 0) { ratio = pow(1.02, ratio_num - 1); }
-  if (ratio_num > 0) { ratio = pow(1.2, ratio_num - 27); }
-  // if (ratio_num > 0 && ratio_num < 57) {
-  //   ratio = 0.1615 * pow(1.02, ratio_num - 1);
-  // } else if (ratio_num >= 57) {
-  //   ratio = 6.1917 * pow(1.03, ratio_num - 57);
-  // }
-  std::cout << "Memory ratio: " << ratio << std::endl;
-  return ratio;
-}
-
 }  // namespace auto_parallel
 }  // namespace oneflow

@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
@@ -32,19 +34,37 @@ namespace oneflow {
 
 namespace auto_parallel {
 
-double kMemoryRatio = UpdateRatio();
-
 namespace {
 
+// AMS, a.k.a. Applied Mathematics & Statistics, is a department of the Stony Brook University.
+// It contains 5 tracks: Computational & Applied Mathematics, Computational Biology,
+// Operation Research, Quantitative Finance, Statistics.
+AutoMemoryStrategy ams;
+
 // kMemoryRatio increase by this rate at each time.
-const double kMemoryIncreaseRatio = 2.0;
+static const double kMemoryIncreaseRatio = 2.0;
 // The ceil of kMemoryRatio.
-const double kMaxMemoryRatio = 22.0;
+static const double kMaxMemoryRatio = 22.0;
+// The floor of kMemoryRatio
+static const double kMinMemoryRatio = 0.1;
 // If the current memory > available memory * kImpossibleRatio,
 // then it is impossible to reduce the memory to an acceptable size
-const double kImpossibleRatio = 1.4;
+static const double kImpossibleRatio = 1.4;
+
+// Pick from 5 fixed types of memory ratio.
+double UpdateMemoryRatio() {
+  switch (ams) {
+    case kAdaptiveAutoMemory:
+    case kDisableAutoMemory: return 0.0;
+    case kSlightAutoMemory: return 0.4;
+    case kModerateAutoMemory: return 4.3;
+    default: return 11.0;  // case kHeavyAutoMemory
+  }
+}
 
 }  // namespace
+
+double kMemoryRatio;
 
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
@@ -54,6 +74,8 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
   // Update nccl_use_compute_stream
   nccl_use_compute_stream_ = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+  ams = job.job_conf().enable_auto_memory();
+  kMemoryRatio = UpdateMemoryRatio();
   // TODO: process local node
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
@@ -110,17 +132,16 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   while (true) {
     sbp_graph_.GreedyStrategy(4);
     double curr_memory = sbp_graph_.GetMemory();
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "The " << step << "-th try, memory ratio: " << kMemoryRatio
-                << ", memory: " << curr_memory
-                << ", total cost: " << sbp_graph_.ComputeWeightedCost() << std::endl;
-    }
-    if (ParseBooleanFromEnv("NoAdaptive", false)) { break; }
+    LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
+              << ", memory: " << curr_memory
+              << ", total cost: " << sbp_graph_.ComputeWeightedCost();
+    if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     if (curr_memory > available_memory_ * kImpossibleRatio) {
       kMemoryRatio = kMaxMemoryRatio;
     } else {
-      kMemoryRatio = std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio);
+      kMemoryRatio =
+          std::max(std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio), kMinMemoryRatio);
     }
     step++;
     sbp_graph_.ReComputeWeightedCost();
@@ -473,6 +494,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
   std::cout << "Total auto parallel guessed memory: " << sbp_graph_.GetMemory() << std::endl;
+  std::cout << "Final memory ratio: " << kMemoryRatio << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node

@@ -233,8 +233,6 @@ class SbpNode final {
   void DropAvailWaitTime(double curr_trunk_cost);
 };  // class SbpNode
 
-double UpdateRatio();
-
 }  // namespace auto_parallel
 }  // namespace oneflow
 
