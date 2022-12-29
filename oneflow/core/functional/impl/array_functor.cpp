@@ -3685,10 +3685,11 @@ class UniqueFunctor {
     op_ = CHECK_JUST(
         OpBuilder("unique").Input("x").Output("y").Output("idx").Output("num_unique").Build());
   };
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Symbol<DType>& dtype) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const bool sorted,
+                           const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx", "sorted");
     DataType out_idx = dtype->data_type();
-    attrs.SetAllAttrs(out_idx);
+    attrs.SetAllAttrs(out_idx, sorted);
     std::shared_ptr<TensorTuple> output = JUST(
         OpInterpUtil::Dispatch<TensorTuple>(*op_, {JUST(functional::Flatten(x, 0, -1))}, attrs));
     int64_t num_unique = 0;
@@ -3726,10 +3727,11 @@ class UniqueWithCountsFunctor {
                                             .Output("count")
                                             .Build());
   };
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, bool return_inverse,
-                                bool return_counts, const Symbol<DType>& dtype) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx");
-    attrs.SetAllAttrs(dtype->data_type());
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, const bool sorted,
+                                const bool return_inverse, const bool return_counts,
+                                const Symbol<DType>& dtype) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_idx", "sorted");
+    attrs.SetAllAttrs(dtype->data_type(), sorted);
     std::shared_ptr<TensorTuple> output;
     if (return_counts) {
       output = JUST(OpInterpUtil::Dispatch<TensorTuple>(
