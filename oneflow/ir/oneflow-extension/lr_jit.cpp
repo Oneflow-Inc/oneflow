@@ -145,7 +145,7 @@ static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
   CHECK(jit_or_err) << "failed to create JIT exe engine, "
                     << llvm::toString(jit_or_err.takeError());
 
-  std::shared_ptr<mlir::ExecutionEngine> engine = cantFail(move(jit_or_err));
+  std::shared_ptr<mlir::ExecutionEngine> engine = cantFail(std::move(jit_or_err));
 
   std::weak_ptr<mlir::ExecutionEngine> engine_ = engine;
 
