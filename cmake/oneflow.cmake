@@ -81,7 +81,19 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     if(BUILD_ROCM)
-      list(APPEND of_all_obj_cc ${oneflow_single_file})
+      if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.cu$")
+        get_filename_component(oneflow_single_file_hip_cpp_dir ${oneflow_single_file} DIRECTORY)
+        get_filename_component(oneflow_single_file_hip_cpp ${oneflow_single_file} NAME_WE)
+        add_custom_command(
+          OUTPUT "${oneflow_single_file_hip_cpp_dir}/${oneflow_single_file_hip_cpp}_hip.cpp" 
+          COMMAND ${CMAKE_COMMAND} -E copy "${oneflow_single_file}" "${oneflow_single_file_hip_cpp_dir}/${oneflow_single_file_hip_cpp}_hip.cpp" 
+          DEPENDS "${oneflow_single_file}" 
+        ) 
+        list(APPEND of_all_obj_cc ${oneflow_single_file_hip_cpp_dir}/${oneflow_single_file_hip_cpp}_hip.cpp)
+      endif()
+      if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.cuh$")
+        list(APPEND of_all_obj_cc ${oneflow_single_file})
+      endif()
     endif()
     set(group_this ON)
   endif()
@@ -326,9 +338,9 @@ if (BUILD_ROCM)
   # AMD compiler fails to compile these three files with '-O1/2/3'.
   # The value of `COMPILE_OPTIONS` target property is added after CMAKE_<LANG>_FLAGS_<CONFIG>,
   # so '-O0' will override '-O1/2/3'.
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/user/kernels/median_with_indices_kernel.cu
-                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/radix_sort_top_k_kernel.cu
-                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_sort_kernel.cu
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/user/kernels/median_with_indices_kernel_hip.cpp
+                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/radix_sort_top_k_kernel_hip.cpp
+                              ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_sort_kernel_hip.cpp
                               PROPERTIES COMPILE_OPTIONS "-O0")
 endif()
 

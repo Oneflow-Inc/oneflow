@@ -40,12 +40,6 @@ if (BUILD_CUDA AND BUILD_ROCM)
   message(FATAL_ERROR "Compile with cuda and rocm enabled simultaneously are not supported right now.")
 endif()
 
-if (BUILD_ROCM)
-  # Search for rocm in common locations
-  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm)
-  set(CMAKE_MODULE_PATH "${ROCM_PATH}/hip/cmake" ${CMAKE_MODULE_PATH})
-endif()
-
 set(ONEFLOW_CURRENT_VERSION 0.8.1.dev CACHE STRING "")
 
 if(BUILD_FOR_CI)
@@ -74,6 +68,14 @@ endif()
 set(CUDNN_STATIC OFF CACHE BOOL "")
 
 project(oneflow C CXX)
+
+if (BUILD_ROCM)
+  # Search for rocm in common locations
+  #FIND_PACKAGE(HIP REQUIRED)
+  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm)
+  set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+  set(CMAKE_MODULE_PATH "${HIP_PATH}/lib/cmake/hip" ${CMAKE_MODULE_PATH})
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")

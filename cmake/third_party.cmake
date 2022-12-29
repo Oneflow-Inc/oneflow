@@ -172,6 +172,7 @@ endif()
 if (BUILD_ROCM)
   # Find rocm packages
   find_package(hip)
+  find_package(hipfft)
   find_package(hipblas)
   find_package(hipcub)
   find_package(hiprand)
@@ -186,6 +187,7 @@ if (BUILD_ROCM)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mcmodel=large")
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -mcmodel=large")
   list(APPEND oneflow_third_party_libs hip::device)
+  list(APPEND oneflow_third_party_libs hip::hipfft)
   list(APPEND oneflow_third_party_libs roc::hipblas)
   list(APPEND oneflow_third_party_libs hip::hipcub)
   list(APPEND oneflow_third_party_libs roc::rocrand)
@@ -193,7 +195,8 @@ if (BUILD_ROCM)
   list(APPEND oneflow_third_party_libs MIOpen)
   link_directories(${ROCM_PATH}/rccl/lib)
   list(APPEND oneflow_third_party_libs rccl)
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HIP_INCLUDE_DIRS} 
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HIP_INCLUDE_DIRS}
+                                               ${HIPFFT_INCLUDE_DIRS}
                                                ${HIPBLAS_INCLUDE_DIRS}
                                                ${HIPCUB_INCLUDE_DIRS}
                                                "${ROCM_PATH}/hiprand/include"
