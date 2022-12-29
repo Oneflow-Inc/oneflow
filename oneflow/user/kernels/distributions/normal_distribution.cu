@@ -30,7 +30,7 @@ const uint32_t block_size_bound = 256;
 const uint32_t grid_size_bound = 4;
 
 std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
-                                                       ep::CudaStream* stream) {
+                                                     ep::CudaStream* stream) {
   const uint64_t numel = static_cast<uint64_t>(total_elements);
   const uint32_t block_size = block_size_bound;
   // number of randoms given by distributions like curand_uniform4, curand_uniform2_double
@@ -52,10 +52,9 @@ std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
 
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
-__global__
-    void DistributionElementwiseGridStrideKernelDouble(int32_t numel, uint64_t seed,
-                                                            uint64_t offset, ComputeType mean,
-                                                            ComputeType std, T* out_ptr) {
+__global__ void DistributionElementwiseGridStrideKernelDouble(int32_t numel, uint64_t seed,
+                                                              uint64_t offset, ComputeType mean,
+                                                              ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
@@ -79,8 +78,8 @@ __global__
 template<typename T, typename ComputeType, int unroll_factor>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__ void DistributionElementwiseGridStrideKernelFloat(int32_t numel, uint64_t seed,
-                                                                  uint64_t offset, ComputeType mean,
-                                                                  ComputeType std, T* out_ptr) {
+                                                             uint64_t offset, ComputeType mean,
+                                                             ComputeType std, T* out_ptr) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
