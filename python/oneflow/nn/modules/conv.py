@@ -19,7 +19,7 @@ import os
 import oneflow as flow
 from oneflow.nn import init
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _single, _triple
 
 from typing import Union

@@ -1046,6 +1046,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.lt,
     """
     See :func:`oneflow.lt`
@@ -2415,5 +2422,27 @@ add_docstr(
     oneflow.Tensor.broadcast_to,
     """
     See :func:`oneflow.broadcast_to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unique,
+    """
+    See :func:`oneflow.unique`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> x.unique()
+        tensor([3, 1, 2, 0], dtype=oneflow.int64)
+        >>> x, indices = x.unique(return_inverse=True)
+        >>> indices
+        tensor([0, 1, 2, 3, 2], dtype=oneflow.int32)
+        >>> x, counts = x.unique(return_counts=True)
+        >>> counts
+        tensor([1, 1, 1, 1], dtype=oneflow.int32)
     """,
 )

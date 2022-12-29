@@ -80,11 +80,25 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
+    cublasLtMatmulPreference_t preference = nullptr;
+    size_t workspace_size = cuda_stream->cublas_workspace_size();
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
+                                                         CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                         &workspace_size, sizeof(workspace_size)));
+    int returned_results = 0;
+    cublasLtMatmulHeuristicResult_t heuristic_result;
+    OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, matmul_cache->cublas_a_desc,
+        matmul_cache->cublas_b_desc, matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc,
+        preference, 1, &heuristic_result, &returned_results));
+    CHECK_EQ(returned_results, 1);
+    cublasLtMatmulPreferenceDestroy(preference);
     OF_CUBLAS_CHECK(cublasLtMatmul(
         cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
         matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
         (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(), matmul_cache->cublas_c_desc,
-        y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+        y_ptr, matmul_cache->cublas_c_desc, &heuristic_result.algo, cuda_stream->cublas_workspace(),
         cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 

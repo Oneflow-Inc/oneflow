@@ -38,27 +38,27 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
-        >>> values
+        >>> result = flow.topk(flow.Tensor(x), k=3, dim=1)
+        >>> result.values
         tensor([[8., 7., 3.],
                 [9., 4., 3.]], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([[2, 3, 1],
                 [1, 2, 3]], dtype=oneflow.int64)
-        >>> values.shape
+        >>> result.values.shape
         oneflow.Size([2, 3])
-        >>> indices.shape
+        >>> result.indices.shape
         oneflow.Size([2, 3])
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
-        >>> values
+        >>> result = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
+        >>> result.values
         tensor([[1., 2.],
                 [1., 2.]], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([[0, 4],
                 [0, 4]], dtype=oneflow.int64)
-        >>> values.shape
+        >>> result.values.shape
         oneflow.Size([2, 2])
-        >>> indices.shape
+        >>> result.indices.shape
         oneflow.Size([2, 2])
 
     """,
