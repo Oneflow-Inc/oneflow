@@ -84,6 +84,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         y = torch.unsqueeze(x, random(1, 3).to(int))
         return y
 
+    @autotest(n=10, check_graph=False, auto_backward=False)
+    def test_inplace_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.unsqueeze_(random(1, 3).to(int))
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_unsqueeze_with_0_size_data(test_case):
         device = random_device()
