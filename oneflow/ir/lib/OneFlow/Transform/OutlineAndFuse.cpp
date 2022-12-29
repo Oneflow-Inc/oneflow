@@ -62,7 +62,7 @@ class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
  public:
   WrapOpsToKernelLaunchPass() = default;
-  WrapOpsToKernelLaunchPass(const WrapOpsToKernelLaunchPass &other)
+  WrapOpsToKernelLaunchPass(const WrapOpsToKernelLaunchPass& other)
       : WrapOpsToKernelLaunchPassBase(other) {}
 
   void getDependentDialects(DialectRegistry& registry) const override {
