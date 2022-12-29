@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -1094,9 +1095,37 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
 };
 
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
-  KernelLaunchPattern(mlir::MLIRContext* context, bool with_cuda_graph_support)
-      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0),
-        with_cuda_graph_support_(with_cuda_graph_support) {}
+  explicit KernelLaunchPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+
+  mlir::LogicalResult matchAndRewrite(oneflow::Job op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto& ops = op->getRegion(0).front();
+    if (ops.empty()) { return success(); }
+    std::vector<StringRef> white_list{
+        KernelLaunchOp::getOperationName(),
+        OutputOp::getOperationName(),
+        InputOp::getOperationName(),
+        VariableOp::getOperationName(),
+    };
+    int name_index = 0;
+    std::vector<Operation*> wrap_ops;
+    for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
+      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
+          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
+        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+        continue;
+      }
+      wrap_ops.push_back(&(*op_it));
+    }
+    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
+    return success();
+  }
+};
+
+struct KernelLaunchWithCudaGraphPattern : public mlir::OpRewritePattern<oneflow::Job> {
+  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
 
   static bool IsOpCudaGraphSupport(mlir::Operation* op) {
     ::oneflow::okl::RegContext reg_ctx(op);
@@ -1222,9 +1251,16 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
-                                         bool with_cuda_graph_support) {
-  patterns.add<KernelLaunchPattern>(patterns.getContext(), with_cuda_graph_support);
+                                         const std::string& mode) {
+  if (mode == wrap_mode::NORMAL) {
+    patterns.add<KernelLaunchPattern>(patterns.getContext());
+  } else if (mode == wrap_mode::CUDA_GRAPH) {
+    patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
+  } else {
+    llvm_unreachable("Found an unsupported mode in wrap-ops-to-kernel-launch pass");
+  }
 }
+
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);

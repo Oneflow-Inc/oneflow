@@ -35,11 +35,6 @@ def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
   let constructor = "mlir::oneflow::createAggregateComputeOpsPass()";
 }
 
-def WrapOpsToKernelLaunchWithCudaGraphSupportPass : Pass<"wrap-ops-to-kernel-launch-with-cuda-graph-support", "ModuleOp"> {
-  let summary = "wrap the same continuous user ops(support/not support cuda graph) into a kernel launch op in OneFlow Job";
-  let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchWithCudaGraphSupportPass()";
-}
-
 def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";

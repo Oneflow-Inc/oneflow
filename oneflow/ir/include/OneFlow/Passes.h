@@ -53,7 +53,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns);
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
-                                         bool with_cuda_graph_support = false);
+                                         const std::string& mode);
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);

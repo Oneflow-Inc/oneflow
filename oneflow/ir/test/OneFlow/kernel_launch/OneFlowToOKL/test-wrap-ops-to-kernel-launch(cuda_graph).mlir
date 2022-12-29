@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -wrap-ops-to-kernel-launch-with-cuda-graph-support \
+// RUN: -wrap-ops-to-kernel-launch="mode=cuda_graph" \
 // RUN: | FileCheck %s
 
 // CHECK:  func.func @wrap1

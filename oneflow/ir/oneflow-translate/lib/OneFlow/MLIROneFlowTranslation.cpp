@@ -830,11 +830,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
-#ifdef WITH_CUDA_GRAPHS
-    pm.addPass(createWrapOpsToKernelLaunchWithCudaGraphSupportPass());
-#else
     pm.addPass(createWrapOpsToKernelLaunchPass());
-#endif
   }
   pm.addPass(createCanonicalizerPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {

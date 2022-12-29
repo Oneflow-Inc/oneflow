@@ -60,6 +60,11 @@ class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
 };
 
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
+ public:
+  WrapOpsToKernelLaunchPass() = default;
+  WrapOpsToKernelLaunchPass(const WrapOpsToKernelLaunchPass &other)
+      : WrapOpsToKernelLaunchPassBase(other) {}
+
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
   }
@@ -67,24 +72,13 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateWrapOpsToKernelLaunchPasses(patterns);
+    populateWrapOpsToKernelLaunchPasses(patterns, wrap_ops_mode_.c_str());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
-};
 
-class WrapOpsToKernelLaunchWithCudaGraphSupportPass
-    : public WrapOpsToKernelLaunchWithCudaGraphSupportPassBase<
-          WrapOpsToKernelLaunchWithCudaGraphSupportPass> {
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<oneflow::OneFlowDialect>();
-  }
-
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateWrapOpsToKernelLaunchPasses(patterns, true);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
+ private:
+  Option<std::string> wrap_ops_mode_{
+      *this, "mode", llvm::cl::desc("the mode of this pass to wrap ops"), llvm::cl::init("normal")};
 };
 
 class ExtractKernelLaunchTensorPass
@@ -266,10 +260,6 @@ class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizati
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
-}
-
-std::unique_ptr<Pass> createWrapOpsToKernelLaunchWithCudaGraphSupportPass() {
-  return std::make_unique<WrapOpsToKernelLaunchWithCudaGraphSupportPass>();
 }
 
 std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
