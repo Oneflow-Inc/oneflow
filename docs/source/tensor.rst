@@ -365,6 +365,7 @@ Tensor class reference
     Tensor.unfold
     Tensor.uniform_
     Tensor.unsqueeze
+    Tensor.unsqueeze_
     Tensor.var
     Tensor.view
     Tensor.view_as

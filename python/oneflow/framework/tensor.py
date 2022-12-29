@@ -192,6 +192,8 @@ def _new_zeros(
 def _squeeze_inplace(self, dim=None):
     return flow._C.squeeze_(self, dim=dim)
 
+def _unsqueeze_inplace(self, dim=None):
+    return flow._C.unsqueeze_(self, dim=dim)
 
 def _new_full(
     self,
@@ -609,6 +611,7 @@ def RegisterMethods():
     Tensor.new_zeros = _new_zeros
     Tensor.new_full = _new_full
     Tensor.squeeze_ = _squeeze_inplace
+    Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm

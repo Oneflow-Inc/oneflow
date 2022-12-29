@@ -58,6 +58,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
 
+Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
+
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
 

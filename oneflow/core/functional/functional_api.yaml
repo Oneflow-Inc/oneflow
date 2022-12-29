@@ -1051,6 +1051,10 @@
   signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
   bind_python: False
 
+- name: "unsqueeze_"
+  signature: "Tensor (Tensor input, Int32 dim) => InplaceUnsqueeze"
+  bind_python: True
+
 - name: "squeeze"
   signature: "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"
   bind_python: True

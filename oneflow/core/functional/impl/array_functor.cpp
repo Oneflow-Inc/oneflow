@@ -963,6 +963,22 @@ class UnsqueezeMultipleFunctor {
   }
 };
 
+class InplaceUnsqueezeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
+    JUST(CheckInplaceValid(input));
+    int32_t expand_dim = dim;
+    const int32_t ndim = input->shape()->NumAxes();
+    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
+
+    CHECK_OR_RETURN(view::IsViewApplicable(input))
+        << "inplace unsqueeze(tensor.unsqueeze_) only support in eager local mode!";
+
+    JUST(view::InplaceUnsqueeze(input, expand_dim));
+    return input;
+  }
+};
+
 class SqueezeFunctor {
  public:
   SqueezeFunctor() {
@@ -3905,6 +3921,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
+  m.add_functor<impl::InplaceUnsqueezeFunctor>("InplaceUnsqueeze");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::InplaceSqueezeFunctor>("InplaceSqueeze");
   m.add_functor<impl::RollFunctor>("Roll");

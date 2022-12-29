@@ -125,9 +125,9 @@ Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& targe
       target_shape, target_stride, input->dtype()->data_type(), JUST(input->device())));
 
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
-  std::shared_ptr<EagerLocalTensorImpl> new_tensor_impl =
-      std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()), storage_offset,
-                                             /*is_leaf=*/!requires_grad);
+  std::shared_ptr<EagerLocalTensorImpl> new_tensor_impl = std::make_shared<EagerLocalTensorImpl>(
+      JUST(input->tensor_storage()), storage_offset, /*requires_grad=*/requires_grad,
+      /*is_leaf=*/!requires_grad);
   JUST(new_tensor_impl->InitEagerBlobObject(
       new_tensor_meta, JUST(JUST(input->eager_blob_object())->compute_local_dep_object())));
   JUST(JUST(input->AsLocalTensor())->set_impl(new_tensor_impl));
@@ -258,6 +258,48 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
                                                  &outputs));
   }
   return output;
+}
+
+Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const auto& ndim = shape->NumAxes();
+
+  DimVector target_dim_vec(ndim + 1);
+  Stride target_stride_vec(ndim + 1);
+
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (i == expand_dim) { cnt++; }
+      target_dim_vec[cnt] = shape->At(i);
+      target_stride_vec[cnt] = strides->at(i);
+      cnt++;
+    }
+    target_dim_vec[expand_dim] = 1;
+    target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) : 1;
+  }
+
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
+  JUST(view::InplaceView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
+
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
+          JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return false; };
+    TensorTuple outputs{input};
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::inplace_unsqueeze_backward", backward_fn,
+                                                 {input}, &outputs));
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
