@@ -35,7 +35,6 @@ EagerBlobObject::EagerBlobObject(
       data_type_(data_type),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      pin_memory_(false),
       compute_local_dep_object_(dep_object),
       static_local_tensor_meta_(static_local_tensor_meta),
       dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
