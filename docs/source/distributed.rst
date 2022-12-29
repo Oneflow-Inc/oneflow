@@ -13,7 +13,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 
 
-Baisc
+Basic
 -------------------------------
 When you start distributed training in OneFlow, the following functions can be used.
 
