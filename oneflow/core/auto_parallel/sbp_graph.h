@@ -109,7 +109,7 @@ class SbpGraph final {
   // Limitation: Merged node should not have a number of Sbp Signature greater
   // than threshold.
   int32_t threshold_ = 100;
-  // Overlayable wait time for copy cost, which occurs before communication between devices.
+  // Wait time for copy cost, which occurs before communication between devices.
   double wait_time_ = 16500.0;
 
   // Remove a node from the node list

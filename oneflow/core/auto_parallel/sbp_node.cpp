@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace auto_parallel {

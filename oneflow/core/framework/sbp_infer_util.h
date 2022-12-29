@@ -112,7 +112,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 // Decide the priority to infer sbp
 // 0: highest priority
 // 1.0: normal priority
-// 2.0: Penality, the same as infinity
+// 2.0: Penalty, the same as infinity
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
                                const ParallelDesc& producer_parallel_desc,

@@ -433,8 +433,8 @@ void MemoryShareStrategy::AdaptivelyUpdateOffset(
       StealCompactPosition(*regst_desc2offset, mem_reused_regst2size, register2lifetime);
       UpdateOffset(mem_block_size, regst_desc2offset);
     }
+    VLOG(3) << "After compression, memory size: " << *mem_block_size;
   }
-  VLOG(3) << "After compression, memory size: " << *mem_block_size;
 }
 
 // Set the offset of registers to minimize the total memory

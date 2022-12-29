@@ -67,7 +67,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
 
 
         """
@@ -93,7 +93,7 @@ class GraphConfig(object):
     ):
         r"""Enable ZeRO redundancy optimizer.
 
-        This optimzation will reduce optimizer states memory consumption as described
+        This optimization will reduce optimizer states memory consumption as described
         by ZeRO https://arxiv.org/abs/1910.02054 .
 
         The default zero stage is 2.
@@ -118,7 +118,7 @@ class GraphConfig(object):
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3.
             shard_min_size (int): min size (element count) of a shard of an optimizer state.
-            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
+            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this parameter is at pre-alpha stage.
         """
         if not mode:
             self.proto.optimizer_placement_optimization_mode = "none"
@@ -159,12 +159,12 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_model_update_ops = mode
 
     def allow_fuse_add_to_output(self, mode: bool = True):
-        r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
+        r"""If set to true, try to fuse a binary element-wise add operator to one of the predecessors to improve performance.
 
         For example:
 
@@ -185,7 +185,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_add_to_output = mode
 
@@ -212,7 +212,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_cast_scale = mode
 
@@ -262,14 +262,14 @@ class GraphConfig(object):
         # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
 
         Args:
-            value (int): graph ouputs buffer size.
+            value (int): graph outputs buffer size.
         """
         assert isinstance(value, int)
         assert value >= 1
         self._outputs_buffer_size = value
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
-        r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
+        r""" Whether enable cudnn conv operation to use heuristic search algorithm.
 
         For example:
 
@@ -289,7 +289,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 

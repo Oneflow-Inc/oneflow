@@ -328,7 +328,7 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Make sure that every blob dies
   CHECK_EQ(curr_reusable_memory, 0) << " Have not kill all the reusable blobs!";
 
-  // Mark those reusable memory which constitute the maximum reusable memroy
+  // Mark those reusable memory which constitute the maximum reusable memory
   for (auto& topo_struct : ordered_topo_structs) {
     // Blobs born, increase count and memory
     GenerateBlobs(topo_struct);
@@ -353,7 +353,7 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
     KillBlobs(topo_struct);
   }
 
-  // Initiailize memory for each sbp node
+  // Initialize memory for each sbp node
   for (auto& topo_struct : topo_structs) {
     topo_struct->sbp_node->InitializeMemory(topo_struct->is_reusable, lbi2id, id2count,
                                             nccl_use_compute_stream);

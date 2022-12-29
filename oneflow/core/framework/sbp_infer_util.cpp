@@ -91,7 +91,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   }
 
   // NOTE: A tensor placed on cpu with a consumer operator that accepts cuda inputs would be
-  // transfered to cuda later. We might not have correct parallel description at this moment.
+  // transferred to cuda later. We might not have correct parallel description at this moment.
   if (on_same_devices && producer_parallel_num == consumer_parallel_num) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
@@ -952,7 +952,7 @@ double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consum
       // [1, 2]:(P, S0) -> [1, 2]:(S0, S0)
       return 1.0;
     } else {
-      // Penality: this blob have different placements and sbps but it does not support boxing
+      // Penalty: this blob have different placements and sbps but it does not support boxing
       return 2.0;
     }
   } else {

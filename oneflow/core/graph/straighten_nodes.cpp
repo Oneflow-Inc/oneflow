@@ -69,7 +69,7 @@ class TopoStruct {
   int32_t GetMinDistance2Overlap(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
-  void ComputeMeomoryIncrement();
+  void ComputeMemoryIncrement();
 
   // Exceed time = time of cpu - time of gpu
   // For most operators, the execution time on gpu exceed the execution time on cpu.
@@ -245,7 +245,7 @@ int32_t TopoStruct::GetMinDistance2Overlap(HashMap<TaskNode*, TopoStruct>* task_
 }
 
 // Memory increment = (memory of out registers) - (memory of in registers)
-void TopoStruct::ComputeMeomoryIncrement() {
+void TopoStruct::ComputeMemoryIncrement() {
   if (memory_increment < 0) {
     memory_increment = 0;
     for (const auto& produced_register : node->produced_regsts()) {
@@ -392,7 +392,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
-    topo_struct.ComputeMeomoryIncrement();
+    topo_struct.ComputeMemoryIncrement();
     topo_struct.ComputeExceedTime();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;

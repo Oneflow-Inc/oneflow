@@ -80,7 +80,7 @@ void SbpGraph::StoreOriginMemory() {
 }
 
 double SbpGraph::ComputeCost() const {
-  // Over all cost under current strategy
+  // Overall cost under current strategy
   double graph_cost_ = 0;
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
@@ -94,7 +94,7 @@ double SbpGraph::ComputeCost() const {
 }
 
 double SbpGraph::ComputeWeightedCost() const {
-  // Over all cost under current strategy
+  // Overall cost under current strategy
   double graph_cost_ = 0;
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
@@ -116,7 +116,7 @@ void SbpGraph::ReComputeWeightedCost() {
 }
 
 int64_t SbpGraph::GetMemory() const {
-  // Over all memory under current strategy
+  // Overall memory under current strategy
   int64_t total_memory = 0;
   for (const auto& this_node : node_list_) {
     total_memory += this_node->GetMemory();
