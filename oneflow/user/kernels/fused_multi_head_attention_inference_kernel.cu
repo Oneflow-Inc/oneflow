@@ -22,8 +22,8 @@ limitations under the License.
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/fmha_flash_attention/fmha.h"
-#include "oneflow/user/kernels/fmha_flash_attention/include/fmha_flash_attention.h"
+#include "fmha.h"
+#include "fmha_flash_attention.h"
 
 namespace oneflow {
 
@@ -289,8 +289,8 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           cu_seqlens_d);
 
       nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
-          nvinfer1::plugin::getFMHACubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
-      run_fmha_v2_api(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
+          nvinfer1::plugin::getFMHAFlashCubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
+      nvinfer1::plugin::runFMHFAKernel(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
                       kernels, batch_size, num_heads, query_head_size, query_seq_len,
                       cuda_stream->cuda_stream());
       return;
