@@ -2475,10 +2475,10 @@ add_docstr(
         >>> import oneflow as flow
         >>> x = flow.tensor([3, 1, 2, 0 ,2])
         >>> x.unique()
-        tensor([3, 1, 2, 0], dtype=oneflow.int64)
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
         >>> x, indices = x.unique(return_inverse=True)
         >>> indices
-        tensor([0, 1, 2, 3, 2], dtype=oneflow.int32)
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
         >>> x, counts = x.unique(return_counts=True)
         >>> counts
         tensor([1, 1, 1, 1], dtype=oneflow.int32)
