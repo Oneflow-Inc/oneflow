@@ -1876,9 +1876,17 @@ class DetFunctor {
                                    << "but they are " << x->dim(x->ndim() - 2) << " by "
                                    << x->dim(x->ndim() - 1) << " matrices";
     }
-    if (JUST(x->device())->enum_type() == DeviceType::kCPU) {
+
+    DeviceType x_device_type = DeviceType::kInvalidDevice;
+    if (x->is_local()) {
+      x_device_type = JUST(x->device())->enum_type();
+    } else if (x->is_global()) {
+      x_device_type = JUST(x->parallel_desc())->device_type();
+    }
+
+    if (x_device_type == DeviceType::kCPU) {
       return JUST(OpInterpUtil::Dispatch<Tensor>(*det_op_, {x}, {}));
-    } else if (JUST(x->device())->enum_type() == DeviceType::kCUDA) {
+    } else if (x_device_type == DeviceType::kCUDA) {
       auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*lu_decomposition_op_, {x}, {}));
       auto LU = result->at(0);
       auto pivot = result->at(1);
