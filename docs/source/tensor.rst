@@ -366,6 +366,8 @@ Tensor class reference
     Tensor.uniform_
     Tensor.unsqueeze
     Tensor.unsqueeze_
+    Tensor.as_strided
+    Tensor.as_strided_
     Tensor.var
     Tensor.view
     Tensor.view_as

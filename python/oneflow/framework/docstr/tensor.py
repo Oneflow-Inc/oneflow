@@ -586,6 +586,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze,
     """
+    Tensor.squeeze(dim=None) -> Tensor
     See :func:`oneflow.squeeze`
     """,
 )
@@ -593,6 +594,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze_,
     """
+    Tensor.squeeze_(dim=None) -> Tensor
     In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
@@ -673,6 +675,8 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze,
     """
+    Tensor.unsqueeze(dim) -> Tensor
+
     See :func:`oneflow.unsqueeze`
     """,
 )
@@ -680,7 +684,27 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze_,
     """
-    In-place version of :func:`oneflow.Tensor.unsqueeze_`
+    Tensor.unsqueeze_(dim) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided,
+    """
+    Tensor.as_strided(size, stride, storage_offset=None) -> Tensor
+
+    See :func:`oneflow.as_strided`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided_,
+    """
+    Tensor.as_strided_(size, stride, storage_offset=None) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.as_strided`
     """,
 )
 

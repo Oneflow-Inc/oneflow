@@ -569,6 +569,10 @@ def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
 
+def _as_strided_inplace(self, size, stride, storage_offset=0):
+    return flow._C.as_strided_(self, size, stride, storage_offset)
+
+
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
@@ -649,6 +653,7 @@ def RegisterMethods():
     Tensor.index_add = _index_add
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
+    Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
 
 
