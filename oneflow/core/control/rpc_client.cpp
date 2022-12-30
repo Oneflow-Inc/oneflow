@@ -209,7 +209,7 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
       LOG(FATAL) << st.error_message();
     }
   }
-  CHECK_LT(retry_idx, max_retry_num);
+  CHECK_LT(retry_idx, rpc_client_max_retry_times());
 }
 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
