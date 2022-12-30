@@ -114,7 +114,7 @@ class TestSqueeze(flow.unittest.TestCase):
     @autotest(n=10, check_graph=False, auto_backward=False)
     def test_inplace_squeeze_with_random_data(test_case):
         device = random_device()
-        x = random_tensor().to(device)
+        x = random_tensor(requires_grad=False).to(device)
         y = x.squeeze_(random(1, 3).to(int))
         return y
 
