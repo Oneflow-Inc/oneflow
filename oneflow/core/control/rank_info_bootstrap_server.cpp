@@ -49,7 +49,8 @@ int64_t rpc_bootsrtap_server_max_retry_times() {
 RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf)
     : BootstrapServer(), port_(0), world_size_(bootstrap_conf.world_size()) {
   Init();
-  int p = (bootstrap_conf.rank() == 0 ? bootstrap_conf.master_addr().port() : 0);
+  const int64_t rank = bootstrap_conf.rank();
+  int p = (rank == 0 ? bootstrap_conf.master_addr().port() : 0);
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
   server_builder.AddListeningPort("0.0.0.0:" + std::to_string(p), grpc::InsecureServerCredentials(),
@@ -58,21 +59,24 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
-  if (bootstrap_conf.rank() == 0) { CHECK_EQ(p, port()) << "Port " << p << " is unavailable"; }
+  if (rank == 0) { CHECK_EQ(p, port()) << "Port " << p << " is unavailable"; }
   LOG(INFO) << "RankInfoBootstrapServer listening on "
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
-  if (bootstrap_conf.rank() == 0) {
+  if (rank == 0) {
     rank2host_ = std::make_shared<std::vector<std::string>>(world_size_);
-    check_thread_ = std::thread(&RankInfoBootstrapServer::CheckServerRpcs, this);
+    // NOTE: use check_thread_ to check RankInfoBootstrapServer status on rank 0
+    // if size of ready ranks == total ranks(world_size), means status is ok.
+    // otherwise, it indicates that other ranks' server have not been created successfully!
+    check_thread_ = std::thread(&RankInfoBootstrapServer::CheckServerStatus, this);
   }
 }
 
-void RankInfoBootstrapServer::CheckServerRpcs() {
+void RankInfoBootstrapServer::CheckServerStatus() {
   bool status_ok = false;
   int64_t skip_warning_times = 1;
   int64_t retry_idx = 0;
-  // get valid rank num of rank2host_
+  // lambda function to get valid rank num of rank2host_
   auto GetValidRank2HostSize = [](const std::shared_ptr<std::vector<std::string>>& rank2host) {
     int64_t valid_size = 0;
     for (int64_t i = 0; i < rank2host->size(); ++i) {
@@ -104,7 +108,7 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
   }
 
   if (!status_ok) {
-    LOG(FATAL) << "CheckServerRpcs() failed, rpc server on some rank are not ready, please check "
+    LOG(FATAL) << "CheckServerStatus() failed, rpc server on some rank are not ready, please check "
                   "whether the processes on all ranks are "
                   "created successfully.";
   }

@@ -34,7 +34,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
 
   int64_t port() const { return port_; }
   Maybe<const std::vector<std::string>&> rank2host() const;
-  void CheckServerRpcs();
+  void CheckServerStatus();
 
  private:
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
