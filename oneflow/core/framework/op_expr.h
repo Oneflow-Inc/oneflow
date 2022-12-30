@@ -179,7 +179,8 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn logical_tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn physical_tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;

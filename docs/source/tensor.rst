@@ -226,6 +226,7 @@ Tensor class reference
     Tensor.dtype 
     Tensor.element_size
     Tensor.eq
+    Tensor.equal
     Tensor.erf
     Tensor.erfc
     Tensor.erfinv
@@ -250,6 +251,8 @@ Tensor class reference
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point
@@ -379,3 +382,5 @@ Tensor class reference
     Tensor.bincount
     Tensor.isclose
     Tensor.allclose
+    Tensor.broadcast_to
+    Tensor.unique

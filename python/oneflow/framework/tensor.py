@@ -62,7 +62,7 @@ def _eq(self, other):
     elif self is None or other is None:
         return False
     else:
-        return flow._C.equal(self, other)
+        return flow._C.broadcast_equal(self, other)
 
 
 def _cuda(self, device: Union[int, str, flow.device] = None):
@@ -441,9 +441,7 @@ def _numpy(self):
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
             self.to_global(placement=self_cpu_placement)
-            .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-            )
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
             .to_local()
         )
     assert self.is_local
@@ -533,10 +531,10 @@ def _scatter_add_inplace(self, dim, index, src):
 def _contains(self, element):
     r"""Check if `element` is present in tensor
 
-        Args:
-            element (Tensor or scalar): element to be checked
-                for presence in current tensor"
-        """
+    Args:
+        element (Tensor or scalar): element to be checked
+            for presence in current tensor"
+    """
     if isinstance(element, (flow.Tensor, Number)):
         # type hint doesn't understand the __contains__ result array
         return (element == self).any().item()  # type: ignore[union-attr]
@@ -549,6 +547,22 @@ def _contains(self, element):
 
 def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
     return flow._C.allclose(self, other, atol, rtol, equal_nan)
+
+
+def _index_add(self, dim, index, source, alpha=1):
+    return flow._C.index_add(self, dim, index, source, alpha)
+
+
+def _index_add_inplace(self, dim, index, source, alpha=1):
+    return flow._C.index_add_(self, dim, index, source, alpha)
+
+
+def _as_strided(self, size, stride, storage_offset=0):
+    return flow._C.as_strided(self, size, stride, storage_offset)
+
+
+def _logaddexp(self, other):
+    return flow._C.logaddexp(self, other)
 
 
 def RegisterMethods():
@@ -622,6 +636,10 @@ def RegisterMethods():
     Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
     Tensor.allclose = _allclose
+    Tensor.index_add = _index_add
+    Tensor.index_add_ = _index_add_inplace
+    Tensor.as_strided = _as_strided
+    Tensor.logaddexp = _logaddexp
 
 
 def register_tensor_op(op_name):
