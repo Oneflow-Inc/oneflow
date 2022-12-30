@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_einsum_get_diagonal(test_case, placement, sbp):
     dim = random(1, 3) * 8
     x = random_tensor(ndim=2, dim0=dim, dim1=dim,)

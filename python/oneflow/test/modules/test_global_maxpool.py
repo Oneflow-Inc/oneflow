@@ -25,7 +25,7 @@ from oneflow.test_utils.test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool1d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -48,7 +48,7 @@ def _test_maxpool1d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool2d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -72,7 +72,7 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool3d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(high=4).to(int).value() * 8
@@ -101,7 +101,7 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool1d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -125,7 +125,7 @@ def _test_maxpool1d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool2d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(1, 3).to(int).value() * 8
@@ -149,7 +149,7 @@ def _test_maxpool2d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool3d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(high=4).to(int).value() * 8
