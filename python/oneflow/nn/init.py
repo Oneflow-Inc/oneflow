@@ -26,33 +26,6 @@ from oneflow.ops.util.initializer_util import (
 )
 from oneflow.framework.tensor import Tensor
 import oneflow.framework.dtype as dtype_util
-import oneflow.ops.initializer_register as initializer_register
-
-
-def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
-    # NOTE: initializing weight should not enable autograd mode
-    if random_seed is None:
-        random_seed = flow.default_generator.seed()
-    shape = tuple(tensor.shape)
-    initializer = initializer_register.get_initializer(
-        initializer_conf, random_seed, shape
-    )
-
-    np_arr = initializer_register.generate_values_by_initializer(
-        initializer, shape, tensor.dtype
-    )
-    with flow.no_grad():
-        if tensor.is_global:
-            src_tensor = flow.tensor(np_arr)
-            src_tensor = src_tensor.to_global(
-                placement=tensor.placement,
-                sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
-            )
-            tensor.copy_(src_tensor)
-        else:
-            shared_mem_tensor = flow.from_numpy(np_arr)
-            tensor[...] = shared_mem_tensor
-    return tensor
 
 
 def uniform_(tensor, a=0.0, b=1.0):
@@ -362,16 +335,7 @@ def eye_(tensor):
     if tensor.ndimension() != 2:
         raise ValueError("Only tensors with 2 dimensions are supported")
     with flow.no_grad():
-        # TODO: use flow._C.eye_ after eye_op supporting non-contiguous kernel
-        assign_tensor = flow.from_numpy(
-            np.eye(
-                tensor.shape[0],
-                tensor.shape[1],
-                dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
-            )
-        )
-        tensor[...] = assign_tensor
-        return tensor
+        return flow._C.eye_(tensor)
 
 
 def _calculate_fan_in_and_fan_out(tensor):

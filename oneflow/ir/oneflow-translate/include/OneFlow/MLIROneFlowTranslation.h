@@ -52,7 +52,6 @@ LogicalResult ConvertUserOpAttributes(
                             offer information for the next query*/
     = false);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
-llvm::Optional<std::string> GetOutputLbn(OpResult result);
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value);
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf);
@@ -114,7 +113,6 @@ class Importer {
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
   ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
-  llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }

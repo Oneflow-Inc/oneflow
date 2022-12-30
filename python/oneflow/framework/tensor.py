@@ -62,7 +62,7 @@ def _eq(self, other):
     elif self is None or other is None:
         return False
     else:
-        return flow._C.equal(self, other)
+        return flow._C.broadcast_equal(self, other)
 
 
 def _cuda(self, device: Union[int, str, flow.device] = None):
@@ -441,9 +441,7 @@ def _numpy(self):
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
             self.to_global(placement=self_cpu_placement)
-            .to_global(
-                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-            )
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
             .to_local()
         )
     assert self.is_local
@@ -463,11 +461,6 @@ def _is_consistent(self):
 
 def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
-
-
-def _item(self):
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
 
 
 def _new_tensor(
@@ -568,6 +561,10 @@ def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
 
+def _logaddexp(self, other):
+    return flow._C.logaddexp(self, other)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -618,7 +615,6 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.item = _item
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
@@ -643,6 +639,7 @@ def RegisterMethods():
     Tensor.index_add = _index_add
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
+    Tensor.logaddexp = _logaddexp
 
 
 def register_tensor_op(op_name):

@@ -237,6 +237,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
       JUST(instruction->Prepare());
       instruction->Compute();
     }
+    instruction_list->Clear();
   } else if (unlikely(disable_vm_threads_)) {
     JUST(RunInCurrentThread(instruction_list));
   } else {

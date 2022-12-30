@@ -409,12 +409,6 @@ class ArgsTree(object):
         root_prefix: str = "",
         root_name: str = None,
     ) -> None:
-        assert (
-            _is_raw_type(io_args, dict)
-            or _is_raw_type(io_args, OrderedDict)
-            or _is_raw_type(io_args, tuple)
-            or _is_raw_type(io_args, list)
-        ), "input/output arguments must be one of those types(typle/list/dict/OrderedDict)"
 
         self._io_args = io_args
         self._gen_name = gen_name
