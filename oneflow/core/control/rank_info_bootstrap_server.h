@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/maybe.h"
-#include <condition_variable>
 
 namespace oneflow {
 
@@ -42,10 +41,10 @@ class RankInfoBootstrapServer final : public BootstrapServer {
 
   int port_;
   const int64_t world_size_;
+  std::mutex lock_;
   std::thread check_thread_;
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
-  std::mutex lock_;
 };
 
 }  // namespace oneflow

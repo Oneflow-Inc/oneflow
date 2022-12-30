@@ -200,8 +200,8 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
       if (retry_idx >= skip_warning_times) {
         LOG(WARNING) << "LoadServer " << request.addr() << " Failed at " << retry_idx + 1
                      << " times"
-                     << " error_code " << st.error_code() << " error_message "
-                     << st.error_message();
+                     << " error_code: " << st.error_code()
+                     << " error_message: " << st.error_message();
       }
       std::this_thread::sleep_for(std::chrono::seconds(rpc_client_sleep_seconds()));
       continue;
@@ -209,7 +209,8 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
       LOG(FATAL) << st.error_message();
     }
   }
-  CHECK_LT(retry_idx, rpc_client_max_retry_times());  // NOLINT
+  CHECK_LT(retry_idx, rpc_client_max_retry_times())
+      << "Please check whether the process on rank 0 is created successfully.";
 }
 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }

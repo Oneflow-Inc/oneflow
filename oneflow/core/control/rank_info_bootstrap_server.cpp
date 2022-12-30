@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rank_info_bootstrap_server.h"
-#include <cstddef>
-#include <cstdio>
 #include <thread>
 #include <mutex>
 #include <chrono>
@@ -97,7 +95,7 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
     } else {
       std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
       if (retry_idx >= skip_warning_times) {
-        LOG(WARNING) << "BootstrapServer not ready, other ranks' rpc server not initialized "
+        LOG(WARNING) << "BootstrapServer not ready, rpc server on some rank have not been created "
                         "successfully. Failed at "
                      << retry_idx + 1 << " times, total ranks(world_size): " << world_size_
                      << ", ready ranks: " << valid_size;
@@ -106,8 +104,9 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
   }
 
   if (!status_ok) {
-    LOG(FATAL) << "RankInfoBootstrapServer::CheckServerRpcs() failed, Other ranks' rpc server not "
-                  "initialized successfully!";
+    LOG(FATAL) << "CheckServerRpcs() failed, rpc server on some rank are not ready, please check "
+                  "whether the processes on all ranks are "
+                  "created successfully.";
   }
 }
 

@@ -18,16 +18,14 @@ limitations under the License.
 namespace oneflow {
 
 RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_conf) {
-  const int64_t current_rank = bootstrap_conf.rank();
   stubs_.reserve(bootstrap_conf.world_size());
   const auto& master_addr = bootstrap_conf.master_addr();
   const std::string& host = master_addr.host() + ":" + std::to_string(master_addr.port());
   stubs_.emplace_back(CtrlService::NewStub(host));
   LoadServerRequest request;
   request.set_addr(master_addr.host());
-  request.set_rank(current_rank);
+  request.set_rank(bootstrap_conf.rank());
   LoadServer(request, stubs_[0].get());
-
-}  // namespace oneflow
+}
 
 }  // namespace oneflow
