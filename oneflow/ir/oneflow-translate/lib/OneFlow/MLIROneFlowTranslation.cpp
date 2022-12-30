@@ -718,7 +718,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf, false))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }
