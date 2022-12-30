@@ -294,7 +294,7 @@ class TestSaveLoad(flow.unittest.TestCase):
         m1.load_state_dict(params)
 
         m2 = flow.load(test_data_dir / "3x3_i3o3_conv2d")
-        
+
         x = flow.randn(1, 3, 3, 3)
         y1 = m1(x)
         y2 = m2(x)
