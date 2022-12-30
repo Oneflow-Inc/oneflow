@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+import oneflow.framework.session_context as session_ctx
 
 
 def get_graph_output(*args, func):
@@ -935,6 +936,8 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                 # TODO: cpu variable don't support common net
                 if not placement.type == "cpu":
                     _test_setitem_scalars(test_case, placement)
+
+                session_ctx.GetDefaultSession().Reset()
 
     @globaltest
     def test_bool_indices(test_case):

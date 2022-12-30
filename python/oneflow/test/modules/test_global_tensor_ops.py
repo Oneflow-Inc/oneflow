@@ -44,7 +44,7 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
         test_case.assertEqual(output, False)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_global_cuda(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
@@ -61,7 +61,7 @@ class TestGlobalCuda(flow.unittest.TestCase):
                 _test_global_cuda(test_case, placement, sbp)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_cpu(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cpu()
@@ -71,7 +71,7 @@ def _test_global_cpu(test_case, placement, sbp):
 
 # PyTorch error if open auto_backward:
 # element 0 of tensors does not require grad and does not have a grad_fn
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_long(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=True).to_global(placement, sbp)
     y = x.long()
@@ -79,7 +79,7 @@ def _test_global_long(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_int(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=True).to_global(placement, sbp)
     y = x.int()
@@ -87,21 +87,21 @@ def _test_global_int(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_float(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.float()
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_double(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.double()
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_item(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=1, dtype=int).to_global(placement, sbp)
     y = torch.tensor(x.item())
