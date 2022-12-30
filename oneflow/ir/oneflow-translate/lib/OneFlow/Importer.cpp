@@ -541,8 +541,6 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
   return ConvertDT(dt_attr.getValue(), data_type);
 }
 
-
-
 void Importer::SetOpStateLoc(const ::oneflow::OperatorConf& op_conf, OperationState& state) {
   if (op_conf.has_loc()) {
     state.location = (FileLineColLoc::get(GetMLIRContext(), op_conf.loc(), 0, 0));
