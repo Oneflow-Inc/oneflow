@@ -74,8 +74,6 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
   bool status_ok = false;
   int64_t skip_warning_times = 1;
   int64_t retry_idx = 0;
-  conv_.notify_one();
-  std::unique_lock<std::mutex> lock(lock_);
   // get valid rank num of rank2host_
   auto GetValidRank2HostSize = [](const std::shared_ptr<std::vector<std::string>>& rank2host) {
     int64_t valid_size = 0;
@@ -87,24 +85,30 @@ void RankInfoBootstrapServer::CheckServerRpcs() {
   };
 
   for (; retry_idx < rpc_bootsrtap_server_max_retry_times(); ++retry_idx) {
-    int64_t valid_size = GetValidRank2HostSize(rank2host_);
+    int64_t valid_size = 0;
+    {
+      std::lock_guard<std::mutex> lock(lock_);
+      valid_size = GetValidRank2HostSize(rank2host_);
+    }
     CHECK(valid_size <= world_size_);
     if (valid_size == world_size_) {
       status_ok = true;
       break;
     } else {
+      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
       if (retry_idx >= skip_warning_times) {
         LOG(WARNING) << "BootstrapServer not ready, other ranks' rpc server not initialized "
                         "successfully. Failed at "
                      << retry_idx + 1 << " times, total ranks(world_size): " << world_size_
                      << ", ready ranks: " << valid_size;
       }
-      conv_.wait(lock);
-      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
     }
   }
 
-  if (!status_ok) { LOG(FATAL) << "Grpc failed."; }
+  if (!status_ok) {
+    LOG(FATAL) << "RankInfoBootstrapServer::CheckServerRpcs() failed, Other ranks' rpc server not "
+                  "initialized successfully!";
+  }
 }
 
 Maybe<const std::vector<std::string>&> RankInfoBootstrapServer::rank2host() const {
@@ -116,8 +120,7 @@ void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* ca
   int64_t rank = call->request().rank();
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
-  // std::lock_guard<std::mutex> lock(lock_);
-  std::unique_lock<std::mutex> lock(lock_);
+  std::lock_guard<std::mutex> lock(lock_);
   rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();

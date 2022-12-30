@@ -28,10 +28,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapServer);
   ~RankInfoBootstrapServer() override {
-    if (check_thread_.joinable()) {
-      conv_.notify_all();
-      check_thread_.join();
-    }
+    if (check_thread_.joinable()) { check_thread_.join(); }
   }
 
   RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf);
@@ -49,7 +46,6 @@ class RankInfoBootstrapServer final : public BootstrapServer {
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
   std::mutex lock_;
-  std::condition_variable conv_;
 };
 
 }  // namespace oneflow

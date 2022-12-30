@@ -25,17 +25,9 @@ namespace oneflow {
 class RankInfoBootstrapClient final : public BootstrapClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapClient);
-  ~RankInfoBootstrapClient() override;
+  ~RankInfoBootstrapClient() override = default;
 
   RankInfoBootstrapClient(const BootstrapConf& bootstrap_conf);
-
-  void StopHeartbeat();
-
- private:
-  std::thread heartbeat_thread_;
-  bool heartbeat_thread_stop_ = false;
-  std::mutex heartbeat_thread_mutex_;
-  std::condition_variable heartbeat_thread_cv_;
 };
 
 }  // namespace oneflow
