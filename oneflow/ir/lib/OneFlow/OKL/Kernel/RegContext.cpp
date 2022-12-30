@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/UserOpConversion.h"
 #include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -35,7 +36,7 @@ namespace okl {
 static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
                                                  bool is_mapping_size = false) {
   OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
+  if (mlir::failed(mlir::oneflow::user_op::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
     op->emitError("fail to convert user op attributes");
     exit(1);
   }
