@@ -42,7 +42,7 @@ META_INFO_FILENAME = "meta"
 PICKLE_FILENAME = "pickled_data"
 DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
-ONEFLOW_MAGIC_KEY = "oneflow"
+ONEFLOW_MAGIC_KEY = "__oneflow__"
 
 
 class FileBackendVariableBlob:
@@ -171,20 +171,19 @@ def _broadcast_py_object(obj, src: int = 0):
 # (de)serializing a container of global tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
-    if save_load_path is not None and save_as_external_data_context:
-        # save_load_path is not None means setstate/getstate is called inside
-        # flow.save or flow.load
-        assert isinstance(save_load_path, Path)
-        if global_src_dsk_rank is None:
+    # context_data is not None means setstate/getstate is called inside
+    # flow.save or flow.load
+    if context_data is not None and context_data.save_as_external_data:
+        if context_data.global_rank is None:
             assert self.is_local
             rel_dir_name = id_util.UniqueStr("tensor_")
-            abs_dir_name = save_load_path / rel_dir_name
+            abs_dir_name = context_data.path / rel_dir_name
 
             tensor = self
         else:
             assert not self.is_local
             rel_dir_name = f"global_tensor_{self.global_id()}"
-            abs_dir_name = save_load_path / rel_dir_name
+            abs_dir_name = context_data.path / rel_dir_name
 
             # Boxing to cpu firstly to avoid extra gpu memory usage
             tensor = (
@@ -193,17 +192,21 @@ def tensor_getstate(self):
                 )
                 .to_global(
                     sbp=flow.sbp.broadcast,
-                    placement=flow.placement("cpu", [global_src_dsk_rank]),
+                    placement=flow.placement("cpu", [context_data.global_rank]),
                 )
                 .to_local()
             )
-        if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
+        if context_data.global_rank is None or context_data.global_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
     else:
-        # save_load_path is None means setstate/getstate is called inside
-        # methods other than flow.save/load, for example, copy.deepcopy
+        if context_data is not None:
+            return {
+                "data": self.numpy(),
+                "dtype": self.dtype,
+            }
+
         if self.is_local:
             if self.is_cuda:
                 device = "cuda"
@@ -211,34 +214,26 @@ def tensor_getstate(self):
                 device = "cpu"
             return {"data": self.numpy(), "dtype": self.dtype, "device": device}
         else:
-            if save_load_path is None:
-                return {
-                    "data": self.numpy(),
-                    "dtype": self.dtype,
-                    "placement": self.placement,
-                    "sbp": self.sbp,
-                }
-            else:
-                return {
-                    "data": self.numpy(),
-                    "dtype": self.dtype,
-                }
+            return {
+                "data": self.numpy(),
+                "dtype": self.dtype,
+                "placement": self.placement,
+                "sbp": self.sbp,
+            }
 
 
 def tensor_setstate(self, pickle_dict):
-    if save_load_path is not None:
-        if save_as_external_data_context:
-            assert isinstance(save_load_path, Path)
+    if context_data is not None:
+        if context_data.save_as_external_data:
             rel_dir_name = pickle_dict["path"]
-            abs_dir_name = save_load_path / rel_dir_name
+            abs_dir_name = context_data.path / rel_dir_name
             tmp_tensor = _LoadSingleVariable(
-                str(abs_dir_name), global_src_dsk_rank, map_location
+                str(abs_dir_name), context_data.global_rank, context_data.map_location
             )
             self.__init__(tmp_tensor)
         else:
             self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
     else:
-        assert map_location is None
         if "placement" in pickle_dict:
             return self.__init__(
                 flow.tensor(
@@ -326,25 +321,16 @@ def legacy_load(
 @contextlib.contextmanager
 def tensor_pickling_context(
     path: Path,
-    global_src_dst_rank: Optional[int],
+    global_rank: Optional[int],
     mp: Optional[Union[str, flow.device, flow.placement]],
     save_as_external_data: bool,
 ):
-    global save_load_path
-    global global_src_dsk_rank
-    global map_location
-    global save_as_external_data_context
-    global_src_dsk_rank = global_src_dst_rank
-    save_load_path = path
-    map_location = mp
-    save_as_external_data_context = save_as_external_data
+    global context_data
+    context_data = ContextData(path, global_rank, mp, save_as_external_data)
     try:
         yield
     finally:
-        global_src_dsk_rank = None
-        save_load_path = None
-        map_location = None
-        save_as_external_data_context = False
+        context_data = None
 
 
 def is_oneflow_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
@@ -590,7 +576,7 @@ def save(
     with context():
         pickled_bytes = pickle.dumps(obj)
 
-    def write_to_path(path):
+    def write_file():
         if save_as_external_data:
             path.mkdir(exist_ok=True)
             pickle_path = path / PICKLE_FILENAME
@@ -606,13 +592,24 @@ def save(
             global_dst_rank >= 0 and global_dst_rank < flow.env.get_world_size()
         ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
         if flow.env.get_rank() == global_dst_rank:
-            write_to_path(path)
+            write_file()
     else:
         # global_dst_rank is None
-        write_to_path(path)
+        write_file()
 
 
-save_load_path = None
-global_src_dsk_rank = None
-map_location = None
-save_as_external_data_context = False
+class ContextData:
+    def __init__(
+        self,
+        path: Path,
+        global_rank: Optional[int],
+        map_location: Optional[Union[str, flow.device, flow.placement]],
+        save_as_external_data: bool,
+    ):
+        self.path = path
+        self.global_rank = global_rank
+        self.map_location = map_location
+        self.save_as_external_data = save_as_external_data
+
+
+context_data = None
