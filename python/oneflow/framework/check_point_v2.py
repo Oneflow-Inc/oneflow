@@ -196,7 +196,10 @@ def tensor_getstate(self):
                 )
                 .to_local()
             )
-        if context_data.global_rank is None or context_data.global_rank == flow.env.get_rank():
+        if (
+            context_data.global_rank is None
+            or context_data.global_rank == flow.env.get_rank()
+        ):
             _save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
@@ -276,7 +279,16 @@ load_methods = []
 
 def load_if(condition):
     def decorator(func):
-        load_methods.append((condition, func))
+        def condition_always_returning_extra_data(*args, **kwargs):
+            res = condition(*args, **kwargs)
+            if isinstance(res, tuple):
+                assert len(res) == 2
+                assert isinstance(res[1], tuple)
+                return res
+            else:
+                return res, ()
+
+        load_methods.append((condition_always_returning_extra_data, func))
         return func
 
     return decorator
@@ -292,8 +304,8 @@ def is_dir_and_no_pickle_file(path: Path, support_pytorch_format: bool):
 @load_if(is_dir_and_no_pickle_file)
 def legacy_load(
     path: Path,
-    global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[str, flow.device]] = None,
+    global_src_rank: Optional[int],
+    map_location: Optional[Union[str, flow.device]],
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -340,25 +352,27 @@ def is_oneflow_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
         with open(path, "rb") as f:
             content = pickle.load(f)
             if ONEFLOW_MAGIC_KEY in content:
-                return True
+                return True, (content,)
             else:
                 return False
     except:
         return False
 
 
+# `path` is not used in this function, because the file is already loaded
+# and deserialized in `is_oneflow_pickle_file`, and the content is passed
+# as `content`.
 @load_if(is_oneflow_pickle_file)
 def load_from_oneflow_single_file(
     path: Path,
-    global_src_rank=None,
-    map_location: Optional[Union[str, flow.device]] = None,
+    global_src_rank,
+    map_location: Optional[Union[str, flow.device]],
+    content: Any = None,
 ):
     rank = flow.env.get_rank()
     if global_src_rank is None or rank == global_src_rank:
-        pickle_bytes = path.read_bytes()
-        res = pickle.loads(pickle_bytes)
-        assert res["protocol_version"] == PROTOCOL_VERSION
-        res = res["data"]
+        assert content["protocol_version"] == PROTOCOL_VERSION
+        res = content["data"]
     else:
         res = None
 
@@ -381,9 +395,7 @@ def is_file_and_support_pytorch_format(
 
 @load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
-    path: Path,
-    global_src_rank=None,
-    map_location: Optional[Union[str, flow.device]] = None,
+    path: Path, global_src_rank, map_location: Optional[Union[str, flow.device]],
 ):
     with flow.mock_torch.disable():
         import torch
@@ -422,8 +434,8 @@ def is_dir_and_has_pickle_file(path: Path, support_pytorch_format: bool) -> bool
 @load_if(is_dir_and_has_pickle_file)
 def load_from_oneflow_pickle_dir(
     path: Path,
-    global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+    global_src_rank: Optional[int],
+    map_location: Optional[Union[str, flow.device, flow.placement]],
 ):
     rank = flow.env.get_rank()
     pickle_path = path / PICKLE_FILENAME
@@ -475,7 +487,8 @@ def load(
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
         for i, (condition, load) in enumerate(load_methods):
-            if condition(path, support_pytorch_format):
+            is_ok, extra_data = condition(path, support_pytorch_format)
+            if is_ok:
                 if global_src_rank is not None:
                     _broadcast_py_object(i, global_src_rank)
                 break
@@ -484,8 +497,9 @@ def load(
     else:
         i = _broadcast_py_object(None, global_src_rank)
         load = load_methods[i][1]
+        extra_data = ()
 
-    return load(path, global_src_rank, map_location)  # type: ignore
+    return load(path, global_src_rank, map_location, *extra_data)  # type: ignore
 
 
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
