@@ -209,8 +209,7 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
       LOG(FATAL) << st.error_message();
     }
   }
-  CHECK_LT(retry_idx, rpc_client_max_retry_times())
-      << "Please check whether the process on rank 0 is created successfully.";
+  CHECK_LT(retry_idx, max_retry_num);
 }
 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
