@@ -24,10 +24,10 @@ namespace oneflow {
 template<DeviceType device_type, typename KEY, typename IDX>
 struct UniqueKernelUtil {
   static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
-                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes);
+                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes, bool sorted);
   static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
-                               int64_t workspace_size_in_bytes);
+                               int64_t workspace_size_in_bytes, bool sorted);
   static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes);
   static void GetUniqueWithCountsWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
