@@ -36,6 +36,7 @@ oneflow_add_mlir_dialect_library(
   OKL/Kernel/RunContext.cpp
   OKL/Kernel/TmpBufferManager.cpp
   OKL/Kernel/JITOpInfer.cpp
+  OKL/Kernel/JITEngine.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
@@ -81,6 +82,7 @@ oneflow_add_mlir_dialect_library(
   ${MLIR_GPU_LIBS}
   MLIRIR
   MLIROneFlowPDLLPatterns
+  MLIRExecutionEngine
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)
