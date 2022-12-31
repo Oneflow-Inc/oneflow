@@ -426,10 +426,6 @@ def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
 
-def _type_as(self, target):
-    return self.to(dtype=target.dtype)
-
-
 def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
@@ -630,7 +626,6 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.sort = _sort
-    Tensor.type_as = _type_as
     Tensor.tolist = _tolist
     Tensor.topk = _topk
     Tensor.nms = _nms

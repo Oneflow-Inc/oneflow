@@ -34,6 +34,29 @@ def _test_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
     test_case.assertEqual(input.dtype, target.dtype)
 
 
+def _test_local_to_global_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
+    np_input = np.random.rand(*shape)
+    input = random_tensor(ndim=len(shape)).oneflow.to_local()
+    target = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
+    input = input.type_as(target)
+    test_case.assertEqual(input.dtype, target.dtype)
+    test_case.assertEqual(input.placement, target.placement)
+    test_case.assertEqual(input.sbp, target.sbp)
+
+
+def _test_global_to_local_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
+    target = random_tensor(ndim=len(shape)).to(random_device()).oneflow.to_local()
+    input = input.type_as(target)
+    test_case.assertEqual(input.dtype, target.dtype)
+    test_case.assertEqual(input.device, target.device)
+
+
 def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype).to_global(placement, sbp)
@@ -171,6 +194,8 @@ class TestGlobalTensorOps(flow.unittest.TestCase):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=len(arg[0])):
                     _test_type_as(test_case, *arg, placement, sbp)
+                    _test_local_to_global_type_as(test_case, *arg, placement, sbp)
+                    _test_global_to_local_type_as(test_case, *arg, placement, sbp)
 
     @globaltest
     def test_is_floating_point(test_case):
