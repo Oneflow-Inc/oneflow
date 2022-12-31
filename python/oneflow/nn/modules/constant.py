@@ -29,7 +29,7 @@ class _ConstantBase(Module):
         size: Union[_size_any_t, flow.Size],
         value: Union[float, int],
         dtype: Optional[flow.dtype],
-        device: Union[flow.device, str] = None,
+        device: Union[flow.device, int, str] = None,
         placement: flow.placement = None,
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
@@ -40,6 +40,8 @@ class _ConstantBase(Module):
             size, (int, tuple, list, flow.Size)
         ), "shape should be int or tuple int!"
         self.device = device
+        if isinstance(self.device, int):
+            self.device = flow.device("cuda", self.device)
         if isinstance(self.device, str):
             self.device = flow.device(self.device)
         self.requires_grad = requires_grad
