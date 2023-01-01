@@ -98,6 +98,7 @@ from oneflow._C import logical_not
 from oneflow._C import logaddexp
 from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import quick_gelu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave
@@ -142,6 +143,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import topk
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
 from oneflow._C import minimum
@@ -231,6 +233,7 @@ from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
+from oneflow._C import sort
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -380,7 +383,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
@@ -397,7 +399,6 @@ from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
-from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
