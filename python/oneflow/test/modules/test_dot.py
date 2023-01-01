@@ -31,6 +31,21 @@ class TestDot(flow.unittest.TestCase):
         z = torch.dot(x, y)
         return z
 
+    @autotest(n=5, check_graph=False)
+    def test_dot_with_random_int_data(test_case):
+        k = np.random.randint(0, 100)
+        x = np.random.randint(low=0, high=100, size=k)
+        y = np.random.randint(low=0, high=100, size=k)
+        torch_x = torch.from_numpy(x).to(torch.int)
+        torch_y = torch.from_numpy(y).to(torch.int)
+        torch_output_numpy = torch.dot(torch_x, torch_y).numpy()
+        flow_x = flow.tensor(x).to(flow.int)
+        flow_y = flow.tensor(y).to(flow.int)
+        flow_output_numpy = flow.dot(flow_x, flow_y).numpy()
+        test_case.assertTrue(
+            np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
+        )
+
     @profile(torch.dot)
     def profile_dot(test_case):
         input1 = torch.ones(10000)

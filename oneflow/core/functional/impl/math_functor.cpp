@@ -16,15 +16,18 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
@@ -1422,6 +1425,7 @@ class ClipInplaceFunctor {
     return ClampInplace(x, min, max);
   }
 };
+
 class SqrtSquareSumFunctor {
  public:
   SqrtSquareSumFunctor() {
@@ -1840,6 +1844,36 @@ class InvFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class MultiDotFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& tensors) const {
+    CHECK_GE_OR_RETURN(tensors.size(), 2);
+    CHECK_LT_OR_RETURN(tensors.size(), kMaxInputCount);
+    for (int64_t i = 0; i < tensors.size(); ++i) {
+      const auto& input_shape = tensors[i]->shape();
+      CHECK_LE_OR_RETURN(input_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "tensors' dim size should be lower equal than 2.";
+    }
+
+    TensorTuple outputs(tensors.size());
+    outputs[0] = tensors[0];
+    bool first_tensor_1d = outputs[0]->ndim() == 1;
+    if (first_tensor_1d) { outputs[0] = JUST(functional::Unsqueeze(outputs[0], /*dim=*/0)); }
+
+    for (int i = 0; i < tensors.size() - 1; i++) {
+      outputs[i + 1] = JUST(functional::MatMul(outputs[i], tensors[i + 1], /*transpose_a=*/false,
+                                               /*transpose_b=*/false, /*alpha=*/1.0));
+    }
+
+    if (first_tensor_1d) {
+      CHECK_GE_OR_RETURN(outputs[tensors.size() - 1]->ndim(), 1);
+      return JUST(
+          functional::Squeeze(outputs[tensors.size() - 1], /*dim=*/std::vector<int32_t>{0}));
+    }
+    return outputs[tensors.size() - 1];
+  }
 };
 
 class ClampGradFunctor {
@@ -2320,7 +2354,26 @@ class DotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+    DeviceType device_type{};
+    if (input->is_global()) {
+      device_type = JUST(input->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(input->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_input = input;
+    std::shared_ptr<one::Tensor> cast_other = other;
+    if ((input->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_input =
+          JUST(functional::Cast(input, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_other =
+          JUST(functional::Cast(other, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {cast_input, cast_other}));
+    if ((input->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, input->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -3336,6 +3389,7 @@ class StftFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
 class FusedWeightedSumFunctor {
  public:
   FusedWeightedSumFunctor() {
@@ -3881,6 +3935,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
+  m.add_functor<MultiDotFunctor>("MultiDot");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");

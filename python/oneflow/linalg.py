@@ -41,3 +41,7 @@ def diagonal(self, input, offset=0, dim1=-2, dim2=-1):
 
 def cross(input, other, dim=-1):
     return flow._C.linalg_cross(input, other, dim=dim)
+
+
+def multi_dot(tensors):
+    return flow._C.multi_dot(tensors)
