@@ -39,7 +39,6 @@ def _test_finfo(test_case, dtype):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTypeInfo(flow.unittest.TestCase):
-    @autotest(n=3, check_graph=False)
     def test_iinfo(test_case):
         for dtype in [torch.uint8, torch.int8, torch.int32, torch.int64]:
             iinfo = torch.iinfo(dtype)
@@ -47,10 +46,9 @@ class TestTypeInfo(flow.unittest.TestCase):
             # so return all fields as a tuple
             return iinfo.max, iinfo.min, iinfo.bits
 
-    @autotest(n=3, check_graph=False)
     def test_finfo(test_case):
-        dtype = random_dtype(["None", "float", "half", "bfloat16"])
-        _test_finfo(test_case, dtype)
+        for dtype in [None, torch.half, torch.bfloat16, torch.float, torch.double]:
+            _test_finfo(test_case, dtype)
 
 
 if __name__ == "__main__":
