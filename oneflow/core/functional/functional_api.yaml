@@ -422,6 +422,10 @@
   signature: "Tensor (Tensor dy, Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStridedGrad"
   bind_python: False
 
+- name: "as_strided_"
+  signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => InplaceAsStrided"
+  bind_python: True
+
 - name: "select"
   signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
   bind_python: True
@@ -1047,8 +1051,16 @@
   signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
   bind_python: False
 
+- name: "unsqueeze_"
+  signature: "Tensor (Tensor input, Int32 dim) => InplaceUnsqueeze"
+  bind_python: True
+
 - name: "squeeze"
-  signature: ["Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"]
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"
+  bind_python: True
+
+- name: "squeeze_"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => InplaceSqueeze"
   bind_python: True
 
 - name: "exp"
