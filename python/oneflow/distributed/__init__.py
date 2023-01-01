@@ -56,6 +56,26 @@ def get_world_size(group=None) -> int:
     return flow.env.get_world_size()
 
 
+def send(tensor: flow.Tensor, dst: int, group=None, tag: int = 0) -> None:
+    """Alias of `oneflow.comm.send()` for PyTorch compatibility.
+
+    See also :func:`oneflow.comm.send()`
+    """
+    assert group is None, "group is not supported yet"
+    assert tag == 0, "tag is not supported yet"
+    return flow.comm.send(tensor, dst)
+
+
+def recv(tensor: flow.Tensor, src: int, group=None, tag: int = 0) -> None:
+    """Alias of `oneflow.comm.recv()` for PyTorch compatibility.
+
+    See also :func:`oneflow.comm.recv()`
+    """
+    assert group is None, "group is not supported yet"
+    assert tag == 0, "tag is not supported yet"
+    return flow.comm.recv(tensor, src)
+
+
 def broadcast(
     tensor: flow.Tensor, src: int, group=None, async_op: bool = False
 ) -> None:
