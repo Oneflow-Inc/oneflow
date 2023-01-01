@@ -38,9 +38,9 @@ def _test_finfo(test_case, dtype):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestIInfo(flow.unittest.TestCase):
+class TestTypeInfo(flow.unittest.TestCase):
     @autotest(n=3, check_graph=False)
-    def test_iinfo_max(test_case):
+    def test_iinfo(test_case):
         for dtype in [torch.uint8, torch.int8, torch.int32, torch.int64]:
             iinfo = torch.iinfo(dtype)
             # checker not implemented for type <class 'torch.iinfo'> and <class 'oneflow.iinfo'>
@@ -48,7 +48,7 @@ class TestIInfo(flow.unittest.TestCase):
             return iinfo.max, iinfo.min, iinfo.bits
 
     @autotest(n=3, check_graph=False)
-    def test_finfo_min(test_case):
+    def test_finfo(test_case):
         dtype = random_dtype(["None", "float", "half", "bfloat16"])
         _test_finfo(test_case, dtype)
 
