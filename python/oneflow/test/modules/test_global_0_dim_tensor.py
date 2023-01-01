@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_0_dim_tensor(test_case, placement, sbp):
     x1 = random_tensor(0).to_global(placement=placement, sbp=sbp)
     x2 = random_tensor(0).to_global(placement=placement, sbp=sbp)
@@ -29,7 +29,7 @@ def _test_0_dim_tensor(test_case, placement, sbp):
     return y1 + y2
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_1dim_slice(test_case, placement, sbp):
     x = random_tensor(1, random(1, 4) * 8).to_global(placement=placement, sbp=sbp)
     return x[5]
