@@ -77,7 +77,7 @@ NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
-static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
@@ -116,7 +116,7 @@ NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul_);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div_);
 
-PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObjectPtr dict(PyDict_New());
@@ -248,6 +248,7 @@ DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
 DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
 DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
+DIRECT_PASS_FUNC(PyTensorObject_equal, functional::equal)
 DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal)
 DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less)
 DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal)
@@ -305,6 +306,7 @@ DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_cummax, functional::cummax)
 DIRECT_PASS_FUNC(PyTensorObject_cummin, functional::cummin)
+DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -784,6 +786,41 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto self_tensor = PyTensor_Unpack(self);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:type_as", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+
+  // target is local
+  auto other_tensor = PyTensor_Unpack(other);
+  if (other_tensor->is_local()) {
+    Optional<Symbol<Device>> device = ASSERT(other_tensor->device());
+    if (self_tensor->is_global()) {
+      self_tensor = ASSERT_PTR(functional::GlobalToLocal(self_tensor, /*copy=*/false));
+    }
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(self_tensor, device, other_tensor->dtype(), /*copy=*/false)));
+  }
+
+  // target is global
+  std::shared_ptr<Tensor> value_tensor;
+  value_tensor = ASSERT_PTR(functional::To(self_tensor, other_tensor->dtype(), /*copy=*/false));
+  Symbol<ParallelDesc> placement = ASSERT(other_tensor->parallel_desc());
+  std::vector<Symbol<SbpParallel>> sbp;
+  auto ndsbp = ASSERT(other_tensor->nd_sbp());
+  for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
+    sbp.emplace_back(ndsbp->sbp_parallel(i));
+  }
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false)));
+  END_HANDLE_ERRORS
+}
+
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
@@ -881,6 +918,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
      NULL},
     {"to_local", (PyCFunction)PyTensorObject_to_local, METH_VARARGS | METH_KEYWORDS, NULL},
     {"to_global", (PyCFunction)PyTensorObject_to_global, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"type_as", (PyCFunction)PyTensorObject_type_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
     {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -896,6 +934,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -955,6 +994,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cummax", (PyCFunction)PyTensorObject_cummax, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cummin", (PyCFunction)PyTensorObject_cummin, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -1029,7 +1069,7 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
       if (self == Py_None || other == Py_None) return Py_False;
-      return functional::equal(NULL, tuple.get(), NULL);
+      return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
     case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);

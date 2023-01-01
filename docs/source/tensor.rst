@@ -228,6 +228,7 @@ Tensor class reference
     Tensor.dtype 
     Tensor.element_size
     Tensor.eq
+    Tensor.equal
     Tensor.erf
     Tensor.erfc
     Tensor.erfinv
@@ -333,6 +334,7 @@ Tensor class reference
     Tensor.sqrt
     Tensor.square
     Tensor.squeeze
+    Tensor.squeeze_
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
@@ -365,6 +367,9 @@ Tensor class reference
     Tensor.unfold
     Tensor.uniform_
     Tensor.unsqueeze
+    Tensor.unsqueeze_
+    Tensor.as_strided
+    Tensor.as_strided_
     Tensor.var
     Tensor.view
     Tensor.view_as
@@ -384,3 +389,4 @@ Tensor class reference
     Tensor.isclose
     Tensor.allclose
     Tensor.broadcast_to
+    Tensor.unique

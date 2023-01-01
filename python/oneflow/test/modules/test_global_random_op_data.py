@@ -29,6 +29,15 @@ _fn_param = {
     "normal": lambda shape, placement, sbp: flow.normal(
         size=shape, mean=0.0, std=1.0, placement=placement, sbp=sbp
     ),
+    "rand": lambda shape, placement, sbp: flow.rand(
+        size=shape, placement=placement, sbp=sbp
+    ),
+    "randint": lambda shape, placement, sbp: flow.randint(
+        low=0, high=2, size=shape, placement=placement, sbp=sbp
+    ),
+    "randn": lambda shape, placement, sbp: flow.randn(
+        size=shape, placement=placement, sbp=sbp
+    ),
 }
 
 

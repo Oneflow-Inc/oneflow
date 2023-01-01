@@ -89,6 +89,12 @@ struct MultiTensorAdamUpdateWithCastKernelUtil {
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
 
+template<DeviceType device_type, typename T>
+struct MultiTensorYoloV5WeightUpdateKernelUtil {
+  static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float d,
+                     TensorTupleParams<2> tensor_tuple_params);
+};
+
 }  // namespace oneflow
 
 #endif

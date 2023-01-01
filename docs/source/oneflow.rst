@@ -266,6 +266,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 
@@ -399,6 +400,7 @@ Other Ops
     broadcast_shapes
     broadcast_tensors
     broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -408,7 +410,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm
