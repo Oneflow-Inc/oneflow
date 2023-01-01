@@ -352,15 +352,6 @@ void OfCollectiveActor::NoNegoAct() {
 
     VLOG(2) << "Actor " << actor_id_ << " " << round++ << "th AsyncLaunchKernel";
     AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
-
-    if (ParseBooleanFromEnv("ONEFLOW_OFCCL_DUMMY_KERNEL", false)) {
-      int64_t actor_id = actor_id_;
-      AddCallback([actor_id](){
-        Singleton<ActorMsgBus>::Get()->SendMsg(
-          ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
-        );
-      });
-    }
           
     // kernel里的callback会发送kCollectiveDone信息，然后在处理kCollectiveDone信息的地方调用这些善后的代码。否则似乎找不到更方便的实现异步调用callback的方法了。
     // 没办法和nego低成本地完全切割。在july_nego分支里比较轻松地依托kCollectiveDone完成了no nego
@@ -855,15 +846,9 @@ void OfCollectiveActor::AsyncSendQueuedMsg() {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
 
-    if (ParseBooleanFromEnv("ONEFLOW_OFCCL_DUMMY_KERNEL", false)) {
-      AddCallback([msgs]() {
-        for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
-      });
-    } else {
-      for (const ActorMsg& msg : msgs) {
-        Singleton<ActorMsgBus>::Get()->SendMsg(msg);
-        VLOG(2) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
-      }
+    for (const ActorMsg& msg : msgs) {
+      Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+      VLOG(2) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
     }
   }
 }
