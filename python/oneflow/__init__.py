@@ -18,6 +18,10 @@ import os
 import sys
 import collections
 
+# https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
+if "CUDA_MODULE_LOADING" not in os.environ:
+    os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+
 import oneflow._oneflow_internal
 
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
@@ -98,6 +102,7 @@ from oneflow._C import logical_not
 from oneflow._C import logaddexp
 from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import quick_gelu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave
@@ -105,6 +110,7 @@ from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import as_strided
+from oneflow._C import as_strided_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softshrink
@@ -142,6 +148,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import topk
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
 from oneflow._C import minimum
@@ -179,6 +186,7 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+from oneflow._C import stft
 from oneflow._C import var
 from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
 from oneflow._C import atleast_1d, atleast_2d, atleast_3d
@@ -231,6 +239,7 @@ from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
+from oneflow._C import sort
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -255,6 +264,7 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
+oneflow._oneflow_internal.RegisterStackGetter()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -379,7 +389,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
@@ -396,7 +405,6 @@ from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
-from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
