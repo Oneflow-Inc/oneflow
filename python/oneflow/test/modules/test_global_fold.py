@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_fold_impl(test_case, placement, sbp):
     ndim = 3
     dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
