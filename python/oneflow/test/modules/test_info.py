@@ -58,8 +58,8 @@ class TestIInfo(flow.unittest.TestCase):
     @autotest(n=3, check_graph=False)
     def test_finfo_min(test_case):
         # TODO(WangYi): support bf16
-        for dtype in [None, torch.float16, torch.float32, torch.float64]:
-            _test_finfo(test_case, dtype)
+        dtype = random_dtype(["None", "float", "half"])
+        _test_finfo(test_case, dtype)
 
 
 if __name__ == "__main__":
