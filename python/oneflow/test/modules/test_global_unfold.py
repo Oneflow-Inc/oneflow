@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t
 
 
-@autotest(n=1, auto_backward=True, check_graph=True)
+@autotest(n=1, check_graph=True)
 def _test_unfold_with_random_data(test_case, placement, sbp):
     ndim = 4
     dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
