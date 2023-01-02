@@ -17,7 +17,7 @@ import warnings
 from typing import Optional
 
 import oneflow as flow
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class PReLU(Module):
@@ -319,18 +319,28 @@ class CELU(Module):
 
 
 class GELU(Module):
-    """Gelu activation operator.
+    """
+    GELU(approximate='none') -> Tensor
 
-    The equation is:
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GELU.html.
 
-    .. math::
-        out = 0.5 * x * (1 + tanh(\\sqrt{\\frac{2}{\\pi}} * (x + 0.044715x^{3})))
+    Applies the Gaussian Error Linear Units function:
+
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
 
     Args:
-        x (oneflow.Tensor): Input Tensor
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.Tensor: A Tensor has same shape as the input.
 
     For example:
 
@@ -349,11 +359,52 @@ class GELU(Module):
 
     """
 
+    def __init__(self, approximate: str = "none"):
+        super().__init__()
+        self.approximate = approximate
+
+    def forward(self, input):
+        if self.approximate == "none" or self.approximate == "tanh":
+            return flow._C.gelu_with_approximate(input, self.approximate)
+        else:
+            raise NotImplementedError
+
+
+class QuickGELU(Module):
+    """
+    QuickGELU() -> Tensor
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([-0.5, 0, 0.5])
+        >>> gelu = flow.nn.QuickGELU()
+
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1496,  0.0000,  0.3504], dtype=oneflow.float32)
+
+    """
+
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.gelu(x)
+        return flow._C.quick_gelu(x)
 
 
 class Sigmoid(Module):

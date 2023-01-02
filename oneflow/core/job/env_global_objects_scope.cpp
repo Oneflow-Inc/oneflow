@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -49,9 +50,11 @@ limitations under the License.
 #include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -68,9 +71,15 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_minloglevel = logging_conf.minloglevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  if (IsInDebugMode()) {
+    // record all level logs to file in debug mode
+    FLAGS_logtostderr = 0;
+    FLAGS_minloglevel = 0;  // 0=INFO
+  }
+  if (!FLAGS_logtostderr) { LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir); }
 }
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
@@ -106,7 +115,19 @@ void ClearAllSymbol() {
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
-bool CommNetIBEnabled() { return ibv::IsAvailable(); }
+bool CommNetIBEnabled() {
+  if (!ibv::IsAvailable()) { return false; }
+  const auto* node_manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
+  if (node_manager == nullptr) { return false; }
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    const auto& node = node_manager->GetNodeDeviceDescriptor(rank);
+    if (!node) { return false; }
+    const auto& list = node->GetDeviceDescriptorList("net_ib");
+    if (!list) { return false; }
+    if (list->DeviceCount() == 0) { return false; }
+  }
+  return true;
+}
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
@@ -132,16 +153,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-#ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "Using rpc backend: dry-run";
-    Singleton<RpcManager>::SetAllocated(new DryRunRpcManager());
-#else
-    static_assert(false, "Requires rpc backend dry-run to dry run oneflow");
-#endif  // RPC_BACKEND_LOCAL
-  } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
-             || (env_proto.has_ctrl_bootstrap_conf()
-                 && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+
+  if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
+      || (env_proto.has_ctrl_bootstrap_conf()
+          && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
     LOG(INFO) << "Using rpc backend: local";
     Singleton<RpcManager>::SetAllocated(new LocalRpcManager());
@@ -175,19 +190,17 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
+  Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
-  Singleton<EagerJobBuildAndInferCtxMgr>::New();
-  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
-    Singleton<EpollCommNet>::New();
-    Singleton<Transport>::New();
-    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
-    }
-#endif  // __linux__
+  Singleton<EpollCommNet>::New();
+  Singleton<Transport>::New();
+  if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+    Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
   }
+#endif  // __linux__
   {
     std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
     if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK", false)) {
@@ -212,23 +225,20 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   TensorBufferPool::Delete();
   Singleton<KernelObserver>::Delete();
-  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
-    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-      if (Singleton<EpollCommNet>::Get()
-          != dynamic_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
-        Singleton<CommNet>::Delete();
-      }
+  if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+    if (Singleton<EpollCommNet>::Get() != dynamic_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
+      Singleton<CommNet>::Delete();
     }
-    Singleton<Transport>::Delete();
-    Singleton<EpollCommNet>::Delete();
-#endif  // __linux__
   }
-  Singleton<EagerJobBuildAndInferCtxMgr>::Delete();
+  Singleton<Transport>::Delete();
+  Singleton<EpollCommNet>::Delete();
+#endif  // __linux__
   Singleton<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
+  Singleton<CudnnHandlePool>::Delete();
   Singleton<EagerNcclCommMgr>::Delete();
 #endif
   Singleton<ThreadPool>::Delete();
@@ -244,6 +254,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
   ClearAllSymbol();
+  ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {
     Singleton<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }
@@ -252,30 +263,26 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 }
 
 Maybe<void> InitRDMA() {
-  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
-    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
-      if (CommNetIBEnabled()) {
-        if (Singleton<IBVerbsCommNet>::Get() == nullptr) {
-          Singleton<IBVerbsCommNet>::New();
-          Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
-        } else {
-          LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
-        }
+    if (CommNetIBEnabled()) {
+      if (Singleton<IBVerbsCommNet>::Get() == nullptr) {
+        Singleton<IBVerbsCommNet>::New();
+        Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
       } else {
-        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
+        LOG(INFO) << "Skip init RDMA because RDMA is already initialized!";
       }
-#else
-      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
-#endif  // WITH_RDMA && OF_PLATFORM_POSIX
     } else {
-      LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+      LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
     }
-#endif  // __linux__
+#else
+    LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
   } else {
-    LOG(WARNING) << "Skip init RDMA in dry run mode!";
+    LOG(INFO) << "Skip init RDMA because only one process in this group!";
   }
+#endif  // __linux__
   return Maybe<void>::Ok();
 }
 
@@ -285,6 +292,20 @@ Maybe<bool> RDMAIsInitialized() {
 #else
   return false;
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+}
+
+Maybe<void> DestoryRDMA() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  if (JUST(RDMAIsInitialized())) {
+    CHECK_NOTNULL(Singleton<IBVerbsCommNet>::Get());
+    CHECK_NOTNULL(Singleton<CommNet>::Get());
+    Singleton<IBVerbsCommNet>::Delete();
+    if (Singleton<EpollCommNet>::Get()) {
+      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
+    }
+  }
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

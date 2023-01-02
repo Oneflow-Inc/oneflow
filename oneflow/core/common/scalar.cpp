@@ -29,7 +29,7 @@ namespace oneflow {
     }                                                     \
     return *this;                                         \
   }                                                       \
-  Scalar Scalar::operator op(const Scalar& other) {       \
+  Scalar Scalar::operator op(const Scalar& other) const { \
     if (IsFloatingPoint() || other.IsFloatingPoint()) {   \
       double val = As<double>() op other.As<double>();    \
       return Scalar(val);                                 \

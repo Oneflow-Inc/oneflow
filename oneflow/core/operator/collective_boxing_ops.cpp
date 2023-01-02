@@ -62,7 +62,7 @@ class CollectiveBoxingGenericOp : public Operator {
     if (GenericOpHasOutput(rank_desc)) {
       BlobDesc* out = GetBlobDesc4BnInOp("out");
       out->set_data_type(data_type);
-      out->mut_shape() = GenericOpGetOutputShape(rank_desc);
+      out->set_shape(GenericOpGetOutputShape(rank_desc));
     }
     return Maybe<void>::Ok();
   }

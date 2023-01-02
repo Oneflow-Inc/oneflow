@@ -20,8 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> ErfInvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  *y_shape = x_shape;
+  ctx->SetOutputShape("y", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
@@ -38,7 +37,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ErfInvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

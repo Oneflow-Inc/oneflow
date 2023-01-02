@@ -17,6 +17,7 @@ import os
 import socket
 import traceback
 from contextlib import closing
+import warnings
 
 import oneflow._oneflow_internal
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
@@ -30,6 +31,9 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
     oneflow.env.all_device_placement(device_type) -> oneflow.placement
 
     Returns a placement that contains all available devices.
+
+    Note:
+        It is recommended to use `oneflow.placement.all` instead of this function.
 
     Args:
         device_type (str): cuda or cpu
@@ -45,7 +49,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
     """
-    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+    return oneflow.placement.all(device_type)
 
 
 def check_non_localhost_proxy_and_print_warning():
@@ -153,19 +157,21 @@ def _FindFreePort():
 
 
 def HasAllMultiClientEnvVars():
-    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
-    env_var_values = [os.getenv(x) for x in env_var_names]
-    has_no_env_vars = not any(env_var_values)
-    has_all_env_vars = all(env_var_values)
-    assert has_no_env_vars or has_all_env_vars, list(zip(env_var_names, env_var_values))
-    return has_all_env_vars
+    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]
+    env_var_without_value = [x for x in env_var_names if os.getenv(x) is None]
+    env_var_with_value = [x for x in env_var_names if os.getenv(x) is not None]
+    if len(env_var_with_value) != 0 and len(env_var_without_value) != 0:
+        warnings.warn(
+            f"Among four environment variables required for distributed training, only {', '.join('`{0}`'.format(x) for x in env_var_with_value)} are set, but {', '.join('`{0}`'.format(x) for x in env_var_without_value)} are not set."
+        )
+    return len(env_var_without_value) == 0
 
 
 def SetDefaultMultiClientEnvVars():
     os.environ["MASTER_ADDR"] = "127.0.0.1"
     os.environ["MASTER_PORT"] = str(_FindFreePort())
     os.environ["WORLD_SIZE"] = "1"
-    os.environ["RANK"] = "0"
+    os.environ["RANK"] = "-1"
     os.environ["LOCAL_RANK"] = "0"
 
 
@@ -173,7 +179,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     assert HasAllMultiClientEnvVars()
 
     def str2int(env_config):
-        assert env_config.isdigit()
         return int(env_config)
 
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
@@ -188,9 +193,11 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
+        cpp_logging_conf.logtostderr = str2int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
-        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+        cpp_logging_conf.logbuflevel = str2int(os.getenv("GLOG_logbuflevel"))
+    if os.getenv("GLOG_minloglevel"):
+        cpp_logging_conf.minloglevel = str2int(os.getenv("GLOG_minloglevel"))
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 

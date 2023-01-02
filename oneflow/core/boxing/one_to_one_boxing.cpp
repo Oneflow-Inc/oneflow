@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/user/kernels/communicate_util.h"
 
 namespace oneflow {
 
@@ -31,8 +32,7 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   CHECK_OR_RETURN(in->placement() != out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(IsSendAndRecvRegistered(in->placement()->device_type()));  // NOLINT
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)
@@ -58,7 +58,9 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));
   int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
 
+  bool copy = true;
   if (src != dst) {
+    copy = false;
     if (GlobalProcessCtx::Rank() == src) {
       JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
     }
@@ -67,9 +69,9 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
                                                 JUST(local_tensor->device()), NullOpt));
     }
   }
-  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
-                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                             tensor->dtype(), /* sync_data */ false));
+  return JUST(one::functional::LocalToGlobal(
+      local_tensor, out->placement(), *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+      tensor->dtype(), /* sync_data */ false, /*copy=*/copy));
 }
 
 COMMAND(RegisterBoxingFunction("naive-1-to-1", CheckNaiveOneToOne, &NaiveOneToOne));

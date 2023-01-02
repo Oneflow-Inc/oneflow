@@ -17,6 +17,7 @@ import os
 import unittest
 import oneflow.framework.session_context as session_ctx
 import oneflow as flow
+import oneflow.unittest
 import oneflow.framework.config_util as config_util
 import oneflow.framework.attr_util as attr_util
 import random
@@ -44,6 +45,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
         flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
+        flow.backends.cudnn.enable_conv_heuristic_search_algo(False)
 
         flow.utils.load_library("")
 

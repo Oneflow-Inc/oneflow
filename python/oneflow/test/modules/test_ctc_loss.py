@@ -180,6 +180,7 @@ def compare_with_np(
     device_type,
     device_num,
     data_type,
+    target_dtype,
     max_input_length,
     batch_size,
     num_classes,
@@ -188,13 +189,13 @@ def compare_with_np(
     reduction,
     zero_infinity,
 ):
-    assert data_type in ["float32", "double"]
+    assert data_type in [flow.float32, flow.double]
     assert device_type in ["cuda", "cpu"]
     assert reduction in ["none", "mean", "sum"]
     assert zero_infinity in [False, True]
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
-    ).astype(np.float32)
+    ).astype(flow.convert_oneflow_dtype_to_numpy_dtype(data_type))
     log_probs = log_softmax(log_probs, axis=2)
     targets = np.random.randint(
         1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32
@@ -239,13 +240,13 @@ def compare_with_np(
         blank=blank, reduction=reduction, zero_infinity=zero_infinity
     )
     log_probs = flow.tensor(
-        log_probs,
-        dtype=flow.float32,
-        requires_grad=True,
-        device=flow.device(device_type),
+        log_probs, dtype=data_type, requires_grad=True, device=flow.device(device_type),
     )
     targets = flow.tensor(
-        targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type)
+        targets,
+        dtype=target_dtype,
+        requires_grad=False,
+        device=flow.device(device_type),
     )
     input_lengths = flow.tensor(
         input_lengths,
@@ -271,7 +272,8 @@ def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cuda", "cpu"]
     arg_dict["device_num"] = [1]
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["data_type"] = [flow.float32, flow.double]
+    arg_dict["target_dtype"] = [flow.float32, flow.double, flow.int32, flow.int64]
     arg_dict["max_input_length"] = [20]
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]

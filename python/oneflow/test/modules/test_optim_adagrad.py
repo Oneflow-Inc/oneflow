@@ -104,7 +104,7 @@ def compare_with_numpy_adagrad(
     )
 
 
-def compare_with_numpy_adam_clip_grad(
+def compare_with_numpy_adagrad_clip_grad(
     test_case,
     device,
     x_shape,
@@ -228,7 +228,7 @@ class TestAdagrad(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adam_clip_grad(test_case, *arg)
+            compare_with_numpy_adagrad_clip_grad(test_case, *arg)
 
 
 if __name__ == "__main__":

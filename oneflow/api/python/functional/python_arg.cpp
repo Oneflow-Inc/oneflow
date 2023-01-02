@@ -37,6 +37,9 @@ namespace functional {
 #define INSTANCE_OBJECT_AS_INTEGER(T)                                                            \
   template<>                                                                                     \
   T PythonArg::ObjectAs<T>() const {                                                             \
+    if (PyIntegerScalarTensorCheck(object_)) {                                                   \
+      return static_cast<T>(PyUnpackIntegerScalarTensor_AsLongLong(object_));                    \
+    }                                                                                            \
     return static_cast<T>(PyLong_AsLongLong(object_));                                           \
   }                                                                                              \
   template<>                                                                                     \
@@ -51,12 +54,15 @@ namespace functional {
     return std::make_shared<std::vector<T>>(ObjectAs<std::vector<T>>());                         \
   }
 
-OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_AND_BOOL_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_INTEGER
 
 #define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
   template<>                                                                                     \
   T PythonArg::ObjectAs<T>() const {                                                             \
+    if (PyFloatScalarTensorCheck(object_)) {                                                     \
+      return static_cast<T>(PyUnpackFloatScalarTensor_AsDouble(object_));                        \
+    }                                                                                            \
     return static_cast<T>(PyFloat_AsDouble(object_));                                            \
   }                                                                                              \
   template<>                                                                                     \
@@ -88,6 +94,7 @@ INSTANCE_OBJECT_AS_SHARED_PTR(std::string)
 
 template<>
 Scalar PythonArg::ObjectAs<Scalar>() const {
+  if (PyScalarTensorCheck(object_)) { return PyUnpackScalarTensor(object_); }
   return PyUnpackScalar(object_);
 }
 INSTANCE_OBJECT_AS_SHARED_PTR(Scalar)
@@ -120,8 +127,7 @@ INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<Symbol<DType>>)
 
 template<>
 Shape PythonArg::ObjectAs<Shape>() const {
-  const auto& shape = PyUnpackLongSequence<int64_t>(object_);
-  return Shape(DimVector(shape.begin(), shape.end()));
+  return PyUnpackShape(object_);
 }
 INSTANCE_OBJECT_AS_SHARED_PTR(Shape)
 
@@ -197,7 +203,9 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kUINT32:
     case kINT64:
     case kUINT64:
-    case kBOOL: return PyLong_Check(object_) || numpy::PyArrayCheckLongScalar(object_);
+    case kBOOL:
+      return PyLong_Check(object_) || numpy::PyArrayCheckLongScalar(object_)
+             || PyIntegerScalarTensorCheck(object_) || PyBoolScalarTensorCheck(object_);
     case kINT32_LIST:
     case kUINT32_LIST:
     case kINT64_LIST:
@@ -206,16 +214,17 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kFLOAT:
     case kDOUBLE:
       return PyFloat_Check(object_) || PyLong_Check(object_)
-             || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_);
+             || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_)
+             || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
     case kFLOAT_LIST:
     case kDOUBLE_LIST:
-      return PyFloatSquenceCheck(object_)
+      return PyFloatSequenceCheck(object_)
              || (size_ > 0 && (PyFloat_Check(object_) || PyLong_Check(object_)));
     case kSTRING: return PyStringCheck(object_);
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR:
       return PyScalarCheck(object_) || numpy::PyArrayCheckLongScalar(object_)
-             || numpy::PyArrayCheckFloatScalar(object_);
+             || numpy::PyArrayCheckFloatScalar(object_) || PyScalarTensorCheck(object_);
     case kTENSOR:
     case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
@@ -224,7 +233,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
-    case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
+    case kDEVICE: return PyStringCheck(object_) || PyDeviceCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST:
@@ -239,8 +248,6 @@ bool PythonArg::TypeCheck(ValueType type) const {
   }
   return false;
 }
-
-bool PythonArgCheck(const PythonArg& arg, ValueType type) { return arg.TypeCheck(type); }
 
 }  // namespace functional
 }  // namespace one

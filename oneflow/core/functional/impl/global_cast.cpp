@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -379,7 +380,8 @@ static constexpr auto* GetGlobalToGlobalOpExpr =
 
 Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                              const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                             const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
+                             const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
+                             bool copy) {
   const auto& global_tensor = JUST(x->AsGlobalTensor());
   CHECK_NOTNULL_OR_RETURN(global_tensor) << "global tensors supported only";
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
@@ -395,6 +397,7 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
   }
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+    if (copy) { return functional::Identity(x); }
     return x;
   }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
@@ -409,7 +412,7 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
 
 Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint) {
+                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint, bool copy) {
   CHECK_OR_RETURN(!x->is_lazy())
       << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
@@ -424,9 +427,12 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
-  if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-    VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
-            << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+  bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
+  if (copy || device_mismatch) {
+    if (device_mismatch) {
+      VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    }
     input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
                                   /*pin_memory=*/false));
   }
@@ -441,10 +447,8 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   sync_and_check_meta));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *shape));
-  JUST(attrs.SetAttr<DataType>("dtype", dtype));
-  JUST(attrs.SetAttr<bool>("sync_data", true));
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
+  attrs.SetAllAttrs(*shape, dtype, true);
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -455,13 +459,14 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
 class LocalToGlobalFunctor {
  public:
   LocalToGlobalFunctor() {
-    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+    op_ = CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const Shape& shape, const Symbol<DType>& dtype, bool sync_data) const {
+                           const Shape& shape, const Symbol<DType>& dtype, bool sync_data,
+                           bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
@@ -478,17 +483,18 @@ class LocalToGlobalFunctor {
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
-    if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
-              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
+    if (copy || device_mismatch) {
+      if (device_mismatch) {
+        VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
+                << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      }
       input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
                                     /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", sync_data));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
+    attrs.SetAllAttrs(shape, dtype->data_type(), sync_data);
     DisableCheckGlobalTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
@@ -503,26 +509,26 @@ class ToGlobalFunctor {
  public:
   ToGlobalFunctor() {
     local_to_global_op_ =
-        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+        CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
-                           bool check_meta) const {
+                           bool check_meta, bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
                                   /* force_check */ check_meta));
     std::shared_ptr<Tensor> tensor;
     if (x->is_global()) {
-      tensor = JUST(GlobalToGlobal(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
+      tensor = JUST(GlobalToGlobal(x, parallel_desc, sbp_parallels, grad_sbp_parallels, copy));
     } else {
       DeviceType device_type = parallel_desc->device_type();
       if (device_type == DeviceType::kCPU || device_type == DeviceType::kCUDA) {
-        tensor =
-            JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_global_op_, check_meta));
+        tensor = JUST(
+            LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_global_op_, check_meta, copy));
       } else {
         // Assuming that the newly adapted hardware device does not support collective
         // communication, since local to global may need to synchronize data (through the
@@ -531,9 +537,10 @@ class ToGlobalFunctor {
         // to the desired placement.
         Symbol<ParallelDesc> cpu_parallel_desc =
             JUST(ReplaceDeviceType(parallel_desc, DeviceType::kCPU));
-        std::shared_ptr<Tensor> cpu_tensor = JUST(
-            LocalToGlobal(x, cpu_parallel_desc, sbp_parallels, local_to_global_op_, check_meta));
-        tensor = JUST(GlobalToGlobal(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList()));
+        std::shared_ptr<Tensor> cpu_tensor = JUST(LocalToGlobal(
+            x, cpu_parallel_desc, sbp_parallels, local_to_global_op_, check_meta, copy));
+        tensor =
+            JUST(GlobalToGlobal(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList(), copy));
       }
     }
     return tensor;
@@ -546,16 +553,18 @@ class ToGlobalFunctor {
 class GlobalToLocalFunctor {
  public:
   GlobalToLocalFunctor() {
-    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
+    op_ = CHECK_JUST(one::GlobalToLocalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool copy) const {
     CHECK_OR_RETURN(!x->is_lazy())
         << Error::RuntimeError()
         << "global_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_global())
         << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
+    const auto& local_tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
+    if (copy) { return local_tensor->clone(); }
+    return local_tensor;
   }
 
  private:

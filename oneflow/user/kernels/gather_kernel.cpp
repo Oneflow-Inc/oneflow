@@ -120,11 +120,20 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+// For cpu float16/bfloat16
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
+                                 FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-// For Half
+// For cuda half
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 INDEX_DATA_TYPE_SEQ)
+#endif
+
 #endif
 
 }  // namespace user_op

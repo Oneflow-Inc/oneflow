@@ -323,7 +323,9 @@ def _test_unique_key_value(test_case, has_table_id, num_tables):
                 unique_ids,
                 unique_table_ids,
                 inverse_indices,
-            ) = flow._C.one_embedding_unique_key_value_pair(ids, table_ids, num_tables)
+            ) = flow._C.one_embedding_unique_key_value_pair(
+                ids, table_ids, num_tables, "test"
+            )
             return (
                 flow.cast(num_unique, flow.int32),
                 flow.cast(unique_ids, flow.int32),

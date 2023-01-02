@@ -38,7 +38,8 @@ Maybe<one::Tensor> ReinterpterGlobalTensor(const std::shared_ptr<one::Tensor>& t
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
   return JUST(one::functional::LocalToGlobal(x, parallel_desc, *JUST(GetSbpList(nd_sbp)), shape,
-                                             tensor->dtype(), /* sync_data */ false));
+                                             tensor->dtype(), /* sync_data */ false,
+                                             /*copy=*/false));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
@@ -102,7 +103,7 @@ Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor
     }
     output = JUST(ReinterpterGlobalTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
   } else {
-    one::GlobalTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
+    one::GlobalTensorMeta tensor_meta(*input->shape(), input->dtype()->data_type(), out_nd_sbp,
                                       out_parallel_desc);
     const auto& tensor_impl =
         JUST(one::EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));

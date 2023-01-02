@@ -65,10 +65,13 @@ type_name_to_flow_type = {
     "float16": flow.float16,
     "float32": flow.float32,
     "double": flow.double,
+    "float64": flow.double,
     "int8": flow.int8,
     "int32": flow.int32,
     "int64": flow.int64,
     "uint8": flow.uint8,
+    "half": flow.half,
+    "bfloat16": flow.bfloat16,
 }
 type_name_to_np_type = {
     "float16": np.float16,

@@ -31,18 +31,5 @@ void InstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
                                                        instruction->mut_status_buffer());
 }
 
-namespace {
-
-void InitOrCheckMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_blob_object) {
-  eager_blob_object->InitOrCheckMemPtrForAllocationComputationPipelining();
-}
-
-}  // namespace
-
-void InstructionPolicy::InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(
-    Instruction* instruction) {
-  ForEachInputEagerBlobObjects(&InitOrCheckMemPtrForAllocationCompuationPipelining);
-}
-
 }  // namespace vm
 }  // namespace oneflow

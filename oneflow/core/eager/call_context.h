@@ -57,10 +57,7 @@ class TmpTensor final : public user_op::Tensor {
 
   char* mut_tmp_buffer_ptr() { return tmp_buffer_ptr_; }
 
-  void init_tmp_buffer_ptr(char* ptr) {
-    CHECK_EQ(tmp_buffer_ptr_, nullptr);
-    tmp_buffer_ptr_ = ptr;
-  }
+  void set_tmp_buffer_ptr(char* ptr) { tmp_buffer_ptr_ = ptr; }
 
  private:
   std::shared_ptr<MemoryCase> mem_case_;

@@ -44,7 +44,6 @@ release = u""
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx.ext.intersphinx",
     "recommonmark",
     "sphinx.ext.autosummary",
     "sphinx_copybutton",
@@ -112,11 +111,6 @@ html_static_path = ["_static"]
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-}
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

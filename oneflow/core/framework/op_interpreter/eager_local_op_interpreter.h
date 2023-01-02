@@ -28,5 +28,8 @@ class Tensor;
 Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
                         Symbol<ParallelDesc> parallel_desc, bool inplace);
 
+Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
+                             Symbol<ParallelDesc> parallel_desc, bool inplace);
+
 }  // namespace one
 }  // namespace oneflow

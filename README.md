@@ -1,8 +1,9 @@
 # OneFlow
 
-OneFlow is an **easy to program, scale, and deploy** deep learning framework that **accelerates the innovation of next-generation AI**. In OneFlow, it's easy to:
+OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
+
 - program a model with **PyTorch-like API**
-- scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**
+- scale a model to n-dimensional-parallel/distributed execution with the **Global View API**
 - accelerate/deploy a model with the **Static Graph Compiler**.
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
@@ -60,7 +61,7 @@ OneFlow is an **easy to program, scale, and deploy** deep learning framework tha
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
+  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu117
   ```
 
 - To install other available builds for different variants:
@@ -76,7 +77,7 @@ OneFlow is an **easy to program, scale, and deploy** deep learning framework tha
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
-    | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu117 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
     | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 

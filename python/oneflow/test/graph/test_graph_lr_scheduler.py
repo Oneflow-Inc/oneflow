@@ -111,10 +111,12 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
             ret = graph(_rand_input())
             ret.numpy()  # sync for graph finishing
 
-    lr_log_file = glob.glob("log/*/train_step2lr.csv")[0]
+    pid = os.getpid()
+    lr_log_file = glob.glob(f"log/*/{pid}-train_step2lr.csv")[0]
     lrs = _get_graph_lrs_from_log(lr_log_file)
     lrs = lrs[:iters]
 
+    optimizer.zero_grad(set_to_none=True)
     eager_lrs = [lr_scheduler.get_last_lr()[0]]
     for _ in range(iters):
         ret = module(_rand_input())
@@ -152,6 +154,17 @@ class TestGraphLRSchedulerWithEager(flow.unittest.TestCase):
             lr_scheduler=flow.optim.lr_scheduler.LinearLR,
             start_factor=0.1,
             end_factor=1.0,
+            total_iters=10,
+        )
+
+    def test_linear_lr_end_factor(self):
+        _compare_graph_lr_scheduler_with_eager(
+            self,
+            base_lr=0.1,
+            iters=20,
+            lr_scheduler=flow.optim.lr_scheduler.LinearLR,
+            start_factor=0.1,
+            end_factor=0.9,
             total_iters=10,
         )
 

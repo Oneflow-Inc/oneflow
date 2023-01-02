@@ -28,9 +28,10 @@ inline Maybe<void> FillVariableTensorMgr(
   auto mgr = Singleton<VariableTensorMgr>::Get();
   return mgr->Fill(variable_op_names, variable_tensors);
 }
-inline void ClearVariableTensorMgr() {
+
+inline void ResetVariableTensorMgr() {
   auto mgr = Singleton<VariableTensorMgr>::Get();
-  mgr->Clear();
+  mgr->Reset();
 }
 
 inline std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>>

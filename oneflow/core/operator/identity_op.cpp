@@ -117,7 +117,9 @@ class CastToLocalOp : public LocalCastOp {
       const int64_t dim_value = out->shape().At(axis);
       const int64_t parallel_num = parallel_desc.parallel_num();
       CHECK_EQ_OR_RETURN(dim_value % parallel_num, 0);
-      out->mut_shape().Set(axis, dim_value / parallel_num);
+      Shape output = out->shape();
+      output.Set(axis, dim_value / parallel_num);
+      out->set_shape(output);
     }
     return Maybe<void>::Ok();
   }
@@ -175,7 +177,9 @@ class CastFromLocalOp : public LocalCastOp {
       const int64_t axis = conf_sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LT_OR_RETURN(axis, out->shape().NumAxes());
-      out->mut_shape().Set(axis, out->shape().At(axis) * parallel_desc.parallel_num());
+      Shape output = out->shape();
+      output.Set(axis, out->shape().At(axis) * parallel_desc.parallel_num());
+      out->set_shape(output);
     }
     return Maybe<void>::Ok();
   }

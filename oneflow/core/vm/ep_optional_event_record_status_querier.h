@@ -25,12 +25,12 @@ class DeviceCtx;
 
 namespace vm {
 
-class EpDeviceCtx;
-
 class EpOptionalEventRecordStatusQuerier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpOptionalEventRecordStatusQuerier);
   ~EpOptionalEventRecordStatusQuerier();
+
+  bool launched() const { return launched_; }
 
   bool done() const { return launched_ && (ep_event_ == nullptr || ep_event_->Query()); }
 

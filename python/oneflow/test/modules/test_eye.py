@@ -95,6 +95,11 @@ class TestEye(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         return x
 
+    @profile(torch.eye)
+    def profile_eye(test_case):
+        torch.eye(1000)
+        torch.eye(100, 1280)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestGlobalEye(flow.unittest.TestCase):

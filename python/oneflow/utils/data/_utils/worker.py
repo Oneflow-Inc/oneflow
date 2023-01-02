@@ -241,7 +241,6 @@ def _worker_loop(
     auto_collation,
     collate_fn,
     drop_last,
-    generator,
     base_seed,
     init_fn,
     worker_id,
@@ -271,7 +270,7 @@ def _worker_loop(
         flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
-        generator.manual_seed(seed)
+        flow.manual_seed(seed)
         if HAS_NUMPY:
             np_seed = _generate_state(base_seed, worker_id)
             import numpy as np

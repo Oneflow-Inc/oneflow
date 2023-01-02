@@ -20,10 +20,12 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp& nd_sbp,
+                                     uint64_t init_seed, int64_t rank_id);
 
-Maybe<int64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
-                                                  int64_t init_seed);
+Maybe<uint64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
+                                                   uint64_t init_seed);
 
 }  // namespace oneflow
 

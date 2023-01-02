@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -51,6 +52,8 @@ class OpExpr {
   virtual Maybe<bool> SupportNonContiguous() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
+
+  virtual Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const;
 
  protected:
   OpExpr() = default;
@@ -113,6 +116,8 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
+  Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const override;
+
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
@@ -123,9 +128,11 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   ProtoType op_proto_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+  mutable std::shared_ptr<autocast::AutoCastMeta> autocast_meta_;
 };
 
 class StatefulOpKernel;
+class LocalTensorInferCache;
 class GlobalTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
@@ -159,6 +166,9 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Stream>> InferDeviceAndStream(const AttrMap& attrs, const TensorTuple& inputs,
                                              TensorTuple* outputs) const;
+  LocalTensorInferCache* mut_local_tensor_infer_cache() const {
+    return local_tensor_infer_cache_.get();
+  }
   GlobalTensorInferCache* mut_global_tensor_infer_cache() const {
     return global_tensor_infer_cache_.get();
   }
@@ -169,10 +179,12 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn logical_tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn physical_tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
+  std::shared_ptr<LocalTensorInferCache> local_tensor_infer_cache_;
   std::shared_ptr<GlobalTensorInferCache> global_tensor_infer_cache_;
 };
 
@@ -216,30 +228,30 @@ class CastGlobalOpExpr : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class CastToGlobalOpExpr final : public CastGlobalOpExpr {
+class LocalToGlobalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastToGlobalOpExpr() = default;
+  ~LocalToGlobalOpExpr() = default;
 
-  static Maybe<CastToGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<LocalToGlobalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToGlobalOpExpr(const std::string& op_name);
+  LocalToGlobalOpExpr(const std::string& op_name);
 };
 
-class CastFromGlobalOpExpr final : public CastGlobalOpExpr {
+class GlobalToLocalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastFromGlobalOpExpr() = default;
+  ~GlobalToLocalOpExpr() = default;
 
-  static Maybe<CastFromGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<GlobalToLocalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromGlobalOpExpr(const std::string& op_name);
+  GlobalToLocalOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.

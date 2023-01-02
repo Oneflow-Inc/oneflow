@@ -66,7 +66,7 @@ Function
 .. autoclass:: Function
 .. currentmodule:: oneflow.autograd
 .. autosummary::
-    :toctree generated
+    :toctree: generated
     :nosignatures:
 
     Function.forward
@@ -77,11 +77,11 @@ Context method mixins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When creating a new :class:`Function`, the following methods are available to `ctx`.
 
-.. currentmodule:: oneflow.autograd.autograd_function
+.. currentmodule:: oneflow._oneflow_internal.autograd.Function
 .. autosummary::
     :toctree: generated
     :nosignatures:
     
-    FunctionAutoGradCaptureState.mark_non_differentiable
-    FunctionAutoGradCaptureState.save_for_backward
-    FunctionAutoGradCaptureState.saved_tensors
+    FunctionCtx.mark_non_differentiable
+    FunctionCtx.save_for_backward
+    FunctionCtx.saved_tensors

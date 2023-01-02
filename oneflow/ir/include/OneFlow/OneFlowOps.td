@@ -14,29 +14,9 @@ include "mlir/Pass/PassBase.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
-def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
-  let builders = [
-    OpBuilder<(ins
-      "Value":$x,
-      "Value":$addend,
-      "Value":$moving_mean,
-      "Value":$moving_variance,
-      "Value":$gamma,
-      "Value":$beta,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "DenseElementsAttr":$operand_segment_sizes,
-      "DenseElementsAttr":$result_segment_sizes,
-      "IntegerAttr":$axis,
-      "FloatAttr":$epsilon,
-      "BoolAttr":$training,
-      "FloatAttr":$momentum
-    )>
-  ];
-}
+
+include "OneFlow/SBP/SBPOps.td"
+
 
 #ifndef REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
@@ -73,6 +53,7 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let arguments = (ins
     F32ElementsAttr:$value,
     StrAttr:$op_name,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id,
@@ -85,11 +66,6 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let hasFolder = 1;
 }
 
-def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
-  let summary = "mark a result as loss to prevent its defining op from optimized away";
-  let arguments = (ins Variadic<AnyType>:$loss);
-}
-
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
@@ -99,40 +75,6 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
   let output = (outs AnyType:$out);
 }
 
-// JIT ops
-
-def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
-  let input = (ins Variadic<AnyType>:$data_input);
-  let output = (outs Variadic<AnyType>:$data_output);
-  let attrs = (ins
-    FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
-  );
-  let builders = [
-    OpBuilder<(ins "func::FuncOp":$callee,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input), [{
-      $_state.addOperands(data_input);
-      $_state.addAttributes(attributes);
-      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getFunctionType().getResults());
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    operand_range getArgOperands() {
-      return {arg_operand_begin(), arg_operand_end()};
-    }
-
-    operand_iterator arg_operand_begin() { return operand_begin(); }
-    operand_iterator arg_operand_end() { return operand_end(); }
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-    }
-  }];
-  let assemblyFormat = [{
-    $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
-  }];
-}
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
@@ -164,7 +106,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
-    StrArrayAttr:$nd_sbp
+    OptionalAttr<SBP_ParallelSignatureAttr>:$parallel
   );
 }
 
@@ -275,59 +217,3 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 
 #endif // ONEFLOW_OPS
 
-#ifndef ONEFLOW_PASSES
-#define ONEFLOW_PASSES
-
-def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
-  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
-  let options = [
-    Option<"variableAsConstant", "variable-as-constant", "int", "0",
-           "convert variable op as const op of tosa">,
-  ];
-}
-
-def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
-  let dependentDialects = ["gpu::GPUDialect"];
-}
-
-def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createGpuCopyArgPass()";
-  let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
-}
-
-def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
-  let summary = "move ops could be jitted to jit function";
-  let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
-}
-
-def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
-}
-
-def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createAutoNhwcPass()";
-}
-
-def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
-  let summary = "Convert variable op to variable ir op for constant folding.";
-  let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
-}
-
-def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
-  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
-  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
-}
-
-def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
-  let summary = "Convert variable ir op to variable op after contant folding.";
-  let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
-}
-
-#endif // ONEFLOW_PASSES

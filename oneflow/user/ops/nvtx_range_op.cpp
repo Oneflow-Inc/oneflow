@@ -22,8 +22,8 @@ namespace oneflow {
 #ifdef WITH_CUDA
 
 /* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -44,13 +44,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> NvtxStartOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> NvtxEndOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -71,7 +71,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> NvtxEndOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -110,39 +110,5 @@ namespace oneflow {
 }
 
 #endif  // WITH_CUDA
-
-REGISTER_USER_OP_GRAD("nvtx_start")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper nvtx_end_op =
-            builder.Op("nvtx_end")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-bw")
-                .Build();
-        op.BindGradTensorWithOpInput(nvtx_end_op.output("out", 0), "in", 0);
-        AddOp(nvtx_end_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("nvtx_end")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper nvtx_start_op =
-            builder.Op("nvtx_start")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-bw")
-                .Build();
-        op.BindGradTensorWithOpInput(nvtx_start_op.output("out", 0), "in", 0);
-        AddOp(nvtx_start_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

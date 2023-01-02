@@ -14,6 +14,9 @@ oneflow.cuda
     current_device
     set_device
     synchronize
+    get_device_properties
+    get_device_capability
+    get_device_name
 
 .. note::
    The :attr:`current_device` returns local rank as device index. It is different from the 'torch.current_device()' in PyTorch.
@@ -43,3 +46,12 @@ GPU tensor
     CharTensor
     IntTensor
     LongTensor
+
+Memory management
+-----------------------------
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    empty_cache
+    

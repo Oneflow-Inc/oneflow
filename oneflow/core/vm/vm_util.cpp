@@ -20,8 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"

@@ -194,6 +194,23 @@ class TestLinear(flow.unittest.TestCase):
         return y
 
     @autotest(n=5)
+    def test_linear_with_device_and_dtype(test_case):
+        input_size = random()
+        device = random_device()
+        m = torch.nn.Linear(
+            in_features=input_size,
+            out_features=random(),
+            bias=random() | nothing(),
+            device=device,
+            dtype=torch.float,
+        )
+        m.train(random())
+        m.to(device)
+        x = random_tensor(ndim=2, dim1=input_size).to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
     def test_nn_functional_linear_with_random_data(test_case):
         input_size = random()
         device = random_device()

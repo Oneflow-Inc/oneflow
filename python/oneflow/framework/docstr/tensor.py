@@ -239,7 +239,7 @@ add_docstr(
     """
     Tensor.new_zeros(size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
-    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same oneflow.dtype, oneflow.device or oneflow.placement and oneflow.sbp as this tensor.
 
     Args:
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
@@ -261,6 +261,37 @@ add_docstr(
         >>> y
         tensor([[0., 0.],
                 [0., 0.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_full,
+    """
+    Tensor.new_full(size, fill_value, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a Tensor of size size filled with fill_value. By default, the returned Tensor has the same oneflow.dtype, oneflow.device or oneflow.placement and oneflow.sbp as this tensor.
+
+    Args:
+        fill_value (scalar): the number to fill the output tensor with.
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> tensor = flow.ones((2,), dtype=flow.float64)
+        >>> tensor.new_full((3, 4), 3.141592)
+        tensor([[3.1416, 3.1416, 3.1416, 3.1416],
+                [3.1416, 3.1416, 3.1416, 3.1416],
+                [3.1416, 3.1416, 3.1416, 3.1416]], dtype=oneflow.float64)
     """,
 )
 
@@ -305,6 +336,7 @@ add_docstr(
         check_meta (bool, optional): indicates whether to check meta information when createing global tensor from local
             tensor. Only can be set to False when the shape and dtype of the input local tensor on each rank are the same. If set to False, the
             execution of local_to_global can be accelerated. Default: True
+        copy (bool, optional): When copy is set, the returned global tensor takes the replication of this tensor as its local component in the current rank. Default: False
 
     .. code-block:: python
 
@@ -351,6 +383,7 @@ add_docstr(
             tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. Default: None
         check_meta (bool, optional): indicates whether to check meta information. If set to True, check the consistency
             of the input meta information (placement and sbp) on each rank. Default: False
+        copy (bool, optional): When copy is set, a new Tensor is created even when the Tensor already matches the desired conversion. Default: False
 
     .. code-block:: python
 
@@ -408,6 +441,9 @@ add_docstr(
             global tensor. Default: None
         check_meta (bool, optional): indicates whether to check meta information. If set to True, check the input meta
             information on each rank. Default: True if this tensor is a local tensor, False if this tensor is a global tensor
+        copy (bool, optional): When copy is set, copy occurres in this operation. For local tensor, the returned global tensor takes the
+            replication of this tensor as its local component in the current rank. For global tensor, a new Tensor is created even when
+            the Tensor already matches the desired conversion. Default: False
 
     For local tensor:
 
@@ -467,14 +503,17 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_local,
     """
-    Tensor.to_local() -> Tensor
+    Tensor.to_local(**kwargs) -> Tensor
 
     Returns the local component of this global tensor in the current rank.
+
+    Keyword Args:
+        copy (bool, optional): When copy is set, a new replicated tensor of the local component of this global tensor in the current rank is returned. Default: False
 
     Note:
         This tensor should be a global tensor, and it returns a empty tensor if there is no local component in the current rank.
 
-        No copy occurred in this operation.
+        No copy occurred in this operation if copy is not set.
 
     For example:
 
@@ -547,7 +586,16 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze,
     """
+    Tensor.squeeze(dim=None) -> Tensor
     See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze_,
+    """
+    Tensor.squeeze_(dim=None) -> Tensor
+    In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
 
@@ -627,7 +675,36 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze,
     """
+    Tensor.unsqueeze(dim) -> Tensor
+
     See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze_,
+    """
+    Tensor.unsqueeze_(dim) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided,
+    """
+    Tensor.as_strided(size, stride, storage_offset=None) -> Tensor
+
+    See :func:`oneflow.as_strided`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided_,
+    """
+    Tensor.as_strided_(size, stride, storage_offset=None) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.as_strided`
     """,
 )
 
@@ -928,6 +1005,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcdiv,
+    """
+    See :func:`oneflow.addcdiv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcdiv_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcdiv`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.dim,
     """
     Tensor.dim() → int
@@ -993,6 +1084,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.lt,
     """
     See :func:`oneflow.lt`
@@ -1040,13 +1138,6 @@ add_docstr(
     oneflow.Tensor.ge,
     """
     See :func:`oneflow.ge`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.gelu,
-    """
-    See :func:`oneflow.gelu`
     """,
 )
 
@@ -1293,6 +1384,13 @@ add_docstr(
     oneflow.Tensor.log2,
     """
     See :func:`oneflow.log2`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log10,
+    """
+    See :func:`oneflow.log10`
     """,
 )
 
@@ -1690,9 +1788,23 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logsumexp,
+    """
+    See :func:`oneflow.logsumexp`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill_,
+    """
+    In-place version of :meth:`oneflow.Tensor.masked_fill`.
     """,
 )
 
@@ -1960,8 +2072,30 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.bool,
+    r"""``Tensor.bool()`` is equivalent to ``Tensor.to(oneflow.bool)``. See :class:`oneflow.Tensor.to()`.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.bool()
+        >>> input.dtype
+        oneflow.bool
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.int,
-    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+    r"""``Tensor.int()`` is equivalent to ``Tensor.to(flow.int32)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -1982,7 +2116,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.long,
-    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+    r"""``Tensor.long()`` is equivalent to ``Tensor.to(flow.int64)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2003,7 +2137,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.float,
-    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+    r"""``Tensor.float()`` is equivalent to ``Tensor.to(flow.float32)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2024,7 +2158,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.double,
-    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+    r"""``Tensor.double()`` is equivalent to ``Tensor.to(flow.float64)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2175,8 +2309,12 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.type,
-    r"""Returns the type if dtype is not provided, else casts this object to the specified type.
-        If this is already of the correct type, no copy is performed and the original object is returned.
+    r"""
+    type(dtype=None, non_blocking=False, **kwargs) -> str or Tensor
+
+    Returns the type if dtype is not provided, else casts this object to the specified type.
+
+    If this is already of the correct type, no copy is performed and the original object is returned.
 
     Args:
         dtype (oneflow.dtype or oneflow.tensortype or string, optional): The desired type.
@@ -2198,5 +2336,151 @@ add_docstr(
         tensor([1., 2.], device='cuda:0', dtype=oneflow.float64)
         >>> a.type("oneflow.HalfTensor")  # string input
         tensor([1., 2.], dtype=oneflow.float16)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter,
+    """
+    See :func:`oneflow.scatter`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_,
+    """
+    Inplace version of :func:`oneflow.Tensor.scatter`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add,
+    """
+    See :func:`oneflow.scatter_add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add_,
+    """
+    Inplace version of :func:`oneflow.Tensor.scatter_add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cross,
+    """
+    See :func:`oneflow.cross`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nansum,
+    """
+    See :func:`oneflow.nansum`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> x.nansum()
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> x.nansum(dim=1, keepdim=True)
+        tensor([[1.],
+                [2.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bincount,
+    """
+    See :func:`oneflow.bincount`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([0, 2, 3]).int()
+        >>> x.bincount()
+        tensor([1, 0, 1, 1], dtype=oneflow.int64)
+        >>> weight = flow.Tensor([0.1, 0.2, 0.3])
+        >>> x.bincount(weight)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000], dtype=oneflow.float32)
+        >>> x.bincount(weight, minlength=5)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000, 0.0000], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli,
+    """
+    See :func:`oneflow.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli()
+        tensor([1., 1., 1.], dtype=oneflow.float32)
+        >>> x.bernoulli(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli_,
+    """
+    The inplace version of :func:`oneflow.Tensor.bernoulli_`.
+
+    See :func:`oneflow.Tensor.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli_(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+        >>> x
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unique,
+    """
+    See :func:`oneflow.unique`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> x.unique()
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
+        >>> x, indices = x.unique(return_inverse=True)
+        >>> indices
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
+        >>> x, counts = x.unique(return_counts=True)
+        >>> counts
+        tensor([1, 1, 1, 1], dtype=oneflow.int32)
     """,
 )

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VPU_INSTRUCTION__H_
 
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/intrusive/intrusive.h"
@@ -24,15 +25,13 @@ limitations under the License.
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/stream_policy.h"
-#include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 
 namespace oneflow {
 
 class Stream;
 
 namespace vm {
-
-class InstructionType;
 
 static const int kInstructionStatusBufferBytes = 64;
 
@@ -106,16 +105,13 @@ class Instruction final : public intrusive::Base {
   using DependenceAccessList =
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
-  void __Init__(Stream* stream, std::unique_ptr<InstructionPolicy>&& instruction_policy);
+  void __Init__(Stream* stream, std::shared_ptr<InstructionPolicy>&& instruction_policy);
 
   // Getters
   const Stream& stream() const { return *stream_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
   const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const InstructionPolicy& instruction_policy() const { return *instruction_policy_; }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const {
-    return instruction_policy_->phy_instr_operand();
-  }
   std::string DebugName() const;
 
   const intrusive::ListHook& dispatched_instruction_hook() const {
@@ -143,10 +139,12 @@ class Instruction final : public intrusive::Base {
 
   // methods
   void InitStatus();
-  void DeleteStatusAndClearEdges();
+  void DeleteStatusAndCheckEdges();
+  bool Launched() const;
   bool Done() const;
   StreamPolicy* mut_stream_policy();
   const StreamPolicy& stream_policy() const;
+  intrusive::shared_ptr<Frame> foreign_frame() const { return foreign_frame_; }
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
@@ -203,8 +201,9 @@ class Instruction final : public intrusive::Base {
   // fields
   intrusive::Ref intrusive_ref_;
   Stream* stream_;
-  std::unique_ptr<InstructionPolicy> instruction_policy_;
+  std::shared_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
+  intrusive::shared_ptr<Frame> foreign_frame_;
 };
 
 using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;

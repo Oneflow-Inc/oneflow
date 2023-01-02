@@ -18,4 +18,5 @@ Matrix Properties
     vector_norm
     matrix_norm
     diagonal
-
+    inv
+    cross

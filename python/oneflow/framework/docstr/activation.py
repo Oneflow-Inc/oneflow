@@ -75,10 +75,23 @@ add_docstr(
     r"""
     gelu(x: Tensor) -> Tensor 
 
-    The equation is:
+    Applies the Gaussian Error Linear Units function:
 
-    .. math::
-         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
     
     For example:
 
@@ -100,6 +113,28 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow._C.quick_gelu,
+    r"""
+    quick_gelu(x: Tensor) -> Tensor 
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    See    
+    :class:`~oneflow.nn.QuickGELU` for more details.
+ 
+    """,
+)
 
 add_docstr(
     oneflow._C.softmax,
@@ -126,6 +161,37 @@ add_docstr(
         \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
     
     See :class:`~oneflow.nn.LogSoftmax` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.gumbel_softmax,
+    r"""
+    gumbel_softmax(x: Tensor, dim: int, tau: float = 1.0, hard: bool = False) -> Tensor 
+
+    Solve the problem that the output values of argmax do not reflect the probability distribution of the model's output.
+    Compensates for the fact that the argmax cannot participate in gradient back-propagation.
+
+    Gumbel is defined as:
+
+    .. math::
+        Gumbel_i = -log(-log(U_i)),\ U_i \sim U(0,1)
+
+    Add Noise ~ Gumbel:
+
+    .. math::
+        In = (In + Noise) / tau
+
+    Calculate Softmax value:
+
+    .. math::
+        gumbel\_softmax(In)=\frac{e^{In_i/tau}}{\sum_{j=1}^n{e^{In_j/tau}}},i=1,2,3...n
+
+    Parameters:
+        x (oneflow.Tensor): the input Tensor.
+        dim (int, Tuple[int]): the dimension to softmax. 
+        tau (double): the input tensor of Softmax should obey the Gumbel(x, tau).
+        hard (bool): if `hard=True`, the output tensor will be one-hot.
     """,
 )
 
@@ -476,5 +542,38 @@ add_docstr(
         >>> out = flow.nn.functional.celu(input, alpha=0.5)
         >>> out
         tensor([-0.3161,  0.0000,  0.5000], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow._C.threshold,
+    """
+    threshold(input: Tensor, threshold: float, value: float) -> Tensor
+
+    Thresholds each element of the input Tensor.
+
+    See :class:`~oneflow.nn.Threshold` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.hardshrink,
+    """
+    hardshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the hard shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Hardshrink` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.softshrink,
+    """
+    softshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the soft shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Softshrink` for more details.
     """,
 )

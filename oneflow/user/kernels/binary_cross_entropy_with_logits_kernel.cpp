@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 namespace user_op {
@@ -36,20 +37,21 @@ inline T CalSigmoid(const T x) {
   return half_of_one * std::tanh(half_of_one * x) + half_of_one;
 }
 
-template<typename T>
-void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T* input, const T* target,
-                                            T* out, const T* weight,
-                                            const T* pos_weight_processed) {
+template<typename INPUT_T, typename TARGET_T>
+void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const INPUT_T* input,
+                                            const TARGET_T* target, TARGET_T* out,
+                                            const TARGET_T* weight,
+                                            const TARGET_T* pos_weight_processed) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    T input_val = input[i];
-    T target_val = target[i];
-    T max_val = ComputeMaxVal(input_val);
+    TARGET_T input_val = static_cast<TARGET_T>(input[i]);
+    TARGET_T target_val = target[i];
+    TARGET_T max_val = ComputeMaxVal(input_val);
     if (out != nullptr) {
       if (pos_weight_processed == nullptr) {
         out[i] = (1 - target_val) * input_val + max_val
                  + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
       } else {
-        T pos_weight_processed_val = pos_weight_processed[i] - target_val + 1;
+        TARGET_T pos_weight_processed_val = pos_weight_processed[i] - target_val + 1;
         out[i] = (1 - target_val) * input_val
                  + (pos_weight_processed_val
                     * (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)) + max_val));
@@ -58,28 +60,32 @@ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T* input, co
     if (weight != nullptr && out != nullptr) { out[i] *= weight[i]; }
   }
 }
-template<typename T>
-void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input, const T* target,
-                                                const T* dy, T* dx, const T* weight,
-                                                const T* pos_weight_processed) {
+
+template<typename INPUT_T, typename TARGET_T>
+void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const INPUT_T* input,
+                                                const TARGET_T* target, const TARGET_T* dy,
+                                                INPUT_T* dx, const TARGET_T* weight,
+                                                const TARGET_T* pos_weight_processed) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    T input_val = input[i];
-    T target_val = target[i];
-    T dy_val = dy[i];
-    T input_sigmoid = CalSigmoid(input_val);
+    INPUT_T input_val = input[i];
+    TARGET_T target_val = target[i];
+    TARGET_T dy_val = dy[i];
+    TARGET_T input_sigmoid = static_cast<TARGET_T>(CalSigmoid(input_val));
+    TARGET_T dx_i_buffer = 0.0;
     if (pos_weight_processed == nullptr) {
-      dx[i] = (input_sigmoid - target_val) * dy_val;
+      dx_i_buffer = (input_sigmoid - target_val) * dy_val;
     } else {
-      dx[i] =
+      dx_i_buffer =
           dy_val
           * ((pos_weight_processed[i] + 1 - target_val) * input_sigmoid - pos_weight_processed[i]);
     }
 
-    if (weight != nullptr) { dx[i] *= weight[i]; }
+    if (weight != nullptr) { dx_i_buffer *= weight[i]; }
+    dx[i] = static_cast<INPUT_T>(dx_i_buffer);
   }
 }
 
-template<typename T>
+template<typename INPUT_T, typename TARGET_T>
 class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
  public:
   BinaryCrossEntropyWithLogitsKernel() = default;
@@ -95,26 +101,31 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
 
     const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
 
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* out = out_blob->mut_dptr<T>();
+    const INPUT_T* input = input_blob->dptr<INPUT_T>();
+    const TARGET_T* target = target_blob->dptr<TARGET_T>();
+    TARGET_T* out = out_blob->mut_dptr<TARGET_T>();
 
-    const T* weight =
-        ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
+    const TARGET_T* weight = ctx->has_input("weight", 0)
+                                 ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>()
+                                 : nullptr;
 
-    T* pos_weight_processed = nullptr;
+    TARGET_T* pos_weight_processed = nullptr;
 
     if (ctx->Attr<bool>("has_pos_weight")) {
-      pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
-      const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
+      pos_weight_processed = tmp_buffer_blob->mut_dptr<TARGET_T>();
+      const TARGET_T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<TARGET_T>();
 
       Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
-      NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
-          XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape_view(), target));
+      auto bcast_mul =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kMul, target_blob->data_type(),
+              target_blob->data_type(), target_blob->shape_view().NumAxes());
+      CHECK(bcast_mul);
+      bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
+                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsOut(elem_cnt, input, target, out, weight,
                                            pos_weight_processed);
@@ -122,7 +133,7 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
+template<typename INPUT_T, typename TARGET_T>
 class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
  public:
   BinaryCrossEntropyWithLogitsGradKernel() = default;
@@ -139,26 +150,31 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
 
     const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
 
-    const T* dy = dy_blob->dptr<T>();
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* dx = dx_blob->mut_dptr<T>();
-    const T* weight =
-        ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
+    const TARGET_T* dy = dy_blob->dptr<TARGET_T>();
+    const INPUT_T* input = input_blob->dptr<INPUT_T>();
+    const TARGET_T* target = target_blob->dptr<TARGET_T>();
+    INPUT_T* dx = dx_blob->mut_dptr<INPUT_T>();
+    const TARGET_T* weight = ctx->has_input("weight", 0)
+                                 ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>()
+                                 : nullptr;
 
-    T* pos_weight_processed = nullptr;
+    TARGET_T* pos_weight_processed = nullptr;
 
     if (ctx->Attr<bool>("has_pos_weight")) {
-      pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
-      const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
+      pos_weight_processed = tmp_buffer_blob->mut_dptr<TARGET_T>();
+      const TARGET_T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<TARGET_T>();
 
       Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
-      NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
-          XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape_view(), target));
+      auto bcast_mul =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kMul, target_blob->data_type(),
+              target_blob->data_type(), target_blob->shape_view().NumAxes());
+      CHECK(bcast_mul);
+      bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
+                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut(elem_cnt, input, target, dy, dx, weight,
                                                pos_weight_processed);
@@ -188,29 +204,34 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 
 }  // namespace
 
-#define REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                 \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<dtype>());
+#define REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(input_dtype, target_dtype)               \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                        \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<input_dtype, target_dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
+                       && (user_op::HobDataType("input", 0) == GetDataType<input_dtype>::value)   \
+                       && (user_op::HobDataType("target", 0) == GetDataType<target_dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<target_dtype>::value))   \
+      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<target_dtype>());
 
-#define REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                            \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))    \
-      .SetInferTmpSizeFn(GenBwInferTmpSizeFn<dtype>());
+#define REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(input_dtype, target_dtype)          \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                                   \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<input_dtype, target_dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
+                       && (user_op::HobDataType("input", 0) == GetDataType<input_dtype>::value)   \
+                       && (user_op::HobDataType("target", 0) == GetDataType<target_dtype>::value) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<target_dtype>::value)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<input_dtype>::value))     \
+      .SetInferTmpSizeFn(GenBwInferTmpSizeFn<target_dtype>());
 
-REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(float)
-REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(double)
-REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(float)
-REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(double)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(float, float)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(float, double)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(double, float)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_KERNEL(double, double)
+
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(float, float)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(float, double)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(double, float)
+REGISTER_BINARY_CROSS_ENTROPY_WITH_LOGITS_GRAD_KERNEL(double, double)
 
 }  // namespace user_op
 }  // namespace oneflow

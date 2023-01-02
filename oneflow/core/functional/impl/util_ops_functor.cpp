@@ -53,12 +53,20 @@ class IsInfFunctor final : public UtilOpsFunctor {
   IsInfFunctor() { op_ = CHECK_JUST(one::OpBuilder("isinf").Input("in").Output("out").Build()); }
 };
 
+class IsFiniteFunctor final : public UtilOpsFunctor {
+ public:
+  IsFiniteFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("isfinite").Input("in").Output("out").Build());
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsNanFunctor>("IsNan"); };
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsInfFunctor>("IsInf"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsFiniteFunctor>("IsFinite"); };
 
 }  // namespace functional
 }  // namespace one

@@ -172,6 +172,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     int64_t tmp_buf_elem_cnt = tmp_buffer->shape_view().elem_cnt();
     const int64_t weight_num = ctx->input_size("weights");
     user_op::Tensor* d_x = ctx->Tensor4ArgNameAndIndex("d_x", 0);
+    const std::vector<float> alpha_list = ctx->Attr<std::vector<float>>("alpha_list");
 
     auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
     const auto* matmul_grad_cache =
@@ -192,6 +193,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
+    const double alpha_one = 1.0;
+    auto sp_alpha_one = GetCublasScalarParameter(alpha_one, cublas_compute_dtype);
     double alpha = 1.0;
     auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     double beta = 0.0;
@@ -230,6 +233,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                            /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
       if (idx != 0) {
+        alpha = alpha_list.at(idx - 1);
+        sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
         const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx - 1);
         user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
         epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
@@ -262,15 +267,13 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         */
         OF_CUDA_CHECK(cudaEventRecord(main_stream_event_, cuda_stream->cuda_stream()));
         OF_CUBLAS_CHECK(cublasLtMatmul(
-            cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha_one,
             weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
             matmul_grad_cache->cublas_b_desc, &sp_beta, d_x->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, d_x->mut_dptr(), matmul_grad_cache->cublas_c_desc,
             nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
             cuda_stream->cuda_stream()));
       }
-      alpha = 1.0;
-      sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
 
       // step1: Get last layer's dbias.
       if (idx == weight_num - 1) {
@@ -289,7 +292,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                       nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
         OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->grad_cuda_stream(), main_stream_event_));
         OF_CUBLAS_CHECK(cublasLtMatmul(
-            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha_one,
             dgrad_buf, matmul_grad_cache->cublas_a_desc, ones, matmul_grad_cache->cublas_b_desc,
             &sp_beta, d_last_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc,
             d_last_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc, nullptr,
@@ -316,7 +319,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
           OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->grad_cuda_stream(), main_stream_event_));
         }
         OF_CUBLAS_CHECK(cublasLtMatmul(
-            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha_one,
             hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
             matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
@@ -343,7 +346,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                       nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
         OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->grad_cuda_stream(), main_stream_event_));
         OF_CUBLAS_CHECK(cublasLtMatmul(
-            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha_one,
             x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
             matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),

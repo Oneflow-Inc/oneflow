@@ -43,10 +43,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor(6., dtype=oneflow.float32)
-        >>> (values, indices) = flow.max(input, dim=1)
-        >>> values
+        >>> result = flow.max(input, dim=1)
+        >>> result.values
         tensor([5., 6.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([2, 1], dtype=oneflow.int64)
 
     """,
@@ -79,10 +79,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor(1., dtype=oneflow.float32)
-        >>> (values, indices) = flow.min(input, dim=1)
-        >>> values
+        >>> result = flow.min(input, dim=1)
+        >>> result.values
         tensor([1., 2.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([1, 0], dtype=oneflow.int64)
 
     """,
@@ -245,6 +245,85 @@ add_docstr(
         tensor([True, True, True], dtype=oneflow.bool)
         >>> flow.any(input, 0, True)
         tensor([[True, True, True]], dtype=oneflow.bool)
+
+    """,
+)
+
+add_docstr(
+    oneflow.nansum,
+    r"""oneflow.nansum(input, dim, keepdim=False, *, dtype=None) -> Tensor
+
+    Returns the sum of each row of the ``input`` tensor in the given dimension ``dim``,
+    treating Not a Numbers (NaNs) as zero. If ``dim`` is a list of dimensions, 
+    reduce over all of them.
+
+    If ``keepdim`` is ``True``, the output tensor is of the same size as ``input`` except 
+    in the dimension(s) ``dim`` where it is of size 1. 
+    Otherwise, ``dim`` is squeezed (see :class:`oneflow.squeeze()`), 
+    resulting in the output tensor having 1 (or ``len(dim)``) fewer dimension(s).
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nansum.html.
+
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: ``None``
+        keepdim (bool, optional): whether the output tensor has ``dim`` retained or not. Default: `False`
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor. 
+            If specified, the input tensor is casted to dtype before the operation is performed.
+            This is useful for preventing data type overflows. Default: ``None``.
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> flow.nansum(x)
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> flow.nansum(x, dim=1)
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> x = flow.tensor([float("nan") for i in range(3)])
+        >>> flow.nansum(x)
+        tensor(0., dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.logsumexp,
+    r"""
+    oneflow.logsumexp(input, dim, keepdim=False) -> Tensor
+    
+    Returns the log of summed exponentials of each row of the :attr:`input`
+    tensor in the given dimension :attr:`dim`. The computation is numerically
+    stabilized.
+
+    For summation index :math:`j` given by `dim` and other indices :math:`i`, the result is
+
+    .. math::
+        \text{logsumexp}(x)_{{i}} = \log \sum_j \exp(x_{{ij}})
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.12/generated/torch.logsumexp.html.
+
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> flow.logsumexp(input, 0)
+        tensor([4.0486, 5.0486, 6.0486], dtype=oneflow.float32)
+        >>> flow.logsumexp(input, 1)
+        tensor([3.4076, 6.4076], dtype=oneflow.float32)
 
     """,
 )

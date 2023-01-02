@@ -52,6 +52,7 @@ class FillTensorGpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_FILL_CUDA_KERNEL(float)
+REGISTER_FILL_CUDA_KERNEL(half)
 REGISTER_FILL_CUDA_KERNEL(double)
 REGISTER_FILL_CUDA_KERNEL(int8_t)
 REGISTER_FILL_CUDA_KERNEL(int32_t)
