@@ -70,7 +70,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
 
   // TODO(chengcheng): filter ops which has special type
   // TODO(chengcheng): get stream by op type
-  if (op_conf.has_variable_conf()                                                   /* varialbe */
+  if (op_conf.has_variable_conf()                                                   /* variable */
       || IsTickOpConf(op_conf)                                                      /* tick */
       || op_conf.has_input_conf() || op_conf.has_output_conf()                      /* io */
       || op_conf.has_wait_and_send_ids_conf() || op_conf.has_callback_notify_conf() /* ctrl */
