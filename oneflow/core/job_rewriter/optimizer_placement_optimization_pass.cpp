@@ -62,8 +62,8 @@ class DataParallelNodeSequence final {
   int64_t len() const { return len_; }
 
   void resize(const int64_t size) {
-    CHECK(size <= len_);
-    CHECK(size > 1);
+    CHECK_LE(size, len_);
+    CHECK_GE(size, 1);
     nodes_.resize(size);
     len_ = nodes().size();
   }
