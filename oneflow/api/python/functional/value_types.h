@@ -94,6 +94,7 @@ enum ValueType : int {
   kATTR_REF,
   kDTYPE,
   kSHAPE,
+  kSHAPE_MAYBE,
   kGENERATOR,
   kGENERATOR_REF,
   kGENERATOR_MAYBE,
@@ -152,6 +153,7 @@ VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
+VALUE_TYPE_OF_IMPL(Maybe<Shape>, kSHAPE_MAYBE);
 VALUE_TYPE_OF_IMPL(std::vector<Shape>, kSHAPE_LIST);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);

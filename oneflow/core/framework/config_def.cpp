@@ -30,7 +30,7 @@ ConfigDef* MutGlobalConfigDef() {
 template<ConfigDefType config_def_type>
 AttrValue* AddAttrDef(const std::string& name, const std::string& description) {
   auto* name2flag_def = MutGlobalConfigDef<config_def_type>()->mutable_attr_name2attr_def();
-  CHECK(name2flag_def->find(name) == name2flag_def->end());
+  CHECK(name2flag_def->find(name) == name2flag_def->end()) << "Duplicate attribute: " << name;
   auto* flag_def = &(*name2flag_def)[name];
   flag_def->set_name(name);
   flag_def->set_description(description);

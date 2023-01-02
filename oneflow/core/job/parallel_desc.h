@@ -146,6 +146,8 @@ extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_de
 extern Maybe<Symbol<ParallelDesc>> (*TxtStringToPlacement)(const std::string& parallel_conf_str);
 extern Maybe<void> (*CheckDeviceIdsIsValid)(Symbol<ParallelDesc> placement);
 
+extern Maybe<Symbol<ParallelDesc>> (*GetParallelDescOfThisRank)(const std::string& device_tag);
+
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
 }
@@ -159,6 +161,7 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+ParallelConf GenParallelConfOfCpuOnAllRanks();
 
 namespace private_details {
 
@@ -176,16 +179,16 @@ namespace std {
 template<>
 struct hash<oneflow::ParallelDesc> {
   size_t operator()(const oneflow::ParallelDesc& pr) const {
+    using namespace oneflow;
     size_t ret = 0;
     int i = 0;
     int shift_roundtrip = (sizeof(size_t) / 2);
     for (int machine_id : pr.sorted_machine_ids()) {
       int shift = i++ % shift_roundtrip;
-      ret ^= machine_id << shift_roundtrip << shift;
-      ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
+      AddHash(&ret, machine_id << shift_roundtrip << shift);
+      AddHash(&ret, pr.sorted_dev_phy_ids(machine_id).size() << shift);
     }
-    const auto& shape_hash = std::hash<oneflow::Shape>();
-    ret ^= shape_hash(*pr.hierarchy());
+    AddHash(&ret, *pr.hierarchy());
     return hash<size_t>()(ret);
   }
 };

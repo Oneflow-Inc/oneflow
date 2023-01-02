@@ -250,17 +250,28 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   }
 
   SliceParams large_slice_param;
+  std::copy(large->stride().begin(), large->stride().end(), large_slice_param.stride);
   SliceParams small_slice_param;
+  std::copy(small->stride().begin(), small->stride().end(), small_slice_param.stride);
   ConstructSliceParamsLarge(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             large->shape_view(), &large_slice_param);
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
+  if (large_slice_param.ndim == 0 && small_slice_param.ndim == 0) {
+    // Copy data directly for scalar tensor
+    AutoMemcpy(ctx->stream(), dst->mut_dptr<T>(), src->dptr<T>(), sizeof(T), src->mem_case(),
+               dst->mem_case());
+    return;
+  }
   if (from_large_to_small) {
     if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
       SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
                                                dst->mut_dptr<T>());
     } else {
+      AutoMemset(ctx->stream(), dst->mut_dptr(), 0,
+                 dst->shape_view().elem_cnt() * GetSizeOfDataType(dst->data_type()),
+                 dst->mem_case());
       SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
                                                src->dptr<T>(), dst->mut_dptr<T>());
     }
@@ -271,7 +282,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
@@ -321,9 +332,6 @@ class SliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
-               y_tensor->shape_view().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
-               y_tensor->mem_case());
     WriteSlice<device_type, T>(ctx, x_tensor, y_tensor, slice_ctx, /*from_large_to_small=*/true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -429,6 +437,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 #define REGISTER_SLICE_KERNEL_WITH_DEVICE(device) \
   REGISTER_SLICE_KERNEL(device, bool)             \
+  REGISTER_SLICE_KERNEL(device, float16)          \
   REGISTER_SLICE_KERNEL(device, float)            \
   REGISTER_SLICE_KERNEL(device, double)           \
   REGISTER_SLICE_KERNEL(device, int32_t)          \
@@ -437,9 +446,12 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   REGISTER_SLICE_KERNEL(device, uint8_t)
 
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_SLICE_KERNEL(DeviceType::kCPU, bfloat16)
 #ifdef WITH_CUDA
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
-REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+REGISTER_SLICE_KERNEL(DeviceType::kCUDA, nv_bfloat16)
+#endif
 #endif
 
 }  // namespace oneflow

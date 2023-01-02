@@ -31,13 +31,13 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
     out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
   }
 
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
+  ctx->SetOutputShape("y", 0, Shape(out_shape));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBWTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -63,12 +63,12 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -117,59 +117,5 @@ DEF_ADAPTIVE_AVG_POOL_OP(AdaptiveAvgPool2D)
 DEF_ADAPTIVE_AVG_POOL_OP(AdaptiveAvgPool3D)
 
 #undef DEF_ADAPTIVE_AVG_POOL_OP
-
-REGISTER_USER_OP_GRAD("adaptive_avg_pool1d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto adaptive_avg_pool1d_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(adaptive_avg_pool1d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("adaptive_avg_pool1d_grad")
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(
-          user_op::OpArg("x", 0),
-          [&ctx, &adaptive_avg_pool1d_grad_op_name]() -> const std::string& {
-            return ctx->GetOp(adaptive_avg_pool1d_grad_op_name).output("dx", 0);
-          });
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("adaptive_avg_pool2d_grad")
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(
-          user_op::OpArg("x", 0),
-          [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
-            return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
-          });
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("adaptive_avg_pool3d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto adaptive_avg_pool3d_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(adaptive_avg_pool3d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("adaptive_avg_pool3d_grad")
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(
-          user_op::OpArg("x", 0),
-          [&ctx, &adaptive_avg_pool3d_grad_op_name]() -> const std::string& {
-            return ctx->GetOp(adaptive_avg_pool3d_grad_op_name).output("dx", 0);
-          });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

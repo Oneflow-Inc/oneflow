@@ -27,9 +27,6 @@ import oneflow as flow
 def compare_with_numpy_sgd(
     test_case, device, x_shape, tensor_num, learning_rate, train_iters, weight_decay
 ):
-    os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "1"
-    os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
-
     random_weight_seq = []
     init_value_seq = []
 
@@ -89,6 +86,8 @@ def compare_with_numpy_sgd(
             self.add_optimizer(sgd0)
             self.config.enable_amp(True)
             self.config.allow_fuse_model_update_ops(True)
+            self.config.enable_multi_tensor_update(True)
+            self.config.enable_fused_model_update_cast(True)
 
         def build(self, mask_tensor_list):
             loss = flow.sum(self.m(mask_tensor_list))
@@ -155,5 +154,3 @@ class TestMultiTensorSGD(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "0"
-    os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "0"

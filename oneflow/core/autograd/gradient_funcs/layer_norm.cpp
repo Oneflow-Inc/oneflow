@@ -108,10 +108,10 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
   std::shared_ptr<Tensor> inv_variance = saved_tensors.at(ctx->inv_variance_index);
 
   if (ctx->has_affine) {
-    // Use LayerNormParamGrad(Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64
-    // begin_params_axis, Double epsilon).
-    const auto& results = JUST(
-        functional::LayerNormParamGrad(dy, x, mean, inv_variance, begin_params_axis, ctx->epsilon));
+    // Use LayerNormParamGrad(Tensor dy, Tensor x, Tensor mean, Tensor inv_variance,
+    // Int64 begin_params_axis)
+    const auto& results =
+        JUST(functional::LayerNormParamGrad(dy, x, mean, inv_variance, begin_params_axis));
     in_grads->at(1) = results->at(0);  // For gamma.
     in_grads->at(2) = results->at(1);  // For beta.
   }

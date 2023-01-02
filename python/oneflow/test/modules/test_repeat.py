@@ -51,6 +51,13 @@ class TestRepeat(flow.unittest.TestCase):
         z = y.byte()
         return z
 
+    @autotest(n=5)
+    def test_flow_tensor_0size_with_random_data(test_case):
+        x = random_tensor(ndim=2, dim0=3, dim1=1)
+        sizes = (1, 0)
+        y = x.repeat(sizes)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

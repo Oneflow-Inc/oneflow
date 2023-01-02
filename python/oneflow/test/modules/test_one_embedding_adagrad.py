@@ -77,12 +77,15 @@ def compare_with_numpy_adagrad(
                 down_scale_by_tensor,
                 skip_if,
                 train_step,
+                0,
+                0.0,
                 scale,
                 weight_decay,
                 lr_decay,
                 epsilon,
                 line_size,
                 embedding_size,
+                "",
             )
 
     graph = TestGraph()
@@ -95,7 +98,7 @@ def compare_with_numpy_adagrad(
             np.array(learning_rate).reshape(1,).astype(np.float32)
         ).to("cuda")
         down_scale_by_tensor = flow.tensor(
-            np.array(down_scale_by).astype(np.float32)
+            np.array(down_scale_by).reshape(1,).astype(np.float32)
         ).to("cuda")
 
         def train_one_iter(ids, unique_embeddings, embedding_grad, skip_if, train_step):

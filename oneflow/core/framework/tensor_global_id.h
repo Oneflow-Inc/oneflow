@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_CONSISTENT_ID_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_CONSISTENT_ID_
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_GLOBAL_ID_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_GLOBAL_ID_
 
 #include "oneflow/core/common/maybe.h"
 
@@ -49,4 +49,4 @@ struct NonRecursiveInitGlobalId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args...> 
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_CONSISTENT_ID_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_GLOBAL_ID_

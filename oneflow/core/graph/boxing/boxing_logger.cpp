@@ -57,6 +57,17 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   return serialized_parallel_desc;
 }
 
+std::string NdSbpToCsvString(const NdSbp& nd_sbp) {
+  std::ostringstream ss;
+  ss << "(";
+  for (size_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    if (i > 0) { ss << " "; }
+    ss << SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  ss << ")";
+  return ss.str();
+}
+
 std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
                                    const std::string& src_op_name, const std::string& dst_op_name,
                                    const ParallelDesc& src_parallel_desc,
@@ -68,8 +79,8 @@ std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
   serialized_status += dst_op_name + ",";
   serialized_status += ParallelDescToString(src_parallel_desc) + ",";
   serialized_status += ParallelDescToString(dst_parallel_desc) + ",";
-  serialized_status += NdSbpToString(src_nd_sbp) + ",";
-  serialized_status += NdSbpToString(dst_nd_sbp) + ",";
+  serialized_status += NdSbpToCsvString(src_nd_sbp) + ",";
+  serialized_status += NdSbpToCsvString(dst_nd_sbp) + ",";
   serialized_status += GenLogicalBlobName(lbi) + ",";
   serialized_status += DataType_Name(logical_blob_desc.data_type()) + ",";
   serialized_status += ShapeToString(logical_blob_desc.shape()) + ",";

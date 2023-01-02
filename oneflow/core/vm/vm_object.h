@@ -27,6 +27,8 @@ namespace vm {
 class Instruction;
 class Dependence;
 
+using DependenceVector = std::vector<Dependence*>;
+
 enum OperandAccessType {
   kConstOperandAccess = 0,
   kMutableOperandAccess,

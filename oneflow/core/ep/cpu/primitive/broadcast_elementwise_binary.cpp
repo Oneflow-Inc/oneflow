@@ -45,6 +45,11 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
+template<>
+bfloat16 GetValue<bfloat16>(Scalar value) {
+  return static_cast<bfloat16>(GetValue<float>(value));
+}
+
 template<BinaryOp binary_op, typename Src, typename Dst>
 struct BinaryLhsScalarFunctor {
   BinaryLhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
@@ -568,7 +573,11 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 
                     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                         MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
-                        BINARY_ACTIVATION_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
+                        BINARY_ACTIVATION_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
+
+                        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                            MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                            BINARY_MATH_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY

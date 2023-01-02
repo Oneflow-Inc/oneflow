@@ -28,9 +28,9 @@ using Key128 = ulonglong2;
 
 namespace {
 
-template<typename Key, typename Index>
-__device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Index* table_size,
-                               Key key, Index* out) {
+template<typename Key, typename Index, bool dump_dirty_only>
+__device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool* entry_dirty_flag,
+                               Index* table_size, Key key, Index* out) {
   Key key_hi = (key | 0x1);
   Key key_lo = (key & 0x1);
   Index index_plus_one = 0;
@@ -41,6 +41,10 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
+      if (dump_dirty_only) {
+        bool entry_flag_val = *entry_dirty_flag;
+        if (!entry_flag_val) { *entry_dirty_flag = true; }
+      }
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
@@ -48,6 +52,10 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
+        if (dump_dirty_only) {
+          bool entry_flag_val = *entry_dirty_flag;
+          if (!entry_flag_val) { *entry_dirty_flag = true; }
+        }
         return true;
       } else {
         return false;
@@ -59,15 +67,20 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
   return false;
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool dump_dirty_only>
 __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* table_indices,
-                               Index* table_size, Key key, size_t hash, Index* out) {
+                               bool* table_dirty_flags, Index* table_size, Key key, size_t hash,
+                               Index* out) {
   const size_t start_idx = hash % capacity;
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = table_keys + idx;
     Index* entry_index = table_indices + idx;
-    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, table_size, key, out)) { return true; }
+    bool* entry_dirty_flag = dump_dirty_only ? table_dirty_flags + idx : nullptr;
+    if (TryGetOrInsert<Key, Index, dump_dirty_only>(entry_key, entry_index, entry_dirty_flag,
+                                                    table_size, key, out)) {
+      return true;
+    }
   }
   return false;
 }
@@ -94,15 +107,15 @@ __device__ bool GetOne(const size_t capacity, Key* table_keys, Index* table_indi
   return false;
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool dump_dirty_only>
 __global__ void OrdinalEncodeKernel(uint64_t capacity, Key* table_keys, Index* table_indices,
-                                    Index* table_size, uint32_t num_keys, const Key* keys,
-                                    Index* context) {
+                                    bool* table_dirty_flags, Index* table_size, uint32_t num_keys,
+                                    const Key* keys, Index* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = FullCacheHash()(key);
-    bool success = GetOrInsertOne<Key, Index>(capacity, table_keys, table_indices, table_size, key,
-                                              hash, context + i);
+    bool success = GetOrInsertOne<Key, Index, dump_dirty_only>(
+        capacity, table_keys, table_indices, table_dirty_flags, table_size, key, hash, context + i);
     assert(success);
   }
 }
@@ -117,14 +130,20 @@ __global__ void OrdinalEncodeLookupKernel(uint64_t capacity, Key* table_keys, In
   }
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool dump_dirty_only>
 __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* table_indices,
-                                        uint64_t start_key_index, uint64_t end_key_index,
-                                        uint32_t* n_dumped, Key* keys, Index* context) {
+                                        const bool* table_dirty_flags, uint64_t start_key_index,
+                                        uint64_t end_key_index, uint32_t* n_dumped, Key* keys,
+                                        Index* context) {
   CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
     Key entry_key = table_keys[i + start_key_index];
     Index entry_index = table_indices[i + start_key_index];
-    if (entry_index != 0) {
+    bool dump_flag = (entry_index != 0);
+    if (dump_dirty_only) {
+      bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
+      dump_flag = (dump_flag && entry_dirty_flag);
+    }
+    if (dump_flag) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
       keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
       context[index] = (entry_index >> 1U);
@@ -333,13 +352,18 @@ template<typename Key, typename Index>
 class OrdinalEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
-  explicit OrdinalEncoder(uint64_t capacity, float load_factor)
-      : capacity_(capacity), table_capacity_(capacity / load_factor) {
+  explicit OrdinalEncoder(uint64_t capacity, float load_factor, bool if_dump_dirty)
+      : capacity_(capacity),
+        table_capacity_(capacity / load_factor),
+        if_dump_dirty_(if_dump_dirty) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
+    }
     Clear();
   }
   ~OrdinalEncoder() {
@@ -348,13 +372,15 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_keys_));
     OF_CUDA_CHECK(cudaFree(table_indices_));
+    if (if_dump_dirty_) { OF_CUDA_CHECK(cudaFree(table_dirty_flags_)); }
   }
 
-  template<bool insert>
+  template<bool insert, bool dump_dirty_only>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, Index* context) {
     if (insert) {
-      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index>), stream, num_keys, table_capacity_,
-                      table_keys_, table_indices_, table_size_, num_keys, keys, context);
+      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index, dump_dirty_only>), stream, num_keys,
+                      table_capacity_, table_keys_, table_indices_, table_dirty_flags_, table_size_,
+                      num_keys, keys, context);
     } else {
       RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, Index>), stream, num_keys, table_capacity_,
                       table_keys_, table_indices_, num_keys, keys, context);
@@ -365,15 +391,33 @@ class OrdinalEncoder {
             uint32_t* n_dumped, Key* keys, Index* context) {
     OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
-    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index>), stream, end_key_index - start_key_index,
-                    table_keys_, table_indices_, start_key_index, end_key_index, n_dumped, keys,
-                    context);
+    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, false>), stream,
+                    end_key_index - start_key_index, table_keys_, table_indices_,
+                    table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
+  }
+
+  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+                     uint32_t* n_dumped, Key* keys, Index* context) {
+    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
+    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, true>), stream,
+                    end_key_index - start_key_index, table_keys_, table_indices_,
+                    table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
+  }
+
+  void ClearDirtyFlags() {
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    }
   }
 
   void Clear() {
     OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(Index)));
     OF_CUDA_CHECK(cudaMemset(table_keys_, 0, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMemset(table_indices_, 0, table_capacity_ * sizeof(Index)));
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    }
   }
 
   uint64_t TableCapacity() const { return table_capacity_; }
@@ -386,8 +430,10 @@ class OrdinalEncoder {
   int device_index_{};
   Key* table_keys_;
   Index* table_indices_;
+  bool* table_dirty_flags_;
   uint64_t capacity_;
   uint64_t table_capacity_;
+  bool if_dump_dirty_;
   Index* table_size_{};
   Index* table_size_host_{};
 };
@@ -397,7 +443,8 @@ class CacheImpl : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
-      : encoder_(options.capacity, options.load_factor),
+      : if_dump_dirty_(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
+        encoder_(options.capacity, options.load_factor, if_dump_dirty_),
         device_index_(-1),
         options_(options),
         max_query_length_(0) {
@@ -460,15 +507,19 @@ class CacheImpl : public Cache {
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override;
+
   void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
                           const void* update, const float* lr, float scale, uint32_t* n_evicted,
                           void* evicted_keys, void* evicted_values) override;
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
 
+  void ClearDirtyFlags() override;
+
   void Clear() override;
 
  private:
+  bool if_dump_dirty_;
   OrdinalEncoder<Key, Index> encoder_;
   int device_index_;
   uint32_t num_elem_per_value_{};
@@ -486,7 +537,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::Test(ep::Stream* stream, uint32_t n
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<false, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  } else {
+    encoder_.template Encode<false, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                           encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, false>), stream, values_elem_cnt,
                   num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
@@ -536,7 +593,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_
                                                  void* evicted_values) {
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<true, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                         encoding_buffer_);
+  } else {
+    encoder_.template Encode<true, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
                   num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
@@ -550,22 +613,39 @@ void CacheImpl<Key, Elem, Index, pack_size>::FusedHalfUpdatePut(
   if (!std::is_same<Elem, float>::value) { UNIMPLEMENTED(); }
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<true, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                         encoding_buffer_);
+  } else {
+    encoder_.template Encode<true, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((FusedHalfUpdateKernel<Elem, Index, pack_size>), stream,
                   values_elem_cnt / pack_size, num_elem_per_value_, values_, values_elem_cnt,
                   encoding_buffer_, static_cast<const Elem*>(values),
                   static_cast<const half*>(update), lr, scale);
 }
+
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Dump(ep::Stream* stream, uint64_t start_key_index,
                                                   uint64_t end_key_index, uint32_t* n_dumped,
                                                   void* keys, void* values) {
-  encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-                encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped,
+                           static_cast<Key*>(keys), encoding_buffer_);
+  } else {
+    encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
+                  encoding_buffer_);
+  }
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
+}
+
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags() {
+  encoder_.ClearDirtyFlags();
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>

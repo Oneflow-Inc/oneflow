@@ -34,6 +34,19 @@ Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
 Maybe<void> ThreadLocalScopeStackPop();
 
+class BackwardPassScopeGuard {
+ public:
+  BackwardPassScopeGuard();
+  explicit BackwardPassScopeGuard(const std::shared_ptr<Scope>& scope);
+  ~BackwardPassScopeGuard();
+
+ private:
+  std::shared_ptr<Scope> backward_pass_scope_;
+};
+
+Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope);
+void ClearAllBackwardPassScope();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_

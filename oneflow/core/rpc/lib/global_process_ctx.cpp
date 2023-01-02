@@ -32,7 +32,10 @@ int64_t GlobalProcessCtx::Rank() {
 
 int64_t GlobalProcessCtx::LocalRank() {
   char* local_rank_env = std::getenv("LOCAL_RANK");
-  if (!local_rank_env) { return 0; }
+  if (!local_rank_env) {
+    static int64_t local_rank = Rank() % NumOfProcessPerNode();
+    return local_rank;
+  }
   CHECK(IsStrInt(local_rank_env));
   static int64_t local_rank = std::stol(local_rank_env);
   return local_rank;

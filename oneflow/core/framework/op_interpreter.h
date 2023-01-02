@@ -33,8 +33,6 @@ namespace one {
 
 struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, const bool inplace)
-      : attrs(attrs_arg), inplace(inplace) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
@@ -55,7 +53,6 @@ struct OpExprInterpContext {
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op
   Optional<Symbol<NdSbp>> nd_sbp;                // for global op
-  Optional<bool> inplace;                        // for inplace operation op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
@@ -84,8 +81,8 @@ class OpExprInterpreter {
   _macro(CastToLocalOp);             \
   _macro(CastFromLocalOp);           \
   _macro(GlobalToGlobalOp);          \
-  _macro(CastToGlobalOp);            \
-  _macro(CastFromGlobalOp);          \
+  _macro(LocalToGlobalOp);           \
+  _macro(GlobalToLocalOp);           \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \

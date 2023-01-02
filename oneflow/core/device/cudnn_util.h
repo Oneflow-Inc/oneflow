@@ -96,6 +96,22 @@ const void* CudnnSPOnePtr();
 template<typename T>
 const void* CudnnSPZeroPtr();
 
+const void* CudnnSPOnePtr(const DataType dtype);
+
+const void* CudnnSPZeroPtr(const DataType dtype);
+
+class CudnnHandlePool {
+ public:
+  CudnnHandlePool() = default;
+  ~CudnnHandlePool();
+  cudnnHandle_t Get();
+  void Put(cudnnHandle_t handle);
+
+ private:
+  std::mutex mutex_;
+  HashMap<int64_t, std::vector<cudnnHandle_t>> handle_list_map_;
+};
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA

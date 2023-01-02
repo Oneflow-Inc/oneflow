@@ -155,7 +155,6 @@ def _run_test_moving_average_min_max_observer(
             activation, dtype=flow.float32, device=flow.device(device_type)
         )
         moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
-            training=True,
             stop_update_after_iters=1,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,

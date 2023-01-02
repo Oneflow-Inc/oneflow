@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_CONSISTENT_TENSOR_INFER_CACHE_H_
-#define ONEFLOW_CORE_FRAMEWORK_CONSISTENT_TENSOR_INFER_CACHE_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_GLOBAL_TENSOR_INFER_CACHE_H_
+#define ONEFLOW_CORE_FRAMEWORK_GLOBAL_TENSOR_INFER_CACHE_H_
 
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 
@@ -140,7 +140,7 @@ class OpArgMutGlobalTensorMeta final {
   TensorMeta* mut_tensor_meta() { return &tensor_meta_; }
 
  private:
-  TensorMeta tensor_meta_;
+  MutTensorMeta tensor_meta_;
 };
 
 }  // namespace one
@@ -229,4 +229,4 @@ class GlobalTensorInferCache final {
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_CONSISTENT_TENSOR_INFER_CACHE_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_GLOBAL_TENSOR_INFER_CACHE_H_

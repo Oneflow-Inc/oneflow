@@ -32,8 +32,9 @@ struct DimScatterFunctor<DeviceType::kCPU, IN_T, IDX_T, Opt> final {
   }
 };
 
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpAddFunctor);
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpUpdateFunctor);
+INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(DeviceType::kCPU, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(DeviceType::kCPU, BinOpMulFunctor);
+INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(DeviceType::kCPU, BinOpUpdateFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow

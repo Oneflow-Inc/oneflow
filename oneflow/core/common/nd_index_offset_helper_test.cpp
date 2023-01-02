@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include "gtest/gtest.h"
 #define private public
+#define protected public
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -140,6 +141,35 @@ void test_constructor() {
 TEST(NdIndexOffsetHelper, constructor) {
   test_constructor<int32_t>();
   test_constructor<int64_t>();
+}
+
+template<typename T, typename U>
+void test_stride_constructor() {
+  const T d1 = 5;
+  const T d2 = 6;
+
+  const U u1 = 5;
+  const U u2 = 6;
+
+  std::vector<T> strides({d1 * d2, d2, 1});
+  std::vector<U> strides_u({u1 * u2, u2, 1});
+
+  const NdIndexStrideOffsetHelper<T, 3> helper1(strides.data());
+  const NdIndexStrideOffsetHelper<T, 3> helper2(strides.data(), strides.size());
+  const NdIndexStrideOffsetHelper<T, 3> helper3(strides_u.data());
+  const NdIndexStrideOffsetHelper<T, 3> helper4(strides_u.data(), strides_u.size());
+
+  for (int i = 0; i < 3; i++) {
+    ASSERT_EQ(helper1.stride_[i], strides[i]);
+    ASSERT_EQ(helper2.stride_[i], strides[i]);
+    ASSERT_EQ(helper3.stride_[i], strides_u[i]);
+    ASSERT_EQ(helper4.stride_[i], strides_u[i]);
+  }
+}
+
+TEST(NdIndexStrideOffsetHelper, constructor) {
+  test_stride_constructor<int32_t, int64_t>();
+  test_stride_constructor<int64_t, int32_t>();
 }
 
 }  // namespace test

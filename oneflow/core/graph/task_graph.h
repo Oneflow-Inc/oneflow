@@ -43,11 +43,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   ~TaskGraph() override;
 
-  explicit TaskGraph(bool enable_straighten_algorithm);
+  explicit TaskGraph();
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -81,7 +82,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
   void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace
@@ -117,8 +119,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
     struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
-        return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
-               ^ key.dst_mem_zone_id.hash();
+        return Hash(key.src_node, key.lbi, key.dst_mem_zone_id.hash());
       }
     };
   };

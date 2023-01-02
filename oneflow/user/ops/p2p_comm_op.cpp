@@ -33,7 +33,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 namespace {
@@ -48,19 +48,19 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
 
 /*static*/ Maybe<void> RecvOp::GetSbp(user_op::SbpContext* ctx) { UNIMPLEMENTED_THEN_RETURN(); }
 /*static*/ Maybe<void> RecvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
+  ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("shape"));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RecvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return SendOp::InferLogicalTensorDesc(ctx);
+  return RecvOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RecvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
+  return DeviceAndStreamInferFn<&GetRecvOutputDeivce>(ctx);
 }
 
 }  // namespace oneflow

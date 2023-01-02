@@ -43,6 +43,9 @@ Maybe<Symbol<NdSbp>> RawGetNdSbp(const std::vector<Symbol<SbpParallel>>& sbp_lis
 Maybe<std::vector<Symbol<SbpParallel>>> RawGetSbpList(Symbol<NdSbp> nd_sbp);
 bool RawContainSplitSbp(Symbol<NdSbp> nd_sbp);
 
+Maybe<std::vector<Symbol<SbpParallel>>> RawNdSbpReplacePartialByBroadcast(
+    const std::vector<Symbol<SbpParallel>>& sbp_list);
+
 }  // namespace private_details
 
 static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocalCopiable);
@@ -50,6 +53,9 @@ static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, Th
 static constexpr auto* ContainSplitSbp =
     DECORATE(&private_details::RawContainSplitSbp, ThreadLocal);
 const std::vector<Symbol<SbpParallel>>& GetNoneSbpList();
+
+static constexpr auto* NdSbpReplacePartialByBroadcast =
+    DECORATE(&private_details::RawNdSbpReplacePartialByBroadcast, ThreadLocalCachedCopiable);
 
 std::string SbpToString(Symbol<SbpParallel> sbp_sym);
 std::string NdSbpToString(Symbol<NdSbp> nd_sbp_sym);

@@ -126,8 +126,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   // Use Fully Fused MLP Backward.
   if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_ASYNC_GRAD", false)) {
-    const auto& fused_mlp_grad = JUST(functional::FusedMLPGrad(
-        cublas_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), weights, cublas_auxs, hiddens));
+    const std::vector<float> alpha_list(weight_num - 1, 1.0);
+    const auto& fused_mlp_grad =
+        JUST(functional::FusedMLPGrad(cublas_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), weights,
+                                      cublas_auxs, hiddens, alpha_list));
     if (ctx->x_requires_grad) {
       // dx:
       JUST(VectorAt(*in_grads, 0)) = fused_mlp_grad->at(0);

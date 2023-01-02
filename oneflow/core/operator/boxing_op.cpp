@@ -100,13 +100,13 @@ Maybe<void> BoxingOp::InferBlobDescs(
       *out_blob_desc = *first_in_blob;
       CHECK_GT_OR_RETURN(split_conf.part_num(i), 0);
       data_tmp_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
-      out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
+      out_blob_desc->set_shape(Shape(data_tmp_blob_shape_vec));
     }
   } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
     for (const std::string& obn : output_bns()) {
       BlobDesc* out_blob_desc = BlobDesc4BnInOp(obn);
       *out_blob_desc = *first_in_blob;
-      out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
+      out_blob_desc->set_shape(Shape(data_tmp_blob_shape_vec));
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN();
@@ -152,7 +152,7 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
     if (!is_logical) {
       BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
-      data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
+      data_tmp_blob_desc->set_shape(Shape(*data_tmp_vec_ptr));
       data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
     }
   }

@@ -41,6 +41,9 @@ class ScheduleCtx {
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
 
+using ReadyInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
+
 class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types
@@ -90,9 +93,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
  private:
-  using ReadyInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
-
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
@@ -116,6 +116,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
+
   void TryDispatchReadyInstructions();
 
   void LivelyInstructionListPushBack(Instruction* instruction);

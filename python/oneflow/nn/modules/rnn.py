@@ -251,9 +251,7 @@ class RNNBase(nn.Module):
 
 
 class RNN(RNNBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
-
+    r"""
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
 
     For each element in the input sequence, each layer computes the following function:
@@ -267,6 +265,9 @@ class RNN(RNNBase):
     the input at time `t`, and :math:`h_{(t-1)}` is the hidden state of the
     previous layer at time `t-1` or the initial hidden state at time `0`.
     If :attr:`nonlinearity` is ``'relu'``, then :math:`\text{ReLU}` is used instead of :math:`\tanh`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -295,14 +296,14 @@ class RNN(RNNBase):
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
-        
+
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
                 L ={} & \text{sequence length} \\
                 D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
-                H_{in} ={} & \text{input\_size} \\
-                H_{out} ={} & \text{hidden\_size}
+                H_{in} ={} & \text{input_size} \\
+                H_{out} ={} & \text{hidden_size}
             \end{aligned}
 
     Outputs: output, h_n
@@ -488,9 +489,7 @@ class RNN(RNNBase):
 
 
 class LSTM(RNNBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#LSTM.
-
+    r"""
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
 
     For each element in the input sequence, each layer computes the following
@@ -526,6 +525,9 @@ class LSTM(RNNBase):
     matrix: :math:`h_t = W_{hr}h_t`. Note that as a consequence of this, the output
     of LSTM network will be of different shape as well. See Inputs/Outputs sections below for exact
     dimensions of all variables. You can find more details in https://arxiv.org/abs/1402.1128.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#LSTM.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -788,9 +790,7 @@ class LSTM(RNNBase):
 
 
 class GRU(RNNBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
-
+    r"""
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
 
     For each element in the input sequence, each layer computes the following
@@ -801,7 +801,7 @@ class GRU(RNNBase):
         \begin{array}{ll}
             r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
             z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
-            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            n_t = \\tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
             h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
         \end{array}
     
@@ -815,6 +815,9 @@ class GRU(RNNBase):
     (:math:`l >= 2`) is the hidden state :math:`h^{(l-1)}_t` of the previous layer multiplied by
     dropout :math:`\delta^{(l-1)}_t` where each :math:`\delta^{(l-1)}_t` is a Bernoulli random
     variable which is :math:`0` with probability :attr:`dropout`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
 
     Args:
         num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
@@ -1046,9 +1049,7 @@ class RNNCellBase(nn.Module):
 
 
 class RNNCell(RNNCellBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNNCell.html.
-    
+    r"""    
     An Elman RNN cell with tanh or ReLU non-linearity.
 
     .. math::
@@ -1056,6 +1057,9 @@ class RNNCell(RNNCellBase):
         h' = \tanh(W_{ih} x + b_{ih}  +  W_{hh} h + b_{hh})
 
     If :attr:`nonlinearity` is `'relu'`, then ReLU is used in place of tanh.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNNCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -1168,9 +1172,7 @@ class RNNCell(RNNCellBase):
 
 
 class LSTMCell(RNNCellBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html.
-    
+    r"""    
     A long short-term memory (LSTM) cell.
 
     .. math::
@@ -1185,6 +1187,9 @@ class LSTMCell(RNNCellBase):
         \end{array}
 
     where :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.LSTMCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -1285,9 +1290,7 @@ class LSTMCell(RNNCellBase):
 
 
 class GRUCell(RNNCellBase):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.GRUCell.html.
-    
+    r"""    
     A gated recurrent unit (GRU) cell
 
     .. math::
@@ -1300,6 +1303,9 @@ class GRUCell(RNNCellBase):
         \end{array}
 
     where :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GRUCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -1349,6 +1355,7 @@ class GRUCell(RNNCellBase):
         >>> hx = rnn(input[0], hx)
         >>> hx.size()
         oneflow.Size([3, 20])
+
     """
 
     def __init__(

@@ -82,22 +82,22 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     const auto& this_placement =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(
             this->placement_symbol_id()));
-    CHECK_OR_RETURN(this_placement == placement) << "Each rank must have same input placement";
-    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id());
+    CHECK_OR_RETURN(this_placement == placement) << Error::RuntimeError() << "Each rank must have the same input placement";
+    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id()) << Error::RuntimeError()  << "Either all ranks have sbp or not";
     if (this->has_nd_sbp_symbol_id()) {
       const auto& that_nd_sbp =
           JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
               this->nd_sbp_symbol_id()));
       const auto& this_nd_sbp = JUST(nd_sbp);
-      CHECK_OR_RETURN(this_nd_sbp == that_nd_sbp)  << "Each rank must have same input sbp";
+      CHECK_OR_RETURN(this_nd_sbp == that_nd_sbp) << Error::RuntimeError() << "Each rank must have the same input sbp";
     }
-    CHECK_EQ_OR_RETURN(grad_nd_sbp.has_value(), this->has_grad_nd_sbp_symbol_id());
+    CHECK_EQ_OR_RETURN(grad_nd_sbp.has_value(), this->has_grad_nd_sbp_symbol_id()) << Error::RuntimeError() << "Either all ranks have grad sbp or not";
     if (this->has_grad_nd_sbp_symbol_id()) {
        const auto& that_grad_nd_sbp =
           JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
               this->grad_nd_sbp_symbol_id()));
       const auto& this_grad_nd_sbp = JUST(grad_nd_sbp);
-      CHECK_OR_RETURN(this_grad_nd_sbp == that_grad_nd_sbp) << "Each rank must have same input grad sbp";
+      CHECK_OR_RETURN(this_grad_nd_sbp == that_grad_nd_sbp)<< Error::RuntimeError() << "Each rank must have same input grad sbp";
     }
     return Maybe<void>::Ok();
   }
@@ -181,7 +181,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
   JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), buffer_size)
                   == 0)
-      << "Each rank must have same input sequence or numpy array";
+      << Error::RuntimeError() << "Each rank must have same input sequence or numpy array";
   return Maybe<void>::Ok();
 }
 

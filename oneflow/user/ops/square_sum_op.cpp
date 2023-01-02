@@ -26,15 +26,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_shape() = Shape({1});
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
+  y->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SquareSumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -50,8 +50,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_shape() = Shape({1});
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
+  y->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -59,7 +59,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_0 = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   for (int64_t i = 1; i < ctx->input_size("x"); ++i) {
     const user_op::TensorDesc& x_i = ctx->InputTensorDesc("x", i);
     CHECK_EQ_OR_RETURN(x_i.data_type(), x_0.data_type())
@@ -67,7 +67,7 @@ namespace oneflow {
         << "All tensors are expected to have the same dtype, but found at least two dtypes, "
         << DataType_Name(x_i.data_type()) << " and " << DataType_Name(x_0.data_type());
   }
-  *y->mut_data_type() = x_0.data_type();
+  y->set_data_type(x_0.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::CheckAttr(const user_op::UserOpDefWrapper&,

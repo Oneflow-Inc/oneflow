@@ -76,7 +76,7 @@ Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
 
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
                                              *tensor->shape(), tensor->dtype(),
-                                             /* sync_data */ false));
+                                             /* sync_data */ false, /*copy=*/false));
 }
 
 static constexpr auto* NaiveBToSWithAutoConvert =

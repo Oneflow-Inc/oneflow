@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include <cstddef>
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -22,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
@@ -69,56 +69,60 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_global_interpreter = BuildEagerInterpreter(/*is_local=*/false);
   static const auto& g_eager_local_interpreter = BuildEagerInterpreter(/*is_local=*/true);
-  if (!LazyMode::is_enabled()) {
-    if (inputs.empty()) {
-      if (ctx.parallel_desc.has_value()) {
-        JUST(ctx.nd_sbp);
-        CHECK_OR_RETURN(!ctx.device.has_value());
-        return g_eager_global_interpreter;
-      } else {
-        CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
-        return g_eager_local_interpreter;
-      }
+  bool is_local = true;
+  if (inputs.empty()) {
+    if (ctx.parallel_desc.has_value()) {
+      JUST(ctx.nd_sbp);
+      CHECK_OR_RETURN(!ctx.device.has_value());
+      is_local = false;
     } else {
-      if (inputs[0]->is_global()) {
-        if (inputs.size() == 1) {
-          // do nothing
-        } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs[1]->is_global())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs[2]->is_global())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else {
-          for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
-          }
-        }
-        return g_eager_global_interpreter;
+      CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
+    }
+  } else {
+    if (inputs[0]->is_global()) {
+      if (inputs.size() == 1) {
+        // do nothing
+      } else if (inputs.size() == 2) {
+        CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else if (inputs.size() == 3) {
+        CHECK_OR_RETURN(inputs[1]->is_global())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+        CHECK_OR_RETURN(inputs[2]->is_global())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
       } else {
-        if (inputs.size() == 1) {
-          // do nothing
-        } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else {
-          for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
-          }
+        for (const auto& tensor : inputs) {
+          CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
         }
-        return g_eager_local_interpreter;
+      }
+      is_local = false;
+    } else {
+      if (inputs.size() == 1) {
+        // do nothing
+      } else if (inputs.size() == 2) {
+        CHECK_OR_RETURN(inputs.at(1)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else if (inputs.size() == 3) {
+        CHECK_OR_RETURN(inputs.at(1)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+        CHECK_OR_RETURN(inputs.at(2)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else {
+        for (const auto& tensor : inputs) {
+          CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
+        }
       }
     }
-    UNIMPLEMENTED_THEN_RETURN();
   }
-  return g_lazy_interpreter;
+  if (!LazyMode::is_enabled()) {
+    if (is_local) {
+      return g_eager_local_interpreter;
+    } else {
+      return g_eager_global_interpreter;
+    }
+  } else {
+    return g_lazy_interpreter;
+  }
 }
 
 }  // namespace
@@ -144,7 +148,14 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
+  functional::TensorProcessorPipe processor(inputs, outputs);
+  if (autocast::is_enabled()) {
+    JUST(processor.Apply<functional::TensorAutoCastProcessor>(
+        *JUST(op_expr.GetOrCreateAutoCastMeta())));
+  }
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
+  return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
+      ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }
 
 /* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
