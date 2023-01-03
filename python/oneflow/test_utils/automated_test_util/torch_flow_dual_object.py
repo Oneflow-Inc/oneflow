@@ -393,11 +393,22 @@ def get_functional_graph_res(
         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
-                if (oneflow_args and oneflow_res.device.type == oneflow_args[0]) or (
-                    oneflow_kwargs
-                    and oneflow_res.device.type == oneflow_kwargs["device"]
-                ):
-                    test_g_res = oneflow_res
+                if is_global():
+                    if (
+                        oneflow_args and oneflow_res.placement.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.placement.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
+                else:
+                    if (
+                        oneflow_args and oneflow_res.device.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.device.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
             else:
                 pass
         elif oneflow.__name__ == "Parameter":
