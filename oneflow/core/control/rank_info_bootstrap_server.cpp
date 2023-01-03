@@ -87,6 +87,7 @@ void RankInfoBootstrapServer::CheckServerStatus() {
   };
 
   for (; retry_idx < rpc_bootsrtap_server_max_retry_times(); ++retry_idx) {
+    std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
     int64_t valid_size = 0;
     {
       std::lock_guard<std::mutex> lock(lock_);
@@ -97,7 +98,6 @@ void RankInfoBootstrapServer::CheckServerStatus() {
       status_ok = true;
       break;
     } else {
-      std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
       if (retry_idx >= skip_warning_times) {
         LOG(WARNING) << "BootstrapServer not ready, rpc server on some rank have not been created "
                         "successfully. Failed at "
