@@ -411,6 +411,9 @@ def get_functional_graph_res(
                         test_g_res = oneflow_res
             else:
                 pass
+        # nn.Graph donot deal with Module type. EX: m.to_global(placement, sbp).
+        elif oneflow.__name__ == "to_global":
+            test_g_res = oneflow_res
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
