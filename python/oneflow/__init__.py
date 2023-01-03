@@ -110,6 +110,7 @@ from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import as_strided
+from oneflow._C import as_strided_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softshrink

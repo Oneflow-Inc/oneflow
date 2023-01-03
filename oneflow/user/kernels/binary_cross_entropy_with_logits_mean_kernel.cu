@@ -73,10 +73,10 @@ __device__ __forceinline__ half Sigmoid(const half x) {
   return __float2half(Sigmoid(__half2float(x)));
 }
 
-template<typename INPUT_T, typename TARGET_T, typename ComputeType>
+template<typename INPUT_T, typename TARGET_T, typename OUTPUT_T, typename ComputeType>
 __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const INPUT_T* input,
                                                                   const TARGET_T* target,
-                                                                  TARGET_T* out,
+                                                                  OUTPUT_T* out,
                                                                   const int64_t local_elem_cnt,
                                                                   const int64_t reduce_elem_cnt) {
   ComputeType zero = static_cast<ComputeType>(0.0);
@@ -95,18 +95,18 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const INPUT_T*
 
   const ComputeType block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
   if (threadIdx.x == 0) {
-    out[blockIdx.x] = static_cast<TARGET_T>(block_reduce_sum / reduce_elem_cnt);
+    out[blockIdx.x] = static_cast<OUTPUT_T>(block_reduce_sum / reduce_elem_cnt);
   }
 }
 
-template<typename TARGET_T, typename ComputeType>
-__global__ void ReduceLocalSumKernel(ComputeType* block_local_sum_buf, TARGET_T* out,
+template<typename TARGET_T, typename INPUT_T>
+__global__ void ReduceLocalSumKernel(INPUT_T* block_local_sum_buf, TARGET_T* out,
                                      int64_t elem_cnt) {
-  using BlockReduce = cub::BlockReduce<ComputeType, kReduceLocalSumBlockSize>;
+  using BlockReduce = cub::BlockReduce<INPUT_T, kReduceLocalSumBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  ComputeType reduce_sum = 0.0;
+  INPUT_T reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { reduce_sum += block_local_sum_buf[i]; }
-  const ComputeType block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
+  const INPUT_T block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
   if (threadIdx.x == 0) { out[0] = block_reduce_sum; }
 }
 
@@ -271,7 +271,7 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
     using ComputeType = typename DefaultComputeType<TARGET_T>::type;
 
     if (local_elem_cnt <= kSingleBlockProcessNumThreshold) {
-      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T, ComputeType>
+      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T, TARGET_T, ComputeType>
           <<<1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<INPUT_T>(), target_blob->dptr<TARGET_T>(),
               out_blob->mut_dptr<TARGET_T>(), local_elem_cnt, reduce_elem_cnt);
@@ -280,14 +280,15 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
       const int64_t tmp_buffer_elem_cnt = tmp_buffer->shape_view().elem_cnt() / sizeof(TARGET_T);
       const int64_t block_num = (local_elem_cnt + kBlockSize - 1) / kBlockSize;
       int launch_block = block_num;
-      OF_CUDA_CHECK(GetNumBlocks(
-          FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T, ComputeType>,
-          kBlockSize, 0, block_num, 32, &launch_block));
+      OF_CUDA_CHECK(
+          GetNumBlocks(FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T,
+                                                                         ComputeType, ComputeType>,
+                       kBlockSize, 0, block_num, 32, &launch_block));
       launch_block = std::min<int64_t>(tmp_buffer_elem_cnt, launch_block);
-      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T, ComputeType>
+      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<INPUT_T, TARGET_T, ComputeType, ComputeType>
           <<<launch_block, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<INPUT_T>(), target_blob->dptr<TARGET_T>(),
-              tmp_buffer->mut_dptr<TARGET_T>(), local_elem_cnt, reduce_elem_cnt);
+              tmp_buffer->mut_dptr<ComputeType>(), local_elem_cnt, reduce_elem_cnt);
       ReduceLocalSumKernel<TARGET_T, ComputeType>
           <<<1, kReduceLocalSumBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               tmp_buffer->mut_dptr<ComputeType>(), out_blob->mut_dptr<TARGET_T>(), block_num);
@@ -354,9 +355,9 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
         using compute_dtype = typename DefaultComputeType<target_dtype>::type;                    \
         OF_CUDA_CHECK(GetNumBlocks(                                                               \
             FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<input_dtype, target_dtype,          \
-                                                              compute_dtype>,                     \
+                                                              compute_dtype, compute_dtype>,      \
             kBlockSize, 0, block_num, 32, &launch_block));                                        \
-        const int64_t tmp_buffer_size = GetCudaAlignedSize(launch_block * sizeof(target_dtype));  \
+        const int64_t tmp_buffer_size = GetCudaAlignedSize(launch_block * sizeof(compute_dtype)); \
         return tmp_buffer_size;                                                                   \
       });
 
@@ -401,7 +402,7 @@ REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_GRAD_KERNEL(double, double)
         using compute_dtype = typename DefaultComputeType<target_dtype>::type;                   \
         OF_CUDA_CHECK(GetNumBlocks(                                                              \
             FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<input_dtype, target_dtype,         \
-                                                              compute_dtype>,                    \
+                                                              compute_dtype, compute_dtype>,     \
             kBlockSize, 0, block_num, 32, &launch_block));                                       \
         const int64_t tmp_buffer_size = GetCudaAlignedSize(launch_block * sizeof(target_dtype)); \
         return tmp_buffer_size;                                                                  \
