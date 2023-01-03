@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_diagonal_impl(test_case, placement, sbp):
     offset = random(-5, 5).to(int).value()
     dim1 = random(-4, 4).to(int).value()

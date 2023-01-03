@@ -18,6 +18,10 @@ import os
 import sys
 import collections
 
+# https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
+if "CUDA_MODULE_LOADING" not in os.environ:
+    os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+
 import oneflow._oneflow_internal
 
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
@@ -98,6 +102,7 @@ from oneflow._C import logical_not
 from oneflow._C import logaddexp
 from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import quick_gelu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave
@@ -105,6 +110,7 @@ from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import as_strided
+from oneflow._C import as_strided_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softshrink
@@ -180,6 +186,7 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+from oneflow._C import stft
 from oneflow._C import var
 from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
 from oneflow._C import atleast_1d, atleast_2d, atleast_3d

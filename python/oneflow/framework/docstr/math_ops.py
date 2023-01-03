@@ -1563,6 +1563,7 @@ add_docstr(
 add_docstr(
     oneflow.as_strided,
     r"""
+    as_strided(input, size, stride, storage_offset=None) -> Tensor
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.as_strided.html.

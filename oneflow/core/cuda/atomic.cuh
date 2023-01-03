@@ -44,7 +44,7 @@ struct CastCASImpl {
   }
 };
 
-#if __CUDA_ARCH__ < 700
+#if __CUDA_ARCH__ < 700 || (defined(__clang__) && defined(__CUDA__))
 
 template<typename T>
 struct CastCASImpl<T, unsigned short int> {
