@@ -64,7 +64,7 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
   if (rank == 0) {
-    rank2host_ = std::make_shared<std::vector<std::string>>(world_size_);
+    rank2host_ = std::make_shared<std::vector<std::string>>(world_size_, "");
     // NOTE: use check_thread_ to check RankInfoBootstrapServer status on rank 0
     // if size of ready ranks == total ranks(world_size), means status is ok.
     // otherwise, it indicates that other ranks' server have not been created successfully!
