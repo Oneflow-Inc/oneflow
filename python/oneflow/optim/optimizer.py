@@ -140,6 +140,13 @@ class ParamGroup(object):
 
             self.params_dict[buf_type].index += numel_in_bucket(p)
 
+            """
+            This empty_cache can reduce the memory fragments, but cannot
+            release the origin parameters' memory.
+            Contiguous parameters will use the memory for parameters.
+            """
+            flow.cuda.empty_cache()
+
         for buf_type in self.params_dict.keys():
             self.params_dict[buf_type].param_buf.grad = self.params_dict[
                 buf_type
