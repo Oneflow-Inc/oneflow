@@ -471,7 +471,7 @@ void SbpConstructor::InitAvailableMemory() {
   // It varies from 0 to 5.23% if using pipeline parallelism.
   double second_ratio = 1.06;
   // The occupied memory at this moment would be around 1114MB to 1240MB.
-  // When it gets to the training process, the occupied memory would drop from 161MB to 162MB.
+  // When it gets to the training process, the occupied memory might drop by 162MB.
   // But the key is that we start to allocate memory before the training process.
   // Thus, this 161MB should not be added to the free memory.
   // We still use "available memory = free / ratio" instead of "free / ratio + 161MB".
