@@ -26,6 +26,12 @@ from flowvision.models.resnet import resnet50
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS"] = "1"
+# os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+# os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+# os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 
 def _test_fuse_conv_bn(test_case):

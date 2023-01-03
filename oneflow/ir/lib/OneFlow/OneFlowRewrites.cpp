@@ -161,8 +161,9 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
   add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
 
-  float epsilon_attr = epsilon.cast<FloatAttr>().getValueAsDouble();
+  double epsilon_attr = epsilon.cast<FloatAttr>().getValueAsDouble();
   add_op_attrs.set("float_operand", rewriter.getF64FloatAttr(epsilon_attr));
+
   auto add_op = rewriter.create<oneflow::ScalarAddOp>(
       conv_op->getLoc(), conv_op.out().getType(), SmallVector<Value, 4>({bn_op.moving_variance()}),
       add_op_attrs);
