@@ -455,8 +455,15 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
 void SbpConstructor::InitAvailableMemory() {
   size_t free = 0;
   size_t total = 0;
-  CudaCurrentDeviceGuard guard((int32_t)(GlobalProcessCtx::Rank()));
+#ifdef WITH_CUDA
+  CudaCurrentDeviceGuard guard(GlobalProcessCtx::Rank());
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
+#else
+  free = 1e13;   // 10T = 10,000G
+  total = 1e13;  // 10T = 10,000G
+  LOG(INFO) << "We do not use CUDA in CPU mode, auto memory is unnecessary since all the SBPs are "
+               "Broadcast.";
+#endif
   // The estimated memory differs from the lower bound of the peak memory by the first ratio.
   // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
   // It varies from 0.00313% to 0.5% if enabling nccl_use_compute_stream.
