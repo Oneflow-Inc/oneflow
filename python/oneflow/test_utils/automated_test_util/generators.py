@@ -39,7 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
-random_value_default_range = {int: (-10, 11), float: (-1, 1)}
+random_value_default_range = {int: (0, 1), float: (0, 1)}
 
 
 def data_generator(annotation):
