@@ -103,7 +103,7 @@ class ProxyModule(Proxy):
         if origin is None:
             return
         assert isinstance(origin, Module)
-        for (n, m) in list(origin.named_children()):
+        for (n, m) in origin._modules.items():
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(

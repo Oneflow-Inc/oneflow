@@ -70,7 +70,7 @@ class ConvBaseFunctor {
     enable_fused_conv_bias_ = ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
@@ -93,10 +93,11 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
+                                            conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input, weight}, conv_attrs));
     if (bias) {
       return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
     } else {
@@ -148,7 +149,7 @@ class DeConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
@@ -168,7 +169,7 @@ class DeConvBaseFunctor {
     deconv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(1) * groups), kernel_size_vec,
                              padding, output_padding, stride, dilation, groups, data_format);
     std::shared_ptr<one::Tensor> deconv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {input, weight}, deconv_attrs));
     if (bias) {
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
       bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
