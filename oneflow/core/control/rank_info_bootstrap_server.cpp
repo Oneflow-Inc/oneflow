@@ -32,16 +32,16 @@ std::string GetHostFromUri(const std::string& uri) {
   return uri.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
 }
 
-int64_t rpc_bootsrtap_server_sleep_seconds() {
-  static const int64_t rpc_bootsrtap_server_sleep_seconds =
+int64_t rpc_bootstrap_server_sleep_seconds() {
+  static const int64_t rpc_bootstrap_server_sleep_seconds =
       ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS", 20);
-  return rpc_bootsrtap_server_sleep_seconds;
+  return rpc_bootstrap_server_sleep_seconds;
 }
 
-int64_t rpc_bootsrtap_server_max_retry_times() {
-  static const int64_t rpc_bootsrtap_server_max_retry_times =
-      ParseIntegerFromEnv("ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES", 3);
-  return rpc_bootsrtap_server_max_retry_times;
+int64_t rpc_bootstrap_server_max_retry_times() {
+  static const int64_t rpc_bootstrap_server_max_retry_times =
+      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_MAX_RETRY_TIMES", 3);
+  return rpc_bootstrap_server_max_retry_times;
 }
 
 }  // namespace
@@ -86,8 +86,8 @@ void RankInfoBootstrapServer::CheckServerStatus() {
     return valid_size;
   };
 
-  for (; retry_idx < rpc_bootsrtap_server_max_retry_times(); ++retry_idx) {
-    std::this_thread::sleep_for(std::chrono::seconds(rpc_bootsrtap_server_sleep_seconds()));
+  for (; retry_idx < rpc_bootstrap_server_max_retry_times(); ++retry_idx) {
+    std::this_thread::sleep_for(std::chrono::seconds(rpc_bootstrap_server_sleep_seconds()));
     int64_t valid_size = 0;
     {
       std::lock_guard<std::mutex> lock(lock_);
@@ -123,6 +123,7 @@ void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* ca
   int64_t rank = call->request().rank();
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
+  if (!rank2host_) { rank2host_ = std::make_shared<std::vector<std::string>>(world_size_); }
   std::lock_guard<std::mutex> lock(lock_);
   rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
   call->SendResponse();
