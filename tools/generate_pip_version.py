@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 local_label = ""
 version = f"0.9.0"
-
+os.environ["ONEFLOW_RELEASE_VERSION"] = version
 # set version if release of nightly
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
@@ -28,7 +28,7 @@ elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
     date_str = today.strftime("%Y%m%d")
     version += f".dev{date_str}"
     is_nightly = True
-is_release=True
+
 # append compute_platform
 compute_platform = ""
 if args.cuda:
