@@ -68,7 +68,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu117
     ```
   - Nightly
     ```
