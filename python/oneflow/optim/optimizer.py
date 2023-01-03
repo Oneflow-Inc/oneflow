@@ -143,7 +143,7 @@ class ParamGroup(object):
             """
             This empty_cache can reduce the memory fragments, but cannot
             release the origin parameters' memory.
-            Contiguous parameters will use the memory for parameters.
+            Contiguous parameters will use the double memory for parameters.
             """
             flow.cuda.empty_cache()
 
