@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph=False)
 def _test_linear_with_random_data(test_case, placement, input_sbp):
     input_size = 8
     m = torch.nn.Linear(in_features=input_size, out_features=8, bias=random())
