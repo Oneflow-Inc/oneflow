@@ -271,6 +271,9 @@ class GraphConfig(object):
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operation to use heuristic search algorithm.
 
+        Note:
+            It is recommended to use `flow.backends.cudnn.enable_conv_heuristic_search_algo(False)` instead of this function.
+
         For example:
 
         .. code-block:: python

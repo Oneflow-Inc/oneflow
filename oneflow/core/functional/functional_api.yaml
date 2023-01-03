@@ -3098,8 +3098,8 @@
 
 - name: "unique"
   signature: [
-    "Tensor (Tensor x, DataType dtype=kInt32) => Unique",
-    "TensorTuple (Tensor x, Bool return_inverse=False, Bool return_counts=False, DataType dtype=kInt32) => UniqueWithCounts"
+    "Tensor (Tensor x, Bool sorted=True, DataType dtype=kInt32) => Unique",
+    "TensorTuple (Tensor x, Bool sorted=True, Bool return_inverse=False, Bool return_counts=False, DataType dtype=kInt32) => UniqueWithCounts"
   ]
   bind_python: True
 
