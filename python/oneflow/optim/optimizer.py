@@ -90,6 +90,10 @@ class ParamGroup(object):
             self._make_contiguous_params(parameters)
 
     def _make_contiguous_params(self, parameters):
+        assert not any(
+            [p.is_global for p in parameters["params"]]
+        ), "All parameters must be local tensor for contiguous params."
+
         def numel_in_bucket(tensor: flow.Tensor):
             assert flow.is_floating_point(
                 tensor
