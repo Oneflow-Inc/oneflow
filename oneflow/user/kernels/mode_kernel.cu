@@ -32,7 +32,15 @@ class CudaModeKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
    
-   
+  //  大概思路
+  //  1. 排序
+  //  2. 使用 cub::DeviceRunLengthEncode::NonTrivialRuns 获得每一个元素的数量
+  //  https://nvlabs.github.io/cub/structcub_1_1_device_run_length_encode.html#aa2318dc7a69f28a8c47d417aaf53db3a
+  //  3. 获取最大数量的元素的值和索引,并根据排序时的索引得到原始位置的索引
+
+  // 难点:
+  // 1. InferTmpSize 是否每个开辟了辅助内存的函数都需要将其内存size加上这里
+  // 2. 核函数的启动和参数的设置（多维数组需要设置迭代器？？ 不太清楚  还需要看一下其他算子的核函数的代码）
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
