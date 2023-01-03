@@ -3868,6 +3868,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AminFunctor>("Amin");
   m.add_functor<MedianFunctor>("Median");
   m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
+  m.add_functor<ModeFunctor>("Mode");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");

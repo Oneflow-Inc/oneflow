@@ -54,21 +54,22 @@ class CpuModeKernel final : public user_op::OpKernel {
           int64_t mode_idx = 0;
           int64_t temp_freq = 0;
           int64_t max_freq = 0;
-          FOR_RANGE(int64_t, idx, 0, stride) { elements[i] = std::make_pair(*(in_ptr + idx), idx); }
+          FOR_RANGE(int64_t, idx, 0, stride) {
+            elements[idx] = std::make_pair(*(in_ptr + idx), idx);
+          }
           std::sort(elements.begin(), elements.end(),
                     [=](const auto& i, const auto& j) { return i.first < j.first; });
-          FOR_RANGE(
-              int64_0, idx, 0, stride {
-                temp_freq++;
-                if ((idx == stride - 1) || (elements[i].first != elements[i + 1].first)) {
-                  if (temp_freq > max_freq) {
-                    mode = elements[i].first;
-                    mode_idx = elements[i].second;
-                    max_freq = temp_freq;
-                  }
-                  temp_freq=0;
-                }
-              })
+          FOR_RANGE(int64_t, idx, 0, stride) {
+            temp_freq++;
+            if ((idx == stride - 1) || (elements[idx].first != elements[idx + 1].first)) {
+              if (temp_freq > max_freq) {
+                mode = elements[idx].first;
+                mode_idx = elements[idx].second;
+                max_freq = temp_freq;
+              }
+              temp_freq = 0;
+            }
+          }
           *val_ptr = mode;
           *ind_ptr = mode_idx;
         }
@@ -80,20 +81,20 @@ class CpuModeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_MODE_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("mode")                                              \
-      .SetCreateFn<CpuModeKernel<dtype>>()                                    \
+#define REGISTER_CPU_MODE_KERNEL(dtype)                                                    \
+  REGISTER_USER_KERNEL("mode")                                                             \
+      .SetCreateFn<CpuModeKernel<dtype>>()                                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         return ctx->InputShape("input", 0).elem_cnt() * sizeof(dtype);                     \
       });
 
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(float)
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(double)
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(int8_t)
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(uint8_t)
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(int32_t)
-REGISTER_CPU_MODE_WITH_INDICES_KERNEL(int64_t)
+REGISTER_CPU_MODE_KERNEL(float)
+REGISTER_CPU_MODE_KERNEL(double)
+REGISTER_CPU_MODE_KERNEL(int8_t)
+REGISTER_CPU_MODE_KERNEL(uint8_t)
+REGISTER_CPU_MODE_KERNEL(int32_t)
+REGISTER_CPU_MODE_KERNEL(int64_t)
 
 }  // namespace oneflow
