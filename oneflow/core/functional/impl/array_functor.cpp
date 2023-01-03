@@ -963,6 +963,19 @@ class UnsqueezeMultipleFunctor {
   }
 };
 
+class InplaceUnsqueezeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
+    JUST(CheckInplaceValid(input));
+    const int64_t expand_dim = JUST(maybe_wrap_dim(dim, input->shape()->NumAxes() + 1));
+    CHECK_OR_RETURN(view::IsViewApplicable(input))
+        << "inplace unsqueeze(tensor.unsqueeze_) only support in eager local mode!";
+
+    JUST(view::InplaceUnsqueeze(input, expand_dim));
+    return input;
+  }
+};
+
 class SqueezeFunctor {
  public:
   SqueezeFunctor() {
@@ -994,6 +1007,37 @@ class SqueezeFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceSqueezeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim) const {
+    JUST(CheckInplaceValid(input));
+    const int32_t ndim = input->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
+    if (dim.has_value()) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        dim_i = JUST(maybe_wrap_dim(dim_i, ndim));
+        if (input->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (input->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
+      }
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axes");
+    attrs.SetAllAttrs(squeeze_dims);
+
+    CHECK_OR_RETURN(view::IsViewApplicable(input))
+        << "inplace squeeze(tensor.squeeze_) only support in eager local mode!";
+
+    JUST(view::InplaceSqueeze(input, squeeze_dims));
+    return input;
+  }
 };
 
 class RollFunctor {
@@ -3876,7 +3920,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
+  m.add_functor<impl::InplaceUnsqueezeFunctor>("InplaceUnsqueeze");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
+  m.add_functor<impl::InplaceSqueezeFunctor>("InplaceSqueeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");

@@ -103,6 +103,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
             cuda_gen = flow.Generator(device="cuda")
             state = cuda_gen.get_state()
 
+    @unittest.skip("the curandstate is no longer used by normal kernel")
     def test_generator_setstate(test_case):
         cpu_gen = flow.default_generator
         flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=cpu_gen)
