@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/rank_info_bootstrap_server.h"
 #include <thread>
 #include <mutex>
 #include <chrono>
 #include "grpc/grpc_posix.h"
+#include "oneflow/core/common/env_var/bootstrap.h"
+#include "oneflow/core/control/rank_info_bootstrap_server.h"
 
 namespace oneflow {
 
@@ -34,13 +35,13 @@ std::string GetHostFromUri(const std::string& uri) {
 
 int64_t rpc_bootstrap_server_sleep_seconds() {
   static const int64_t rpc_bootstrap_server_sleep_seconds =
-      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS", 20);
+      EnvInteger<ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS>();
   return rpc_bootstrap_server_sleep_seconds;
 }
 
 int64_t rpc_bootstrap_server_max_retry_times() {
   static const int64_t rpc_bootstrap_server_max_retry_times =
-      ParseIntegerFromEnv("ONEFLOW_RPC_BOOTSTRAP_SERVER_MAX_RETRY_TIMES", 3);
+      EnvInteger<ONEFLOW_RPC_BOOTSTRAP_SERVER_MAX_RETRY_TIMES>();
   return rpc_bootstrap_server_max_retry_times;
 }
 

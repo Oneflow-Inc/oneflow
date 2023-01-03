@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/control/rpc_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/common/env_var/bootstrap.h"
 
 namespace oneflow {
 
@@ -23,13 +24,12 @@ namespace {
 
 int64_t rpc_client_max_retry_times() {
   static const int64_t rpc_client_max_retry_times =
-      ParseIntegerFromEnv("ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES", 6);
+      EnvInteger<ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES>();
   return rpc_client_max_retry_times;
 }
 
 int64_t rpc_client_sleep_seconds() {
-  static const int64_t rpc_client_sleep_seconds =
-      ParseIntegerFromEnv("ONEFLOW_RPC_CLIENT_SLEEP_SECONDS", 10);
+  static const int64_t rpc_client_sleep_seconds = EnvInteger<ONEFLOW_RPC_CLIENT_SLEEP_SECONDS>();
   return rpc_client_sleep_seconds;
 }
 
