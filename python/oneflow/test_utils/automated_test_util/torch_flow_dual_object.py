@@ -1169,6 +1169,7 @@ def autotest(
     check_allclose=True,
     check_dtype=False,
     check_grad_use_random_data=True,
+    skip=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1179,6 +1180,8 @@ def autotest(
     def deco(f):
         @functools.wraps(f)
         def new_f(test_case, *args, **kwargs):
+            if skip:
+                return
             successful_runs_needed = n
             loop_limit = successful_runs_needed * 20
             current_run = 0
