@@ -127,7 +127,7 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   cudaDataType_t compute_type{};
   if (std::is_same<T, half>::value) {
     data_type = CUDA_R_16F;
-    const static bool allow_half_accumulation =
+    const bool allow_half_accumulation =
         ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     if (allow_half_accumulation) {
       compute_type = CUDA_R_16F;

@@ -488,6 +488,14 @@ Maybe<void> RawCheckDeviceIdsIsValid(Symbol<ParallelDesc> placement) {
   return Maybe<void>::Ok();
 }
 
+Maybe<Symbol<ParallelDesc>> RawGetParallelDescOfThisRank(const std::string& device_tag) {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device_tag);
+  parallel_conf.add_device_name(std::to_string(GlobalProcessCtx::Rank()) + ":"
+                                + std::to_string(GlobalProcessCtx::LocalRank()));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -499,6 +507,8 @@ decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, 
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
 decltype(TxtStringToPlacement) TxtStringToPlacement =
     DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+decltype(GetParallelDescOfThisRank) GetParallelDescOfThisRank =
+    DECORATE(&RawGetParallelDescOfThisRank, ThreadLocalCopiable);
 decltype(CheckDeviceIdsIsValid) CheckDeviceIdsIsValid =
     DECORATE(&RawCheckDeviceIdsIsValid, ThreadLocal);
 

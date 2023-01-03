@@ -142,12 +142,17 @@ class Module(object):
         self._load_state_dict_pre_hooks = OrderedDict()
         if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
-            flow.nn.parallel.DistributedDataParallel(self)
+            flow.nn.parallel.DistributedDataParallel(self, broadcast_parameters=False)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
+        if flow._oneflow_internal.lazy_mode.is_enabled():
+            warnings.warn(
+                self._shallow_repr()
+                + " is called in a nn.Graph, but not registered into a nn.Graph."
+            )
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:

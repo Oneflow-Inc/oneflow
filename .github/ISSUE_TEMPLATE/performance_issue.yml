@@ -1,0 +1,48 @@
+name: Performance Issue
+description: Submit an issue about performance problem or regression of OneFlow.
+title: "[Performance Issue]: "
+labels: [Performance Issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome issues about OneFlow performance! This template will help us gather the information we need to locate the problem improve the performance.
+  - type: textarea
+    id: brief-description
+    attributes:
+      label: Brief Description
+      description: Please give a brief description about the performance issue here.
+      placeholder: Description
+    validations:
+      required: true
+  - type: textarea
+    id: device-and-context
+    attributes:
+      label: Device and Context
+      description: |
+        Please describe the device and context you used when you encounter the performance problem/regression.
+      placeholder: Device and Context
+    validations:
+      required: true
+  - type: textarea
+    id: benchmark
+    attributes:
+      label: Benchmark
+      description: |
+        We will appreciate it if you'd like to provide benchmark comparison of the performance issue.
+      placeholder: Benchmark
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: |
+        Please provide some alternative information of the performance issue here, if any.
+      placeholder: Alternatives
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your contributing!
