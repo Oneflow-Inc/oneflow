@@ -48,7 +48,7 @@ __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff
                                        const int64_t indices_num, const int64_t instance_size,
                                        const int64_t gather_dim_size, T* in_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    FastAtomicAdd(
+    cuda::atomic::FastAdd(
         in_diff,
         static_cast<int>(GetInOffset<K>(i, indices, indices_num, instance_size, gather_dim_size)),
         static_cast<int>(elem_cnt), out_diff[i]);

@@ -64,7 +64,7 @@ __global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf,
     params.destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, params.dest_num_dims);
     int32_t index_in_dx = params.storage_offset;
     FOR_RANGE(int64_t, j, 0, params.dest_num_dims) { index_in_dx += dy_index[j] * stride[j]; }
-    FastAtomicAdd(dx_buf, static_cast<int>(index_in_dx), params.output_num, dy_buf[i]);
+    cuda::atomic::FastAdd(dx_buf, static_cast<int>(index_in_dx), params.output_num, dy_buf[i]);
   }
 }
 

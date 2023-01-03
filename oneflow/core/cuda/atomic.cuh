@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CUDA_ATOMIC_H_
 #define ONEFLOW_CORE_CUDA_ATOMIC_H_
 
+#include <cstddef>
 #if defined(__CUDACC__)
 
 #include <cuda.h>
@@ -300,17 +301,12 @@ __device__ __forceinline__ double Max(double* address, const double val) {
   return __longlong_as_double(old);
 }
 
-}  // namespace atomic
-
-}  // namespace cuda
-
-// FastAtomicAdd is referenced from
+// FastAdd is referenced from
 // https://github.com/pytorch/pytorch/blob/396c3b1d88d7624938a2bb0b287f2a19f1e89bb4/aten/src/ATen/native/cuda/KernelUtils.cuh#L29
 #if defined(__CUDACC__)
-template<typename T, typename IndexT,
-         typename std::enable_if<std::is_same<half, T>::value>::type* = nullptr>
-__device__ __forceinline__ void fastSpecializedAtomicAdd(T* base, IndexT offset,
-                                                         const IndexT length, T value) {
+template<typename T, typename std::enable_if<std::is_same<half, T>::value>::type* = nullptr>
+__device__ __forceinline__ void fastSpecializedAtomicAdd(T* base, size_t offset,
+                                                         const size_t length, T value) {
 #if ((defined(CUDA_VERSION) && (CUDA_VERSION < 10000)) \
      || (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 700)))
   cuda::atomic::Add(reinterpret_cast<half*>(base) + offset, static_cast<half>(value));
@@ -337,19 +333,21 @@ __device__ __forceinline__ void fastSpecializedAtomicAdd(T* base, IndexT offset,
 #endif
 }
 
-template<typename T, typename IndexT,
-         typename std::enable_if<!std::is_same<half, T>::value>::type* = nullptr>
-__device__ __forceinline__ void fastSpecializedAtomicAdd(T* base, IndexT offset,
-                                                         const IndexT length, T value) {
+template<typename T, typename std::enable_if<!std::is_same<half, T>::value>::type* = nullptr>
+__device__ __forceinline__ void fastSpecializedAtomicAdd(T* base, size_t offset,
+                                                         const size_t length, T value) {
   cuda::atomic::Add(base + offset, value);
 }
 
-template<class T, class IndexT>
-__device__ __forceinline__ void FastAtomicAdd(T* base, IndexT offset, const IndexT length,
-                                              T value) {
+template<class T>
+__device__ __forceinline__ void FastAdd(T* base, size_t offset, const size_t length, T value) {
   fastSpecializedAtomicAdd(base, offset, length, value);
 }
 #endif
+
+}  // namespace atomic
+
+}  // namespace cuda
 
 }  // namespace oneflow
 

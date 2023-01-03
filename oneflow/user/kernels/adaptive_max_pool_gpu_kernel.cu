@@ -82,7 +82,7 @@ __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const i
   CUDA_1D_KERNEL_LOOP(idx, dy_elems) {
     int bc_idx = idx / out_panel_size;
     T* input_ptr = input + bc_idx * in_panel_size;
-    FastAtomicAdd(input_ptr, static_cast<int>(index[idx]), dy_elems, output[idx]);
+    cuda::atomic::FastAdd(input_ptr, static_cast<int>(index[idx]), dy_elems, output[idx]);
   }
 }
 
