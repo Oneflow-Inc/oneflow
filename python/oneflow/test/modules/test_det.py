@@ -14,30 +14,38 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import time
+import re
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
+def det_random_device():
+    min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
+    if min_cuda_version < 11:  # cuSOLVER is only supported in CUDA 11.0 and above
+        return random_device()
+    else:
+        return cpu_device()
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestLinalgDet(flow.unittest.TestCase):
     @autotest(n=5, rtol=1e-2, auto_backward=False)
     def test_det_3by3_with_random_data(test_case):
-        device = random_device()
+        device = det_random_device()
         x = random_tensor(ndim=2, dim0=3, dim1=3, low=-1).to(device)
         return torch.linalg.det(x)
 
     @autotest(n=5, rtol=1e-2, auto_backward=False)
     def test_det_batch_3by3_with_random_data(test_case):
-        device = random_device()
+        device = det_random_device()
         x = random_tensor(ndim=3, dim0=random(), dim1=3, dim2=3, low=-1).to(device)
         return torch.linalg.det(x)
 
     @autotest(n=5, rtol=1e-2, auto_backward=False)
     def test_det_random_square_with_random_data(test_case):
-        device = random_device()
+        device = det_random_device()
         square_dim = random()
         x = random_tensor(ndim=4, dim2=square_dim, dim3=square_dim, low=-1).to(device)
         return torch.linalg.det(x)
