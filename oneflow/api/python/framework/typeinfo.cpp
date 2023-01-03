@@ -55,10 +55,6 @@ typename std::enable_if<std::is_integral<T>::value, PyObject*>::type PyGetVal(T 
   return PyLong_FromLong(value);
 }
 
-PyObject* PyGetVal(bfloat16 value) { return PyFloat_FromDouble(static_cast<double>(value)); }
-
-PyObject* PyGetVal(float16 value) { return PyFloat_FromDouble(static_cast<double>(value)); }
-
 PyObject* PyGetMaxVal(DataType datatype) {
 #define GET_MAX_VAL(cpp_type, of_datatype) \
   case of_datatype: return PyGetVal(std::numeric_limits<DataTypeToType<of_datatype>>::max());
