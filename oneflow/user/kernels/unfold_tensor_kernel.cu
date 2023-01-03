@@ -47,7 +47,7 @@ __global__ void UnfoldTensorGradCudaKernel(const T* dout_ptr, const STRIDES dout
   int32_t step = gridDim.x * blockDim.x;
   while (gid < elements) {
     int32_t offset = Offset(gid, dout_stride.val, dout_shape.val, dout_dims - 1);
-    cuda::atomic::Add(&din_ptr[offset], dout_ptr[gid]);
+    FastAtomicAdd(din_ptr, static_cast<int>(offset), static_cast<int>(elements), dout_ptr[gid]);
     gid += step;
   }
 }

@@ -101,17 +101,21 @@ __global__ void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_
     T* pos1 = &dx_dptr[dx_helper.NdIndexToOffset(n, c, t1, h1, w1)];
     const T* pos2 = &dy_dptr[index];
 
-    cuda::atomic::Add(pos1 + 0, t0lambda * h0lambda * w0lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + w1p, t0lambda * h0lambda * w1lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + h1p * in_width, t0lambda * h1lambda * w0lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + h1p * in_width + w1p, t0lambda * h1lambda * w1lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + t1p * in_height * in_width, t1lambda * h0lambda * w0lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + t1p * in_height * in_width + w1p,
-                      t1lambda * h0lambda * w1lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + t1p * in_height * in_width + h1p * in_width,
-                      t1lambda * h1lambda * w0lambda * pos2[0]);
-    cuda::atomic::Add(pos1 + t1p * in_height * in_width + h1p * in_width + w1p,
-                      t1lambda * h1lambda * w1lambda * pos2[0]);
+    FastAtomicAdd(pos1, 0, static_cast<int>(elem_cnt), t0lambda * h0lambda * w0lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(w1p), static_cast<int>(elem_cnt),
+                  t0lambda * h0lambda * w1lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(h1p * in_width), static_cast<int>(elem_cnt),
+                  t0lambda * h1lambda * w0lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(h1p * in_width + w1p), static_cast<int>(elem_cnt),
+                  t0lambda * h1lambda * w1lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(t1p * in_height * in_width), static_cast<int>(elem_cnt),
+                  t1lambda * h0lambda * w0lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(t1p * in_height * in_width + w1p),
+                  static_cast<int>(elem_cnt), t1lambda * h0lambda * w1lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(t1p * in_height * in_width + h1p * in_width),
+                  static_cast<int>(elem_cnt), t1lambda * h1lambda * w0lambda * pos2[0]);
+    FastAtomicAdd(pos1, static_cast<int>(t1p * in_height * in_width + h1p * in_width + w1p),
+                  static_cast<int>(elem_cnt), t1lambda * h1lambda * w1lambda * pos2[0]);
   }
 }
 
