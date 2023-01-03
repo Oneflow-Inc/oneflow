@@ -402,6 +402,7 @@ def get_functional_graph_res(
                         and oneflow_res.placement.type == oneflow_kwargs["device"]
                     ):
                         test_g_res = oneflow_res
+                # The tensor needs to obtain the device type through device.type.
                 else:
                     if (
                         oneflow_args and oneflow_res.device.type == oneflow_args[0]
