@@ -191,6 +191,7 @@ class TestCase(unittest.TestCase):
         reset_session_period = int(
             os.environ.get("ONEFLOW_TEST_RESET_SESSION_PERIOD", "10")
         )
+        RESET_SESSION_COUNT += 1
         if RESET_SESSION_COUNT >= reset_session_period:
             oneflow.framework.session_context.GetDefaultSession().Reset()
             RESET_SESSION_COUNT = 0
