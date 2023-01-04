@@ -18,43 +18,86 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/user/kernels/fused_rnn_cell_kernel_util.h"
+#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
 namespace {
 
-template<typename T>
-__device__ T GenNormal(curandState* state, const T mean, const T std);
+// launch bounds used for kernels
+const uint32_t block_size_bound = 256;
+const uint32_t grid_size_bound = 4;
 
-template<>
-__device__ float GenNormal<float>(curandState* state, const float mean, const float std) {
-  return curand_normal(state) * std + mean;
+std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
+                                                     ep::CudaStream* stream) {
+  const uint64_t numel = static_cast<uint64_t>(total_elements);
+  const uint32_t block_size = block_size_bound;
+  // number of randoms given by distributions like curand_uniform4, curand_uniform2_double
+  // used in calculating philox offset.
+  const uint32_t curand4_engine_calls = 4;
+  const uint32_t unroll = curand4_engine_calls;
+  dim3 dim_block(block_size);
+  dim3 grid((numel + block_size - 1) / block_size);
+  uint32_t blocks_per_sm = stream->device_properties().maxThreadsPerMultiProcessor / block_size;
+  grid.x = std::min(
+      static_cast<uint32_t>(stream->device_properties().multiProcessorCount) * blocks_per_sm,
+      grid.x);
+  // number of times random will be generated per thread, to offset philox counter in thc random
+  // state
+  uint64_t counter_offset =
+      ((numel - 1) / (block_size * grid.x * unroll) + 1) * curand4_engine_calls;
+  return std::make_tuple(counter_offset, grid, dim_block);
 }
 
-template<>
-__device__ double GenNormal<double>(curandState* state, const double mean, const double std) {
-  return curand_normal_double(state) * std + mean;
-}
+template<typename T, typename ComputeType, int unroll_factor>
+OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
+__global__ void DistributionElementwiseGridStrideKernelDouble(int32_t numel, uint64_t seed,
+                                                              uint64_t offset, ComputeType mean,
+                                                              ComputeType std, T* out_ptr) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, idx, offset, &state);
 
-template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T mean,
-                            const T std) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenNormal<T>(&localState, mean, std); }
-  state[id] = localState;
-}
-
-// specialization for half
-template<>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, half* dptr, const half mean,
-                            const half std) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    dptr[i] = static_cast<half>(GenNormal<float>(&localState, mean, std));
+  int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
+                     * gridDim.x * unroll_factor;
+  for (int32_t linear_index = idx; linear_index < rounded_size;
+       linear_index += blockDim.x * gridDim.x * unroll_factor) {
+    double2 rand = curand_normal2_double(&state);
+#pragma unroll
+    for (int ii = 0; ii < unroll_factor; ii++) {
+      int li = linear_index + blockDim.x * gridDim.x * ii;
+      if (li < numel) {
+        out_ptr[li] = static_cast<T>(static_cast<ComputeType>((&rand.x)[ii]) * std + mean);
+      }
+    }
+    __syncthreads();
   }
-  state[id] = localState;
+}
+
+template<typename T, typename ComputeType, int unroll_factor>
+OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
+__global__ void DistributionElementwiseGridStrideKernelFloat(int32_t numel, uint64_t seed,
+                                                             uint64_t offset, ComputeType mean,
+                                                             ComputeType std, T* out_ptr) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, idx, offset, &state);
+
+  int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
+                     * gridDim.x * unroll_factor;
+  for (int32_t linear_index = idx; linear_index < rounded_size;
+       linear_index += blockDim.x * gridDim.x * unroll_factor) {
+    float4 rand = curand_normal4(&state);
+#pragma unroll
+    for (int ii = 0; ii < unroll_factor; ii++) {
+      int li = linear_index + blockDim.x * gridDim.x * ii;
+      if (li < numel) {
+        out_ptr[li] = static_cast<T>(static_cast<ComputeType>((&rand.x)[ii]) * std + mean);
+      }
+    }
+    __syncthreads();
+  }
 }
 
 }  // namespace
@@ -64,13 +107,36 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
+  if (elem_cnt == 0) return;
   const auto device_index = stream->device()->device_index();
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-  int32_t block_num = gen->max_block_num();
-  int32_t thread_num = gen->max_thread_num();
-  auto* curand_states = gen->curand_states();
-  GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, elem_cnt, dptr, mean_, std_);
+
+  ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+  auto execution_policy = CalcExecutionPolicy(elem_cnt, cuda_stream);
+
+  auto counter_offset = std::get<0>(execution_policy);
+  auto grid = std::get<1>(execution_policy);
+  auto block = std::get<2>(execution_policy);
+
+  uint64_t offset = 0;
+  uint64_t seed = gen->current_seed();
+  {
+    std::lock_guard<std::mutex> lock(gen->mutex_);
+    offset = gen->get_philox_offset(counter_offset);
+  }
+
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  if (std::is_same<T, double>::value) {
+    DistributionElementwiseGridStrideKernelDouble<T, ComputeType, 2>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
+            dptr);
+  } else {
+    DistributionElementwiseGridStrideKernelFloat<T, ComputeType, 4>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, static_cast<ComputeType>(mean_), static_cast<ComputeType>(std_),
+            dptr);
+  }
 }
 
 #define INITIATE_CUDA_NORMAL_DISTRIBUTION(T, typeproto)               \

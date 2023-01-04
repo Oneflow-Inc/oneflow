@@ -303,9 +303,9 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/NVIDIA/cutlass/archive/20d90e0b7bcaeb168b0313bb08440cc6427fedee.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 8dbb42044031337fa302c2ab9d1875fa)
+set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
 
 set(FLASH_ATTENTION_URL
     https://github.com/Oneflow-Inc/flash-attention/archive/d80920c22c2484f1c76332f5393b3a2594851211.zip
@@ -314,8 +314,6 @@ use_mirror(VARIABLE FLASH_ATTENTION_URL URL ${FLASH_ATTENTION_URL})
 set(FLASH_ATTENTION_MD5 0cc400b822b2d7e034c04e54a79adf1a)
 
 include(cuda)
-add_subdirectory(external)
-include(third_party)
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
@@ -351,6 +349,14 @@ if(BUILD_CUDA)
     endif()
   endif()
 
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
@@ -366,6 +372,9 @@ if(BUILD_CUDA)
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()
 endif()
+
+add_subdirectory(external)
+include(third_party)
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
