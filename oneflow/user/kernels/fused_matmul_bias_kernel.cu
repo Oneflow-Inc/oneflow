@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 
-#if CUDA_VERSION >= 10200
+#if CUDA_VERSION >= 10020
 
 namespace oneflow {
 
@@ -122,4 +122,4 @@ REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kBFloat16);
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 10200
+#endif  // CUDA_VERSION >= 10020
