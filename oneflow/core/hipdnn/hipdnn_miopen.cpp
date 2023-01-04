@@ -165,9 +165,17 @@ hipdnnStatus_t hipTomiopenDataType(hipdnnDataType_t in, miopenDataType_t *out) {
             *out = miopenHalf;
             break;
         case HIPDNN_DATA_DOUBLE:
+            *out = miopenDouble;
+            break;
         case HIPDNN_DATA_INT8:
+            *out = miopenInt8;
+            break;
         case HIPDNN_DATA_INT32:
+            *out = miopenInt32;
+            break;
         case HIPDNN_DATA_INT8x4:
+            *out = miopenInt8x4;
+            break;
         default:
             HIPDNN_OPEN_LOG_M("hipTomiopenDataType " << in << ": NOT SUPPORTED."
                                                      << std::flush);
