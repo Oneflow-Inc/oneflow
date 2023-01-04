@@ -117,7 +117,8 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
     for (int id = 0; id < k_d; ++id) {
       for (int ih = 0; ih < k_h; ++ih) {
         for (int iw = 0; iw < k_w; ++iw) {
-          cuda::atomic::FastAdd(input_ptr, ih * in_w + iw, in_panel_size, grad_delta);
+          // TODO (Tianyu): Use 'atmoic::Add' when necessary
+          cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
         }
       }
       input_ptr += in_h * in_w;  // next input depth

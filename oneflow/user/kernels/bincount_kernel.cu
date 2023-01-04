@@ -28,7 +28,7 @@ template<typename IDX, typename T>
 __global__ static void BinCountCompute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
   CUDA_1D_KERNEL_LOOP(i, size) {
     IDX idx = *(in_ptr + i);
-    cuda::atomic::FastAdd(out_ptr, static_cast<int>(idx), static_cast<int>(size), weight[i]);
+    cuda::atomic::Add(out_ptr + idx, weight[i]);
   }
 };
 // clang-format on
@@ -38,7 +38,7 @@ __global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t si
   T one = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP(i, size) {
     IDX idx = *(in_ptr + i);
-    cuda::atomic::FastAdd(out_ptr, static_cast<int>(idx), static_cast<int>(size), one);
+    cuda::atomic::Add(out_ptr + idx, one);
   }
 };
 

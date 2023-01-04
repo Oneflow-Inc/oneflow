@@ -64,10 +64,7 @@ __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
       const IDX idx = origin_idx - segment_id_offset;
       if (idx >= 0 && idx < num_segments) {
         const int64_t out_offset = out_helper.NdIndexToOffset(outer_idx, idx, inner_idx);
-        if (out_offset >= 0) {
-          cuda::atomic::FastAdd(out, static_cast<int>(out_offset), static_cast<int>(data_elem_cnt),
-                                static_cast<T>(val));
-        }
+        if (out_offset >= 0) { cuda::atomic::Add(out + out_offset, static_cast<T>(val)); }
       }
     }
   }
@@ -90,10 +87,7 @@ __global__ void UnsortedSegmentColSumGpu(const IDX data_elem_cnt,
       const IDX idx = origin_idx - segment_id_offset;
       if (idx >= 0 && idx < num_segments) {
         const int64_t out_offset = out_helper.NdIndexToOffset(outer_idx, idx);
-        if (out_offset >= 0) {
-          cuda::atomic::FastAdd(out, static_cast<int>(out_offset), static_cast<int>(data_elem_cnt),
-                                static_cast<T>(val));
-        }
+        if (out_offset >= 0) { cuda::atomic::Add(out + out_offset, static_cast<T>(val)); }
       }
     }
   }
@@ -116,10 +110,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
       const IDX idx = origin_idx - segment_id_offset;
       if (idx >= 0 && idx < num_segments) {
         const int64_t out_offset = out_helper.NdIndexToOffset(idx, inner_idx);
-        if (out_offset >= 0) {
-          cuda::atomic::FastAdd(out, static_cast<int>(out_offset), static_cast<int>(data_elem_cnt),
-                                static_cast<T>(val));
-        }
+        if (out_offset >= 0) { cuda::atomic::Add(out + out_offset, static_cast<T>(val)); }
       }
     }
   }
