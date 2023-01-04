@@ -30,7 +30,7 @@ oneflow_add_mlir_dialect_library(
   OKL/Conversion/Conversion.cpp
   OKL/Kernel/InferContext.cpp
   OKL/Kernel/KernelLaunchOp.cpp
-  OKL/Kernel/KernelLaunchState.cpp
+  OKL/Kernel/LauncherState.cpp
   OKL/Kernel/LauncherContext.cpp
   OKL/Kernel/RegContext.cpp
   OKL/Kernel/RunContext.cpp

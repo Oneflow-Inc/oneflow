@@ -31,7 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "OneFlow/OKL/Kernel/JITOpInfer.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
-#include "OneFlow/OKL/Kernel/KernelLaunchState.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
 #include "OneFlow/OKL/Kernel/TmpBufferManager.h"
 
 #include "mlir/IR/DialectRegistry.h"
@@ -82,19 +82,19 @@ class KernelLaunchKernel final : public user_op::OpKernel, public user_op::CudaG
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     // use ctx to create module, reg_ctx and fn;
-    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
+    std::shared_ptr<user_op::OpKernelState> res(new LauncherState(ctx));
     return res;
   }
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
                             user_op::OpKernelState* state) const override {
-    return dynamic_cast<KernelLaunchState*>(state)->IsCudaGraphSupported(ctx);
+    return dynamic_cast<LauncherState*>(state)->IsCudaGraphSupported(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
+    auto* okl_state = dynamic_cast<LauncherState*>(state);
     okl_state->DoCompute(ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

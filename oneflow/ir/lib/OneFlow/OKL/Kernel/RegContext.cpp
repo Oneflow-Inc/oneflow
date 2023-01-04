@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "OneFlow/OKL/Kernel/InferMisc/InferContext.h"
+#include "OneFlow/OKL/Kernel/InferContext.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
@@ -117,7 +117,7 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
   return user_op_conf().Attr4Name(attr_name);
 }
 
-size_t RegContext::GetTmpBufferSize() {
+const size_t RegContext::GetTmpBufferSize() const {
   if (reg_res_->need_temp_storage) {
     InferContext infer_ctx(this);
     return reg_res_->infer_tmp_size_fn(&infer_ctx);

@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_LAUNCHER_CONTEXT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_LAUNCHER_CONTEXT_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_LAUNCHER_CONTEXT_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_LAUNCHER_CONTEXT_H_
 
-#include "OneFlow/OKL/Kernel/InferMisc/InitContext.h"
+#include "OneFlow/OKL/Kernel/InitContext.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -51,4 +51,4 @@ class LauncherContext final {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_LAUNCHER_CONTEXT_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_LAUNCHER_CONTEXT_H_

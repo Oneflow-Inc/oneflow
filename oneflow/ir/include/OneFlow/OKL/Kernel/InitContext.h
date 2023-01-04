@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_CACHECONTEXT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_CACHECONTEXT_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_CACHECONTEXT_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_CACHECONTEXT_H_
 
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/util.h"
@@ -28,16 +28,12 @@ namespace okl {
 class InitContext final : public user_op::KernelCacheContext, public user_op::KernelInitContext {
  public:
   explicit InitContext(RunContext* run_ctx)
-      : reg_ctx_(run_ctx->GetRegContext()),
-        stream_(run_ctx->stream()),
-        parallel_ctx_(run_ctx->parallel_ctx()) {}
-
-  InitContext(RegContext* reg_ctx_, ep::Stream* stream_, const ParallelContext& parallel_ctx_)
-      : reg_ctx_(reg_ctx_), stream_(stream_), parallel_ctx_(parallel_ctx_) {}
+      : reg_ctx_(run_ctx->GetRegContext()), run_ctx_(run_ctx) {}
 
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
-  ep::Stream* stream() override { return stream_; }
-  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
+  const ParallelContext& parallel_ctx() const override { return run_ctx_->parallel_ctx(); }
+  ep::Stream* stream() override { return run_ctx_->stream(); }
+
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -62,8 +58,7 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
 
  private:
   RegContext* reg_ctx_;
-  ep::Stream* stream_;
-  const ParallelContext& parallel_ctx_;
+  RunContext* run_ctx_;
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
     return reg_ctx_->user_op_conf();
@@ -77,4 +72,4 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_CACHECONTEXT_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_CACHECONTEXT_H_

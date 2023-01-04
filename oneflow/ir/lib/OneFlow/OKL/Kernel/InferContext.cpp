@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OKL/Kernel/InferMisc/InferContext.h"
+#include "OneFlow/OKL/Kernel/InferContext.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Casting.h"
@@ -22,7 +22,7 @@ namespace oneflow {
 namespace okl {
 using namespace user_op;
 
-InferContext::InferContext(RegContext* reg_ctx) : reg_ctx_(reg_ctx) {}
+InferContext::InferContext(const RegContext* reg_ctx) : reg_ctx_(reg_ctx) {}
 
 const TensorDesc* InferContext::LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) const {

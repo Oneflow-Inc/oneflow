@@ -30,6 +30,7 @@ using LaunchArgs = std::tuple<RunContext*, const oneflow::user_op::OpKernel*>;
 class JITEngine {
  public:
   explicit JITEngine(mlir::ModuleOp module);
+
   void Run(const std::string& name, LauncherContext* launcher) const {
     auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));

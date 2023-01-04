@@ -13,33 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_TMP_BUFFER_MANAGER_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_TMP_BUFFER_MANAGER_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 namespace okl {
 
-class TmpBufferTensor final : public oneflow::user_op::Tensor {
- public:
-  explicit TmpBufferTensor(user_op::Tensor* tensor) : tensor_(tensor) {}
-  ShapeView shape_view() const override { return tensor_->shape_view(); }
-  MutShapeView mut_shape_view() override { return tensor_->mut_shape_view(); }
-  const Stride& stride() const override { return tensor_->stride(); }
-  DataType data_type() const override { return tensor_->data_type(); }
-  const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
-
-  const void* raw_dptr() const override {
-    return (reinterpret_cast<const char*>(tensor_->raw_dptr()));
-  }
-  void* mut_raw_dptr() override { return (reinterpret_cast<char*>(tensor_->mut_raw_dptr())); }
-
- private:
-  user_op::Tensor* tensor_;
-};
-
 class TmpBufferManager {
+  class TmpBufferTensor final : public oneflow::user_op::Tensor {
+   public:
+    explicit TmpBufferTensor(user_op::Tensor* tensor) : tensor_(tensor) {}
+    ShapeView shape_view() const override { return tensor_->shape_view(); }
+    MutShapeView mut_shape_view() override { return tensor_->mut_shape_view(); }
+    const Stride& stride() const override { return tensor_->stride(); }
+    DataType data_type() const override { return tensor_->data_type(); }
+    const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
+
+    const void* raw_dptr() const override {
+      return (reinterpret_cast<const char*>(tensor_->raw_dptr()));
+    }
+    void* mut_raw_dptr() override { return (reinterpret_cast<char*>(tensor_->mut_raw_dptr())); }
+
+   private:
+    user_op::Tensor* tensor_;
+  };
+
  public:
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
 
@@ -55,4 +55,4 @@ class TmpBufferManager {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_TMP_BUFFER_MANAGER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_

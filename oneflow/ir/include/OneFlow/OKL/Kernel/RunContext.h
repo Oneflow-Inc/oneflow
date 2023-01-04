@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_RUNCONTEXT_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_RUNCONTEXT_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
@@ -60,4 +60,4 @@ class RunContext final : public user_op::KernelComputeContext {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_RUNCONTEXT_H_

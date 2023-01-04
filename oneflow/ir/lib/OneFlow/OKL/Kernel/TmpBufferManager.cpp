@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OKL/Kernel/InferMisc/InferContext.h"
+#include "OneFlow/OKL/Kernel/InferContext.h"
 #include "OneFlow/OKL/Kernel/TmpBufferManager.h"
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "mlir/IR/MLIRContext.h"
@@ -29,7 +29,7 @@ std::shared_ptr<TmpBufferManager> TmpBufferManager::InitTmpBufferManager(user_op
 }
 
 size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
-  mlir::MLIRContext mlir_ctx(KernelLaunchState::GetRegistry());
+  mlir::MLIRContext mlir_ctx(GetRegistry());
 
   auto module =
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);

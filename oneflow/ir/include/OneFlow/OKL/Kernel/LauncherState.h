@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_OP_KERNEL_STATE_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_OP_KERNEL_STATE_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_
 
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "OneFlow/OKL/Conversion/OKLToLLVM.h"
@@ -33,41 +33,36 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-class KernelLaunchState final : public user_op::OpKernelState {
- public:
-  static mlir::DialectRegistry GetRegistry() {
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
-                    mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    return registry;
-  }
+inline mlir::DialectRegistry GetRegistry() {
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
+                  mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+  return registry;
+}
 
-  explicit KernelLaunchState(user_op::KernelInitContext* ctx);
-  ~KernelLaunchState() = default;
+class LauncherState final : public user_op::OpKernelState {
+ public:
+  explicit LauncherState(user_op::KernelInitContext* ctx);
+  ~LauncherState() = default;
 
   void DoCompute(user_op::KernelComputeContext* ctx);
-
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
-    const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
-    if (const auto func = module_->lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME)) {
-      if (const auto is_supported =
-              func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
-        return is_supported;
-      }
-    }
-    return false;
-  }
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx);
 
  private:
+  // manage module(compile)
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;
+
+  // manage context
   std::shared_ptr<LauncherContext> launcher_context_{};
-  std::shared_ptr<JITEngine> engine_{};
   void LazyInitLauncher(user_op::KernelComputeContext* ctx);
+
+  // manage engine(runtime)
+  std::shared_ptr<JITEngine> engine_{};
 };
 
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_OP_KERNEL_STATE_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_

@@ -26,12 +26,12 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
-#include "OneFlow/OKL/Kernel/KernelLaunchState.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
 
 namespace oneflow {
 namespace okl {
 
-KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
+LauncherState::LauncherState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
   // get raw module from ctx attr
   module_ =
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
@@ -43,12 +43,22 @@ KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx
   }
 };
 
-void KernelLaunchState::DoCompute(user_op::KernelComputeContext* ctx) {
+bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
+  const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
+  if (const auto func = module_->lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME)) {
+    if (const auto is_supported =
+            func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
+      return is_supported;
+    }
+  }
+  return false;
+}
+void LauncherState::DoCompute(user_op::KernelComputeContext* ctx) {
   if (!launcher_context_) { LazyInitLauncher(ctx); }
   engine_->Run(mlir::okl::function::COMPUTE_FUNC_NAME.str(), launcher_context_.get());
 }
 
-void KernelLaunchState::LazyInitLauncher(user_op::KernelComputeContext* ctx) {
+void LauncherState::LazyInitLauncher(user_op::KernelComputeContext* ctx) {
   launcher_context_ = std::make_shared<LauncherContext>(ctx, module_->clone());
 
   if (failed(mlir::okl::LowerOKLComputeToLLVM(*module_))) {
