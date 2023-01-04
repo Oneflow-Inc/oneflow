@@ -139,13 +139,6 @@ int GetThreadNum(const cudaDeviceProp& prop) {
   }
 }
 
-Maybe<void> CUDASynchronize() {
-  // Synchronize cuda device to avoid state been modified in random kernels.
-  JUST(CPUSynchronize());
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
@@ -162,8 +155,7 @@ CUDAGeneratorImpl::~CUDAGeneratorImpl() {
 }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
-  CudaCurrentDeviceGuard dev_guard(this->device_index());
-  CHECK_JUST(CUDASynchronize());
+  CHECK_JUST(CPUSynchronize());
   seed_ = seed;
   philox_offset_per_thread_ = 0;
 }
@@ -183,8 +175,7 @@ uint64_t CUDAGeneratorImpl::get_philox_offset(uint64_t increment) {
 }
 
 Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
-  CudaCurrentDeviceGuard dev_guard(this->device_index());
-  JUST(CUDASynchronize());
+  JUST(CPUSynchronize());
   static const size_t states_size = 200 * sizeof(4120);
   static const size_t seed_size = sizeof(uint64_t);
   static const size_t offset_size = sizeof(int64_t);
@@ -222,8 +213,7 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
                                  << total_size << ", but got " << tensor_state->shape()->elem_cnt();
   }
 
-  CudaCurrentDeviceGuard dev_guard(this->device_index());
-  JUST(CUDASynchronize());
+  JUST(CPUSynchronize());
   const auto& callback = [&](ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     const uint8_t* data = static_cast<const uint8_t*>(eager_blob_object->dptr());
