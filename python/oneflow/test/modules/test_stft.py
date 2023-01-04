@@ -53,9 +53,9 @@ class TestStft(flow.unittest.TestCase):
     )
     def test_stft_with_1D_random_data(test_case):
         if is_cufft_available():
-            device = cpu_device()
-        else:
             device = random_device()
+        else:
+            device = cpu_device()
         rand_fft = getRandFFtvalue()
         rand_size = np.random.randint(rand_fft, 30000)
         input_dims = [rand_size]
@@ -78,9 +78,9 @@ class TestStft(flow.unittest.TestCase):
 
     def test_stft_with_2D_random_data(test_case):
         if is_cufft_available():
-            device = cpu_device()
-        else:
             device = random_device()
+        else:
+            device = cpu_device()
         row_rand_size = np.random.randint(1, 50)
         rand_fft = getRandFFtvalue()
         col_rand_size = np.random.randint(rand_fft, 30000)
