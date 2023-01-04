@@ -27,28 +27,34 @@ def _test_tensor_offload_d2h(test_case, input, tensor_mem):
 
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
     print("cuda", before_used)
+    before_id = id(input)
 
     input.offload()
     test_case.assertTrue(input.is_offloaded())
     test_case.assertEqual(input.device, flow.device("cuda"))
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    after_id = id(input)
     print("cuda to cpu", after_used)
     # Check tensor_mem cuda memory released
     test_case.assertTrue((before_used - after_used) == tensor_mem)
+    test_case.assertEqual(before_id, after_id)
 
 
 def _test_tensor_load_h2d(test_case, input, tensor_mem):
     test_case.assertTrue(input.is_offloaded())
 
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    before_id = id(input)
 
     input.load()
     test_case.assertTrue(not input.is_offloaded())
     test_case.assertEqual(input.device, flow.device("cuda"))
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    after_id = id(input)
     print("cpu to cuda", after_used)
     # Check tensor_mem cuda memory allocated
     test_case.assertTrue((after_used - before_used) == tensor_mem)
+    test_case.assertEqual(before_id, after_id)
 
 
 def _get_tensor_mem(input):
@@ -185,14 +191,20 @@ class TestTensorOffload(flow.unittest.TestCase):
         tensor_mem = _get_tensor_mem(input)
 
         before_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        before_id = id(input)
         input.offload()
         after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        after_id = id(input)
         test_case.assertTrue(after_used > before_used)
+        test_case.assertEqual(before_id, after_id)
 
         cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        before_id = id(input)
         input.load()
         after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+        after_id = id(input)
         test_case.assertTrue(after_used < cur_used)
+        test_case.assertEqual(before_id, after_id)
 
 
 if __name__ == "__main__":
