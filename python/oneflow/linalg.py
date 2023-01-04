@@ -47,10 +47,11 @@ def det(A):
     """
     Computes the determinant of a square matrix.
 
-    Supports input of float, double dtypes. Also supports batches of matrices, and if A is a batch of matrices then the output has the same batch dimensions.
+    Supports input of float, double dtypes. Also supports batches of matrices,
+    and if A is a batch of matrices then the output has the same batch dimensions.
 
     Args:
-        A (Tensor): tensor of shape (*, n, n) where * is zero or more batch dimensions.
+        A (Tensor): tensor of shape (\*, n, n) where \* is zero or more batch dimensions.
 
     Returns:
         oneflow.Tensor: the output Tensor.
