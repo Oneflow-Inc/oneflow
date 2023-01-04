@@ -20,8 +20,10 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
-@autotest(n=1, check_graph=False)
+# Not check graph because of one reason:
+# Reason 1, The implementation of the masked_select op calls argwhere with the lazy tensor as an argument, but lazy tensor can not be applied to argwhere.
+# Please refer to File "python/oneflow/nn/modules/masked_select.py", line 54, in masked_select_op.
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_masked_select(test_case, placement, sbp):
     k1 = random(1, 2).to(int).value() * 8
     k2 = random(1, 2).to(int).value() * 8
@@ -30,7 +32,10 @@ def _test_masked_select(test_case, placement, sbp):
     return torch.masked_select(input, mask)
 
 
-@autotest(n=1, check_graph=False)
+# Not check graph because of one reason:
+# Reason 1, The implementation of the masked_select op calls argwhere with the lazy tensor as an argument, but lazy tensor can not be applied to argwhere.
+# Please refer to File "python/oneflow/nn/modules/masked_select.py", line 54, in masked_select_op.
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_masked_select_broadcast(test_case, placement, input_sbp, mask_sbp):
     k1 = random(1, 2).to(int).value() * 8
     k2 = random(1, 2).to(int).value() * 8
