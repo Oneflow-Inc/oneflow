@@ -46,6 +46,11 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
   }
 
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  ComputeType mean = static_cast<ComputeType>(mean_);
+  ComputeType std = static_cast<ComputeType>(std_);
+  auto transform_func = [mean, std] __device__(T random_val) -> T {
+    return static_cast<T>(static_cast<ComputeType>(random_val) * std + mean);
+  };
   if (std::is_same<T, double>::value) {
     DistributionElementwiseGridStrideKernel<T, 2>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -53,21 +58,13 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
             [] __device__(curandStatePhilox4_32_10_t * state) {
               return curand_normal2_double(state);
             },
-            [=] __device__(T random_val) -> T {
-              return static_cast<T>(static_cast<ComputeType>(random_val)
-                                        * static_cast<ComputeType>(std_)
-                                    + static_cast<ComputeType>(mean_));
-            });
+            transform_func);
   } else {
     DistributionElementwiseGridStrideKernel<T, 4>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, dptr,
             [] __device__(curandStatePhilox4_32_10_t * state) { return curand_normal4(state); },
-            [=] __device__(T random_val) -> T {
-              return static_cast<T>(static_cast<ComputeType>(random_val)
-                                        * static_cast<ComputeType>(std_)
-                                    + static_cast<ComputeType>(mean_));
-            });
+            transform_func);
   }
 }
 

@@ -36,7 +36,7 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
     offset = generator_->get_philox_offset(counter_offset);
   }
 
-  auto transform_func = [=] __device__(float rand_val) -> bool { return rand_val > rate; };
+  auto transform_func = [rate] __device__(float rand_val) -> bool { return rand_val > rate; };
 
   DistributionElementwiseGridStrideKernel<bool, 4>
       <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(

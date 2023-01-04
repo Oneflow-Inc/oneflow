@@ -149,11 +149,6 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
   max_thread_num_ = GetThreadNum(prop);
 }
 
-CUDAGeneratorImpl::~CUDAGeneratorImpl() {
-  // Skip if cuda runtime has been deinitialized.
-  if (cudaErrorCudartUnloading == cudaSetDevice(this->device_index())) { return; }
-}
-
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CPUSynchronize());
   seed_ = seed;

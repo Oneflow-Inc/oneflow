@@ -214,7 +214,7 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
-  virtual ~CUDAGeneratorImpl();
+  virtual ~CUDAGeneratorImpl() = default;
 
   int32_t max_block_num() const { return max_block_num_; }
   int32_t max_thread_num() const { return max_thread_num_; }

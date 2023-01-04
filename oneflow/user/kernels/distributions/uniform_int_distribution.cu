@@ -46,10 +46,11 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
     std::lock_guard<std::mutex> lock(gen->mutex_);
     offset = gen->get_philox_offset(counter_offset);
   }
-
-  auto transform_func = [=] __device__(T rand_num) -> T {
+  auto high = high_;
+  auto low = low_;
+  auto transform_func = [high, low] __device__(T rand_num) -> T {
     if (rand_num == 1.0) { rand_num = 0.0; }
-    return static_cast<T>(static_cast<int64_t>(rand_num * (high_ - low_) + low_));
+    return static_cast<T>(static_cast<int64_t>(rand_num * (high - low) + low));
   };
   if (std::is_same<T, double>::value) {
     DistributionElementwiseGridStrideKernel<T, 2>
