@@ -98,9 +98,9 @@ def compare_with_numpy_adamw(
                 state_dict = adam.state_dict()
                 adam = flow.optim.AdamW(x)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -232,9 +232,9 @@ def compare_with_numpy_adamw_clip_grad(
                 state_dict = adam.state_dict()
                 adam = flow.optim.AdamW(x)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 adam.load_state_dict(state_dict)
         return x
 

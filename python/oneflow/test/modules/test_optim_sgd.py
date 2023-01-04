@@ -94,9 +94,9 @@ def compare_with_numpy_sgd(
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -226,9 +226,9 @@ def compare_with_numpy_sgd_clip_grad(
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 sgd.load_state_dict(state_dict)
         return x
 
