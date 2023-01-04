@@ -5396,7 +5396,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
-<<<<<<< HEAD
   m.add_functor<impl::FusedMSASoftmaxFunctor>("FusedMSASoftmax");
   m.add_functor<impl::FusedMSASoftmaxGradFunctor>("FusedMSASoftmaxGrad");
   m.add_functor<impl::FusedMSABiasaddSigmoidMulFunctor>("FusedMSABiasaddSigmoidMul");
@@ -5406,9 +5405,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedMSABiasaddDropoutResidualGrad");
   m.add_functor<impl::FusedMSATmuFunctor>("FusedMSATmu");
   m.add_functor<impl::FusedMSATmuGradFunctor>("FusedMSATmuGrad");
-=======
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
->>>>>>> ad20365ab990bbeb3975a125ed39afbf3fd6d8a6
 }
 
 }  // namespace functional

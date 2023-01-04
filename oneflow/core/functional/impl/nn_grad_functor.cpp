@@ -1261,7 +1261,7 @@ class FlashAttentionGradFunctor {
                                             .Output("bias_grad")
                                             .Build());
   }
-  
+
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& out,
       const std::shared_ptr<one::Tensor>& softmax_lse, const std::shared_ptr<one::Tensor>& query,
