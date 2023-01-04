@@ -15,52 +15,34 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 
 namespace oneflow {
 
-namespace {
-
-constexpr int32_t kMinPackPerThread = 2;
-
-using PackType = ulonglong2;
-
-union Pack {
-  PackType p_value;
-  bool b_value[sizeof(PackType)];
-};
-
-__device__ bool GenMask(curandState* state, const float rate) {
-  return curand_uniform(state) > rate;
-}
-
-__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, bool* mask) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  PackType* pack_mask = reinterpret_cast<PackType*>(mask);
-  Pack pack;
-  CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
-#pragma unroll
-    for (int j = 0; j < sizeof(PackType); ++j) { pack.b_value[j] = GenMask(&localState, rate); }
-    pack_mask[i] = pack.p_value;
-  }
-  const int32_t rem_cnt = n % sizeof(PackType);
-  const int32_t rem_offset = n - rem_cnt;
-  if (id < rem_cnt) { mask[id + rem_offset] = GenMask(&localState, rate); }
-  state[id] = localState;
-}
-
-}  // namespace
-
 void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const int64_t n,
                                                       const float rate, bool* mask) {
-  int32_t block_num = generator_->max_block_num();
-  int32_t thread_num = generator_->max_thread_num();
-  auto* curand_states = generator_->curand_states();
-  const int32_t elem_cnt_per_block = thread_num * sizeof(PackType) * kMinPackPerThread;
-  const int32_t block_num_final =
-      std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
-  GenerateGpu<<<block_num_final, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, n, rate, mask);
+  if (n == 0) return;
+  ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+  auto execution_policy = CalcExecutionPolicy(n, cuda_stream);
+
+  auto counter_offset = std::get<0>(execution_policy);
+  auto grid = std::get<1>(execution_policy);
+  auto block = std::get<2>(execution_policy);
+
+  uint64_t offset = 0;
+  uint64_t seed = generator_->current_seed();
+  {
+    std::lock_guard<std::mutex> lock(generator_->mutex_);
+    offset = generator_->get_philox_offset(counter_offset);
+  }
+
+  auto transform_func = [=] __device__(float rand_val) -> bool { return rand_val > rate; };
+
+  DistributionElementwiseGridStrideKernel<bool, 4>
+      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          n, seed, offset, mask,
+          [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
+          transform_func);
 }
 
 template class RandomMaskGenerator<DeviceType::kCUDA>;

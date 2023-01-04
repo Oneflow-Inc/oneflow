@@ -18,45 +18,54 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/user/kernels/distributions/uniform_int_distribution.h"
+#include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
-
-namespace {
-
-__device__ int64_t GenUniformInt(curandState* state, const int64_t low, const int64_t high) {
-  auto rand_num = curand_uniform(state);
-  // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
-  if (rand_num == 1.0) { rand_num = 0.0; }
-  return static_cast<int64_t>(rand_num * (high - low) + low);
-}
-
-template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const int64_t low,
-                            const int64_t high) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
-  }
-  state[id] = localState;
-}
-
-}  // namespace
 
 template<typename T>
 void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
+  if (elem_cnt == 0) return;
   const auto device_index = stream->device()->device_index();
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-  int32_t block_num = gen->max_block_num();
-  int32_t thread_num = gen->max_thread_num();
-  auto* curand_states = gen->curand_states();
-  GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, elem_cnt, dptr, low_, high_);
+
+  ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+  auto execution_policy = CalcExecutionPolicy(elem_cnt, cuda_stream);
+
+  auto counter_offset = std::get<0>(execution_policy);
+  auto grid = std::get<1>(execution_policy);
+  auto block = std::get<2>(execution_policy);
+
+  uint64_t offset = 0;
+  uint64_t seed = gen->current_seed();
+  {
+    std::lock_guard<std::mutex> lock(gen->mutex_);
+    offset = gen->get_philox_offset(counter_offset);
+  }
+
+  auto transform_func = [=] __device__(T rand_num) -> T {
+    if (rand_num == 1.0) { rand_num = 0.0; }
+    return static_cast<T>(static_cast<int64_t>(rand_num * (high_ - low_) + low_));
+  };
+  if (std::is_same<T, double>::value) {
+    DistributionElementwiseGridStrideKernel<T, 2>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr,
+            [=] __device__(curandStatePhilox4_32_10_t * state) {
+              return curand_uniform2_double(state);
+            },
+            transform_func);
+  } else {
+    DistributionElementwiseGridStrideKernel<T, 4>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr,
+            [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
+            transform_func);
+  }
 }
 
 #define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
