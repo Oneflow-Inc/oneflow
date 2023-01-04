@@ -142,7 +142,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
-    : DeviceGeneratorImpl(seed, DeviceType::kCUDA, device_index) {
+    : DeviceGeneratorImpl(seed, DeviceType::kCUDA, device_index), philox_offset_per_thread_(0) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;

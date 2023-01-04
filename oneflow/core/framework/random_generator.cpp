@@ -129,8 +129,6 @@ Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
   static int device_count = GetCudaDeviceCount();
   FOR_RANGE(int, device_id, 0, device_count) {
     const auto& cuda_gen = JUST(DefaultCUDAGenerator(device_id));
-    std::lock_guard<std::mutex> lock(
-        JUST(cuda_gen->Get<one::CUDAGeneratorImpl>(device_id))->mutex_);
     cuda_gen->set_current_seed(seed);
   }
 #endif  // WITH_CUDA
