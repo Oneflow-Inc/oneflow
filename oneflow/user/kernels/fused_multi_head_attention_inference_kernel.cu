@@ -263,7 +263,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
         query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
         && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
         && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
-    const bool is_trt_supported_arch = (arch == 80 || arch == 86 || arch == 89);
+    const bool is_trt_supported_arch = (arch == 75 || arch == 80 || arch == 86 || arch == 89);
     const int64_t query_head_size = query_hidden_size / num_heads;
     const bool is_trt_supported_head_size = ((query_head_size == 40) || (query_head_size == 64));
     // Avoid PackQKV overhead when seq_len is small.
