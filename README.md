@@ -90,8 +90,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 ### Use docker image
 
 ```
-docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.2
+docker pull oneflowinc/oneflow:nightly-cuda11.7
 ```
 
 ### Build from Source
