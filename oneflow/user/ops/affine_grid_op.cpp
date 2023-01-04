@@ -119,7 +119,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
         JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
     N = physical_shape->At(0);
   }
-  CHECK_EQ_OR_RETURN(theta_shape.At(0), size.At(0))
+  CHECK_EQ_OR_RETURN(theta_shape.At(0), N)
       << "The dimension 0 size of theta shape should be " << N << ", but got " << theta_shape.At(0);
 
   grid->set_is_dynamic(theta.is_dynamic());

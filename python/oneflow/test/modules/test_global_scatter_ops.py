@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, auto_backward=True, check_graph=False)
+@autotest(n=10, auto_backward=True, check_graph=True)
 def _test_scatter_random_data(test_case, placement):
     input = random_tensor(ndim=2, dim0=2, dim1=2).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
@@ -39,7 +39,7 @@ def _test_scatter_random_data(test_case, placement):
     return torch.scatter(input, dim, index, src)
 
 
-@autotest(n=10, auto_backward=True, check_graph=False)
+@autotest(n=10, auto_backward=True, check_graph=True)
 def _test_scatter_scalar_random_data(test_case, placement):
     input = random_tensor(ndim=2, dim0=2, dim1=2).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
@@ -53,7 +53,7 @@ def _test_scatter_scalar_random_data(test_case, placement):
     return torch.scatter(input, dim, index, 3.14)
 
 
-@autotest(n=10, auto_backward=True, check_graph=False)
+@autotest(n=10, auto_backward=True, check_graph=True)
 def _test_scatter_add_random_data(test_case, placement):
     input = random_tensor(ndim=2, dim0=2, dim1=2).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
