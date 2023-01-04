@@ -57,7 +57,7 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
     DistributionElementwiseGridStrideKernel<T, 2>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, dptr,
-            [=] __device__(curandStatePhilox4_32_10_t * state) {
+            [] __device__(curandStatePhilox4_32_10_t * state) {
               return curand_uniform2_double(state);
             },
             transform_func);

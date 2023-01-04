@@ -24,6 +24,26 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+#define OF_DEINFE_INT_DEFAULT_COMPUTE_TYPE(T, typeproto) \
+  template<>                                             \
+  struct DefaultComputeType<T> {                         \
+    using type = float;                                  \
+  };
+
+OF_PP_FOR_EACH_TUPLE(OF_DEINFE_INT_DEFAULT_COMPUTE_TYPE,
+                     INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+
+#undef OF_DEINFE_INT_DEFAULT_COMPUTE_TYPE
+
+}  //  namespace
+
 template<typename T>
 void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
@@ -48,15 +68,17 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
   }
   auto high = high_;
   auto low = low_;
-  auto transform_func = [high, low] __device__(T rand_num) -> T {
+  using ComputeType = typename DefaultComputeType<T>::type;
+  auto transform_func = [high, low] __device__(ComputeType rand_num) -> T {
     if (rand_num == 1.0) { rand_num = 0.0; }
     return static_cast<T>(static_cast<int64_t>(rand_num * (high - low) + low));
   };
+
   if (std::is_same<T, double>::value) {
     DistributionElementwiseGridStrideKernel<T, 2>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, dptr,
-            [=] __device__(curandStatePhilox4_32_10_t * state) {
+            [] __device__(curandStatePhilox4_32_10_t * state) {
               return curand_uniform2_double(state);
             },
             transform_func);
