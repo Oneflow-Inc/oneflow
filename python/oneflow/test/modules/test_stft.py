@@ -47,6 +47,7 @@ def is_cufft_available():
     (major, _minor) = flow.cuda.get_device_capability()
     return major >= 7
 
+
 class TestStft(flow.unittest.TestCase):
     @autotest(
         n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
