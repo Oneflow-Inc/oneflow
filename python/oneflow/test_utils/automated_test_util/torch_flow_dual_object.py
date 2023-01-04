@@ -24,6 +24,7 @@ import gc
 import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import profiler as auto_profiler
+from oneflow.test_utils.test_util import type_name_to_flow_type
 
 flow.backends.cudnn.deterministic = True
 
@@ -44,6 +45,7 @@ from .generators import (
     Nothing,
     generator,
     random_pytorch_tensor,
+    random_pytorch_dtype,
     choice_pytorch_tensor,
     rng,
 )
@@ -388,16 +390,32 @@ def get_functional_graph_res(
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
-        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
+        # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
-                if (oneflow_args and oneflow_res.device.type == oneflow_args[0]) or (
-                    oneflow_kwargs
-                    and oneflow_res.device.type == oneflow_kwargs["device"]
-                ):
-                    test_g_res = oneflow_res
+                # The global tensor needs to obtain the device type through placement.type.
+                if is_global():
+                    if (
+                        oneflow_args and oneflow_res.placement.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.placement.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
+                # The tensor needs to obtain the device type through device.type.
+                else:
+                    if (
+                        oneflow_args and oneflow_res.device.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.device.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
             else:
                 pass
+        # nn.Graph donot deal with Module type. EX: m.to_global(placement, sbp).
+        elif oneflow.__name__ == "to_global":
+            test_g_res = oneflow_res
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
@@ -1354,6 +1372,15 @@ def random_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
+def random_dtype(seq_names):
+    pytorch_dtype = random_pytorch_dtype(seq_names).value()
+    if pytorch_dtype is None:
+        flow_dtype = None
+    else:
+        flow_dtype = type_name_to_flow_type[pytorch_dtype.__str__().split(".")[-1]]
+    return GetDualObject("DualDType", pytorch_dtype, flow_dtype)
+
+
 def choice_tensor(
     a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
 ):
@@ -1385,4 +1412,4 @@ def choice_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor", "random_dtype", "choice_tensor"]
