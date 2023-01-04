@@ -281,10 +281,12 @@ void LaunchKernel(Stream* stream, const int64_t* src_dims, const void* src, cons
             cuda_stream, params, num_batches, rows, cols);
       }
     } else {
+      if (params.count == 0) { return; }
       PermuteKernel<num_dims, movement_size, IndexType>
           <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
     }
   } else {
+    if (params.count == 0) { return; }
     PermuteKernel<num_dims, movement_size, IndexType>
         <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
   }
