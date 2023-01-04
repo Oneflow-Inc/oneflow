@@ -5,10 +5,10 @@ find_package(Threads)
 set(TRT_FLASH_ATTENTION_PROJECT trt_flash_attention)
 
 set(TRT_FLASH_ATTENTION_URL
-    https://github.com/Oneflow-Inc/trt_flash_attention/archive/cb9d1c547153fd96fbb9428d20de36dde500077c.zip
+    https://github.com/Oneflow-Inc/trt_flash_attention/archive/dac29803b711535ed11fcd6ca4a0acfb0f2f8d12.zip
 )
 use_mirror(VARIABLE TRT_FLASH_ATTENTION_URL URL ${TRT_FLASH_ATTENTION_URL})
-set(TRT_FLASH_ATTENTION_MD5 a12bc202839773281ff3b5ba8319c2cc)
+set(TRT_FLASH_ATTENTION_MD5 85d2bcb87f21a58cd8c4dbfa4ae8f2a8)
 
 set(TRT_FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/trt_flash_attention)
 set(TRT_FLASH_ATTENTION_INCLUDE_DIR ${TRT_FLASH_ATTENTION_INSTALL_DIR}/include CACHE PATH "" FORCE)
