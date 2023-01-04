@@ -37,6 +37,7 @@ class CustomModuleForSaveLoad(flow.nn.Module):
         return self.param + x
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSaveLoad(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_load_map_location(test_case):
