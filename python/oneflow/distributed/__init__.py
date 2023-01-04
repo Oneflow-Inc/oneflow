@@ -174,8 +174,8 @@ def reduce_scatter(
 
 def gather(
     tensor: flow.Tensor,
-    gather_list: Optional[List[flow.Tensor]]=None,
-    dst: int=0,
+    gather_list: Optional[List[flow.Tensor]] = None,
+    dst: int = 0,
     group=None,
     async_op: bool = False,
 ) -> None:
