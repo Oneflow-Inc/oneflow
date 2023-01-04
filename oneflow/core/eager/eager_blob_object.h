@@ -216,7 +216,6 @@ class EagerBlobObject final : public user_op::Tensor,
   DataType data_type_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;

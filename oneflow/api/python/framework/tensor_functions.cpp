@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.h"
+#include "oneflow/extension/python/numpy.h"
+#include "oneflow/api/python/utils/tensor_utils.h"
 
 namespace oneflow {
 namespace one {
@@ -32,13 +35,34 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
 using functional::PyObjectPtr;
-
-static PyObject* concat_self(PyObject* self, PyObject* args) {
+namespace {
+PyObject* concat_self(PyObject* self, PyObject* args) {
   PyObjectPtr self_tuple(PyTuple_Pack(1, self));
   PyObject* tuple = PySequence_Concat(self_tuple.get(), args);
   CHECK_OR_THROW(tuple != NULL);
   return tuple;
 }
+
+PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
+  if (PyArray_Check(other)) {
+    const auto& tensor = PyTensor_Unpack(self);
+    CHECK_OR_THROW(!tensor->is_cuda())
+        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
+      auto ndsbp = ASSERT(tensor->nd_sbp());
+      std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
+                                           ASSERT(MakeBroadcastSbpParallel()));
+      other = functional::CastToPyObject(MakeGlobalTensorFromData(other, tensor->dtype(), placement,
+                                                                  sbp, /*requires_grad=*/false));
+    } else {
+      other = functional::CastToPyObject(functional::LocalTensorSharedNumpyData(other));
+    }
+  }
+  return other;
+}
+
+}  // namespace
 
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
@@ -53,12 +77,13 @@ static PyObject* concat_self(PyObject* self, PyObject* args) {
 #define NB_BINARY_FUNC(func_name, bind_func)                 \
   static PyObject* func_name(PyObject* a, PyObject* b) {     \
     HANDLE_ERRORS                                            \
+    b = ndarray_judgment_and_compatibility(a, b);            \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                \
     auto* result = bind_func(NULL, tuple.get(), NULL);       \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
     END_HANDLE_ERRORS                                        \
-  }
+  }  // namespace one
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
@@ -77,8 +102,9 @@ NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
-static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
+  b = ndarray_judgment_and_compatibility(a, b);
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -100,6 +126,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
 #define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                           \
   static PyObject* func_name(PyObject* a, PyObject* b) {                       \
     HANDLE_ERRORS                                                              \
+    b = ndarray_judgment_and_compatibility(a, b);                              \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
@@ -116,7 +143,7 @@ NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul_);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div_);
 
-PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObjectPtr dict(PyDict_New());
@@ -784,6 +811,41 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto self_tensor = PyTensor_Unpack(self);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:type_as", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+
+  // target is local
+  auto other_tensor = PyTensor_Unpack(other);
+  if (other_tensor->is_local()) {
+    Optional<Symbol<Device>> device = ASSERT(other_tensor->device());
+    if (self_tensor->is_global()) {
+      self_tensor = ASSERT_PTR(functional::GlobalToLocal(self_tensor, /*copy=*/false));
+    }
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(self_tensor, device, other_tensor->dtype(), /*copy=*/false)));
+  }
+
+  // target is global
+  std::shared_ptr<Tensor> value_tensor;
+  value_tensor = ASSERT_PTR(functional::To(self_tensor, other_tensor->dtype(), /*copy=*/false));
+  Symbol<ParallelDesc> placement = ASSERT(other_tensor->parallel_desc());
+  std::vector<Symbol<SbpParallel>> sbp;
+  auto ndsbp = ASSERT(other_tensor->nd_sbp());
+  for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
+    sbp.emplace_back(ndsbp->sbp_parallel(i));
+  }
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false)));
+  END_HANDLE_ERRORS
+}
+
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
@@ -881,6 +943,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
      NULL},
     {"to_local", (PyCFunction)PyTensorObject_to_local, METH_VARARGS | METH_KEYWORDS, NULL},
     {"to_global", (PyCFunction)PyTensorObject_to_global, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"type_as", (PyCFunction)PyTensorObject_type_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
     {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
