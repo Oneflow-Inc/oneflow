@@ -39,12 +39,14 @@ def _test_global_tensor_offload_d2h(test_case, input, tensor_mem):
 
     flow._oneflow_internal.eager.ClusterSync()
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    before_id = id(input)
     print("cuda", before_used)
 
     input.offload()
     test_case.assertTrue(input.is_offloaded())
     test_case.assertEqual(input.placement.type, "cuda")
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    after_id = id(input)
     print("cuda to cpu", after_used)
     # Check global_tensor_mem cuda memory released
     # NOTE(Li Xiang): In the case of 4 gpus, the memory usage of the tensor sometimes has a 2MB error.
@@ -55,6 +57,7 @@ def _test_global_tensor_offload_d2h(test_case, input, tensor_mem):
         )
         return
     test_case.assertTrue((before_used - after_used) == tensor_mem)
+    test_case.assertEqual(before_id, after_id)
 
 
 def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
@@ -71,11 +74,13 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
 
     flow._oneflow_internal.eager.ClusterSync()
     before_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    before_id = id(input)
 
     input.load()
     test_case.assertTrue(not input.is_offloaded())
     test_case.assertEqual(input.placement.type, "cuda")
     after_used = flow._oneflow_internal.GetCUDAMemoryUsed()
+    after_id = id(input)
     print("cpu to cuda", after_used)
     # Check global_tensor_mem cuda memory allocated
     # NOTE(Li Xiang): In the case of 4 gpus, the memory usage of the tensor sometimes has a 2MB error.
@@ -86,6 +91,7 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
         )
         return
     test_case.assertTrue((after_used - before_used) == tensor_mem)
+    test_case.assertEqual(before_id, after_id)
 
 
 def _get_specific_global_tensor_mem(placement, sbp):
@@ -143,14 +149,20 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 )
 
                 before_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                before_id = id(input)
                 input.offload()
                 after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                after_id = id(input)
                 test_case.assertTrue(after_used > before_used)
+                test_case.assertEqual(before_id, after_id)
 
                 cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                before_id = id(input)
                 input.load()
                 after_used = flow._oneflow_internal.GetCPUMemoryUsed()
+                after_id = id(input)
                 test_case.assertTrue(after_used < cur_used)
+                test_case.assertEqual(before_id, after_id)
 
 
 if __name__ == "__main__":
