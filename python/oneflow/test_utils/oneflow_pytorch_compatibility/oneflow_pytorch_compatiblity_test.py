@@ -229,12 +229,12 @@ def do_test_train_loss_oneflow_pytorch(
     oneflow_model_loss = []
     pytorch_model_loss = []
 
-    with tempfile.NamedTemporaryFile() as tmpfilename:
+    with tempfile.NamedTemporaryFile() as f:
         pytorch_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, True, device, tmpfilename
+            image_nd, label_nd, model_path, module_name, True, device, f.name
         )
         oneflow_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, False, device, tmpfilename
+            image_nd, label_nd, model_path, module_name, False, device, f.name
         )
 
     if verbose:
