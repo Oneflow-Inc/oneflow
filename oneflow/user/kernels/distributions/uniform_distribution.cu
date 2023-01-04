@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
@@ -45,12 +44,12 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
     offset = gen->get_philox_offset(counter_offset);
   }
 
-  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  using ComputeType = typename distribution::DefaultComputeType<T>::type;
   auto high = high_;
   auto low = low_;
-  auto transform_func = [high, low] __device__(T rand_num) -> T {
+  auto transform_func = [high, low] __device__(ComputeType rand_num) -> T {
     if (rand_num == static_cast<T>(1.0)) { rand_num = static_cast<T>(0.0); }
-    return static_cast<T>(static_cast<ComputeType>(rand_num * (high - low) + low));
+    return static_cast<T>(rand_num * (high - low) + low);
   };
 
   if (std::is_same<T, double>::value) {

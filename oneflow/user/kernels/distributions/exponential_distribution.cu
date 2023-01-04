@@ -65,7 +65,7 @@ void ExponentialDistribution<DeviceType::kCUDA, double>::operator()(
       <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, seed, offset, dptr,
           [] __device__(curandStatePhilox4_32_10_t * state) {
-            return curand_normal2_double(state);
+            return curand_uniform2_double(state);
           },
           transform_func);
 }
@@ -111,7 +111,7 @@ void ExponentialDistribution<DeviceType::kCUDA, float>::operator()(
   DistributionElementwiseGridStrideKernel<float, 4>
       <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, seed, offset, dptr,
-          [] __device__(curandStatePhilox4_32_10_t * state) { return curand_normal4(state); },
+          [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
           transform_func);
 }
 

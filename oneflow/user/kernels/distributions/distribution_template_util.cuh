@@ -25,6 +25,30 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace distribution {
+
+namespace {
+
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+#define OF_DEINFE_SPECIAL_DEFAULT_COMPUTE_TYPE(T, typeproto) \
+  template<>                                                 \
+  struct DefaultComputeType<T> {                             \
+    using type = float;                                      \
+  };
+
+OF_PP_FOR_EACH_TUPLE(OF_DEINFE_SPECIAL_DEFAULT_COMPUTE_TYPE,
+                     INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+
+#undef OF_DEINFE_SPECIAL_DEFAULT_COMPUTE_TYPE
+
+}  //  namespace
+
+}  // namespace distribution
+
 namespace {
 
 // launch bounds used for kernels

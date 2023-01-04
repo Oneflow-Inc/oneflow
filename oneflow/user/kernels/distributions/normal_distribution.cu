@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/user/kernels/distributions/normal_distribution.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/include/device.h"
-#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
@@ -45,11 +44,11 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
     offset = gen->get_philox_offset(counter_offset);
   }
 
-  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  using ComputeType = typename distribution::DefaultComputeType<T>::type;
   ComputeType mean = static_cast<ComputeType>(mean_);
   ComputeType std = static_cast<ComputeType>(std_);
-  auto transform_func = [mean, std] __device__(T random_val) -> T {
-    return static_cast<T>(static_cast<ComputeType>(random_val) * std + mean);
+  auto transform_func = [mean, std] __device__(ComputeType random_val) -> T {
+    return static_cast<T>(random_val * std + mean);
   };
   if (std::is_same<T, double>::value) {
     DistributionElementwiseGridStrideKernel<T, 2>
