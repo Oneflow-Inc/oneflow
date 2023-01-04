@@ -52,9 +52,7 @@ def check_dir_empty(path):
 oneflow_test_dir = src_root / "python" / "oneflow" / "test"
 save_load_test_data_dirs = [
     os.path.relpath(x[0], oneflow_test_dir)
-    for x in os.walk(
-        oneflow_test_dir / "modules" / "save_load_test_data"
-    )
+    for x in os.walk(oneflow_test_dir / "modules" / "save_load_test_data")
 ]
 
 print(save_load_test_data_dirs)
