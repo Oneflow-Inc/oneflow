@@ -647,8 +647,8 @@ OF_DEVICE_FUNC void GridSampler5DKernel(const index_type nthreads, const data_ty
 
 // Note [Passing pointer and offset to fastAtomicAdd]
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// For its internal bounds checking, fastAtomicAdd needs to know where the destination
-// address lies relative to the entire tensor, so we pass the base grad_input_ptr and full offset
+// For its internal bounds checking, fastAtomicAdd needs to know where the destination address
+// lies relative to the entire tensor, so we pass the base grad_input_ptr and full offset
 // information, including batch * channel offset (NC_offset).
 
 template<typename data_type, typename index_type>
@@ -718,8 +718,7 @@ OF_DEVICE_FUNC void GridSampler4DBackwardKernel(
            ++c, inp_ptr_NC += inp_sC, NC_offset += gInp_sC, gOut_ptr_NCHW += gOut_sC) {
         data_type gOut = *gOut_ptr_NCHW;
 
-        // calculate and set grad_input. See Note [Passing pointer and offset to
-        // fastAtomicAdd].
+        // calculate and set grad_input. See Note [Passing pointer and offset to fastAtomicAdd].
         SafeAdd2D(grad_input_ptr, iy_nw, ix_nw, gInp_sH, gInp_sW, inp_H, inp_W, nw * gOut,
                   NC_offset, grad_input_memory_span);
         SafeAdd2D(grad_input_ptr, iy_ne, ix_ne, gInp_sH, gInp_sW, inp_H, inp_W, ne * gOut,
@@ -767,8 +766,7 @@ OF_DEVICE_FUNC void GridSampler4DBackwardKernel(
       const data_type* gOut_ptr_NCHW = grad_output_ptr + n * gOut_sN + h * gOut_sH + w * gOut_sW;
       index_type NC_offset = n * gInp_sN;
       for (index_type c = 0; c < C; ++c, NC_offset += gInp_sC, gOut_ptr_NCHW += gOut_sC) {
-        // calculate and set grad_input. See Note [Passing pointer and offset to
-        // fastAtomicAdd].
+        // calculate and set grad_input. See Note [Passing pointer and offset to fastAtomicAdd].
         SafeAdd2D(grad_input_ptr, iy_nearest, ix_nearest, gInp_sH, gInp_sW, inp_H, inp_W,
                   *gOut_ptr_NCHW, NC_offset, grad_input_memory_span);
       }
@@ -948,8 +946,7 @@ OF_DEVICE_FUNC void GridSampler5DBackwardKernel(
            ++c, gOut_ptr_NCDHW += gOut_sC, NC_offset += gInp_sC, inp_ptr_NC += inp_sC) {
         data_type gOut = *gOut_ptr_NCDHW;
 
-        // calculate and set grad_input. See Note [Passing pointer and offset to
-        // fastAtomicAdd].
+        // calculate and set grad_input. See Note [Passing pointer and offset to fastAtomicAdd].
         SafeAdd3D(grad_input_ptr, iz_tnw, iy_tnw, ix_tnw, gInp_sD, gInp_sH, gInp_sW, inp_D, inp_H,
                   inp_W, tnw * gOut, NC_offset, grad_input_memory_span);
         SafeAdd3D(grad_input_ptr, iz_tne, iy_tne, ix_tne, gInp_sD, gInp_sH, gInp_sW, inp_D, inp_H,
@@ -1036,8 +1033,7 @@ OF_DEVICE_FUNC void GridSampler5DBackwardKernel(
           grad_output_ptr + n * gOut_sN + d * gOut_sD + h * gOut_sH + w * gOut_sW;
       index_type NC_offset = n * gInp_sN;
       for (index_type c = 0; c < C; ++c, gOut_ptr_NCDHW += gOut_sC, NC_offset += gInp_sC) {
-        // calculate and set grad_input. See Note [Passing pointer and offset to
-        // fastAtomicAdd].
+        // calculate and set grad_input. See Note [Passing pointer and offset to fastAtomicAdd].
         SafeAdd3D(grad_input_ptr, iz_nearest, iy_nearest, ix_nearest, gInp_sD, gInp_sH, gInp_sW,
                   inp_D, inp_H, inp_W, *gOut_ptr_NCDHW, NC_offset, grad_input_memory_span);
       }
