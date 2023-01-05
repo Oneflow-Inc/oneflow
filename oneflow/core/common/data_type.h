@@ -74,6 +74,16 @@ struct IsFloating : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_FLOATING
 
+template<>
+struct IsFloating<float16> : std::integral_constant<bool, true> {};
+
+#ifdef WITH_CUDA
+
+template<>
+struct IsFloating<half> : std::integral_constant<bool, true> {};
+
+#endif  // WITH_CUDA
+
 // Type Trait: IsIntegral
 
 template<typename T>
