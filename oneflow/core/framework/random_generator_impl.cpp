@@ -171,6 +171,9 @@ uint64_t CUDAGeneratorImpl::get_philox_offset(uint64_t increment) {
 
 Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   JUST(CPUSynchronize());
+  // NOTE: The RNG state comprises the seed, and an offset used for Philox.
+  // The following line is just here for aligning Pytorch and it is also no
+  // practical effect in Pytorch just for backward compatibility reason.
   static const size_t states_size = 200 * sizeof(4120);
   static const size_t seed_size = sizeof(uint64_t);
   static const size_t offset_size = sizeof(int64_t);
