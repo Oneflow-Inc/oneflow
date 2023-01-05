@@ -78,8 +78,10 @@ class VirtualMachine final {
 
   Maybe<void> NotifyOrRunScheduler();
 
-  bool disable_scheduler_thread_;
-  bool disable_vm_threads_;
+  Maybe<void> CloseWorkerThreads();
+
+  bool multi_thread_;
+  bool threads_closed_;
   bool scheduler_stopped_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> engine_;
 
