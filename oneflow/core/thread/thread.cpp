@@ -68,9 +68,15 @@ void Thread::PollMsgChannel() {
     local_msg_queue_.pop();
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
-        CHECK(id2actor_ptr_.empty())
-            << " RuntimeError! Thread: " << thrd_id_
-            << " NOT empty when stop with actor num: " << id2actor_ptr_.size();
+        if (!id2actor_ptr_.empty()) {
+          LOG(WARNING) << " RuntimeError! (hotfix by warning) Thread: " << thrd_id_
+                       << " NOT empty when stop with actor num: " << id2actor_ptr_.size();
+          for (const auto& pair : id2actor_ptr_) {
+            LOG(WARNING) << " wrong actor: " << pair.first << " to be removed with debug proto : "
+                         << pair.second.first->task_proto().DebugString();
+          }
+          id2actor_ptr_.clear();
+        }
         break;
       } else if (msg.actor_cmd() == ActorCmd::kConstructActor) {
         ConstructActor(msg.dst_actor_id());
