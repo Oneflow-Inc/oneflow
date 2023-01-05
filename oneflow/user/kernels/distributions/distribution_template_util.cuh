@@ -27,8 +27,6 @@ namespace oneflow {
 
 namespace distribution {
 
-namespace {
-
 template<typename T>
 struct DefaultComputeType {
   using type = T;
@@ -44,8 +42,6 @@ OF_PP_FOR_EACH_TUPLE(OF_DEINFE_SPECIAL_DEFAULT_COMPUTE_TYPE,
                      INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 #undef OF_DEINFE_SPECIAL_DEFAULT_COMPUTE_TYPE
-
-}  //  namespace
 
 }  // namespace distribution
 
@@ -83,7 +79,7 @@ std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
 
 #ifdef WITH_CUDA
 
-template<typename T, int unroll_factor, typename dist_t, typename transform_t>
+template<typename T, typename ComputeType, int unroll_factor, typename dist_t, typename transform_t>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__
     void DistributionElementwiseGridStrideKernel(int32_t numel, uint64_t seed, uint64_t offset,
@@ -101,7 +97,7 @@ __global__
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
       int li = linear_index + blockDim.x * gridDim.x * ii;
-      if (li < numel) { out_ptr[li] = transform_func((&rand.x)[ii]); }
+      if (li < numel) { out_ptr[li] = transform_func(static_cast<ComputeType>((&rand.x)[ii])); }
     }
     __syncthreads();
   }

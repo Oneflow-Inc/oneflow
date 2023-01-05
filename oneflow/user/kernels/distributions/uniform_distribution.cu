@@ -53,7 +53,7 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
   };
 
   if (std::is_same<T, double>::value) {
-    DistributionElementwiseGridStrideKernel<T, 2>
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, dptr,
             [] __device__(curandStatePhilox4_32_10_t * state) {
@@ -61,7 +61,7 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
             },
             transform_func);
   } else {
-    DistributionElementwiseGridStrideKernel<T, 4>
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4>
         <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, seed, offset, dptr,
             [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
