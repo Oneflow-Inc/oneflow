@@ -44,8 +44,11 @@ def getRandFFtvalue():
 
 
 def is_cufft_available():
-    (major, _minor) = flow.cuda.get_device_capability()
-    return major >= 7
+    if flow.cuda.is_available():
+        (major, _minor) = flow.cuda.get_device_capability()
+        return major >= 7
+    else:
+        return False
 
 class TestStft(flow.unittest.TestCase):
     @autotest(
