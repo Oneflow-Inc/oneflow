@@ -374,7 +374,6 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocal
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Stream> stream) {
   std::unique_lock<std::recursive_mutex> lock(stream_and_thread_ctx_mutex_);
-
   vm::ThreadCtx* thread_ctx =
       JUST(FindOrCreateThreadCtx(stream->device(), stream->stream_type(), stream->thread_uid()));
   return JUST(CreateStream(thread_ctx, stream));

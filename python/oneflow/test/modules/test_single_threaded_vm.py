@@ -21,11 +21,12 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n2d()
 class TestSingleThreadedVM(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
     def test_ddp_in_single_threaded_vm(test_case):
-        # ONEFLOW_TEST_DEVICE_NUM and environment variables about distributed
-        # training (i.e. MASTER_ADDR, MASTER_PORT, WORLD_SIZE, RANK) are in it.
+        # Environment variables of current process like ONEFLOW_TEST_DEVICE_NUM
+        # and environment variables about distributed training (i.e. MASTER_ADDR,
+        # MASTER_PORT, WORLD_SIZE, RANK) are all in `env`.
         env = os.environ.copy()
         env["ONEFLOW_VM_MULTI_THREAD"] = "0"
         p = subprocess.run(
