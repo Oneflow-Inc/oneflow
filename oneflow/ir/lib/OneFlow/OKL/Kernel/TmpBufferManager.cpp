@@ -39,7 +39,7 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
 
   size_t max_size = 0;
   for (auto& op : ops) {
-    if (!llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) { break; }
+    // if (!llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) { break; }
     mlir::Operation* reg_op = nullptr;
     for (auto& op_it : op.getRegion(0).front().getOperations()) {
       if (op_it.getDialect()->getNamespace() == "oneflow") {

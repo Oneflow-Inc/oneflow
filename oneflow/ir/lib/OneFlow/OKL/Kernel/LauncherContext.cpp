@@ -47,21 +47,21 @@ LauncherContext::LauncherContext(mlir::ModuleOp module) {
 
   for (auto& op : ops) {
     llvm::TypeSwitch<mlir::Operation*>(&op)
-        .Case([&](mlir::okl::BuildRegContextOp elem) {
-          auto index = compile_ctx_vec_.size();
+        // .Case([&](mlir::okl::BuildRegContextOp elem) {
+        //   auto index = compile_ctx_vec_.size();
 
-          mlir::Operation* reg_op = nullptr;
-          for (auto& op_it : op.getRegion(0).front().getOperations()) {
-            if (op_it.getDialect()->getNamespace() == "oneflow") {
-              reg_op = &op_it;
-              break;
-            }
-          }
+        //   mlir::Operation* reg_op = nullptr;
+        //   for (auto& op_it : op.getRegion(0).front().getOperations()) {
+        //     if (op_it.getDialect()->getNamespace() == "oneflow") {
+        //       reg_op = &op_it;
+        //       break;
+        //     }
+        //   }
 
-          if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-          compile_ctx_vec_.emplace_back(reg_op);
-          op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
-        })
+        //   if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+        //   compile_ctx_vec_.emplace_back(reg_op);
+        //   op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
+        // })
         .Case([&](mlir::func::ReturnOp elem) {})
         .Default([&](mlir::Operation* elem) {
           LOG(FATAL) << "Fail to parse this op in okl init context";

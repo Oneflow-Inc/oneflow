@@ -52,52 +52,52 @@ namespace mlir {
 
 namespace okl {
 
-struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
-  explicit FetchFromLauncherPattern(mlir::MLIRContext* context)
-      : mlir::OpRewritePattern<func::CallOp>(context, 0) {}
-  mlir::LogicalResult matchAndRewrite(func::CallOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    // this pattern only replace func.call @get_resources_type_{X}
-    auto prefix = function::PREFIX_RESOURCES_NAME;
-    if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
+// struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
+//   explicit FetchFromLauncherPattern(mlir::MLIRContext* context)
+//       : mlir::OpRewritePattern<func::CallOp>(context, 0) {}
+//   mlir::LogicalResult matchAndRewrite(func::CallOp op,
+//                                       mlir::PatternRewriter& rewriter) const override {
+//     // this pattern only replace func.call @get_resources_type_{X}
+//     auto prefix = function::PREFIX_RESOURCES_NAME;
+//     if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
 
-    // if the result number equals to zero, it means this kind of resources is not needed in this
-    // function scope.
-    if (op->getNumResults() == 0) {
-      rewriter.eraseOp(op);
-      return success();
-    }
+//     // if the result number equals to zero, it means this kind of resources is not needed in this
+//     // function scope.
+//     if (op->getNumResults() == 0) {
+//       rewriter.eraseOp(op);
+//       return success();
+//     }
 
-    auto elem_type = op->getResult(0).getType();
-    auto launcher_ctx = op->getParentOfType<func::FuncOp>().getBody().getArgument(0);
-    llvm::SmallVector<Value> new_ops;
-    // convert single function: get_resources_type_{X} to multiple functions:
-    // fetch_{resources}_from_launcher_ctx
-    for (int index = 0; index < op->getNumResults(); ++index) {
-      Value val;
-      llvm::TypeSwitch<Type>(elem_type)
-          .Case<KernelType>([&](auto elem) {
-            val = rewriter.create<FetchKernelOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
-          })
-          .Case<RegContextType>([&](auto elem) {
-            val =
-                rewriter.create<FetchRegContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
-          })
-          .Case<RunContextType>([&](auto elem) {
-            val =
-                rewriter.create<FetchRunContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
-          })
-          .Default([&](auto elem) {
-            op->emitError("Failed to fetch from launcher with illegal tensor.extract op");
-            exit(1);
-          });
-      new_ops.push_back(val);
-    }
-    op->replaceAllUsesWith(new_ops);
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
+//     auto elem_type = op->getResult(0).getType();
+//     auto launcher_ctx = op->getParentOfType<func::FuncOp>().getBody().getArgument(0);
+//     llvm::SmallVector<Value> new_ops;
+//     // convert single function: get_resources_type_{X} to multiple functions:
+//     // fetch_{resources}_from_launcher_ctx
+//     for (int index = 0; index < op->getNumResults(); ++index) {
+//       Value val;
+//       llvm::TypeSwitch<Type>(elem_type)
+//           .Case<KernelType>([&](auto elem) {
+//             val = rewriter.create<FetchKernelOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+//           })
+//           .Case<RegContextType>([&](auto elem) {
+//             val =
+//                 rewriter.create<FetchRegContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+//           })
+//           .Case<RunContextType>([&](auto elem) {
+//             val =
+//                 rewriter.create<FetchRunContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+//           })
+//           .Default([&](auto elem) {
+//             op->emitError("Failed to fetch from launcher with illegal tensor.extract op");
+//             exit(1);
+//           });
+//       new_ops.push_back(val);
+//     }
+//     op->replaceAllUsesWith(new_ops);
+//     rewriter.eraseOp(op);
+//     return success();
+//   }
+// };
 
 namespace {
 struct FetchFromLauncherPass : public FetchFromLauncherPassBase<FetchFromLauncherPass> {
@@ -119,7 +119,7 @@ std::unique_ptr<Pass> createFetchFromLauncherPass() {
 void FetchFromLauncherPass::runOnOperation() {
   Operation* op = getOperation();
   RewritePatternSet patterns(op->getContext());
-  patterns.add<FetchFromLauncherPattern>(patterns.getContext());
+  // patterns.add<FetchFromLauncherPattern>(patterns.getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 

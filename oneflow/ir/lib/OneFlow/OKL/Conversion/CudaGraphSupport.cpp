@@ -57,24 +57,24 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
   static LogicalResult CheckChild(func::FuncOp func) {
     using namespace ::oneflow::user_op;
     for (auto& op : func->getRegion(0).front()) {
-      if (auto reg_ctx_op = llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(&op)) {
-        // iter reg context op
-        const auto reg_op = FindOneFlowOp(&op);
-        if (!reg_op) {
-          func->emitError("Failed to find reg_op in okl.build_reg_context_op");
-          return failure();
-        }
-        // generate kernel from oneflow.{compute op}
-        ::oneflow::okl::RegContext reg_ctx(reg_op);
-        auto* kernel = const_cast<OpKernel*>(reg_ctx.GetKernel());
+      // if (auto reg_ctx_op = llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(&op)) {
+      //   // iter reg context op
+      //   const auto reg_op = FindOneFlowOp(&op);
+      //   if (!reg_op) {
+      //     func->emitError("Failed to find reg_op in okl.build_reg_context_op");
+      //     return failure();
+      //   }
+      //   // generate kernel from oneflow.{compute op}
+      //   ::oneflow::okl::RegContext reg_ctx(reg_op);
+      //   auto* kernel = const_cast<OpKernel*>(reg_ctx.GetKernel());
 
-        // check whether cuda graph support is base class
-        if (const auto* cuda_graph_support = dynamic_cast<CudaGraphSupport*>(kernel)) {
-          // TODO: more check
-          continue;
-        }
-        return failure();
-      }
+      //   // check whether cuda graph support is base class
+      //   if (const auto* cuda_graph_support = dynamic_cast<CudaGraphSupport*>(kernel)) {
+      //     // TODO: more check
+      //     continue;
+      //   }
+      //   return failure();
+      // }
     }
     return success();
   }
