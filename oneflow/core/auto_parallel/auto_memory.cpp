@@ -214,7 +214,7 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
       const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
       auto it = lbi2id->find(lbi);
       if (it == lbi2id->end()) {
-        lbi2id->at(lbi) = id2blob_size->size();
+        (*lbi2id)[lbi] = id2blob_size->size();
         const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
         id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
         id2consumer_topo_structs->push_back({topo_struct});
