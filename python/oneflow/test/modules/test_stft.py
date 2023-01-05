@@ -50,6 +50,7 @@ def is_cufft_available():
     else:
         return False
 
+
 class TestStft(flow.unittest.TestCase):
     @autotest(
         n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
