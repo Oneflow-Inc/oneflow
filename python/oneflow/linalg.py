@@ -56,6 +56,9 @@ def det(A):
     Returns:
         oneflow.Tensor: the output Tensor.
 
+    .. warning::
+        Currently, only CUDA11 and above versions are supported.
+
     For example:
 
     .. code-block:: python
@@ -65,8 +68,8 @@ def det(A):
         >>> flow.linalg.det(x)
         >>> tensor(-3., dtype=oneflow.float32)
         >>> x = flow.randn(3, 3, 2, 2)
-        >>> y = flow.linalg.det(x)
-        >>> y.shape
+        >>> y = flow.linalg.det(x) # doctest: +SKIP
+        >>> y.shape # doctest: +SKIP
         >>> oneflow.Size([3, 3])
 
     """
