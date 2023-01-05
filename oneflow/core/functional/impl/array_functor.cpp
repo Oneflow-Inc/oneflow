@@ -3119,7 +3119,8 @@ class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t k,
-                                const Optional<int32_t>& dim, const bool largest, const bool sorted) const {
+                                const Optional<int32_t>& dim, const bool largest,
+                                const bool sorted) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     std::shared_ptr<Tensor> values;
     std::shared_ptr<Tensor> indices;
