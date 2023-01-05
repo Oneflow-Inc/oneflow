@@ -150,7 +150,7 @@ jobs:
   pack_src:
     name: Pack source code
     if: github.ref == 'refs/heads/master' && github.repository == 'Oneflow-Inc/oneflow'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Pack OneFlow source code
