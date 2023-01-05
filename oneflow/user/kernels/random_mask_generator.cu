@@ -19,6 +19,39 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+using PackType = ulonglong2;
+
+union Pack {
+  PackType p_value;
+  bool b_value[sizeof(PackType)];
+};
+
+__device__ bool GenMask(curandStatePhilox4_32_10_t* state, const float rate) {
+  return curand_uniform(state) > rate;
+}
+
+__global__ void GenerateGpu(uint64_t seed, uint64_t offset, const int64_t n, const float rate,
+                            bool* mask) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, id, offset, &state);
+  PackType* pack_mask = reinterpret_cast<PackType*>(mask);
+  Pack pack;
+  CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
+#pragma unroll
+    for (int j = 0; j < sizeof(PackType); ++j) { pack.b_value[j] = GenMask(&state, rate); }
+    pack_mask[i] = pack.p_value;
+  }
+
+  const int32_t rem_cnt = n % sizeof(PackType);
+  const int32_t rem_offset = n - rem_cnt;
+  if (id < rem_cnt) { mask[id + rem_offset] = GenMask(&state, rate); }
+}
+
+}  // namespace
+
 void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const int64_t n,
                                                       const float rate, bool* mask) {
   if (n == 0) return;
@@ -36,13 +69,8 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
     offset = generator_->get_philox_offset(counter_offset);
   }
 
-  auto transform_func = [rate] __device__(float rand_val) -> bool { return rand_val > rate; };
-
-  DistributionElementwiseGridStrideKernel<bool, 4>
-      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          n, seed, offset, mask,
-          [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
-          transform_func);
+  GenerateGpu<<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(seed, offset, n,
+                                                                               rate, mask);
 }
 
 template class RandomMaskGenerator<DeviceType::kCUDA>;
