@@ -13,25 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_
 
 #include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-DEFINE_ENV_BOOL(ONEFLOW_DEBUG_MODE, false);
-DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
-
-inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
-
-DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
-inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
-
-inline bool IsPythonStackGetterEnabled() {
-  return ParseBooleanFromEnv("ONEFLOW_PYTHON_STACK_GETTER", IsInDebugMode());
-}
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS, 20);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_BOOTSTRAP_SERVER_MAX_RETRY_TIMES, 3);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_CLIENT_SLEEP_SECONDS, 5);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES, 6);
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_
