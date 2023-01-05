@@ -21,9 +21,7 @@ namespace oneflow {
 /* static */ auto FusedGluWithoutLinearGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   // check existance of optional args
   bool is_split_mode = false;
-  if (ctx->user_op_conf().has_input("matmul_vx", 0)) {
-    is_split_mode = true;
-  }
+  if (ctx->user_op_conf().has_input("matmul_vx", 0)) { is_split_mode = true; }
 
   for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes();
        ++i) {
@@ -42,7 +40,7 @@ namespace oneflow {
           .Build();
     }
   }
-  
+
   return Maybe<void>::Ok();
 }
 

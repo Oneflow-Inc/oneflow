@@ -371,9 +371,7 @@ struct BinaryFunctor<device, BinaryOp::kReluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    const Src zero_val = static_cast<Src>(0.0);
-    const Src y = x <= zero_val ? zero_val : x;
-    return static_cast<Dst>((y <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0) : dy);
+    return static_cast<Dst>((x <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0) : dy);
   }
 };
 

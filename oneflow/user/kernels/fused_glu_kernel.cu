@@ -25,11 +25,14 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+
+#if CUDA_VERSION >= 10020
 
 #if !defined(__clang__)
 
@@ -297,8 +300,8 @@ template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_
 __global__ void FusedGluForwardGpu(
     const IndexType m, const IndexType packed_n, const IndexType packed_num,
     const IndexType packed_stride,
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act, T* matmul_wx, const T* b,
-    T* matmul_vx, const T* c, T* y) {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act, T* matmul_wx, T* matmul_vx,
+    T* y) {
   // obtain global thread index
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -313,140 +316,127 @@ __global__ void FusedGluForwardGpu(
     const IndexType y_packed_col = packed_index - y_packed_row * packed_n;
 
     // cast type to load type
-    LoadPack* matmul_wx_load =
+    const LoadPack* matmul_wx_load =
         reinterpret_cast<LoadPack*>(matmul_wx) + (y_packed_row * packed_stride + y_packed_col);
-    LoadPack* matmul_vx_load =
+    const LoadPack* matmul_vx_load =
         reinterpret_cast<LoadPack*>(matmul_vx) + (y_packed_row * packed_stride + y_packed_col);
-    const LoadPack* b_load = reinterpret_cast<const LoadPack*>(b) + y_packed_col;
-    const LoadPack* c_load = reinterpret_cast<const LoadPack*>(c) + y_packed_col;
 
     // init vectors
     LoadPack matmul_wx_vec = *matmul_wx_load;
     LoadPack matmul_vx_vec = *matmul_vx_load;
-    LoadPack b_vec = *b_load;
-    LoadPack c_vec = *c_load;
-    LoadPack matmu_wx_bias_vec;
-    LoadPack matmu_vx_bias_vec;
     LoadPack y_vec;
 
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      // calculate the hidden_state and gate
-      T hidden_state = matmul_wx_vec.elem[i] + b_vec.elem[i];
-      T gate = matmul_vx_vec.elem[i] + c_vec.elem[i];
+      // obtain the hidden_state and gate
+      T hidden_state = matmul_wx_vec.elem[i];
+      T gate = matmul_vx_vec.elem[i];
 
       // calculate activation
       T act_gate = act(gate);
 
       // calculate element-wise product
       y_vec.elem[i] = hidden_state * act_gate;
-      matmu_wx_bias_vec.elem[i] = hidden_state;
-      matmu_vx_bias_vec.elem[i] = gate;
     }
     *(reinterpret_cast<LoadPack*>(y + packed_index * pack_size)) = y_vec;
-    *(matmul_wx_load) = matmu_wx_bias_vec;
-    *(matmul_vx_load) = matmu_vx_bias_vec;
   }
 }
 
 template<typename T, typename IndexType, ep::primitive::UnaryOp act_type, int32_t pack_size>
 void LaunchFusedGluForwardGpu(ep::Stream* stream, const IndexType m, const IndexType packed_n,
                               const IndexType pack_num, const IndexType packed_stride, T* matmul_wx,
-                              const T* b, T* matmul_vx, const T* c, T* y) {
+                              T* matmul_vx, T* y) {
   constexpr int32_t block_size = 128;
   unsigned int grid_size = (pack_num + block_size - 1) / block_size;
   ep::primitive::UnaryFunctor<DeviceType::kCUDA, act_type, T, T> act(0, 0);
   FusedGluForwardGpu<T, IndexType, act_type, pack_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          m, packed_n, pack_num, packed_stride, act, matmul_wx, b, matmul_vx, c, y);
+          m, packed_n, pack_num, packed_stride, act, matmul_wx, matmul_vx, y);
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, int32_t pack_size>
 void DispatchIndexType(ep::Stream* stream, const int64_t m, const int64_t packed_n,
                        const int64_t pack_num, const int64_t packed_stride, T* matmul_wx,
-                       const T* b, T* matmul_vx, const T* c, T* y) {
+                       T* matmul_vx, T* y) {
   // dispatch index type
   if (pack_num < (1 << 30)) {
     LaunchFusedGluForwardGpu<T, int32_t, act_type, pack_size>(
-        stream, m, packed_n, pack_num, packed_stride, matmul_wx, b, matmul_vx, c, y);
+        stream, m, packed_n, pack_num, packed_stride, matmul_wx, matmul_vx, y);
   } else {
     LaunchFusedGluForwardGpu<T, int64_t, act_type, pack_size>(
-        stream, m, packed_n, pack_num, packed_stride, matmul_wx, b, matmul_vx, c, y);
+        stream, m, packed_n, pack_num, packed_stride, matmul_wx, matmul_vx, y);
   }
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, int32_t alignment,
          typename std::enable_if<alignment / sizeof(T) == 0, int>::type = 0>
 void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t stride,
-                      T* matmul_wx, const T* b, T* matmul_vx, const T* c, T* y) {
-  DispatchIndexType<T, act_type, 1>(stream, m, n, m * n, stride, matmul_wx, b, matmul_vx, c, y);
+                      T* matmul_wx, T* matmul_vx, T* y) {
+  DispatchIndexType<T, act_type, 1>(stream, m, n, m * n, stride, matmul_wx, matmul_vx, y);
 }
 
 template<typename T, ep::primitive::UnaryOp act_type, int32_t alignment,
          typename std::enable_if<alignment / sizeof(T) != 0, int>::type = 0>
 void DispatchPackSize(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t stride,
-                      T* matmul_wx, const T* b, T* matmul_vx, const T* c, T* y) {
+                      T* matmul_wx, T* matmul_vx, T* y) {
   const int64_t pack_size = alignment / sizeof(T);
   const int64_t packed_n = n / pack_size;
   const int64_t pack_num = m * packed_n;
   const int64_t packed_stride = stride / pack_size;
-  DispatchIndexType<T, act_type, alignment / sizeof(T)>(
-      stream, m, packed_n, pack_num, packed_stride, matmul_wx, b, matmul_vx, c, y);
+  DispatchIndexType<T, act_type, alignment / sizeof(T)>(stream, m, packed_n, pack_num,
+                                                        packed_stride, matmul_wx, matmul_vx, y);
 }
 
 template<typename T, ep::primitive::UnaryOp act_type>
 void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, const int64_t stride,
-                       T* matmul_wx, const T* b, T* matmul_vx, const T* c, T* y) {
+                       T* matmul_wx, T* matmul_vx, T* y) {
   const auto IsAligned = [&](const size_t alignment) {
     const uintptr_t matmul_wx_ptr = reinterpret_cast<uintptr_t>(matmul_wx);
     const uintptr_t matmul_vx_ptr = reinterpret_cast<uintptr_t>(matmul_vx);
-    const uintptr_t b_ptr = reinterpret_cast<uintptr_t>(b);
-    const uintptr_t c_ptr = reinterpret_cast<uintptr_t>(c);
     const uintptr_t y_ptr = reinterpret_cast<uintptr_t>(y);
 
     return (/* memory address alignment */
             matmul_wx_ptr % alignment == 0 && matmul_vx_ptr % alignment == 0
-            && b_ptr % alignment == 0 && c_ptr % alignment == 0
             && y_ptr % alignment == 0
             /* #element per row alignment */
             && n % (alignment / sizeof(T)) == 0);
   };
 
   if (IsAligned(16)) {
-    DispatchPackSize<T, act_type, 16>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 16>(stream, m, n, stride, matmul_wx, matmul_vx, y);
   } else if (IsAligned(8)) {
-    DispatchPackSize<T, act_type, 8>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 8>(stream, m, n, stride, matmul_wx, matmul_vx, y);
   } else if (IsAligned(4)) {
-    DispatchPackSize<T, act_type, 4>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 4>(stream, m, n, stride, matmul_wx, matmul_vx, y);
   } else if (IsAligned(2)) {
-    DispatchPackSize<T, act_type, 2>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 2>(stream, m, n, stride, matmul_wx, matmul_vx, y);
   } else {
-    DispatchPackSize<T, act_type, 1>(stream, m, n, stride, matmul_wx, b, matmul_vx, c, y);
+    DispatchPackSize<T, act_type, 1>(stream, m, n, stride, matmul_wx, matmul_vx, y);
   }
 }
 
 template<typename T>
 void DispatchActivationType(ep::Stream* stream, const int64_t m, const int64_t n,
-                            const int64_t stride, T* matmul_wx, const T* b, T* matmul_vx,
-                            const T* c, T* y, const std::string& activation) {
+                            const int64_t stride, T* matmul_wx, T* matmul_vx, T* y,
+                            const std::string& activation) {
   if (activation == "none") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity>(stream, m, n, stride, matmul_wx, b,
-                                                            matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kIdentity>(stream, m, n, stride, matmul_wx,
+                                                            matmul_vx, y);
   } else if (activation == "sigmoid") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid>(stream, m, n, stride, matmul_wx, b,
-                                                           matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSigmoid>(stream, m, n, stride, matmul_wx,
+                                                           matmul_vx, y);
   } else if (activation == "relu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kRelu>(stream, m, n, stride, matmul_wx, b,
-                                                        matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kRelu>(stream, m, n, stride, matmul_wx, matmul_vx,
+                                                        y);
   } else if (activation == "gelu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kGelu>(stream, m, n, stride, matmul_wx, b,
-                                                        matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kGelu>(stream, m, n, stride, matmul_wx, matmul_vx,
+                                                        y);
   } else if (activation == "fast_gelu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kFastGelu>(stream, m, n, stride, matmul_wx, b,
-                                                            matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kFastGelu>(stream, m, n, stride, matmul_wx,
+                                                            matmul_vx, y);
   } else if (activation == "silu") {
-    DispatchAlignment<T, ep::primitive::UnaryOp::kSilu>(stream, m, n, stride, matmul_wx, b,
-                                                        matmul_vx, c, y);
+    DispatchAlignment<T, ep::primitive::UnaryOp::kSilu>(stream, m, n, stride, matmul_wx, matmul_vx,
+                                                        y);
   } else {
     UNIMPLEMENTED();
   }
@@ -458,9 +448,15 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
   GpuFusedGluKernel() = default;
   ~GpuFusedGluKernel() override = default;
 
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateCublasFusedMLPKernelCache();
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     // obtain tensors from context
     const user_op::Tensor* input_tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* input_tensor_w = ctx->Tensor4ArgNameAndIndex("w", 0);
@@ -473,6 +469,11 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     user_op::Tensor* input_tensor_v = nullptr;
     user_op::Tensor* input_tensor_c = nullptr;
     user_op::Tensor* out_tensor_matmul_vx = nullptr;
+
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    const auto* fused_glu_cache =
+        CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
 
     if (ctx->has_input("v", 0) && ctx->has_input("c", 0)) {
       input_tensor_v = ctx->Tensor4ArgNameAndIndex("v", 0);
@@ -523,6 +524,11 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(c_shape, b_shape) << "the shape of \'c\' is not consistant with \'b\'";
     }
 
+    // obtain data type for cublaslt computation
+    const DataType data_type = out_tensor_matmul_wx->data_type();
+    const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
+    const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
+
     // infer m, n, k
     const int64_t m = x_shape.Count(0, x_num_axes - 1);
     const int64_t n = y_shape.At(x_num_axes - 1);
@@ -541,36 +547,130 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       return;
     }
 
-    // calculate matmul_wx (and matmul_vx) through primitive
-    auto matmul = ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
-        DeviceType::kCUDA, input_tensor_x->data_type(), ep::primitive::BlasTransposeType::N,
-        ep::primitive::BlasTransposeType::T);
-    CHECK(matmul);
-    /* Launch(Stream* stream, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
-                  const void* b, Scalar beta, void* c) = 0; */
+    // init scalar parameters for cublaslt
+    const double alpha = 1.0;
+    const double beta = 0.0;
+    const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+    const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+
+    // calculate matmul_wx (and matmul_vx) through cublaslt
     if (is_split_mode) {
-      matmul->Launch(ctx->stream(), m, n, k, 1.0, input_tensor_x->dptr(), input_tensor_w->dptr(),
-                     0.0, out_tensor_matmul_wx->mut_dptr());
-      matmul->Launch(ctx->stream(), m, n, k, 1.0, input_tensor_x->dptr(), input_tensor_v->dptr(),
-                     0.0, out_tensor_matmul_vx->mut_dptr());
+      // define shape parameters to be inferred
+      size_t cublas_wx_m = 0, cublas_wx_n = 0, cublas_wx_k = 0;
+      int64_t cublas_wx_lda = 0, cublas_wx_ldb = 0, cublas_wx_ldc = 0;
+      size_t cublas_vx_m = 0, cublas_vx_n = 0, cublas_vx_k = 0;
+      int64_t cublas_vx_lda = 0, cublas_vx_ldb = 0, cublas_vx_ldc = 0;
+
+      // init dim vector
+      DimVector x_dim_vec({m, k});
+      DimVector w_dim_vec({n, k});
+      DimVector v_dim_vec({n, k});
+
+      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
+      InferMatmulCublasMNK(x_dim_vec, w_dim_vec,
+                           /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                           /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_wx_m,
+                           &cublas_wx_n, &cublas_wx_k, &cublas_wx_lda, &cublas_wx_ldb,
+                           &cublas_wx_ldc);
+      SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
+                    /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                    /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
+                    input_tensor_b->dptr(), nullptr, cublas_wx_m, cublas_wx_n, cublas_wx_k,
+                    cublas_wx_lda, cublas_wx_ldb, cublas_wx_ldc);
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          /*lightHandle*/ cuda_stream->cublas_lt_handle(),
+          /*computeDesc*/ fused_glu_cache->operation_desc,
+          /*alpha*/ &sp_alpha,
+          /*A*/ input_tensor_w->dptr(),
+          /*Adesc*/ fused_glu_cache->cublas_a_desc,
+          /*B*/ input_tensor_x->dptr(),
+          /*Bdesc*/ fused_glu_cache->cublas_b_desc,
+          /*beta*/ &sp_beta,
+          /*C*/ input_tensor_b->dptr(),
+          /*Cdesc*/ fused_glu_cache->cublas_c_desc,
+          /*D*/ out_tensor_matmul_wx->mut_dptr(),
+          /*Ddesc*/ fused_glu_cache->cublas_c_desc,
+          /*algo*/ nullptr,
+          /*workspace*/ cuda_stream->cublas_workspace(),
+          /*workspaceSizeInBytes*/ cuda_stream->cublas_workspace_size(),
+          /*stream*/ cuda_stream->cuda_stream()));
+
+      // out_tensor_matmul_vx = 1.0 * (input_tensor_v * input_tensor_x) + 1.0 * input_tensor_c
+      InferMatmulCublasMNK(x_dim_vec, v_dim_vec,
+                           /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                           /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_vx_m,
+                           &cublas_vx_n, &cublas_vx_k, &cublas_vx_lda, &cublas_vx_ldb,
+                           &cublas_vx_ldc);
+      SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
+                    /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                    /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
+                    input_tensor_c->dptr(), nullptr, cublas_vx_m, cublas_vx_n, cublas_vx_k,
+                    cublas_vx_lda, cublas_vx_ldb, cublas_vx_ldc);
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          /*lightHandle*/ cuda_stream->cublas_lt_handle(),
+          /*computeDesc*/ fused_glu_cache->operation_desc,
+          /*alpha*/ &sp_alpha,
+          /*A*/ input_tensor_v->dptr(),
+          /*Adesc*/ fused_glu_cache->cublas_a_desc,
+          /*B*/ input_tensor_x->dptr(),
+          /*Bdesc*/ fused_glu_cache->cublas_b_desc,
+          /*beta*/ &sp_beta,
+          /*C*/ input_tensor_c->dptr(),
+          /*Cdesc*/ fused_glu_cache->cublas_c_desc,
+          /*D*/ out_tensor_matmul_vx->mut_dptr(),
+          /*Ddesc*/ fused_glu_cache->cublas_c_desc,
+          /*algo*/ nullptr,
+          /*workspace*/ cuda_stream->cublas_workspace(),
+          /*workspaceSizeInBytes*/ cuda_stream->cublas_workspace_size(),
+          /*stream*/ cuda_stream->cuda_stream()));
     } else {
-      matmul->Launch(ctx->stream(), m, n * 2, k, 1.0, input_tensor_x->dptr(),
-                     input_tensor_w->dptr(), 0.0, out_tensor_matmul_wx->mut_dptr());
+      // define shape parameters to be inferred
+      size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
+      int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
+
+      // init dim vector
+      DimVector x_dim_vec({m, k});
+      DimVector w_dim_vec({2 * n, k});
+
+      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
+      InferMatmulCublasMNK(x_dim_vec, w_dim_vec,
+                           /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                           /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m,
+                           &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+      SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
+                    /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                    /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
+                    input_tensor_b->dptr(), nullptr, cublas_m, cublas_n, cublas_k, cublas_lda,
+                    cublas_ldb, cublas_ldc);
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          /*lightHandle*/ cuda_stream->cublas_lt_handle(),
+          /*computeDesc*/ fused_glu_cache->operation_desc,
+          /*alpha*/ &sp_alpha,
+          /*A*/ input_tensor_w->dptr(),
+          /*Adesc*/ fused_glu_cache->cublas_a_desc,
+          /*B*/ input_tensor_x->dptr(),
+          /*Bdesc*/ fused_glu_cache->cublas_b_desc,
+          /*beta*/ &sp_beta,
+          /*C*/ input_tensor_b->dptr(),
+          /*Cdesc*/ fused_glu_cache->cublas_c_desc,
+          /*D*/ out_tensor_matmul_wx->mut_dptr(),
+          /*Ddesc*/ fused_glu_cache->cublas_c_desc,
+          /*algo*/ nullptr,
+          /*workspace*/ cuda_stream->cublas_workspace(),
+          /*workspaceSizeInBytes*/ cuda_stream->cublas_workspace_size(),
+          /*stream*/ cuda_stream->cuda_stream()));
     }
 
     // dispatch according to activation type
-    DispatchActivationType<T>(
-        ctx->stream(),
-        /*m, n=*/m, n,
-        /*stride=*/is_split_mode ? n : 2 * n,
-        /*matmul_wx=*/out_tensor_matmul_wx->mut_dptr<T>(),
-        /*b=*/input_tensor_b->dptr<T>(),
-        /*matmul_vx=*/
-        is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>()
-                      : out_tensor_matmul_wx->mut_dptr<T>() + n,
-        /*c=*/is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
-        /*y=*/out_tensor_y->mut_dptr<T>(),
-        /*activation=*/ctx->Attr<std::string>("activation"));
+    DispatchActivationType<T>(ctx->stream(),
+                              /*m, n=*/m, n,
+                              /*stride=*/is_split_mode ? n : 2 * n,
+                              /*matmul_wx=*/out_tensor_matmul_wx->mut_dptr<T>(),
+                              /*matmul_vx=*/
+                              is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>()
+                                            : out_tensor_matmul_wx->mut_dptr<T>() + n,
+                              /*y=*/out_tensor_y->mut_dptr<T>(),
+                              /*activation=*/ctx->Attr<std::string>("activation"));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -592,3 +692,5 @@ REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
 #endif
 
 }  // namespace oneflow
+
+#endif  // CUDA_VERSION >= 10020

@@ -160,12 +160,14 @@ void DispatchAlignment(ep::Stream* stream, const int64_t m, const int64_t n, con
     const uintptr_t matmul_vx_ptr = reinterpret_cast<uintptr_t>(matmul_vx);
     const uintptr_t d_matmul_wx_ptr = reinterpret_cast<uintptr_t>(d_matmul_wx);
     const uintptr_t d_matmul_vx_ptr = reinterpret_cast<uintptr_t>(d_matmul_vx);
-    return (/* memory address alignment */
-            dy_ptr % alignment == 0 && matmul_vx_ptr % alignment == 0
-            && matmul_wx_ptr % alignment == 0 && d_matmul_wx_ptr % alignment == 0
-            && d_matmul_vx_ptr % alignment == 0
-            /* #element per row alignment */
-            && n % (alignment / sizeof(T)) == 0);
+    const int64_t pack_size = alignment / sizeof(T);
+    return pack_size != 0 ? (/* memory address alignment */
+                             dy_ptr % alignment == 0 && matmul_vx_ptr % alignment == 0
+                             && matmul_wx_ptr % alignment == 0 && d_matmul_wx_ptr % alignment == 0
+                             && d_matmul_vx_ptr % alignment == 0
+                             /* #element per row alignment */
+                             && n % (pack_size) == 0)
+                          : false;
   };
 
   // dispatch alignment
