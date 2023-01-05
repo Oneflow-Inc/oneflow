@@ -53,6 +53,7 @@ using std::is_same_v;
 namespace mlir {
 using pdl::OperandOp;
 using pdl::OperationOp;
+using pdl::ResultOp;
 namespace oneflow {
 
 auto Generator::get_random_tensor() {
@@ -110,7 +111,7 @@ void Generator::examples() {
       ArrayRef{device_name, device_tag, hierarchy, op_name(), scope_symbol_id});
   (void)res2;
   graph->print(llvm::dbgs() << "Example MLIR Graph:\n");
-  if (verify(graph, true).failed()) { llvm::errs() << "verify failed"; }
+  if (verify(graph, true).failed()) { llvm::errs() << "verification failed\n"; }
   // TODO: how to evaluate res1 & res2?
   // I have a job, but the job is constituted of multiple OPs
   // of::Job job;
@@ -144,18 +145,15 @@ void Generator::examples() {
       builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op1, pdl_op2});
   auto vt = pdl::ValueType::Base::get(context);
 
-  auto pdl_of_add_op_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_of_add_op, 0);
+  auto pdl_of_add_op_res = builder.create<ResultOp>(loc(), vt, pdl_of_add_op, 0);
 
   auto pdl_res1 =
       builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_of_add_op_res, pdl_op3});
-  auto pdl_res1_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_res1, 0);
-
-  //  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState
-  //  &odsState, ::mlir::Type val, ::mlir::Value parent, uint32_t index);
+  auto pdl_res1_res = builder.create<ResultOp>(loc(), vt, pdl_res1, 0);
 
   auto pdl_of_add_op2 =
       builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op2, pdl_op3});
-  auto pdl_of_add_op2_res = builder.create<pdl::ResultOp>(loc(), vt, pdl_of_add_op2, 0);
+  auto pdl_of_add_op2_res = builder.create<ResultOp>(loc(), vt, pdl_of_add_op2, 0);
 
   auto pdl_res2 =
       builder.create<OperationOp>(loc(), res1.op_name(), ValueRange{pdl_op1, pdl_of_add_op2_res});
@@ -187,6 +185,8 @@ size_t Generator::fingerprint(Operation* op) {
 }
 
 bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
+  lhs->print(llvm::dbgs() << "LHS: ");
+  rhs->print(llvm::dbgs() << "RHS: ");
   BlockAndValueMapping bav{};
   if (lhs->getNumRegions() != rhs->getNumRegions()) return false;
   for (auto i = 0u; i < lhs->getNumRegions(); ++i) {
@@ -201,12 +201,11 @@ bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
     for (const auto& pair : llvm::zip(ra.getOps(), rb.getOps())) {
       Operation* a = &std::get<0>(pair);
       Operation* b = &std::get<1>(pair);
-      OperandOp rand_a = llvm::dyn_cast<OperandOp>(a);
-      OperandOp rand_b = llvm::dyn_cast<OperandOp>(b);
-      OperationOp opa = llvm::dyn_cast<OperationOp>(a);
-      OperationOp opb = llvm::dyn_cast<OperationOp>(b);
 
       if (isa<OperandOp>(a) and isa<OperandOp>(b)) {  // both are (input) operand
+        OperandOp rand_a = llvm::dyn_cast<OperandOp>(a);
+        OperandOp rand_b = llvm::dyn_cast<OperandOp>(b);
+
         auto a_mapped = bav.lookupOrNull(rand_a.getResult());
         if (a_mapped == nullptr) {
           bav.map(rand_a, rand_b);
@@ -214,8 +213,24 @@ bool Generator::same_via_subst(Operation* lhs, Operation* rhs) const {
           return false;
         }
       } else if (isa<OperationOp>(a) and isa<OperationOp>(b)) {
+        OperationOp opa = llvm::dyn_cast<OperationOp>(a);
+        OperationOp opb = llvm::dyn_cast<OperationOp>(b);
+
         // represents some oneflow operation
-        // TODO
+        auto a_mapped = bav.lookupOrNull(opa.getResult());
+
+        if (a_mapped == nullptr) {
+          bav.map(opa, opb);
+        } else if (a_mapped != opb) {
+          return false;
+        }
+      } else if (isa<ResultOp>(a) and isa<ResultOp>(b)) {
+        ResultOp rea = llvm::dyn_cast<ResultOp>(a);
+        ResultOp reb = llvm::dyn_cast<ResultOp>(b);
+        if (rea.index() == reb.index() and bav.lookup(rea.val()) == reb.val()) {
+          bav.map(rea, reb);
+        } else
+          return false;
       } else {
         return false;
       }
@@ -249,7 +264,7 @@ void Generator::dfs(int depth, SmallVector<Value>& inputs) {
     graph_pdl->print(llvm::dbgs() << "Debug. pdl: ");
     if (verify(graph_pdl, true).failed()) {
       llvm::errs() << "Error verifying pdl\n";
-      abort();
+      // abort();
     }
     // get existing rewrites, check if the new graph can be infered
     auto fp = fingerprint(graph);
@@ -304,6 +319,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
   // set insertion point
   // clone graph to the new pdl module
   assert(graph->getNumRegions() == 1);
+  // FIXME: the final results are not bind
   for (Block& block : graph.getBodyRegion().getBlocks()) {
     for (Operation& op : block.getOperations()) {
       if (auto frozen = llvm::dyn_cast<FrozenVariableOp>(op)) {
@@ -320,7 +336,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
         attrs.set("attributeNames", builder.getArrayAttr({}));
         attrs.set("operand_segment_sizes",
                   builder.getI32VectorAttr({static_cast<int>(pdl_operands.size()), 0, 0}));
-        // attrs_copy.
+        attrs.set("name", op.getName().getIdentifier());
         auto op_ty = pdl::OperationType::Base::get(context);
         auto pdlop = builder.create<OperationOp>(loc(), op_ty, pdl_operands, attrs);
         // what if the original op has multiple results? pdl OperationOp is OneResult??
@@ -328,7 +344,7 @@ ModuleOp Generator::build_pdl_from_oneflow_op(Operation* op) {
         auto vt = pdl::ValueType::Base::get(context);
 
         for (auto result : op.getResults()) {
-          bav.map(result, builder.create<pdl::ResultOp>(loc(), vt, pdlop, idx));
+          bav.map(result, builder.create<ResultOp>(loc(), vt, pdlop, idx++));
         }
       }
     }
