@@ -61,6 +61,20 @@ static StraightenAlgorithmTag sat;
 
 static std::vector<StraightenOrder> decide_parameters;
 
+// Order in the waiting sets
+struct comp {
+  bool operator()(const TopoStruct* a, const TopoStruct* b) const {
+    for (auto decide_parameter : decide_parameters) {
+      auto decide_parameter_a = a->GetDecidingParameter(decide_parameter);
+      auto decide_parameter_b = b->GetDecidingParameter(decide_parameter);
+      if (decide_parameter_a != decide_parameter_b) {
+        return decide_parameter_a < decide_parameter_b;
+      }
+    }
+    return a->op_node->op().op_name() < b->op_node->op().op_name();
+  }
+};
+
 bool IsProducedRegisterReusable(const Operator& op) {
   // The repeat, acc, pack and unpack operators have non-reusable registers
   // and a -1 register num at this moment.
@@ -169,6 +183,59 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
   id2consumer_topo_structs.resize(id2blob_size.size());
 }
 
+void UpdateSat(const std::vector<TopoStruct*>& topo_structs, StraightenAlgorithmTag* sat) {
+  *sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  if (*sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
+    bool exist_cpu_nodes = false;
+    for (const auto& topo_struct : topo_structs) {
+      // Found a cpu node
+      if (topo_struct->exceed_time == 1) {
+        exist_cpu_nodes = true;
+        break;
+      }
+    }
+    if (!exist_cpu_nodes) {
+      // Switch to the compress memory strategy, the default one
+      // Since the overlap strategy for transfer might not be working on 1n1d.
+      *sat = StraightenAlgorithmTag::kCompressMemory;
+    }
+  }
+}
+
+void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
+                       HashMap<LogicalBlobId, int32_t>* lbi2id,
+                       std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
+                       std::vector<int64_t>* id2blob_size) {
+  // Construct the map from a lbi to its id, consumers, blob size
+  for (auto& topo_struct : *topo_structs) {
+    const auto& consumer = topo_struct->op_node->op();
+    for (const auto& ibn : consumer.input_bns()) {
+      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
+      auto it = lbi2id->find(lbi);
+      if (it == lbi2id->end()) {
+        lbi2id->at(lbi) = id2blob_size->size();
+        const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
+        id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+        id2consumer_topo_structs->push_back({topo_struct});
+      } else {
+        id2consumer_topo_structs->at(it->second).push_back(topo_struct);
+      }
+    }
+  }
+
+  // Compute the memory increment for all the topological structures
+  ComputeAllMemoryIncrement(*topo_structs, *lbi2id, *id2consumer_topo_structs, *id2blob_size);
+
+  // Update sat, since sat might be changed in previous jobs
+  UpdateSat(*topo_structs, &sat);
+
+  // Decide which node should run first
+  InitDecideParameters(sat, &decide_parameters);
+  VLOG(3) << "Straightening order in sbp graph: ";
+  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
+}
+
 }  // anonymous namespace
 
 void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
@@ -187,45 +254,9 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   HashMap<LogicalBlobId, int32_t> lbi2id;
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
-  for (auto& topo_struct : topo_structs) {
-    const auto& consumer = topo_struct->op_node->op();
-    for (const auto& ibn : consumer.input_bns()) {
-      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
-      auto it = lbi2id.find(lbi);
-      if (it == lbi2id.end()) {
-        lbi2id[lbi] = id2blob_size.size();
-        const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
-        id2blob_size.push_back(TotalByteSize4BlobDesc(logical_blob_desc));
-        id2consumer_topo_structs.push_back({topo_struct});
-      } else {
-        id2consumer_topo_structs[it->second].push_back(topo_struct);
-      }
-    }
-  }
-  // Compute the memory increment for all the topological structures
-  ComputeAllMemoryIncrement(topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
 
-  // Update sat, since sat might be changed in previous jobs
-  UpdateSat(sbp_node2topo_struct, &sat);
+  InitAllParameters(&topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
 
-  // Decide which node should run first
-  InitDecideParameters(sat, &decide_parameters);
-  VLOG(3) << "Straightening order in sbp graph: ";
-  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
-
-  // Order in the waiting sets
-  struct comp {
-    bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      for (auto decide_parameter : decide_parameters) {
-        auto decide_parameter_a = a->GetDecidingParameter(decide_parameter);
-        auto decide_parameter_b = b->GetDecidingParameter(decide_parameter);
-        if (decide_parameter_a != decide_parameter_b) {
-          return decide_parameter_a < decide_parameter_b;
-        }
-      }
-      return a->op_node->op().op_name() < b->op_node->op().op_name();
-    }
-  };
   std::set<TopoStruct*, comp> waiting_list;
 
   // Order of execution for topological structs
