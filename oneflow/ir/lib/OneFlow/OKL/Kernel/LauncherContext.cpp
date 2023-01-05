@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/OKL/Kernel/WrapperContext.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -22,7 +24,7 @@ limitations under the License.
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
-#include "OneFlow/OKL/Kernel/RunContext.h"
+#include "OneFlow/OKL/Kernel/ComputeContext.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -37,26 +39,16 @@ static int GetOpIndex(mlir::Operation* op, int index) {
       .getInt();
 };
 
-LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
-                                 mlir::ModuleOp module)
-    : module_(module) {
+LauncherContext::LauncherContext(mlir::ModuleOp module) {
   auto func = module.lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME);
   auto context = func->getContext();
 
   auto& ops = func->getRegion(0).front();
 
   for (auto& op : ops) {
-    auto index = 0;
     llvm::TypeSwitch<mlir::Operation*>(&op)
-        .Case([&](mlir::okl::BuildKernelOp elem) {
-          index = kernel_vec_.size();
-
-          auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          kernel_vec_.push_back(reg_ctx->GetKernel());
-          op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
-        })
         .Case([&](mlir::okl::BuildRegContextOp elem) {
-          index = reg_ctx_vec_.size();
+          auto index = compile_ctx_vec_.size();
 
           mlir::Operation* reg_op = nullptr;
           for (auto& op_it : op.getRegion(0).front().getOperations()) {
@@ -67,28 +59,28 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
           }
 
           if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-
-          reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(reg_op));
-          op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
-        })
-        .Case([&](mlir::okl::BuildRunContextOp elem) {
-          index = run_ctx_vec_.size();
-
-          auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          run_ctx_vec_.emplace_back(
-              std::make_shared<RunContext>(std::move(reg_ctx), compute_context));
+          auto&& compile_ctx = CompileTimeWrapperContext(reg_op);
+          compile_ctx_vec_.emplace_back(compile_ctx);
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
         .Case([&](mlir::func::ReturnOp elem) {})
         .Default([&](mlir::Operation* elem) {
-          op.emitError("Fail to parse this op in okl init context");
-          exit(1);
+          LOG(FATAL) << "Fail to parse this op in okl init context";
         });
   }
 }
-void* LauncherContext::FetchKernel(int index) { return (void*)kernel_vec_[index]; }
+bool LauncherContext::Infer(user_op::KernelComputeContext* compute_context) {
+  // if this context has been inferred before, it won't be rebuilt later
+  if (inferred_) { return inferred_; }
 
-void* LauncherContext::FetchRunCtx(int index) { return run_ctx_vec_[index].get(); }
+  for (auto& elem : compile_ctx_vec_) {
+    auto&& run_ctx = RunTimeWrapperContext(elem.GetRegContext()->GetOp(), compute_context);
+    run_ctx_vec_.emplace_back(run_ctx);
+  }
+  inferred_ = compile_ctx_vec_.size() == run_ctx_vec_.size();
+  return inferred_;
+}
+void LauncherContext::Launch(int index) { TODO(); }
 
 }  // namespace okl
 }  // namespace oneflow

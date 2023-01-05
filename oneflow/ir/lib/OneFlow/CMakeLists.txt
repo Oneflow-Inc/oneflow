@@ -32,8 +32,8 @@ oneflow_add_mlir_dialect_library(
   OKL/Kernel/KernelLaunchOp.cpp
   OKL/Kernel/LauncherState.cpp
   OKL/Kernel/LauncherContext.cpp
+  OKL/Kernel/ComputeContext.cpp
   OKL/Kernel/RegContext.cpp
-  OKL/Kernel/RunContext.cpp
   OKL/Kernel/TmpBufferManager.cpp
   OKL/Kernel/JITOpInfer.cpp
   OKL/Kernel/JITEngine.cpp

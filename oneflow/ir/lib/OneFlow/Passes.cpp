@@ -1254,7 +1254,7 @@ void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
     patterns.add<KernelLaunchPattern>(patterns.getContext());
 #endif
   } else {
-    llvm_unreachable("Found an unsupported mode in wrap-ops-to-kernel-launch pass");
+    LOG(FATAL) << "Found an unsupported mode in wrap-ops-to-kernel-launch pass";
   }
 }
 

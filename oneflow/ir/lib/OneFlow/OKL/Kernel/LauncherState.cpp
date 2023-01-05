@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/Conversion/Conversion.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -31,17 +32,34 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-LauncherState::LauncherState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
-  // get raw module from ctx attr
-  module_ =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
-  if (!module_) { LOG(FATAL) << "Fail to load mlir assembly"; }
+namespace {
+
+mlir::OwningOpRef<mlir::ModuleOp> GetModule(user_op::KernelInitContext* ctx,
+                                            mlir::MLIRContext* mlir_ctx) {
+  auto module =
+      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), mlir_ctx);
+  if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
-  if (failed(mlir::okl::LowerWrapOpsToOKL(*module_))) {
-    LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
-    exit(1);
+  if (failed(mlir::okl::LowerWrapOpsToOKL(*module))) {
+    LOG(FATAL) << "Fail lowering kernel launch Module to okl ir";
   }
-};
+  return module;
+}
+
+JITEngine GetEngine(mlir::ModuleOp module) {
+  if (failed(mlir::okl::LowerOKLComputeToLLVM(module))) {
+    LOG(FATAL) << "Fail lowering okl compute Module to llvm ir";
+  }
+  return JITEngine(module);
+}
+
+}  // namespace
+
+LauncherState::LauncherState(user_op::KernelInitContext* ctx)
+    : mlir_ctx_(GetRegistry()),
+      module_(GetModule(ctx, &mlir_ctx_)),
+      launcher_context_(module_->clone()),
+      engine_(GetEngine(module_->clone())){};
 
 bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
   const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
@@ -53,20 +71,10 @@ bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
   }
   return false;
 }
+
 void LauncherState::DoCompute(user_op::KernelComputeContext* ctx) {
-  if (!launcher_context_) { LazyInitLauncher(ctx); }
-  engine_->Run(mlir::okl::function::COMPUTE_FUNC_NAME.str(), launcher_context_.get());
-}
-
-void LauncherState::LazyInitLauncher(user_op::KernelComputeContext* ctx) {
-  launcher_context_ = std::make_shared<LauncherContext>(ctx, module_->clone());
-
-  if (failed(mlir::okl::LowerOKLComputeToLLVM(*module_))) {
-    LOG(ERROR) << "Fail lowering okl compute Module to llvm ir";
-    exit(1);
-  }
-
-  engine_ = std::make_shared<JITEngine>(*module_);
+  launcher_context_.Infer(ctx);
+  engine_.Run(mlir::okl::function::COMPUTE_FUNC_NAME.str(), &launcher_context_);
 }
 
 }  // namespace okl

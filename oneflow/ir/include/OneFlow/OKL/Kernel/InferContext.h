@@ -19,7 +19,6 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "OneFlow/OKL/Kernel/LauncherState.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
 
 #include <memory>
@@ -30,9 +29,7 @@ namespace okl {
 
 class InferContext final : public user_op::InferContext {
  public:
-  static size_t InferTmpSize(const user_op::InferContext* ctx);
-
-  explicit InferContext(const RegContext* reg_ctx);
+  explicit InferContext(RegContext const* reg_ctx);
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
@@ -117,7 +114,7 @@ class InferContext final : public user_op::InferContext {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
 
-  const RegContext* reg_ctx_;
+  RegContext const* reg_ctx_;
 };
 
 }  // namespace okl

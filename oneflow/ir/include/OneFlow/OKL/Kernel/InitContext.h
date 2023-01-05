@@ -17,22 +17,22 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_CACHECONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_CACHECONTEXT_H_
 
+#include "OneFlow/OKL/Kernel/RegContext.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/op_kernel.h"
-#include "OneFlow/OKL/Kernel/RunContext.h"
 
 namespace oneflow {
 namespace okl {
 
 class InitContext final : public user_op::KernelCacheContext, public user_op::KernelInitContext {
  public:
-  explicit InitContext(RunContext* run_ctx)
-      : reg_ctx_(run_ctx->GetRegContext()), run_ctx_(run_ctx) {}
+  InitContext(RegContext const* reg_ctx, user_op::KernelComputeContext* compute_ctx)
+      : reg_ctx_(reg_ctx), compute_ctx_(compute_ctx) {}
 
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
-  const ParallelContext& parallel_ctx() const override { return run_ctx_->parallel_ctx(); }
-  ep::Stream* stream() override { return run_ctx_->stream(); }
+  const ParallelContext& parallel_ctx() const override { return compute_ctx_->parallel_ctx(); }
+  ep::Stream* stream() override { return compute_ctx_->stream(); }
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -57,8 +57,8 @@ class InitContext final : public user_op::KernelCacheContext, public user_op::Ke
   }
 
  private:
-  RegContext* reg_ctx_;
-  RunContext* run_ctx_;
+  RegContext const* reg_ctx_;
+  user_op::KernelComputeContext* compute_ctx_;
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
     return reg_ctx_->user_op_conf();

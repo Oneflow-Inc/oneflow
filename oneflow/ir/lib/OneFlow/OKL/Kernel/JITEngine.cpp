@@ -20,34 +20,22 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
-#include "OneFlow/OKL/Kernel/RunContext.h"
+#include "OneFlow/OKL/Kernel/ComputeContext.h"
 
 extern "C" {
-void* oneflow_okl_fetch_run_ctx(void* launcher, int64_t index) {
-  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
-      ->FetchRunCtx(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
-}
-
-void* oneflow_okl_fetch_kernel(void* launcher, int64_t index) {
-  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
-      ->FetchKernel(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
-}
-
-void oneflow_okl_launch(void* run_ctx, void* kernel) {
-  const oneflow::user_op::OpKernel* engine =
-      static_cast<typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>>(kernel);
-
-  oneflow::okl::RunContext* compute_ctx_ =
-      static_cast<typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>>(run_ctx);
-  engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
+void oneflow_okl_run(void* launcher, int64_t index) {
+  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)->Launch(
+      index);
 }
 }  // extern "C"
 
 namespace oneflow {
+
 SharedLibs* MutSharedLibPaths() {
   static SharedLibs libs = {};
   return &libs;
 }
+
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 

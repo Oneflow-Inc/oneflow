@@ -18,13 +18,7 @@ limitations under the License.
 
 #include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
-#include "oneflow/core/register/blob.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
 
-#include <memory>
-#include <string>
-#include <vector>
 namespace oneflow {
 namespace okl {
 // this context should support querying information about the kernel from representation in MLIR
@@ -50,8 +44,6 @@ class RegContext final : public user_op::KernelRegContext {
   const user_op::OpKernel* GetKernel() const { return kernel_; };
 
  private:
-  friend class RunContext;
-
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};

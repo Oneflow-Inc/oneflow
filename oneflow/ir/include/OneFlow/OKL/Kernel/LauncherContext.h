@@ -16,36 +16,30 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_LAUNCHER_CONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_LAUNCHER_CONTEXT_H_
 
-#include "OneFlow/OKL/Kernel/InitContext.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
-#include "OneFlow/OKL/Kernel/RunContext.h"
+#include "OneFlow/OKL/Kernel/WrapperContext.h"
+#include "mlir/IR/Operation.h"
 
 namespace oneflow {
 namespace okl {
 
 class LauncherContext final {
-  using RegContextResource = std::shared_ptr<RegContext>;
-  using RunContextResource = std::shared_ptr<RunContext>;
-
  public:
-  explicit LauncherContext(user_op::KernelComputeContext* compute_context, mlir::ModuleOp module);
-
-  void* FetchKernel(int index);
-  void* FetchRunCtx(int index);
+  // compile the mlir to ctx
+  explicit LauncherContext(mlir::ModuleOp module);
+  // infer ctx with okl info
+  bool Infer() { return inferred_; }
+  bool Infer(user_op::KernelComputeContext* compute_context);
+  // launch kernel with index
+  void Launch(int index);
 
  private:
-  std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;
-  std::vector<RegContextResource> reg_ctx_vec_;
-  std::vector<RunContextResource> run_ctx_vec_;
-  ::mlir::ModuleOp module_;
+  bool inferred_ = false;
+
+  std::vector<CompileTimeWrapperContext> compile_ctx_vec_;
+  std::vector<RunTimeWrapperContext> run_ctx_vec_;
 };
 
 }  // namespace okl

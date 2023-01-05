@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OKL/Kernel/InferContext.h"
 #include "OneFlow/OKL/Kernel/TmpBufferManager.h"
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Casting.h"
@@ -23,12 +23,8 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-using namespace user_op;
-std::shared_ptr<TmpBufferManager> TmpBufferManager::InitTmpBufferManager(user_op::Tensor* tensor) {
-  return std::make_shared<TmpBufferManager>(tensor);
-}
-
 size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
+  using namespace user_op;
   mlir::MLIRContext mlir_ctx(GetRegistry());
 
   auto module =

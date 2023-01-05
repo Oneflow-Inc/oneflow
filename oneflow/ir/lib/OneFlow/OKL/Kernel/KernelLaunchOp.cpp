@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/framework/op_generated.h"
