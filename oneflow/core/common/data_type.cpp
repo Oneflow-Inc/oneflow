@@ -42,7 +42,7 @@ bool IsFloatingDataType(DataType data_type) {
     case DataType::kFloat16: return true;
 #define FLOATING_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(FLOATING_CASE, FLOATING_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(FLOATING_CASE, FLOATING_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef FLOATING_CASE
