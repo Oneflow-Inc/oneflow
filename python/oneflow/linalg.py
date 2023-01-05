@@ -59,18 +59,5 @@ def det(A):
     .. warning::
         Currently, only CUDA11 and above versions are supported.
 
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> x = flow.Tensor([[1, 2], [2, 1]])
-        >>> flow.linalg.det(x)
-        >>> tensor(-3., dtype=oneflow.float32)
-        >>> x = flow.randn(3, 3, 2, 2)
-        >>> y = flow.linalg.det(x) # doctest: +SKIP
-        >>> y.shape # doctest: +SKIP
-        >>> oneflow.Size([3, 3])
-
     """
     return flow._C.det(A)
