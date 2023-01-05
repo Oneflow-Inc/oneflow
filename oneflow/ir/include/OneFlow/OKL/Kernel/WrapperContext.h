@@ -29,22 +29,22 @@ namespace okl {
 class CompileTimeWrapperContext {
  public:
   explicit CompileTimeWrapperContext(mlir::Operation* op)
-      : reg_ctx_(std::make_unique<const RegContext>(op)) {}
+      : reg_ctx_(std::make_shared<const RegContext>(op)) {}
 
   CompileTimeWrapperContext(CompileTimeWrapperContext&&) = default;
 
   RegContext const* GetRegContext() const { return reg_ctx_.get(); }
 
  private:
-  std::unique_ptr<const RegContext> reg_ctx_;
+  std::shared_ptr<const RegContext> reg_ctx_;
 };
 
 class RunTimeWrapperContext : public CompileTimeWrapperContext {
  public:
   RunTimeWrapperContext(mlir::Operation* op, user_op::KernelComputeContext* ctx)
       : CompileTimeWrapperContext(op),
-        compute_ctx_(std::make_unique<ComputeContext>(GetRegContext(), ctx)),
-        init_ctx_(std::make_unique<InitContext>(GetRegContext(), ctx)),
+        compute_ctx_(std::make_shared<ComputeContext>(GetRegContext(), ctx)),
+        init_ctx_(std::make_shared<InitContext>(GetRegContext(), ctx)),
         kernel_state_(GetRegContext()->GetKernel()->CreateOpKernelState(init_ctx_.get())),
         kernel_cache_(GetRegContext()->GetKernel()->InitOpKernelCache(init_ctx_.get())) {}
 
@@ -54,8 +54,8 @@ class RunTimeWrapperContext : public CompileTimeWrapperContext {
   user_op::OpKernelCache* GetKernelCache() { return kernel_cache_.get(); }
 
  private:
-  std::unique_ptr<ComputeContext> compute_ctx_;
-  std::unique_ptr<InitContext> init_ctx_;
+  std::shared_ptr<ComputeContext> compute_ctx_;
+  std::shared_ptr<InitContext> init_ctx_;
 
   std::shared_ptr<user_op::OpKernelState> kernel_state_;
   std::shared_ptr<user_op::OpKernelCache> kernel_cache_;

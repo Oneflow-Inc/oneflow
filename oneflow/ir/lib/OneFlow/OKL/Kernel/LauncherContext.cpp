@@ -59,8 +59,7 @@ LauncherContext::LauncherContext(mlir::ModuleOp module) {
           }
 
           if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-          auto&& compile_ctx = CompileTimeWrapperContext(reg_op);
-          compile_ctx_vec_.emplace_back(compile_ctx);
+          compile_ctx_vec_.emplace_back(reg_op);
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
         .Case([&](mlir::func::ReturnOp elem) {})
@@ -74,8 +73,7 @@ bool LauncherContext::Infer(user_op::KernelComputeContext* compute_context) {
   if (inferred_) { return inferred_; }
 
   for (auto& elem : compile_ctx_vec_) {
-    auto&& run_ctx = RunTimeWrapperContext(elem.GetRegContext()->GetOp(), compute_context);
-    run_ctx_vec_.emplace_back(run_ctx);
+    run_ctx_vec_.emplace_back(elem.GetRegContext()->GetOp(), compute_context);
   }
   inferred_ = compile_ctx_vec_.size() == run_ctx_vec_.size();
   return inferred_;
