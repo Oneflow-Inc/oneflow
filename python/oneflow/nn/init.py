@@ -252,6 +252,7 @@ def kaiming_normal_(
     return normal_(tensor, 0.0, std)
 
 
+# The trunc_normal_ implemention is referenced from https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py#L22
 def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x):
