@@ -31,8 +31,8 @@ struct ModeCaptureState : public AutoGradCaptureState {
 class Mode : public OpExprGradFunction<ModeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-  Maybe<void> Capture(ModeCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(ModeCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
@@ -60,5 +60,3 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("mode", Mode);
 
 }  // namespace one
 }  // namespace oneflow
-
-
