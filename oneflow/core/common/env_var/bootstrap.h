@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#include "mlir/IR/PatternMatch.h"
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_
 
-namespace mlir {
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-void populateForwardOpPatterns(RewritePatternSet& patterns);
-void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_BOOTSTRAP_SERVER_SLEEP_SECONDS, 20);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_BOOTSTRAP_SERVER_MAX_RETRY_TIMES, 3);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_CLIENT_SLEEP_SECONDS, 5);
+DEFINE_ENV_INTEGER(ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES, 6);
 
 }  // namespace oneflow
-
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_BOOTSTRAP_H_

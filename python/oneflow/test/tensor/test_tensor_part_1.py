@@ -1037,9 +1037,9 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
         y = x.topk(
             random(low=1, high=8).to(int),
-            dim=random(low=1, high=4).to(int),
-            largest=random_bool(),
-            sorted=constant(True),
+            dim=random(low=1, high=4).to(int) | nothing(),
+            largest=random_bool() | nothing(),
+            sorted=constant(True) | nothing(),
         )
         return y[0], y[1]
 
