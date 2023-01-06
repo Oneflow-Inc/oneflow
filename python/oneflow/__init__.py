@@ -299,8 +299,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    oneflow.framework.session_context.TryCloseDefaultSession()
     __oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
+    oneflow.framework.session_context.TryCloseDefaultSession()
 
 
 atexit.register(atexit_hook, hook)

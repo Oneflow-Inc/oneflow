@@ -390,16 +390,32 @@ def get_functional_graph_res(
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
-        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
+        # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
-                if (oneflow_args and oneflow_res.device.type == oneflow_args[0]) or (
-                    oneflow_kwargs
-                    and oneflow_res.device.type == oneflow_kwargs["device"]
-                ):
-                    test_g_res = oneflow_res
+                # The global tensor needs to obtain the device type through placement.type.
+                if is_global():
+                    if (
+                        oneflow_args and oneflow_res.placement.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.placement.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
+                # The tensor needs to obtain the device type through device.type.
+                else:
+                    if (
+                        oneflow_args and oneflow_res.device.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.device.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
             else:
                 pass
+        # nn.Graph donot deal with Module type. EX: m.to_global(placement, sbp).
+        elif oneflow.__name__ == "to_global":
+            test_g_res = oneflow_res
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
