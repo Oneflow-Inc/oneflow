@@ -180,7 +180,6 @@ class TestTensorOffload(flow.unittest.TestCase):
             dtype=flow.float32,
             device=flow.device("cuda"),
         )
-        tensor_mem = _get_tensor_mem(input)
 
         before_used = flow._oneflow_internal.GetCPUMemoryUsed()
         before_id = id(input)
