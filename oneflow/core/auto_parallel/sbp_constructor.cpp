@@ -130,11 +130,12 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 
   int32_t step = 1;
   while (true) {
-    sbp_graph_.GreedyStrategy(4);
+    sbp_graph_.GreedyStrategy(/*nbh_num=*/4);
     double curr_memory = sbp_graph_.GetMemory();
+    double total_weighted_cost = sbp_graph_.ComputeWeightedCost();
     LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
-              << ", memory: " << curr_memory
-              << ", total cost: " << sbp_graph_.ComputeWeightedCost();
+              << ", memory: " << curr_memory << ", total cost: " << total_weighted_cost
+              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory);
     if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     if (curr_memory > available_memory_ * kImpossibleRatio) {
@@ -150,7 +151,6 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
-  // if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
