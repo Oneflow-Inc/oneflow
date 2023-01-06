@@ -63,6 +63,7 @@ def _get_tensor_mem(input):
     cnt_size = input.element_size() * flow.numel(input)
     return cnt_size / 1024 / 1024
 
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorOffload(flow.unittest.TestCase):

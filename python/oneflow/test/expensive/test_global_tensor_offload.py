@@ -115,7 +115,9 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 tensor_mem = _get_specific_global_tensor_mem(placement, sbp, input)
                 _test_global_tensor_offload_d2h(test_case, input, tensor_mem)
                 _test_global_tensor_load_h2d(test_case, input, tensor_mem)
-                test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+                test_case.assertTrue(
+                    np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001)
+                )
 
     @globaltest
     @flow.unittest.skip_unless_1n4d()
@@ -130,7 +132,9 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 tensor_mem = _get_specific_global_tensor_mem(placement, sbp, input)
                 _test_global_tensor_offload_d2h(test_case, input, tensor_mem)
                 _test_global_tensor_load_h2d(test_case, input, tensor_mem)
-                test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
+                test_case.assertTrue(
+                    np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001)
+                )
 
     @globaltest
     @flow.unittest.skip_unless_1n2d()
