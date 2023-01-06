@@ -153,34 +153,26 @@ class Module(object):
                 self._shallow_repr()
                 + " is called in a nn.Graph, but not registered into a nn.Graph."
             )
-        for hook in self._forward_pre_hooks.values():
+        for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
 
-        for hook in self._backward_hooks.values():
-            pass
-
+        bw_hook = None
+        if len(self._backward_hooks) > 0:
+            bw_hook = flow.utils.hooks.BackwardHook(self, self._backward_hooks.values(), [])
+            args = bw_hook.setup_input_hook(args)
         res = self.forward(*args, **kwargs)
 
-        for hook in self._forward_hooks.values():
+        if bw_hook:
+            res = bw_hook.setup_output_hook(res)
+
+        for hook in itertools.chain(self._forward_hooks.values()):
             result = hook(self, args, res)
             if result is not None:
                 res = result
-        
-        if len(self._backward_hooks) > 0:
-            is_tuple = isinstance(res, tuple)
-            if not is_tuple:
-                res = (res,)
-            grad_output = [None] * len(res) if isinstance(res, tuple)
-            for i, x in enumerate(res):
-                if isinstance(x, flow.Tensor):
-                    def tmp(grad):
-                        grad_output[i] = grad
-                    x.register_hook(tmp)
-                    
 
         return res
 
@@ -999,6 +991,16 @@ class Module(object):
 
         """
         self._forward_hooks[len(self._forward_hooks)] = hook
+
+    _grad_t = Union[Tuple[Tensor, ...], Tensor]
+
+    def register_full_backward_hook(
+        self,
+        hook: Callable[["Module", _grad_t, _grad_t], Union[None, _grad_t]],
+        prepend: bool = False,
+    ) -> None:
+        assert prepend is False, "prepend is not supported in oneflow"
+        self._backward_hooks[len(self._backward_hooks)] = hook
 
     def _apply(self, fn):
         # A dict to store tensors that has already been applied.
