@@ -1,3 +1,4 @@
+# This file is mostly copied from PyTorch.
 import oneflow as flow
 import oneflow.nn.modules._functions
 from collections import OrderedDict
@@ -86,6 +87,7 @@ class BackwardHook(object):
         if not (requires_grad and flow.is_grad_enabled()):
             return args, None
 
+        # FIXME: BackwardFunction should not return a single Tensor when the return type is tuple
         new_tensors = flow.nn.modules._functions.BackwardHookFunction.apply(*tensors)
         if not isinstance(new_tensors, tuple):
             new_tensors = (new_tensors,)
