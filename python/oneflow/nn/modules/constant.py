@@ -29,7 +29,7 @@ class _ConstantBase(Module):
         size: Union[_size_any_t, flow.Size],
         value: Union[float, int],
         dtype: Optional[flow.dtype],
-        device: Union[flow.device, str] = None,
+        device: Union[flow.device, int, str] = None,
         placement: flow.placement = None,
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
@@ -40,6 +40,8 @@ class _ConstantBase(Module):
             size, (int, tuple, list, flow.Size)
         ), "shape should be int or tuple int!"
         self.device = device
+        if isinstance(self.device, int):
+            self.device = flow.device("cuda", self.device)
         if isinstance(self.device, str):
             self.device = flow.device(self.device)
         self.requires_grad = requires_grad
@@ -69,17 +71,37 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.global_constant(
-                self.shape,
-                self.value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=self.sbp,
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.global_tensor_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
+            else:
+                res = flow._C.global_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
         else:
-            res = flow._C.constant(
-                self.shape, self.value, dtype=self.dtype, device=self.device
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.tensor_constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
+            else:
+                res = flow._C.constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
         res.requires_grad = self.requires_grad
         return res
 
@@ -382,7 +404,6 @@ def full_op(
         fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
-    # TODO: constant kernel originally support scalar fill_value tensor rather than by implicitly converting, cause it brings synchronization overhead
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
 

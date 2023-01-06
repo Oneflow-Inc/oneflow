@@ -28,6 +28,10 @@ inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ON
 DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
 inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
 
+inline bool IsPythonStackGetterEnabled() {
+  return ParseBooleanFromEnv("ONEFLOW_PYTHON_STACK_GETTER", IsInDebugMode());
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_

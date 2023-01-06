@@ -13,28 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
-
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-class SessionGlobalObjectsScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
-  SessionGlobalObjectsScope();
-  ~SessionGlobalObjectsScope();
-
-  Maybe<void> Init(const ConfigProto& config_proto);
-  Maybe<void> EagerInit(const ConfigProto& config_proto);
-
- private:
-  int64_t session_id_;
-};
+Maybe<void> ThrowErrorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
+}
+Maybe<void> ThrowErrorOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+Maybe<void> ThrowErrorOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
