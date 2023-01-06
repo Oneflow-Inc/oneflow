@@ -37,6 +37,7 @@ class TopoStruct {
   int32_t counter = 0;
 
   explicit TopoStruct(SbpNode* sbp_node_);
+  explicit TopoStruct(OpNode* op_node_);
 
   // Decide whether all the produced registers are reusable
   void ComputeIsReusable();
@@ -100,6 +101,11 @@ bool IsProducedRegisterReusable(const Operator& op) {
 
 TopoStruct::TopoStruct(SbpNode* sbp_node_)
     : sbp_node(sbp_node_), op_node(sbp_node_->GetOperatorNode()) {
+  ComputeIsReusable();
+  ComputeExceedTime();
+}
+
+TopoStruct::TopoStruct(OpNode* op_node_) : op_node(op_node_) {
   ComputeIsReusable();
   ComputeExceedTime();
 }
@@ -389,6 +395,83 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
     topo_struct->sbp_node->InitializeMemory(topo_struct->is_reusable, lbi2id, id2count,
                                             nccl_use_compute_stream);
   }
+}
+
+void StraightenOpGraph(const OpGraph& op_graph) {
+  // Generate topological data structure for each op node
+  HashMap<OpNode*, TopoStruct> op_node2topo_struct;
+  std::vector<TopoStruct*> topo_structs;
+  // Traverse all the nodes in the op graph
+  op_graph.ForEachNode([&](OpNode* node) {
+    op_node2topo_struct.insert({node, TopoStruct(node)});
+    topo_structs.push_back(&op_node2topo_struct.at(node));
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Generating " << node->op().op_name() << std::endl;
+    }
+  });
+
+  // Construct the map from a lbi to its id, consumers, blob size
+  HashMap<LogicalBlobId, int32_t> lbi2id;
+  std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
+  std::vector<int64_t> id2blob_size;
+
+  InitAllParameters(&topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
+
+  std::set<TopoStruct*, comp> waiting_list;
+
+  // Order of execution for topological structs
+  std::vector<TopoStruct*> ordered_topo_structs;
+
+  // Wait in the list
+  auto wait = [&](OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
+
+  // TODO: Deal with the ctrl edges
+  // Initialization
+  for (auto& topo_struct : topo_structs) {
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << "Looking at " << topo_struct->op_node->op().op_name();
+    topo_struct->counter = topo_struct->op_node->in_edges().size();
+    if (GlobalProcessCtx::Rank() == 0) std::cout << ", in edge size: " << topo_struct->counter;
+    if (topo_struct->counter == 0) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        if (op_node2topo_struct.find(topo_struct->op_node) == op_node2topo_struct.end()) {
+          std::cout << "Can not find this op!" << std::endl;
+        } else {
+          std::cout << "Find this op: " << topo_struct->op_node << std::endl;
+        }
+      }
+      wait(topo_struct->op_node);
+    }
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << ", wait? " << (topo_struct->counter == 0) << std::endl;
+  }
+
+  // Finish execution
+  auto finish_execution = [&](OpNode* op_node) {
+    op_node->ForEachNodeOnOutEdge([&](OpNode* out) {
+      int32_t& out_node_counter = op_node2topo_struct.at(out).counter;
+      out_node_counter--;
+      if (out_node_counter == 0) { wait(out); }
+    });
+  };
+
+  // Execute the first node in the waiting list
+  // Make sure to check that waiting list is not empty before execution
+  auto execute = [&]() {
+    auto first_topo_struct = *waiting_list.begin();
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
+      for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ", "; }
+      std::cout << std::endl;
+    }
+    // Set the order of execution for sbp nodes
+    ordered_topo_structs.push_back(first_topo_struct);
+    waiting_list.erase(waiting_list.begin());
+    finish_execution(first_topo_struct->op_node);
+  };
+
+  // straightening
+  while (!waiting_list.empty()) { execute(); }
 }
 
 }  // namespace auto_parallel
