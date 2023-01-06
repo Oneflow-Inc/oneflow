@@ -95,21 +95,9 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
 
 
 def _get_specific_global_tensor_mem(placement, sbp, tensor):
-    size_tensor = tensor.clone().detach()
-    cnt_size = size_tensor.to_local().element_size()
-    size = 0
-    if sbp[0] == oneflow.sbp.broadcast:
-        if placement == oneflow.placement(type="cuda", ranks=[0, 1]):
-            size = 400
-        elif placement == oneflow.placement(type="cuda", ranks=[0, 1, 2, 3]):
-            size = 40
-    if sbp[0] == oneflow.sbp.split(dim=0) or sbp[0] == oneflow.sbp.split(dim=1):
-        if placement == oneflow.placement(type="cuda", ranks=[0, 1]):
-            size = 200
-        elif placement == oneflow.placement(type="cuda", ranks=[0, 1, 2, 3]):
-            size = 10
-    print("===>", cnt_size, "==", size)
-    return size
+    size_tensor = tensor.clone().detach().to_local()
+    cnt_size = size_tensor.element_size() * flow.numel(size_tensor)
+    return cnt_size / 1024 / 1024
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

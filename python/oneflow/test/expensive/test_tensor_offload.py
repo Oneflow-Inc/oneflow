@@ -60,16 +60,8 @@ def _test_tensor_load_h2d(test_case, input, tensor_mem):
 def _get_tensor_mem(input):
     if input.dim() == 0:
         return 2
-    shape = input.shape
-    tensor_size = shape[0] * shape[1] * shape[2]
-
-    if input.dtype == oneflow.float32:
-        return 4 * tensor_size / 1024 / 1024
-    elif input.dtype == oneflow.float16:
-        return 2 * tensor_size / 1024 / 1024
-    elif input.dtype == oneflow.int64:
-        return 8 * tensor_size / 1024 / 1024
-
+    cnt_size = input.element_size() * flow.numel(input)
+    return cnt_size / 1024 / 1024
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
