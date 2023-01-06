@@ -852,8 +852,8 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 //             find = true;
 //             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
 //             auto source = rewriter.create<okl::GetTensorFromRetOp>(
-//                 op->getLoc(), arg.getType(), okl_func.getArgument(0), okl::TensorType::TT_Argument,
-//                 index);
+//                 op->getLoc(), arg.getType(), okl_func.getArgument(0),
+//                 okl::TensorType::TT_Argument, index);
 //             mapping.map(arg, source->getResult(0));
 //             break;
 //           }
@@ -1010,66 +1010,64 @@ KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*
   wrap_ops.clear();
   return func;
 }
-// struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
-//   static func::FuncOp ExtractArgTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
-//     auto launcher_ctx_type = okl::LauncherContextType::get(rewriter.getContext());
-//     auto return_types = op.getBody().front().back().getOperandTypes();
-//     auto func_type = rewriter.getFunctionType({launcher_ctx_type}, return_types);
+struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static func::FuncOp ExtractArgTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
+    auto launcher_ctx_type = okl::LauncherContextType::get(rewriter.getContext());
+    auto return_types = op.getBody().front().back().getOperandTypes();
+    auto func_type = rewriter.getFunctionType({launcher_ctx_type}, return_types);
 
-//     auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), func_type);
-//     auto& body = func.getBody();
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), func_type);
+    auto& body = func.getBody();
 
-//     body.emplaceBlock();
-//     body.addArgument(launcher_ctx_type, op->getLoc());
-//     auto launcher_ctx = body.getArgument(0);
+    body.emplaceBlock();
+    body.addArgument(launcher_ctx_type, op->getLoc());
+    auto launcher_ctx = body.getArgument(0);
 
-//     OpBuilder::InsertionGuard guard(rewriter);
-//     rewriter.setInsertionPointToStart(&body.front());
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(&body.front());
 
-//     BlockAndValueMapping mapping;
-//     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-//       auto tensor = rewriter.create<okl::GetTensorFromArgOp>(
-//           func->getLoc(), arg.value().getType(), launcher_ctx, okl::TensorType::TT_Argument,
-//           arg.index());
-//       mapping.map(arg.value(), tensor);
-//     }
+    BlockAndValueMapping mapping;
+    for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
+      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
+                                                             launcher_ctx, arg.index());
+      mapping.map(arg.value(), tensor);
+    }
 
-//     ImplicitLocOpBuilder new_block(func->getLoc(), rewriter);
-//     for (auto& op : op.getBody().front().getOperations()) { new_block.clone(op, mapping); }
-//     rewriter.eraseOp(op);
-//     return func;
-//   }
+    ImplicitLocOpBuilder new_block(func->getLoc(), rewriter);
+    for (auto& op : op.getBody().front().getOperations()) { new_block.clone(op, mapping); }
+    rewriter.eraseOp(op);
+    return func;
+  }
 
-//   static func::FuncOp ExtractRetTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
-//     auto& block = op.getBody().front();
-//     auto launcher_ctx = op.getArgument(0);
-//     auto& return_op = block.back();
+  static func::FuncOp ExtractRetTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
+    auto& block = op.getBody().front();
+    auto launcher_ctx = op.getArgument(0);
+    auto& return_op = block.back();
 
-//     OpBuilder::InsertionGuard guard(rewriter);
-//     rewriter.setInsertionPoint(&return_op);
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(&return_op);
 
-//     std::vector<Value> returns;
-//     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
-//       auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
-//           op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(),
-//           okl::TensorType::TT_Return, ret_val.index());
-//       returns.push_back(new_ret);
-//     }
+    std::vector<Value> returns;
+    for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
+      auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
+          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(), ret_val.index());
+      returns.push_back(new_ret);
+    }
 
-//     rewriter.replaceOpWithNewOp<func::ReturnOp>(&return_op, ValueRange{returns});
-//     return op;
-//   }
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(&return_op, ValueRange{returns});
+    return op;
+  }
 
-//   explicit ExtractKernelLaunchTensorPattern(mlir::MLIRContext* context)
-//       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
-//   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
-//                                       mlir::PatternRewriter& rewriter) const override {
-//     if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
-//     op = ExtractArgTensors(op, rewriter);
-//     op = ExtractRetTensors(op, rewriter);
-//     return success();
-//   }
-// };
+  explicit ExtractKernelLaunchTensorPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
+    op = ExtractArgTensors(op, rewriter);
+    op = ExtractRetTensors(op, rewriter);
+    return success();
+  }
+};
 
 struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
   explicit TrimReturnAsVoidPattern(mlir::MLIRContext* context)
@@ -1236,7 +1234,7 @@ void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns) {
-  // patterns.add<ExtractKernelLaunchTensorPattern>(patterns.getContext());
+  patterns.add<ExtractKernelLaunchTensorPattern>(patterns.getContext());
 }
 
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
