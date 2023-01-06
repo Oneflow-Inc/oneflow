@@ -72,6 +72,21 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
   return ret;
 }
 
+Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
+                                    const one::TensorTuple& tensor_list) {
+  blob_list->reserve(tensor_list.size());
+  for (const auto& tensor : tensor_list) {
+    CHECK_OR_RETURN(tensor->is_eager())
+        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
+    if (tensor->is_global()) {
+      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+    } else {
+      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 NNGraph::~NNGraph() {
@@ -110,6 +125,8 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 }
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
+
+vm::EagerBlobObjectList NNGraph::var_blobs() const { return var_blobs_; }
 
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
@@ -196,6 +213,9 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
       << "Number of variable names and tensors mismatch. "
          "Size of variable names: "
       << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
+  one::TensorTuple tuple(variable_tensors.size());
+  for (int i = 0; i < variable_tensors.size(); ++i) { tuple[i] = variable_tensors[i]; }
+  JUST(MakeEagerBlobObjectList(&var_blobs_, tuple));
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
     CHECK_OR_RETURN(var->is_eager())
@@ -559,25 +579,6 @@ void NNGraph::CloseRuntimeBuffers() {
   }
 }
 
-namespace {
-
-Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
-                                    const one::TensorTuple& tensor_list) {
-  blob_list->reserve(tensor_list.size());
-  for (const auto& tensor : tensor_list) {
-    CHECK_OR_RETURN(tensor->is_eager())
-        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
-    if (tensor->is_global()) {
-      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
-    } else {
-      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
                            const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
@@ -618,16 +619,14 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   }
   vm::EagerBlobObjectList input_blobs;
   vm::EagerBlobObjectList output_blobs;
-  vm::EagerBlobObjectList var_blobs;
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
-  JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
   const auto& input_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(input_blobs));
   const auto& output_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(output_blobs));
   const auto& var_blob_list_ptr =
-      std::make_shared<const vm::EagerBlobObjectList>(std::move(var_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(nn_graph->var_blobs()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
                                   nn_graph);
