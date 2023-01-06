@@ -499,8 +499,8 @@ void MatrixColReduceBy1BlockLayer(ep::Stream* stream, K num_elems, K num_cols, c
     RUN_CUDA_KERNEL((MatrixColReduceBy1ThreadPerColumn<R, T, K, RetT>), stream, num_cols, num_elems,
                     num_cols, in, out);
   } else {
-    const int num_blocks = (num_cols + kCudaWarpSize - 1) / kCudaWarpSize;
-    const int num_threads = kCudaWarpSize * kCudaWarpSize;
+    const int num_blocks = (num_cols + kCudaWarpSize - 1) / kCudaWarpSize * 2;
+    const int num_threads = 1024;
     auto Reduce = &MatrixColReduceByWarpBlock<R, T, K, RetT>;
     Reduce<<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         num_elems, num_cols, in, out);
