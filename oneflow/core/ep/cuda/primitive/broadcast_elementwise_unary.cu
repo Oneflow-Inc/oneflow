@@ -304,7 +304,7 @@ void LaunchFill(CudaStream* stream, Dst* dst, const Src* src, size_t count, Scal
   }
 }
 
-template<UnaryOp unary_op, typename Src, typename Dst>
+template<UnaryOp unary_op, typename Src, DataType src_type, typename Dst, DataType dst_type>
 class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseUnaryImpl);
@@ -363,12 +363,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
-    } else if (permutable) {
+    } else if (permutable && src_type == dst_type) {
       std::unique_ptr<Permute> permute =
         NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
 
-      //TODO: convert src into dst type, now hardcode to kFloat for simplicity
-      permute->Launch(stream, DataType::kFloat, simplified_num_dims, permutation_src_dims, src_ptr,
+      permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
                     permutation_list, dst_ptr);
     } else {
       LaunchWithSimplified<unary_op, Src, Dst>(
@@ -381,11 +380,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   Scalar attr0, attr1;
 };
 
-template<UnaryOp unary_op, typename Src, typename Dst>
+template<UnaryOp unary_op, typename Src, DataType src_type, typename Dst, DataType dst_type>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
                                                                         Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseUnary>(
-      new BroadcastElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
+      new BroadcastElementwiseUnaryImpl<unary_op, Src, src_type, Dst, dst_type>(attr0, attr1));
 }
 
 class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFactory {
@@ -410,8 +409,8 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
     if (max_num_dims > kMaxNumDims) { return nullptr; }
 #define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
-                                OF_PP_PAIR_FIRST(dtype_pair)>},
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair), \
+                                OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
