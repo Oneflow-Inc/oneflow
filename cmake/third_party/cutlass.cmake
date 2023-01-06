@@ -21,7 +21,7 @@ if(WITH_CUTLASS)
   set(CUTLASS_INCLUDE_DIR ${CUTLASS_INSTALL_DIR}/include CACHE PATH "" FORCE)
   set(CUTLASS_LIBRARY_DIR ${CUTLASS_INSTALL_DIR}/lib CACHE PATH "" FORCE)
   set(CUTLASS_LIBRARIES ${CUTLASS_LIBRARY_DIR}/libcutlass.so)
-  set(CUTLASS_SOUREC_DIR ${CMAKE_CURRENT_BINARY_DIR}/cutlass/src/cutlass/)
+  set(CUTLASS_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cutlass/src/cutlass/)
 
   foreach(arch ${CUDA_REAL_ARCHS_LIST})
     if(arch GREATER_EQUAL 70)
@@ -61,7 +61,7 @@ if(WITH_CUTLASS)
         -DCUTLASS_NVCC_EMBED_PTX:BOOL=OFF)
 
     add_custom_target(cutlass_copy_examples_to_destination DEPENDS cutlass)
-    set(CUTLASS_SOURCE_EXAMPLES_DIR ${CUTLASS_SOUREC_DIR}/examples)
+    set(CUTLASS_SOURCE_EXAMPLES_DIR ${CUTLASS_SOURCE_DIR}/examples)
 
     set(CUTLASS_INSTALL_EXAMPLES_FILES
         "41_fused_multi_head_attention/iterators/make_residual_last.h"
