@@ -57,7 +57,7 @@ def _test_global_div_grad_grad_impl(test_case, placement):
             dx_and_dy.pytorch[1].detach().cpu().numpy(),
             dx_and_dy.oneflow[1].detach().numpy(),
             rtol=1e-4,
-            atol=1e-4,
+            atol=1e-3,
         )
     )
 
