@@ -20,12 +20,14 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
+
 def det_random_placement():
     cuda_version = flow._oneflow_internal.flags.cuda_version()
     if cuda_version < 11000:  # cuSOLVER is only supported in CUDA 11.0 and above
         return random_cpu_placement()
     else:
         return all_placement()
+
 
 @autotest(n=1, check_graph=False)
 def _test_det(test_case, placement, sbp, ndim):
