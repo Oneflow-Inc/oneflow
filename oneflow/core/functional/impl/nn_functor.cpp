@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "fmt/core.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -76,6 +77,9 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
+    CHECK_EQ_OR_RETURN(num_spatial_dims_ + 2, input->ndim())
+        << "Expected " << num_spatial_dims_ + 2 << "D input to conv" << num_spatial_dims_
+        << "d, but got input of size: " << input->shape()->ToString();
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
