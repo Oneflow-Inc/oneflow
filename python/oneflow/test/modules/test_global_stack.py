@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_stack_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=8).to_global(
         placement, sbp

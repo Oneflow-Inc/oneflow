@@ -15,8 +15,8 @@ limitations under the License.
 """
 from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.modules.module import Module
+from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 import json
 import datetime

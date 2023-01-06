@@ -246,6 +246,10 @@ class GraphConfig(object):
             #  effects.
             nccl_config.enable_use_compute_stream(True)
 
+            # TODO(chengcheng): hotfix.(just for now), logical chain has some bugs in OneEmmbedding,
+            #  just using logical chain in acc on.
+            os.environ["ENABLE_LOGICAL_CHAIN"] = "true"
+
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.
 
@@ -266,6 +270,9 @@ class GraphConfig(object):
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
+
+        Note:
+            It is recommended to use `flow.backends.cudnn.enable_conv_heuristic_search_algo(False)` instead of this function.
 
         For example:
 
@@ -311,7 +318,7 @@ class GraphConfig(object):
         Under the forth configuration, the straighten algorithm would try to run the cpu nodes and gpu nodes alternately.
         Such procedure would reduce the gaps of the execution on gpus.
         It might speed up the training by 2%.
-        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically. 
+        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
         """
         assert (
             mode == "Disable"
