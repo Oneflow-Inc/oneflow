@@ -20,6 +20,7 @@ namespace oneflow_api {
 
 void initialize();
 void release();
+void sync();
 
 }  // namespace oneflow_api
 

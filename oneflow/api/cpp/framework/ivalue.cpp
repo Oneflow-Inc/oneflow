@@ -25,18 +25,28 @@ std::ostream& operator<<(std::ostream& os, const IValue::Tag& tag) {
   return os;
 }
 
-int64_t IValue::ToInt() const {
-  CHECK_EQ(tag_, Tag::kInt) << "Current value is not an int.";
+int32_t IValue::ToInt32() const {
+  CHECK_EQ(tag_, Tag::kInt32) << "Current value is not int32.";
+  return static_cast<int32_t>(payload_.i.v_int);
+}
+
+int64_t IValue::ToInt64() const {
+  CHECK_EQ(tag_, Tag::kInt64) << "Current value is not int64.";
   return payload_.i.v_int;
 }
 
+float IValue::ToFloat() const {
+  CHECK_EQ(tag_, Tag::kFloat) << "Current value is not float.";
+  return static_cast<float>(payload_.i.v_double);
+}
+
 double IValue::ToDouble() const {
-  CHECK_EQ(tag_, Tag::kDouble) << "Current value is not a double.";
+  CHECK_EQ(tag_, Tag::kDouble) << "Current value is not double.";
   return payload_.i.v_double;
 }
 
 bool IValue::ToBool() const {
-  CHECK_EQ(tag_, Tag::kBool) << "Current value is not a bool.";
+  CHECK_EQ(tag_, Tag::kBool) << "Current value is not bool.";
   return payload_.i.v_bool;
 }
 

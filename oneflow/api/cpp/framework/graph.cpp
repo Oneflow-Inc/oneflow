@@ -400,7 +400,7 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
     const std::string variable_filename = model_path_ + "/" + variable_op_name + "/out";
     const std::string buffer = [&]() {
       std::ifstream variable_file(variable_filename, std::ios::binary);
-      CHECK(variable_file.is_open());
+      CHECK(variable_file.is_open()) << "failed to open " << variable_filename;
       std::stringstream ss;
       ss << variable_file.rdbuf();
       return ss.str();

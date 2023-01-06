@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_NN_H_
 #define ONEFLOW_API_CPP_NN_H_
 
+#include "nn/functional/nn.h"
 #include "nn/functional/activation.h"
 
 #endif  // ONEFLOW_API_CPP_NN_H_

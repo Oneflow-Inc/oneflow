@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/thread/thread_global_id.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow_api {
 void initialize() {
@@ -31,5 +32,7 @@ void release() {
   of::SetShuttingDown();
   of::ResetThisThreadUniqueGlobalId().GetOrThrow();
 }
+
+void sync() { of::vm::ClusterSync().GetOrThrow(); }
 
 }  // namespace oneflow_api

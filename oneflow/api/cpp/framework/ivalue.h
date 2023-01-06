@@ -26,13 +26,20 @@ namespace oneflow_api {
 class IValue {
  public:
   IValue() : tag_(IValue::Tag::kNone) {}
-  explicit IValue(int value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
 
-  explicit IValue(int64_t value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
+  IValue(int32_t value) : tag_(IValue::Tag::kInt32) {  // NOLINT
+    payload_.i.v_int = static_cast<int64_t>(value);
+  }
 
-  explicit IValue(double value) : tag_(IValue::Tag::kDouble) { payload_.i.v_double = value; }
+  IValue(int64_t value) : tag_(IValue::Tag::kInt64) { payload_.i.v_int = value; }  // NOLINT
 
-  explicit IValue(bool value) : tag_(IValue::Tag::kBool) { payload_.i.v_bool = value; }
+  IValue(float value) : tag_(IValue::Tag::kFloat) {  // NOLINT
+    payload_.i.v_double = static_cast<double>(value);
+  }
+
+  IValue(double value) : tag_(IValue::Tag::kDouble) { payload_.i.v_double = value; }  // NOLINT
+
+  IValue(bool value) : tag_(IValue::Tag::kBool) { payload_.i.v_bool = value; }  // NOLINT
 
   IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) {  // NOLINT
     new (&payload_.v_tensor) Tensor(value);
@@ -60,6 +67,14 @@ class IValue {
     }
   }
 
+  IValue(const std::vector<IValue>& values) : tag_(Tag::kTensorVector) {  // NOLINT
+    new (&payload_.v_tensor_vector) std::vector<Tensor>(values.size());
+    for (size_t i = 0; i < values.size(); ++i) {
+      // TODO check type of values[i]
+      payload_.v_tensor_vector.at(i) = values.at(i).ToTensor();
+    }
+  }
+
   IValue(IValue&& value) noexcept : tag_(value.tag_) { MoveFrom(std::move(value)); }
 
   IValue& operator=(const IValue& value) {
@@ -77,11 +92,17 @@ class IValue {
     return *this;
   }
 
+  explicit operator bool() const { return !IsNone(); }
+
   ~IValue() { Destory(); }
 
   bool IsNone() const { return tag_ == Tag::kNone; }
 
-  bool IsInt() const { return tag_ == Tag::kInt; }
+  bool IsInt32() const { return tag_ == Tag::kInt32; }
+
+  bool IsInt64() const { return tag_ == Tag::kInt64; }
+
+  bool IsFloat() const { return tag_ == Tag::kFloat; }
 
   bool IsDouble() const { return tag_ == Tag::kDouble; }
 
@@ -91,14 +112,25 @@ class IValue {
 
   bool IsTensorVector() const { return tag_ == Tag::kTensorVector; }
 
-  int64_t ToInt() const;
+  int32_t ToInt32() const;
+  int64_t ToInt64() const;
+  float ToFloat() const;
   double ToDouble() const;
   bool ToBool() const;
   const Tensor& ToTensor() const;
   const std::vector<Tensor>& ToTensorVector() const;
 
  private:
-  enum class Tag { kNone = 0, kInt = 1, kDouble = 2, kBool = 3, kTensor = 4, kTensorVector = 5 };
+  enum class Tag {
+    kNone = 0,
+    kInt32 = 1,
+    kInt64 = 2,
+    kFloat = 3,
+    kDouble = 4,
+    kBool = 5,
+    kTensor = 6,
+    kTensorVector = 7
+  };
   friend std::ostream& operator<<(std::ostream&, const Tag&);
 
   union Payload {  // NOLINT

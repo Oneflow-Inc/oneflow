@@ -426,6 +426,11 @@ def save(
                 x.to(Tensor),
                 path / f"{x.to(GraphTensor).name_prefix}{x.to(GraphTensor).name}",
             )
+        for k, v in graph.state_dict().items():
+            if "FreeEagerTensor" in k:
+                _save_tensor_to_disk(
+                    v, path / k,
+                )
 
         save_one_embedding_info(obj.state_dict(), path)
 

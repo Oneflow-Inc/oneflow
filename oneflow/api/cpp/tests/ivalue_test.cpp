@@ -33,10 +33,10 @@ TEST(Api, ivalue) {
   std::uniform_int_distribution<> dist_bool(0, 1);
 
   const auto v_int = static_cast<int>(dist(rng));
-  ASSERT_EQ(IValue(v_int).ToInt(), v_int);
+  ASSERT_EQ(IValue(v_int).ToInt32(), v_int);
 
   const auto v_int64 = static_cast<int64_t>(dist(rng));
-  ASSERT_EQ(IValue(v_int64).ToInt(), v_int64);
+  ASSERT_EQ(IValue(v_int64).ToInt64(), v_int64);
 
   const auto v_float = static_cast<float>(dist(rng));
   ASSERT_EQ(IValue(v_float).ToDouble(), v_float);

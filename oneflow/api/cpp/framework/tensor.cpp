@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/shape.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
@@ -124,6 +125,7 @@ const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const {
 #define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
   template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer) const;
 
+REGISTER_TENSOR_COPY_TO(oneflow::float16)
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)
 REGISTER_TENSOR_COPY_TO(bool)
