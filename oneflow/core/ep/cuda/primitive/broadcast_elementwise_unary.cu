@@ -351,7 +351,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
     bool permutable = inferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_src_dims, 
-                                                    simplified_dst_dims, permutation_list, permutation_src_dims);
+                                                    simplified_dst_dims, permutation_list, permutation_src_dims, unary_op);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {

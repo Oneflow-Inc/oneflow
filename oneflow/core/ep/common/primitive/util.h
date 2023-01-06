@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 
 namespace oneflow {
 
@@ -198,7 +199,10 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
 template<size_t max_num_dims>
 inline bool inferPermutable(size_t simplified_num_dims, const int64_t* simplified_src_strides,
                             const int64_t* simplified_src_dims, const int64_t* simplified_dst_dims, int* permutation_list, 
-                            int64_t* permutation_src_dims) {
+                            int64_t* permutation_src_dims, UnaryOp unary_op) {
+  if (unary_op != UnaryOp::kIdentity) {
+    return false;
+  }
   std::pair<int64_t, size_t> sorted_src_dims[max_num_dims];
   std::pair<int64_t, size_t> sorted_dst_dims[max_num_dims];
   std::pair<int64_t, size_t> sorted_src_strides[max_num_dims];
@@ -212,20 +216,16 @@ inline bool inferPermutable(size_t simplified_num_dims, const int64_t* simplifie
   std::sort(sorted_src_strides, sorted_src_strides + simplified_num_dims,
             [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
 
+  // all dims of src & dst should be the same
   for (size_t i = 0; i < simplified_num_dims; i++) {
     if (sorted_src_dims[i].first != sorted_dst_dims[i].first) {
       return false;
     }
   }
   
-  for (size_t i = 0; i < simplified_num_dims; i++) {
-    // invoke permute primitive only when the last three dimensions are permuted
-    if (i != sorted_src_strides[i].second) {
-      for (size_t j = 0; j < simplified_num_dims; j++) {
-        permutation_list[j] = sorted_src_strides[j].second;
-        permutation_src_dims[j] = simplified_src_dims[sorted_src_strides[j].second];
-      }
-    }
+  for (size_t j = 0; j < simplified_num_dims; j++) {
+    permutation_list[j] = sorted_src_strides[j].second;
+    permutation_src_dims[j] = simplified_src_dims[sorted_src_strides[j].second];
   }
 
   return true;
@@ -238,12 +238,12 @@ inline bool inferPermutable(size_t num_src_dims, const int64_t* src_dims,
                                   size_t* simplified_num_dims, int64_t* simplified_src_dims,
                                   int64_t* simplified_src_strides, int64_t* simplified_dst_dims,
                                   int64_t* simplified_dst_strides, int* permutation_list,
-                                  int64_t* permutation_src_dims) {
+                                  int64_t* permutation_src_dims, UnaryOp unary_op) {
   SimplifyBroadcastDims<max_num_dims>(num_src_dims, src_dims, src_strides, num_dst_dims, dst_dims, dst_strides,
     simplified_num_dims, simplified_src_dims, simplified_src_strides, simplified_dst_dims, simplified_dst_dims);
 
   return inferPermutable<max_num_dims>(*simplified_num_dims, simplified_src_strides, simplified_src_dims, simplified_dst_dims,
-                                        permutation_list, permutation_src_dims);
+                                        permutation_list, permutation_src_dims, unary_op);
 }
 
 template<typename T, typename D>
