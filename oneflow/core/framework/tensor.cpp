@@ -119,14 +119,14 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   return Maybe<void>::Ok();
 }
 
-#define TENSOR_OFFLOAD_CHECK(is_offloaded, msg)   \
-  if (!is_cuda()) {                                          \
-    LOG(WARNING) << "Only cuda tensor can be offloaded.";    \
-    return Maybe<void>::Ok();                                \
-  }                                                   \
-  if (is_offloaded_ != is_offloaded) { \
+#define TENSOR_OFFLOAD_CHECK(is_offloaded, msg)                  \
+  if (!is_cuda()) {                                              \
+    LOG(WARNING) << "Only cuda tensor can be offloaded.";        \
+    return Maybe<void>::Ok();                                    \
+  }                                                              \
+  if (is_offloaded_ != is_offloaded) {                           \
     LOG(WARNING) << "This tensor has already be " << msg << "."; \
-    return Maybe<void>::Ok(); \
+    return Maybe<void>::Ok();                                    \
   }
 
 Maybe<void> LocalTensor::offload() {
@@ -161,7 +161,8 @@ Maybe<void> LocalTensor::load() {
   // Load cpu to cuda.
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> cpu_tensor = std::make_shared<LocalTensor>(offloaded_impl_);
-  auto loaded_tensor = JUST(functional::Copy(cpu_tensor, "cuda", device_id, /*pin_memory=*/JUST(cpu_tensor->is_pinned())));
+  auto loaded_tensor = JUST(functional::Copy(cpu_tensor, "cuda", device_id,
+                                             /*pin_memory=*/JUST(cpu_tensor->is_pinned())));
   JUST(vm::CurrentRankSync());
   JUST(set_data(loaded_tensor));
 
