@@ -94,17 +94,22 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
     test_case.assertEqual(before_id, after_id)
 
 
-def _get_specific_global_tensor_mem(placement, sbp):
+def _get_specific_global_tensor_mem(placement, sbp, tensor):
+    size_tensor = tensor.clone().detach()
+    cnt_size = size_tensor.to_local().element_size()
+    size = 0
     if sbp[0] == oneflow.sbp.broadcast:
         if placement == oneflow.placement(type="cuda", ranks=[0, 1]):
-            return 400
+            size = 400
         elif placement == oneflow.placement(type="cuda", ranks=[0, 1, 2, 3]):
-            return 40
+            size = 40
     if sbp[0] == oneflow.sbp.split(dim=0) or sbp[0] == oneflow.sbp.split(dim=1):
         if placement == oneflow.placement(type="cuda", ranks=[0, 1]):
-            return 200
+            size = 200
         elif placement == oneflow.placement(type="cuda", ranks=[0, 1, 2, 3]):
-            return 10
+            size = 10
+    print("===>", cnt_size, "==", size)
+    return size
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -119,9 +124,10 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                     1024, 1024, 100, dtype=flow.float32, placement=placement, sbp=sbp
                 )
                 data = input.numpy()
-                tensor_mem = _get_specific_global_tensor_mem(placement, sbp)
+                tensor_mem = _get_specific_global_tensor_mem(placement, sbp, input)
                 _test_global_tensor_offload_d2h(test_case, input, tensor_mem)
                 _test_global_tensor_load_h2d(test_case, input, tensor_mem)
+                test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
     @globaltest
     @flow.unittest.skip_unless_1n4d()
@@ -133,13 +139,14 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                     1024, 1024, 10, dtype=flow.float32, placement=placement, sbp=sbp
                 )
                 data = input.numpy()
-                tensor_mem = _get_specific_global_tensor_mem(placement, sbp)
+                tensor_mem = _get_specific_global_tensor_mem(placement, sbp, input)
                 _test_global_tensor_offload_d2h(test_case, input, tensor_mem)
                 _test_global_tensor_load_h2d(test_case, input, tensor_mem)
+                test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
     @globaltest
     @flow.unittest.skip_unless_1n2d()
-    def test_global_tensor_offload_and_load_2d_cpu(test_case):
+    def test_global_tensor_offload_and_load_2d_cpu_mem(test_case):
         flow.cuda.empty_cache()
         for i in range(5):
             placement = flow.placement("cuda", ranks=[0, 1])

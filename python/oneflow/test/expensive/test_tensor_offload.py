@@ -182,7 +182,7 @@ class TestTensorOffload(flow.unittest.TestCase):
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
-    def test_tensor_offload_and_load_cpu(test_case):
+    def test_tensor_offload_and_load_cpu_mem(test_case):
         input = flow.tensor(
             np.random.randn(1024, 1024, 100),
             dtype=flow.float32,

@@ -118,7 +118,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   // For offloading between devices
   virtual Maybe<void> offload() = 0;
   virtual Maybe<void> load() = 0;
-  virtual Maybe<bool> is_offloaded() = 0;
+  virtual Maybe<bool> is_offloaded() const = 0;
 
   virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
     OF_UNIMPLEMENTED();
@@ -280,7 +280,7 @@ class StaticZerosTensor final : public Tensor {
 
   Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<bool> is_offloaded() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   Maybe<LocalTensor> AsLocalTensor() override;
   Maybe<GlobalTensor> AsGlobalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -433,7 +433,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   virtual Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
-  Maybe<bool> is_offloaded() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   virtual Maybe<LocalTensor> AsLocalTensor() override {
     if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
@@ -576,7 +576,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
 
   Maybe<void> offload() override;
   Maybe<void> load() override;
-  Maybe<bool> is_offloaded() override { return is_offloaded_; }
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
 
   Maybe<void> set_impl(std::shared_ptr<LocalTensorImpl> impl) {
     impl_ = impl;
@@ -707,7 +707,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 
   Maybe<void> offload() override;
   Maybe<void> load() override;
-  Maybe<bool> is_offloaded() override { return is_offloaded_; }
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
 
   Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<GlobalTensor> AsGlobalTensor() override {
