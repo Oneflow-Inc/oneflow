@@ -77,8 +77,6 @@ class TestRNNCellGlobal(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_lstm_cell(test_case, placement, sbp)
 
-                session_ctx.GetDefaultSession().Reset()
-
 
 if __name__ == "__main__":
     unittest.main()

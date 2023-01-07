@@ -937,7 +937,7 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                 if not placement.type == "cpu":
                     _test_setitem_scalars(test_case, placement)
 
-                session_ctx.GetDefaultSession().Reset()
+                # session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
     @globaltest
     def test_bool_indices(test_case):
