@@ -83,9 +83,6 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
   int64_t actor_id = GetOfCollectiveBoxingActorContext(ctx)->actor_id();
 
-  // Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
-  // return;
-
   const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
   
   // TODO(Panlichen): 目前只实现了AllReduce  

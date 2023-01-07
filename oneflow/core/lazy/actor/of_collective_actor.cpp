@@ -522,8 +522,8 @@ int OfCollectiveActor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
-  VLOG(2) << "Actor " << actor_id_  << " ReactToNegoCmd get msg of type " << print_actor_msg_type_[msg.msg_type()];
   CHECK(msg.msg_type() == ActorMsgType::kCollectiveMsg);
+  VLOG(2) << "Actor " << actor_id_  << " ReactToNegoCmd get msg  " << print_nego_cmd_[msg.collective_nego_cmd()] << " from " << msg.src_actor_id();;
   int64_t src_actor_id = msg.src_actor_id();
 
   switch (msg.collective_nego_cmd()) {
@@ -663,12 +663,6 @@ void OfCollectiveActor::Act() {
   CHECK(IsReadReady() && IsWriteReady() && CanAct()) << "Actor " << actor_id_;
   
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
-  int64_t actor_id = actor_id_;
-  AddCallback([actor_id](){
-    Singleton<ActorMsgBus>::Get()->SendMsg(
-      ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
-    );
-  });
   return;
 }
 
