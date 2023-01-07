@@ -37,7 +37,7 @@ class TestSessionResetStreamIndexStateMock1(flow.unittest.TestCase):
         return torch.nn.functional.relu(x)
 
     def setUp(self):
-        session_ctx.GetDefaultSession().Reset()
+        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -56,7 +56,7 @@ class TestSessionResetStreamIndexStateMock2(flow.unittest.TestCase):
     def setUp(self):
         # If not reset session, will raise
         # F20221201 13:55:30.758263 2023961 stream_id.h:33] Check failed: stream_index <= kMaxStreamIndex (4096 vs. 4095)
-        session_ctx.GetDefaultSession().Reset()
+        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
 
 if __name__ == "__main__":

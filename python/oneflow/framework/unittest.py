@@ -34,7 +34,7 @@ import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
 
-RESET_SESSION_COUNT = 0
+RESET_STREAM_INDEX_MANAGER_COUNT = 0
 
 
 def register_test_cases(
@@ -187,14 +187,14 @@ def call(conn=None, cmd=None, msg=None):
 
 class TestCase(unittest.TestCase):
     def tearDown(self):
-        global RESET_SESSION_COUNT
-        reset_session_period = int(
-            os.environ.get("ONEFLOW_TEST_RESET_SESSION_PERIOD", "10")
+        global RESET_STREAM_INDEX_MANAGER_COUNT
+        reset_stream_index_manager_period = int(
+            os.environ.get("ONEFLOW_TEST_RESET_STREAM_INDEX_MANAGER_PERIOD", "10")
         )
-        RESET_SESSION_COUNT += 1
-        if RESET_SESSION_COUNT >= reset_session_period:
-            oneflow.framework.session_context.GetDefaultSession().Reset()
-            RESET_SESSION_COUNT = 0
+        RESET_STREAM_INDEX_MANAGER_COUNT += 1
+        if RESET_STREAM_INDEX_MANAGER_COUNT >= reset_stream_index_manager_period:
+            oneflow.framework.session_context.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
+            RESET_STREAM_INDEX_MANAGER_COUNT = 0
 
 
 def skip_unless(n, d):
