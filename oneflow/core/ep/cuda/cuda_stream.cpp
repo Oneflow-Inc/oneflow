@@ -171,11 +171,11 @@ CudaStream::CudaStream(CudaDevice* device)
 #if CUDA_VERSION >= 11000
   OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
   OF_CUSOLVER_CHECK(cusolverDnSetStream(cusolver_dn_handle_, cuda_stream_));
+#endif
   workspace_size_ =
       ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
       * 1024 * 1024;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
-#endif
 #if CUBLAS_VERSION >= 11200
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
