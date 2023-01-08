@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <memory>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -126,7 +127,9 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
 
-const vm::EagerBlobObjectListPtr& NNGraph::var_blobs() const { return var_blobs_; }
+const std::shared_ptr<vm::EagerBlobObjectList>& NNGraph::var_blobs() const {
+  return variable_op_blobs_;
+}
 
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
@@ -213,7 +216,9 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
       << "Number of variable names and tensors mismatch. "
          "Size of variable names: "
       << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
-  JUST(MakeEagerBlobObjectList(var_blobs_.get(), variable_tensors));
+  CHECK_ISNULL_OR_RETURN(variable_op_blobs_);
+  variable_op_blobs_ = std::make_shared<vm::EagerBlobObjectList>();
+  JUST(MakeEagerBlobObjectList(variable_op_blobs_.get(), variable_tensors));
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
     CHECK_OR_RETURN(var->is_eager())

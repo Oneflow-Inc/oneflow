@@ -54,7 +54,7 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& inputs_tensor_meta_str() const;
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
-  const vm::EagerBlobObjectListPtr& var_blobs() const;
+  const std::shared_ptr<vm::EagerBlobObjectList>& var_blobs() const;
 
   void restore_job(const Job& job) { job_ = job; }
   void restore_job_id(int64_t job_id) { job_id_ = job_id; }
@@ -105,7 +105,7 @@ class NNGraph final : public NNGraphIf {
       additional_variable_op_tobe_loaded_name2tensor_;
   HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object_;
   HashSet<std::string> variable_op_names_;
-  vm::EagerBlobObjectListPtr var_blobs_;
+  std::shared_ptr<vm::EagerBlobObjectList> variable_op_blobs_;
   Plan plan_;
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
