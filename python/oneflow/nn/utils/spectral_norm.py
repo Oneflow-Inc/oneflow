@@ -75,7 +75,8 @@ class SpectralNorm:
                     # v = v.clone(memory_format=flow.contiguous_format)
                     u = u.clone()
                     v = v.clone()
-
+        setattr(module, self.name + "_u", u)
+        setattr(module, self.name + "_v", v)
         sigma = flow.dot(u, flow.mv(weight_mat, v))
         weight = weight / sigma
         return weight
@@ -97,10 +98,8 @@ class SpectralNorm:
         )
 
     def _solve_v_and_rescale(self, weight_mat, u, target_sigma):
-        # Tries to returns a vector `v` s.t. `u = normalize(W @ v)`
-        # (the invariant at top of this class) and `u @ W @ v = sigma`.
-        # This uses pinverse in case W^T W is not invertible.
         v = flow.linalg.multi_dot(
+            # TODO: pinverse
             [weight_mat.t().mm(weight_mat).pinverse(), weight_mat.t(), u.unsqueeze(1)]
         ).squeeze(1)
         return v.mul_(target_sigma / flow.dot(u, flow.mv(weight_mat, v)))
@@ -133,21 +132,73 @@ class SpectralNorm:
 
         delattr(module, fn.name)
         module.register_parameter(fn.name + "_orig", weight)
-        # We still need to assign weight back as fn.name because all sorts of
-        # things may assume that it exists, e.g., when initializing weights.
-        # However, we can't directly assign as it could be an nn.Parameter and
-        # gets added as a parameter. Instead, we register weight.data as a plain
-        # attribute.
         setattr(module, fn.name, weight.data)
         module.register_buffer(fn.name + "_u", u)
         module.register_buffer(fn.name + "_v", v)
 
         module.register_forward_pre_hook(fn)
+        module._register_state_dict_hook(SpectralNormStateDictHook(fn))
+        module._register_load_state_dict_pre_hook(SpectralNormLoadStateDictPreHook(fn))
         return fn
 
 
-T_module = TypeVar("T_module", bound=Module)
+class SpectralNormStateDictHook:
+    def __init__(self, fn) -> None:
+        self.fn = fn
 
+    def __call__(self, module, state_dict, prefix, local_metadata) -> None:
+        if 'spectral_norm' not in local_metadata:
+            local_metadata['spectral_norm'] = {}
+        key = self.fn.name + '.version'
+        if key in local_metadata['spectral_norm']:
+            raise RuntimeError("Unexpected key in metadata['spectral_norm']: {}".format(key))
+        local_metadata['spectral_norm'][key] = self.fn._version
+
+
+class SpectralNormLoadStateDictPreHook:
+    def __init__(self, fn) -> None:
+        self.fn = fn
+
+    # For state_dict with version None, (assuming that it has gone through at
+    # least one training forward), we have
+    #
+    #    u = normalize(W_orig @ v)
+    #    W = W_orig / sigma, where sigma = u @ W_orig @ v
+    #
+    # To compute `v`, we solve `W_orig @ x = u`, and let
+    #    v = x / (u @ W_orig @ x) * (W / W_orig).
+    def __call__(self, state_dict, prefix, local_metadata, strict,
+                 missing_keys, unexpected_keys, error_msgs) -> None:
+        fn = self.fn
+        version = local_metadata.get('spectral_norm', {}).get(fn.name + '.version', None)
+        if version is None or version < 1:
+            weight_key = prefix + fn.name
+            if version is None and all(weight_key + s in state_dict for s in ('_orig', '_u', '_v')) and \
+                    weight_key not in state_dict:
+                # Detect if it is the updated state dict and just missing metadata.
+                # This could happen if the users are crafting a state dict themselves,
+                # so we just pretend that this is the newest.
+                return
+            has_missing_keys = False
+            for suffix in ('_orig', '', '_u'):
+                key = weight_key + suffix
+                if key not in state_dict:
+                    has_missing_keys = True
+                    if strict:
+                        missing_keys.append(key)
+            if has_missing_keys:
+                return
+            with flow.no_grad():
+                weight_orig = state_dict[weight_key + '_orig']
+                weight = state_dict.pop(weight_key)
+                sigma = (weight_orig / weight).mean()
+                weight_mat = fn.reshape_weight_to_matrix(weight_orig)
+                u = state_dict[weight_key + '_u']
+                v = fn._solve_v_and_rescale(weight_mat, u, sigma)
+                state_dict[weight_key + '_v'] = v
+
+
+T_module = TypeVar("T_module", bound=Module)
 
 def spectral_norm(
     module: T_module,
@@ -193,7 +244,7 @@ def spectral_norm(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> m = spectral_norm(nn.Linear(20, 40))
+        >>> m = flow.nn.utils.spectral_norm(flow.nn.Linear(20, 40))
         >>> m
         Linear(in_features=20, out_features=40, bias=True)
         >>> m.weight_u.size()
@@ -224,8 +275,8 @@ def remove_spectral_norm(module: T_module, name: str = "weight") -> T_module:
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> m = spectral_norm(nn.Linear(40, 10))
-        >>> remove_spectral_norm(m)
+        >>> m = flow.nn.utils.spectral_norm(nn.Linear(40, 10))
+        >>> flow.nn.utils.remove_spectral_norm(m)
 
     """
     for k, hook in module._forward_pre_hooks.items():
@@ -235,6 +286,16 @@ def remove_spectral_norm(module: T_module, name: str = "weight") -> T_module:
             break
     else:
         raise ValueError("spectral_norm of '{}' not found in {}".format(name, module))
+
+    for k, hook in module._state_dict_hooks.items():
+        if isinstance(hook, SpectralNormStateDictHook) and hook.fn.name == name:
+            del module._state_dict_hooks[k]
+            break
+
+    for k, hook in module._load_state_dict_pre_hooks.items():
+        if isinstance(hook, SpectralNormLoadStateDictPreHook) and hook.fn.name == name:
+            del module._load_state_dict_pre_hooks[k]
+            break
 
     return module
 

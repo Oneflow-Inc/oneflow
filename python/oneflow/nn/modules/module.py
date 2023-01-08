@@ -16,6 +16,7 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import (
+    Any,
     Callable,
     Dict,
     Iterator,
@@ -28,6 +29,8 @@ from typing import (
     overload,
 )
 import traceback
+import functools
+import weakref
 import warnings
 
 import numpy as np
@@ -46,6 +49,42 @@ class _IncompatibleKeys(
         return super(_IncompatibleKeys, self).__repr__()
 
     __str__ = __repr__
+
+
+class _WrappedHook:
+    def __init__(self, hook: Callable, module: Optional["Module"] = None):
+        self.hook: Callable = hook
+        functools.update_wrapper(self, hook)
+
+        self.with_module: bool = False
+
+        if module is not None:
+            self.module: weakref.ReferenceType["Module"] = weakref.ref(module)
+            self.with_module = True
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if self.with_module:
+            module = self.module()
+            if module is None:
+                raise RuntimeError("You are trying to call the hook of a dead Module!")
+            return self.hook(module, *args, **kwargs)
+        return self.hook(*args, **kwargs)
+
+    def __getstate__(self) -> Dict:
+        result = {"hook": self.hook, "with_module": self.with_module}
+        if self.with_module:
+            result["module"] = self.module()
+
+        return result
+
+    def __setstate__(self, state: Dict):
+        self.hook = state["hook"]
+        self.with_module = state["with_module"]
+
+        if self.with_module:
+            if state["module"] is None:
+                raise RuntimeError("You are trying to revive the hook of a dead Module!")
+            self.module = weakref.ref(state["module"])
 
 
 def _addindent(s_, numSpaces):
@@ -935,12 +974,14 @@ class Module(object):
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
+
+        local_metadata = destination._metadata
         self._save_to_state_dict(destination, prefix, keep_vars)
         for (name, module) in self._modules.items():
             if module is not None:
                 module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
         for hook in self._state_dict_hooks.values():
-            hook_result = hook(self, destination, prefix)
+            hook_result = hook(self, destination, prefix, local_metadata)
             if hook_result is not None:
                 destination = hook_result
         return destination
@@ -964,6 +1005,32 @@ class Module(object):
 
         """
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+    
+    def _register_state_dict_hook(self, hook):
+        r"""These hooks will be called with arguments: `self`, `state_dict`,
+        `prefix`, `local_metadata`, after the `state_dict` of `self` is set.
+        Note that only parameters and buffers of `self` or its children are
+        guaranteed to exist in `state_dict`. The hooks may modify `state_dict`
+        inplace or return a new one.
+        """
+        self._state_dict_hooks[len(self._state_dict_hooks)] = hook
+
+    def _register_load_state_dict_pre_hook(self, hook: Callable[..., None], with_module=False) -> None:
+        r"""These hooks will be called with arguments: `state_dict`, `prefix`,
+        `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
+        `error_msgs`, before loading `state_dict` into `self`. These arguments
+        are exactly the same as those of `_load_from_state_dict`.
+
+        If ``with_module`` is ``True``, then the first argument to the hook is
+        an instance of the module.
+
+        Arguments:
+            hook (Callable): Callable hook that will be invoked before
+                loading the state dict.
+            with_module (bool, optional): Whether or not to pass the module
+                instance to the hook as the first parameter.
+        """
+        self._load_state_dict_pre_hooks[len(self._load_state_dict_pre_hooks)] = _WrappedHook(hook, self if with_module else None)
 
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         r"""
