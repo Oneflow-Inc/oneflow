@@ -25,6 +25,7 @@ import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
+test_dualgemm_impt = True
 
 class Glu(nn.Module):
     def __init__(self):
@@ -208,36 +209,63 @@ class TestFusedGlu(flow.unittest.TestCase):
             _test_fused_glu_split,
         ]
 
-        # set up profiling functions
-        arg_dict["params"] = [
-            # m=256, k=1280, n=5120
-            {"m": 256, "k": 1280, "n": 5120, "act": "none"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "relu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
-            {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
-            # m=1024, k=640, n=2560
-            {"m": 1024, "k": 640, "n": 2560, "act": "none"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "gelu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
-            {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
-            # m=4096, k=320, n=1280
-            {"m": 4096, "k": 320, "n": 1280, "act": "none"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
-            {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
-        ]
+        # set up env valuable if necessary
+        if not test_dualgemm_impt:        
+            os.environ['ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL']="false"
+        else:
+            os.environ['ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL']="true"
 
-        arg_dict["dtype"] = [flow.float16, flow.float32]
+        # set up profiling functions
+        if not test_dualgemm_impt:        
+            arg_dict["params"] = [            
+                # m=256, k=1280, n=5120
+                {"m": 256, "k": 1280, "n": 5120, "act": "none"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "relu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
+                {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
+                # m=1024, k=640, n=2560
+                {"m": 1024, "k": 640, "n": 2560, "act": "none"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "gelu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
+                {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
+                # m=4096, k=320, n=1280
+                {"m": 4096, "k": 320, "n": 1280, "act": "none"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
+                {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
+                # m=2560, k=12800, n=51200
+                {"m": 2560, "k": 1280, "n": 5120, "act": "none"},
+                {"m": 2560, "k": 1280, "n": 5120, "act": "sigmoid"},
+                {"m": 2560, "k": 1280, "n": 5120, "act": "relu"},
+                {"m": 2560, "k": 1280, "n": 5120, "act": "gelu"},
+                {"m": 2560, "k": 1280, "n": 5120, "act": "fast_gelu"},
+                {"m": 2560, "k": 1280, "n": 5120, "act": "silu"},
+            ]
+        else:
+            arg_dict["params"] = [            
+                # m=256, k=1280, n=5120
+                {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
+                # m=1024, k=640, n=2560
+                {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
+                # m=4096, k=320, n=1280
+                {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
+                # m=2560, k=12800, n=51200
+                {"m": 2560, "k": 1280, "n": 5120, "act": "fast_gelu"},
+            ]
+
+        if not test_dualgemm_impt:        
+            arg_dict["dtype"] = [flow.float16, flow.float32]
+        else:
+            arg_dict["dtype"] = [flow.float16]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
 
 if __name__ == "__main__":
     unittest.main()
