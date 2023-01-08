@@ -40,6 +40,7 @@ def compare_with_numpy_lamb(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
 ):
 
     np.random.seed(1000)
@@ -60,6 +61,7 @@ def compare_with_numpy_lamb(
             "weight_decay": weight_decay,
             "adam_w_mode": adam_w_mode,
             "do_bias_correction": do_bias_correction,
+            "contiguous_params": contiguous_params,
         }
 
         if clip_grad_max_norm != -1:
@@ -159,7 +161,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda"]
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             arg_dict["device"] = ["cpu"]
-        arg_dict["x_shape"] = [(1,)]
+        arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
@@ -172,6 +174,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)
