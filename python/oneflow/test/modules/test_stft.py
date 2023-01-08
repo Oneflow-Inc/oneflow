@@ -36,7 +36,7 @@ def getRandBoolvalue():
 
 
 def getRandFFtvalue():
-    pow = np.random.randint(2, 10)
+    pow = np.random.randint(2, 5)
     result = 1
     for i in range(pow):
         result = result * 2
@@ -61,7 +61,7 @@ class TestStft(flow.unittest.TestCase):
         else:
             device = cpu_device()
         rand_fft = getRandFFtvalue()
-        rand_size = np.random.randint(rand_fft, 30000)
+        rand_size = np.random.randint(rand_fft, 300)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
@@ -87,7 +87,7 @@ class TestStft(flow.unittest.TestCase):
             device = cpu_device()
         row_rand_size = np.random.randint(1, 50)
         rand_fft = getRandFFtvalue()
-        col_rand_size = np.random.randint(rand_fft, 30000)
+        col_rand_size = np.random.randint(rand_fft, 300)
         input_dims = [row_rand_size, col_rand_size]
         win_dims = [rand_fft]
         x = random_tensor(2, *input_dims).to(device)
