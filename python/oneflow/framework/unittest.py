@@ -189,7 +189,7 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         global RESET_STREAM_INDEX_MANAGER_COUNT
         reset_stream_index_manager_period = int(
-            os.environ.get("ONEFLOW_TEST_RESET_STREAM_INDEX_MANAGER_PERIOD", "10")
+            os.environ.get("ONEFLOW_TEST_RESET_STREAM_INDEX_MANAGER_PERIOD", "1")
         )
         RESET_STREAM_INDEX_MANAGER_COUNT += 1
         if RESET_STREAM_INDEX_MANAGER_COUNT >= reset_stream_index_manager_period:

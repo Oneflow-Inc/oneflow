@@ -17,7 +17,6 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
-import oneflow.framework.session_context as session_ctx
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t
@@ -53,9 +52,6 @@ class TestUnfold(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_unfold_with_random_data(test_case, placement, sbp)
-
-    def tearDown(self):
-        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
 
 if __name__ == "__main__":

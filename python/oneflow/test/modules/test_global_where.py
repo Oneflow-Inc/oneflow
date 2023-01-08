@@ -20,7 +20,6 @@ from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
-import oneflow.framework.session_context as session_ctx
 
 
 @autotest(n=1, check_graph=True)
@@ -261,9 +260,6 @@ class TestGlobalWhere(flow.unittest.TestCase):
                     test_case, placement, sbp
                 )
 
-    def tearDown(self):
-        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
-
 
 class TestGlobalWhereScalarX(flow.unittest.TestCase):
     @globaltest
@@ -284,9 +280,6 @@ class TestGlobalWhereScalarX(flow.unittest.TestCase):
                     test_case, placement, sbp
                 )
 
-    def tearDown(self):
-        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
-
 
 class TestGlobalWhereScalarY(flow.unittest.TestCase):
     @globaltest
@@ -306,9 +299,6 @@ class TestGlobalWhereScalarY(flow.unittest.TestCase):
                 _test_flow_where_scalar_y_broadcast_bool_with_random_data(
                     test_case, placement, sbp
                 )
-
-    def tearDown(self):
-        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
 
 class TestGlobalWhereScalarXY(flow.unittest.TestCase):

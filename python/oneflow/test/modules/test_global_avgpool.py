@@ -17,7 +17,6 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
-import oneflow.framework.session_context as session_ctx
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -139,9 +138,6 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_avgpool3d_with_random_data(test_case, placement, sbp)
                 _test_functional_avgpool3d_with_random_data(test_case, placement, sbp)
-
-    def tearDown(self):
-        session_ctx.GetDefaultSession()._session_ctx.reset_task_stream_index_manager()
 
 
 if __name__ == "__main__":
