@@ -215,6 +215,8 @@ Communication collectives
         scatter
         send
 
+We also provide PyTorch-compatible APIs for communication collectives, for example, `oneflow.distributed.all_reduce(tensor, op=ReduceOp.SUM, group=None, async_op=False)`. For more information, see `PyTorch Distributed Communication <https://pytorch.org/docs/stable/distributed.html>`_. Note that we currently only support op=ReduceOp.SUM, group=None and async_op=False in these operations.
+
 Launching distributed training
 --------------------------------------------------------------
 
