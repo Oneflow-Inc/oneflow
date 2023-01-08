@@ -21,10 +21,10 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def det_random_placement():
+def det_all_placement():
     cuda_version = flow._oneflow_internal.flags.cuda_version()
     if cuda_version < 11000:  # cuSOLVER is only supported in CUDA 11.0 and above
-        return [random_cpu_placement()]
+        return all_cpu_placement()
     else:
         return all_placement()
 
@@ -46,7 +46,7 @@ class TestDet(flow.unittest.TestCase):
     @globaltest
     def test_det(test_case):
         ndim = random(2, 5).to(int).value()
-        for placement in det_random_placement():
+        for placement in det_all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_det(test_case, placement, sbp, ndim)
 
