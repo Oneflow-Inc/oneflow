@@ -3118,8 +3118,9 @@ class ToDeviceFunctor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t& k,
-                                const int32_t& dim, const bool largest, const bool sorted) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, const int32_t k,
+                                const Optional<int32_t>& dim, const bool largest,
+                                const bool sorted) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     std::shared_ptr<Tensor> values;
     std::shared_ptr<Tensor> indices;
@@ -3127,7 +3128,8 @@ class TopKFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
     attrs.SetAllAttrs(k, sorted);
 
-    int32_t axis = dim;
+    int32_t dim_value = dim.value_or(-1);
+    int32_t axis = dim_value;
     axis = JUST(maybe_wrap_dim(axis, input->ndim()));
     if (axis == input->ndim() - 1) {
       if (largest) {
@@ -3139,7 +3141,7 @@ class TopKFunctor {
       values = JUST(DimGather(input, axis, indices, false));
 
     } else {
-      auto perm = JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim));
+      auto perm = JUST(GetPermWhenTransposeAxisToLastDim(input->ndim(), dim_value));
       auto x = JUST(Transpose(input, *perm));
       if (largest) {
         indices = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
