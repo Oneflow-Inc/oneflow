@@ -213,10 +213,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
       << "Number of variable names and tensors mismatch. "
          "Size of variable names: "
       << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
-  one::TensorTuple tuple(variable_tensors.size());
-  for (int i = 0; i < variable_tensors.size(); ++i) { tuple[i] = variable_tensors[i]; }
-  vm::EagerBlobObjectListPtr var_blobs_;
-  JUST(MakeEagerBlobObjectList(*var_blobs_, tuple));
+  JUST(MakeEagerBlobObjectList(var_blobs_.get(), variable_tensors));
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
     CHECK_OR_RETURN(var->is_eager())
