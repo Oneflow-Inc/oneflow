@@ -65,7 +65,6 @@ class SbpConstructor final {
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyAndMemoryCost(const OpGraph& op_graph);
   Maybe<void> ApplyTrunkAlgo();
-  Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
   void InitAvailableMemory();
   void InitWeightedCost();
   // Load logical blob ids onto sbp edges
@@ -80,6 +79,8 @@ class SbpConstructor final {
   bool nccl_use_compute_stream_;
   int64_t available_memory_;
 };
+
+Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
 
 }  // namespace auto_parallel
 }  // namespace oneflow

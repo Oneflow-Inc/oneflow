@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -35,6 +37,9 @@ class TopoStruct {
   int32_t exceed_time = -1;
   bool is_reusable = false;
   int32_t counter = 0;
+
+  HashSet<TopoStruct*> in_topo_struct;
+  HashSet<TopoStruct*> out_topo_struct;
 
   explicit TopoStruct(SbpNode* sbp_node_);
   explicit TopoStruct(OpNode* op_node_);
@@ -209,7 +214,43 @@ void UpdateSat(const std::vector<TopoStruct*>& topo_structs, StraightenAlgorithm
   }
 }
 
-void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
+void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs, const OpGraph& op_graph) {
+  // Generate the map from operator names to topological structure
+  HashMap<std::string, TopoStruct*> op_name2topo_structs;
+  for (auto& topo_struct : *topo_structs) {
+    op_name2topo_structs[topo_struct->op_node->op().op_name()] = topo_struct;
+  }
+
+  // Find all the control edges
+  auto op_node2ctrl_in_op_names = CHECK_JUST(GetMutableOpCtrlDeps(op_graph));
+
+  // Traverse the operator graph
+  op_graph.ForEachNode([&](OpNode* node) {
+    auto& this_topo_struct = op_name2topo_structs.at(node->op().op_name());
+    // Initialize input nodes for edges with data
+    node->ForEachNodeOnInEdge([&](OpNode* in) {
+      // We use a lot of op_name2topo_structs.at() here, to avoid error,
+      // topo_structs must contain all the operator nodes in the op_graph.
+      this_topo_struct->in_topo_struct.insert(op_name2topo_structs.at(in->op().op_name()));
+    });
+    // Initialize output nodes for edges with data
+    node->ForEachNodeOnOutEdge([&](OpNode* out) {
+      this_topo_struct->out_topo_struct.insert(op_name2topo_structs.at(out->op().op_name()));
+    });
+    // Initialize input nodes for control edges
+    auto it = op_node2ctrl_in_op_names->find(node);
+    if (it != op_node2ctrl_in_op_names->end()) {
+      for (const auto& ctrl_in_op_name : it->second) {
+        auto& ctrl_in_topo_struct = op_name2topo_structs.at(ctrl_in_op_name);
+        this_topo_struct->in_topo_struct.insert(ctrl_in_topo_struct);
+        // Initialize output nodes for this control edge simultaneously
+        ctrl_in_topo_struct->out_topo_struct.insert(this_topo_struct);
+      }
+    }
+  });
+}
+
+void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_structs,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
@@ -230,6 +271,9 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
     }
   }
 
+  // Construct all the data edges and control edges
+  InitInOutTopoStructs(topo_structs, op_graph);
+
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(*topo_structs, *lbi2id, *id2consumer_topo_structs, *id2blob_size);
 
@@ -244,7 +288,7 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
 
 }  // anonymous namespace
 
-void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
+void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Generate topological data structure for each sbp node
   HashMap<SbpNode*, TopoStruct> sbp_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
@@ -261,7 +305,7 @@ void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  InitAllParameters(&topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
+  InitAllParameters(op_graph, &topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
 
   std::set<TopoStruct*, comp> waiting_list;
 
@@ -415,7 +459,7 @@ void StraightenOpGraph(const OpGraph& op_graph) {
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  InitAllParameters(&topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
+  InitAllParameters(op_graph, &topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
 
   std::set<TopoStruct*, comp> waiting_list;
 
