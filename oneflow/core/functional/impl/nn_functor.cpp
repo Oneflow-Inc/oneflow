@@ -2514,8 +2514,7 @@ class ConstantPadFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("padding", "floating_constant_value",
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
-    if (IsFloatingDataType(input->dtype()->data_type())
-        || input->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
@@ -3007,6 +3006,7 @@ class OneHotFunctor {
                            const Scalar& on_value, const Scalar& off_value) const {
     CHECK_OR_RETURN(!IsFloatingDataType(input->dtype()->data_type()))
         << Error::RuntimeError() << "one_hot is only applicable to index tensor.";
+    // May not support float16
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("depth", "dtype", "floating_on_value", "floating_off_value",
                                        "integer_on_value", "integer_off_value");
@@ -3090,6 +3090,7 @@ class CosineSimilarityFunctor {
              << "expected common dtype to be floating point, yet common dtype is "
              << common_dtype->name();
     }
+    // May not support float16
     auto& x_ = JUST(oneflow::VectorAt(input_vec, 0));
     auto& y_ = JUST(oneflow::VectorAt(input_vec, 1));
     std::shared_ptr<Tensor> w12 =
