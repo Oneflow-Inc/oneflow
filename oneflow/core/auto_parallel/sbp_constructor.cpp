@@ -130,11 +130,12 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 
   int32_t step = 1;
   while (true) {
-    sbp_graph_.GreedyStrategy(4);
+    sbp_graph_.GreedyStrategy(/*nbh_num=*/4);
     double curr_memory = sbp_graph_.GetMemory();
+    double total_weighted_cost = sbp_graph_.ComputeWeightedCost();
     LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
-              << ", memory: " << curr_memory
-              << ", total cost: " << sbp_graph_.ComputeWeightedCost();
+              << ", memory: " << curr_memory << ", total cost: " << total_weighted_cost
+              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory);
     if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     if (curr_memory > available_memory_ * kImpossibleRatio) {
@@ -150,7 +151,6 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
-  // if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
@@ -455,8 +455,15 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
 void SbpConstructor::InitAvailableMemory() {
   size_t free = 0;
   size_t total = 0;
+#ifdef WITH_CUDA
   CudaCurrentDeviceGuard guard(GlobalProcessCtx::Rank());
   OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
+#else
+  free = 1e13;   // 10T = 10,000G
+  total = 1e13;  // 10T = 10,000G
+  LOG(INFO) << "We do not use CUDA in CPU mode, auto memory is unnecessary since all the SBPs are "
+               "Broadcast.";
+#endif
   // The estimated memory differs from the lower bound of the peak memory by the first ratio.
   // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
   // It varies from 0.00313% to 0.5% if enabling nccl_use_compute_stream.
@@ -471,7 +478,7 @@ void SbpConstructor::InitAvailableMemory() {
   // It varies from 0 to 5.23% if using pipeline parallelism.
   double second_ratio = 1.06;
   // The occupied memory at this moment would be around 1114MB to 1240MB.
-  // When it gets to the training process, the occupied memory would drop from 161MB to 162MB.
+  // When it gets to the training process, the occupied memory might drop by 162MB.
   // But the key is that we start to allocate memory before the training process.
   // Thus, this 161MB should not be added to the free memory.
   // We still use "available memory = free / ratio" instead of "free / ratio + 161MB".

@@ -22,7 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_where(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     y = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
@@ -36,7 +36,7 @@ def _test_global_where(test_case, placement, sbp):
     return z
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_where_broadcast(test_case, placement, sbp):
     x = random_tensor(ndim=3, dim0=8, dim1=16, dim2=1).to_global(placement, sbp)
     y = random_tensor(ndim=3, dim0=8, dim1=16, dim2=8).to_global(placement, sbp)
@@ -50,7 +50,7 @@ def _test_global_where_broadcast(test_case, placement, sbp):
     return z
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_where_scalar(test_case, placement, sbp):
     x = random_tensor(ndim=0).to_global(placement, sbp)
     y = random_tensor(ndim=0).to_global(placement, sbp)
@@ -64,7 +64,10 @@ def _test_global_where_scalar(test_case, placement, sbp):
 
 # Close auto_backward because pytorch raise error:
 # PyTorch error: element 0 of tensors does not require grad and does not have a grad_fn
-@autotest(n=1, auto_backward=False, check_graph=False)
+# Not check graph because of one reason:
+# Reason 1, lazy tensor cannot call .numpy(), tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
+# Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op. Because nonzero_op is called by where.
+@autotest(n=1, auto_backward=False, check_graph="ValidatedFalse")
 def _test_where_x_y_none(test_case, placement, sbp):
     condition = random_tensor(ndim=2, dim0=8, dim1=8, low=-1, high=1).to_global(
         placement, sbp
@@ -73,7 +76,7 @@ def _test_where_x_y_none(test_case, placement, sbp):
     return y[0], y[1]
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_where_tensor_with_0dim_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random_tensor(ndim=0).to_global(placement, sbp)
@@ -81,7 +84,7 @@ def _test_global_where_tensor_with_0dim_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_where_tensor_broadcast_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=3, dim0=8, dim1=16, dim2=8).to_global(placement, sbp)
     x = random_tensor(ndim=3, dim0=8, dim1=1, dim2=8).to_global(placement, sbp)
@@ -89,7 +92,7 @@ def _test_flow_where_tensor_broadcast_with_random_data(test_case, placement, sbp
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_where_scalar_x_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random().to(float)
@@ -101,7 +104,7 @@ def _test_flow_where_scalar_x_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_where_scalar_x_broadcast_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=1, dim1=16).to_global(placement, sbp)
     x = random().to(float)
@@ -113,7 +116,7 @@ def _test_flow_where_scalar_x_broadcast_with_random_data(test_case, placement, s
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_x_int_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random().to(int)
@@ -121,7 +124,7 @@ def _test_flow_where_scalar_x_int_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_where_scalar_y_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = (
@@ -133,7 +136,7 @@ def _test_flow_where_scalar_y_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_where_scalar_y_broadcast_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=1, dim1=16).to_global(placement, sbp)
     x = (
@@ -145,7 +148,7 @@ def _test_flow_where_scalar_y_broadcast_with_random_data(test_case, placement, s
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_y_int_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random_tensor(ndim=2, dim0=8, dim1=16, dtype=int).to_global(placement, sbp)
@@ -153,7 +156,7 @@ def _test_flow_where_scalar_y_int_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_tensor_bool_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp).to(torch.bool)
@@ -161,7 +164,7 @@ def _test_flow_where_tensor_bool_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_tensor_broadcast_bool_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random_tensor(ndim=2, dim0=1, dim1=16).to_global(placement, sbp).to(torch.bool)
@@ -169,7 +172,7 @@ def _test_flow_where_tensor_broadcast_bool_with_random_data(test_case, placement
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_x_bool_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random().to(bool)
@@ -181,7 +184,7 @@ def _test_flow_where_scalar_x_bool_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_x_broadcast_bool_with_random_data(
     test_case, placement, sbp
 ):
@@ -195,7 +198,7 @@ def _test_flow_where_scalar_x_broadcast_bool_with_random_data(
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_y_bool_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = (
@@ -207,7 +210,7 @@ def _test_flow_where_scalar_y_bool_with_random_data(test_case, placement, sbp):
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_y_broadcast_bool_with_random_data(
     test_case, placement, sbp
 ):
@@ -221,7 +224,7 @@ def _test_flow_where_scalar_y_broadcast_bool_with_random_data(
     return torch.where(cond > 0, x, y)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_flow_where_scalar_xy_bool_with_random_data(test_case, placement, sbp):
     cond = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     x = random().to(bool)

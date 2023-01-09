@@ -22,8 +22,8 @@ limitations under the License.
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/fmha_flash_attention/fmha.h"
-#include "oneflow/user/kernels/fmha_flash_attention/include/fmha_flash_attention.h"
+#include "fmha.h"
+#include "fmha_flash_attention.h"
 
 namespace oneflow {
 
@@ -263,7 +263,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
         query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
         && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
         && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
-    const bool is_trt_supported_arch = (arch == 80 || arch == 86 || arch == 89);
+    const bool is_trt_supported_arch = (arch == 75 || arch == 80 || arch == 86 || arch == 89);
     const int64_t query_head_size = query_hidden_size / num_heads;
     const bool is_trt_supported_head_size = ((query_head_size == 40) || (query_head_size == 64));
     // Avoid PackQKV overhead when seq_len is small.
@@ -289,10 +289,10 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           cu_seqlens_d);
 
       nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
-          nvinfer1::plugin::getFMHACubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
-      run_fmha_v2_api(packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch,
-                      kernels, batch_size, num_heads, query_head_size, query_seq_len,
-                      cuda_stream->cuda_stream());
+          nvinfer1::plugin::getFMHAFlashCubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
+      nvinfer1::plugin::runFMHFAKernel(
+          packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch, kernels,
+          batch_size, num_heads, query_head_size, query_seq_len, cuda_stream->cuda_stream());
       return;
     }
 

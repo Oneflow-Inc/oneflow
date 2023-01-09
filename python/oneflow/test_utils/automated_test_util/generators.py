@@ -497,7 +497,7 @@ class random_cpu_placement(random_placement):
         super().__init__()
 
     def _calc_device(self):
-        return "cpu"
+        return ["cpu"]
 
 
 class random_gpu_placement(random_placement):
@@ -505,7 +505,7 @@ class random_gpu_placement(random_placement):
         super().__init__()
 
     def _calc_device(self):
-        return "cuda"
+        return ["cuda"]
 
 
 class all_sbp(generator):
