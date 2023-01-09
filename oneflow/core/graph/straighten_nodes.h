@@ -20,6 +20,60 @@ limitations under the License.
 
 namespace oneflow {
 
+// The difference between a descending order and its corresponding ascending order
+const int kDiff4AscendDescend = 100;
+
+// deciding parameter
+// The sorting order of nodes for the straighten algorithm
+enum StraightenOrder : int {
+  kTributaryLayerAscend = 0,     // small tributary layers go first
+  kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
+  kLayerAscend = 2,              // first in first out
+  kMemoryIncrementAscend = 3,    // small memory increment go first
+  kExceedTimeAscend = 4,         // small exceed time go first
+
+  kTributaryLayerDescend =
+      kDiff4AscendDescend + kTributaryLayerAscend,  // large tributary layers go first
+  kDistanceToOverlapDescend =
+      kDiff4AscendDescend + kDistanceToOverlapAscend,  // long distance to overlap go first
+  kLayerDescend = kDiff4AscendDescend + kLayerAscend,  // last in first out
+  kMemoryIncrementDescend =
+      kDiff4AscendDescend + kMemoryIncrementAscend,              // large memory increment go first
+  kExceedTimeDescend = kDiff4AscendDescend + kExceedTimeAscend,  // large exceed time go first
+};
+
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf);
+
+// SAT, a.k.a. Scholastic Aptitude Test,
+// is the college admission test in the United States of America.
+void InitDecideParameters(StraightenAlgorithmTag sat,
+                          std::vector<StraightenOrder>* decide_parameters);
+
+template<class HashMapType>
+void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat) {
+  *sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  if (*sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
+    bool exist_cpu_nodes = false;
+    for (const auto& pair : node2topo_struct) {
+      // Found a cpu node
+      if (pair.second.exceed_time == 1) {
+        exist_cpu_nodes = true;
+        break;
+      }
+    }
+    if (!exist_cpu_nodes) {
+      // Switch to the compress memory strategy, the default one
+      // Since the overlap strategy for transfer might not be working on 1n1d.
+      *sat = StraightenAlgorithmTag::kCompressMemory;
+    }
+  }
+}
+
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 
 }  // namespace oneflow
