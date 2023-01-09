@@ -84,8 +84,8 @@ class TestDTR(flow.unittest.TestCase):
 
         print(self._testMethodName)
         assert (
-            os.getenv("ONEFLOW_VM_NO_SCHEDULER_THREAD") is not None
-        ), "Please set ONEFLOW_VM_NO_SCHEDULER_THREAD to True, 1 or ON"
+            os.getenv("ONEFLOW_VM_MULTI_THREAD") is not None
+        ), "Please set ONEFLOW_VM_MULTI_THREAD to False, 0 or OFF"
         # check the memory is empty at the beginning of every test case
         if allocated_memory('cpu') > 0:
             print('allocated_memory(cpu):', allocated_memory('cpu'))
