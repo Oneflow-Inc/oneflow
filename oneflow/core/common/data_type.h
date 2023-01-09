@@ -68,21 +68,24 @@ struct IsFloat16 : std::false_type {};
 template<typename T>
 struct IsFloating : std::integral_constant<bool, false> {};
 
-#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};
+#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto)                          \
+  template<>                                                                    \
+  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};          \
+    template<>                                                                  \
+  struct IsFloating<const type_cpp> : std::integral_constant<bool, true> {};    \
+    template<>                                                                  \
+  struct IsFloating<volatile type_cpp> : std::integral_constant<bool, true> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
-#undef SPECIALIZE_TRUE_FLOATING
 
-template<>
-struct IsFloating<float16> : std::integral_constant<bool, true> {};
+SPECIALIZE_TRUE_FLOATING(float16, nullptr);
 
 #ifdef WITH_CUDA
 
-template<>
-struct IsFloating<half> : std::integral_constant<bool, true> {};
+SPECIALIZE_TRUE_FLOATING(half, nullptr);
 
 #endif  // WITH_CUDA
+
+#undef SPECIALIZE_TRUE_FLOATING
 
 // Type Trait: IsIntegral
 
