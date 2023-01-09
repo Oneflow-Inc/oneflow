@@ -68,12 +68,12 @@ struct IsFloat16 : std::false_type {};
 template<typename T>
 struct IsFloating : std::integral_constant<bool, false> {};
 
-#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto)                          \
-  template<>                                                                    \
-  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};          \
-    template<>                                                                  \
-  struct IsFloating<const type_cpp> : std::integral_constant<bool, true> {};    \
-    template<>                                                                  \
+#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto)                       \
+  template<>                                                                 \
+  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};       \
+  template<>                                                                 \
+  struct IsFloating<const type_cpp> : std::integral_constant<bool, true> {}; \
+  template<>                                                                 \
   struct IsFloating<volatile type_cpp> : std::integral_constant<bool, true> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
 
