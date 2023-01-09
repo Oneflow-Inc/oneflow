@@ -130,9 +130,6 @@ if __name__ == "__main__":
     files = filter(
         lambda p: p.suffix in exts, pathlib.Path(args.source_dir).rglob("*"),
     )
-    files = filter(
-        lambda p: not "oneflow/user/kernels/fmha_flash_attention/" in str(p), files,
-    )
     loop = asyncio.get_event_loop()
     files = [str(f) for f in files]
     clang_fmt_args = "-dry-run --Werror"

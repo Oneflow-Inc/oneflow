@@ -26,7 +26,9 @@ namespace oneflow {
 class RankInfoBootstrapServer final : public BootstrapServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapServer);
-  ~RankInfoBootstrapServer() override = default;
+  ~RankInfoBootstrapServer() override {
+    if (check_thread_.joinable()) { check_thread_.join(); }
+  }
 
   RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf);
 
@@ -35,9 +37,12 @@ class RankInfoBootstrapServer final : public BootstrapServer {
 
  private:
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
+  void CheckServerStatus();
 
   int port_;
   const int64_t world_size_;
+  std::mutex lock_;
+  std::thread check_thread_;
   // use std::shared_ptr as std::optional
   std::shared_ptr<std::vector<std::string>> rank2host_;
 };
