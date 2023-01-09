@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "fmt/core.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"

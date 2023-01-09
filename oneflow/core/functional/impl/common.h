@@ -52,6 +52,8 @@ Maybe<std::vector<int32_t>> GetPermWhenTransposeAxisToLastDim(const int32_t& ndi
                                                               const int32_t& axis);
 Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
 
+// batchify function is referenced from
+// https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Convolution.cpp#L729
 Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
                                                           const int64_t num_spatial_dims,
                                                           const std::string& func_name);

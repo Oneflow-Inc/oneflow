@@ -76,7 +76,7 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
-    std::shared_ptr<one::Tensor> input_unsqueeze;
+    std::shared_ptr<one::Tensor> unsqueezed_input;
     bool is_batched = true;
     std::string func_name;
     if (num_spatial_dims_ == 1) {
@@ -86,7 +86,7 @@ class ConvBaseFunctor {
     } else {
       func_name = "conv3d";
     }
-    std::tie(input_unsqueeze, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
@@ -108,15 +108,15 @@ class ConvBaseFunctor {
                                             conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input_unsqueeze, weight}, conv_attrs));
-    std::shared_ptr<one::Tensor> conv_output_squeeze = conv_out;
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {unsqueezed_input, weight}, conv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_conv_output = conv_out;
     if (!is_batched) {
-      conv_output_squeeze = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+      squeezed_conv_output = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
     }
     if (bias) {
-      return functional::BiasAdd(conv_output_squeeze, JUST(bias), channel_idx);
+      return functional::BiasAdd(squeezed_conv_output, JUST(bias), channel_idx);
     } else {
-      return conv_output_squeeze;
+      return squeezed_conv_output;
     }
   }
 
