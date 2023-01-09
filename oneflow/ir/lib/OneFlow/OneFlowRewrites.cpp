@@ -230,6 +230,70 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   return new_conv_op;
 }
 
+NamedAttrList GetJitOpAttributes(PatternRewriter& rewriter, StringRef op_name, int32_t input_size,
+                                 int32_t output_size, Operation* op) {
+  NamedAttrList attributes;
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+  }
+  return attributes;
+}
+
+static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Operation* cast) {
+  auto mul_op = mul;
+  auto scale = mlir::Value();
+  auto output = mlir::Value();
+  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
+    scale = scalar_mul_op.scalar();
+    output = scalar_mul_op.y();
+  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
+    scale = broadcast_mul_op.y();
+    output = broadcast_mul_op.z();
+  } else {
+    mul->emitError("pattern mul(cast(x), scalar) doesn't support this op");
+    exit(1);
+  }
+  if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    mul->emitError("not OpConf compatible");
+    exit(1);
+  }
+  auto cast_op = llvm::dyn_cast<CastOp>(cast)
+      // TODO: extract a function to generate op name for jit op from ops being fused
+      SmallString<64>
+          op_name_storage;
+  auto op_name =
+      (cast_op.op_name() + "__FUSE__"
+       + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+             .getValue()
+             .str())
+          .toStringRef(op_name_storage);
+  SmallString<16> tempBuffer;
+  op_name = SanitizeIdentifier(op_name, tempBuffer);
+  SmallVector<::mlir::Value, 2> operands;
+  operands.push_back(cast_op.in());
+  operands.push_back(scale);
+  SmallVector<::mlir::Value, 1> results;
+  results.push_back(output);
+  NamedAttrList attributes =
+      GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
+  SmallVector<Operation*, 4> ops = {cast_op, mul_op};
+  auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
+  auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
+  if (failed(DumpAssembly(rewriter, created, created.op_name()))) { exit(1); }
+  cast_op->dropAllUses();
+  cast_op.erase();
+  return created;
+}
+
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,
                                                          Attribute padding_after,
