@@ -1589,7 +1589,7 @@ class TestConv2d(flow.unittest.TestCase):
         kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
         y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
         return y
-    
+
     @autotest(n=3)
     def test_nn_functional_conv2d_3dinput(test_case):
         device = random_device()
