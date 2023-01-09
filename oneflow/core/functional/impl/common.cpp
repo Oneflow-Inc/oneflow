@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "fmt/core.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
