@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -76,9 +77,17 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
-    CHECK_EQ_OR_RETURN(num_spatial_dims_ + 2, input->ndim())
-        << "Expected " << num_spatial_dims_ + 2 << "D input to conv" << num_spatial_dims_
-        << "d, but got input of size: " << input->shape()->ToString();
+    std::shared_ptr<one::Tensor> input_unsqueeze;
+    bool is_batched = false;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "conv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "conv2d";
+    } else {
+      func_name = "conv3d";
+    }
+    std::tie(input_unsqueeze, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
@@ -96,15 +105,19 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input_unsqueeze, weight, JUST(bias)},
                                             conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input, weight}, conv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input_unsqueeze, weight}, conv_attrs));
+    std::shared_ptr<one::Tensor> conv_output_squeeze;
+    if (is_batched) {
+      conv_output_squeeze = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+    }
     if (bias) {
-      return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
+      return functional::BiasAdd(conv_output_squeeze, JUST(bias), channel_idx);
     } else {
-      return conv_out;
+      return conv_output_squeeze;
     }
   }
 
