@@ -389,7 +389,6 @@ def get_functional_graph_res(
         def build(self):
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
-
     try:
         # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
@@ -420,7 +419,9 @@ def get_functional_graph_res(
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
-        elif is_global() and (isinstance(oneflow_arg,int) for oneflow_arg in oneflow_args):
+        elif is_global() and (
+            isinstance(oneflow_arg, int) for oneflow_arg in oneflow_args
+        ):
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
         elif is_global() and (
