@@ -78,7 +78,7 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
     std::shared_ptr<one::Tensor> input_unsqueeze;
-    bool is_batched = false;
+    bool is_batched = true;
     std::string func_name;
     if (num_spatial_dims_ == 1) {
       func_name = "conv1d";
@@ -105,13 +105,13 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input_unsqueeze, weight, JUST(bias)},
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
                                             conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input_unsqueeze, weight}, conv_attrs));
-    std::shared_ptr<one::Tensor> conv_output_squeeze;
-    if (is_batched) {
+    std::shared_ptr<one::Tensor> conv_output_squeeze = conv_out;
+    if (!is_batched) {
       conv_output_squeeze = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
     }
     if (bias) {

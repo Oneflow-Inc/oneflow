@@ -442,6 +442,14 @@ class TestConv1d(flow.unittest.TestCase):
         kernel = torch.ones((3, 1, 3), requires_grad=True).to(device)
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
+    
+    @autotest(n=3)
+    def test_nn_functional_conv1d_2dinput(test_case):
+        device = random_device()
+        img = torch.ones((3, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv1d(img, kernel, groups=3)
+        return y
 
     @profile(torch.nn.functional.conv1d)
     def profile_conv1d(test_case):
