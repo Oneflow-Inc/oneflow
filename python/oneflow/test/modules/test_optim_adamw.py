@@ -39,6 +39,7 @@ def compare_with_numpy_adamw(
     amsgrad,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     fused,
     tensor_num,
 ):
@@ -75,6 +76,7 @@ def compare_with_numpy_adamw(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            contiguous_params=contiguous_params,
             fused=fused,
         )
 
@@ -96,7 +98,7 @@ def compare_with_numpy_adamw(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.AdamW(x)
+                adam = flow.optim.AdamW(x, contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -170,6 +172,7 @@ def compare_with_numpy_adamw_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     fused,
     tensor_num,
 ):
@@ -208,6 +211,7 @@ def compare_with_numpy_adamw_clip_grad(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            contiguous_params=contiguous_params,
             fused=fused,
         )
 
@@ -230,7 +234,7 @@ def compare_with_numpy_adamw_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.AdamW(x)
+                adam = flow.optim.AdamW(x, contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -306,6 +310,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["amsgrad"] = [True, False]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
         arg_dict["fused"] = [False, True]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgList(arg_dict):
@@ -326,6 +331,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["contiguous_params"] = [False, True]
         arg_dict["fused"] = [False, True]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgList(arg_dict):
