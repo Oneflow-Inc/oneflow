@@ -22,7 +22,7 @@ from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
-class _ConstantBase():
+class _ConstantBase:
     def __init__(
         self,
         size: Union[_size_any_t, flow.Size],
@@ -402,7 +402,9 @@ def full_op(
         fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
-    return Full(size, fill_value, dtype, device, placement, sbp, requires_grad).forward()
+    return Full(
+        size, fill_value, dtype, device, placement, sbp, requires_grad
+    ).forward()
 
 
 def full_like_op(
