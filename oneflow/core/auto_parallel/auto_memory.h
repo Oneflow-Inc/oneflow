@@ -13,20 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#include "mlir/IR/PatternMatch.h"
+#ifndef ONEFLOW_CORE_AUTO_PARALLEL_AUTO_MEMORY_H_
+#define ONEFLOW_CORE_AUTO_PARALLEL_AUTO_MEMORY_H_
 
-namespace mlir {
-
+#include "oneflow/core/auto_parallel/sbp_graph.h"
 namespace oneflow {
 
-void populateForwardOpPatterns(RewritePatternSet& patterns);
-void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
+namespace auto_parallel {
+void InitMemory(SbpGraph* sbp_graph, bool nccl_use_compute_stream);
 
+}  // namespace auto_parallel
 }  // namespace oneflow
 
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
+#endif  // ONEFLOW_CORE_AUTO_PARALLEL_AUTO_MEMORY_H_
