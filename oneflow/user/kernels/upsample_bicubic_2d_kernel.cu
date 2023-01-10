@@ -30,7 +30,7 @@ __device__ void upsample_increment_value_bounded_cuda(T* data, int64_t width, in
                                                       T value) {
   int64_t access_x = max(min(x, width - 1), static_cast<int64_t>(0));
   int64_t access_y = max(min(y, height - 1), static_cast<int64_t>(0));
-  FastAtomicAdd(data, access_y * width + access_x, element, value);
+  cuda::atomic::FastAdd(data, access_y * width + access_x, element, value);
 }
 
 template<typename T>

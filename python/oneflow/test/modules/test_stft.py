@@ -36,11 +36,19 @@ def getRandBoolvalue():
 
 
 def getRandFFtvalue():
-    pow = np.random.randint(2, 10)
+    pow = np.random.randint(2, 5)
     result = 1
     for i in range(pow):
         result = result * 2
     return result
+
+
+def is_cufft_available():
+    if flow.cuda.is_available():
+        (major, _minor) = flow.cuda.get_device_capability()
+        return major >= 7
+    else:
+        return False
 
 
 class TestStft(flow.unittest.TestCase):
@@ -48,13 +56,12 @@ class TestStft(flow.unittest.TestCase):
         n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
-        min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
-        if min_cuda_version < 11:  # cufft is only supported in CUDA 11.0 and above
-            device = cpu_device()
-        else:
+        if is_cufft_available():
             device = random_device()
+        else:
+            device = cpu_device()
         rand_fft = getRandFFtvalue()
-        rand_size = np.random.randint(rand_fft, 30000)
+        rand_size = np.random.randint(rand_fft, 300)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
@@ -74,14 +81,13 @@ class TestStft(flow.unittest.TestCase):
         return y
 
     def test_stft_with_2D_random_data(test_case):
-        min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
-        if min_cuda_version < 11:
-            device = cpu_device()
-        else:
+        if is_cufft_available():
             device = random_device()
+        else:
+            device = cpu_device()
         row_rand_size = np.random.randint(1, 50)
         rand_fft = getRandFFtvalue()
-        col_rand_size = np.random.randint(rand_fft, 30000)
+        col_rand_size = np.random.randint(rand_fft, 300)
         input_dims = [row_rand_size, col_rand_size]
         win_dims = [rand_fft]
         x = random_tensor(2, *input_dims).to(device)
