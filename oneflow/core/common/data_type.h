@@ -285,7 +285,6 @@ bool IsFloatingDataType(DataType data_type);
 bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsTriviallyCopyableDataType(DataType data_type);
-bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 bool NotSupportBoxingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
