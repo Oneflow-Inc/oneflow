@@ -19,6 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename Context>
+std::unique_ptr<ep::primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
+      ctx->device_type(), ep::primitive::MemcpyKind::kDtoD);
+}
 template<typename T>
 class CpuModeKernel final : public user_op::OpKernel {
  public:
@@ -36,8 +41,13 @@ class CpuModeKernel final : public user_op::OpKernel {
     user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    Memcpy<DeviceType::kCPU>(ctx->stream(), tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
-                             size * sizeof(T));
+    // Memcpy<DeviceType::kCPU>(ctx->stream(), tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
+    //                          size * sizeof(T));
+    auto memcpy = NewMemcpyPrimitive(ctx);
+    CHECK(memcpy);
+    memcpy->Launch(ctx->stream(),tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
+                   size * sizeof(T));
+
     const int64_t thread_num =
         std::min(instance_num, (int64_t)Singleton<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, thread_num);
