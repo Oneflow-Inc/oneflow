@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
@@ -22,7 +23,6 @@ limitations under the License.
 #include "OneFlow/OKL/OKLTypes.h"
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -57,24 +57,24 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
   static LogicalResult CheckChild(func::FuncOp func) {
     using namespace ::oneflow::user_op;
     for (auto& op : func->getRegion(0).front()) {
-      // if (auto reg_ctx_op = llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(&op)) {
-      //   // iter reg context op
-      //   const auto reg_op = FindOneFlowOp(&op);
-      //   if (!reg_op) {
-      //     func->emitError("Failed to find reg_op in okl.build_reg_context_op");
-      //     return failure();
-      //   }
-      //   // generate kernel from oneflow.{compute op}
-      //   ::oneflow::okl::RegContext reg_ctx(reg_op);
-      //   auto* kernel = const_cast<OpKernel*>(reg_ctx.GetKernel());
+      if (auto reg_ctx_op = llvm::dyn_cast_or_null<mlir::okl::WrapperKernelOp>(&op)) {
+        // iter reg context op
+        const auto reg_op = FindOneFlowOp(&op);
+        if (!reg_op) {
+          func->emitError("Failed to find reg_op in okl.build_reg_context_op");
+          return failure();
+        }
+        // generate kernel from oneflow.{compute op}
+        ::oneflow::okl::RegContext reg_ctx(reg_op);
+        auto* kernel = const_cast<OpKernel*>(reg_ctx.GetKernel());
 
-      //   // check whether cuda graph support is base class
-      //   if (const auto* cuda_graph_support = dynamic_cast<CudaGraphSupport*>(kernel)) {
-      //     // TODO: more check
-      //     continue;
-      //   }
-      //   return failure();
-      // }
+        // check whether cuda graph support is base class
+        if (const auto* cuda_graph_support = dynamic_cast<CudaGraphSupport*>(kernel)) {
+          // TODO: more check
+          continue;
+        }
+        return failure();
+      }
     }
     return success();
   }
@@ -86,7 +86,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
                                       mlir::PatternRewriter& rewriter) const override {
     const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
     // check whether this op is okl init context function  op
-    if (op.getSymName().str() != function::CREATE_FUNC_NAME) { return failure(); }
+    if (op.getSymName().str() != oneflow::okl_func::OKL_FUNC) { return failure(); }
     // check whether this op has been taged before
     if (op->getAttr(tag_name).dyn_cast_or_null<BoolAttr>() != nullptr) { return success(); }
     // check whether its childern is all cuda graph supported

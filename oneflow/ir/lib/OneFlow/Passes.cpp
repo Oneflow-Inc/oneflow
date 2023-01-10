@@ -116,6 +116,9 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+
+// enable with_cuda_graphs
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 #include "llvm/ADT/STLExtras.h"
@@ -819,113 +822,102 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
-// struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
-//   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-//                                     func::FuncOp okl_func) {
-//     auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
-//     auto raw_func = op->getParentOfType<func::FuncOp>();
-//     if (!op_type_name) { return failure(); }
-//     OpBuilder::InsertionGuard guard(rewriter);
-//     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
+struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
+                                    func::FuncOp okl_func, int index) {
+    auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
+    auto raw_func = op->getParentOfType<func::FuncOp>();
+    if (!op_type_name) { return failure(); }
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
 
-//     auto loc = op->getLoc();
+    auto loc = op->getLoc();
 
-//     auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-//         loc, okl::RegContextType::get(rewriter.getContext()));
-//     reg_ctx.body().emplaceBlock();
-//     rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
+    auto wrap_kernel = rewriter.create<okl::WrapperKernelOp>(loc, index);
+    wrap_kernel.body().emplaceBlock();
+    rewriter.setInsertionPointToEnd(&wrap_kernel.body().back());
 
-//     BlockAndValueMapping mapping;
+    BlockAndValueMapping mapping;
 
-//     // map launcher_ctx from wrap func to block
-//     mapping.map(raw_func.getArgument(0), okl_func.getArgument(0));
+    // map launcher_ctx from wrap func to block
+    mapping.map(raw_func.getArgument(0), okl_func.getArgument(0));
 
-//     ImplicitLocOpBuilder new_block(loc, rewriter);
-//     for (auto arg : op->getOperands()) {
-//       auto define_op = arg.getDefiningOp();
-//       if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
-//         new_block.clone(*define_op, mapping);
-//       } else {
-//         auto find = false;
-//         for (auto use : arg.getUsers()) {
-//           if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
-//             find = true;
-//             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
-//             auto source = rewriter.create<okl::GetTensorFromRetOp>(
-//                 op->getLoc(), arg.getType(), okl_func.getArgument(0),
-//                 okl::TensorType::TT_Argument, index);
-//             mapping.map(arg, source->getResult(0));
-//             break;
-//           }
-//         }
-//         if (!find) { op->emitError("Fail to find operand source"); }
-//       }
-//     }
-//     new_block.clone(*op, mapping);
-//     for (auto ret : op->getResults()) {
-//       auto find = false;
-//       for (auto use : ret.getUsers()) {
-//         if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
-//           find = true;
-//           new_block.clone(*use, mapping);
-//           break;
-//         }
-//       }
-//       if (!find) { op->emitError("Fail to find result source"); }
-//     }
-//     rewriter.create<okl::ReturnOp>(loc);
+    ImplicitLocOpBuilder new_block(loc, rewriter);
+    for (auto arg : op->getOperands()) {
+      auto define_op = arg.getDefiningOp();
+      if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
+        new_block.clone(*define_op, mapping);
+      } else {
+        auto find = false;
+        for (auto use : arg.getUsers()) {
+          if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+            find = true;
+            auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
+            auto source = rewriter.create<okl::GetTensorFromRetOp>(op->getLoc(), arg.getType(),
+                                                                   okl_func.getArgument(0), index);
+            mapping.map(arg, source->getResult(0));
+            break;
+          }
+        }
+        if (!find) { op->emitError("Fail to find operand source"); }
+      }
+    }
+    new_block.clone(*op, mapping);
+    for (auto ret : op->getResults()) {
+      auto find = false;
+      for (auto use : ret.getUsers()) {
+        if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+          find = true;
+          new_block.clone(*use, mapping);
+          break;
+        }
+      }
+      if (!find) { op->emitError("Fail to find result source"); }
+    }
+    rewriter.create<okl::ReturnOp>(loc);
 
-//     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-//     auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
-//         loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
-//     auto kernel = rewriter.create<okl::BuildKernelOp>(
-//         loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
-//     rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
-//     rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
-//     rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
-//     return success();
-//   }
+    return success();
+  }
 
-//   explicit LowerToOKLPattern(mlir::MLIRContext* context)
-//       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
-//   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
-//                                       mlir::PatternRewriter& rewriter) const override {
-//     if (op->hasAttr("compiled")) { return success(); }
-//     op->setAttr("compiled", rewriter.getStringAttr("true"));
+  explicit LowerToOKLPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    ModuleOp module;
+    if (module = op->getParentOfType<ModuleOp>(); !module) { LOG(FATAL) << "Not found module"; }
+    if (module.lookupSymbol(okl_func::OKL_FUNC)) { return success(); }
 
-//     auto func_name = "okl_func";
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointAfter(op);
+    auto& block = op.getBody().front();
+    auto loc = op->getLoc();
 
-//     OpBuilder::InsertionGuard guard(rewriter);
-//     rewriter.setInsertionPointAfter(op);
-//     auto& block = op.getBody().front();
-//     auto loc = op->getLoc();
+    auto func_type = rewriter.getFunctionType(
+        {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
+    auto okl_func = rewriter.create<func::FuncOp>(loc, okl_func::OKL_FUNC, func_type);
+    okl_func.getBody().emplaceBlock();
+    okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
+                                    loc);
 
-//     auto func_type = rewriter.getFunctionType(
-//         {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
-//     auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-//     okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
-//     okl_func.getBody().emplaceBlock();
-//     okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
-//                                     loc);
+    auto index = 0;
+    for (auto& op : block) {
+      if (!op.hasAttr("op_name")) {
+        if (op.getDialect()->getNamespace() == "okl") { continue; }
+        if (isa<func::ReturnOp>(op)) { break; }
+        op.emitError("Failed to parse this op in kernel launch wrap func.");
+      }
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index++))) {
+        op.emitError("Failed to lowering OneFlow op to okl dialect.");
+        return failure();
+      }
+    }
 
-//     for (auto& op : block) {
-//       if (!op.hasAttr("op_name")) {
-//         if (op.getDialect()->getNamespace() == "okl") { continue; }
-//         if (isa<func::ReturnOp>(op)) { break; }
-//         op.emitError("Failed to parse this op in kernel launch wrap func.");
-//       }
-//       if (failed(LowerToOKLOp(rewriter, &op, okl_func))) {
-//         op.emitError("Failed to lowering OneFlow op to okl dialect.");
-//         return failure();
-//       }
-//     }
-
-//     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-//     rewriter.create<func::ReturnOp>(loc);
-//     rewriter.eraseOp(op);
-//     return success();
-//   }
-// };
+    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
+    rewriter.create<func::ReturnOp>(loc);
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
 
 // {func, ins}
 std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
@@ -1230,7 +1222,7 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
-  // patterns.add<LowerToOKLPattern>(patterns.getContext());
+  patterns.add<LowerToOKLPattern>(patterns.getContext());
 }
 
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns) {

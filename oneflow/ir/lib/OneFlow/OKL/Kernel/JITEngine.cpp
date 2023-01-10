@@ -21,10 +21,11 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "OneFlow/OKL/Kernel/ComputeContext.h"
+#include "oneflow/core/device/cuda_util.h"
 
 extern "C" {
-void oneflow_okl_run(void* launcher, int64_t index) {
-  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)->Launch(
+void okl_llvm_func(void* launcher, int64_t index) {
+  static_cast<typename std::tuple_element_t<0, oneflow::okl::LLVMLaunchArgs>>(launcher)->Launch(
       index);
 }
 }  // extern "C"

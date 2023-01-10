@@ -65,17 +65,21 @@ def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
   let results = (outs AnyTensor);
 }
 
-def WapperKernelOp : OKL_Op<"wrapper_kernel"> {
+def WrapperKernelOp : OKL_Op<"wrapper_kernel"> {
   let summary = "build reg context operation";
   let description = [{
     this context is generated from module op and used on kernel/run_ctx build phase.
     each wrapped op has their own reg_ctx with their own attrs.
   }];
 
+  let arguments = (ins
+    I32Attr:$index
+  );
+
   let regions = (region AnyRegion:$body);
 }
 
-def ReturnOp : OKL_Op<"return", [HasParent<"WapperKernelOp">, Terminator]> {
+def ReturnOp : OKL_Op<"return", [HasParent<"WrapperKernelOp">, Terminator]> {
   let summary = "return operation";
   let description = [{
     return oneflow ops in reg context
@@ -89,21 +93,6 @@ def ReturnOp : OKL_Op<"return", [HasParent<"WapperKernelOp">, Terminator]> {
     [{ build($_builder, $_state, llvm::None); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
-}
-
-def SplitIntoFuncsPass : Pass<"split-into-funcs", "ModuleOp"> {
-  let summary = "split okl dialect op into different func with respective lifetime";
-  let constructor = "mlir::okl::createSplitIntoFuncsPass()";
-}
-
-def FetchFromLauncherPass : Pass<"fetch-from-launcher", "ModuleOp"> {
-  let summary = "fetch okl resources from okl.launcher_ctx";
-  let constructor = "mlir::okl::createFetchFromLauncherPass()";
-}
-
-def OnlyKeepComputeOpsPass : Pass<"only-keep-compute-ops", "ModuleOp"> {
-  let summary = "only keep compute ops perpared for llvm lowering";
-  let constructor = "mlir::okl::createOnlyKeepComputeOpsPass()";
 }
 
 def LowerLauncherToLLVMPtrPass : Pass<"lower-launcher-to-llvm-ptr", "ModuleOp"> {

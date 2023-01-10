@@ -53,6 +53,11 @@ class RunTimeWrapperContext : public CompileTimeWrapperContext {
   user_op::OpKernelState* GetKernelState() { return kernel_state_.get(); }
   user_op::OpKernelCache* GetKernelCache() { return kernel_cache_.get(); }
 
+  void Run() {
+    GetRegContext()->GetKernel()->Compute(compute_ctx_.get(), kernel_state_.get(),
+                                          kernel_cache_.get());
+  }
+
  private:
   std::shared_ptr<ComputeContext> compute_ctx_;
   std::shared_ptr<InitContext> init_ctx_;

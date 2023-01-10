@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OKL/Kernel/WrapperContext.h"
+#include "OneFlow/Passes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -22,7 +23,6 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/OKLOps.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
 #include "OneFlow/OKL/Kernel/ComputeContext.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
@@ -31,43 +31,33 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-static int GetOpIndex(mlir::Operation* op, int index) {
-  return op->getOperand(index)
-      .getDefiningOp()
-      ->getAttr("index")
-      .dyn_cast<mlir::IntegerAttr>()
-      .getInt();
-};
-
 LauncherContext::LauncherContext(mlir::ModuleOp module) {
-  auto func = module.lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME);
-  auto context = func->getContext();
-
+  auto func = module.lookupSymbol(mlir::oneflow::okl_func::OKL_FUNC);
+  if (!func) { LOG(FATAL) << "Not Found okl_func in mlir ir"; }
   auto& ops = func->getRegion(0).front();
 
   for (auto& op : ops) {
     llvm::TypeSwitch<mlir::Operation*>(&op)
-        // .Case([&](mlir::okl::BuildRegContextOp elem) {
-        //   auto index = compile_ctx_vec_.size();
+        .Case([&](mlir::okl::WrapperKernelOp elem) {
+          mlir::Operation* reg_op = nullptr;
+          for (auto& op_it : op.getRegion(0).front().getOperations()) {
+            if (op_it.getDialect()->getNamespace() == "oneflow") {
+              reg_op = &op_it;
+              break;
+            }
+          }
 
-        //   mlir::Operation* reg_op = nullptr;
-        //   for (auto& op_it : op.getRegion(0).front().getOperations()) {
-        //     if (op_it.getDialect()->getNamespace() == "oneflow") {
-        //       reg_op = &op_it;
-        //       break;
-        //     }
-        //   }
-
-        //   if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-        //   compile_ctx_vec_.emplace_back(reg_op);
-        //   op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
-        // })
+          if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+          compile_ctx_vec_.emplace_back(reg_op);
+        })
         .Case([&](mlir::func::ReturnOp elem) {})
         .Default([&](mlir::Operation* elem) {
+          elem->dump();
           LOG(FATAL) << "Fail to parse this op in okl init context";
         });
   }
 }
+
 bool LauncherContext::Infer(user_op::KernelComputeContext* compute_context) {
   // if this context has been inferred before, it won't be rebuilt later
   if (inferred_) { return inferred_; }
@@ -78,7 +68,11 @@ bool LauncherContext::Infer(user_op::KernelComputeContext* compute_context) {
   inferred_ = compile_ctx_vec_.size() == run_ctx_vec_.size();
   return inferred_;
 }
-void LauncherContext::Launch(int index) { TODO(); }
+
+void LauncherContext::Launch(int index) {
+  if (!inferred_) { LOG(FATAL) << "Not infer yet when launch kernels"; }
+  run_ctx_vec_[index].Run();
+}
 
 }  // namespace okl
 }  // namespace oneflow

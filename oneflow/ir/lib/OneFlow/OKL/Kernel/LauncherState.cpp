@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/OKL/Conversion/Conversion.h"
+#include "OneFlow/Passes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -63,10 +63,9 @@ LauncherState::LauncherState(user_op::KernelInitContext* ctx)
 
 bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
   const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
-  if (const auto func = module_->lookupSymbol(mlir::okl::function::CREATE_FUNC_NAME)) {
-    if (const auto is_supported =
-            func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>() != nullptr) {
-      return is_supported;
+  if (const auto func = module_->lookupSymbol(mlir::oneflow::okl_func::OKL_FUNC)) {
+    if (const auto is_supported = func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>()) {
+      return is_supported.getValue();
     }
   }
   return false;
@@ -74,7 +73,7 @@ bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
 
 void LauncherState::DoCompute(user_op::KernelComputeContext* ctx) {
   launcher_context_.Infer(ctx);
-  engine_.Run(mlir::okl::function::COMPUTE_FUNC_NAME.str(), &launcher_context_);
+  engine_.Run(mlir::oneflow::okl_func::OKL_FUNC, &launcher_context_);
 }
 
 }  // namespace okl

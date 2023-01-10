@@ -21,11 +21,16 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
 
+#define FUNC_NAME(func) #func
+
+extern "C" {
+void okl_llvm_func(void* launcher, int64_t index);
+}  // extern "C"
+
 namespace oneflow {
 namespace okl {
 
-using FetchArgs = std::tuple<LauncherContext*, int>;
-using LaunchArgs = std::tuple<ComputeContext*, const oneflow::user_op::OpKernel*>;
+using LLVMLaunchArgs = std::tuple<LauncherContext*, int>;
 
 class JITEngine {
  public:
@@ -39,6 +44,10 @@ class JITEngine {
  private:
   std::unique_ptr<mlir::ExecutionEngine> engine_;
 };
+
+namespace llvm_func {
+const auto LLVM_FUNC = FUNC_NAME(okl_llvm_func);
+}  // namespace llvm_func
 
 }  // namespace okl
 }  // namespace oneflow
