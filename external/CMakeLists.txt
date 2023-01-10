@@ -14,13 +14,5 @@ list(APPEND EXTERNAL_TARGETS fmt)
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
 
-if(BUILD_CUDA)
-  add_subdirectory(cutlass)
-  list(APPEND EXTERNAL_TARGETS cutlass_headers)
-
-  add_subdirectory(flash-attention)
-  list(APPEND EXTERNAL_TARGETS of_flash_attention)
-endif()
-
 mark_targets_as_system(${EXTERNAL_TARGETS})
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
