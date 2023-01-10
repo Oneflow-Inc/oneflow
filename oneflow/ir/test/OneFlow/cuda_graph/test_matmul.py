@@ -37,7 +37,6 @@ def _test_okl_resnet(test_case):
     x = flow.randn(2, 3, 224, 224)
     x = x.cuda()
 
-
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
