@@ -91,7 +91,6 @@ struct WrapperKernelOpLowering final : public OpConversionPattern<WrapperKernelO
   }
 };
 
-
 // change func.func(!okl.launcher_ctx) -> func.func(!llvm.ptr<i8>) { unrealized_conversion_cast():
 // llvm.ptr<i8> -> okl.launcher_ctx }
 struct RewriteFunctionArgsPattern final : public mlir::OpRewritePattern<func::FuncOp> {
