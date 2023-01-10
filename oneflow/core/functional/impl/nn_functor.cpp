@@ -696,7 +696,7 @@ class FusedMatmulBiasFunctor {
     CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
         << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
 
-#if CUDA_VERSION >= 10200
+#if CUDA_VERSION >= 11020
     DeviceType device_type{};
     if (x->is_global()) {
       device_type = JUST(x->parallel_desc())->device_type();
@@ -711,7 +711,7 @@ class FusedMatmulBiasFunctor {
       }
       return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
     }
-#endif  // CUDA_VERSION >= 10200
+#endif  // CUDA_VERSION >= 11020
 
     auto matmul_bias = JUST(functional::BiasAdd(
         JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
