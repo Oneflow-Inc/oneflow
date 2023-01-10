@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_permute4d_tensor_with_random_data(test_case, placement, sbp):
     ndim = 4
     permute_list = [1, 2, 3, 0]

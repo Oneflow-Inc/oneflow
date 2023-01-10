@@ -47,6 +47,9 @@ Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithI
 
 Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
 
+Maybe<std::vector<int32_t>> GetPermWhenTransposeAxisToLastDim(const int32_t& ndim,
+                                                              const int32_t& axis);
+Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
