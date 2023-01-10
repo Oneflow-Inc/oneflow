@@ -124,16 +124,16 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     const T dy = dy_dptr[index];
     const T dbottom = params.h_lerp * dy;
     T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
-                      static_cast<T>((1 - params.w_lerp) * dbottom));
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
-                      static_cast<T>(params.w_lerp * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.left_w_index, elem_cnt,
+                          static_cast<T>((1 - params.w_lerp) * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.right_w_index, elem_cnt,
+                          static_cast<T>(params.w_lerp * dbottom));
     const T dtop = dy - dbottom;
     T* dx_dptr_top_offset = dx_dptr + top_offset;
-    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
-                      static_cast<T>((1 - params.w_lerp) * dtop));
-    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
-                      static_cast<T>(params.w_lerp * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.left_w_index, elem_cnt,
+                          static_cast<T>((1 - params.w_lerp) * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.right_w_index, elem_cnt,
+                          static_cast<T>(params.w_lerp * dtop));
   }
 }
 
@@ -154,16 +154,16 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const half* dy_
     const half dy = dy_dptr[index];
     const half dbottom = params.h_lerp * dy;
     half* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
-                      static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dbottom));
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
-                      static_cast<half>(params.w_lerp * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.left_w_index, elem_cnt,
+                          static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.right_w_index, elem_cnt,
+                          static_cast<half>(params.w_lerp * dbottom));
     const half dtop = dy - dbottom;
     half* dx_dptr_top_offset = dx_dptr + top_offset;
-    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
-                      static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dtop));
-    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
-                      static_cast<half>(params.w_lerp * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.left_w_index, elem_cnt,
+                          static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.right_w_index, elem_cnt,
+                          static_cast<half>(params.w_lerp * dtop));
   }
 }
 
