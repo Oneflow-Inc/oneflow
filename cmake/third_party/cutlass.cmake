@@ -102,24 +102,31 @@ if(WITH_CUTLASS)
     endforeach()
 
     if(WITH_OF_FLASH_ATTENTION)
-      set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
-      set(FLASH_ATTENTION_INCLUDE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include/csrc/flash_attn/src)
+      set(OF_FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
+      set(OF_FLASH_ATTENTION_INCLUDE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include/csrc/flash_attn/src)
       FetchContent_Declare(
           flash-attention
-          URL     https://github.com/Oneflow-Inc/flash-attention/archive/2f6a59a84a3e9338b11b614bb437f36a099f99ce.zip
-          URL_HASH MD5=bbdaeb82b27000c9ba02254555f98582
-          SOURCE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include
+          URL     https://github.com/Oneflow-Inc/flash-attention/archive/58e98e3492c14fa9f2fd1de5fe9056a14dc6400c.zip
+          URL_HASH MD5=7c3760af96534b68a243d6efda689510
+          SOURCE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include
       )
       FetchContent_MakeAvailable(flash-attention)
+      set(OF_FLASH_ATTENTION_SRC_FILES 
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim32.cu
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim64.cu
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim128.cu
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim32.cu
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim64.cu
+          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim128.cu)
 
-      add_library(of_flash_attention ${FLASH_ATTENTION_INCLUDE_DIR}/fmha_fprop_fp16_kernel.sm80.cu ${FLASH_ATTENTION_INCLUDE_DIR}/fmha_dgrad_fp16_kernel_loop.sm80.cu)
+      add_library(of_flash_attention ${OF_FLASH_ATTENTION_SRC_FILES})
       add_dependencies(of_flash_attention cutlass)
       target_compile_options(of_flash_attention PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
                               --expt-relaxed-constexpr --use_fast_math
                           >)
       set(OF_FLASH_ATTENTION_LIBRARIES ${PROJECT_BINARY_DIR}/libof_flash_attention.a)
       set_target_properties(of_flash_attention PROPERTIES CUDA_ARCHITECTURES "75;80;86")
-      target_include_directories(of_flash_attention PUBLIC $<BUILD_INTERFACE:${FLASH_ATTENTION_INCLUDE_DIR}>)
+      target_include_directories(of_flash_attention PUBLIC $<BUILD_INTERFACE:${OF_FLASH_ATTENTION_INCLUDE_DIR}>)
       target_include_directories(of_flash_attention PRIVATE ${CUTLASS_INCLUDE_DIR})
     endif(WITH_OF_FLASH_ATTENTION)
   endif(THIRD_PARTY)

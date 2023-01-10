@@ -23,6 +23,26 @@ namespace oneflow {
 
 namespace {
 
+void run_fmha_fwd(Launch_params<FMHA_fprop_params>& launch_params, const bool configure) {
+  if (launch_params.params.d <= 32) {
+    run_fmha_fwd_hdim32(launch_params, configure);
+  } else if (launch_params.params.d <= 64) {
+    run_fmha_fwd_hdim64(launch_params, configure);
+  } else if (launch_params.params.d <= 128) {
+    run_fmha_fwd_hdim128(launch_params, configure);
+  }
+}
+
+void run_fmha_bwd(FMHA_dgrad_params& params, cudaStream_t stream) {
+  if (params.d <= 32) {
+    run_fmha_bwd_hdim32(params, stream);
+  } else if (params.d <= 64) {
+    run_fmha_bwd_hdim64(params, stream);
+  } else if (params.d <= 128) {
+    run_fmha_bwd_hdim128(params, stream);
+  }
+}
+
 // copy from https://github.com/HazyResearch/flash-attention/blob/main/csrc/flash_attn/fmha_api.cpp
 void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
                       // sizes
@@ -263,7 +283,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
                          : nullptr,
                      bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
-    run_fmha_fp16_sm80(launch_params, /*configure=*/true);
+    run_fmha_fwd(launch_params, /*configure=*/true);
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state
 
@@ -283,7 +303,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
       launch_params.params.philox_args = at::PhiloxCudaState(seed, offset);
     }
 
-    run_fmha_fp16_sm80(launch_params, /*configure=*/false);
+    run_fmha_fwd(launch_params, /*configure=*/false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -429,7 +449,7 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
       uint64_t offset = kernel_state->offset(counter_offset);
       launch_params.params.philox_args = at::PhiloxCudaState(seed, offset);
     }
-    run_fmha_dgrad_fp16_sm80(launch_params, stream);
+    run_fmha_bwd(launch_params, stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
