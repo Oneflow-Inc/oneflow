@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# Just for alignment with pytorch, not really useful
+from .constants import default_pg_timeout
 
 from typing import List, Optional
 
