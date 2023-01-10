@@ -24,7 +24,8 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-
+import torch as torch_original
+from packaging import version
 
 def _test_conv1d_bias_false(test_case, device):
     np_arr = np.array([[[1.28795946, -0.2921792, 0.20338029, 0.78604293, -1.89607573]]])
@@ -443,6 +444,10 @@ class TestConv1d(flow.unittest.TestCase):
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
     @autotest(n=3)
     def test_nn_functional_conv1d_2dinput(test_case):
         device = random_device()
