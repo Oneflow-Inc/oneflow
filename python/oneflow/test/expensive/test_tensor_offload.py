@@ -36,9 +36,9 @@ def _test_tensor_offload_d2h(test_case, input, tensor_mem):
     after_id = id(input)
     print("cuda to cpu", after_used)
     # Check tensor_mem cuda memory released
-    # test_case.assertTrue((before_used - after_used) == tensor_mem)
-    if tensor_mem != 0:
-        test_case.assertTrue(before_used > after_used)
+    test_case.assertTrue((before_used - after_used) == tensor_mem)
+    # if tensor_mem != 0:
+    #     test_case.assertTrue(before_used > after_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -55,9 +55,9 @@ def _test_tensor_load_h2d(test_case, input, tensor_mem):
     after_id = id(input)
     print("cpu to cuda", after_used)
     # Check tensor_mem cuda memory allocated
-    # test_case.assertTrue((after_used - before_used) == tensor_mem)
-    if tensor_mem != 0:
-        test_case.assertTrue(after_used > before_used)
+    test_case.assertTrue((after_used - before_used) == tensor_mem)
+    # if tensor_mem != 0:
+    #     test_case.assertTrue(after_used > before_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -137,6 +137,7 @@ class TestTensorOffload(flow.unittest.TestCase):
         # test data after tensor load
         test_case.assertTrue(np.allclose(input.numpy(), data, rtol=0.0001, atol=0.0001))
 
+    @unittest.skip("0 dim tensor is unstable in CI container mem tests.")
     def test_tensor_offload_and_load_0dim(test_case):
         flow.cuda.empty_cache()
         input = flow.tensor(
