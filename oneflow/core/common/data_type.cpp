@@ -56,16 +56,7 @@ bool IsHalfDataType(DataType data_type) {
   }
 #undef HALF_CASE
 }
-bool IsPODDataType(DataType data_type) {
-  switch (data_type) {
-#define POD_CASE(type_cpp, type_proto) \
-  case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_CASE, POD_DATA_TYPE_SEQ)
-    default: return false;
-  }
-#undef POD_CASE
-}
-bool IsPODAndHalfDataType(DataType data_type) {
+bool IsTriviallyCopyableDataType(DataType data_type) {
   switch (data_type) {
 #define POD_AND_HALF_CASE(type_cpp, type_proto) \
   case type_proto: return true;

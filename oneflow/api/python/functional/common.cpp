@@ -159,7 +159,7 @@ Scalar PyUnpackScalar(PyObject* obj) {
 bool PyScalarTensorCheck(PyObject* obj) {
   if (!LazyMode::is_enabled() && PyTensor_Check(obj)) {
     const auto& tensor = PyTensor_Unpack(obj);
-    return tensor->shape()->size() == 0 && IsPODDataType(tensor->dtype()->data_type());
+    return tensor->shape()->size() == 0 && IsTriviallyCopyableDataType(tensor->dtype()->data_type());
   }
   return false;
 }
