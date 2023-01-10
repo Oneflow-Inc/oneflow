@@ -36,78 +36,94 @@ limitations under the License.
 
 namespace oneflow {
 
-template<>
-struct IsScalarType<bfloat16> final {
-  static const bool value = true;
-};
+using float16 = half_float::half;
 
-typedef half_float::half float16;
+#define _DEFINE_SPEC(_Trait, _Type, _Value)             \
+  template<>                                            \
+    struct _Trait<_Type>                                \
+    : std::integral_constant<bool, _Value> { };
 
-template<>
-struct IsScalarType<float16> final {
-  static const bool value = true;
-};
+// Type Trait: extened IsScalarType
 
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<float16> : std::true_type {};
-
+template<typename _Tp>
+struct IsScalarType<typename std::remove_cv<_Tp>> final {
+  static const bool value = 
+    std::is_same<float16, _Tp>::value
 #ifdef WITH_CUDA
+    || std::is_same<half, _Tp>::value
+#endif  // WITH_CUDA
+    || std::is_same<bfloat16, _Tp>::value;
+};
 
-template<>
-struct IsFloat16<half> : std::true_type {};
+// Type Trait: IsFloat16
 
+template<typename>
+  struct __IsFloat16_helper
+  : std::false_type { };
+_DEFINE_SPEC(__IsFloat16_helper, float16, true)
+#ifdef WITH_CUDA
+_DEFINE_SPEC(__IsFloat16_helper, half, true)
 #endif  // WITH_CUDA
 
-template<typename T>
-struct IsFloat16 : std::false_type {};
+template<typename _Tp>
+  struct IsFloat16
+  : std::integral_constant<bool, (__IsFloat16_helper<typename
+            std::remove_cv<_Tp>::type>::value)>
+  { };
 
 // Type Trait: IsFloating
-template<typename T>
-struct IsFloating : std::integral_constant<bool, false> {};
+template<typename>
+  struct __IsFloating_helper
+  : std::false_type { };
 
-#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto)                       \
-  template<>                                                                 \
-  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};       \
-  template<>                                                                 \
-  struct IsFloating<const type_cpp> : std::integral_constant<bool, true> {}; \
-  template<>                                                                 \
-  struct IsFloating<volatile type_cpp> : std::integral_constant<bool, true> {};
+#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
+  _DEFINE_SPEC(__IsFloating_helper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
-
-SPECIALIZE_TRUE_FLOATING(float16, nullptr);
-
+#undef SPECIALIZE_TRUE_FLOATING
+_DEFINE_SPEC(__IsFloating_helper, float16, true)
 #ifdef WITH_CUDA
-
-SPECIALIZE_TRUE_FLOATING(half, nullptr);
-
+_DEFINE_SPEC(__IsFloating_helper, half, true)
 #endif  // WITH_CUDA
 
-#undef SPECIALIZE_TRUE_FLOATING
+template<typename _Tp>
+  struct IsFloating
+  : std::integral_constant<bool, (__IsFloating_helper<typename
+            std::remove_cv<_Tp>::type>::value)>
+  { };
 
 // Type Trait: IsIntegral
-
-template<typename T>
-struct IsIntegral : std::integral_constant<bool, false> {};
+template<typename>
+  struct __IsIntegral_helper
+  : std::false_type { };
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  _DEFINE_SPEC(__IsIntegral_helper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
-// Type Trait: IsUnsignedIntegral
+template<typename _Tp>
+  struct IsIntegral
+  : std::integral_constant<bool, (__IsIntegral_helper<typename
+            std::remove_cv<_Tp>::type>::value)>
+  { };
 
-template<typename T>
-struct IsUnsignedIntegral : std::integral_constant<bool, false> {};
+// Type Trait: IsUnsignedIntegral
+template<typename>
+  struct __IsUnsignedIntegral_helper
+  : std::false_type { };
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsUnsignedIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  _DEFINE_SPEC(__IsUnsignedIntegral_helper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
+
+template<typename _Tp>
+  struct IsUnsignedIntegral
+  : std::integral_constant<bool, (__IsUnsignedIntegral_helper<typename
+            std::remove_cv<_Tp>::type>::value)>
+  { };
+
+#undef _DEFINE_SPEC
 
 // Type Trait: GetDataType
 

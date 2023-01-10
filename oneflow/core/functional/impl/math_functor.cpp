@@ -1246,7 +1246,6 @@ class HannWindowFunctor {
              << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
     }
     // TODO: speedup
-    // May not support float16
     auto result = JUST(Arange(1, 2, 1, dtype, device));
     if (window_length != 1) {
       if (periodic) {
@@ -1278,7 +1277,6 @@ class GlobalHannWindowFunctor {
       return Error::RuntimeError()
              << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
     }
-    // May not support float16
     auto result = JUST(GlobalArange(1, 1 + window_length, 1, dtype, placement, sbp));
     if (window_length != 1) {
       if (periodic) {
@@ -1475,7 +1473,6 @@ class VectorNormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports floating point and "
                                        "complex dtypes, but got: Int.";
       }
-      // May not support float16
       dtype_val = x->dtype();
     }
     bool full_dim_flag = true;
@@ -1542,7 +1539,6 @@ class ScalarVectorNormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports the float, double, "
                                        "cfloat and cdouble dtypes, but got: Int.";
       }
-      // May not support float16
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
@@ -1583,7 +1579,6 @@ class ScalarMatrixNormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
                                        "cfloat and cdouble dtypes, but got: Int.";
       }
-      // May not support float16
       dtype_val = x->dtype();
     }
     std::vector<int32_t> dim_tmp;
@@ -1645,7 +1640,6 @@ class MatrixNormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
                                        "cfloat and cdouble dtypes, but got: Int.";
       }
-      // May not support float16
       dtype_val = x->dtype();
     }
     auto num_dims = x->ndim();
@@ -1693,7 +1687,6 @@ class NormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
                                        "cdouble dtypes, but got: Int.";
       }
-      // May not support float16
     }
     Scalar ord_sca;
     bool ord_type = false;
@@ -1776,7 +1769,6 @@ class Norm2Functor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
                                        "cdouble dtypes, but got: Int.";
       }
-      // May not support float16
     }
     if (input_dim.has_value()) {
       res = JUST(MatrixNorm(x, ord, *JUST(input_dim), keepdim, dtype));
@@ -1807,7 +1799,6 @@ class ScalarNormFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
                                        "cdouble dtypes, but got: Int.";
       }
-      // May not support float16
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
@@ -1838,7 +1829,6 @@ class ScalarNorm2Functor {
         UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
                                        "cdouble dtypes, but got: Int.";
       }
-      // May not support float16
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
@@ -1886,7 +1876,6 @@ class ClampGradFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
     if (IsFloatingDataType(x->dtype()->data_type())) {
-      // May not support float16
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());

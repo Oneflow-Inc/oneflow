@@ -3009,7 +3009,6 @@ class OneHotFunctor {
                            const Scalar& on_value, const Scalar& off_value) const {
     CHECK_OR_RETURN(!IsFloatingDataType(input->dtype()->data_type()))
         << Error::RuntimeError() << "one_hot is only applicable to index tensor.";
-    // May not support float16
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("depth", "dtype", "floating_on_value", "floating_off_value",
                                        "integer_on_value", "integer_off_value");
@@ -3093,7 +3092,6 @@ class CosineSimilarityFunctor {
              << "expected common dtype to be floating point, yet common dtype is "
              << common_dtype->name();
     }
-    // May not support float16
     auto& x_ = JUST(oneflow::VectorAt(input_vec, 0));
     auto& y_ = JUST(oneflow::VectorAt(input_vec, 1));
     std::shared_ptr<Tensor> w12 =
