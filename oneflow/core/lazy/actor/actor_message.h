@@ -27,7 +27,7 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class ActorMsgType  : int8_t { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
 constexpr uint8_t kActorMsgUserDataMaxSize = 32;
 
@@ -71,6 +71,8 @@ class ActorMsg final {
     in_stream.Read(this, sizeof(ActorMsg));
   }
 
+  void set_dst_actor_id(int64_t actor_id) { dst_actor_id_ = actor_id; }
+
  private:
   struct RegstWrapper {
     Regst* regst;
@@ -83,12 +85,12 @@ class ActorMsg final {
 
   int64_t src_actor_id_;
   int64_t dst_actor_id_;
-  ActorMsgType msg_type_;
   union {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
   };
+  ActorMsgType msg_type_;
   uint8_t user_data_size_;
   unsigned char user_data_[kActorMsgUserDataMaxSize];
 };

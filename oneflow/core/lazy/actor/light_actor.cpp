@@ -436,8 +436,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       HandleRegstMsg(msg);
     } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
       HandleEordMsg(msg);
+    } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+      CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << msg.msg_type() << " " << actor_ctx_->task_proto().task_id();
     }
   }
 
@@ -720,6 +722,8 @@ ActorBase* TryNewLightActorWithoutInit(ActorContext* actor_ctx) {
   } else if (task_proto.task_type() == TaskType::kCopyHd) {
     return NewLightActorWithKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kTick) {
+    return NewLightActorWithoutKernel(actor_ctx);
+  } else if (task_proto.task_type() == TaskType::kDeviceTick) {
     return NewLightActorWithoutKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kCollectiveBoxingGeneric) {
     return NewLightActorWithKernel(actor_ctx);
