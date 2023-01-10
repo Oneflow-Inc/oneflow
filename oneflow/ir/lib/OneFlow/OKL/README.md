@@ -57,8 +57,6 @@ module {
  - -extract-kernel-launch-tensor
  - -trim-return-to-void
  - -lower-to-okl
- - -split-into-funcs
- - -fetch-from-launcher
 结果为：
 ```mlir
 module {

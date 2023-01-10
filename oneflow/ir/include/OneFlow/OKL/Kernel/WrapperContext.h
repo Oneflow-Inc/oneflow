@@ -13,57 +13,60 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
-
-#include "OneFlow/UserOpReflection.h"
-#include "oneflow/core/framework/user_op_kernel_registry.h"
-#include "oneflow/core/register/blob.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_
 
 #include <memory>
-#include <string>
-#include <vector>
+#include "mlir/IR/BuiltinAttributes.h"
+#include "OneFlow/OKL/Kernel/InitContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "OneFlow/OKL/Kernel/ComputeContext.h"
+#include "oneflow/core/framework/op_kernel.h"
+
 namespace oneflow {
 namespace okl {
-// this context should support querying information about the kernel from representation in MLIR
-using ArgVec = std::vector<std::pair<std::string, int32_t>>;
-class RegContext final : public user_op::KernelRegContext {
+
+class CompileTimeWrapperContext {
  public:
-  explicit RegContext(mlir::Operation* op);
-  ~RegContext() = default;
+  explicit CompileTimeWrapperContext(mlir::Operation* op)
+      : reg_ctx_(std::make_shared<const RegContext>(op)) {}
 
-  // override user_op KernelRegContext
-  DeviceType device_type() const override;
-  const ParallelContext& parallel_ctx() const override;
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                        int32_t index) const override;
-  const ArgVec& inputs() const override;
-  const ArgVec& outputs() const override;
-  const user_op::UserOpConfWrapper& user_op_conf() const override;
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override;
+  CompileTimeWrapperContext(CompileTimeWrapperContext&&) = default;
 
-  const size_t GetTmpBufferSize() const;
-  ::mlir::Operation* GetOp() const { return op_; };
-  const user_op::OpKernel* GetKernel() const { return kernel_; };
+  RegContext const* GetRegContext() const { return reg_ctx_.get(); }
 
  private:
-  friend class RunContext;
+  std::shared_ptr<const RegContext> reg_ctx_;
+};
 
-  ::mlir::Operation* op_;
-  DeviceType device_type_ = DeviceType::kInvalidDevice;
-  std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
-  ArgVec inputs_;
-  ArgVec outputs_;
-  user_op::UserOpConfWrapper conf_wrapper_;
+class RunTimeWrapperContext : public CompileTimeWrapperContext {
+ public:
+  RunTimeWrapperContext(mlir::Operation* op, user_op::KernelComputeContext* ctx)
+      : CompileTimeWrapperContext(op),
+        compute_ctx_(std::make_shared<ComputeContext>(GetRegContext(), ctx)),
+        init_ctx_(std::make_shared<InitContext>(GetRegContext(), ctx)),
+        kernel_state_(GetRegContext()->GetKernel()->CreateOpKernelState(init_ctx_.get())),
+        kernel_cache_(GetRegContext()->GetKernel()->InitOpKernelCache(init_ctx_.get())) {}
 
-  const user_op::OpKernelRegistryResult* reg_res_ = nullptr;
-  const user_op::OpKernel* kernel_ = nullptr;
+  InitContext* GetInitContext() { return init_ctx_.get(); }
+
+  user_op::OpKernelState* GetKernelState() { return kernel_state_.get(); }
+  user_op::OpKernelCache* GetKernelCache() { return kernel_cache_.get(); }
+
+  void Run() {
+    GetRegContext()->GetKernel()->Compute(compute_ctx_.get(), kernel_state_.get(),
+                                          kernel_cache_.get());
+  }
+
+ private:
+  std::shared_ptr<ComputeContext> compute_ctx_;
+  std::shared_ptr<InitContext> init_ctx_;
+
+  std::shared_ptr<user_op::OpKernelState> kernel_state_;
+  std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
 };
 
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_

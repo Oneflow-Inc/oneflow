@@ -17,16 +17,11 @@ limitations under the License.
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_
 
 #include "OneFlow/OKL/Conversion/Conversion.h"
-#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
 
@@ -55,11 +50,10 @@ class LauncherState final : public user_op::OpKernelState {
   mlir::OwningOpRef<mlir::ModuleOp> module_;
 
   // manage context
-  std::shared_ptr<LauncherContext> launcher_context_{};
-  void LazyInitLauncher(user_op::KernelComputeContext* ctx);
+  LauncherContext launcher_context_;
 
   // manage engine(runtime)
-  std::shared_ptr<JITEngine> engine_{};
+  JITEngine engine_;
 };
 
 }  // namespace okl

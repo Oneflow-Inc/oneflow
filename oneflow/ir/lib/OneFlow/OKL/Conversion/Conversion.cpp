@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OKL/Conversion/Conversion.h"
-#include "OneFlow/OKL/Conversion/FetchFromLauncher.h"
 #include "OneFlow/OKL/Conversion/OKLToLLVM.h"
-#include "OneFlow/OKL/Conversion/OnlyKeepComputeOps.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
@@ -33,8 +30,6 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
   pm.addPass(oneflow::createExtractKernelLaunchTensorPass());  // extract-kernel-launch-tensor
   pm.addPass(oneflow::createTrimReturnAsVoidPass());           // trim-return-to-void
   pm.addPass(oneflow::createLowerToOKLPass());                 // lower-to-okl
-  pm.addPass(createSplitIntoFuncsPass());                      // split-into-funcs
-  pm.addPass(createFetchFromLauncherPass());                   // fetch-from-launcher
   pm.addPass(createTagCudaGraphSupportPass());                 // tag-cuda-graph-support
   oneflow::CheckEnableIRPrinting(pm);
   return pm.run(module);
@@ -42,7 +37,6 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
 
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
-  pm.addPass(createOnlyKeepComputeOpsPass());        // only-keep-compute-ops
   pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr
   pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm

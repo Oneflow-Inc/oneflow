@@ -64,6 +64,10 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 
+namespace okl_func {
+const auto OKL_FUNC = "okl_func";
+}  // namespace okl_func
+
 }  // namespace oneflow
 
 }  // namespace mlir

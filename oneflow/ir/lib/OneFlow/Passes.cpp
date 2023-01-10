@@ -116,6 +116,9 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+
+// enable with_cuda_graphs
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 #include "llvm/ADT/STLExtras.h"
@@ -731,7 +734,7 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-                                    func::FuncOp okl_func) {
+                                    func::FuncOp okl_func, int index) {
     auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
     auto raw_func = op->getParentOfType<func::FuncOp>();
     if (!op_type_name) { return failure(); }
@@ -740,10 +743,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto loc = op->getLoc();
 
-    auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-        loc, okl::RegContextType::get(rewriter.getContext()));
-    reg_ctx.body().emplaceBlock();
-    rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
+    auto wrap_kernel = rewriter.create<okl::WrapperKernelOp>(loc, index);
+    wrap_kernel.body().emplaceBlock();
+    rewriter.setInsertionPointToEnd(&wrap_kernel.body().back());
 
     BlockAndValueMapping mapping;
 
@@ -761,9 +763,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
           if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
-            auto source = rewriter.create<okl::GetTensorFromRetOp>(
-                op->getLoc(), arg.getType(), okl_func.getArgument(0), okl::TensorType::TT_Argument,
-                index);
+            auto source = rewriter.create<okl::GetTensorFromRetOp>(op->getLoc(), arg.getType(),
+                                                                   okl_func.getArgument(0), index);
             mapping.map(arg, source->getResult(0));
             break;
           }
@@ -785,14 +786,6 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     }
     rewriter.create<okl::ReturnOp>(loc);
 
-    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-    auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
-        loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
-    auto kernel = rewriter.create<okl::BuildKernelOp>(
-        loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
-    rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
-    rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
-    rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
     return success();
   }
 
@@ -800,10 +793,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttr("compiled")) { return success(); }
-    op->setAttr("compiled", rewriter.getStringAttr("true"));
-
-    auto func_name = "okl_func";
+    ModuleOp module;
+    if (module = op->getParentOfType<ModuleOp>(); !module) { LOG(FATAL) << "Not found module"; }
+    if (module.lookupSymbol(okl_func::OKL_FUNC)) { return success(); }
 
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
@@ -812,19 +804,19 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto func_type = rewriter.getFunctionType(
         {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
-    auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-    okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
+    auto okl_func = rewriter.create<func::FuncOp>(loc, okl_func::OKL_FUNC, func_type);
     okl_func.getBody().emplaceBlock();
     okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
                                     loc);
 
+    auto index = 0;
     for (auto& op : block) {
       if (!op.hasAttr("op_name")) {
         if (op.getDialect()->getNamespace() == "okl") { continue; }
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(LowerToOKLOp(rewriter, &op, okl_func))) {
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index++))) {
         op.emitError("Failed to lowering OneFlow op to okl dialect.");
         return failure();
       }
@@ -938,9 +930,8 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
 
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(
-          func->getLoc(), arg.value().getType(), launcher_ctx, okl::TensorType::TT_Argument,
-          arg.index());
+      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
+                                                             launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
 
@@ -961,8 +952,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     std::vector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
       auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
-          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(),
-          okl::TensorType::TT_Return, ret_val.index());
+          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }
 
@@ -1164,7 +1154,7 @@ void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
     patterns.add<KernelLaunchPattern>(patterns.getContext());
 #endif
   } else {
-    llvm_unreachable("Found an unsupported mode in wrap-ops-to-kernel-launch pass");
+    LOG(FATAL) << "Found an unsupported mode in wrap-ops-to-kernel-launch pass";
   }
 }
 
