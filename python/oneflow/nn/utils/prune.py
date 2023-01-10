@@ -1304,9 +1304,8 @@ def _compute_norm(t, n, dim):
 
     # torch.norm in pytorch can support the norm of multi-dimensional arrays,
     # but the norm of the oneflow version only supports the norm of two-dimensional
-    # arrays, which is simply bypassed using np.norm().
-    # You can see the usage of `np.linalg.norm` in 
-    # https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html#numpy.linalg.norm
+    # arrays. So we need to reshape tensor into two-dimensional tensor. The dim of 1
+    # represent the dims to compute norm.
 
     a = t.clone()
     fullDims = list(range(a.dim()))
@@ -1317,30 +1316,6 @@ def _compute_norm(t, n, dim):
         reshape_size *= a.shape[item]
     a = a.permute(permute_order)
     a = a.reshape(reshape_size, -1)
-    norm_np = np.linalg.norm(a.numpy(), ord = n, axis = 1)
-    norm = flow.from_numpy(norm_np)
-    # -------------------------------------------------------
-    # torch.norm in pytorch can support the norm of multi-dimensional arrays,
-    # but the norm of the oneflow version only supports the norm of two-dimensional
-    # arrays, which is simply bypassed at the python level
-    # a=t
-    # quan=range(len(a.size()))
-    # shen = list(set(quan).difference(set(dims)))
-    # permute_order=shen+dims
-    # a=a.permute(permute_order)
-    # reshape_size=1
-    # bb=[]
-    # for i in range(len(shen)):
-    #     bb.append(a.size()[i])
-    #     reshape_size*=a.size()[i]
-    # a=a.reshape(reshape_size,-1)
-    # y1 = a.split(1, 0)
-    # aa=[]
-    # for y in y1:
-    #     aa.append(flow.norm(y.reshape(-1),p=n))
-    # aa=np.array(aa).reshape(bb)
-    # aa=flow.tensor(aa)
+    norm = flow.norm(a, p = n, dim = 1)
 
-    # norm=aa
-    # -------------------------------------------------------
     return norm
