@@ -144,7 +144,7 @@ std::string ComposedAttrMap::ToString() const {
     results.emplace_back(fmt::format("{}={}", attr.first, attr.second->ToString()));
   }
   for (const auto& attr : base_) {
-    if (prior_.find(attr.first) != prior_.end()) { continue; }
+    if (prior_.Has(attr.first)) { continue; }
     results.emplace_back(fmt::format("{}={}", attr.first, attr.second->ToString()));
   }
   return fmt::format("{}", fmt::join(results, ", "));
