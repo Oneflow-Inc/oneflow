@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False, atol=1e-3, rtol=1e-3)
+@autotest(n=1, check_graph=True, atol=1e-3, rtol=1e-3)
 def _test_global_group_norm(test_case, placement, input_sbp, affine):
     if placement.type == "cpu":
         return

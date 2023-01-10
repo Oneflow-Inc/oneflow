@@ -419,7 +419,7 @@ def get_functional_graph_res(
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
-        # For some ops whose input parameters is int, 'int' object has no attribute 'placement'. 
+        # For some ops whose input parameters is int, 'int' object has no attribute 'placement'.
         elif is_global() and (
             isinstance(oneflow_arg, int) for oneflow_arg in oneflow_args
         ):
