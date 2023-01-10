@@ -239,6 +239,7 @@ SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.emplace_back(job_id);
+    // VLOG(1) << "Scheduler::AddPlan before impl_->request_store->InitJob job_id = " << job_id;
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
     impl_->executor->InitJob(job_id);
     impl_->coordinator->InitJob(job_id);

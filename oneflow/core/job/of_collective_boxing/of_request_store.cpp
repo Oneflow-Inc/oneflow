@@ -52,6 +52,7 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc, int coll_id) : desc_(des
 }
 
 void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
+  // VLOG(1) << "OfRequestStore job_id = " << job_id;
   std::vector<std::unique_ptr<OfRequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
   CHECK_EQ(request_entry_vec.size(), 0);
   for (const RequestDesc& desc : request_set.request()) {
@@ -60,6 +61,7 @@ void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<OfRequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), OfRequestId(job_id, i)).second);
+    // VLOG(1) << "OfRequestStore job_id = " << job_id << " coll_id = " << entry->coll_id() << " op_type = " << entry->desc().op_desc().op_type();
   }
 }
 

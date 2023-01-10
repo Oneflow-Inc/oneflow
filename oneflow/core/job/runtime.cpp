@@ -68,10 +68,10 @@ Runtime::Runtime(
     Singleton<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
     Singleton<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
-    // if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+    // VLOG(1) << "before Singleton<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan)";
     collective_boxing_collective_manager_plan_token_ =
         Singleton<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan);
-    // }
+    // VLOG(1) << "before Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan)";
     collective_boxing_scheduler_plan_token_ =
         Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
 #ifdef WITH_CUDA

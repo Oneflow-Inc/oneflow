@@ -73,6 +73,7 @@ std::vector<std::shared_ptr<const RuntimeRequestInfo>> RequestEntry::ResetRuntim
 }
 
 void RequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
+  // VLOG(1) << "RequestStore job_id = " << job_id;
   std::vector<std::unique_ptr<RequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
   CHECK_EQ(request_entry_vec.size(), 0);
   for (const RequestDesc& desc : request_set.request()) {
@@ -81,6 +82,7 @@ void RequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<RequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), RequestId(job_id, i)).second);
+    // VLOG(1) << "RequestStore job_id = " << job_id << " coll_id = " << i << " op_type = " << entry->desc().op_desc().op_type();
   }
 }
 
