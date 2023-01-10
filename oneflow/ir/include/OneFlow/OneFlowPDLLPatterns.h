@@ -21,6 +21,7 @@ namespace mlir {
 
 namespace oneflow {
 
+void populateMulCastPattern(RewritePatternSet& patterns);
 void populateForwardOpPatterns(RewritePatternSet& patterns);
 void populateNormalizationOpPatterns(RewritePatternSet& patterns);
 void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);

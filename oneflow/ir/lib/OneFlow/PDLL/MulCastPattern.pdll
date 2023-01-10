@@ -3,11 +3,10 @@
 Pattern {
   let device_name: Attr;
   let device_tag: Attr;
-
   
   let cast = op<oneflow.cast>(x: Value){device_name = device_name, device_tag = device_tag};
   
-  let mul = op<oneflow.scalar_mul_by_tensor>(x,scalar:Value) {device_name = device_name, device_tag = device_tag} -> (y: Type);
+  let mul = op<oneflow.scalar_mul_by_tensor>(cast, scalar:Value) {device_name = device_name, device_tag = device_tag} -> (y: Type);
 
   rewrite mul with{
     let mulcast = OutlineMulCast(mul,cast);
