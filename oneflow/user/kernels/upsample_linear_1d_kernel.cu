@@ -57,9 +57,10 @@ __global__ void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dpt
     const double h1lambda = h1r - h1;
     const double h0lambda = static_cast<double>(1.) - h1lambda;
 
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1), h0lambda * dy_dptr[index]);
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1 + h1p),
-                      h1lambda * dy_dptr[index]);
+    cuda::atomic::FastAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, h1), elem_cnt,
+                          static_cast<T>(h0lambda * dy_dptr[index]));
+    cuda::atomic::FastAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, h1 + h1p), elem_cnt,
+                          static_cast<T>(h1lambda * dy_dptr[index]));
   }
 }
 
