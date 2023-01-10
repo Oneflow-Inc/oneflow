@@ -238,19 +238,30 @@ class TestGlobalWhere(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_where(test_case, placement, sbp)
-                _test_global_where_broadcast(test_case, placement, sbp)
-                _test_where_x_y_none(test_case, placement, sbp)
-                _test_flow_where_tensor_bool_with_random_data(test_case, placement, sbp)
 
     @globaltest
     def test_global_where_broadcast(test_case):
         for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_global_where_broadcast(test_case, placement, sbp)
+
+    @globaltest
+    def test_global_where_scalar(test_case):
+        for placement in all_placement():
             for sbp in all_sbp(placement, except_split=True):
                 _test_global_where_scalar(test_case, placement, sbp)
+
+    @globaltest
+    def test_where_x_y_none(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_where_x_y_none(test_case, placement, sbp)
+
+    @globaltest
+    def test_global_where_tensor_with_0dim_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_global_where_tensor_with_0dim_data(test_case, placement, sbp)
-                _test_flow_where_tensor_broadcast_bool_with_random_data(
-                    test_case, placement, sbp
-                )
 
     @globaltest
     def test_flow_where_tensor_broadcast_with_random_data(test_case):
@@ -260,48 +271,96 @@ class TestGlobalWhere(flow.unittest.TestCase):
                     test_case, placement, sbp
                 )
 
-
-class TestGlobalWhereScalarX(flow.unittest.TestCase):
     @globaltest
-    def test_flow_where_scalar_x(test_case):
+    def test_flow_where_scalar_x_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_x_with_random_data(test_case, placement, sbp)
+
+    @globaltest
+    def test_flow_where_scalar_x_broadcast_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_x_broadcast_with_random_data(
                     test_case, placement, sbp
                 )
+
+    @globaltest
+    def test_flow_where_scalar_x_int_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_x_int_with_random_data(
                     test_case, placement, sbp
                 )
+
+    @globaltest
+    def test_flow_where_scalar_y_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
+                _test_flow_where_scalar_y_with_random_data(test_case, placement, sbp)
+
+    @globaltest
+    def test_flow_where_scalar_y_broadcast_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
+                _test_flow_where_scalar_y_broadcast_with_random_data(
+                    test_case, placement, sbp
+                )
+
+    @globaltest
+    def test_flow_where_scalar_y_int_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
+                _test_flow_where_scalar_y_int_with_random_data(
+                    test_case, placement, sbp
+                )
+
+    @globaltest
+    def test_flow_where_tensor_bool_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_flow_where_tensor_bool_with_random_data(test_case, placement, sbp)
+
+    @globaltest
+    def test_flow_where_tensor_broadcast_bool_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
+                _test_flow_where_tensor_broadcast_bool_with_random_data(
+                    test_case, placement, sbp
+                )
+
+    @globaltest
+    def test_flow_where_scalar_x_bool_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_x_bool_with_random_data(
                     test_case, placement, sbp
                 )
+
+    @globaltest
+    def test_flow_where_scalar_x_broadcast_bool_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_x_broadcast_bool_with_random_data(
                     test_case, placement, sbp
                 )
 
-
-class TestGlobalWhereScalarY(flow.unittest.TestCase):
     @globaltest
-    def test_flow_where_scalar_y(test_case):
+    def test_flow_where_scalar_y_bool_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, except_split=True):
-                _test_flow_where_scalar_y_with_random_data(test_case, placement, sbp)
-                _test_flow_where_scalar_y_broadcast_with_random_data(
-                    test_case, placement, sbp
-                )
-                _test_flow_where_scalar_y_int_with_random_data(
-                    test_case, placement, sbp
-                )
                 _test_flow_where_scalar_y_bool_with_random_data(
                     test_case, placement, sbp
                 )
+
+    @globaltest
+    def test_flow_where_scalar_y_broadcast_bool_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, except_split=True):
                 _test_flow_where_scalar_y_broadcast_bool_with_random_data(
                     test_case, placement, sbp
                 )
 
-
-class TestGlobalWhereScalarXY(flow.unittest.TestCase):
     @globaltest
     def test_flow_where_scalar_xy_bool_with_random_data(test_case):
         for placement in all_placement():

@@ -20,8 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/session.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/graph/task_stream_index_manager.h"
-#include "oneflow/core/vm/vm_util.h"
 
 namespace py = pybind11;
 
@@ -36,19 +34,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](MultiClientSessionContext& session, const std::string& config_proto_str) {
              return session.TryInit(config_proto_str).GetOrThrow();
            })
-      .def("try_close",
-           [](MultiClientSessionContext& session) { return session.TryClose().GetOrThrow(); })
       .def("update_resource",
            [](MultiClientSessionContext& session, const std::string& reso_proto_str) {
              return session.UpdateResource(reso_proto_str).GetOrThrow();
-           })
-      .def("reset_task_stream_index_manager", [](MultiClientSessionContext& session) {
-        if (Singleton<TaskStreamIndexManager>::Get() != nullptr) {
-          vm::CurrentRankSync().GetOrThrow();
-          Singleton<TaskStreamIndexManager>::Delete();
-          Singleton<TaskStreamIndexManager>::New();
-        }
-      });
+           });
 
   m.def("NewSessionId", &NewSessionId);
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
