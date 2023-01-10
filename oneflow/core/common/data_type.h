@@ -38,43 +38,38 @@ namespace oneflow {
 
 using float16 = half_float::half;
 
-#define _DEFINE_SPEC(_Trait, _Type, _Value)             \
-  template<>                                            \
-    struct _Trait<_Type>                                \
-    : std::integral_constant<bool, _Value> { };
+#define _DEFINE_SPEC(_Trait, _Type, _Value) \
+  template<>                                \
+  struct _Trait<_Type> : std::integral_constant<bool, _Value> {};
 
 // Type Trait: extened IsScalarType
 
 template<typename _Tp>
 struct IsScalarType<typename std::remove_cv<_Tp>> final {
-  static const bool value = 
-    std::is_same<float16, _Tp>::value
+  static const bool value = std::is_same<float16, _Tp>::value
 #ifdef WITH_CUDA
-    || std::is_same<half, _Tp>::value
+                            || std::is_same<half, _Tp>::value
 #endif  // WITH_CUDA
-    || std::is_same<bfloat16, _Tp>::value;
+                            || std::is_same<bfloat16, _Tp>::value;
 };
 
 // Type Trait: IsFloat16
 
 template<typename>
-  struct __IsFloat16_helper
-  : std::false_type { };
+struct __IsFloat16_helper : std::false_type {};
 _DEFINE_SPEC(__IsFloat16_helper, float16, true)
 #ifdef WITH_CUDA
 _DEFINE_SPEC(__IsFloat16_helper, half, true)
 #endif  // WITH_CUDA
 
 template<typename _Tp>
-  struct IsFloat16
-  : std::integral_constant<bool, (__IsFloat16_helper<typename
-            std::remove_cv<_Tp>::type>::value)>
-  { };
+struct IsFloat16
+    : std::integral_constant<bool,
+                             (__IsFloat16_helper<typename std::remove_cv<_Tp>::type>::value)> {};
 
 // Type Trait: IsFloating
 template<typename>
-  struct __IsFloating_helper
-  : std::false_type { };
+struct __IsFloating_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
   _DEFINE_SPEC(__IsFloating_helper, type_cpp, true)
@@ -86,15 +81,13 @@ _DEFINE_SPEC(__IsFloating_helper, half, true)
 #endif  // WITH_CUDA
 
 template<typename _Tp>
-  struct IsFloating
-  : std::integral_constant<bool, (__IsFloating_helper<typename
-            std::remove_cv<_Tp>::type>::value)>
-  { };
+struct IsFloating
+    : std::integral_constant<bool,
+                             (__IsFloating_helper<typename std::remove_cv<_Tp>::type>::value)> {};
 
 // Type Trait: IsIntegral
 template<typename>
-  struct __IsIntegral_helper
-  : std::false_type { };
+struct __IsIntegral_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
   _DEFINE_SPEC(__IsIntegral_helper, type_cpp, true)
@@ -102,15 +95,13 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<typename _Tp>
-  struct IsIntegral
-  : std::integral_constant<bool, (__IsIntegral_helper<typename
-            std::remove_cv<_Tp>::type>::value)>
-  { };
+struct IsIntegral
+    : std::integral_constant<bool,
+                             (__IsIntegral_helper<typename std::remove_cv<_Tp>::type>::value)> {};
 
 // Type Trait: IsUnsignedIntegral
 template<typename>
-  struct __IsUnsignedIntegral_helper
-  : std::false_type { };
+struct __IsUnsignedIntegral_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
   _DEFINE_SPEC(__IsUnsignedIntegral_helper, type_cpp, true)
@@ -118,10 +109,9 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<typename _Tp>
-  struct IsUnsignedIntegral
-  : std::integral_constant<bool, (__IsUnsignedIntegral_helper<typename
-            std::remove_cv<_Tp>::type>::value)>
-  { };
+struct IsUnsignedIntegral
+    : std::integral_constant<
+          bool, (__IsUnsignedIntegral_helper<typename std::remove_cv<_Tp>::type>::value)> {};
 
 #undef _DEFINE_SPEC
 
