@@ -39,7 +39,7 @@ namespace one {
 Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
   if (requires_grad) {
     const DataType tensor_dtype = dtype();
-    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype))
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
   autograd_meta_->set_requires_grad(requires_grad);
