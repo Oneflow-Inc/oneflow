@@ -26,7 +26,7 @@ import collections.abc
 import queue
 
 from . import MP_STATUS_CHECK_INTERVAL
-from .worker import ExceptionWrapper
+from oneflow._utils import ExceptionWrapper
 
 container_abcs = collections.abc
 string_classes = (str, bytes)

@@ -16,6 +16,7 @@ limitations under the License.
 #include <functional>
 #include <memory>
 #include <vector>
+#include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/OneFlowOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -43,6 +44,24 @@ StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
   return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
 }
 
+bool MLIRDataTypesAreSame(const std::vector<DataType>& data_types) {
+  if (data_types.empty() || data_types.size() == 1) { return true; }
+  bool result = true;
+  const auto first_data_type = data_types[0];
+  for (size_t i = 1; i < data_types.size(); ++i) { result &= (first_data_type == data_types[i]); }
+  return result;
+}
+
+bool DictionaryAttrsHaveSameDataType(const std::vector<mlir::DictionaryAttr>& attrs) {
+  std::vector<DataType> data_types;
+  for (const auto& attr : attrs) {
+    data_types.push_back(attr.get(OpTrait::TensorSource<void>::getDataTypeAttrName())
+                             .cast<DataTypeAttr>()
+                             .getValue());
+  }
+  return MLIRDataTypesAreSame(data_types);
+}
+
 OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
                        const std::function<MaybeTensor(const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
@@ -56,6 +75,8 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
+            attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
   return attrs.getDictionary(ctx);
 }
@@ -66,6 +87,12 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
+  if (!DictionaryAttrsHaveSameDataType({lhs_attr_dict, rhs_attr_dict})) {
+    llvm::errs()
+        << "Input tensors should have same data type in binary operation of constant folding."
+        << "\n";
+    return nullptr;
+  }
 
   auto attrs = NamedAttrList(lhs_attr_dict);
   const auto lhs_tensor = support::DenseElementsAttrToTensor(
@@ -81,6 +108,8 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
+            lhs_attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
   return attrs.getDictionary(ctx);
 }
@@ -91,6 +120,7 @@ OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
   NamedAttrList attrs;
   attrs.set(valueAttrName(), valueAttr());
   attrs.set(op_nameAttrName(), op_nameAttr());
+  attrs.set(data_typeAttrName(), data_typeAttr());
   attrs.set(device_tagAttrName(), device_tagAttr());
   attrs.set(device_nameAttrName(), device_nameAttr());
   attrs.set(scope_symbol_idAttrName(), scope_symbol_idAttr());
@@ -122,7 +152,7 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
     if (has_int_operand()) { return functional::ScalarAdd(tensor, int_operand(), 1, false); }
     if (has_float_operand()) {
-      return functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false);
+      return functional::ScalarAdd(tensor, float_operand().convertToDouble(), 1, false);
     }
     emitError("Scalar op must has a int operand or a float operand.");
     return TensorPtr();

@@ -21,9 +21,10 @@ namespace oneflow {
 namespace one {
 
 struct ExpandCaptureState : public AutoGradCaptureState {
-  std::vector<int32_t> logical_out_shape;
-  std::vector<int32_t> logical_expand_shape;
   bool requires_grad;
+  int32_t lpad;
+  bool keep_dims;
+  std::vector<int32_t> reduce_dims;
 };
 
 class Expand : public OpExprGradFunction<ExpandCaptureState> {
@@ -33,39 +34,51 @@ class Expand : public OpExprGradFunction<ExpandCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const ExpandCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
 };
 
 Maybe<void> Expand::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
                             const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(0)->requires_grad();
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+  ctx->requires_grad = inputs[0]->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->logical_out_shape = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("logical_in_shape"));
-  ctx->logical_expand_shape =
-      JUST(composed_attrs.GetAttr<std::vector<int32_t>>("logical_expand_shape"));
+  const Shape& in_shape = *inputs[0]->shape();
+  const Shape& expand_shape = *outputs[0]->shape();
+  ctx->lpad = expand_shape.size() - in_shape.size();
+  ctx->keep_dims = (in_shape.size() > 0);
+  ctx->reduce_dims.reserve(expand_shape.size());
+  if (ctx->keep_dims) {
+    for (size_t i = 0; i < expand_shape.size(); ++i) {
+      const auto& t_dim = expand_shape[i];
+      const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad];
+      if (dim != t_dim) { ctx->reduce_dims.push_back(i); }
+    }
+  } else {
+    for (int32_t axis = 0; axis < expand_shape.size(); ++axis) { ctx->reduce_dims.push_back(axis); }
+  }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", ctx->logical_out_shape));
-  JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", ctx->logical_expand_shape));
-  in_grads->at(0) = JUST(
-      functional::ExpandGrad(out_grads.at(0), ctx->logical_out_shape, ctx->logical_expand_shape));
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  in_grads->resize(1);
+  in_grads->at(0) = out_grads[0];
+  if (ctx->reduce_dims.size() > 0) {
+    in_grads->at(0) =
+        JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, ctx->keep_dims));
+  }
+  if (ctx->lpad > 0 && ctx->keep_dims) {
+    in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad));
+  }
   return Maybe<void>::Ok();
 }
 

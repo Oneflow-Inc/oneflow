@@ -220,4 +220,14 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   return shape;
 }
 
+bool Shape::operator==(const Shape& rhs) const {
+  if (is_initialized_ != rhs.is_initialized_) { return false; }
+  if (is_initialized_ == false) { return true; }
+  if (this->NumAxes() != rhs.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, this->NumAxes()) {
+    if (this->At(i) != rhs.At(i)) { return false; }
+  }
+  return true;
+}
+
 }  // namespace oneflow

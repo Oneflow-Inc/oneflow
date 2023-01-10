@@ -15,14 +15,42 @@ limitations under the License.
 """
 
 import unittest
-from oneflow.test_utils.automated_test_util import *
+from collections import OrderedDict
+
+import numpy as np
+
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.test_util import GenArgList, type_name_to_flow_type
+from oneflow.test_utils.automated_test_util import *
+
+
+def _test_functional_normalize_double_dtype(test_case, device, dtype):
+    dtype = type_name_to_flow_type[dtype]
+    x = flow.ones(2, 2, dtype=dtype).to(device)
+    y = flow.nn.functional.normalize(x, p=2, dim=0)
+    test_case.assertEqual((2, 2), y.shape)
+    out = np.array(
+        [
+            [0.7071067690849304, 0.7071067690849304],
+            [0.7071067690849304, 0.7071067690849304],
+        ]
+    )
+    test_case.assertTrue(np.allclose(y.numpy().tolist(), out, 1e-05, 1e-05))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalNormalize(flow.unittest.TestCase):
-    @autotest()
+    def test_functional_normalize_naive(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [_test_functional_normalize_double_dtype]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["dtype"] = ["float32", "double"]
+
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest(n=5)
     def test_functional_normalize(test_case):
         device = random_device()
         ndim = random(low=2)

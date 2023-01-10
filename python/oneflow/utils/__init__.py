@@ -14,4 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.framework.config_util import api_load_library as load_library
-from oneflow.utils.torch.from_or_to_torch_tensor import from_torch, to_torch
+from oneflow.utils import tensor
+from oneflow.utils import global_view
+from . import checkpoint

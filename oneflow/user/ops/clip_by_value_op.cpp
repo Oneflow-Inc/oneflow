@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -34,7 +34,7 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipTensorDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -106,64 +106,5 @@ DEF_CLIP_BY_VALUE_OP(ClipByScalarMin)
 DEF_CLIP_BY_VALUE_OP(ClipByScalarMax)
 
 #undef DEF_CLIP_BY_VALUE_OP
-
-REGISTER_USER_OP_GRAD("clip_by_scalar")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("clip_by_scalar_grad")
-                .Attr("floating_min", op.attr<double>("floating_min"))
-                .Attr("integral_min", op.attr<int64_t>("integral_min"))
-                .Attr("floating_max", op.attr<double>("floating_max"))
-                .Attr("integral_max", op.attr<int64_t>("integral_max"))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("x", op.input("x", 0))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("clip_by_scalar_min")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("clip_by_scalar_min_grad")
-                .Attr("floating_min", op.attr<double>("floating_min"))
-                .Attr("integral_min", op.attr<int64_t>("integral_min"))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("x", op.input("x", 0))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("clip_by_scalar_max")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("clip_by_scalar_max_grad")
-                .Attr("floating_max", op.attr<double>("floating_max"))
-                .Attr("integral_max", op.attr<int64_t>("integral_max"))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("x", op.input("x", 0))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

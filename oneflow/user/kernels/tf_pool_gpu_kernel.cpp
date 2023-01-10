@@ -48,7 +48,7 @@ class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
   GPUPoolOpKernelCache(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
                        const ShapeView& y_shape, const std::string& data_format,
                        const DataType& dtype, const Params3D& params_3d)
-      : dim_(dim), pooling_type_(pooling_type) {
+      : pooling_type_(pooling_type) {
     Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
   }
   ~GPUPoolOpKernelCache() = default;
@@ -107,11 +107,9 @@ class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
   std::unique_ptr<CudnnPoolDesc> pooling_desc_;
-  int32_t dim_;
   std::string pooling_type_;
 };
 
-template<typename T>
 struct PoolGpuKernelUtil {
   static void FWCompute(user_op::KernelComputeContext* ctx,
                         const GPUPoolOpKernelCache* gpu_pool_op_kernel_cache) {
@@ -120,8 +118,8 @@ struct PoolGpuKernelUtil {
     CHECK(gpu_pool_op_kernel_cache != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingForward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
-        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
-        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr(x->data_type()),
+        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr(x->data_type()),
         gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->mut_dptr()));
   }
 
@@ -134,17 +132,16 @@ struct PoolGpuKernelUtil {
     CHECK(gpu_pool_op_kernel_cache != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingBackward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
-        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr(y->data_type()),
         gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->dptr(),
         gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), dy->dptr(),
-        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr(y->data_type()),
         gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), dx->mut_dptr()));
   }
 };
 
 }  // namespace
 
-template<typename T>
 class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGpuKernel() = default;
@@ -159,11 +156,10 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGradGpuKernel() = default;
@@ -176,11 +172,10 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGpuKernel() = default;
@@ -195,11 +190,10 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGradGpuKernel() = default;
@@ -214,11 +208,10 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGpuKernel() = default;
@@ -233,11 +226,10 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGradGpuKernel() = default;
@@ -252,11 +244,10 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGpuKernel() = default;
@@ -271,11 +262,10 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGradGpuKernel() = default;
@@ -290,11 +280,10 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGpuKernel() = default;
@@ -309,11 +298,10 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGradGpuKernel() = default;
@@ -328,11 +316,10 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGpuKernel() = default;
@@ -347,11 +334,10 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-template<typename T>
 class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGradGpuKernel() = default;
@@ -366,63 +352,46 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
+    PoolGpuKernelUtil::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
-#define REGISTER_POOL_CUDA_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("tf_avg_pool_1d")                                                \
-      .SetCreateFn<AvgPool1DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_avg_pool_1d_grad")                                           \
-      .SetCreateFn<AvgPool1DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_avg_pool_2d")                                                \
-      .SetCreateFn<AvgPool2DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_avg_pool_2d_grad")                                           \
-      .SetCreateFn<AvgPool2DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_avg_pool_3d")                                                \
-      .SetCreateFn<AvgPool3DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_avg_pool_3d_grad")                                           \
-      .SetCreateFn<AvgPool3DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_1d")                                                \
-      .SetCreateFn<MaxPool1DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_1d_grad")                                           \
-      .SetCreateFn<MaxPool1DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_2d")                                                \
-      .SetCreateFn<MaxPool2DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_2d_grad")                                           \
-      .SetCreateFn<MaxPool2DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_3d")                                                \
-      .SetCreateFn<MaxPool3DGpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("tf_max_pool_3d_grad")                                           \
-      .SetCreateFn<MaxPool3DGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
-
-REGISTER_POOL_CUDA_KERNEL(float)
-REGISTER_POOL_CUDA_KERNEL(double)
-REGISTER_POOL_CUDA_KERNEL(float16)
+REGISTER_USER_KERNEL("tf_avg_pool_1d")
+    .SetCreateFn<AvgPool1DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_avg_pool_1d_grad")
+    .SetCreateFn<AvgPool1DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_avg_pool_2d")
+    .SetCreateFn<AvgPool2DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_avg_pool_2d_grad")
+    .SetCreateFn<AvgPool2DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_avg_pool_3d")
+    .SetCreateFn<AvgPool3DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_avg_pool_3d_grad")
+    .SetCreateFn<AvgPool3DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_1d")
+    .SetCreateFn<MaxPool1DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_1d_grad")
+    .SetCreateFn<MaxPool1DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_2d")
+    .SetCreateFn<MaxPool2DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_2d_grad")
+    .SetCreateFn<MaxPool2DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_3d")
+    .SetCreateFn<MaxPool3DGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+REGISTER_USER_KERNEL("tf_max_pool_3d_grad")
+    .SetCreateFn<MaxPool3DGradGpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
 
 }  // namespace oneflow
 

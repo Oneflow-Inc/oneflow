@@ -82,18 +82,6 @@ std::string Join(const T& con, const std::string& delimiter) {
   return os.str();
 }
 
-template<typename T>
-using SmallSet = std::vector<T>;
-
-template<typename T>
-std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
-  for (auto iter = vec->begin(); iter != vec->end(); ++iter) {
-    if (*iter == elem) { return std::make_pair(iter, false); }
-  }
-  vec->push_back(elem);
-  return std::make_pair(--vec->end(), true);
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_

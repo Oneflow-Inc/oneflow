@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <type_traits>
+#ifndef ONEFLOW_API_PYTHON_CASTER_COMMON_H_
+#define ONEFLOW_API_PYTHON_CASTER_COMMON_H_
 
+#include <type_traits>
 #include <pybind11/pybind11.h>
 
 namespace pybind11 {
@@ -49,3 +51,5 @@ using IsSupportedByPybind11WhenInsideSharedPtr =
 
 }  // namespace detail
 }  // namespace pybind11
+
+#endif  // ONEFLOW_API_PYTHON_CASTER_COMMON_H_

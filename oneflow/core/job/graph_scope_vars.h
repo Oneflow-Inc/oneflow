@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_
 
 #include <cstdint>
+#include <string>
+#include <vector>
+
 namespace oneflow {
 
 bool IsOpenGraphVerboseStepLr();
@@ -26,6 +29,12 @@ void SetGraphDebugMaxPyStackDepth(int32_t depth);
 int32_t GetGraphDebugMaxPyStackDepth();
 void SetGraphDebugMode(bool mode);
 bool GetGraphDebugMode();
+void SetGraphDebugOnlyUserPyStack(bool flag);
+bool GetGraphDebugOnlyUserPyStack();
+void InitPythonPathsToBeKeptAndFilteredForDebugging(const std::string& python_base_dir);
+const std::vector<std::string>& GetPythonPathsToBeFilteredForDebugging();
+const std::vector<std::string>& GetPythonPathsToBeKeptForDebugging();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_

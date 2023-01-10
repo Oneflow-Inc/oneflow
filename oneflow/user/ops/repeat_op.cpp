@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -30,15 +31,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RepeatOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RepeatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RepeatOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
@@ -48,25 +49,5 @@ namespace oneflow {
   *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                           -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("acc")
-        .InputBind("in", ctx->FwOp().output_grad("out", 0))
-        .Output("out")
-        .Attr<int32_t>("max_acc_num", ctx->FwOp().attr<int32_t>("repeat_num"))
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("out", 0);
-  });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
 
 }  // namespace oneflow

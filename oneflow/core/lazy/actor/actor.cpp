@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
 namespace oneflow {
 
@@ -76,6 +76,7 @@ void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* ker
 }
 
 void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  CHECK_JUST_MSG(kernel_ctx->stream()->GetAsyncError(), kernel->op_conf().name());
   Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForward(kernel_ctx, kernel);

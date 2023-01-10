@@ -141,12 +141,15 @@ class PosixFile final {
 class PosixMappedFile final {
  public:
   PosixMappedFile() : file_(), ptr_(nullptr) {}
-  PosixMappedFile(PosixFile&& file, size_t size, int prot) : file_(std::move(file)), ptr_(nullptr) {
+  PosixMappedFile(PosixFile&& file, size_t size, int prot, int flags)
+      : file_(std::move(file)), ptr_(nullptr) {
     CHECK_NE(file_.fd(), -1);
-    void* ptr = mmap(nullptr, size, prot, MAP_SHARED, file_.fd(), 0);
+    void* ptr = mmap(nullptr, size, prot, flags, file_.fd(), 0);
     PCHECK(ptr != MAP_FAILED);
     ptr_ = ptr;
   }
+  PosixMappedFile(PosixFile&& file, size_t size, int prot)
+      : PosixMappedFile(std::move(file), size, prot, MAP_SHARED) {}
   PosixMappedFile(PosixMappedFile&& other) noexcept : PosixMappedFile() {
     *this = std::move(other);
   }

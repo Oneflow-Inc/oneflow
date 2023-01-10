@@ -42,12 +42,12 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = params_shape;
+  ctx->SetOutputShape("out", 0, params_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("updates", 0));
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
   JUST(CheckScatterNdShape(like_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = like_shape;
+  ctx->SetOutputShape("out", 0, like_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("updates", 0));
   return Maybe<void>::Ok();
 }
 
@@ -70,12 +70,13 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = params_shape;
+  ctx->SetOutputShape("out", 0, params_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("params", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("params", 0));
   return Maybe<void>::Ok();
 }
 
@@ -122,7 +123,11 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
     out_shape_vec.emplace_back(params_shape.At(i));
   }
-  *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
+  const Shape& out_shape = Shape(out_shape_vec);
+  bool is_out_of_bounds = params_shape.Count(0) == 0 && out_shape.Count(0) != 0;
+  CHECK_OR_RETURN(!is_out_of_bounds)
+      << Error::IndexError() << "The index is out of bounds for dimension with size 0";
+  ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
 
@@ -168,7 +173,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> GatherNdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("params", 0));
   return Maybe<void>::Ok();
 }
 
@@ -315,93 +320,4 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return InferTensorScatterNdOptDataType(ctx);
 }
 
-REGISTER_USER_OP_GRAD("gather_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("scatter_nd_like")
-                .Input("like", op.input("params", 0))
-                .Input("updates", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("scatter_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("updates", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("gather_nd")
-                .Input("params", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("updates", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("gather_nd")
-                .Input("params", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        user_op::UserOpConfWrapperBuilder zero_grad_builder(op.op_name() + "_zero_updates");
-        user_op::UserOpConfWrapper zero_grad_op = zero_grad_builder.Op("zero_like")
-                                                      .Input("like", op.input("updates", 0))
-                                                      .Output("out")
-                                                      .Build();
-        AddOp(zero_grad_op);
-        user_op::UserOpConfWrapperBuilder grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            grad_builder.Op("tensor_scatter_nd_update")
-                .Input("params", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("updates", zero_grad_op.output("out", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("updates", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("gather_nd")
-                .Input("params", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "params", 0);
-      }
-      return Maybe<void>::Ok();
-    });
 }  // namespace oneflow

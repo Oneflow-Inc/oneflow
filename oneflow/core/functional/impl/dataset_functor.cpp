@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -53,32 +54,14 @@ class DecodeOneRecFunctor {
                            const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
                            const Optional<Shape>& reshape,
                            const Optional<Shape>& batch_padding) const {
-    MutableAttrMap attrs;
-    bool has_reshape = false;
-    bool has_batch_padding = false;
-
-    if (reshape.has_value()) {
-      has_reshape = true;
-      JUST(attrs.SetAttr<Shape>("reshape", *JUST(reshape)));
-    } else {
-      has_reshape = false;
-      JUST(attrs.SetAttr<Shape>("reshape", shape));
-    }
-
-    if (batch_padding.has_value()) {
-      has_batch_padding = true;
-      JUST(attrs.SetAttr<Shape>("batch_padding", *JUST(batch_padding)));
-    } else {
-      has_batch_padding = false;
-      JUST(attrs.SetAttr<Shape>("batch_padding", shape));
-    }
-    JUST(attrs.SetAttr<std::string>("key", key));
-    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
-    JUST(attrs.SetAttr<Shape>("static_shape", shape));
-    JUST(attrs.SetAttr<bool>("is_dynamic", is_dynamic));
-    JUST(attrs.SetAttr<bool>("has_reshape", has_reshape));
-    JUST(attrs.SetAttr<bool>("has_batch_padding", has_batch_padding));
-
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("reshape", "batch_padding", "key", "data_type",
+                                                 "static_shape", "is_dynamic", "has_reshape",
+                                                 "has_batch_padding");
+    bool has_reshape = reshape.has_value();
+    bool has_batch_padding = batch_padding.has_value();
+    attrs.SetAllAttrs(has_reshape ? *JUST(reshape) : shape,
+                      has_batch_padding ? *JUST(batch_padding) : shape, key, dtype->data_type(),
+                      shape, is_dynamic, has_reshape, has_batch_padding);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 

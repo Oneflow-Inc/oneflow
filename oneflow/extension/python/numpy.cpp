@@ -48,8 +48,8 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
     case DataType::kUInt8: return NPY_UINT8;
     case DataType::kFloat16: return NPY_FLOAT16;
     default:
-      return Error::InvalidValueError("OneFlow data type " + DataType_Name(of_data_type)
-                                      + " is not valid to Numpy data type.");
+      return Error::InvalidValueError() << "OneFlow data type " << DataType_Name(of_data_type)
+                                        << " is not valid to Numpy data type.";
   }
 }
 
@@ -65,8 +65,8 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:
-      return Error::InvalidValueError("Numpy data type " + std::to_string(np_type)
-                                      + " is not valid to OneFlow data type.");
+      return Error::InvalidValueError() << "Numpy data type " << std::to_string(np_type)
+                                        << " is not valid to OneFlow data type.";
   }
 }
 

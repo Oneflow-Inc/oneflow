@@ -41,15 +41,15 @@ Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
 
 }  // namespace private_details
 
-inline bool IsConsistentTensorMetaCheckDisabled() {
+inline bool IsGlobalTensorMetaCheckDisabled() {
   return *private_details::MutThreadLocalTensorMetaCheckDepth() > 1;
 }
 
 template<typename... Args>
-struct CheckConsistentTensorMeta;
+struct CheckGlobalTensorMeta;
 
 template<typename RetT, typename... Args>
-struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
+struct CheckGlobalTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
   static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
   template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
   static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
@@ -62,23 +62,19 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
     ++*depth;
     RetT ret = func(tensor, args...);
     --*depth;
-    // Always synchronize consistent tensor meta even if `func` failed.
+    // Always synchronize global tensor meta even if `func` failed.
     if (*depth == 0 && is_env_enabled_check) { JUST(private_details::BusyWaitAndCheck(ctx)); }
     return ret;
   }
 };
 
-struct DisableCheckConsistentTensorMetaScope final {
-  DisableCheckConsistentTensorMetaScope() {
-    ++*private_details::MutThreadLocalTensorMetaCheckDepth();
-  }
-  ~DisableCheckConsistentTensorMetaScope() {
-    --*private_details::MutThreadLocalTensorMetaCheckDepth();
-  }
+struct DisableCheckGlobalTensorMetaScope final {
+  DisableCheckGlobalTensorMetaScope() { ++*private_details::MutThreadLocalTensorMetaCheckDepth(); }
+  ~DisableCheckGlobalTensorMetaScope() { --*private_details::MutThreadLocalTensorMetaCheckDepth(); }
 };
 
 static constexpr auto* WithConsistencyChecked =
-    DECORATE(&private_details::RunCallback, CheckConsistentTensorMeta);
+    DECORATE(&private_details::RunCallback, CheckGlobalTensorMeta);
 
 }  // namespace oneflow
 

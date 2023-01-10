@@ -110,7 +110,10 @@ def _test_linear_graph_train_with_lr_sch(
 
         def one_iter():
             of_graph_out = linear_t_g(x)
-            return of_graph_out.numpy(), linear_t_g.linear.weight.origin.numpy()
+            return (
+                of_graph_out.numpy(),
+                linear_t_g.linear.weight.to(flow.Tensor).numpy(),
+            )
 
         check_list = []
         for i in range(iter_num):

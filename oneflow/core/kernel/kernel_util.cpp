@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 
@@ -27,15 +27,15 @@ void AutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   ep::primitive::MemcpyKind kind{};
   if (stream->device_type() == DeviceType::kCPU) {
-    CHECK(src_mem_case.has_host_mem());
-    CHECK(dst_mem_case.has_host_mem());
+    CHECK(memory::IsHostMem(src_mem_case));
+    CHECK(memory::IsHostMem(dst_mem_case));
     kind = ep::primitive::MemcpyKind::kDtoD;
   } else {
-    if (src_mem_case.has_host_mem()) {
-      CHECK(!dst_mem_case.has_host_mem());
+    if (memory::IsHostMem(src_mem_case)) {
+      CHECK(!memory::IsHostMem(dst_mem_case));
       kind = ep::primitive::MemcpyKind::kHtoD;
-    } else if (dst_mem_case.has_host_mem()) {
-      CHECK(!src_mem_case.has_host_mem());
+    } else if (memory::IsHostMem(dst_mem_case)) {
+      CHECK(!memory::IsHostMem(src_mem_case));
       kind = ep::primitive::MemcpyKind::kDtoH;
     } else {
       kind = ep::primitive::MemcpyKind::kDtoD;

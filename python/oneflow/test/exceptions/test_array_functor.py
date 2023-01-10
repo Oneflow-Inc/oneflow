@@ -34,6 +34,14 @@ class TestArrayError(flow.unittest.TestCase):
             "The expanded size of the tensor" in str(context.exception)
         )
 
+    def test_broadcast_like_numaxes_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones((2, 2, 2), dtype=flow.float32, requires_grad=True)
+            like = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
+            y = flow._C.broadcast_like(x, like)
+        print(str(context.exception))
+        test_case.assertTrue("The number of sizes provided" in str(context.exception))
+
     def test_concat_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)

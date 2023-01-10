@@ -17,33 +17,75 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_FRAME_H_
 
 #include <Python.h>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/job/graph_scope_vars.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
 namespace {
-std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
-  std::string cur_f_str;
-  PyFrameObject* cur_frame = PyEval_GetFrame();
-  for (int32_t i = 0; i < max_stack_depth; i++) {
-    if (cur_frame == NULL) break;
-    const int32_t stack_index = (-1) * i - 1;
-    cur_f_str = "Python Stack[" + std::to_string(stack_index)
-                + "]: " + PyObjectToReprStr((PyObject*)cur_frame) + "; " + cur_f_str;
-    cur_frame = cur_frame->f_back;
+
+// get a formatted stack frame representation
+// example: Python Stack[-10]: '__call__' at '.../graph/graph.py': line 219
+std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame) {
+  if (frame == NULL) return "";
+  PyCodeObject* code = frame->f_code;
+  std::string repr = "Python Stack[" + std::to_string(stack_index) + "]: ";
+  std::string file_name = PyObjectToReprStr(code->co_filename);
+  std::string code_name = PyObjectToReprStr(code->co_name);
+  int line_number = PyFrame_GetLineNumber(frame);
+
+  return repr + code_name + " at " + file_name + ": line " + std::to_string(line_number) + "; ";
+}
+
+bool check_if_python_file_should_be_filtered(const std::string& path) {
+  const auto& paths_to_be_kept = GetPythonPathsToBeKeptForDebugging();
+  for (int i = 0; i < paths_to_be_kept.size(); ++i) {
+    const std::string& path_to_be_kept = paths_to_be_kept[i];
+    if (path.size() > path_to_be_kept.size()) {
+      if (path.substr(0, path_to_be_kept.size()) == path_to_be_kept) { return false; }
+    }
   }
-  return cur_f_str;
+
+  const auto& paths_to_be_filtered = GetPythonPathsToBeFilteredForDebugging();
+  for (int i = 0; i < paths_to_be_filtered.size(); ++i) {
+    const std::string& path_to_be_filtered = paths_to_be_filtered[i];
+    if (path.size() > path_to_be_filtered.size()) {
+      if (path.substr(0, path_to_be_filtered.size()) == path_to_be_filtered) { return true; }
+    }
+  }
+
+  return false;
+}
+
+bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
+  std::string frame_file_name = PyObjectToReprStr(frame->f_code->co_filename);
+  frame_file_name = frame_file_name.substr(1, frame_file_name.size() - 2);  // get rid of ' '
+  return check_if_python_file_should_be_filtered(frame_file_name);
+}
+
+bool check_if_should_skip_this_frame(PyFrameObject* frame) {
+  const bool only_user_py_stack = GetGraphDebugOnlyUserPyStack();
+  if (only_user_py_stack) { return check_if_frame_should_be_filtered(frame); }
+  return false;
 }
 
 int32_t get_cur_stack_depth() {
   int32_t current_stack_depth = 0;
   PyFrameObject* f = PyEval_GetFrame();
   while (f) {
+    if (check_if_should_skip_this_frame(f)) {
+      f = f->f_back;
+      continue;
+    }
+
     current_stack_depth++;
     f = f->f_back;
   }
@@ -51,20 +93,40 @@ int32_t get_cur_stack_depth() {
 }
 
 std::string get_cur_frame_stack_str() {
-  const bool debug_mode = GetGraphDebugMode();
   const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
-  if (debug_mode) {  // show more info for the stack trace in debug mode
-    int32_t current_stack_depth = get_cur_stack_depth();
-    std::string cur_f_str = get_cur_frame_stack_str(max_stack_depth);
-    if (current_stack_depth > max_stack_depth) {  // show how many stack depth remaining to be shown
-      int32_t remaining_stack_depth = current_stack_depth - max_stack_depth;
-      cur_f_str += " ... " + std::to_string(remaining_stack_depth) + " more; ";
+  std::string cur_f_str;
+  PyFrameObject* cur_frame = PyEval_GetFrame();
+
+  int i = 0;
+  while (i < max_stack_depth) {
+    if (cur_frame == NULL) break;
+
+    const int32_t stack_index = (-1) * i - 1;
+
+    if (check_if_should_skip_this_frame(cur_frame)) {
+      cur_frame = cur_frame->f_back;
+      continue;
     }
-    return cur_f_str;
+
+    i++;
+    cur_f_str = get_python_frame_str_repr(stack_index, cur_frame) + cur_f_str;
+    cur_frame = cur_frame->f_back;
   }
 
-  return get_cur_frame_stack_str(max_stack_depth);
+  const bool debug_mode =
+      GetGraphDebugMode();  // show how may stack frames remain to be shown in debug mode
+  if (debug_mode) {
+    const int32_t current_stack_depth = get_cur_stack_depth();
+    if (current_stack_depth > max_stack_depth) {
+      cur_f_str += "... " + std::to_string(current_stack_depth - max_stack_depth) + " more";
+    }
+  } else {
+    if (cur_frame != NULL) { cur_f_str += " ... more"; }
+  }
+
+  return cur_f_str;
 }
+
 }  // namespace
 
 class PythonFrameGuard {

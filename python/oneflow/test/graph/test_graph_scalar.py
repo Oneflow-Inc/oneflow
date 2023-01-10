@@ -142,7 +142,6 @@ def _test_scalar_global_train_graph(test_case, placement):
         x = x.to_global(placement=placement, sbp=sbp_b)
         of_lazy_out = scalar_g(x)
         lazy_out_list.append(of_lazy_out)
-
     for i in range(3):
         test_case.assertTrue(
             np.array_equal(

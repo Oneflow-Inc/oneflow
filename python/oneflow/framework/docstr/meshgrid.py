@@ -18,13 +18,14 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.meshgrid,
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/_modules/torch/functional.html#meshgrid.
-    
+    """
     Take :math:`N` tensors, each of which can be either scalar or 1-dimensional
     vector, and create :math:`N` N-dimensional grids, where the :math:`i` :sup:`th` grid is defined by
     expanding the :math:`i` :sup:`th` input over dimensions defined by other inputs.
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.meshgrid.html#torch.meshgrid
 
     Args:
         tensors (list of Tensor): list of scalars or 1 dimensional tensors. Scalars will be

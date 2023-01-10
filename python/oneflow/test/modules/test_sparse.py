@@ -70,7 +70,7 @@ def _test_embedding_padding_idx(test_case, device):
     embedding(indices).sum().backward()
     after = (embedding.weight + embedding.weight.grad)[padding_idx]
     embedding.zero_grad()
-    test_case.assertTrue(flow.equal(after, pre).all())
+    test_case.assertTrue(flow.equal(after, pre))
 
 
 def _test_embedding_scale_by_freq(test_case, device):
@@ -185,7 +185,7 @@ class TestEmbedding(flow.unittest.TestCase):
     # Graph mode do not support inplace op with flow.no_grad()
     # See this issue: https://github.com/Oneflow-Inc/OneTeam/issues/1382
     @unittest.skip("still have error in ci test. TODO(Yao Zihang)")
-    @autotest(n=5, rtol=1e-03, atol=1e-03, check_graph="ValidatedFlase")
+    @autotest(n=5, rtol=1e-03, atol=1e-03, check_graph="ValidatedFalse")
     def test_embedding_renorm(test_case):
         device = random_device()
         emb_size = random(low=2) * 16

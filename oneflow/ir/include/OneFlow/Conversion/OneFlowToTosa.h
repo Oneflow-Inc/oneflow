@@ -24,6 +24,7 @@ namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
+std::unique_ptr<mlir::Pass> createConvertToSignlessForTosaPass();
 
 }  // namespace oneflow
 

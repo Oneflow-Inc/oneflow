@@ -64,6 +64,11 @@ using AddInplaceArgPair = std::function<Maybe<void>(
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
 using IsMatchedHob = std::shared_ptr<hob::BaseExpr<user_op::KernelRegContext, bool>>;
 
+constexpr int kKernelPriorityFallback = -10;
+constexpr int kKernelPriorityDefault = 0;
+constexpr int kKernelPriorityOptimized = 10;
+constexpr int kKernelPriorityExperimental = 100;
+
 struct OpKernelRegistryResult {
   std::string op_type_name;
 
@@ -72,6 +77,7 @@ struct OpKernelRegistryResult {
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;
+  int32_t priority = kKernelPriorityDefault;
 };
 
 class OpKernelRegistry final {
@@ -94,6 +100,7 @@ class OpKernelRegistry final {
   OpKernelRegistryResult GetResult() { return result_; }
 
   OpKernelRegistry& SetCreateFn(OpKernelCreateFn fn);
+  OpKernelRegistry& SetPriority(int32_t priority);
 
  private:
   OpKernelRegistryResult result_;

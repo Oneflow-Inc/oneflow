@@ -64,8 +64,8 @@ __device__ __inline__ void Maxpool2dForwardComputeCLast(
     /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = detail::numeric_limits<T>::lower_bound();
 
-    for (IDX i = hstart; i < hend; i++) {
-      for (IDX j = wstart; j < wend; j++) {
+    for (IDX i = hstart; i < hend; i += dilation_h) {
+      for (IDX j = wstart; j < wend; j += dilation_w) {
         const IDX window_idx = i * x_width * n_channel + j * n_channel + c;
         const IDX search_idx = x_start_idx + window_idx;
         T val = src[search_idx];

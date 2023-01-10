@@ -45,20 +45,30 @@ void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::stri
   }
 }
 
-void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<const Operator> sole_op = op();
-  size_t mem_block_num = RegstNum4OpSameOutputBlob(sole_op->op_conf().op_type_case());
-  if (sole_op->op_conf().has_user_conf()) {
-    const std::string& op_type_name = sole_op->op_conf().user_conf().op_type_name();
+size_t RegstNum4Op(const Operator& sole_op) {
+  size_t mem_block_num = RegstNum4OpSameOutputBlob(sole_op.op_conf().op_type_case());
+  if (sole_op.op_conf().has_user_conf()) {
+    const std::string& op_type_name = sole_op.op_conf().user_conf().op_type_name();
     const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
     CHECK(op_reg_result != nullptr) << "op_type_name " << op_type_name << " not register";
     if (op_reg_result->same_output_regst_num > 0) {
       mem_block_num = op_reg_result->same_output_regst_num;
     }
+    if (IsClassRegistered<std::string, RuntimeRegstNum4OpSameOutputBlob>(op_type_name)) {
+      std::unique_ptr<RuntimeRegstNum4OpSameOutputBlob> ptr;
+      ptr.reset(NewObj<std::string, RuntimeRegstNum4OpSameOutputBlob>(op_type_name));
+      mem_block_num = *ptr;
+    }
     if (op_type_name == "identity_buffer") {
-      mem_block_num = user_op::UserOpConfWrapper(sole_op->op_conf()).attr<int64_t>("buffer_size");
+      mem_block_num = user_op::UserOpConfWrapper(sole_op.op_conf()).attr<int64_t>("buffer_size");
     }
   }
+  return mem_block_num;
+}
+
+void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  std::shared_ptr<const Operator> sole_op = op();
+  size_t mem_block_num = RegstNum4Op(*sole_op);
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op
 

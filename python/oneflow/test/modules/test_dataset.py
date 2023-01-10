@@ -87,7 +87,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestConsistentOFRecordModule(flow.unittest.TestCase):
+class TestGlobalOFRecordModule(flow.unittest.TestCase):
     def test_global_record(test_case):
         batch_size = 1
         color_space = "RGB"

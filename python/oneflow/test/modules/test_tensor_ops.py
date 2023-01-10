@@ -18,20 +18,13 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from random import shuffle
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-
-
-def _test_type_as(test_case, shape, device, src_dtype, tgt_dtype):
-    np_input = np.random.rand(*shape)
-    input = flow.tensor(np_input, dtype=src_dtype, device=device)
-    target = flow.tensor(np_input, dtype=tgt_dtype, device=device)
-    input = input.type_as(target)
-    test_case.assertEqual(input.dtype, target.dtype)
 
 
 def _test_is_floating_point(test_case, shape, device, dtype):
@@ -154,6 +147,16 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.long()
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_long_with_non_contiguous_input(test_case):
+        device = random_device()
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        input = random_tensor(ndim=4).to(device)
+        x = input.permute(permute_list)
+        y = x.long()
+        return y
+
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_int(test_case):
         device = random_device()
@@ -210,12 +213,36 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.double()
         return y
 
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool_0dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_bool_with_non_contiguous_input(test_case):
+        device = random_device()
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        input = random_tensor(ndim=4).to(device)
+        x = input.permute(permute_list)
+        y = x.bool()
+        return y
+
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFalse"
     )
     def test_item(test_case):
         device = random_device()
@@ -228,7 +255,7 @@ class TestTensorOps(flow.unittest.TestCase):
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFalse"
     )
     def test_item_0dim(test_case):
         device = random_device()
@@ -241,7 +268,7 @@ class TestTensorOps(flow.unittest.TestCase):
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFalse"
     )
     def test_tolist(test_case):
         device = random_device()
@@ -254,7 +281,7 @@ class TestTensorOps(flow.unittest.TestCase):
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFalse"
     )
     def test_tolist_0dim(test_case):
         device = random_device()
@@ -262,14 +289,12 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.tolist())
         return y
 
+    @autotest()
     def test_type_as(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        arg_dict["tgt_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        for arg in GenArgList(arg_dict):
-            _test_type_as(test_case, *arg)
+        input = random_tensor().to(random_device())
+        target = random_tensor().to(random_device())
+        input = input.type_as(target)
+        return input
 
     def test_is_floating_point(test_case):
         arg_dict = OrderedDict()
@@ -417,6 +442,7 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.IntTensor: [flow.int32, flow.device("cpu")],
             flow.LongTensor: [flow.int64, flow.device("cpu")],
             flow.HalfTensor: [flow.float16, flow.device("cpu")],
+            flow.Tensor: [flow.float32, flow.device("cpu")],
             flow.FloatTensor: [flow.float32, flow.device("cpu")],
             flow.DoubleTensor: [flow.float64, flow.device("cpu")],
             flow.cuda.CharTensor: [flow.int8, flow.device("cuda")],
@@ -447,6 +473,18 @@ class TestTensorOps(flow.unittest.TestCase):
         ]
         for arg in GenArgList(arg_dict):
             _test_type_noargs(test_case, *arg)
+
+    @autotest(n=3, auto_backward=False)
+    def test_bincount(test_case):
+        device = random_device()
+        len = random(1, 100)
+        input = random_tensor(1, len, dtype=int).to(device)
+        weight = random_tensor(1, len, dtype=float).to(device)
+        min_length = random(1, 100) | nothing()
+        return (
+            input.bincount(minlength=min_length),
+            input.bincount(weight, minlength=min_length),
+        )
 
 
 if __name__ == "__main__":

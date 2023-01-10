@@ -20,12 +20,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct Pad2dCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::vector<int64_t> paddings;
+struct PadNdCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+  std::vector<int64_t> paddings{};
 };
 
-class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
+class PadNd : public OpExprGradFunction<PadNdCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -34,7 +34,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(Pad2dCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(PadNdCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
@@ -50,9 +50,9 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
   AttrMap base_attrs_;
 };
 
-class ReflectionPad2d : public Pad2d {
+class ReflectionPadNd : public PadNd {
  public:
-  Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PadNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
@@ -64,9 +64,9 @@ class ReflectionPad2d : public Pad2d {
   }
 };
 
-class ReplicationPad2d : public Pad2d {
+class ReplicationPadNd : public PadNd {
  public:
-  Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PadNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
@@ -121,8 +121,10 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("pad", ConstantPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
-REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad1d", ReflectionPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad1d", ReplicationPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPadNd);
 
 }  // namespace one
 }  // namespace oneflow

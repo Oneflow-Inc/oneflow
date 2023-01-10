@@ -108,25 +108,18 @@ Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_sta
   return ss.str();
 }
 
-// the error_summary and msg in error proto
-std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<ErrorProto>& error) {
-  std::stringstream ss;
-  if (error->has_error_summary()) { ss << error->error_summary(); }
-  if (error->has_msg()) { ss << (ss.str().size() != 0 ? "\n" + error->msg() : error->msg()); }
-  return ss.str();
-}
-
 // the msg in error type instance.
-Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error) {
-  CHECK_NE_OR_RETURN(error->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET)
+Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<StackedError>& error) {
+  const auto& error_proto = error->error_proto();
+  CHECK_NE_OR_RETURN(error_proto->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET)
       << Error::RuntimeError() << "Parse error failed, unknown error type";
   std::stringstream ss;
-  const google::protobuf::Descriptor* error_des = error->GetDescriptor();
+  const google::protobuf::Descriptor* error_des = error_proto->GetDescriptor();
   const google::protobuf::OneofDescriptor* oneof_field_des =
       error_des->FindOneofByName("error_type");
-  const google::protobuf::Reflection* error_ref = error->GetReflection();
+  const google::protobuf::Reflection* error_ref = error_proto->GetReflection();
   const google::protobuf::FieldDescriptor* field_des =
-      error_ref->GetOneofFieldDescriptor(*error, oneof_field_des);
+      error_ref->GetOneofFieldDescriptor(*error_proto, oneof_field_des);
   CHECK_OR_RETURN(field_des != nullptr);
   ss << "Error Type: " << field_des->full_name();
   return ss.str();
@@ -134,20 +127,17 @@ Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error
 
 }  // namespace
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorProto>& error) {
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>& error) {
   std::stringstream ss;
+  ss << error->error_proto()->msg();
+  ss << error->error_proto()->frame_msg();
   // Get msg from stack frame of error proto
-  for (auto stack_frame = error->mutable_stack_frame()->rbegin();
-       stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
+  for (auto iter = error->stack_frame().rbegin(); iter < error->stack_frame().rend(); iter++) {
+    auto stack_frame = *iter;
     ss << FormatFileOfStackFrame(stack_frame->file()) << FormatLineOfStackFrame(stack_frame->line())
        << FormatFunctionOfStackFrame(stack_frame->function())
-       << *JUST(FormatMsgOfStackFrame(stack_frame->error_msg(),
-                                      stack_frame == error->mutable_stack_frame()->rend() - 1));
-  }
-  // Get msg from error summary and msg of error proto
-  std::string error_summary_and_msg_of_error_proto = FormatErrorSummaryAndMsgOfErrorProto(error);
-  if (error_summary_and_msg_of_error_proto.size() != 0) {
-    ss << "\n" << error_summary_and_msg_of_error_proto;
+       << *JUST(FormatMsgOfStackFrame(stack_frame->code_text(),
+                                      iter == error->stack_frame().rend() - 1));
   }
   // Get msg from error type of error proto
   std::string msg_of_error_type = *JUST(FormatMsgOfErrorType(error));

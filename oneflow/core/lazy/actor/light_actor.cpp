@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
 #ifdef WITH_CUDA
 
@@ -328,10 +328,16 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         Regst* regst =
             index2state_.Get(regst_desc_id_index_.Lookup(regst_desc_id_it->second)).regst;
         if (regst == nullptr) {
+          LOG(WARNING) << "null regst found, op:"
+                       << node.kernel_conf().op_attribute().op_conf().name();
           CHECK(kernel_info_[0]->bn_in_op2blob.emplace(bn, nullptr).second);
           continue;
         }
         Blob* blob = regst->GetBlobByLbi(pair.second);
+        if (!blob) {
+          LOG(WARNING) << "null blob found, op: "
+                       << node.kernel_conf().op_attribute().op_conf().name();
+        }
         CHECK(kernel_info_[0]->bn_in_op2blob.emplace(bn, blob).second);
       }
     }
@@ -545,6 +551,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    CHECK_JUST_MSG(kernel_ctx->stream()->GetAsyncError(), kernel->op_conf().name());
     Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForward(kernel_ctx, kernel);

@@ -276,9 +276,9 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(out_tensor->data_type()));
+  const user_op::TensorDesc& out_tensor = ctx->OutputTensorDesc("out", 0);
+  return GetCudaAlignedSize(out_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor.data_type()));
 }
 
 template<typename T>
@@ -348,9 +348,9 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
 };
 
 size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in_tensor = ctx->OutputTensorDesc("in", 0);
-  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(in_tensor->data_type()));
+  const user_op::TensorDesc& in_tensor = ctx->OutputTensorDesc("in", 0);
+  return GetCudaAlignedSize(in_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor.data_type()));
 }
 
 template<typename T>
@@ -528,6 +528,9 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
+#endif
 
 #define REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(dtype)                              \
   REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter_noncontinuous")                     \
@@ -544,6 +547,9 @@ REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int64_t)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(float)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(double)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(float16)
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(nv_bfloat16)
+#endif
 
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
@@ -560,6 +566,9 @@ REGISTER_S2S_KERNEL(int64_t)
 REGISTER_S2S_KERNEL(float)
 REGISTER_S2S_KERNEL(double)
 REGISTER_S2S_KERNEL(float16)
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+REGISTER_S2S_KERNEL(nv_bfloat16)
+#endif
 
 REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_reduce");
 REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_reduce_scatter");

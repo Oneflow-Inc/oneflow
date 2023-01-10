@@ -30,7 +30,9 @@ Maybe<void> CheckShapeLike(const user_op::TensorDesc* tensor_desc,
 }
 Maybe<void> CheckDataTypeLike(const user_op::TensorDesc* tensor_desc,
                               const user_op::TensorDesc* like) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type());
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_desc->data_type())
+      << ", but got " << DataType_Name(like->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -41,7 +43,9 @@ Maybe<void> CheckScalarShape(const user_op::TensorDesc* tensor_desc) {
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const DataType data_type) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_desc->data_type())
+      << ", but got " << DataType_Name(data_type);
   return Maybe<void>::Ok();
 }
 
@@ -81,7 +85,9 @@ Maybe<void> CheckIndexedSlicesModelDiffDataType(const user_op::TensorDesc* model
                                                 const user_op::TensorDesc* model_diff_indices,
                                                 const user_op::TensorDesc* model_diff_values) {
   CHECK_OR_RETURN(IsIndexDataType(model_diff_indices->data_type()));
-  CHECK_EQ_OR_RETURN(model->data_type(), model_diff_values->data_type());
+  CHECK_EQ_OR_RETURN(model->data_type(), model_diff_values->data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(model->data_type()) << ", but got "
+      << DataType_Name(model_diff_values->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -93,6 +99,10 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
   }
   JUST(CheckLearningRateShape(ctx));
+  if (ctx->has_input("model_copy", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_copy", 0).shape(), shape)
+        << "Model copy shape should be equal to Model shape. ";
+  }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -182,6 +192,10 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
+  if (ctx->has_input("model_copy", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_copy", 0).shape(), shape)
+        << "Model copy shape should be equal to Model shape. ";
+  }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -300,6 +314,28 @@ Maybe<void> InferFtrlUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferAdadeltaUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  const user_op::TensorDesc& square_avgs = ctx->InputTensorDesc("square_avgs", 0);
+  const user_op::TensorDesc& acc_deltas = ctx->InputTensorDesc("acc_deltas", 0);
+  JUST(CheckShapeLike(&model_diff, &model));
+  JUST(CheckShapeLike(&square_avgs, &model));
+  JUST(CheckShapeLike(&acc_deltas, &model));
+  JUST(CheckLearningRateShape(ctx));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferAdadeltaUpdateDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& square_avgs = ctx->InputTensorDesc("square_avgs", 0);
+  const user_op::TensorDesc& acc_deltas = ctx->InputTensorDesc("acc_deltas", 0);
+  JUST(CheckDataTypeLike(&square_avgs, &model));
+  JUST(CheckDataTypeLike(&acc_deltas, &model));
+  JUST(CheckLearningRateDataType(ctx));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -315,6 +351,9 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
   if (conf.has_input("max_v", 0)) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "max_v", 0));
+  }
+  if (conf.has_input("model_copy", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", 0));
   }
   return Maybe<void>::Ok();
 }
@@ -337,6 +376,9 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 Maybe<void> SgdInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
+  if (conf.has_input("model_copy", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", 0));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -384,6 +426,14 @@ Maybe<void> FtrlInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "accumulate", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "z", 0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AdadeltaInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                     const user_op::UserOpConfWrapper& conf) {
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "square_avgs", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "acc_deltas", 0));
   return Maybe<void>::Ok();
 }
 
@@ -468,11 +518,14 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> SgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Broadcast(ctx->inputs())
-        .Split(user_op::OpArg("model", 0), axis)
-        .Split(user_op::OpArg("model_diff", 0), axis)
-        .Build();
+    auto builder = ctx->NewBuilder()
+                       .Broadcast(ctx->inputs())
+                       .Split(user_op::OpArg("model", 0), axis)
+                       .Split(user_op::OpArg("model_diff", 0), axis);
+    if (ctx->user_op_conf().has_input("model_copy", 0)) {
+      builder.Split(user_op::OpArg("model_copy", 0), axis);
+    }
+    builder.Build();
   }
   return Maybe<void>::Ok();
 }
@@ -615,7 +668,11 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
     split_args.emplace_back("m", 0);
     split_args.emplace_back("v", 0);
     if (ctx->user_op_conf().has_input("max_v", 0)) { split_args.emplace_back("max_v", 0); }
-    ctx->NewBuilder().Broadcast(ctx->inputs()).Split(split_args, axis).Build();
+    auto builder = ctx->NewBuilder().Broadcast(ctx->inputs()).Split(split_args, axis);
+    if (ctx->user_op_conf().has_input("model_copy", 0)) {
+      builder.Split(user_op::OpArg("model_copy", 0), axis);
+    }
+    builder.Build();
   }
   return Maybe<void>::Ok();
 }
@@ -731,7 +788,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("train_step", 0));
   return Maybe<void>::Ok();
 }
 
@@ -745,7 +802,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kFloat;
+  ctx->SetOutputDType("out", 0, DataType::kFloat);
   return Maybe<void>::Ok();
 }
 
@@ -849,6 +906,37 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> FtrlUpdateOp::InferDataType(user_op::InferContext* ctx) {
   return InferFtrlUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> AdadeltaUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdadeltaInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> AdadeltaUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferAdadeltaUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdadeltaUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdadeltaUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("square_avgs", 0), axis)
+        .Split(user_op::OpArg("acc_deltas", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdadeltaUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferAdadeltaUpdateDataType(ctx);
 }
 
 }  // namespace oneflow

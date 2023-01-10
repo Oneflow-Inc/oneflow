@@ -26,8 +26,8 @@ namespace oneflow {
   const int64_t in_size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
   for (int64_t i = 0; i < in_size; ++i) {
-    *ctx->OutputShape("out", i) = ctx->InputShape("in", i);
-    *ctx->IsDynamic4ArgNameAndIndex("out", i) = ctx->InputIsDynamic("in", i);
+    ctx->SetOutputShape("out", i, ctx->InputShape("in", i));
+    ctx->SetIsDynamic4ArgNameAndIndex("out", i, ctx->InputIsDynamic("in", i));
   }
   return Maybe<void>::Ok();
 }
@@ -37,7 +37,7 @@ namespace oneflow {
 /*static*/ Maybe<void> TupleIdentityOp::InferDataType(user_op::InferContext* ctx) {
   const int64_t in_size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
-  for (int64_t i = 0; i < in_size; ++i) { *ctx->OutputDType("out", i) = ctx->InputDType("in", i); }
+  for (int64_t i = 0; i < in_size; ++i) { ctx->SetOutputDType("out", i, ctx->InputDType("in", i)); }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TupleIdentityOp::InferSbpSignature(
@@ -69,17 +69,5 @@ namespace oneflow {
   CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("tuple_identity")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      int32_t in_size = op.input_size("in");
-      for (int i = 0; i < in_size; ++i) {
-        if (op.NeedGenGradTensor4OpInput("in", i)) {
-          op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", i), "in", i);
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

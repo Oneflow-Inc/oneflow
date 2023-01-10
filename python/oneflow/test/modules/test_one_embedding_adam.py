@@ -19,6 +19,9 @@ from collections import OrderedDict
 import tempfile
 
 import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -36,6 +39,7 @@ def compare_with_numpy_adam(
     do_bias_correction,
     beta1,
     beta2,
+    use_optional_tensor,
 ):
 
     num_rows = 500
@@ -53,27 +57,40 @@ def compare_with_numpy_adam(
     init_value = np.random.uniform(size=(num_rows, line_size)).astype(np.float32)
 
     down_scale_by = 10
+
+    """
+    In OneFlow's optimizer, learning_rate is passed by attr in eager mode, and passed by tensor in lazy mode.
+    in this test, if use_optional_tensor is True, we also pass lr_tensor/down_scale_by_tensor/skip_if tensor for unittest.
+    if use_optional_tensor is False, we only pass lr by attr, and not have down_scale_by_tensor/skip_if, so mul down_scale_by to scale and skip skip_if's test.
+    """
+    bias_correction1_val = 1.0
+    bias_correction2_val = 1.0
+    if use_optional_tensor:
+        scale_val = scale
+    else:
+        # if pass as attr instead of tensor, mul down_scale_by to scale_value
+        scale_val = scale / down_scale_by
     epsilon = 1e-5
 
-    def adam_by_oneflow():
-        unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
-            "cuda"
-        )
-        lr_tensor = flow.tensor(
-            np.array(learning_rate).reshape(1,).astype(np.float32)
-        ).to("cuda")
-        down_scale_by_tensor = flow.tensor(
-            np.array(down_scale_by).astype(np.float32)
-        ).to("cuda")
+    class TestGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
 
-        def train_one_iter(
-            num_valid,
+        def build(
+            self,
+            ids,
             unique_embeddings,
             embedding_grad,
+            lr_tensor,
+            down_scale_by_tensor,
             skip_if,
             bias_correction1,
             bias_correction2,
         ):
+            # add id shuffle to set num_unique in op, and use it in update
+            (_, _, num_valid, _, _, _,) = flow._C.one_embedding_id_shuffle(
+                ids, table_ids=None, num_tables=1, embedding_name=""
+            )
             return flow._C.one_embedding_adam_update(
                 num_valid,
                 unique_embeddings,
@@ -83,23 +100,69 @@ def compare_with_numpy_adam(
                 skip_if,
                 bias_correction1,
                 bias_correction2,
-                scale,
+                learning_rate,
+                scale_val,
                 weight_decay,
                 beta1,
                 beta2,
+                bias_correction1_val,
+                bias_correction2_val,
                 epsilon,
                 do_bias_correction,
+                line_size,
+                embedding_size,
+                embedding_name="",
+            )
+
+    graph = TestGraph()
+
+    def adam_by_oneflow():
+        unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
+            "cuda"
+        )
+        if use_optional_tensor:
+            lr_tensor = flow.tensor(
+                np.array(learning_rate).reshape(1,).astype(np.float32)
+            ).to("cuda")
+            down_scale_by_tensor = flow.tensor(
+                np.array(down_scale_by).reshape(1,).astype(np.float32)
+            ).to("cuda")
+        else:
+            lr_tensor = None
+            down_scale_by_tensor = None
+
+        def train_one_iter(
+            ids,
+            unique_embeddings,
+            embedding_grad,
+            skip_if,
+            bias_correction1,
+            bias_correction2,
+        ):
+            return graph(
+                ids,
+                unique_embeddings,
+                embedding_grad,
+                lr_tensor,
+                down_scale_by_tensor,
+                skip_if,
+                bias_correction1,
+                bias_correction2,
             )
 
         for i in range(1, train_iters):
-            num_valid_tensor = flow.tensor(
-                np.array(num_valid_seq[i]).reshape(1,).astype(np.int32)
-            ).to("cuda")
+            np_ids = np.zeros(num_rows)
+            np_ids[0 : num_valid_seq[i]] = np.arange(num_valid_seq[i])
+            # add ids of num_valid unique to use id_shuffle out_put num_unique as grad input
+            ids = flow.tensor(np_ids.astype(np.int32)).to("cuda")
             grad_tensor = flow.tensor(random_grad_seq[i]).to("cuda")
-            skip_if_tensor = flow.tensor(
-                np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
-            ).to("cuda")
-            if do_bias_correction:
+            if use_optional_tensor:
+                skip_if_tensor = flow.tensor(
+                    np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
+                ).to("cuda")
+            else:
+                skip_if_tensor = None
+            if do_bias_correction and use_optional_tensor:
                 bias_correction1 = 1.0 - np.power(beta1, i)
                 bias_correction2 = 1.0 - np.power(beta2, i)
                 bias_correction1_tensor = flow.tensor(
@@ -112,7 +175,7 @@ def compare_with_numpy_adam(
                 bias_correction1_tensor = None
                 bias_correction2_tensor = None
             updated_tensor = train_one_iter(
-                num_valid_tensor,
+                ids,
                 unique_embeddings_tensor,
                 grad_tensor,
                 skip_if_tensor,
@@ -135,7 +198,7 @@ def compare_with_numpy_adam(
             bias_correction1 = 1.0
             bias_correction2 = 1.0
 
-            if do_bias_correction:
+            if do_bias_correction and use_optional_tensor:
                 bias_correction1 = 1.0 - np.power(beta1, step)
                 bias_correction2 = 1.0 - np.power(beta2, step)
 
@@ -156,7 +219,7 @@ def compare_with_numpy_adam(
             return (model, state_m, state_v)
 
         for i in range(1, train_iters):  # if step = 0, bias_correction2 is 0
-            if skip_if_seq[i] > 0:
+            if skip_if_seq[i] > 0 and use_optional_tensor:
                 pass
             else:
                 (x, m, v) = np_train_one_iter(
@@ -192,6 +255,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["beta1"] = [0.9, 0.8]
         arg_dict["beta2"] = [0.9, 0.8]
+        arg_dict["use_optional_tensor"] = [True, False]
 
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_adam(test_case, **arg)

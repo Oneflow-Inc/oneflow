@@ -55,6 +55,32 @@ class TestBroadcastOps(flow.unittest.TestCase):
                 in str(ctx.exception)
             )
 
+    def test_broadcast_shapes(test_case):
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = flow.broadcast_shapes((2,), (3, 3), (1, 1, 1))
+        test_case.assertTrue(
+            "input and other can't be broadcasted to a single shape."
+            in str(ctx.exception)
+        )
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = flow.broadcast_shapes()
+        test_case.assertTrue("shapes should not be empty." in str(ctx.exception))
+
+    def test_broadcast_tensors(test_case):
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y, z = flow.broadcast_tensors(flow.ones(2, 3), flow.ones(4, 3))
+        test_case.assertTrue(
+            "input and other can't be broadcasted to a single shape."
+            in str(ctx.exception)
+        )
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = flow.broadcast_tensors()
+        test_case.assertTrue("tensors should not be empty." in str(ctx.exception))
+
+    def test_broadcast_to(test_case):
+        # see flow.expand, because broadcast_to is an alias of flow.expand
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

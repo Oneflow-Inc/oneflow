@@ -32,7 +32,6 @@ class _TestModuleDiffHierarchy(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -63,7 +62,6 @@ class _TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -101,17 +99,20 @@ class _TestGraph(nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
         x = flow.ones(
             4,
             12,
             4,
-            12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
             placement=flow.placement(
                 type="cuda", ranks=np.array(range(4)).reshape(2, 2)
             ),
         )
+
+        flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_hierarchy = _TestModuleDiffHierarchy()
         graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)

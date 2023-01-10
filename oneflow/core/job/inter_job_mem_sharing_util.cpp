@@ -179,9 +179,9 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
   for (const auto& pair : *chunk_id2chunk) {
     const ChunkProto& chunk = pair.second;
     const MemoryCase& mem_case = chunk.mem_case();
-    // only reused mem in cuda device
-    if (mem_case.has_host_mem()) { continue; }
-    int64_t mzuid = MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), mem_case);
+    // NOTE(zwx): do not reuse mem on cpu
+    if (memory::IsHostMem(mem_case)) { continue; }
+    int64_t mzuid = memory::GetUniqueMemCaseId(chunk.machine_id(), mem_case);
     CHECK_EQ(chunk.job_id_size(), 1);
     CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
   }
@@ -275,8 +275,7 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
     CHECK_EQ(separated_header_mem_size, right_rt_regst.TotalSeparatedHeaderByteSize4AllRegst());
     int64_t merged_header_id = lhs->separated_header_mem_block_id();
     int64_t erased_header_id = rhs->separated_header_mem_block_id();
-    MemoryCase header_mem_case =
-        MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(lhs->mem_case());
+    MemoryCase header_mem_case = memory::GetPinnedHostMemoryCase(lhs->mem_case());
     MemBlockProto* merged_header_block =
         CheckValidAndGetMemBlock(merged_header_id, separated_header_mem_size, header_mem_case);
     MemBlockProto* erased_header_block =
@@ -314,10 +313,8 @@ void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs,
 
         MergeSharedMemBlockR2L(first_regst_desc, regst_desc, mem_block_id2mem_block);
 
-        MemoryCase common_mem_case;
-        CHECK(MemoryCaseUtil::GetCommonMemoryCase(common_mem_case_vec.at(i), regst_desc->mem_case(),
-                                                  &common_mem_case));
-        common_mem_case_vec[i] = common_mem_case;
+        CHECK(memory::EqualsIgnorePinnedDevice(common_mem_case_vec.at(i), regst_desc->mem_case()));
+        common_mem_case_vec[i] = regst_desc->mem_case();
       }
     }
     for (const auto& pair : job_id2same_op_name_sorted_task_protos) {

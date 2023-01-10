@@ -67,5 +67,6 @@ struct ClipKernelUtil<DeviceType::kCUDA, T> {
       dtype*);
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CLIP_KERNEL_UTIL_CUDA, ARITHMETIC_DATA_TYPE_SEQ)
+INITIATE_CLIP_KERNEL_UTIL_CUDA(half, DataType::kFloat16)
 
 }  // namespace oneflow

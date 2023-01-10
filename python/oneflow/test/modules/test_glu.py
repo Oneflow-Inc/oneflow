@@ -43,6 +43,11 @@ class TestGluModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @profile(torch.nn.functional.glu)
+    def profile_glu(test_case):
+        input = torch.ones(1000, 1000)
+        torch.nn.functional.glu(input)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -103,6 +103,12 @@ class TestChunk(flow.unittest.TestCase):
         z = torch.cat(y, dim=-1)
         return z
 
+    @profile(torch.chunk)
+    def profile_chunk(test_case):
+        torch.chunk(torch.ones(16), 4)
+        torch.chunk(torch.ones(100000), 5)
+        torch.chunk(torch.ones(100, 100), 5, dim=1)
+
 
 if __name__ == "__main__":
     unittest.main()

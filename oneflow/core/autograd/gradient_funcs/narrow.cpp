@@ -71,8 +71,8 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
             functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device()), /*pin_memory=*/false));
       } else {
         like = JUST(
-            functional::ConsistentEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
-                                        *JUST(private_details::RawGetSbpList(JUST(dy->nd_sbp())))));
+            functional::GlobalEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
+                                    *JUST(private_details::RawGetSbpList(JUST(dy->nd_sbp())))));
       }
       in_grads->resize(1);
       in_grads->at(0) = JUST(functional::NarrowGrad(dy, like, ctx->dim, ctx->start, ctx->length));

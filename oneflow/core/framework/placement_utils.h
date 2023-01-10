@@ -26,9 +26,9 @@ namespace oneflow {
 Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
                                                       const std::string& device_type);
 
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor);
+Maybe<void> TouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor);
 
-constexpr auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
+constexpr auto* CheckMetaConsistency = DECORATE(&TouchGlobalTensor, CheckGlobalTensorMeta);
 
 }  // namespace oneflow
 

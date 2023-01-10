@@ -252,9 +252,9 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 };
 
 size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(out_tensor->data_type()));
+  const user_op::TensorDesc& out_tensor = ctx->OutputTensorDesc("out", 0);
+  return GetCudaAlignedSize(out_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor.data_type()));
 }
 
 template<typename T>
@@ -506,6 +506,9 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
+#endif
 
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                             \
@@ -522,6 +525,9 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(int64_t)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(float)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(double)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(float16)
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(nv_bfloat16)
+#endif
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
     .SetCreateFn<NcclLogical2DSameDim1AllReduce>()

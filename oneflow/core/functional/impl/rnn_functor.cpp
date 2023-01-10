@@ -34,8 +34,8 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
@@ -81,7 +81,7 @@ Maybe<void> check_rnn_cell_forward_hidden(const std::shared_ptr<one::Tensor>& in
 Maybe<void> check_attributes(const std::shared_ptr<one::Tensor>& input, const TensorTuple& params,
                              const TensorTuple& hiddens, bool check_dtype = false) {
   DeviceType input_device{};
-  if (input->is_consistent()) {
+  if (input->is_global()) {
     input_device = JUST(input->parallel_desc())->device_type();
   } else {
     input_device = JUST(input->device())->enum_type();
@@ -92,7 +92,7 @@ Maybe<void> check_attributes(const std::shared_ptr<one::Tensor>& input, const Te
   auto check_tensors = [&](const std::string& name,
                            const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     DeviceType t_device{};
-    if (t->is_consistent()) {
+    if (t->is_global()) {
       t_device = JUST(t->parallel_desc())->device_type();
     } else {
       t_device = JUST(t->device())->enum_type();
@@ -225,7 +225,7 @@ struct GRUCell {
                            const std::shared_ptr<one::Tensor>& hidden, const cell_params& params,
                            bool pre_compute_input = false) const {
     DeviceType input_device{};
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       input_device = JUST(input->parallel_desc())->device_type();
     } else {
       input_device = JUST(input->device())->enum_type();
@@ -278,7 +278,7 @@ struct LSTMCell {
     const std::shared_ptr<Tensor>& cx = hidden[1];
 
     DeviceType input_device{};
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       input_device = JUST(input->parallel_desc())->device_type();
     } else {
       input_device = JUST(input->device())->enum_type();
@@ -773,9 +773,11 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
 
   std::vector<int64_t> batch_sizes_vec;
   batch_sizes_vec.resize(batch_sizes->nelement());
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<int64_t>(batch_sizes_vec.data(), batch_sizes_vec.size());
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    SyncAutoMemcpy(stream, batch_sizes_vec.data(), eager_blob_object->dptr(),
+                   batch_sizes_vec.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                   eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(batch_sizes, callback, "const"));
   int64_t num_steps = batch_sizes->shape()->At(0);
@@ -1071,9 +1073,11 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
 
   std::vector<int64_t> batch_sizes_vec;
   batch_sizes_vec.resize(batch_sizes->nelement());
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<int64_t>(batch_sizes_vec.data(), batch_sizes_vec.size());
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    SyncAutoMemcpy(stream, batch_sizes_vec.data(), eager_blob_object->dptr(),
+                   batch_sizes_vec.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                   eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(batch_sizes, callback, "const"));
   int64_t num_steps = batch_sizes->shape()->At(0);
@@ -1313,10 +1317,11 @@ class PackPaddedSequenceFunctor {
     int64_t batch_size = new_input->shape()->At(1);
     std::vector<int64_t> lengths_vec;
     lengths_vec.resize(lengths->nelement());
-    const auto& callback = [&](uint64_t of_blob_ptr) {
-      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-      of_blob->AutoMemCopyTo<int64_t>(
-          lengths_vec.data(), lengths_vec.size());  // copy 1 scalar(int64_t) tensor's value to max
+    const auto& callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, lengths_vec.data(), eager_blob_object->dptr(),
+                     lengths_vec.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                     eager_blob_object->mem_case());
     };
     JUST(SyncAccessTensorWithTimeOut(lengths, callback, "const"));
 
@@ -1394,10 +1399,11 @@ class PackPaddedSequenceFunctor {
     const Shape ls(lsv);
     std::shared_ptr<Tensor> batch_sizes_t =
         JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()), false));
-    const auto& callback2 = [&](uint64_t of_blob_ptr) {
-      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-      of_blob->AutoMemCopyFrom<int64_t>(
-          batch_sizes.data(), batch_sizes.size());  // copy 1 scalar(int64_t) tensor's value to max
+    const auto& callback2 = [&](ep::Stream* stream,
+                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), batch_sizes.data(),
+                     batch_sizes.size() * sizeof(int64_t), eager_blob_object->mem_case(),
+                     memory::MakeHostMemCase());  // copy 1 scalar(int64_t) tensor's value to max
     };
     JUST(SyncAccessTensorWithTimeOut(batch_sizes_t, callback2, "const"));
 

@@ -38,8 +38,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define POOL_DATA_TYPE_CPU_SEQ POOL_DATA_TYPE_SEQ
-
-#define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ
+#define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 
 typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 

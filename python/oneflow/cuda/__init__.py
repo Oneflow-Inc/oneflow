@@ -18,7 +18,7 @@ import oneflow as flow
 from oneflow.cuda.type_tensor import *
 from oneflow.cuda._utils import _get_device_index
 
-from typing import Union, Any
+from typing import Optional, Tuple, Union, Any
 
 
 def is_available() -> bool:
@@ -38,11 +38,66 @@ def current_device() -> int:
     return flow._oneflow_internal.GetCudaDeviceIndex()
 
 
+def get_device_properties(device: Union[flow.device, str, int] = None):
+    r"""Gets the properties of a device.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_properties.html.
+
+    Args:
+        device(oneflow.device or str or int): device for which to return the properties of the device.
+
+    Returns:
+        the properties of the device.
+    """
+    device = _get_device_index(device, optional=True)
+    return flow._oneflow_internal._get_device_properties(device)
+
+
+def get_device_capability(
+    device: Optional[Union[flow.device, str, int]] = None
+) -> Tuple[int, int]:
+    r"""Gets the cuda capability of a device.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_capability.html.
+
+    Args:
+        device (oneflow.device or int or str, optional): device for which to return the
+            device capability. It uses the current device, given by
+            :func:`~oneflow.cuda.current_device`, if :attr:`device` is ``None``
+            (default).
+
+    Returns:
+        tuple(int, int): the major and minor cuda capability of the device
+    """
+    device_prop = get_device_properties(device)
+    return device_prop.major, device_prop.minor
+
+
+def get_device_name(device: Optional[Union[flow.device, str, int]] = None) -> str:
+    r"""Gets the name of a device.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_name.html.
+
+    Args:
+        device (oneflow.device or int or str, optional): device for which to return the
+            name. It uses the current device, given by :func:`~oneflow.cuda.current_device`,
+            if :attr:`device` is ``None`` (default).
+
+    Returns:
+        str: the name of the device
+    """
+    return get_device_properties(device).name
+
+
 def manual_seed_all(seed) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+    r"""Sets the seed for generating random numbers on all GPUs.
     
-    Sets the seed for generating random numbers on all GPUs.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -54,10 +109,11 @@ def manual_seed_all(seed) -> None:
 
 
 def manual_seed(seed: int) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+    r"""Sets the seed for generating random numbers for the current GPU.
     
-    Sets the seed for generating random numbers for the current GPU.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -74,10 +130,11 @@ def manual_seed(seed: int) -> None:
 
 
 def set_device(device: Union[flow.device, str, int]) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html.
+    r"""Sets the current device.
     
-    Sets the current device.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.set_device.html.
+
     Usage of this function is discouraged in favor of :attr:`device`. In most
     cases it's better to use ``CUDA_VISIBLE_DEVICES`` environmental variable.
 
@@ -85,11 +142,16 @@ def set_device(device: Union[flow.device, str, int]) -> None:
         device (flow.device or int): selected device. This function is a no-op
             if this argument is negative.
     """
-    if flow.env.get_world_size() > 0:
-        raise ValueError("set_device() function is disabled in multi-device setting")
     device_idx = _get_device_index(device)
-    if device_idx >= 0:
-        flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
+    if device_idx < 0:
+        return
+    if flow.env.get_world_size() > 0:
+        if device_idx == flow.env.get_local_rank():
+            return
+        raise ValueError(
+            "Setting cuda device to a device whose index does not equal to the local rank is not supported."
+        )
+    flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
 
 
 def synchronize(device: Union[flow.device, str, int, None] = None) -> None:

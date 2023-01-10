@@ -56,6 +56,11 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
+template<>
+bfloat16 GetValue<bfloat16>(Scalar value) {
+  return static_cast<bfloat16>(GetValue<float>(value));
+}
+
 template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(ConstantPadParams<num_dims, IndexType> params, StorageType packed_pad_val) {
   ConstantPadKernel<num_dims, IndexType, StorageType>(params, packed_pad_val);
@@ -163,6 +168,7 @@ template<typename T>
 void SimplifyThenLaunch(size_t num_dims, const int64_t* src_dims, const void* src,
                         const int64_t* padding_before, const int64_t* padding_after, T pad_val,
                         void* dst) {
+  CHECK_GT(num_dims, 0) << "num_dims must greater than 0";
   CHECK_LE(num_dims, kMaxNumDims);
   int64_t simplified_dst_dims[kMaxNumDims];
   int64_t simplified_src_dims[kMaxNumDims];
