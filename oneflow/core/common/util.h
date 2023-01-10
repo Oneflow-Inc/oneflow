@@ -212,4 +212,4 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_UTIL_H_
+#endif  // ONEFLOW_CORE_COMMON_UTIL_H_

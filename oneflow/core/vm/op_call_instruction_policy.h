@@ -120,4 +120,4 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_VM_OP_CALL_INSTRUCTION_POLICY_H_
+#endif  // ONEFLOW_CORE_VM_OP_CALL_INSTRUCTION_POLICY_H_
