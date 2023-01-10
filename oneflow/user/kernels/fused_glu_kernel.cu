@@ -32,7 +32,6 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
-
 #if CUDA_VERSION >= 10020
 
 #if !defined(__clang__)
@@ -107,7 +106,7 @@ class RightActivationAndMul {
 
 #endif  // WITH_CUTLASS
 
-#endif // !defined(__clang__)
+#endif  // !defined(__clang__)
 
 namespace oneflow {
 
