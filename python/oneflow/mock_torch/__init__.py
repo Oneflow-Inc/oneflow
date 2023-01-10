@@ -119,15 +119,15 @@ class OneflowImporter(MetaPathFinder, Loader):
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
-                self.disable_mod_cache.update({k: v})
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.disable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.enable_mod_cache.items():
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.enable_mod_cache.items():
             sys.modules.update({k: v})
-            globals.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
         self.enable = True
 
     def _disable(self, globals):
@@ -135,15 +135,15 @@ class OneflowImporter(MetaPathFinder, Loader):
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
-                self.enable_mod_cache.update({k: v})
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.enable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.disable_mod_cache.items():
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.disable_mod_cache.items():
             sys.modules.update({k: v})
-            globals.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
         self.enable = False
 
 
