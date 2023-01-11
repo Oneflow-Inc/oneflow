@@ -314,8 +314,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
 }
 
 template<typename T>
-class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
-                                                  public user_op::CudaGraphSupport {
+class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel {
  public:
   FusedMatmulBiasAddReluDropoutKernel() = default;
   ~FusedMatmulBiasAddReluDropoutKernel() override = default;

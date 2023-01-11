@@ -392,7 +392,7 @@ struct MaskAndScaleFunctor<nv_bfloat16> {
 #endif
 
 template<typename T>
-class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class DropoutKernelGPU final : public user_op::OpKernel {
  public:
   DropoutKernelGPU() = default;
   ~DropoutKernelGPU() = default;
