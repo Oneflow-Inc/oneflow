@@ -44,13 +44,23 @@ using float16 = half_float::half;
 
 // Type Trait: extened IsScalarType
 
-template<typename T>
-struct IsScalarType<typename std::remove_cv<T>> final {
-  static const bool value = std::is_same<float16, T>::value
-#ifdef WITH_CUDA
-                            || std::is_same<half, T>::value
-#endif  // WITH_CUDA
-                            || std::is_same<bfloat16, T>::value;
+// template<typename T>
+// struct IsScalarType<typename std::remove_cv<T>> final {
+//   static const bool value = std::is_same<float16, T>::value
+// #ifdef WITH_CUDA
+//                             || std::is_same<half, T>::value
+// #endif  // WITH_CUDA
+//                             || std::is_same<bfloat16, T>::value;
+// };
+
+template<>
+struct IsScalarType<bfloat16> final {
+  static const bool value = true;
+};
+
+template<>
+struct IsScalarType<float16> final {
+  static const bool value = true;
 };
 
 // Type Trait: IsFloat16
