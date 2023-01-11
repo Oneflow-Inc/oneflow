@@ -1160,6 +1160,53 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mode,
+    r"""
+    oneflow.mode(input, dim=-1, keepdim=False)
+
+    Returns a namedtuple (values, indices) where values is the mode value of each row of 
+    the input tensor in the given dimension dim, i.e. a value which appears most often in 
+    that row, and indices is the index location of each mode value found.
+    
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+    
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce. Default: `-1`
+        keepdim (bool): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): the result tuple of two output
+        tensors (values, indices) 
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor([6, 2, 5, 3, 3, 5, 4, 3])
+        >>> result = flow.mode(x)
+        >>> result.values
+        tensor(3, dtype=oneflow.int64)
+        >>> result.indices
+        tensor(7, dtype=oneflow.int64)
+        >>> x = flow.Tensor([[2, 1, 2, 3], [2, 4, 3, 3]])
+        >>> result = flow.mode(x, dim=0)
+        >>> result.values
+        tensor([2., 1., 2., 3.], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 0, 0, 1], dtype=oneflow.int64)
+        
+    """,
+)
+
+add_docstr(
     oneflow.pow,
     r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
