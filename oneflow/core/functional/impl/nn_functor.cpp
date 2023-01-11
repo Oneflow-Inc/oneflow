@@ -17,10 +17,8 @@ limitations under the License.
 #include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -4764,21 +4762,6 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-// class BatchAddBatchMatMulFunctor {
-//  public:
-//   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-//                            const std::shared_ptr<Tensor>& batch1,
-//                            const std::shared_ptr<Tensor>& batch2, const bool& transpose_a,
-//                            const bool& transpose_b, const double& beta, const double& alpha) const {
-//     const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, transpose_a, transpose_b, alpha));
-//     if (beta == 0) { return bmm_result; }
-//     CHECK_EQ_OR_RETURN(input->ndim(), 3)
-//         << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << input->ndim();
-//     const auto& input_broadcast = JUST(BroadcastLike(input, bmm_result, {}));
-//     return Add(input_broadcast, bmm_result, beta, false);
-//   }
-// };
-
 class MultiHeadAttentionFunctor {
  public:
   Maybe<Tensor> qkv_projection(const std::shared_ptr<Tensor>& query,
@@ -5179,7 +5162,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  // m.add_functor<impl::BatchAddBatchMatMulFunctor>("BatchAddBatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
   m.add_functor<impl::VectorMatrixProductFunctor>("VectorMatrixProduct");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
