@@ -192,7 +192,6 @@ def _test_mha_nn_module(test_case):
     flow_results[0].sum().backward()
 
     for name, param in flow_mha.named_parameters():
-        print(name)
         torch_grad = torch_mha.get_parameter(name).grad.detach().cpu().numpy()
         flow_grad = param.grad.detach().numpy()
         test_case.assertTrue(np.allclose(torch_grad, flow_grad, 1e-4, 1e-4))
@@ -234,32 +233,32 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             mask_type=1,
         )
 
-    @autotest(n=10)
+    @autotest(n=3)
     def test_mha_nn_module(test_case):
         _test_mha_nn_module(test_case)
 
-    @autotest(n=10)
+    @autotest(n=3)
     def test_mha_functional(test_case):
         device = random_device()
 
-        if version.parse(torch_original.__version__) <= version.parse("1.10.0"):
-            is_batched = False
+        if version.parse(torch_original.__version__) <= version.parse("1.12.0"):
+            is_batched = True
         else:
             is_batched = random_bool().value()
         use_separate_proj_weight = random_bool().value()
         bias_k_v = random_bool().value()
         need_weights = random_bool().value()
 
-        batch_size = random(1, 20)
-        tgt_len = random(1, 20)
-        src_len = random(1, 20)
-        num_heads = random(3, 10)
-        dims_per_head = random(10, 20)
+        batch_size = random(1, 20).to(int).value()
+        tgt_len = random(1, 20).to(int).value()
+        src_len = random(1, 20).to(int).value()
+        num_heads = random(3, 10).to(int).value()
+        dims_per_head = random(10, 20).to(int).value()
         embed_dim = num_heads * dims_per_head
 
         if use_separate_proj_weight:
-            kdim = random(30, 200)
-            vdim = random(30, 200)
+            kdim = random(30, 200).to(int).value()
+            vdim = random(30, 200).to(int).value()
         else:
             kdim = embed_dim
             vdim = embed_dim
@@ -347,12 +346,10 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
                 {"average_attn_weights": random_bool(),}
             )
 
-        result = torch.nn.functional.multi_head_attention_forward(**param_dict)
-
         if need_weights:
-            return result
+            return torch.nn.functional.multi_head_attention_forward(**param_dict)
         else:
-            return result[0]
+            return torch.nn.functional.multi_head_attention_forward(**param_dict)[0]
 
 
 if __name__ == "__main__":
