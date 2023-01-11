@@ -21,6 +21,7 @@ import numpy as np
 
 import oneflow as flow
 from oneflow import nn
+import flowvision
 import oneflow.unittest
 
 
@@ -278,6 +279,35 @@ class TestDTR(flow.unittest.TestCase):
             del loss
             optimizer.step()
             optimizer.zero_grad()
+
+    @assert_no_small_piece_optimization
+    @memory_budget(220, 'cpu')
+    def test_bn_and_backward(self):
+        flow.manual_seed(0)
+        device = 'cpu'
+
+        model = flowvision.models.resnet18().to(device)
+        criterion = nn.CrossEntropyLoss().to(device)
+
+        for x in model.parameters():
+            x.grad = flow.zeros_like(x).to(device)
+        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
+        x = flow.rand(10, 3, 224, 224).to(device)
+        target = flow.randint(low=0, high=1000, size=(x.shape[0],)).to(device).to(flow.int32)
+        ITER_NUM = 5
+        for i in range(ITER_NUM):
+            output = model(x)
+            loss = criterion(output, target)
+            del output
+            if i == 4:
+                self.assertEqual(loss.numpy().item(), 0.6304041147232056)
+            loss.backward()
+            del loss
+            optimizer.step()
+            optimizer.zero_grad()
+        # check there is more than 10 recomputations each iteration
+        # so the correctness check makes sense.
+        self.assertGreater(flow._oneflow_internal.dtr.recomputation_num(), ITER_NUM * 10)
 
 
 if __name__ == "__main__":

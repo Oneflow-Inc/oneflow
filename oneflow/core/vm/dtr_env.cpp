@@ -43,7 +43,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     for (int j = 0; j < op->mut_inputs().size(); j++) {
       auto& x = op->mut_inputs()[j];
       if (x == nullptr) {
-        std::cout << "No." << j << " input of " << op->opkernel().op_type_name() << " is nullptr"
+        LOG(INFO) << "No." << j << " input of " << op->opkernel().op_type_name() << " is nullptr"
                   << std::endl;
         continue;
       }
@@ -58,7 +58,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     for (int j = 0; j < op->mut_outputs().size(); j++) {
       auto& y = op->mut_outputs()[j];
       if (y.lock() == nullptr) {
-        std::cout << "No." << j << " output of " << op->opkernel().op_type_name() << " is nullptr"
+        LOG(INFO) << "No." << j << " output of " << op->opkernel().op_type_name() << " is nullptr"
                   << std::endl;
         continue;
       }

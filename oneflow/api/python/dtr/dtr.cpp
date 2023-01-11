@@ -94,6 +94,8 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     return Maybe<void>::Ok();
   });
   m.def("clear_time", []() { Singleton<dtr::Env>::Get()->clear_time(); });
+  m.def("forced_eviction_num", []() { return Singleton<dtr::Env>::Get()->forced_eviction_num(); });
+  m.def("recomputation_num", []() { return Singleton<dtr::Env>::Get()->recomputation_num(); });
 }
 
 }  // namespace oneflow

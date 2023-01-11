@@ -115,8 +115,8 @@ struct OpCallInstructionUtil final {
         VLOG(2) << "storage id: " << x->tensor_storage()->id();
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false, true));
-        JUST(vm_stream->mut_stream_policy()->stream()->Sync());
-        CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
+        // JUST(vm_stream->mut_stream_policy()->stream()->Sync());
+        // CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
       x->tensor_storage()->Access();
     }

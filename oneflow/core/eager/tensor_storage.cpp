@@ -49,7 +49,20 @@ TensorStorage::~TensorStorage() {
 void TensorStorage::Evict(bool eager_eviction) {
   Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
   CHECK_JUST(dtr::DisjointSet::update_after_evict(this));
+  VLOG(1) << "evict storage " << id_
+          << ", compute op type: " << compute_op_->opkernel().op_type_name()
+          << ", eager_eviction: " << eager_eviction;
+  ;
   return Release();
+}
+
+std::vector<std::string> random_ops{"uniform", "uniform_int", "normal", "randperm"};
+
+bool TensorStorage::is_evictable() const {
+  return compute_op_ != nullptr
+         && std::find(random_ops.begin(), random_ops.end(), compute_op_->opkernel().op_type_name())
+                == random_ops.end()
+         && !eviction_disabled_;
 }
 
 OpCallInstructionPolicy TensorStorage::compute_op() const {

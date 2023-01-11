@@ -68,7 +68,7 @@ class TensorStorage {
   bool is_in_memory() const { return blob_bytes_ == 0 || blob_dptr_ != nullptr; }
   bool is_pinned() const { return num_pinned() > 0; }
   int32_t num_pinned() const { return num_pinned_; }
-  bool is_evictable() const { return compute_op_ != nullptr && !eviction_disabled_; }
+  bool is_evictable() const;
   void disable_eviction() { eviction_disabled_ = true; }
   bool eviction_disabled() const { return eviction_disabled_; }
   int64_t id() const { return id_; }
