@@ -161,6 +161,7 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
 //      in order to make distribution related cuda kernels to have the same output as pytorch
 //      when setting the same seed.
 uint64_t CUDAGeneratorImpl::get_philox_offset(uint64_t increment) {
+  std::lock_guard<std::mutex> lock(mutex_);
   // rounds increment up to the nearest multiple of 4
   increment = ((increment + 3) / 4) * 4;
   CHECK_EQ(this->philox_offset_per_thread_ % 4, 0);

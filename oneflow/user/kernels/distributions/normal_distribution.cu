@@ -37,12 +37,8 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
   auto grid = std::get<1>(execution_policy);
   auto block = std::get<2>(execution_policy);
 
-  uint64_t offset = 0;
   uint64_t seed = gen->current_seed();
-  {
-    std::lock_guard<std::mutex> lock(gen->mutex_);
-    offset = gen->get_philox_offset(counter_offset);
-  }
+  uint64_t offset = gen->get_philox_offset(counter_offset);
 
   DistributionElementwiseGridStrideParams params;
   params.numel = elem_cnt;

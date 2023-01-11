@@ -131,12 +131,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     auto grid = std::get<1>(execution_policy);
     auto block = std::get<2>(execution_policy);
 
-    uint64_t offset = 0;
     uint64_t seed = gpu_generator->current_seed();
-    {
-      std::lock_guard<std::mutex> lock(gpu_generator->mutex_);
-      offset = gpu_generator->get_philox_offset(counter_offset);
-    }
+    uint64_t offset = gpu_generator->get_philox_offset(counter_offset);
 
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.

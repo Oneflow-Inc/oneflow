@@ -62,12 +62,8 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   auto grid = std::get<1>(execution_policy);
   auto block = std::get<2>(execution_policy);
 
-  uint64_t offset = 0;
   uint64_t seed = generator_->current_seed();
-  {
-    std::lock_guard<std::mutex> lock(generator_->mutex_);
-    offset = generator_->get_philox_offset(counter_offset);
-  }
+  uint64_t offset = generator_->get_philox_offset(counter_offset);
 
   GenerateGpu<<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(seed, offset, n,
                                                                                rate, mask);

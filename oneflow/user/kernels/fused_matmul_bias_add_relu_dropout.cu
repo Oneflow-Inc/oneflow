@@ -231,10 +231,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
       grid_size = ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int32_t>,
                                   elem_cnt, kBlockSize);
       uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-      {
-        std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-        offset = cuda_generator->get_philox_offset(inc_offset);
-      }
+      offset = cuda_generator->get_philox_offset(inc_offset);
       FusedVectorizedReluDropoutKernel<T, relu, int32_t>
           <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, offset, elem_cnt, aux_ld,
                                                                 cols, uint_rate, scale, x, mask);
@@ -242,10 +239,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
       grid_size = ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int64_t>,
                                   elem_cnt, kBlockSize);
       uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-      {
-        std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-        offset = cuda_generator->get_philox_offset(inc_offset);
-      }
+      offset = cuda_generator->get_philox_offset(inc_offset);
       FusedVectorizedReluDropoutKernel<T, relu, int64_t>
           <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, offset, elem_cnt, aux_ld,
                                                                 cols, uint_rate, scale, x, mask);
@@ -260,10 +254,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
             ComputeGridSize(stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int32_t>,
                             align32_elem_cnt, kBlockSize);
         uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-        {
-          std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-          offset = cuda_generator->get_philox_offset(inc_offset);
-        }
+        offset = cuda_generator->get_philox_offset(inc_offset);
         FusedPaddedVectorizedReluDropoutKernel<T, relu, int32_t>
             <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, offset, align32_elem_cnt,
                                                                   aux_ld, align32_cols, cols,
@@ -273,10 +264,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
             ComputeGridSize(stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int64_t>,
                             align32_elem_cnt, kBlockSize);
         uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-        {
-          std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-          offset = cuda_generator->get_philox_offset(inc_offset);
-        }
+        offset = cuda_generator->get_philox_offset(inc_offset);
         FusedPaddedVectorizedReluDropoutKernel<T, relu, int64_t>
             <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, offset, align32_elem_cnt,
                                                                   aux_ld, align32_cols, cols,
@@ -289,10 +277,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
         grid_size = ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, elem_cnt,
                                     kBlockSize);
         uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-        {
-          std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-          offset = cuda_generator->get_philox_offset(inc_offset);
-        }
+        offset = cuda_generator->get_philox_offset(inc_offset);
         FusedWarpReluDropoutKernel<T, relu, int32_t>
             <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(
                 seed, offset, elem_cnt, aux_ld, rows, cols, uint_rate, scale, x, mask);
@@ -300,10 +285,7 @@ cudaError_t LaunchFusedReluDropoutKernel(
         grid_size = ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, elem_cnt,
                                     kBlockSize);
         uint64_t inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
-        {
-          std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-          offset = cuda_generator->get_philox_offset(inc_offset);
-        }
+        offset = cuda_generator->get_philox_offset(inc_offset);
         FusedWarpReluDropoutKernel<T, relu, int64_t>
             <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(
                 seed, offset, elem_cnt, aux_ld, rows, cols, uint_rate, scale, x, mask);

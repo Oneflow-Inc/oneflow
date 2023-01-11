@@ -349,20 +349,14 @@ void DispatchTail(ep::Stream* stream, const std::shared_ptr<one::CUDAGeneratorIm
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
     uint64_t inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
-    {
-      std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-      offset = cuda_generator->get_philox_offset(inc_offset);
-    }
+    offset = cuda_generator->get_philox_offset(inc_offset);
     FusedDropoutAddGpu<T, pack_size, true, has_addend>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y, (x + tail_offset),
             (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
     uint64_t inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
-    {
-      std::lock_guard<std::mutex> lock(cuda_generator->mutex_);
-      offset = cuda_generator->get_philox_offset(inc_offset);
-    }
+    offset = cuda_generator->get_philox_offset(inc_offset);
     FusedDropoutAddGpu<T, pack_size, false, has_addend>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y, nullptr, nullptr,
