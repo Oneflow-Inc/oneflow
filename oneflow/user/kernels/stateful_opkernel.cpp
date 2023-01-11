@@ -971,10 +971,10 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
       [call_ctx]() -> std::pair<std::string, int64_t> {
         std::stringstream ss;
         std::size_t hash = 0;
-        for (size_t i = 0; i < call_ctx->inputs()->size(); i++) {
-          const auto& shape = call_ctx->inputs()->at(i)->shape();
+        for (size_t i = 0; i < call_ctx->inputs().size(); i++) {
+          const auto& shape = call_ctx->inputs().at(i)->shape();
           ss << shape;
-          if (i != call_ctx->inputs()->size() - 1) { ss << ", "; }
+          if (i != call_ctx->inputs().size() - 1) { ss << ", "; }
           AddHash(&hash, shape);
         }
         return {ss.str(), hash};
