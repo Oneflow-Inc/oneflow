@@ -109,7 +109,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<1>(ctx, "UpsampleLinear1D");
+  return UpsamplingInferLogicalDesc<1>(ctx, "upsample_linear_1d");
 }
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -124,7 +124,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<1>(ctx, "UpsampleNearest1D");
+  return UpsamplingInferLogicalDesc<1>(ctx, "upsample_nearest_1d");
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -139,7 +139,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<2>(ctx, "UpsampleNearest2D");
+  return UpsamplingInferLogicalDesc<2>(ctx, "upsample_nearest_2d");
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -154,7 +154,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<2>(ctx, "UpsampleBilinear2D");
+  return UpsamplingInferLogicalDesc<2>(ctx, "upsample_bilinear_2d");
 }
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -169,7 +169,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<2>(ctx, "UpsampleBicubic2D");
+  return UpsamplingInferLogicalDesc<2>(ctx, "upsample_bicubic_2d");
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -184,7 +184,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<3>(ctx, "UpsampleNearest3D");
+  return UpsamplingInferLogicalDesc<3>(ctx, "upsample_nearest_3d");
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
@@ -199,7 +199,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return UpsamplingInferLogicalDesc<3>(ctx, "UpsampleTrilinear3D");
+  return UpsamplingInferLogicalDesc<3>(ctx, "upsample_trilinear_3d");
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
