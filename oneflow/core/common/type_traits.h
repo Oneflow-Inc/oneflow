@@ -99,7 +99,7 @@ class is_trivially_copyable<T*> : public true_type {};
 
 namespace oneflow {
 
-template<typename T, typename Enable=void>
+template<typename T, typename Enable = void>
 struct IsScalarType final {
   static const bool value = std::is_scalar<T>::value;
 };
