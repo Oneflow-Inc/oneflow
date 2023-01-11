@@ -4769,7 +4769,8 @@ class BatchNormBackwardElemtFunctor {
 //   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
 //                            const std::shared_ptr<Tensor>& batch1,
 //                            const std::shared_ptr<Tensor>& batch2, const bool& transpose_a,
-//                            const bool& transpose_b, const double& beta, const double& alpha) const {
+//                            const bool& transpose_b, const double& beta, const double& alpha)
+//                            const {
 //     const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, transpose_a, transpose_b, alpha));
 //     if (beta == 0) { return bmm_result; }
 //     CHECK_EQ_OR_RETURN(input->ndim(), 3)
