@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -44,6 +45,15 @@ Maybe<void> SyncAccessTensorWithTimeOut(
 Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
 
 Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor);
+
+Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, void* scalar_ptr,
+                                  size_t size);
+template<typename T>
+Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
+  T scalar{0};
+  JUST(GetItemInScalarTensor(scalar_tensor, &scalar, sizeof(T)));
+  return scalar;
+}
 
 }  // namespace one
 }  // namespace oneflow

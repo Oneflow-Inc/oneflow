@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename ComputeType>
 class VarKernel final : public user_op::OpKernel {
  public:
   VarKernel() = default;
@@ -42,29 +42,33 @@ class VarKernel final : public user_op::OpKernel {
     }
     // when computing the variance with all the elements, the implementation of cuda kernel may use
     // tmp buffer for computation.
-    T* tmp_buffer_ptr =
+    ComputeType* tmp_buffer_ptr =
         (input_dim_element > 0
          && (axis.size() == input->shape_view().NumAxes() || input_dim_element == axis_dim_element)
          && DeviceType::kCUDA == device_type)
-            ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
+            ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<ComputeType>()
             : nullptr;
     VarParamHelper param_helper(input->shape_view(), axis, unbiased);
-    VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
-                                 param_helper.param);
+    VarFunctor<device_type, T, ComputeType>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
+                                              param_helper.param);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_VAR_CPU_KERNEL(dtype)                                                           \
-  REGISTER_USER_KERNEL("var").SetCreateFn<VarKernel<DeviceType::kCPU, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                             \
-      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
-REGISTER_VAR_CPU_KERNEL(float)
-REGISTER_VAR_CPU_KERNEL(double)
+#define REGISTER_VAR_CPU_KERNEL(dtype, compute_type)                   \
+  REGISTER_USER_KERNEL("var")                                          \
+      .SetCreateFn<VarKernel<DeviceType::kCPU, dtype, compute_type>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)  \
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+REGISTER_VAR_CPU_KERNEL(float, double)
+REGISTER_VAR_CPU_KERNEL(double, double)
+REGISTER_VAR_CPU_KERNEL(float16, double)
+REGISTER_VAR_CPU_KERNEL(bfloat16, double)
 #undef REGISTER_VAR_CPU_KERNEL
 
 #ifdef WITH_CUDA
 
+template<typename ComputeType>
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const Shape& input_shape = input.shape();
@@ -77,22 +81,26 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
     return GetCudaAlignedSize(
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))),
                  kCudaMaxBlocksNum)
-        * GetSizeOfDataType(input.data_type()) * 3);
+        * sizeof(ComputeType) * 3);
   }
   return 0;
 }
 
-#define REGISTER_VAR_CUDA_KERNEL(dtype)                                                       \
+#define REGISTER_VAR_CUDA_KERNEL(dtype, compute_type)                                         \
   REGISTER_USER_KERNEL("var")                                                                 \
-      .SetCreateFn<VarKernel<DeviceType::kCUDA, dtype>>()                                     \
+      .SetCreateFn<VarKernel<DeviceType::kCUDA, dtype, compute_type>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
                        && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize);
+      .SetInferTmpSizeFn(InferTmpBufferSize<compute_type>);
 
-REGISTER_VAR_CUDA_KERNEL(float)
-REGISTER_VAR_CUDA_KERNEL(double)
+REGISTER_VAR_CUDA_KERNEL(float, double)
+REGISTER_VAR_CUDA_KERNEL(double, double)
+REGISTER_VAR_CUDA_KERNEL(half, double)
+#if CUDA_VERSION >= 11000
+REGISTER_VAR_CUDA_KERNEL(nv_bfloat16, double)
+#endif  // CUDA_VERSION >= 11000
 #undef REGISTER_VAR_CUDA_KERNEL
-#endif
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow

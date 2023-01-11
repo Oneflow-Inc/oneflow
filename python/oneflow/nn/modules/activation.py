@@ -17,7 +17,7 @@ import warnings
 from typing import Optional, Tuple
 
 import oneflow as flow
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.framework.tensor import Tensor
 
 
@@ -369,6 +369,43 @@ class GELU(Module):
             return flow._C.gelu_with_approximate(input, self.approximate)
         else:
             raise NotImplementedError
+
+
+class QuickGELU(Module):
+    """
+    QuickGELU() -> Tensor
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([-0.5, 0, 0.5])
+        >>> gelu = flow.nn.QuickGELU()
+
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1496,  0.0000,  0.3504], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return flow._C.quick_gelu(x)
 
 
 class Sigmoid(Module):

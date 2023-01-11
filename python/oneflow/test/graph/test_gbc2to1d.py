@@ -34,7 +34,7 @@ def _test_general_basic_communication_2d_to_1d(test_case, src_nd_sbp, dst_nd_sbp
     # input
     placement_x = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     placement_y = flow.placement("cuda", ranks=[0, 3, 4])
-    local_np = np.arange(12 * 4).reshape(12, 4)
+    local_np = np.arange(13 * 5).reshape(13, 5)
     x = flow.tensor(local_np, sbp=src_nd_sbp, placement=placement_x)
 
     # check eager boxing

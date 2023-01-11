@@ -116,20 +116,21 @@ class VarParamHelper final {
   std::vector<int32_t> caxis_;
 };
 
-template<typename T>
+template<typename T, typename ComputeType>
 OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const VarParam& var_param) {
   size_t count = 0;
   // torch use double even for float data, so here float will result in accuracy error.
-  double mean = 0.0;
-  double old_mean = 0.0;
-  double m2 = 0.0;
+  ComputeType mean = 0.0;
+  ComputeType old_mean = 0.0;
+  ComputeType m2 = 0.0;
   for (size_t i = 0; i < var_param.elem_cnt; i++) {
     const size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis,
                                              var_param.stride_in_axis, var_param.axis_size);
     count++;
     old_mean = mean;
-    mean += (in_ptr[offset] - mean) / count;
-    m2 += (in_ptr[offset] - mean) * (in_ptr[offset] - old_mean);
+    mean += (static_cast<ComputeType>(in_ptr[offset]) - mean) / count;
+    m2 += (static_cast<ComputeType>(in_ptr[offset]) - mean)
+          * (static_cast<ComputeType>(in_ptr[offset]) - old_mean);
   }
   *out_ptr = m2 / (var_param.unbiased ? count - 1 : count);
 }
@@ -152,16 +153,18 @@ void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* bloc
     int32_t aligned_block_dim =
         (total_elem_cnt >= kCudaThreadsNumPerBlock)
             ? kCudaThreadsNumPerBlock
-            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+            // avoid get block_dim = 0 when total_elem_cnt is 0
+            : std::max<long unsigned>((total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize, 1)
+                  * kCudaWarpSize;
     *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
   }
 }
 #endif  // WITH_CUDA
 }  // namespace
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename ComputeType>
 struct VarFunctor final {
-  void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
+  void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, ComputeType* tmp_buffer_ptr,
                   const VarParam var_param);
 };
 

@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_functional_normalize(test_case, placement, sbp):
     ndim = random(low=2, high=5).to(int).value()
     shape = [random(low=2, high=3) * 8 for i in range(ndim)]

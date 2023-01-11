@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/utils/progress_bar.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -69,6 +70,21 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
     ret += ", device=" + JUST(tensor->device())->ToString();
   }
   return ret;
+}
+
+template<typename T>
+Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list, const T& tensor_list) {
+  blob_list->reserve(tensor_list.size());
+  for (const auto& tensor : tensor_list) {
+    CHECK_OR_RETURN(tensor->is_eager())
+        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
+    if (tensor->is_global()) {
+      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+    } else {
+      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -109,6 +125,10 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 }
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
+
+const std::shared_ptr<vm::EagerBlobObjectList>& NNGraph::var_blobs() const {
+  return variable_op_blobs_;
+}
 
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
@@ -195,6 +215,9 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
       << "Number of variable names and tensors mismatch. "
          "Size of variable names: "
       << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
+  CHECK_ISNULL_OR_RETURN(variable_op_blobs_);
+  variable_op_blobs_ = std::make_shared<vm::EagerBlobObjectList>();
+  JUST(MakeEagerBlobObjectList(variable_op_blobs_.get(), variable_tensors));
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
     CHECK_OR_RETURN(var->is_eager())
@@ -302,7 +325,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   CHECK_OR_RETURN(!runtime_inited_)
       << Error::RuntimeError() << "nn.Graph runtime is already initialized";
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
@@ -326,27 +349,26 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
-    auto sub_compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+    auto sub_compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1, true);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1, true);
     PlanUtil::GenRegisterHint(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1, true);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
-    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1, true);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1, true);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1, true);
   }
   compile_tc->Count("[GraphCompile]" + name_ + " CompilePlan", 0);
   if (GlobalProcessCtx::WorldSize() > 1) {
@@ -364,7 +386,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
   }
-  compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0);
+  compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0, true);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
@@ -378,7 +400,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
-  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
+  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0, true);
+  JUST(LogProgress("[GraphCompile]" + name_ + " Done", true));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
@@ -558,27 +581,7 @@ void NNGraph::CloseRuntimeBuffers() {
   }
 }
 
-namespace {
-
-Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
-                                    const one::TensorTuple& tensor_list) {
-  blob_list->reserve(tensor_list.size());
-  for (const auto& tensor : tensor_list) {
-    CHECK_OR_RETURN(tensor->is_eager())
-        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
-    if (tensor->is_global()) {
-      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
-    } else {
-      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
-                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size())
       << Error::RuntimeError()
@@ -596,7 +599,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size())
+  CHECK_LE_OR_RETURN(nn_graph->var_blobs()->size(), nn_graph->variable_op_size())
       << Error::RuntimeError() << "Parameter size should be less than or equal to variable size";
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
@@ -617,18 +620,14 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   }
   vm::EagerBlobObjectList input_blobs;
   vm::EagerBlobObjectList output_blobs;
-  vm::EagerBlobObjectList var_blobs;
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
-  JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
   const auto& input_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(input_blobs));
   const auto& output_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(output_blobs));
-  const auto& var_blob_list_ptr =
-      std::make_shared<const vm::EagerBlobObjectList>(std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
+    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, nn_graph->var_blobs(),
                                   nn_graph);
   }));
   return Maybe<void>::Ok();

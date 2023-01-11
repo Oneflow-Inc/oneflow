@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
+#define ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
+
 namespace oneflow {
 
 namespace user_op {
@@ -41,3 +44,5 @@ class CudaGraphSupport {
 }  // namespace user_op
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_

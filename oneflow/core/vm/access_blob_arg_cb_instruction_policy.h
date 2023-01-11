@@ -68,10 +68,6 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
     if (modifier_ == "mut2") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
   }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(eager_blob_object_.get());
-  }
-
   std::string DebugName(const Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }

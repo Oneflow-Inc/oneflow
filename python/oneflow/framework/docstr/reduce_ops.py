@@ -43,10 +43,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor(6., dtype=oneflow.float32)
-        >>> (values, indices) = flow.max(input, dim=1)
-        >>> values
+        >>> result = flow.max(input, dim=1)
+        >>> result.values
         tensor([5., 6.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([2, 1], dtype=oneflow.int64)
 
     """,
@@ -79,10 +79,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor(1., dtype=oneflow.float32)
-        >>> (values, indices) = flow.min(input, dim=1)
-        >>> values
+        >>> result = flow.min(input, dim=1)
+        >>> result.values
         tensor([1., 2.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([1, 0], dtype=oneflow.int64)
 
     """,
@@ -287,6 +287,43 @@ add_docstr(
         >>> x = flow.tensor([float("nan") for i in range(3)])
         >>> flow.nansum(x)
         tensor(0., dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.logsumexp,
+    r"""
+    oneflow.logsumexp(input, dim, keepdim=False) -> Tensor
+    
+    Returns the log of summed exponentials of each row of the :attr:`input`
+    tensor in the given dimension :attr:`dim`. The computation is numerically
+    stabilized.
+
+    For summation index :math:`j` given by `dim` and other indices :math:`i`, the result is
+
+    .. math::
+        \text{logsumexp}(x)_{{i}} = \log \sum_j \exp(x_{{ij}})
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.12/generated/torch.logsumexp.html.
+
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> flow.logsumexp(input, 0)
+        tensor([4.0486, 5.0486, 6.0486], dtype=oneflow.float32)
+        >>> flow.logsumexp(input, 1)
+        tensor([3.4076, 6.4076], dtype=oneflow.float32)
 
     """,
 )

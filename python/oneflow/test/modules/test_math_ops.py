@@ -289,6 +289,14 @@ class TestAtan(flow.unittest.TestCase):
         return z
 
     @autotest(n=5)
+    def test_flow_atan2_with_1elem_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim1=1).to(device)
+        y = random_tensor(ndim=3, dim1=random(1, 6).to(int)).to(device)
+        z = torch.atan2(x, y)
+        return z
+
+    @autotest(n=5)
     def test_flow_atanh_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
@@ -317,6 +325,22 @@ class TestTopk(flow.unittest.TestCase):
             sorted=constant(True),
         )
         return y[0], y[1]
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestTopkReturnValues(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_flow_topk_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        result = torch.topk(
+            x,
+            random(low=1, high=8).to(int),
+            dim=random(low=1, high=4).to(int),
+            largest=random_bool(),
+            sorted=constant(True),
+        )
+        return result.values, result.indices
 
 
 @flow.unittest.skip_unless_1n1d()

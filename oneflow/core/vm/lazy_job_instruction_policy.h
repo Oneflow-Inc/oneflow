@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/lazy_job_stream_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include <robin_hood.h>
 
 namespace oneflow {
 
@@ -60,9 +61,19 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstDependence(InstructionPolicyUtil::SetInserter(&input_dependences_));
-    ForEachMutDependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
-    ForEachMut2Dependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
+    robin_hood::unordered_flat_map<Dependence*, bool> unique_map;
+    ForEachConstDependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { input_dependences_.emplace_back(compute); }
+    });
+    unique_map.clear();
+    output_dependences_.reserve(param_blob_objects_->size());
+    unique_map.reserve(param_blob_objects_->size());
+    ForEachMutDependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
+    });
+    ForEachMut2Dependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
+    });
   }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
@@ -80,10 +91,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   }
 
   void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const {}
-
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }
-  }
 
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }

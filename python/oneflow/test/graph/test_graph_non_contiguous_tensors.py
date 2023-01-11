@@ -66,9 +66,11 @@ def _test_graph_non_contiguous_tensors(test_case, device):
     graph_contiguous_tensors = GraphTestContiguousTensors()
     graph_non_contiguous_tensors = GraphTestNonContiguousTensors()
 
-    test_case.assertTrue(graph_contiguous_tensors.model.weight.origin.is_contiguous())
+    test_case.assertTrue(
+        graph_contiguous_tensors.model.weight.to(flow.Tensor).is_contiguous()
+    )
     test_case.assertFalse(
-        graph_non_contiguous_tensors.model.weight.origin.is_contiguous()
+        graph_non_contiguous_tensors.model.weight.to(flow.Tensor).is_contiguous()
     )
 
     inp = flow.tensor(

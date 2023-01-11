@@ -15,9 +15,9 @@ limitations under the License.
 """
 import unittest
 
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
-
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -41,6 +41,20 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
+    @autotest(n=5, check_graph=False)
+    def test_flow_tensor_matmul_with_random_int_data(test_case):
+        x = np.random.randint(10, 21, size=5)
+        y = np.random.randint(1, 14, size=(5, 4))
+        torch_x = torch.from_numpy(x).to(torch.int)
+        torch_y = torch.from_numpy(y).to(torch.int)
+        torch_output_numpy = torch_x.matmul(torch_y).numpy()
+        flow_x = flow.tensor(x).to(flow.int)
+        flow_y = flow.tensor(y).to(flow.int)
+        flow_output_numpy = flow_x.matmul(flow_y).numpy()
+        test_case.assertTrue(
+            np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
+        )
+
     @autotest(n=5, check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
         device = random_device()
@@ -52,7 +66,7 @@ class TestModule(flow.unittest.TestCase):
     @autotest(n=5, check_graph=True)
     def test_flow_tensor_x_broadcast_y_matmul(test_case):
         device = random_device()
-        k = random(1, 6).to(int)
+        k = random(1, 6)
         x = random_tensor(ndim=2, dim1=k).to(device)
         y = random_tensor(ndim=4, dim2=k).to(device)
         return x.matmul(y)
@@ -60,7 +74,7 @@ class TestModule(flow.unittest.TestCase):
     @autotest(n=5, check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
         device = random_device()
-        k = random(1, 6).to(int)
+        k = random(1, 6)
         x = random_tensor(ndim=4, dim1=1, dim3=k).to(device)
         y = random_tensor(ndim=4, dim0=1, dim2=k).to(device)
         return x.matmul(y)

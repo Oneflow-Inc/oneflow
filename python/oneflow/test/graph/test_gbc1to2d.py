@@ -33,8 +33,8 @@ def _test_general_basic_communication_1d_to_2d(test_case, src_nd_sbp, dst_nd_sbp
 
     # input
     placement_x = flow.placement("cuda", ranks=[0, 1, 2])
-    placement_y = flow.placement("cuda", ranks=[[3, 4], [1, 2]])
-    local_np = np.arange(4 * 12).reshape(4, 12)
+    placement_y = flow.placement("cuda", ranks=[[3, 0], [1, 2]])
+    local_np = np.arange(4 * 14).reshape(4, 14)
     x = flow.tensor(local_np, sbp=src_nd_sbp, placement=placement_x)
 
     # check eager boxing
@@ -77,7 +77,7 @@ def gen_nd_sbp_2d():
     return nd_sbp_list
 
 
-@flow.unittest.skip_unless_2n4d()
+@flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
     def test_general_basic_communication(test_case):

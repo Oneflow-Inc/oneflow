@@ -30,7 +30,12 @@ namespace {
 
 Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
   Symbol<DType> common_dtype = DType::InvalidDataType();
+  bool all_scalar_tensors = std::all_of(
+      tensor_tuple.begin(), tensor_tuple.end(),
+      [](const std::shared_ptr<Tensor>& tensor) { return tensor->shape()->NumAxes() == 0; });
   for (auto& tensor_ptr : tensor_tuple) {
+    // skip scalar tensor
+    if (!all_scalar_tensors && tensor_ptr->shape()->NumAxes() == 0) { continue; }
     common_dtype = promoteTypes(tensor_ptr->dtype(), common_dtype);
   }
   return common_dtype;
@@ -196,8 +201,11 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     }
     // Skip autocast if any input is float32 for gray or clear list
     if (autocast_meta_.autocast_color() != autocast::kWhite) {
-      for (const auto& input : inputs_) {
-        if (input->dtype() != autocast_dtype) { return false; }
+      for (int i = 0; i < inputs_.size(); ++i) {
+        if (autocast_meta_.is_args_autocast_eligible(i) && inputs_[i]->dtype()->is_floating_point()
+            && inputs_[i]->dtype() != autocast_dtype) {
+          return false;
+        }
       }
     }
     return true;
