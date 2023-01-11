@@ -1246,6 +1246,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
+  VLOG(2) << "dependency_depth = " << dependency_depth << " order = " << order;
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {

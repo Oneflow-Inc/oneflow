@@ -117,7 +117,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     // TODO(Panlichen): debug目的捕获this
     auto cb_lambda = [](int collIdFromCqe, void *args) {
       int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
-      VLOG(1) << "actor " << actor_id << " Rank<" << (static_cast<CallBackArgs *>(args))->rank << "> callback get cqe for coll_id = " << collIdFromCqe << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++ << " args->coll_id = " << (static_cast<CallBackArgs *>(args))->coll_id;
+      VLOG(2) << "actor " << actor_id << " Rank<" << (static_cast<CallBackArgs *>(args))->rank << "> callback get cqe for coll_id = " << collIdFromCqe << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++ << " args->coll_id = " << (static_cast<CallBackArgs *>(args))->coll_id;
       Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
       delete static_cast<CallBackArgs *>(args);
       return 0;
@@ -125,7 +125,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
     CallbackFunc cb_func = cb_lambda;
     
-    VLOG(1) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id;
+    VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id;
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
   }

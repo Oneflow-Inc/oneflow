@@ -43,6 +43,8 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc, int coll_id) : desc_(des
   size_in_bytes_ = elem_cnt_ * GetSizeOfDataType(desc.op_desc().data_type());
   device_set_symbol_.reset(desc.device_set());
 
+  // VLOG(1) << "coll_id = " << coll_id << " dependency_depth = " << desc.dependency_depth() << " order = " << desc.order();
+
   FOR_EACH(id7nego_tree_info, desc.negotiation_tree_topo()) {
     auto nego_tree_info = RuntimeNegoTreeInfo();
     nego_tree_info.upstream_id = id7nego_tree_info->second.upstream_id();
