@@ -79,6 +79,8 @@ std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
 
 }  // namespace
 
+#ifdef WITH_CUDA
+
 enum class DistributionOp {
   kNormal4,
   kNormal2Double,
@@ -137,9 +139,9 @@ struct TransformFunctor;
 
 template<typename T, typename ComputeType>
 struct TransformFunctor<TransformOp::kNormal, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType attr0, ComputeType attr1) {
-    mean = attr0;
-    std = attr1;
+  __device__ __forceinline__ TransformFunctor(ComputeType mean, ComputeType std) {
+    this->mean = mean;
+    this->std = std;
   }
   __device__ __forceinline__ T operator()(ComputeType random_val) const {
     return static_cast<T>(random_val * std + mean);
@@ -150,9 +152,9 @@ struct TransformFunctor<TransformOp::kNormal, T, ComputeType> {
 
 template<typename T, typename ComputeType>
 struct TransformFunctor<TransformOp::kExponential, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType attr0, ComputeType attr1) {
-    epsilon = attr0;
-    lambd = attr1;
+  __device__ __forceinline__ TransformFunctor(ComputeType epsilon, ComputeType lambd) {
+    this->epsilon = epsilon;
+    this->lambd = lambd;
   }
   __device__ __forceinline__ T operator()(ComputeType random_val) const {
     ComputeType log_rand = ::log(static_cast<ComputeType>(random_val));
@@ -172,9 +174,9 @@ struct TransformFunctor<TransformOp::kExponential, T, ComputeType> {
 
 template<typename T, typename ComputeType>
 struct TransformFunctor<TransformOp::kUniform, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType attr0, ComputeType attr1) {
-    low = attr0;
-    high = attr1;
+  __device__ __forceinline__ TransformFunctor(ComputeType low, ComputeType high) {
+    this->low = low;
+    this->high = high;
   }
   __device__ __forceinline__ T operator()(ComputeType rand_num) const {
     if (rand_num == static_cast<ComputeType>(1.0)) { rand_num = static_cast<ComputeType>(0.0); }
@@ -186,9 +188,9 @@ struct TransformFunctor<TransformOp::kUniform, T, ComputeType> {
 
 template<typename T, typename ComputeType>
 struct TransformFunctor<TransformOp::kUniformInt, T, ComputeType> {
-  __device__ __host__ __forceinline__ TransformFunctor(ComputeType attr0, ComputeType attr1) {
-    low = attr0;
-    high = attr1;
+  __device__ __host__ __forceinline__ TransformFunctor(ComputeType low, ComputeType high) {
+    this->low = low;
+    this->high = high;
   }
   __device__ __forceinline__ T operator()(ComputeType rand_num) const {
     if (rand_num == 1.0) { rand_num = 0.0; }
@@ -206,8 +208,6 @@ struct DistributionElementwiseGridStrideParams {
   Scalar attr0;
   Scalar attr1;
 };
-
-#ifdef WITH_CUDA
 
 template<typename T, typename ComputeType, int unroll_factor, DistributionOp distribution_op,
          TransformOp transform_op>
@@ -234,7 +234,6 @@ __global__
         out_ptr[li] = transform_functor(static_cast<ComputeType>((&rand.x)[ii]));
       }
     }
-    __syncthreads();
   }
 }
 

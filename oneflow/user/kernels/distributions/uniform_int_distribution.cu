@@ -51,7 +51,7 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
   params.numel = elem_cnt;
   params.seed = seed;
   params.offset = offset;
-  params.dst = reinterpret_cast<void*>(dptr);
+  params.dst = dptr;
   params.attr0 = Scalar(low_);
   params.attr1 = Scalar(high_);
 

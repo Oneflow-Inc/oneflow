@@ -48,7 +48,7 @@ void ExponentialDistribution<DeviceType::kCUDA, double>::operator()(
   params.numel = elem_cnt;
   params.seed = seed;
   params.offset = offset;
-  params.dst = reinterpret_cast<void*>(dptr);
+  params.dst = dptr;
   params.attr0 = Scalar(std::numeric_limits<double>::epsilon());
   params.attr1 = Scalar(lambd_);
 
@@ -82,7 +82,7 @@ void ExponentialDistribution<DeviceType::kCUDA, float>::operator()(
   params.numel = elem_cnt;
   params.seed = seed;
   params.offset = offset;
-  params.dst = reinterpret_cast<void*>(dptr);
+  params.dst = dptr;
   params.attr0 = Scalar(std::numeric_limits<float>::epsilon());
   params.attr1 = Scalar(lambd_);
 

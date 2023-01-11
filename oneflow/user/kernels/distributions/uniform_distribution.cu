@@ -48,7 +48,7 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
   params.numel = elem_cnt;
   params.seed = seed;
   params.offset = offset;
-  params.dst = reinterpret_cast<void*>(dptr);
+  params.dst = dptr;
 
   using ComputeType = typename distribution::DefaultComputeType<T>::type;
 
