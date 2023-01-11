@@ -171,6 +171,3 @@ class RunTimeWrapperContext : public CompileTimeWrapperContext {
 CompileTimeWrapperContext 主要是reg_ctx，以作为infer推导的必须输入。
 
 RunTimeWrapperContext 包含所有子op运行时计算需要用的的资源，主要有compute_ctx以及state和cache。
-
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_
