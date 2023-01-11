@@ -79,8 +79,8 @@ class GpuGreaterInplaceKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                       \
-        const Shape& x_shape = ctx->InputShape("x", 0);                                   \
-        return GetCudaAlignedSize(x_shape.elem_cnt() * sizeof(dtype));                                                 \
+        const Shape& x_shape = ctx->InputShape("x", 0);                                  \
+        return GetCudaAlignedSize(x_shape.elem_cnt() * sizeof(dtype));                   \
       });
 
 REGISTER_CUDA_GREATER_INPLACE_KERNEL(half)

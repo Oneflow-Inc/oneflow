@@ -75,7 +75,7 @@ class CpuGreaterInplaceKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
         const Shape& x_shape = ctx->InputShape("x", 0);                                  \
-        return GetCudaAlignedSize(x_shape.elem_cnt() * sizeof(dtype));                                       \
+        return GetCudaAlignedSize(x_shape.elem_cnt() * sizeof(dtype));                   \
       });
 
 REGISTER_CPU_GREATER_INPLACE_KERNEL(float)
