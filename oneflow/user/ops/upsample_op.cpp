@@ -69,7 +69,7 @@ typename std::enable_if<(N <= 3), Maybe<void>>::type UpsamplingInferLogicalDesc(
   } else if (N == 3) {
     CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                     && x_desc.shape().NumAxes() == 5)
-        << "upsample_nearest_3d only supports NCDHW";
+        << func_name << " only supports NCDHW";
     const double depth_scale = ctx->Attr<double>("depth_scale");
     const double height_scale = ctx->Attr<double>("height_scale");
     const double width_scale = ctx->Attr<double>("width_scale");
