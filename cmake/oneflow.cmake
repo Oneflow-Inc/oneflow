@@ -45,7 +45,7 @@ file(
   "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
+  "${PROJECT_SOURCE_DIR}/oneflow/extension/*.*")
 
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -96,8 +96,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       set(group_this ON)
     endif()
 
-    if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.(h|cpp)$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/.*\\.(c|h|cpp)$")
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
@@ -105,7 +104,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*_test\\.cpp$")
+       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe|thread)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES
@@ -136,7 +135,6 @@ add_custom_target(
   of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-          --exclude="oneflow/user/kernels/fmha_flash_attention"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i
           ${ONEFLOW_PYTHON_DIR} --fix --exclude="oneflow/include" --exclude="oneflow/core"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir
@@ -372,6 +370,8 @@ if(BUILD_PYTHON)
   add_dependencies(of_pyext_obj oneflow)
 
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cublas/lib")
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cudnn/lib")
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj of_op_schema)
@@ -552,6 +552,9 @@ if(BUILD_CPP_API)
   if(BUILD_CUDA)
     checkdirandappendslash(DIR ${NCCL_LIBRARY_DIR} OUTPUT NCCL_LIBRARY_DIR_APPENDED)
     list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${NCCL_LIBRARY_DIR_APPENDED})
+    checkdirandappendslash(DIR ${TRT_FLASH_ATTENTION_LIBRARY_DIR} OUTPUT
+                           TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED)
+    list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED})
     if(WITH_CUTLASS)
       checkdirandappendslash(DIR ${CUTLASS_LIBRARY_DIR} OUTPUT CUTLASS_LIBRARY_DIR_APPENDED)
       list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${CUTLASS_LIBRARY_DIR_APPENDED})
