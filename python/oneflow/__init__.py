@@ -232,6 +232,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import det
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
