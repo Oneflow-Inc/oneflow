@@ -135,6 +135,7 @@ class LUDecompositionKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_LU_DECOMPOSITION_KERNEL(float)
+REGISTER_CUDA_LU_DECOMPOSITION_KERNEL(double)
 #endif
 
 }  // namespace user_op

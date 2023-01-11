@@ -1887,13 +1887,14 @@ class DetFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
-    if (x->ndim() < 2) {
+    const int64_t xdims = x->ndim();
+    if (xdims < 2) {
       return Error::RuntimeError() << "linalg.det: The input tensor must be at least 2 dimensions.";
     }
-    if (x->dim(x->ndim() - 1) != x->dim(x->ndim() - 2)) {
-      return Error::RuntimeError() << "linalg.det: A must be batches of square matrices, "
-                                   << "but they are " << x->dim(x->ndim() - 2) << " by "
-                                   << x->dim(x->ndim() - 1) << " matrices";
+    if (x->dim(xdims - 1) != x->dim(xdims - 2)) {
+      return Error::RuntimeError()
+             << "linalg.det: A must be batches of square matrices, "
+             << "but they are " << x->dim(xdims - 2) << " by " << x->dim(xdims - 1) << " matrices";
     }
 
     DeviceType x_device_type = DeviceType::kInvalidDevice;

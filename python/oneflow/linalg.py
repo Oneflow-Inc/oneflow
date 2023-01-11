@@ -50,6 +50,10 @@ def det(A):
     Supports input of float, double dtypes. Also supports batches of matrices,
     and if A is a batch of matrices then the output has the same batch dimensions.
 
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.linalg.det.html
+
     Args:
         A (Tensor): tensor of shape (\*, n, n) where \* is zero or more batch dimensions.
 
