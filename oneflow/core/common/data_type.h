@@ -64,8 +64,8 @@ _DEFINE_SPEC(__IsFloat16_helper, half, true)
 
 template<typename T>
 struct IsFloat16
-    : std::integral_constant<bool, (__IsFloat16_helper<typename std::remove_cv<T>::type>::value)> {
-};
+    : std::integral_constant<
+          bool, (__IsFloat16_helper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsFloating
 template<typename>
@@ -82,8 +82,8 @@ _DEFINE_SPEC(__IsFloating_helper, half, true)
 
 template<typename T>
 struct IsFloating
-    : std::integral_constant<bool, (__IsFloating_helper<typename std::remove_cv<T>::type>::value)> {
-};
+    : std::integral_constant<
+          bool, (__IsFloating_helper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsIntegral
 template<typename>
@@ -96,8 +96,8 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 
 template<typename T>
 struct IsIntegral
-    : std::integral_constant<bool, (__IsIntegral_helper<typename std::remove_cv<T>::type>::value)> {
-};
+    : std::integral_constant<
+          bool, (__IsIntegral_helper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsUnsignedIntegral
 template<typename>
