@@ -27,7 +27,7 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class ActorMsgType  : int8_t { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class ActorMsgType : int8_t { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
 constexpr uint8_t kActorMsgUserDataMaxSize = 32;
 
