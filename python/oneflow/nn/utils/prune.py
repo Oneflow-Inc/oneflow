@@ -1318,6 +1318,6 @@ def _compute_norm(t, n, dim):
         reshape_size *= a.shape[item]
     a = a.permute(permute_order)
     a = a.reshape(reshape_size, -1)
-    norm = flow.norm(a, p = n, dim = 1)
+    norm = flow.norm(a, p=n, dim=1)
 
     return norm
