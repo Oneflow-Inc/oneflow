@@ -41,6 +41,8 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
+  kFastGelu,
+  kQuickGelu,
   // math op
   kAbs,
   kAcos,

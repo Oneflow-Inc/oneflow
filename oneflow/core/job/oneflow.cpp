@@ -899,10 +899,6 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    LOG(ERROR) << "this is dry run, exiting";
-    exit(0);
-  }
 
   HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object;
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object));

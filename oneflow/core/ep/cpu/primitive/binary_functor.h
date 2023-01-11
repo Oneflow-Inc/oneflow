@@ -261,6 +261,39 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst>
 };
 
 template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFastGeluBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    const Src one = static_cast<Src>(1);
+    const Src half = static_cast<Src>(0.5);
+    const Src pow3 = x * x * x;
+    const Src tanh_out = std::tanh(alpha * (x + beta * pow3));
+    const Src dtanh = alpha * (half * x + beta * static_cast<Src>(1.5) * pow3);
+    return dy * (half + half * tanh_out + dtanh * (one - tanh_out * tanh_out));
+  }
+
+ private:
+  static constexpr Src alpha = static_cast<Src>(0.7978845608028654);
+  static constexpr Src beta = static_cast<Src>(0.044714998453855515);
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    const Src one = static_cast<Src>(1.0);
+    const Src sigmoid = one / (one + exp(-x * alpha));
+    return dy * (sigmoid + alpha * x * (sigmoid * (one - sigmoid)));
+  }
+
+ private:
+  static constexpr Src alpha = static_cast<Src>(1.702);
+};
+
+template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 

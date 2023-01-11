@@ -108,6 +108,46 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow._C.randn_like,
+    """
+    randn_like(input, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a tensor with the same size as `input` that is filled with random numbers from a normal distribution with mean 0 and variance 1.
+    flow.randn_like(input) is equivalent to flow.randn(input.size(), dtype=input.dtype, device=input.device).
+
+    Args:
+        input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.
+        dtype (flow.dtype, optional): The desired data type of returned tensor. defaults to the dtype of `input`.
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
+        device (flow.device, optional): The desired device of returned local tensor. If None, defaults to the device of `input`.
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+          numbers of placement, If None, will construct local tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3,3) # construct local tensor
+        >>> y = flow.randn_like(x)
+        >>> y.shape
+        oneflow.Size([3, 3])
+        >>> y.is_global
+        False
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> sbp = flow.sbp.broadcast
+        >>> z = flow.randn_like(y, placement=placement, sbp=sbp) # construct global tensor
+        >>> z.is_global
+        True
+
+    """,
+)
+
 add_docstr(
     oneflow._C.rand,
     """

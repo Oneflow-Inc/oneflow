@@ -15,8 +15,8 @@ limitations under the License.
 """
 from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.modules.module import Module
+from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 import json
 import datetime
@@ -33,7 +33,7 @@ def _check_initializer(initializer):
     assert isinstance(initializer, dict)
     assert initializer.__contains__("type")
     initializer_type = initializer["type"]
-    assert initializer_type in ["uniform", "normal", "constant"]
+    assert initializer_type in ["uniform", "normal", "constant", "trunc_normal"]
     if initializer_type == "uniform":
         assert initializer.__contains__("low")
         assert initializer.__contains__("high")
@@ -42,6 +42,11 @@ def _check_initializer(initializer):
         assert initializer.__contains__("std")
     elif initializer_type == "constant":
         assert initializer.__contains__("value")
+    elif initializer_type == "trunc_normal":
+        assert initializer.__contains__("mean")
+        assert initializer.__contains__("std")
+        assert initializer.__contains__("a")
+        assert initializer.__contains__("b")
     else:
         raise NotImplementedError("unsupported initializer_type")
 
@@ -93,7 +98,11 @@ def _init(
     key_value_store_options["value_type_size"] = value_type_size
     key_value_store_options["value_type"] = str(dtype)
     scale_factor = store_options["size_factor"]
-    key_value_store_options["storage_dim"] = scale_factor * embedding_dim
+    storage_dim = store_options["storage_dim"]
+    if storage_dim != -1:
+        key_value_store_options["storage_dim"] = storage_dim
+    else:
+        key_value_store_options["storage_dim"] = scale_factor * embedding_dim
     # kv store
     assert store_options.__contains__("kv_store")
     kv_store = store_options["kv_store"]
@@ -549,7 +558,7 @@ class Embedding(Module):
 
 
 def make_device_mem_store_options(
-    persistent_path, capacity, size_factor=1, physical_block_size=4096
+    persistent_path, capacity, size_factor=1, storage_dim=-1, physical_block_size=4096
 ):
     """make GPU only store_options param of MultiTableEmbedding
 
@@ -557,6 +566,7 @@ def make_device_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
+        storage_dim (int, optional): number of elements in embedding storage, if set storage_dim, the size_factor param will be invalid. if SGD update, and momentum = 0, storage_dim should be embedding_size*1, if momentum > 0, storage_dim should be embedding_size*2. if Adam, storage_dim should be embedding_size*3. Defaults to -1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
@@ -583,6 +593,7 @@ def make_device_mem_store_options(
             },
         },
         "size_factor": size_factor,
+        "storage_dim": storage_dim,
     }
     return options
 
@@ -592,6 +603,7 @@ def make_cached_ssd_store_options(
     persistent_path,
     capacity=None,
     size_factor=1,
+    storage_dim=-1,
     physical_block_size=4096,
     host_cache_budget_mb=0,
 ):
@@ -602,6 +614,7 @@ def make_cached_ssd_store_options(
         persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
+        storage_dim (int, optional): number of elements in embedding storage, if set storage_dim, the size_factor param will be invalid. if SGD update, and momentum = 0, storage_dim should be embedding_size*1, if momentum > 0, storage_dim should be embedding_size*2. if Adam, storage_dim should be embedding_size*3. Defaults to -1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
         host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
@@ -654,12 +667,18 @@ def make_cached_ssd_store_options(
             },
         },
         "size_factor": size_factor,
+        "storage_dim": storage_dim,
     }
     return options
 
 
 def make_cached_host_mem_store_options(
-    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=4096,
+    cache_budget_mb,
+    persistent_path,
+    capacity,
+    size_factor=1,
+    storage_dim=-1,
+    physical_block_size=4096,
 ):
     """make host use GPU as cache store_options param of MultiTableEmbedding
 
@@ -668,6 +687,7 @@ def make_cached_host_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
+        storage_dim (int, optional): number of elements in embedding storage, if set storage_dim, the size_factor param will be invalid. if SGD update, and momentum = 0, storage_dim should be embedding_size*1, if momentum > 0, storage_dim should be embedding_size*2. if Adam, storage_dim should be embedding_size*3. Defaults to -1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
@@ -699,11 +719,12 @@ def make_cached_host_mem_store_options(
             },
         },
         "size_factor": size_factor,
+        "storage_dim": storage_dim,
     }
     return options
 
 
-def make_uniform_initializer(low, high):
+def make_uniform_initializer(low=0.0, high=1.0):
     """make uniform initializer param of make_table_options
 
     Args:
@@ -725,7 +746,7 @@ def make_uniform_initializer(low, high):
     return {"type": "uniform", "low": low, "high": high}
 
 
-def make_normal_initializer(mean, std):
+def make_normal_initializer(mean=0.0, std=1.0):
     """make normal initializer param of make_table_options
 
     Args:
@@ -766,6 +787,30 @@ def make_constant_initializer(value):
         >>> # ...
     """
     return {"type": "constant", "value": value}
+
+
+def make_trunc_normal_initializer(mean=0.0, std=1.0, a=-2.0, b=2.0):
+    """make truncated normal initializer param of make_table_options
+
+    Args:
+        mean (float): A python scalar. Mean of the random values to generate.
+        std (float): A python scalar. Standard deviation of the random values to generate.
+        a (float): A python scalar. The minimum cutoff value.
+        b (float): A python scalar. The maximum cutoff value.
+
+    Returns:
+        dict: initializer param of make_table_options
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_trunc_normal_initializer(mean=0, std=0.01, a=-0.02, b=0.02)
+        >>> # pass the initializer to flow.one_embedding.make_table_options
+        >>> # ...
+    """
+    return {"type": "trunc_normal", "mean": mean, "std": std, "a": a, "b": b}
 
 
 def make_table_options(param):
@@ -1238,6 +1283,19 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
+
+
+class SmartDecayAdam(flow.nn.optimizer.adam.Adam):
+    """Implements SmartDecayAdam algorithm.
+       The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
+       For Sparse Embedding Table in OneEmbedding, implement the SmartDecayAdam algorithm.
+       For other models, it is same as Adam.
+    """
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = super()._generate_conf_for_graph(train_conf, vars_conf)
+        for opt_conf in new_opt_confs:
+            opt_conf.adam_conf.smart_decay = True
 
 
 class Optimizer(Optimizer):

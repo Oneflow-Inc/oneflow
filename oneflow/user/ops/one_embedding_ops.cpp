@@ -136,7 +136,6 @@ namespace oneflow {
   CHECK_NE_OR_RETURN(embedding_size, 0);
   CHECK_NE_OR_RETURN(line_size, 0);
   CHECK_GE_OR_RETURN(line_size, embedding_size);
-  CHECK_EQ_OR_RETURN(line_size % embedding_size, 0);
   const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   if (ctx->has_output("embeddings", 0)) {
     if (use_dynamic_memory_allocation) {
@@ -398,6 +397,50 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> OneEmbeddingAdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  JUST(CheckDataType(ctx));
+  ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  const int64_t value_dtype_size = GetSizeOfDataType(ctx->InputDType("unique_embeddings", 0));
+  const int64_t step_dtype_size = sizeof(int64_t);
+  const int64_t model_and_states_bytes = embedding_size * 3 * value_dtype_size;
+  const int64_t align_to_step_size_bytes =
+      (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
+  const int64_t smart_decay_sparse_adam_line_size =
+      (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
+  CHECK_EQ_OR_RETURN(line_size, smart_decay_sparse_adam_line_size)
+      << "when using SmartDecayAdam optimizer with embedding_size " << embedding_size
+      << ", storage_dim should equals to " << smart_decay_sparse_adam_line_size
+      << ", but got "
+         "storage_dim: "
+      << line_size << ", please set storage_dim of store_options to "
+      << smart_decay_sparse_adam_line_size;
+  const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
+  ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::GetSbp(
+    user_op::SbpContext* ctx) {
+  JUST(GetEmbeddingUpdateSbp(ctx));
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferDataType(
+    user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();

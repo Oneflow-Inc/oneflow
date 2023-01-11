@@ -18,6 +18,10 @@ import os
 import sys
 import collections
 
+# https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
+if "CUDA_MODULE_LOADING" not in os.environ:
+    os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+
 import oneflow._oneflow_internal
 
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
@@ -95,7 +99,10 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
+from oneflow._C import logaddexp
+from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import quick_gelu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave
@@ -103,6 +110,7 @@ from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import as_strided
+from oneflow._C import as_strided_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softshrink
@@ -140,6 +148,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import topk
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
 from oneflow._C import minimum
@@ -154,6 +163,7 @@ from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
 from oneflow._C import reduce_nansum as nansum
+from oneflow._C import logsumexp
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -176,6 +186,7 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+from oneflow._C import stft
 from oneflow._C import var
 from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
 from oneflow._C import atleast_1d, atleast_2d, atleast_3d
@@ -209,12 +220,13 @@ from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import masked_fill_
 from oneflow._C import equal
-from oneflow._C import equal as eq
+from oneflow._C import broadcast_equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 from oneflow._C import searchsorted
+from oneflow._C import flip
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
@@ -225,6 +237,11 @@ from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import native_multi_head_attention as _native_multi_head_attention
 from oneflow._C import bincount
+from oneflow._C import isclose
+from oneflow._C import allclose
+from oneflow._C import index_add, index_add_
+from oneflow._C import sort
+
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -248,6 +265,7 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
+oneflow._oneflow_internal.RegisterStackGetter()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -281,8 +299,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    oneflow.framework.session_context.TryCloseDefaultSession()
     __oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
+    oneflow.framework.session_context.TryCloseDefaultSession()
 
 
 atexit.register(atexit_hook, hook)
@@ -297,11 +315,12 @@ from oneflow.framework.dtype import (
     set_default_dtype,
     set_default_tensor_type,
     get_default_dtype,
+    is_floating_point,
 )
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
-from oneflow._C import from_numpy
+from oneflow._C import from_numpy, from_dlpack
 
 from oneflow.autograd import (
     enable_grad,
@@ -333,6 +352,7 @@ import oneflow.utils.tensor
 import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow._oneflow_internal import to_dlpack
 from oneflow.framework.type_tensor import *
 
 from oneflow.framework.tensor import zero_
@@ -368,18 +388,17 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
     distributed_partial_fc_sample_op as distributed_partial_fc_sample,
 )
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.unique import unique_op as unique
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
@@ -387,7 +406,6 @@ from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
-from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
@@ -402,6 +420,11 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
+from oneflow.nn.modules.broadcast_ops import (
+    broadcast_tensors,
+    broadcast_shapes,
+    broadcast_to,
+)
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
 # autocast
@@ -417,6 +440,7 @@ from oneflow._oneflow_internal import (
     clear_autocast_cache,
 )
 from oneflow.amp.autocast_mode import *
+from oneflow.jit import *
 
 from . import (
     autograd,
@@ -437,6 +461,7 @@ import oneflow.multiprocessing
 import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
+import oneflow.mock_torch
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

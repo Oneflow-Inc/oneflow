@@ -69,9 +69,7 @@ def _test_roi_align(test_case, placement, rois_sbp):
     np_rois = _get_np_rois()
     of_rois = (
         flow.tensor(np_rois, dtype=flow.float)
-        .to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast,]
-        )
+        .to_global(placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,])
         .to_global(placement, rois_sbp)
     )
     torch_rois = pytorch.tensor(np_rois)
@@ -88,7 +86,7 @@ def _test_roi_align(test_case, placement, rois_sbp):
 
     # compare output
     of_local = of_out.to_global(
-        placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast,]
+        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,]
     ).to_local()
     test_case.assertTrue(
         np.allclose(
@@ -100,7 +98,7 @@ def _test_roi_align(test_case, placement, rois_sbp):
     of_out.sum().backward()
     torch_out.sum().backward()
     of_input_grad = x.oneflow.grad.to_global(
-        placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast,]
+        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast,]
     ).to_local()
     torch_input_grad = x.pytorch.grad.detach().cpu()
     test_case.assertTrue(
@@ -115,13 +113,13 @@ def _test_roi_align_in_fixed_data_impl(test_case, placement, sbp):
 
     input = (
         flow.tensor(input_np, dtype=flow.float32)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp)
         .requires_grad_()
     )
     rois = (
         flow.tensor(rois_np, dtype=flow.float32)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(
             placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
         )

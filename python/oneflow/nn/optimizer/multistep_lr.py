@@ -15,7 +15,7 @@ limitations under the License.
 """
 import bisect
 
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 

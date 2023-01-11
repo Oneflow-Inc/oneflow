@@ -25,7 +25,7 @@ namespace ir {
 namespace jit {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx);
-Maybe<void> SetTensorDateType(user_op::InferContext* ctx);
+Maybe<void> SetTensorDataType(user_op::InferContext* ctx);
 
 }  // namespace jit
 

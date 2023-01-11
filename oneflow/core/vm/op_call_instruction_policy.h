@@ -57,8 +57,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
     return dev_vm_dep_object_consume_mode_;
   }
 
-  bool is_all_outputs_pod() const { return is_all_outputs_pod_; }
-
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
   template<typename DoEachT>
@@ -91,10 +89,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
 
   Stream* vm_stream() const { return vm_stream_; }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
-  }
-
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
   std::string DebugName(const vm::Instruction& instruction) const override;
@@ -121,7 +115,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
-  bool is_all_outputs_pod_;
 };
 
 }  // namespace vm

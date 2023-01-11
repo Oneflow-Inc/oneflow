@@ -17,6 +17,13 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t RegstSlot::GetReadyRegstSize(int64_t regst_desc_id) const {
+  CHECK(is_inited_);
+  auto it = regst_desc_id2regsts_.find(regst_desc_id);
+  if (it == regst_desc_id2regsts_.end()) { return -1; }
+  return it->second.size();
+}
+
 bool RegstSlot::HasRegstDescId(int64_t regst_desc_id) const {
   CHECK(is_inited_);
   return regst_desc_id2regsts_.find(regst_desc_id) != regst_desc_id2regsts_.end();

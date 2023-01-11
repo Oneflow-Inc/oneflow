@@ -105,6 +105,9 @@ Pooling Layers
     nn.MaxPool1d 
     nn.MaxPool2d 
     nn.MaxPool3d 
+    nn.MaxUnpool1d
+    nn.MaxUnpool2d
+    nn.MaxUnpool3d
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
@@ -153,6 +156,7 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.SELU 
     nn.CELU 
     nn.GELU 
+    nn.QuickGELU 
     nn.SiLU 
     nn.Sigmoid 
     nn.Mish 
@@ -196,6 +200,7 @@ Normalization Layers
     nn.InstanceNorm3d 
     nn.LayerNorm
     nn.RMSLayerNorm
+    nn.RMSNorm
 
 Recurrent Layers
 ----------------

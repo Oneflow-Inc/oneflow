@@ -58,7 +58,10 @@ Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
 Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  autograd_meta_->set_retain_grad(retain_grad);
+  if (!requires_grad() && retain_grad) {
+    return Error::RuntimeError() << "Can't retain_grad on Tensor that has requires_grad=False";
+  }
+  if (!is_leaf() && retain_grad) { autograd_meta_->set_retain_grad(retain_grad); }
   return Maybe<void>::Ok();
 }
 
@@ -117,7 +120,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(), dep_object);
+        std::make_shared<vm::InsideVmTensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();

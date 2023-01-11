@@ -25,6 +25,8 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 test_conv2d_weight = np.array(
     [
@@ -1587,7 +1589,19 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         img = torch.ones((1, 3, 224, 224), requires_grad=True).to(device)
         kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
-        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=3)
+    def test_nn_functional_conv2d_3dinput(test_case):
+        device = random_device()
+        img = torch.ones((3, 224, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
         return y
 
     def test_conv2d(test_case):

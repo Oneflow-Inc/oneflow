@@ -31,6 +31,7 @@ class SpinCounter final {
   explicit SpinCounter(int64_t cnt_val) : cnt_val_(cnt_val) {}
 
   int64_t Decrease() { return --cnt_val_; }
+  void Reset(int64_t cnt_val) { cnt_val_ = cnt_val; }
   Maybe<void> WaitUntilCntEqualZero() const;
 
  private:
