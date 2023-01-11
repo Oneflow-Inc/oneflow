@@ -124,7 +124,7 @@ struct OpCallInstructionUtil final {
       auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
       for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
         const auto& y = op_call_instruction_policy->outputs().at(i);
-        if (y->tensor_storage()->eviction_disabled()) { continue; }
+        if (y->tensor_storage()->is_eviction_disabled()) { continue; }
         if (storage_is_initialized[i] && !recompute) {
           VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
                   << y->tensor_storage()->compute_op_type_name() << std::endl;
@@ -139,7 +139,7 @@ struct OpCallInstructionUtil final {
       const auto& y = op_call_instruction_policy->outputs().at(i);
       y->tensor_storage()->Pin();
       y->tensor_storage()->Access();
-      if (!recompute && !y->tensor_storage()->eviction_disabled()) {
+      if (!recompute && !y->tensor_storage()->is_eviction_disabled()) {
         y->tensor_storage()->set_compute_op(*compute_op);
       }
     }
@@ -172,11 +172,12 @@ struct OpCallInstructionUtil final {
     }
     for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
-      x->tensor_storage()->disable_eviction();
+      x->tensor_storage()->set_eviction_disabled(true);
     }
 
     Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));
     VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    Singleton<dtr::Env>::Get()->current_op_type_name = "None";
     return Maybe<void>::Ok();
   }
 

@@ -53,13 +53,16 @@ Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
     : ProxyTensor<Parameter>(tensor) {
   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
   if (tensor_->is_local() && tensor_->is_eager()) {
-    CHECK_JUST(tensor_->eager_blob_object())->tensor_storage()->disable_eviction();
+    CHECK_JUST(tensor_->eager_blob_object())->tensor_storage()->set_eviction_disabled(true);
   }
 }
 Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+  if (tensor_->is_local() && tensor_->is_eager()) {
+    JUST(tensor_->eager_blob_object())->tensor_storage()->set_eviction_disabled(false);
+  }
   JUST(tensor_->set_data(other));
   if (tensor_->is_local() && tensor_->is_eager()) {
-    JUST(tensor_->eager_blob_object())->tensor_storage()->disable_eviction();
+    JUST(tensor_->eager_blob_object())->tensor_storage()->set_eviction_disabled(true);
   }
   return Maybe<void>::Ok();
 }

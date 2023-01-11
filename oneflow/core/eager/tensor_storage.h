@@ -69,8 +69,8 @@ class TensorStorage {
   bool is_pinned() const { return num_pinned() > 0; }
   int32_t num_pinned() const { return num_pinned_; }
   bool is_evictable() const;
-  void disable_eviction() { eviction_disabled_ = true; }
-  bool eviction_disabled() const { return eviction_disabled_; }
+  void set_eviction_disabled(bool disabled) { eviction_disabled_ = disabled; }
+  bool is_eviction_disabled() const { return eviction_disabled_; }
   int64_t id() const { return id_; }
   Maybe<double> cost(size_t override_size) const;
   double approx_neighbor_cost() const;

@@ -68,13 +68,16 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
       current_grad_(new TensorArg) {}
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  if (grad && acc_grad_ != nullptr) {
+    JUST(acc_grad_->eager_blob_object())->tensor_storage()->set_eviction_disabled(false);
+  }
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
     acc_grad_ = JUST(static_zeros_tensor->AsLocalTensor());
   } else {
     acc_grad_ = grad;
   }
   if (acc_grad_ != nullptr) {
-    JUST(acc_grad_->eager_blob_object())->tensor_storage()->disable_eviction();
+    JUST(acc_grad_->eager_blob_object())->tensor_storage()->set_eviction_disabled(true);
   }
   return Maybe<void>::Ok();
 }

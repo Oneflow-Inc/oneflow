@@ -86,7 +86,7 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     return JUST(t->eager_blob_object())->tensor_storage()->is_evictable();
   });
   m.def("disable_eviction", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
-    JUST(t->eager_blob_object())->tensor_storage()->disable_eviction();
+    JUST(t->eager_blob_object())->tensor_storage()->set_eviction_disabled(true);
     return Maybe<void>::Ok();
   });
   m.def("clear_compute_op", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
