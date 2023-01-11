@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -30,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
 
+#include <memory>
 #include <sstream>
 #include <bitset>
 
@@ -3511,6 +3513,54 @@ class FusedGetIntersectionAreaGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGetPboxFunctor {
+ public:
+  FusedGetPboxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_pbox")
+                         .Input("pxy")
+                         .Input("pwh")
+                         .Input("anchors")
+                         .Output("pbox")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& pxy,
+                           const std::shared_ptr<one::Tensor>& pwh,
+                           const std::shared_ptr<one::Tensor>& anchors) const {
+    int64_t num_axes = pxy->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(num_axes, 2);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {pxy, pwh, anchors}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedGetPboxGradFunctor {
+ public:
+  FusedGetPboxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_get_pbox_grad")
+                         .Input("pxy")
+                         .Input("pwh")
+                         .Input("anchors")
+                         .Input("pbox_diff")
+                         .Output("pxy_diff")
+                         .Output("pwh_diff")
+                         .Output("anchors_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& pxy,
+                                const std::shared_ptr<one::Tensor>& pwh,
+                                const std::shared_ptr<one::Tensor>& anchors,
+                                const std::shared_ptr<one::Tensor>& pbox_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {pxy, pwh, anchors, pbox_diff}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedGetBounddingBoxesCoordFunctor {
  public:
   FusedGetBounddingBoxesCoordFunctor() {
@@ -3961,6 +4011,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
   m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
       "FusedGetConvexDiagonalSquaredGrad");
+  m.add_functor<impl::FusedGetPboxFunctor>("FusedGetPbox");
+  m.add_functor<impl::FusedGetPboxGradFunctor>("FusedGetPboxGrad");
 };
 
 }  // namespace functional
