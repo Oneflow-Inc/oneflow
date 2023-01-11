@@ -220,6 +220,8 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
+    std::cout << height_scale << std::endl;
+    std::cout << width_scale << std::endl;
     const int64_t nbatch = x_tensor->shape_view().At(0);
     const int64_t channels = x_tensor->shape_view().At(1);
     const int64_t in_height = x_tensor->shape_view().At(2);
