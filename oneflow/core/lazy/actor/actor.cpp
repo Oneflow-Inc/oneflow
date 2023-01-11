@@ -663,7 +663,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
     sync_msg_queue_.emplace_back(msg);
-    // Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
   }
