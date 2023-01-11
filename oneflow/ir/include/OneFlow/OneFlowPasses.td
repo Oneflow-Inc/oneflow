@@ -74,6 +74,7 @@ def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
 def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
   let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
   let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
