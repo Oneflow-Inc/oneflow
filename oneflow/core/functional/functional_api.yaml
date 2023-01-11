@@ -757,7 +757,7 @@
   bind_python: True
 
 - name: "rrelu_grad"
-  signature: "Tensor (Tensor x, Tensor noise_data, Tensor dy, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluGrad"
+  signature: "Tensor (Tensor dy, Tensor noise_data) => RReluGrad"
   bind_python: False
 
 - name: "normal"
