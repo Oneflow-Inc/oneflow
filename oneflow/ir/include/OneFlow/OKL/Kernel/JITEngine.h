@@ -21,8 +21,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
 
-#define FUNC_NAME(func) #func
-
 extern "C" {
 void okl_llvm_func(void* launcher, int64_t index);
 }  // extern "C"
@@ -46,7 +44,11 @@ class JITEngine {
 };
 
 namespace llvm_func {
-const auto LLVM_FUNC = FUNC_NAME(okl_llvm_func);
+#define C_FUNC_NAME(func) #func
+
+const auto LLVM_FUNC = C_FUNC_NAME(okl_llvm_func);
+
+#undef C_FUNC_NAME
 }  // namespace llvm_func
 
 }  // namespace okl
