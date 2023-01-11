@@ -44,28 +44,25 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
     offset = gen->get_philox_offset(counter_offset);
   }
 
+  DistributionElementwiseGridStrideParams params;
+  params.numel = elem_cnt;
+  params.seed = seed;
+  params.offset = offset;
+  params.dst = reinterpret_cast<void*>(dptr);
+
   using ComputeType = typename distribution::DefaultComputeType<T>::type;
-  auto high = high_;
-  auto low = low_;
-  auto transform_func = [high, low] __device__(ComputeType rand_num) -> T {
-    if (rand_num == static_cast<T>(1.0)) { rand_num = static_cast<T>(0.0); }
-    return static_cast<T>(rand_num * (high - low) + low);
-  };
+
+  params.attr0 = Scalar(static_cast<ComputeType>(low_));
+  params.attr1 = Scalar(static_cast<ComputeType>(high_));
 
   if (std::is_same<T, double>::value) {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 2>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, seed, offset, dptr,
-            [] __device__(curandStatePhilox4_32_10_t * state) {
-              return curand_uniform2_double(state);
-            },
-            transform_func);
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, DistributionOp::kUniform2Double,
+                                            TransformOp::kUniform>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
   } else {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 4>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, seed, offset, dptr,
-            [] __device__(curandStatePhilox4_32_10_t * state) { return curand_uniform4(state); },
-            transform_func);
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, DistributionOp::kUniform4,
+                                            TransformOp::kUniform>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
   }
 }
 

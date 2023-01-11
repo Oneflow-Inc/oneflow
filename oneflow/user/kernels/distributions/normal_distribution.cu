@@ -44,26 +44,25 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
     offset = gen->get_philox_offset(counter_offset);
   }
 
+  DistributionElementwiseGridStrideParams params;
+  params.numel = elem_cnt;
+  params.seed = seed;
+  params.offset = offset;
+  params.dst = reinterpret_cast<void*>(dptr);
+
   using ComputeType = typename distribution::DefaultComputeType<T>::type;
-  ComputeType mean = static_cast<ComputeType>(mean_);
-  ComputeType std = static_cast<ComputeType>(std_);
-  auto transform_func = [mean, std] __device__(ComputeType random_val) -> T {
-    return static_cast<T>(random_val * std + mean);
-  };
+
+  params.attr0 = Scalar(static_cast<ComputeType>(mean_));
+  params.attr1 = Scalar(static_cast<ComputeType>(std_));
+
   if (std::is_same<T, double>::value) {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 2>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, seed, offset, dptr,
-            [] __device__(curandStatePhilox4_32_10_t * state) {
-              return curand_normal2_double(state);
-            },
-            transform_func);
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, DistributionOp::kNormal2Double,
+                                            TransformOp::kNormal>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
   } else {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 4>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, seed, offset, dptr,
-            [] __device__(curandStatePhilox4_32_10_t * state) { return curand_normal4(state); },
-            transform_func);
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, DistributionOp::kNormal4,
+                                            TransformOp::kNormal>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
   }
 }
 
