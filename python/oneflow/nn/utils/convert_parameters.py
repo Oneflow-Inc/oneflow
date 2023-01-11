@@ -4,6 +4,11 @@ from oneflow.framework.tensor import Tensor
 
 def parameters_to_vector(parameters: Iterable[Tensor]) -> Tensor:
     r"""Convert parameters to one vector
+    
+    The method is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.utils.parameters_to_vector.
+
     Args:
         parameters (Iterable[Tensor]): an iterator of Tensors that are the
             parameters of a model.
@@ -24,6 +29,11 @@ def parameters_to_vector(parameters: Iterable[Tensor]) -> Tensor:
 
 def vector_to_parameters(vec: Tensor, parameters: Iterable[Tensor]) -> None:
     r"""Convert one vector to the parameters
+
+    The method is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.utils.vector_to_parameters.
+
     Args:
         vec (Tensor): a single vector represents the parameters of a model.
         parameters (Iterable[Tensor]): an iterator of Tensors that are the
@@ -56,6 +66,11 @@ def _check_param_device(param: Tensor, old_param_device: Optional[int]) -> int:
     in the same device. Currently, the conversion between model parameters
     and single vector form is not supported for multiple allocations,
     e.g. parameters in different GPUs, or mixture of CPU/GPU.
+
+    The method is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/nn.html#utilities.
+
     Args:
         param ([Tensor]): a Tensor of a parameter of a model
         old_param_device (int): the device where the first parameter of a

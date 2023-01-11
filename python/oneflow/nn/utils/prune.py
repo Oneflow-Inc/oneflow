@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 r"""
-Pruning methods
+Prune Methods are consistent with PyTorch.
+The documentation is referenced from:
+https://pytorch.org/docs/stable/nn.html#module-torch.nn.utils.
 """
 import numbers
 from abc import ABC, abstractmethod
