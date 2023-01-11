@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_WRAPPERCONTEXT_H_
 
-#include <memory>
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKL/Kernel/InitContext.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"

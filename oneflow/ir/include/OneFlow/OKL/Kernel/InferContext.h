@@ -21,9 +21,6 @@ limitations under the License.
 #include "oneflow/core/kernel/user_kernel.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
 
-#include <memory>
-#include <utility>
-
 namespace oneflow {
 namespace okl {
 
