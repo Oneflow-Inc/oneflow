@@ -285,6 +285,7 @@ Tensor class reference
     Tensor.min
     Tensor.minimum
     Tensor.mish
+    Tensor.mode
     Tensor.mul
     Tensor.mul_
     Tensor.nansum
