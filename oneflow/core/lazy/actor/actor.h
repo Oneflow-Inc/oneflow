@@ -184,6 +184,7 @@ class Actor : public ActorBase {
 
   virtual void AddCallback(std::function<void()> callback);
 
+  int64_t act_cnt_{1};
   int64_t actor_id_;
   int64_t thrd_id_;
   int64_t job_id_;

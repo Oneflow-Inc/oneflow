@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
 namespace oneflow {
@@ -136,7 +137,7 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
-    ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
+    ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get(), actor_id_);
     exec_kernel_vec_.emplace_back(std::move(ek));
   }
 
@@ -422,6 +423,17 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    // actual run kernel
+    const auto& op_name = actor_ctx_->task_proto()
+                              .exec_sequence()
+                              .exec_node(0)
+                              .kernel_conf()
+                              .op_attribute()
+                              .op_conf()
+                              .name();
+    LOG(INFO) << " actor " << actor_id_ << " name " << op_name << " try to act " << act_cnt_
+              << " thread " << thrd_id_ << " type "
+              << TaskType_Name(actor_ctx_->task_proto().task_type());
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -433,6 +445,8 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+    LOG(INFO) << " actor " << actor_id_ << " name " << op_name << " finish to act " << act_cnt_;
+    ++act_cnt_;
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();

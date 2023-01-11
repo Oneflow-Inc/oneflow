@@ -96,12 +96,17 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       const auto& job_instance = MakeJobInstance(instruction);
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      LOG(INFO) << "vm job " << job_name << " try to push callback."
+                << " run id " << run_id;
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
+      LOG(INFO) << "vm job " << job_name << " try to push source tick."
+                << " run id " << run_id;
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
     }
     OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
+    ++run_id;
   }
 
  private:

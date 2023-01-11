@@ -228,7 +228,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
-      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
+      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this, task_proto.task_id());
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
       if (cuda_stream != nullptr && kernel_conf.all_blobs_are_static()

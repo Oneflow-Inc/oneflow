@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -356,6 +357,10 @@ Maybe<void> NNGraph::MasterRankCompile() {
           }
         }();
         boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+              ->Write(*boxing_task_graph_proto);
+        }
         Plan rank_plan;
         auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
         double start = GetCurTime();
@@ -366,11 +371,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
 
         VLOG(1) << "Graph name: " << name_ << " rank: " << i
                 << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
-        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
-              ->Write(*plan);
-          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(i) + ".dot");
-        }
         PlanUtil::GenRegisterHint(plan);
         plan->mutable_collective_boxing_plan();
         // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
@@ -442,11 +442,6 @@ Maybe<void> NNGraph::NaiveCompile() {
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenerateBasePlan", 1);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenMemBlockAndChunk", 1);
-    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
-    }
-    sub_compile_tc->Count("[PlanCompile]" + name_ + " LogPlan", 1);
     PlanUtil::GenRegisterHint(&plan_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
@@ -530,6 +525,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
 
+  auto cur_rank = GlobalProcessCtx::Rank();
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(cur_rank))
+        ->Write(plan_);
+    PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan" + std::to_string(cur_rank) + ".dot");
+  }
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
   runtime_inited_ = true;

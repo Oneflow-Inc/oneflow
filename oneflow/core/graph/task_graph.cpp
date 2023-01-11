@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -1008,10 +1009,14 @@ void BoxingTaskGraph::ToProto(const std::function<bool(TaskNode*)>& Pick,
     ForEachNode([&](TaskNode* task_node) {
       if (Pick(task_node)) { sources.insert(task_node); }
     });
+    HashSet<TaskNode*> sources_out;
     for (auto* source : sources) {
       // The consumed task_ids must be generated from out_nodes.
-      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) { sources.insert(out_node); });
+      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) {
+        if (!sources.count(out_node)) { sources_out.insert(out_node); }
+      });
     }
+    sources.insert(sources_out.begin(), sources_out.end());
     return std::list<TaskNode*>{sources.begin(), sources.end()};
   }();
   const auto& TransportTaskNodeToProto = [&](TransportTaskNode* task_node) {
@@ -1234,6 +1239,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
+  JUST(InitRegstDescsConsumers());
   // Note that tasks added are from BoxingTaskGraph, so they are all boxing related.
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -1255,21 +1261,19 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
-        // This needs to be removed to pass the zero 2d stage 2 test.
-        // CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym())
-        //   << " src " << src->parallel_desc_sym()->data().DebugString()
-        //   << " dst " << dst->parallel_desc_sym()->data().DebugString();
+        CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
+            << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+            << dst->parallel_desc_sym()->data().DebugString();
         CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
                                    [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 
-  ForEachNode([&](TaskNode* task_node) {
-    task_node->ProduceAllRegstsAndBindEdges();
-  });
+  ForEachNode([&](TaskNode* task_node) { task_node->ProduceAllRegstsAndBindEdges(); });
   ForEachEdge([&](TaskEdge* edge) {
-    CHECK(edge->OutHasBindRegst()) << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
+    CHECK(edge->OutHasBindRegst())
+        << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
   });
   return Maybe<void>::Ok();
 }
