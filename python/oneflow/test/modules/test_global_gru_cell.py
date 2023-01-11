@@ -20,7 +20,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
-import oneflow.framework.session_context as session_ctx
 
 
 @autotest(n=1, check_graph=True)
@@ -69,8 +68,6 @@ class TestRNNCellGlobal(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_gru_cell(test_case, placement, sbp)
-
-                session_ctx.GetDefaultSession().Reset()
 
 
 if __name__ == "__main__":
