@@ -71,28 +71,43 @@ class TestDDP(flow.unittest.TestCase):
             test_case._test_ddp_basic(dev_type)
 
     def _test_ddp_with_global_mode(test_case, placement, sbp):
+        class ParamModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.ones([2], requires_grad=True).to_global(
+                    placement, sbp
+                )
+                
+            def forward(self, x):
+                return x * self.w
+            
         class MulGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.w = flow.nn.Parameter(flow.Tensor([1, 1])).to_global(
-                    placement, sbp
+                self.param = ParamModule()
+                of_sgd = flow.optim.SGD(
+                    [{"params": self.param.parameters()}], lr=0.001, momentum=0.9,
                 )
+                self.add_optimizer(of_sgd)
 
             def build(self, x):
                 with global_mode(True, placement, sbp):
-                    device = self.w.weight.device
+                    device = self.param.w.device
                     x = x.to(device)
-                    out = x * self.w
+                    out = self.param(x)
 
-                out.sum().backward()
+                loss = out.sum()
+                loss.backward()
 
                 return out
 
         rank = flow.env.get_rank()
         if rank == 0:
-            x = flow.Tensor([1, 1])
+            with global_mode(True, placement, sbp):
+                x = flow.ones([2])
         elif rank == 1:
-            x = flow.Tensor([2, 2])
+            with global_mode(True, placement, sbp):
+                x = flow.ones([2]) * 2
         else:
             raise ValueError()
 
@@ -100,7 +115,7 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
 
         test_case.assertTrue(
-            np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5]))
+            np_allclose_with_shape(m.param.w.grad.numpy(), np.array([1.5, 1.5]))
         )
 
     def test_ddp_with_global_mode(test_case):
