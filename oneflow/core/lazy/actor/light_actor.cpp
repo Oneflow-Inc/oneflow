@@ -228,7 +228,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
-      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this, task_proto.task_id());
+      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
       if (cuda_stream != nullptr && kernel_conf.all_blobs_are_static()
@@ -300,7 +300,24 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     HandleActorMsg(msg);
     if (total_reading_cnt_ != 0) { return 0; }
     if (ready_consumed_ == max_ready_consumed_) {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+      const auto& op_name = actor_ctx_->task_proto()
+                                .exec_sequence()
+                                .exec_node(0)
+                                .kernel_conf()
+                                .op_attribute()
+                                .op_conf()
+                                .name();
+      auto actor_id = actor_ctx_->task_proto().task_id();
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
+                << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
+#endif  // OF_DEBUG_LAZY_RUNTIME
       ActOnce();
+#ifdef OF_DEBUG_LAZY_RUNTIME
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " finish to act count "
+                << act_cnt_;
+      ++act_cnt_;
+#endif  // OF_DEBUG_LAZY_RUNTIME
       return 0;
     }
     if (OF_PREDICT_FALSE(ready_consumed_ == 0 && remaining_eord_cnt_ == 0)) {
@@ -606,6 +623,9 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  int64_t act_cnt_{1};
+#endif  // OF_DEBUG_LAZY_RUNTIME
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,

@@ -184,7 +184,6 @@ class Actor : public ActorBase {
 
   virtual void AddCallback(std::function<void()> callback);
 
-  int64_t act_cnt_{1};
   int64_t actor_id_;
   int64_t thrd_id_;
   int64_t job_id_;
@@ -216,6 +215,9 @@ class Actor : public ActorBase {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  int64_t act_cnt_{1};
+#endif  // OF_DEBUG_LAZY_RUNTIME
 };
 
 }  // namespace oneflow

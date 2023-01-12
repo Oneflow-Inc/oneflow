@@ -43,8 +43,7 @@ void Kernel::InitBase(const KernelConf& kernel_conf) {
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), this));
 }
 
-void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx, int64_t actor_id) {
-  actor_id_ = actor_id;
+void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   InitBase(kernel_conf);
   VirtualKernelInit(ctx);
@@ -53,9 +52,13 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx, int64_t act
 void Kernel::Launch(KernelContext* ctx) const {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   ctx->WillForward(ctx, this);
-  LOG(INFO) << " actor " << actor_id_ << " try kernel launch op " << this->op_conf().name();
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  LOG(INFO) << "Kernel try to launch op " << this->op_conf().name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   Forward(ctx);
-  LOG(INFO) << " actor " << actor_id_ << " finish kernel launch op " << this->op_conf().name();
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  LOG(INFO) << "Kernel finish launch op " << this->op_conf().name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   ctx->DidForward(ctx, this);
 }
 
@@ -81,15 +84,14 @@ void Kernel::ForwardShape(KernelContext* ctx) const {
       [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); });
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf, KernelContext* kernel_ctx,
-                                              int64_t actor_id) {
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf, KernelContext* kernel_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   CHECK_NE(op_type, OperatorConf::OpTypeCase::OP_TYPE_NOT_SET)
       << " ERROR! KernelConf: " << conf.DebugString() << " has NOT set op_type_case";
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
-  rptr->Init(conf, kernel_ctx, actor_id);
+  rptr->Init(conf, kernel_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

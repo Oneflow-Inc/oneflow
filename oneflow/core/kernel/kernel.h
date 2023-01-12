@@ -32,7 +32,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel();
 
-  void Init(const KernelConf& kernel_conf, KernelContext* ctx, int64_t actor_id);
+  void Init(const KernelConf& kernel_conf, KernelContext* ctx);
   void Launch(KernelContext* ctx) const;
 
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
@@ -63,7 +63,6 @@ class Kernel {
  private:
   std::unique_ptr<RuntimeBlobShapeInferHelper> shape_infer_helper_;
   KernelConf kernel_conf_;
-  int64_t actor_id_;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
@@ -71,8 +70,7 @@ class Kernel {
 #define REGISTER_KERNEL_CREATOR(k, f) \
   REGISTER_CLASS_CREATOR(int32_t, k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& kernel_conf, KernelContext* ctx,
-                                              int64_t actor_id);
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& kernel_conf, KernelContext* ctx);
 
 }  // namespace oneflow
 
