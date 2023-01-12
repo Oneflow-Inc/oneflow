@@ -317,6 +317,7 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  
