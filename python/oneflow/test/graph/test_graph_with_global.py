@@ -141,7 +141,12 @@ def _test_linear_train_graph_with_ddp(test_case):
                     # Test randn source op
                     sample = flow.randn(out.shape, device="cpu").to(device)
                     out = out + sample * 100
+
+                # Test disable global_mode while passing placement and sbp
+                with global_mode(False, placement=P, sbp=B):
                     out = out - sample * 100
+                    cur_global_mode = global_view.current_global_mode()
+                    test_case.assertFalse(cur_global_mode.is_enabled)
 
                 loss = out.sum()
                 loss.backward()

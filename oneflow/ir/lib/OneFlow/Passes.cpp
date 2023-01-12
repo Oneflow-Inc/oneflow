@@ -371,24 +371,6 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
   return true;
 }
 
-bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after,
-                                         ::mlir::StringAttr data_format) {
-  if (padding_before.size() == 4 && padding_after.size() == 4) {
-    if (padding_before.getValue().equals(padding_after.getValue())) {
-      if (data_format.str() == "channels_first") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-      if (data_format.str() == "channels_last") {
-        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
-      }
-    }
-  }
-  return false;
-}
-
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -399,96 +381,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                      return StringAttr::get(ctx, v);
                                                                    }))));
   return attrs;
-}
-
-::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
-                                                          OpResult conv_result,
-                                                          OpResult bn_result) {
-  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-    if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn_result.getDefiningOp())) {
-      auto ctx = rewriter.getContext();
-      SmallVector<Value, 4> final_results;
-      NamedAttrList attributes = conv_op->getAttrs();
-
-      attributes.set("operand_segment_sizes", rewriter.getI32VectorAttr({1, 1, 1, 0}));
-
-      SmallVector<Value, 4> operands;
-      operands.push_back(conv_op.in());
-
-      // deal with weight
-      auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
-      add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
-      add_op_attrs.set("float_operand", bn_op.epsilonAttr());
-      auto add_op = rewriter.create<oneflow::ScalarAddOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
-
-      auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-                                                      SmallVector<Value, 4>({add_op.out()}),
-                                                      GetUserOpCommonAttrs(ctx, "sqrt"));
-
-      auto div_op = rewriter.create<oneflow::BroadcastDivOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({bn_op.gamma(), sqrt_op.y()}), GetUserOpCommonAttrs(ctx, "div"));
-
-      auto bn_gamma_variable_op =
-          llvm::dyn_cast<oneflow::FrozenVariableOp>(bn_op.gamma().getDefiningOp());
-      if (!bn_gamma_variable_op) {
-        emitError(conv_op.getLoc()) << "Gamma of batchnorm should be a FrozenVariableOp.";
-      }
-      auto bn_gamma_shape =
-          bn_gamma_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
-
-      auto conv_weight_variable_op =
-          llvm::dyn_cast<oneflow::FrozenVariableOp>(conv_op.weight().getDefiningOp());
-      if (!conv_weight_variable_op) {
-        emitError(conv_op.getLoc()) << "Weight of conv2d should be a FrozenVariableOp.";
-      }
-      auto conv_weight_shape =
-          conv_weight_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
-
-      std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
-      for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
-      auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
-      reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
-                                                            ArrayRef<int64_t>(bn_gamma_new_shape),
-                                                            [&](int64_t v) -> Attribute {
-                                                              return rewriter.getI64IntegerAttr(v);
-                                                            }))));
-      auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
-          reshape_op_attrs);
-
-      auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
-          GetUserOpCommonAttrs(ctx, "multiply"));
-      operands.push_back(mul_op.z());
-
-      // deal with bias
-      if (!conv_op.bias()) {
-        auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
-            conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
-            GetUserOpCommonAttrs(ctx, "multiply_bias"));
-        auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
-            conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
-            GetUserOpCommonAttrs(ctx, "sub_bias"));
-        operands.push_back(sub_op_bias.z());
-      } else {
-        emitError(conv_op.getLoc())
-            << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
-      }
-
-      auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
-
-      final_results.push_back(new_conv_op.out());
-      return final_results;
-    }
-  }
-  return {};
 }
 
 struct ReplaceVariablePattern : public ::mlir::RewritePattern {
@@ -961,8 +853,8 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   };
 
   std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
-  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
-                                            TypeRange(ArrayRef<Value>(proto.second)));
+  auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(proto.first))),
+                                            TypeRange(ValueRange(ArrayRef<Value>(proto.second))));
   auto func_name = "wrap" + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) {
@@ -1217,12 +1109,10 @@ void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<KernelLaunchPattern>(patterns.getContext());
 }
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FusedScaleTrilPattern>(patterns.getContext());
-  patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
-  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
@@ -1244,7 +1134,7 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  populateFuseConv2DBatchNormPattern(patterns);
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {

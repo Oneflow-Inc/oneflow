@@ -23,5 +23,6 @@ class Tensor;
 }
 
 Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src);
+Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src);
 
 }  // namespace oneflow

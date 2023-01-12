@@ -122,15 +122,15 @@ OneFlowEnv::OneFlowEnv() {
   of::ConfigProto config_proto;
   config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
   const int64_t session_id = of::NewSessionId();
-  CHECK_JUST(of::RegsiterSession(session_id));
   config_proto.set_session_id(session_id);
-
+  CHECK(of::RegsterSessionId(session_id));
   session_ctx_ = std::make_shared<of::MultiClientSessionContext>(env_ctx_);
   CHECK_JUST(session_ctx_->TryInit(config_proto));
 }
 
 OneFlowEnv::~OneFlowEnv() {
   session_ctx_.reset();
+  CHECK(of::ClearSessionId(CHECK_JUST(of::GetDefaultSessionId())));
   env_ctx_.reset();
 }
 

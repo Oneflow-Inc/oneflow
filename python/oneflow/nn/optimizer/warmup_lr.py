@@ -15,7 +15,7 @@ limitations under the License.
 """
 import numpy as np
 from typing import Union
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 from .sequential_lr import SequentialLR
 from .constant_lr import ConstantLR
