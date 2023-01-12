@@ -20,7 +20,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
-import oneflow.framework.session_context as session_ctx
 
 
 @autotest(n=1, check_graph=False)
@@ -120,15 +119,11 @@ class TestRNNCellGlobal(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_rnn_relu_cell(test_case, placement, sbp)
 
-                session_ctx.GetDefaultSession().Reset()
-
     @globaltest
     def test_rnn_tanh_cell(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_rnn_tanh_cell(test_case, placement, sbp)
-
-                session_ctx.GetDefaultSession().Reset()
 
 
 if __name__ == "__main__":
