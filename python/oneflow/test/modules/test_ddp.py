@@ -19,6 +19,7 @@ import oneflow as flow
 # Test import from oneflow.nn.parallel.distributed
 from oneflow.nn.parallel.distributed import DistributedDataParallel
 from oneflow.nn.parallel import DistributedDataParallel as ddp
+from oneflow.utils.global_view import global_mode, to_global
 import oneflow.unittest
 
 import numpy as np
@@ -32,6 +33,8 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
 
 
 test_device = ["cpu"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+placements = [flow.placement("cpu", ranks=[0, 1]), flow.placement("cuda", ranks=[0, 1])]
+sbps = [flow.sbp.broadcast, flow.sbp.split(0)]
 
 
 @flow.unittest.skip_unless_1n2d()
@@ -66,6 +69,59 @@ class TestDDP(flow.unittest.TestCase):
     def test_ddp_basic(test_case):
         for dev_type in test_device:
             test_case._test_ddp_basic(dev_type)
+
+    def _test_ddp_with_global_mode(test_case, placement, sbp):
+        class ParamModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.ones([2], requires_grad=True).to_global(
+                    placement, sbp
+                )
+                
+            def forward(self, x):
+                return x * self.w
+            
+        class MulGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.param = ParamModule()
+                of_sgd = flow.optim.SGD(
+                    [{"params": self.param.parameters()}], lr=0.001, momentum=0.9,
+                )
+                self.add_optimizer(of_sgd)
+
+            def build(self, x):
+                with global_mode(True, placement, sbp):
+                    device = self.param.w.device
+                    x = x.to(device)
+                    out = self.param(x)
+
+                loss = out.sum()
+                loss.backward()
+
+                return out
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            with global_mode(True, placement, sbp):
+                x = flow.ones([2])
+        elif rank == 1:
+            with global_mode(True, placement, sbp):
+                x = flow.ones([2]) * 2
+        else:
+            raise ValueError()
+
+        m = MulGraph()
+        y = m(x)
+
+        test_case.assertTrue(
+            np_allclose_with_shape(m.param.w.grad.numpy(), np.array([1.5, 1.5]))
+        )
+
+    def test_ddp_with_global_mode(test_case):
+        for placement in placements:
+            for sbp in sbps:
+                test_case._test_ddp_with_global_mode(placement, sbp)
 
     def _test_ddp_multiple_buckets(test_case, dev_type):
         class Mul(flow.nn.Module):
