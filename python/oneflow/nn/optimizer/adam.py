@@ -18,7 +18,7 @@ import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 
@@ -54,6 +54,9 @@ class Adam(Optimizer):
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         fused (bool, optional): whether to divide all the parameters into several groups, then
             update each group of parameters with the fused kernel. (default: False)
 
@@ -119,6 +122,7 @@ class Adam(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
+        contiguous_params: bool = False,
         fused: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -139,11 +143,17 @@ class Adam(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
+        options["contiguous_params"] = contiguous_params
         options["fused"] = fused
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
@@ -186,7 +196,13 @@ class Adam(Optimizer):
             "do_bias_correction": param_group["do_bias_correction"],
             "amsgrad": param_group["amsgrad"],
         }
-        for param in param_group.parameters:
+
+        if param_group["contiguous_params"]:
+            param_list = param_group.contiguous_parameters
+        else:
+            param_list = param_group.parameters
+
+        for param in param_list:
             if param.grad is None:
                 continue
             if "exp_avg" not in self._state[param]:
@@ -287,6 +303,10 @@ class Adam(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

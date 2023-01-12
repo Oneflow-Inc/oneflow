@@ -21,6 +21,8 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/framework/tensor.h"
+#include "oneflow/api/python/caster/maybe.h"
+#include "oneflow/api/python/caster/optional.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"

@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -26,12 +24,10 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
-
-#include <sstream>
-#include <bitset>
 
 namespace oneflow {
 namespace one {
@@ -875,6 +871,40 @@ class MedianWithIndicesFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ModeFunctor {
+ public:
+  ModeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("mode").Input("input").Output("values").Output("indices").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool keepdim) const {
+    int32_t axis = dim;
+    const int64_t ndim = x->ndim();
+    axis = JUST(maybe_wrap_dim(axis, ndim));
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
+    if (axis != ndim - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceProdFunctor {
  public:
   ReduceProdFunctor() {
@@ -1108,6 +1138,25 @@ class AsStridedGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceAsStridedFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
+                           const int64_t& storage_offset) const {
+    JUST(CheckInplaceValid(input));
+    CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
+    for (size_t i = 0; i < size.size(); i++) {
+      CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
+      CHECK_OR_RETURN(stride[i] >= 0)
+          << "as_strided: Negative strides are not supported at the moment, got strides:"
+          << stride[i];
+    }
+    CHECK_OR_RETURN(view::IsViewApplicable(input))
+        << "Only support as_strided_ in eager local mode";
+    JUST(view::InplaceAsStrided(input, size, stride, storage_offset));
+    return input;
+  }
+};
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
@@ -1842,6 +1891,72 @@ class InvFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DetFunctor {
+ public:
+  DetFunctor() {
+    det_op_ = CHECK_JUST(one::OpBuilder("det").Input("x").Output("y").Build());
+    lu_decomposition_op_ = CHECK_JUST(
+        one::OpBuilder("lu_decomposition").Input("x").Output("LU").Output("pivot").Build());
+  }
+  Maybe<Tensor> GetPivotDet(const std::shared_ptr<Tensor>& pivot) const {
+    std::shared_ptr<Tensor> arange = nullptr;
+    int64_t end = pivot->shape()->At(pivot->ndim() - 1) + 1;
+    if (pivot->is_local()) {
+      arange = JUST(functional::Arange(1, end, 1, pivot->dtype(), JUST(pivot->device())));
+    } else {
+      auto pivot_nd_sbp = JUST(pivot->nd_sbp());
+      std::vector<Symbol<SbpParallel>> nd_sbp(pivot_nd_sbp->sbp_parallel_size());
+      {
+        for (int i = 0; i < nd_sbp.size(); ++i) { nd_sbp[i] = pivot_nd_sbp->sbp_parallel(i); }
+      }
+      arange = JUST(functional::GlobalArange(1, end, 1, pivot->dtype(),
+                                             JUST(pivot->parallel_desc()), nd_sbp));
+    }
+    return sequence_function(functional::BroadcastNotEqual)
+        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false); })
+        .then([](const auto& x) { return functional::ScalarFMod(x, Scalar(2), true); })
+        .then([](const auto& x) { return functional::ScalarMul(x, Scalar(-2), true); })
+        .then([](const auto& x) { return functional::ScalarAdd(x, Scalar(1), Scalar(1), true); })
+        .call(arange, pivot);
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    const int64_t xdims = x->ndim();
+    if (xdims < 2) {
+      return Error::RuntimeError() << "linalg.det: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(xdims - 1) != x->dim(xdims - 2)) {
+      return Error::RuntimeError()
+             << "linalg.det: A must be batches of square matrices, "
+             << "but they are " << x->dim(xdims - 2) << " by " << x->dim(xdims - 1) << " matrices";
+    }
+
+    DeviceType x_device_type = DeviceType::kInvalidDevice;
+    if (x->is_local()) {
+      x_device_type = JUST(x->device())->enum_type();
+    } else if (x->is_global()) {
+      x_device_type = JUST(x->parallel_desc())->device_type();
+    }
+
+    if (x_device_type == DeviceType::kCPU) {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*det_op_, {x}, {}));
+    } else if (x_device_type == DeviceType::kCUDA) {
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*lu_decomposition_op_, {x}, {}));
+      auto LU = result->at(0);
+      auto pivot = result->at(1);
+      auto LU_det = JUST(
+          functional::ReduceProd(JUST(functional::Diagonal(LU, 0, -2, -1)), {-1}, false, NullOpt));
+      return functional::Mul(JUST(GetPivotDet(pivot)), LU_det);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Det: Only support cpu and cuda device.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> det_op_;
+  std::shared_ptr<OpExpr> lu_decomposition_op_;
+};
+
 class ClampGradFunctor {
  public:
   ClampGradFunctor() {
@@ -2222,8 +2337,8 @@ class StandardDeviationFunctor {
 
       when we are in the last sqrt,
       if the value in the radical is <= 0, it may cause the result gradient to appear
-      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are different.
-      Use abs(absolute value) can keep it consistent with pytorch:
+      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are
+      different. Use abs(absolute value) can keep it consistent with pytorch:
 
       const auto& abs = JUST(functional::Abs(sub));
       return functional::Sqrt(abs);
@@ -2263,7 +2378,8 @@ class VarianceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    if (!IsFloatingDataType(input->dtype()->data_type())) {
+    if (!(IsFloatingDataType(input->dtype()->data_type())
+          || IsHalfDataType(input->dtype()->data_type()))) {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
     std::vector<int32_t> axis;
@@ -2681,12 +2797,12 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
   }
 
   // we now work with the following permutations / shapes.
-  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
-  // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
-  // "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro, summed, ro"
-  // permuted with rpermutation and the three flattened then the permuted output is a view of
-  // bmm(left, right) finally, opermutation reverts the permutation to the original order of
-  // dimensions
+  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output
+  // -> permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions
+  // left: "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro,
+  // summed, ro" permuted with rpermutation and the three flattened then the permuted output is a
+  // view of bmm(left, right) finally, opermutation reverts the permutation to the original order
+  // of dimensions
   std::vector<int32_t> out_size;
   for (auto& d : lro) out_size.push_back(left->shape()->At(d));
   for (auto& d : lo) out_size.push_back(left->shape()->At(d));
@@ -3223,6 +3339,118 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class StftFunctor {
+ public:
+  StftFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("stft").Input("input").Output("output").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t n_fft,
+                           const Optional<int64_t>& hop_length, const Optional<int64_t>& win_length,
+                           const Optional<one::Tensor>& window, const bool center,
+                           const std::string& mode, const bool normalized, const bool onesided,
+                           const bool return_complex) const {
+    int64_t new_hop_length = hop_length.has_value() == true ? JUST(hop_length) : n_fft / 4;
+    int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
+    auto input_tensor = input;
+
+    // TODO(yzm):Remove this line when complex numbers are supported
+    CHECK_OR_RETURN(return_complex == false)
+        << Error::RuntimeError() << "return_complex parameter is not supported at this time";
+
+    const auto& NumAxes = input_tensor->shape()->NumAxes();
+    CHECK_OR_RETURN(NumAxes == 2 || NumAxes == 1)
+        << Error::RuntimeError() << "Expected a 1D or 2D tensor,but got " << NumAxes << "D";
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized", "onesided", "return_complex");
+    attrs.SetAllAttrs(normalized, onesided, return_complex);
+
+    if (NumAxes == 1) { input_tensor = JUST(functional::Unsqueeze(input_tensor, 0)); }
+    if (center) {
+      const auto& input_shape = input_tensor->shape();
+      const auto input_dim = input_tensor->shape()->NumAxes();
+
+      const auto extra_dims = std::max(size_t{3}, (size_t)input_dim) - input_dim;
+      const auto pad_amount = n_fft / 2;
+
+      DimVector extended_shape(extra_dims, 1);
+      extended_shape.append(input_shape->begin(), input_shape->end());
+      input_tensor =
+          JUST(functional::Pad(JUST(functional::View(input_tensor, Shape(extended_shape))),
+                               {pad_amount, pad_amount}, mode, Scalar(0)));
+
+      DimVector view_shape;
+      if (input_dim == 1) {
+        view_shape = {input_tensor->shape()->back()};
+      } else {
+        view_shape = {input_shape->at(0), input_tensor->shape()->back()};
+      }
+      input_tensor = JUST(functional::View(input_tensor, Shape(view_shape)));
+    }
+
+    int32_t batch = input_tensor->shape()->At(0);
+    int32_t len = input_tensor->shape()->At(1);
+    int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
+    int32_t fft_size = static_cast<int32_t>(n_fft);
+    CHECK_OR_RETURN(n_fft > 0 && n_fft <= len)
+        << Error::RuntimeError() << "Expected 0 < n_fft < " << len << " ,but got " << n_fft;
+    CHECK_GT_OR_RETURN(new_hop_length, 0)
+        << Error::RuntimeError() << "Expected hop_length > 0, but got " << new_hop_length;
+    CHECK_OR_RETURN(new_win_length > 0 && new_win_length <= n_fft)
+        << Error::RuntimeError() << "Expected 0 < win_length <=n_fft ,but got " << new_win_length;
+    const auto& stride = *JUST(input_tensor->stride());
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    input_tensor =
+        JUST(view::AsStrided(input_tensor, {batch, n_frames, fft_size},
+                             {JUST(VectorAt(strides, 0)),
+                              static_cast<int32_t>(new_hop_length) * JUST(VectorAt(strides, 1)),
+                              JUST(VectorAt(strides, 1))},
+                             0));
+
+    std::shared_ptr<Tensor> temp_tensor;
+    if (window.has_value()) {
+      temp_tensor = JUST(window);
+      CHECK_OR_RETURN(temp_tensor->shape()->NumAxes() == 1
+                      && temp_tensor->shape()->at(0) == new_win_length)
+          << Error::RuntimeError()
+          << "Expected a 1D window tensor of size equal to win_length=" << new_win_length
+          << ", but got window with size " << temp_tensor->shape()->ToString();
+    }
+    if (new_win_length < n_fft) {
+      temp_tensor = JUST(functional::Fill(temp_tensor, 0));
+      const int64_t left = (n_fft - new_win_length) / 2;
+
+      if (window.has_value()) {
+        // TODO(yzm):Copy the window matrix to the defined range,such as
+        //'''
+        //      functional::AssignLocalTensor(JUST(functional::Narrow(temp_tensor, 0,
+        //      left,new_win_length)), window);
+        //'''
+        // Remove the following check after support
+        CHECK_OR_RETURN(false) << Error::RuntimeError()
+                               << "The following conditions are not currently supported: "
+                                  "win_length<n_fft and the window function is customized";
+      } else {
+        temp_tensor = JUST(
+            functional::Fill(JUST(functional::Narrow(temp_tensor, 0, left, new_win_length)), 1.0));
+      }
+    }
+
+    if (new_win_length < n_fft || window.has_value()) {
+      input_tensor = JUST(functional::Mul(input_tensor, temp_tensor));
+    }
+
+    auto output = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {JUST(functional::ToContiguous(input_tensor))}, attrs));
+    if (NumAxes == 2 && input->shape()->At(0) == 1) {
+      output = JUST(functional::Unsqueeze(output, 0));
+    }
+    return output;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 class FusedWeightedSumFunctor {
  public:
   FusedWeightedSumFunctor() {
@@ -3721,6 +3949,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AminFunctor>("Amin");
   m.add_functor<MedianFunctor>("Median");
   m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
+  m.add_functor<ModeFunctor>("Mode");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
@@ -3748,6 +3977,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
+  m.add_functor<InplaceAsStridedFunctor>("InplaceAsStrided");
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
@@ -3809,8 +4039,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
+  m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<StftFunctor>("Stft");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");

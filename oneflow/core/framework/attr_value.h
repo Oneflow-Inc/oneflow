@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
+#include "fmt/core.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
@@ -94,6 +95,7 @@ class AttrVal {
 
   virtual AttrType type() const = 0;
   virtual size_t hash_value() const = 0;
+  virtual std::string ToString() const = 0;
 
   virtual const void* Ptr() const = 0;
   virtual bool operator==(const AttrVal& other) const = 0;
@@ -107,6 +109,8 @@ template<typename T>
 class TypedAttrValIf : public AttrVal {
  public:
   virtual const T& val() const = 0;
+  size_t hash_value() const override { return std::hash<T>()(val()); }
+  std::string ToString() const override { return fmt::format("{}", val()); }
 
   AttrType type() const override { return GetAttrType<T>::value; }
 

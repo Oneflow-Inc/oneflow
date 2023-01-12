@@ -41,7 +41,7 @@ enum TaskClassifier : int {
 };
 
 // The difference between a descending order and its corresponding ascending order
-const int kDiff4AscendDescend = 100;
+static const int kDiff4AscendDescend = 100;
 
 class TopoStruct {
  public:
@@ -72,7 +72,7 @@ class TopoStruct {
   int32_t GetMinDistance2Overlap(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
-  void ComputeMeomoryIncrement();
+  void ComputeMemoryIncrement();
 
   // Exceed time = time of cpu - time of gpu
   // For most operators, the execution time on gpu exceed the execution time on cpu.
@@ -99,7 +99,7 @@ class TopoStruct {
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
-StraightenAlgorithmTag sat;
+static StraightenAlgorithmTag sat;
 
 // NOTE: Leave these code for debugging in the future
 // static std::vector<StraightenOrder> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
@@ -107,7 +107,7 @@ StraightenAlgorithmTag sat;
 //                                                        ParseIntegerFromEnv("Parameter2", 3)});
 // The best parameter set for saving time is {102, 100}
 // The best parameter set for saving memory is {3, 0}
-std::vector<StraightenOrder> decide_parameters;
+static std::vector<StraightenOrder> decide_parameters;
 
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
@@ -259,7 +259,7 @@ int32_t TopoStruct::GetMinDistance2Overlap(HashMap<TaskNode*, TopoStruct>* task_
 }
 
 // Memory increment = (memory of out registers) - (memory of in registers)
-void TopoStruct::ComputeMeomoryIncrement() {
+void TopoStruct::ComputeMemoryIncrement() {
   if (memory_increment < 0) {
     memory_increment = 0;
     for (const auto& produced_register : node->produced_regsts()) {
@@ -387,9 +387,53 @@ void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     }
     pair.second.ComputeMemoryVolume();
   }
+  return false;
 }
 
 }  // anonymous namespace
+
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
+// functions on cpu.
+bool ShortGpuTime(const OperatorConf& op_conf) {
+  if (op_conf.has_variable_conf()) {
+    // Variable operators would not be run. They just create tensors.
+    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
+    return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const auto& op_type_name = op_conf.user_conf().op_type_name();
+    // They are sorted according to frequency of occurrences in stable diffusion
+    if (op_type_name == "expand_dims"  // 90
+        || op_type_name == "cast"      // 16
+        || op_type_name == "expand"    // 2
+    ) {
+      return true;
+    }
+  }
+}
+
+// SAT, a.k.a. Scholastic Aptitude Test,
+// is the college admission test in the United States of America.
+void InitDecideParameters(StraightenAlgorithmTag sat,
+                          std::vector<StraightenOrder>* decide_parameters) {
+  decide_parameters->clear();
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+    decide_parameters->push_back(StraightenOrder::kTributaryLayerAscend);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
+    decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kTributaryLayerDescend);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
+    decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+  } else {
+    // sat == StraightenAlgorithmTag::kDisableStraighten
+    decide_parameters->push_back(StraightenOrder::kLayerAscend);
+  }
+}
 
 // Some operators have longer time in cpu and less time in gpu.
 // Running those operators without overlap would cause large gap during each iteration.
@@ -474,7 +518,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
-    topo_struct.ComputeMeomoryIncrement();
+    topo_struct.ComputeMemoryIncrement();
     topo_struct.ComputeExceedTime();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
