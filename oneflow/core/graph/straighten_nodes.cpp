@@ -387,53 +387,9 @@ void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     }
     pair.second.ComputeMemoryVolume();
   }
-  return false;
 }
 
 }  // anonymous namespace
-
-// Some operators have longer time in cpu and less time in gpu.
-// Running those operators without overlap would cause large gap during each iteration.
-// For example, expand dims would not execute any kernel on gpu but still need 10us to execute some
-// functions on cpu.
-bool ShortGpuTime(const OperatorConf& op_conf) {
-  if (op_conf.has_variable_conf()) {
-    // Variable operators would not be run. They just create tensors.
-    // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
-    return true;
-  }
-  if (op_conf.has_user_conf()) {
-    const auto& op_type_name = op_conf.user_conf().op_type_name();
-    // They are sorted according to frequency of occurrences in stable diffusion
-    if (op_type_name == "expand_dims"  // 90
-        || op_type_name == "cast"      // 16
-        || op_type_name == "expand"    // 2
-    ) {
-      return true;
-    }
-  }
-}
-
-// SAT, a.k.a. Scholastic Aptitude Test,
-// is the college admission test in the United States of America.
-void InitDecideParameters(StraightenAlgorithmTag sat,
-                          std::vector<StraightenOrder>* decide_parameters) {
-  decide_parameters->clear();
-  if (sat == StraightenAlgorithmTag::kCompressMemory) {
-    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
-    decide_parameters->push_back(StraightenOrder::kTributaryLayerAscend);
-  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
-    decide_parameters->push_back(StraightenOrder::kLayerDescend);
-    decide_parameters->push_back(StraightenOrder::kTributaryLayerDescend);
-  } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
-    decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
-    decide_parameters->push_back(StraightenOrder::kLayerDescend);
-    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
-  } else {
-    // sat == StraightenAlgorithmTag::kDisableStraighten
-    decide_parameters->push_back(StraightenOrder::kLayerAscend);
-  }
-}
 
 // Some operators have longer time in cpu and less time in gpu.
 // Running those operators without overlap would cause large gap during each iteration.
