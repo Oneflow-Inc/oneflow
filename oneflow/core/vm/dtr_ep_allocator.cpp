@@ -611,9 +611,9 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
     }
     const auto started_at = profiler::GetTimeNow();
     const size_t evict_num1 = Singleton<dtr::Env>::Get()->forced_eviction_num();
-    if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
+    if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTE>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, true));
-    } else if (EnvBool<ONEFLOW_DTR_DTR_NO_FREE>()) {
+    } else if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTR>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, false));
     } else {
       piece = JUST(EvictAndFindPieceOnce(aligned_size));
