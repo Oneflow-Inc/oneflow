@@ -4762,24 +4762,6 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-<<<<<<< HEAD
-class BatchAddBatchMatMulFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& batch1,
-                           const std::shared_ptr<Tensor>& batch2, const bool& transpose_a,
-                           const bool& transpose_b, const double& beta, const double& alpha) const {
-    const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, transpose_a, transpose_b, alpha));
-    if (beta == 0) { return bmm_result; }
-    CHECK_EQ_OR_RETURN(input->ndim(), 3)
-        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << input->ndim();
-    const auto& input_broadcast = JUST(BroadcastLike(input, bmm_result, {}));
-    return Add(input_broadcast, bmm_result, beta, false);
-  }
-};
-
-=======
->>>>>>> 47185a807fa4e5b2c87fb6e7d4779a501d7bc6e7
 class MultiHeadAttentionFunctor {
  public:
   Maybe<Tensor> qkv_projection(const std::shared_ptr<Tensor>& query,
