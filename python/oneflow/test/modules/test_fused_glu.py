@@ -27,6 +27,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 test_dualgemm_impt = False
 
+
 class Glu(nn.Module):
     def __init__(self):
         super().__init__()
@@ -76,6 +77,7 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
+
 def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
     # config test data
     m = params["m"]
@@ -121,18 +123,18 @@ def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
 
 
 def test_fused_glu(test_case, params: dict, dtype=flow.float32):
-    print(f'========== Start Testing ==========')
-    print(f'weight tensor: merged')
+    print(f"========== Start Testing ==========")
+    print(f"weight tensor: merged")
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
     print(f'activation: {params["act"]}')
-    print(f'dtype: {dtype}')
+    print(f"dtype: {dtype}")
 
     flow_module = Glu()
     x, w, b, y_nor = tensor_builder(params=params, dtype=dtype, is_split_mode=False)
 
     # forward
     y = flow_module.forward(x=x, w=w, b=b, split_mode=False, activation=params["act"])
-    
+
     # backward
     y.sum().backward()
 
@@ -166,15 +168,16 @@ def test_fused_glu(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_y, y)
         compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
-    print(f'============== PASSED =============')
+    print(f"============== PASSED =============")
     print("\n")
 
+
 def test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
-    print(f'========== Start Testing ==========')
-    print(f'weight tensor: splited')
+    print(f"========== Start Testing ==========")
+    print(f"weight tensor: splited")
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
     print(f'activation: {params["act"]}')
-    print(f'dtype: {dtype}')
+    print(f"dtype: {dtype}")
 
     flow_module = Glu()
     x, w, b, v, c, y_nor = tensor_builder(
@@ -202,7 +205,7 @@ def test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     fused_v = v.detach().clone().requires_grad_(True)
     fused_c = c.detach().clone().requires_grad_(True)
 
-    # forward 
+    # forward
     fused_y = flow._C.fused_glu(
         x=fused_x, w=fused_w, b=fused_b, v=fused_v, c=fused_c, activation=params["act"]
     )
@@ -228,7 +231,7 @@ def test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1e-2)
-    print(f'============== PASSED =============')
+    print(f"============== PASSED =============")
     print("\n")
 
 
@@ -244,14 +247,14 @@ class TestFusedGlu(flow.unittest.TestCase):
         ]
 
         # set up env valuable if necessary
-        if not test_dualgemm_impt:        
-            os.environ['ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL']="false"
+        if not test_dualgemm_impt:
+            os.environ["ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL"] = "false"
         else:
-            os.environ['ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL']="true"
+            os.environ["ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL"] = "true"
 
         # set up profiling functions
-        if not test_dualgemm_impt:        
-            arg_dict["params"] = [            
+        if not test_dualgemm_impt:
+            arg_dict["params"] = [
                 # m=256, k=1280, n=5120
                 {"m": 256, "k": 1280, "n": 5120, "act": "none"},
                 {"m": 256, "k": 1280, "n": 5120, "act": "sigmoid"},
@@ -282,7 +285,7 @@ class TestFusedGlu(flow.unittest.TestCase):
                 {"m": 2560, "k": 1280, "n": 5120, "act": "silu"},
             ]
         else:
-            arg_dict["params"] = [            
+            arg_dict["params"] = [
                 # m=256, k=1280, n=5120
                 {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
                 # m=1024, k=640, n=2560
@@ -293,13 +296,14 @@ class TestFusedGlu(flow.unittest.TestCase):
                 {"m": 2560, "k": 1280, "n": 5120, "act": "fast_gelu"},
             ]
 
-        if not test_dualgemm_impt:        
+        if not test_dualgemm_impt:
             arg_dict["dtype"] = [flow.float16, flow.float32]
         else:
             arg_dict["dtype"] = [flow.float16]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

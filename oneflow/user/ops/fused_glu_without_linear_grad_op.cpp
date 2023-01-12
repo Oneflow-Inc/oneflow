@@ -23,8 +23,8 @@ namespace oneflow {
   bool is_split_mode = false;
   if (ctx->user_op_conf().has_input("matmul_vx", 0)) { is_split_mode = true; }
 
-  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes()-1;
-       ++i) {
+  for (int64_t i = 0;
+       i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes() - 1; ++i) {
     if (is_split_mode) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("dy", 0), i)
