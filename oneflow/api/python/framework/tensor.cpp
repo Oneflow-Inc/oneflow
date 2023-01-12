@@ -241,6 +241,28 @@ static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_offload(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_JUST(t->offload());
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_load(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_JUST(t->load());
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_offloaded(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_offloaded()));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   if (PyTensor_Unpack(self)->dtype()->is_floating_point()) {
@@ -509,6 +531,9 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
+    {"offload", PyTensorObject_offload, METH_NOARGS, NULL},
+    {"load", PyTensorObject_load, METH_NOARGS, NULL},
+    {"is_offloaded", PyTensorObject_is_offloaded, METH_NOARGS, NULL},
     {"is_floating_point", PyTensorObject_is_floating_point, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
