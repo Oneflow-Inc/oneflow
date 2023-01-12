@@ -23,17 +23,16 @@ namespace oneflow {
 DEFINE_ENV_BOOL(ONEFLOW_DEBUG_MODE, false);
 DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
-inline bool IsInDebugMode() {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr && std::getenv("ONEFLOW_DEBUG") == nullptr) {
-    return std::string(OF_PP_STRINGIZE(ONEFLOW_CMAKE_BUILD_TYPE)) == "Debug";
-  }
-  return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>();
-}
+inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
 
 DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
 inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
 
 inline bool IsPythonStackGetterEnabled() {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr && std::getenv("ONEFLOW_DEBUG") == nullptr
+      && std::getenv("ONEFLOW_PYTHON_STACK_GETTER") == nullptr) {
+    return std::string(OF_PP_STRINGIZE(ONEFLOW_CMAKE_BUILD_TYPE)) == "Debug";
+  }
   return ParseBooleanFromEnv("ONEFLOW_PYTHON_STACK_GETTER", IsInDebugMode());
 }
 
