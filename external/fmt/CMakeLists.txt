@@ -6,6 +6,9 @@ FetchContent_Declare(fmt URL ${FMT_URL} URL_HASH MD5=${FMT_MD5})
 
 FetchContent_MakeAvailable(fmt)
 
+# Clang doesn't support __float128 when compiling CUDA
+target_compile_definitions(fmt PUBLIC FMT_USE_FLOAT128=0)
+
 install(
   TARGETS fmt
   EXPORT oneflow

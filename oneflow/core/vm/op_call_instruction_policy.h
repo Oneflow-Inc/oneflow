@@ -89,7 +89,7 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   const EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
   EagerBlobObjectList& mut_inputs() { return call_ctx_.mut_inputs(); }
   EagerBlobObjectList& mut_outputs() { return call_ctx_.mut_outputs(); }
-  const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
+  const ComposedAttrMap& composed_attrs() const { return call_ctx_.composed_attrs(); }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
     return dev_vm_dep_object_consume_mode_;
