@@ -298,14 +298,13 @@ RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
-  if (edge->HasRegst(name)) { 
-    return;
-  }
+  if (edge->HasRegst(name)) { return; }
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
 std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
-                                                     int32_t min_register_num, int32_t max_register_num) const {
+                                                     int32_t min_register_num,
+                                                     int32_t max_register_num) const {
   auto iter = produced_regsts_.find(name);
   if (iter == produced_regsts_.end()) { return nullptr; }
   const auto& regst = (iter->second);
@@ -322,7 +321,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
-  const auto & regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
+  const auto& regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
   if (regst) { return regst; }
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_data_regst_desc();
