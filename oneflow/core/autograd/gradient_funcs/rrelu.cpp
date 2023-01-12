@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct RReLUCaptureState : public AutoGradCaptureState {
+struct RReluCaptureState : public AutoGradCaptureState {
   bool requires_grad = true;
   float lower;
   float upper;
@@ -28,26 +28,21 @@ struct RReLUCaptureState : public AutoGradCaptureState {
   int noise_data_index = -1;
 };
 
-class RReLU : public OpExprGradFunction<RReLUCaptureState> {
+class RRelu : public OpExprGradFunction<RReluCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(RReLUCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(RReluCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const RReLUCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const RReluCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> RReLU::Init(const OpExpr& op) {
-  //   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  //   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  //   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  return Maybe<void>::Ok();
-}
+Maybe<void> RRelu::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
-Maybe<void> RReLU::Capture(RReLUCaptureState* ctx, const TensorTuple& inputs,
+Maybe<void> RRelu::Capture(RReluCaptureState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -60,7 +55,7 @@ Maybe<void> RReLU::Capture(RReLUCaptureState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RReLU::Apply(const RReLUCaptureState* ctx, const TensorTuple& out_grads,
+Maybe<void> RRelu::Apply(const RReluCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& saved_tensors = ctx->SavedTensors();
@@ -72,13 +67,12 @@ Maybe<void> RReLU::Apply(const RReLUCaptureState* ctx, const TensorTuple& out_gr
 
   } else {
     const auto& noise_data = saved_tensors.at(ctx->noise_data_index);
-    in_grads->at(0) =
-          JUST(functional::RReluGrad(out_grads.at(0), noise_data ));
-          return Maybe<void>::Ok();
+    in_grads->at(0) = JUST(functional::RReluGrad(out_grads.at(0), noise_data));
+    return Maybe<void>::Ok();
   }
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("rrelu", RReLU);
+REGISTER_OP_EXPR_GRAD_FUNCTION("rrelu", RRelu);
 
 }  // namespace one
 }  // namespace oneflow

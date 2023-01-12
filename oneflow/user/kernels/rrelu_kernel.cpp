@@ -16,19 +16,15 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/framework/random_generator_impl.h"
-#include "oneflow/user/kernels/random_mask_generator.h"
-
 #include <random>
 
 namespace oneflow {
 
 template<typename T>
-class CpuRReLUKernel final : public user_op::OpKernel {
+class CpuRReluKernel final : public user_op::OpKernel {
  public:
-  CpuRReLUKernel() = default;
-  ~CpuRReLUKernel() = default;
+  CpuRReluKernel() = default;
+  ~CpuRReluKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -44,17 +40,15 @@ class CpuRReLUKernel final : public user_op::OpKernel {
     T* out_ptr = out->mut_dptr<T>();
     T* noise_ptr = noise_data->mut_dptr<T>();
     const T* in_ptr = in->dptr<T>();
-    const int64_t thread_num = (int64_t)Singleton<ThreadPool>::Get()->thread_num();
 
+    const int64_t thread_num = (int64_t)Singleton<ThreadPool>::Get()->thread_num();
     const BalancedSplitter bs(size, thread_num);
     BlockingCounter bc(thread_num);
 
     std::mt19937 gen{std::random_device{}()};
-    std::uniform_real_distribution<> uni_random_float(
-        lower, upper);  // TODO:范围是否需要修改为   std::nextafter(1,DBL_MAX）这种闭合形式
+    std::uniform_real_distribution<> uni_random_float(lower, upper);
     FOR_RANGE(int64_t, thread_id, 0, thread_num) {
       const Range range = bs.At(thread_id);
-
       Singleton<ThreadPool>::Get()->AddWork([=, &bc, &gen, &uni_random_float]() {
         FOR_RANGE(int64_t, i, range.begin(), range.end()) {
           if (*(in_ptr + i) >= 0) {
@@ -74,12 +68,12 @@ class CpuRReLUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_RRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("rrelu").SetCreateFn<CpuRReLUKernel<dtype>>().SetIsMatchedHob( \
+#define REGISTER_CPU_RRelu_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("rrelu").SetCreateFn<CpuRReluKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_RRELU_KERNEL(float)
-REGISTER_CPU_RRELU_KERNEL(double)
+REGISTER_CPU_RRelu_KERNEL(float) 
+REGISTER_CPU_RRelu_KERNEL(double)
 
 }  // namespace oneflow

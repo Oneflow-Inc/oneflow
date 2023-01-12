@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
+
 namespace oneflow {
 namespace {
 
@@ -24,15 +25,11 @@ __global__ void compute_rrelu(const T* in, T* out, T* noise_data, int64_t elem_c
                               const T upper, const T range) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     if (in[i] <= static_cast<T>(0.0)) {
-      T temp = noise_data[i] * range + lower;
-
-      noise_data[i] = temp;
-
-      out[i] = in[i] * temp;
-
+      T random_float = noise_data[i] * range + lower;
+      noise_data[i] = random_float;
+      out[i] = in[i] * random_float;
     } else {
       noise_data[i] = static_cast<T>(1.0);
-
       out[i] = in[i];
     }
   }
@@ -51,6 +48,7 @@ class CudaRReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const int64_t size = in->shape_view().elem_cnt();
     if (size == 0) return;
+    
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* noise_data = ctx->Tensor4ArgNameAndIndex("noise_data", 0);
     const T& lower = ctx->Attr<float>("lower");

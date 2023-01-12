@@ -547,10 +547,8 @@ class RReluFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
     if (inplace) {
       JUST(CheckInplaceValid(x));
-
       outputs->at(0) = x;
     }
-
     JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
     return outputs->at(0);
   }

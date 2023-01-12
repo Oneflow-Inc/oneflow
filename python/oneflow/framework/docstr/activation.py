@@ -435,6 +435,18 @@ add_docstr(
     """,
 )
 add_docstr(
+    oneflow._C.rrelu,
+    """
+    rrelu(x: Tensor,  lower: Float, upper: Float) -> Tensor
+
+    Applies the randomized leaky rectified liner unit function, element-wise
+    :math:`\text{LeakyReLU}(x) = \max(0, x) + a * \min(0, x)`
+
+    See :class:`~oneflow.nn.RReLU` for more details.
+
+    """,
+)
+add_docstr(
     oneflow._C.elu,
     """
     elu(x: Tensor, alpha :Float) -> Tensor

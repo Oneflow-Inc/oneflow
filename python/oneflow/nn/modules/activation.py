@@ -904,39 +904,41 @@ class LeakyReLU(Module):
         return param_str
 
 class RReLU(Module):
-    """Applies the element-wise function:
+    """Applies the randomized leaky rectified liner unit function, element-wise:
 
     .. math::
-        \\text{LeakyRELU}(x) = \\begin{cases}
+        \\text{RReLU}(x) = \\begin{cases}
             x, & \\text{ if } x \\geq 0 \\\\
-            \\text{negative_slope} \\times x, & \\text{ otherwise }
+            a \\times x, & \\text{ otherwise }
         \\end{cases}
+    
+    .. note::
+        See `Empirical Evaluation of Rectified Activations in Convolution Network: <https://arxiv.org/pdf/1505.00853.pdf>`_
 
     Args:
-        negative_slope: Controls the angle of the negative slope. Default: 1e-2
+        lower: lower bound of the uniform distribution. Default: :math:`\frac{1}{8}`
+        upper: upper bound of the uniform distribution. Default: :math:`\frac{1}{3}`
         inplace: can optionally do the operation in-place. Default: ``False``
 
     Shape:
-        - Input: :math:`(N, *)` where `*` means, any number of additional
-          dimensions
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
         - Output: :math:`(N, *)`, same shape as the input
 
     For example:
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
+        >>> import numpy as np
         
-        >>> m = flow.nn.LeakyReLU(0.1)
-        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> m = flow.nn.RReLU(0.1, 0.3)
+        >>> arr = np.array([0.2, -0.3, -3.0, 4.0, 0.5, -2.2])
         >>> x = flow.Tensor(arr)
         >>> out = m(x)
-        >>> out
-        tensor([0.2000, 0.3000, 3.0000, 4.0000], dtype=oneflow.float32)
+       
     """
 
-    def __init__(self, lower: float = 0.125,  upper: float = 0.3333333333333333, inplace: bool = False):
+    def __init__(self, lower: float = 1./8,  upper: float = 1./3, inplace: bool = False):
         super().__init__()
         self.lower = lower
         self.upper = upper
@@ -947,7 +949,7 @@ class RReLU(Module):
 
     def extra_repr(self):
         param_str = f"lower={self.lower}"
-        param_str = f"upper={self.upper}"
+        param_str += f"upper={self.upper}"
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
 

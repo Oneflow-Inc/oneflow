@@ -9562,8 +9562,8 @@ def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, Dec
 #endif // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
 // Group: UNARY
-// acc, acc_ctrl_tick, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flip, fold, gelu, fast_gelu, quick_gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc, index_add
-// Total: 58
+// acc, acc_ctrl_tick, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flip, fold, gelu, fast_gelu, quick_gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc, index_add, rrelu
+// Total: 59
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
@@ -9980,7 +9980,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_RReLUOp : OneFlow_BaseOp<"rrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RReluOp : OneFlow_BaseOp<"rrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );

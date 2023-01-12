@@ -18,19 +18,18 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> RReLUOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> RReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   ctx->SetOutputShape("output", 0, in_shape);
   ctx->SetOutputShape("noise_data", 0, in_shape);
-
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RReLUOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> RReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> RReLUOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> RReluOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
@@ -38,7 +37,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> RReLUOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> RReluOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("output", 0, ctx->InputDType("in", 0));
   ctx->SetOutputDType("noise_data", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
