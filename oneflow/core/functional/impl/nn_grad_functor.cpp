@@ -1548,7 +1548,7 @@ class FusedGluWithoutLinearGradFunctor {
     // check number of axes of dy and matmul_wx
     size_t dy_num_axes = dy_shape.NumAxes();
     size_t matmul_wx_num_axes = matmul_wx_shape.NumAxes();
-    CHECK_GE_OR_RETURN(dy_num_axes, 2)
+    CHECK_GT_OR_RETURN(dy_num_axes, 1)
         << "number of axes of \'dy\' should have be greater than 1, yet get " << dy_num_axes;
     CHECK_GE_OR_RETURN(matmul_wx_num_axes, 2)
         << "number of axes of \'matmul_wx\' should have be greater than 1, yet get "

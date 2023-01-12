@@ -495,7 +495,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     const ShapeView& y_shape = out_tensor_y->shape_view();
 
     // validate dimension and number of axes
-    CHECK_GE(x_shape.NumAxes(), 2)
+    CHECK_GT(x_shape.NumAxes(), 1)
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
     CHECK_EQ(w_shape.NumAxes(), 2)
         << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();

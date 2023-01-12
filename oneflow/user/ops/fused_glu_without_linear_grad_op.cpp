@@ -61,7 +61,7 @@ namespace oneflow {
   // check dimensions of dy and matmul_wx
   CHECK_GT_OR_RETURN(dy_num_axes, 1)
       << "number of axes of \'dy\' should have be greater than 1, yet get " << dy_num_axes;
-  CHECK_GE_OR_RETURN(matmul_wx_num_axes, 2)
+  CHECK_GT_OR_RETURN(matmul_wx_num_axes, 1)
       << "number of axes of \'matmul_wx\' should have be greater than 1, yet get "
       << matmul_wx_num_axes;
   CHECK_EQ_OR_RETURN(dy_num_axes, matmul_wx_num_axes)
@@ -95,7 +95,7 @@ namespace oneflow {
 
     // check dimensions of matmul_vx
     size_t matmul_vx_num_axes = matmul_vx_shape.NumAxes();
-    CHECK_GE_OR_RETURN(matmul_vx_num_axes, 2)
+    CHECK_GT_OR_RETURN(matmul_vx_num_axes, 1)
         << "number of axes of \'matmul_vx\' should have be greater than 1, yet get "
         << matmul_vx_num_axes;
     CHECK_EQ_OR_RETURN(matmul_vx_num_axes, dy_num_axes)
