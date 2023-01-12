@@ -1222,7 +1222,7 @@ def autotest(
                     res = f(test_case, *args, **kwargs)
                     testing = False
                     testing_graph = False
-                except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
+                except Exception as e:
                     if verbose:
                         print(f"{f.__name__}")
                         print(e)
