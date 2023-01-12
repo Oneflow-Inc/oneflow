@@ -1221,7 +1221,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   }
 }
 
-void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t filter_rank) {
   std::vector<const TaskProto*> ordered_tasks;
   for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
   auto CompTask = [](const TaskProto* a, const TaskProto* b) {
@@ -1295,6 +1295,8 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     rank2ordered_task.at(task->machine_id()).push_back(task);
   }
   for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    // Filter rank to generate log.
+    if (filter_rank >= 0 && rank != filter_rank) { continue; }
     auto file_stream =
         TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
     file_stream << "rank : " << std::to_string(rank) << "\n";

@@ -411,7 +411,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   }
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    PlanUtil::GenLightPlan(&plan_, name_);
+    PlanUtil::GenLightPlan(&plan_, name_, GlobalProcessCtx::Rank());
   }
   OF_SESSION_BARRIER();
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
@@ -525,11 +525,16 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
 
-  auto cur_rank = GlobalProcessCtx::Rank();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(cur_rank))
-        ->Write(plan_);
-    PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan" + std::to_string(cur_rank) + ".dot");
+    auto cur_rank = GlobalProcessCtx::Rank();
+    auto plan_name = "job_" + name_ + "_plan";
+    if (JUST(CurrentCompileMode()) != CompileMode::kNaive) {
+      plan_name += std::to_string(cur_rank);
+    }
+    if (cur_rank == 0 || JUST(CurrentCompileMode()) != CompileMode::kNaive) {
+      TeePersistentLogStream::Create(plan_name)->Write(plan_);
+      PlanUtil::ToDotFile(plan_, plan_name + ".dot");
+    }
   }
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
