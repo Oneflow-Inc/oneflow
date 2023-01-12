@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/env_var/vm.h"
 
 namespace oneflow {
 namespace one {
@@ -73,6 +74,7 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));

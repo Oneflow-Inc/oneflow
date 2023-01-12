@@ -98,6 +98,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertEqual(allocated_memory('cpu'), 0)
         self.assertEqual(allocated_memory('cuda'), 0)
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_1(self):
@@ -113,6 +114,7 @@ class TestDTR(flow.unittest.TestCase):
         evict(x2)
         self.assertTrue(np.array_equal(x2.numpy(), np.zeros(x2.shape)))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_2(self):
@@ -127,6 +129,7 @@ class TestDTR(flow.unittest.TestCase):
         evict(x2)
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape)))
 
+    @flow.unittest.skip_unless_1n1d()
     @unittest.skip("mutation other than inplace is not supported yet")
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
@@ -138,6 +141,7 @@ class TestDTR(flow.unittest.TestCase):
         print(x2.numpy())
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * -2))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cuda')
     def test_dtr_work_on_fbip_4(self):
@@ -152,6 +156,7 @@ class TestDTR(flow.unittest.TestCase):
         evict(x3)
         self.assertTrue(np.array_equal(x4.numpy(), np.ones(x4.shape) * 4))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_1(self):
@@ -176,6 +181,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x6.numpy(), np.ones(x6.shape) * 11))
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_2(self):
@@ -200,6 +206,7 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(np.array_equal(x6.numpy(), np.ones(x6.shape) * 11))
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_full_and_init_constant(self):
@@ -216,6 +223,7 @@ class TestDTR(flow.unittest.TestCase):
 
         self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape) * 3))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_lifecycle_of_view_tensor(self):
@@ -232,6 +240,7 @@ class TestDTR(flow.unittest.TestCase):
 
         self.assertTrue(np.array_equal(x1.numpy(), np.ones(x1.shape)))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_init_constant_and_scalar(self):
@@ -246,6 +255,7 @@ class TestDTR(flow.unittest.TestCase):
         evict(x2)
         self.assertTrue(np.array_equal(x2.numpy(), np.ones(x2.shape) * 2))
 
+    @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @memory_budget(100, 'cuda')
     def test_bn_and_backward(self):
@@ -280,13 +290,13 @@ class TestDTR(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad()
 
-    @assert_no_small_piece_optimization
-    @memory_budget(220, 'cpu')
-    def test_bn_and_backward(self):
-        flow.manual_seed(0)
+    def _test_resnet18(self, ddp, expected_loss):
+        flow.manual_seed(flow.env.get_rank())
         device = 'cpu'
 
         model = flowvision.models.resnet18().to(device)
+        if ddp:
+            model = flow.nn.parallel.DistributedDataParallel(model, use_bucket=False)
         criterion = nn.CrossEntropyLoss().to(device)
 
         for x in model.parameters():
@@ -299,8 +309,9 @@ class TestDTR(flow.unittest.TestCase):
             output = model(x)
             loss = criterion(output, target)
             del output
+            print(loss.numpy().item())
             if i == 4:
-                self.assertEqual(loss.numpy().item(), 0.6304041147232056)
+                self.assertTrue(loss.numpy().item() in expected_loss)
             loss.backward()
             del loss
             optimizer.step()
@@ -308,6 +319,19 @@ class TestDTR(flow.unittest.TestCase):
         # check there is more than 10 recomputations each iteration
         # so the correctness check makes sense.
         self.assertGreater(flow._oneflow_internal.dtr.recomputation_num(), ITER_NUM * 10)
+
+    @flow.unittest.skip_unless_1n1d()
+    @assert_no_small_piece_optimization
+    @memory_budget(220, 'cpu')
+    def test_resnet18(self):
+        self._test_resnet18(False, [0.6304041147232056])
+
+    @flow.unittest.skip_unless_1n2d()
+    @assert_no_small_piece_optimization
+    @memory_budget(220, 'cpu')
+    def test_resnet18_ddp_1n2d(self):
+        # 2 devices, 2 losses
+        self._test_resnet18(True, [1.8890058994293213, 1.8992782831192017])
 
 
 if __name__ == "__main__":
