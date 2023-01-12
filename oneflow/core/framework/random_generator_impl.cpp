@@ -156,20 +156,16 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   philox_offset_per_thread_ = 0;
 }
 
-// launch bounds used for kernels
-const uint32_t block_size_bound = 256;
-const uint32_t grid_size_bound = 4;
-// number of randoms given by distributions like curand_uniform4, curand_uniform2_double
-// used in calculating philox offset.
-const uint32_t curand4_engine_calls = 4;
-
 std::tuple<uint64_t, dim3, dim3> CUDAGeneratorImpl::CalcExecutionPolicy(int64_t total_elements,
                                                                         ep::CudaStream* stream) {
   // NOTE(Liang Depeng): the implementation is modified from
   // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/DistributionTemplates.h
 
   const uint64_t numel = static_cast<uint64_t>(total_elements);
-  const uint32_t block_size = block_size_bound;
+  const uint32_t block_size = 256;  // block_size_bound
+  // number of randoms given by distributions like curand_uniform4, curand_uniform2_double
+  // used in calculating philox offset.
+  const uint32_t curand4_engine_calls = 4;
   const uint32_t unroll = curand4_engine_calls;
   dim3 dim_block(block_size);
   dim3 grid((numel + block_size - 1) / block_size);
