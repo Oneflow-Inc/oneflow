@@ -402,10 +402,6 @@ def _T(self):
     return flow._C.T(self)
 
 
-def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    return flow.topk(self, k, dim, largest, sorted)
-
-
 def _nms(boxes, scores, iou_threshold: float):
     return flow.nms(boxes, scores, iou_threshold)
 
@@ -627,7 +623,6 @@ def RegisterMethods():
     Tensor.eq = _eq
     Tensor.sort = _sort
     Tensor.tolist = _tolist
-    Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
     Tensor.prod = _prod
