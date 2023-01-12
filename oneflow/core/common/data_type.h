@@ -34,6 +34,28 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
 
+namespace std {
+
+// Extend numeric_limits<half> for the C++ standard library.
+#ifdef WITH_CUDA
+
+template<>
+struct numeric_limits<half> {
+  static constexpr int digits = std::numeric_limits<half_float::half>::digits;
+
+  static constexpr half_float::half lowest() {
+    return std::numeric_limits<half_float::half>::lowest();
+  }
+
+  static constexpr half_float::half max() {
+    return std::numeric_limits<half_float::half>::max();
+  }
+};
+
+#endif  // WITH_CUDA
+
+}  // namespace std
+
 namespace oneflow {
 
 using float16 = half_float::half;
