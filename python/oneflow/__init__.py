@@ -156,6 +156,7 @@ from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
 from oneflow._C import median
+from oneflow._C import mode
 from oneflow._C import pow
 from oneflow._C import reduce_prod as prod
 from oneflow._C import reduce_sum as sum
@@ -232,6 +233,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import det
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
