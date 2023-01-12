@@ -2013,6 +2013,10 @@
   signature: "Tensor (Tensor input, Tensor other, Int64 dim=None) => LinalgCross"
   bind_python: True
 
+- name: "det"
+  signature: "Tensor (Tensor x) => Det"
+  bind_python: True
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
@@ -3133,4 +3137,8 @@
   
 - name: "throw_error"
   signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
+
+- name: "mode"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
   bind_python: True
