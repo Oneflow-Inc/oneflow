@@ -125,7 +125,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
 
     ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
-    auto execution_policy = CalcExecutionPolicy(n, cuda_stream);
+    auto execution_policy = gpu_generator->CalcExecutionPolicy(n, cuda_stream);
 
     auto counter_offset = std::get<0>(execution_policy);
     auto grid = std::get<1>(execution_policy);

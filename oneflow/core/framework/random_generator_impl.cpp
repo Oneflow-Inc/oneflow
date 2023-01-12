@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #include <cuda.h>
@@ -153,6 +154,34 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CPUSynchronize());
   seed_ = seed;
   philox_offset_per_thread_ = 0;
+}
+
+// launch bounds used for kernels
+const uint32_t block_size_bound = 256;
+const uint32_t grid_size_bound = 4;
+// number of randoms given by distributions like curand_uniform4, curand_uniform2_double
+// used in calculating philox offset.
+const uint32_t curand4_engine_calls = 4;
+
+std::tuple<uint64_t, dim3, dim3> CUDAGeneratorImpl::CalcExecutionPolicy(int64_t total_elements,
+                                                                        ep::CudaStream* stream) {
+  // NOTE(Liang Depeng): the implementation is modified from
+  // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/DistributionTemplates.h
+
+  const uint64_t numel = static_cast<uint64_t>(total_elements);
+  const uint32_t block_size = block_size_bound;
+  const uint32_t unroll = curand4_engine_calls;
+  dim3 dim_block(block_size);
+  dim3 grid((numel + block_size - 1) / block_size);
+  uint32_t blocks_per_sm = stream->device_properties().maxThreadsPerMultiProcessor / block_size;
+  grid.x = std::min(
+      static_cast<uint32_t>(stream->device_properties().multiProcessorCount) * blocks_per_sm,
+      grid.x);
+  // number of times random will be generated per thread, to offset philox counter in thc random
+  // state
+  uint64_t counter_offset =
+      ((numel - 1) / (block_size * grid.x * unroll) + 1) * curand4_engine_calls;
+  return std::make_tuple(counter_offset, grid, dim_block);
 }
 
 // NOTE(Liang Depeng): The implementation of ` CUDAGeneratorImpl::get_philox_offset` is modified

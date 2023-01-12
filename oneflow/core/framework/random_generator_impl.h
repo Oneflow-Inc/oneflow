@@ -33,6 +33,17 @@ limitations under the License.
 #endif  // WITH_CUDA
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
+
+namespace ep {
+
+class CudaStream;
+
+}  // namespace ep
+
+#endif  // WITH_CUDA
+
 namespace one {
 
 class Tensor;
@@ -225,6 +236,8 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
+  std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
+                                                       ep::CudaStream* stream);
 
   uint64_t get_philox_offset(uint64_t increment);
 

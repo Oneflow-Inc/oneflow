@@ -56,7 +56,7 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
                                                       const float rate, bool* mask) {
   if (n == 0) return;
   ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
-  auto execution_policy = CalcExecutionPolicy(n, cuda_stream);
+  auto execution_policy = generator_->CalcExecutionPolicy(n, cuda_stream);
 
   auto counter_offset = std::get<0>(execution_policy);
   auto grid = std::get<1>(execution_policy);

@@ -42,7 +42,7 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
 
   ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
-  auto execution_policy = CalcExecutionPolicy(elem_cnt, cuda_stream);
+  auto execution_policy = gen->CalcExecutionPolicy(elem_cnt, cuda_stream);
 
   auto counter_offset = std::get<0>(execution_policy);
   auto grid = std::get<1>(execution_policy);
