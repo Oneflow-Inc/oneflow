@@ -1864,7 +1864,7 @@ class TestConv2d(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
-    
+
     @autotest(n=5)
     def test_conv2d_auto_squeeze_with_random_data(test_case):
         channels = random(1, 6)
@@ -1877,7 +1877,7 @@ class TestConv2d(flow.unittest.TestCase):
             dilation=random(1, 5) | nothing(),
             groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
-            bias=random_bool()
+            bias=random_bool(),
         )
         m.train(random())
         device = random_device()

@@ -883,7 +883,7 @@ class TestDeconv2d(flow.unittest.TestCase):
             dilation=random(1, 5) | nothing(),
             groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
-            bias=random_bool()
+            bias=random_bool(),
         )
         m.train(random())
         device = random_device()
@@ -904,7 +904,7 @@ class TestDeconv2d(flow.unittest.TestCase):
             dilation=random(1, 5) | nothing(),
             groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
-            bias=random_bool()
+            bias=random_bool(),
         )
         m.train(random())
         device = random_device()
