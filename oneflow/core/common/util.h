@@ -40,8 +40,15 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/hash.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "fmt/ranges.h"
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
+
+template<class T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
+  os << fmt::format("{}", v);
+  return os;
+}
 
 namespace oneflow {
 

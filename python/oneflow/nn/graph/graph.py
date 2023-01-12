@@ -1137,7 +1137,6 @@ class Graph(object):
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
-                self._state_tensor_tuple,
                 self._c_nn_graph,
             )
             # Update outputs buffer reading index
