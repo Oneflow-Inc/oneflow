@@ -723,9 +723,6 @@ ActorBase* TryNewLightActorWithoutInit(ActorContext* actor_ctx) {
     return NewLightActorWithKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kTick) {
     return NewLightActorWithoutKernel(actor_ctx);
-  } else if (task_proto.task_type() == TaskType::kDeviceTick
-             && task_proto.consumed_regst_desc_id_size() > 0) {
-    return NewLightActorWithoutKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kCollectiveBoxingGeneric) {
     return NewLightActorWithKernel(actor_ctx);
   } else {
