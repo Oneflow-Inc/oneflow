@@ -23,7 +23,7 @@ namespace oneflow {
   bool is_split_mode = false;
   if (ctx->user_op_conf().has_input("matmul_vx", 0)) { is_split_mode = true; }
 
-  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes();
+  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes()-1;
        ++i) {
     if (is_split_mode) {
       ctx->NewBuilder()
@@ -59,7 +59,7 @@ namespace oneflow {
   size_t matmul_wx_num_axes = matmul_wx_shape.NumAxes();
 
   // check dimensions of dy and matmul_wx
-  CHECK_GE_OR_RETURN(dy_num_axes, 2)
+  CHECK_GT_OR_RETURN(dy_num_axes, 1)
       << "number of axes of \'dy\' should have be greater than 1, yet get " << dy_num_axes;
   CHECK_GE_OR_RETURN(matmul_wx_num_axes, 2)
       << "number of axes of \'matmul_wx\' should have be greater than 1, yet get "

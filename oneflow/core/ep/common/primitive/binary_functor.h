@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BINARY_FUNCTOR_H_
 
 #include "oneflow/core/ep/include/primitive/binary_op.h"
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
 #include <cmath>
@@ -628,8 +629,10 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kSigmoidBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src one_val = static_cast<Src>(1.0);
-    Src y = static_cast<Src>(one_val / (one_val + static_cast<Src>(exp(-x))));
+    using UnaryOp = oneflow::ep::primitive::UnaryOp;
+    using UnaryFunctor = oneflow::ep::primitive::UnaryFunctor<device, UnaryOp::kSigmoid, Dst, Src>;
+    auto uf = UnaryFunctor(0, 0);
+    Src y = uf(x);
     return dy * (y * (static_cast<Src>(1.0) - y));
   }
 };

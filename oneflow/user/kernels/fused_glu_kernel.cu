@@ -35,8 +35,6 @@ limitations under the License.
 
 #if CUDA_VERSION >= 10020
 
-#if !defined(__clang__)
-
 #ifdef WITH_CUTLASS
 
 #include "device/dual_gemm.h"
@@ -106,8 +104,6 @@ class RightActivationAndMul {
 }  // namespace cutlass
 
 #endif  // WITH_CUTLASS
-
-#endif // !defined(__clang__)
 
 namespace oneflow {
 
@@ -575,7 +571,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       DimVector w_dim_vec({n, k});
       DimVector v_dim_vec({n, k});
 
-      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
+      // setup cublaslt matmul attributes
       InferMatmulCublasMNK(x_dim_vec, w_dim_vec,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_wx_m,
@@ -586,6 +582,24 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
                     input_tensor_b->dptr(), nullptr, cublas_wx_m, cublas_wx_n, cublas_wx_k,
                     cublas_wx_lda, cublas_wx_ldb, cublas_wx_ldc);
+      
+      // setup algorithms
+      cublasLtMatmulPreference_t preference = nullptr;
+      size_t workspace_size = cuda_stream->cublas_workspace_size();
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
+                                                         CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                         &workspace_size, sizeof(workspace_size)));
+      int wx_returned_result = 0;
+      cublasLtMatmulHeuristicResult_t wx_heuristic_result;
+      OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), fused_glu_cache->operation_desc, fused_glu_cache->cublas_a_desc,
+        fused_glu_cache->cublas_b_desc, fused_glu_cache->cublas_c_desc, fused_glu_cache->cublas_c_desc,
+        preference, 1, &wx_heuristic_result, &wx_returned_result));
+      CHECK_EQ(wx_returned_result, 1);
+
+      // launch cublaslt matmul
+      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
       OF_CUBLAS_CHECK(cublasLtMatmul(
           /*lightHandle*/ cuda_stream->cublas_lt_handle(),
           /*computeDesc*/ fused_glu_cache->operation_desc,
@@ -599,12 +613,12 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
           /*Cdesc*/ fused_glu_cache->cublas_c_desc,
           /*D*/ out_tensor_matmul_wx->mut_dptr(),
           /*Ddesc*/ fused_glu_cache->cublas_c_desc,
-          /*algo*/ nullptr,
+          /*algo*/ &wx_heuristic_result.algo,
           /*workspace*/ cuda_stream->cublas_workspace(),
           /*workspaceSizeInBytes*/ cuda_stream->cublas_workspace_size(),
           /*stream*/ cuda_stream->cuda_stream()));
-
-      // out_tensor_matmul_vx = 1.0 * (input_tensor_v * input_tensor_x) + 1.0 * input_tensor_c
+      
+      // setup cublaslt attributes
       InferMatmulCublasMNK(x_dim_vec, v_dim_vec,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_vx_m,
@@ -615,6 +629,19 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
                     input_tensor_c->dptr(), nullptr, cublas_vx_m, cublas_vx_n, cublas_vx_k,
                     cublas_vx_lda, cublas_vx_ldb, cublas_vx_ldc);
+
+      // setup algorithm
+      int vx_returned_result = 0;
+      cublasLtMatmulHeuristicResult_t vx_heuristic_result;
+      OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), fused_glu_cache->operation_desc, fused_glu_cache->cublas_a_desc,
+        fused_glu_cache->cublas_b_desc, fused_glu_cache->cublas_c_desc, fused_glu_cache->cublas_c_desc,
+        preference, 1, &vx_heuristic_result, &vx_returned_result));
+      CHECK_EQ(vx_returned_result, 1);
+      cublasLtMatmulPreferenceDestroy(preference);
+
+      // launch cublaslt matmul
+      // out_tensor_matmul_vx = 1.0 * (input_tensor_v * input_tensor_x) + 1.0 * input_tensor_c
       OF_CUBLAS_CHECK(cublasLtMatmul(
           /*lightHandle*/ cuda_stream->cublas_lt_handle(),
           /*computeDesc*/ fused_glu_cache->operation_desc,
@@ -628,7 +655,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
           /*Cdesc*/ fused_glu_cache->cublas_c_desc,
           /*D*/ out_tensor_matmul_vx->mut_dptr(),
           /*Ddesc*/ fused_glu_cache->cublas_c_desc,
-          /*algo*/ nullptr,
+          /*algo*/ &wx_heuristic_result.algo,
           /*workspace*/ cuda_stream->cublas_workspace(),
           /*workspaceSizeInBytes*/ cuda_stream->cublas_workspace_size(),
           /*stream*/ cuda_stream->cuda_stream()));
@@ -641,7 +668,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       DimVector x_dim_vec({m, k});
       DimVector w_dim_vec({2 * n, k});
 
-      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
+      // setup cublas attributes
       InferMatmulCublasMNK(x_dim_vec, w_dim_vec,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m,
@@ -651,6 +678,25 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
                     input_tensor_b->dptr(), nullptr, cublas_m, cublas_n, cublas_k, cublas_lda,
                     cublas_ldb, cublas_ldc);
+
+      // setup algorithm
+      cublasLtMatmulPreference_t preference = nullptr;
+      size_t workspace_size = cuda_stream->cublas_workspace_size();
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
+                                                         CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                         &workspace_size, sizeof(workspace_size)));
+      int wx_returned_result = 0;
+      cublasLtMatmulHeuristicResult_t wx_heuristic_result;
+      OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), fused_glu_cache->operation_desc, fused_glu_cache->cublas_a_desc,
+        fused_glu_cache->cublas_b_desc, fused_glu_cache->cublas_c_desc, fused_glu_cache->cublas_c_desc,
+        preference, 1, &wx_heuristic_result, &wx_returned_result));
+      CHECK_EQ(wx_returned_result, 1);
+      cublasLtMatmulPreferenceDestroy(preference);
+
+      // launch cublaslt matmul
+      // out_tensor_matmul_wx = 1.0 * (input_tensor_w * input_tensor_x) + 1.0 * input_tensor_b
       OF_CUBLAS_CHECK(cublasLtMatmul(
           /*lightHandle*/ cuda_stream->cublas_lt_handle(),
           /*computeDesc*/ fused_glu_cache->operation_desc,
@@ -703,3 +749,4 @@ REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
 }  // namespace oneflow
 
 #endif  // CUDA_VERSION >= 10020
+

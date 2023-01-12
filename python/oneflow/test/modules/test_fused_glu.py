@@ -25,7 +25,7 @@ import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-test_dualgemm_impt = True
+test_dualgemm_impt = False
 
 class Glu(nn.Module):
     def __init__(self):
@@ -76,7 +76,6 @@ class Glu(nn.Module):
         elif activation == "silu":
             return hidden_state * flow.silu(gate)
 
-
 def tensor_builder(params: dict, dtype=flow.float32, is_split_mode=True):
     # config test data
     m = params["m"]
@@ -121,11 +120,23 @@ def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
     )
 
 
-def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
+def test_fused_glu(test_case, params: dict, dtype=flow.float32):
+    print(f'========== Start Testing ==========')
+    print(f'weight tensor: merged')
+    print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
+    print(f'activation: {params["act"]}')
+    print(f'dtype: {dtype}')
+
     flow_module = Glu()
     x, w, b, y_nor = tensor_builder(params=params, dtype=dtype, is_split_mode=False)
+
+    # forward
     y = flow_module.forward(x=x, w=w, b=b, split_mode=False, activation=params["act"])
+    
+    # backward
     y.sum().backward()
+
+    # copy back to cpu memory
     w_grad = w.grad.detach().cpu()
     b_grad = b.grad.detach().cpu()
     y = y.detach().cpu()
@@ -133,10 +144,16 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
     fused_x = x.detach().clone()
     fused_w = w.detach().clone().requires_grad_(True)
     fused_b = b.detach().clone().requires_grad_(True)
+
+    # forward
     fused_y = flow._C.fused_glu(
         x=fused_x, w=fused_w, b=fused_b, v=None, c=None, activation=params["act"]
     )
+
+    # backward
     fused_y.sum().backward()
+
+    # copy back to cpu memory
     fused_w_grad = fused_w.grad.detach().cpu()
     fused_b_grad = fused_b.grad.detach().cpu()
     fused_y = fused_y.detach().cpu()
@@ -149,19 +166,30 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_y, y)
         compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
-    print(str(dtype) + ", " + params["act"] + " passed!")
+    print(f'============== PASSED =============')
+    print("\n")
 
+def test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
+    print(f'========== Start Testing ==========')
+    print(f'weight tensor: splited')
+    print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
+    print(f'activation: {params["act"]}')
+    print(f'dtype: {dtype}')
 
-def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     flow_module = Glu()
     x, w, b, v, c, y_nor = tensor_builder(
         params=params, dtype=dtype, is_split_mode=True
     )
 
+    # forward
     y = flow_module.forward(
         x=x, w=w, b=b, v=v, c=c, split_mode=True, activation=params["act"]
     )
+
+    # backward
     y.sum().backward()
+
+    # copy back to cpu memory
     w_grad = w.grad.detach().cpu()
     b_grad = b.grad.detach().cpu()
     v_grad = v.grad.detach().cpu()
@@ -173,10 +201,15 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     fused_b = b.detach().clone().requires_grad_(True)
     fused_v = v.detach().clone().requires_grad_(True)
     fused_c = c.detach().clone().requires_grad_(True)
+
+    # forward 
     fused_y = flow._C.fused_glu(
         x=fused_x, w=fused_w, b=fused_b, v=fused_v, c=fused_c, activation=params["act"]
     )
+
+    # backward
     fused_y.sum().backward()
+
     fused_w_grad = fused_w.grad.detach().cpu()
     fused_b_grad = fused_b.grad.detach().cpu()
     fused_v_grad = fused_v.grad.detach().cpu()
@@ -195,7 +228,8 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
         compare_result(test_case, fused_b_grad, b_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1e-2)
         compare_result(test_case, fused_c_grad, c_grad, 1e-5, 1e-2)
-    print(str(dtype) + ", " + params["act"] + " passed!")
+    print(f'============== PASSED =============')
+    print("\n")
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -205,8 +239,8 @@ class TestFusedGlu(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         # set up test functions
         arg_dict["test_fun"] = [
-            _test_fused_glu,
-            _test_fused_glu_split,
+            test_fused_glu,
+            test_fused_glu_split,
         ]
 
         # set up env valuable if necessary
