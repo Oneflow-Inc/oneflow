@@ -23,10 +23,7 @@ namespace oneflow {
 
 template<typename T, typename ComputeType>
 struct NormalTransformFunctor {
-  NormalTransformFunctor(ComputeType mean, ComputeType std) {
-    this->mean = mean;
-    this->std = std;
-  }
+  NormalTransformFunctor(ComputeType mean, ComputeType std) : mean(mean), std(std) {}
   __device__ T operator()(ComputeType random_val) const {
     return static_cast<T>(random_val * std + mean);
   }

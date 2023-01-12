@@ -23,10 +23,7 @@ namespace oneflow {
 
 template<typename T, typename ComputeType>
 struct UniformTransformFunctor {
-  UniformTransformFunctor(ComputeType low, ComputeType high) {
-    this->low = low;
-    this->high = high;
-  }
+  UniformTransformFunctor(ComputeType low, ComputeType high) : low(low), high(high) {}
   __device__ T operator()(ComputeType rand_num) const {
     if (rand_num == static_cast<ComputeType>(1.0)) { rand_num = static_cast<ComputeType>(0.0); }
     return static_cast<T>(rand_num * (high - low) + low);

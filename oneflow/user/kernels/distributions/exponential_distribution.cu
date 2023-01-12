@@ -25,10 +25,8 @@ namespace oneflow {
 
 template<typename T, typename ComputeType>
 struct ExponentialTransformFunctor {
-  ExponentialTransformFunctor(ComputeType epsilon, ComputeType lambd) {
-    this->epsilon = epsilon;
-    this->lambd = lambd;
-  }
+  ExponentialTransformFunctor(ComputeType epsilon, ComputeType lambd)
+      : epsilon(epsilon), lambd(lambd) {}
   __device__ T operator()(ComputeType random_val) const {
     ComputeType log_rand = ::log(static_cast<ComputeType>(random_val));
     // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
