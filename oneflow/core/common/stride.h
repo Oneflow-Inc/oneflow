@@ -40,6 +40,8 @@ class Stride final : public DimVector {
   void ToProto(Int64ListProto*) const;
 };
 
+std::ostream& operator<<(std::ostream& out, const Stride& stride);
+
 }  // namespace oneflow
 
 namespace std {
