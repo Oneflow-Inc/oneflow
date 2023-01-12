@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "OneFlow/OneFlowUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 using namespace mlir;
 
 #include "oneflow/ir/lib/OneFlow/PDLL/ForwardOpPatterns.h.inc"
