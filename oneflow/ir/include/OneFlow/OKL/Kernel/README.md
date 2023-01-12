@@ -49,3 +49,5 @@ class RunTimeWrapperContext : public CompileTimeWrapperContext {
   std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
 };
 ```
+CompileTimeWrapperContext维护着从ir获取得到的上下文信息并加以封装到reg ctx，用于作为后面推导RunTimeWrapperContext的输入之一。
+RunTimeWrapperContext通过CompileTimeWrapperContext的信息以及okl kernel所创建的comp ctx以及tmp buffer等资源组成了单个op运行时计算所需的实际上下文环境。通过创建的init ctx，创建kernel state，kernel cache等资源用于kernel的compute计算。
