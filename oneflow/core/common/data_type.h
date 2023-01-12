@@ -47,9 +47,7 @@ struct numeric_limits<half> {
     return std::numeric_limits<half_float::half>::lowest();
   }
 
-  static constexpr half_float::half max() {
-    return std::numeric_limits<half_float::half>::max();
-  }
+  static constexpr half_float::half max() { return std::numeric_limits<half_float::half>::max(); }
 };
 
 #endif  // WITH_CUDA
