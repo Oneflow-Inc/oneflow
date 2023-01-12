@@ -24,22 +24,87 @@ namespace oneflow {
 namespace {
 
 void run_fmha_fwd(Launch_params<FMHA_fprop_params>& launch_params, const bool configure) {
+  auto need_attn_mask = !(launch_params.params.attn_mask_ptr == nullptr);
+  auto need_attn_bias = !(launch_params.params.attn_bias_ptr == nullptr);
   if (launch_params.params.d <= 32) {
-    run_fmha_fwd_hdim32(launch_params, configure);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim32_mask_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim32_mask(launch_params, configure);
+    } else {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim32_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim32(launch_params, configure);
+    }
+
   } else if (launch_params.params.d <= 64) {
-    run_fmha_fwd_hdim64(launch_params, configure);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim64_mask_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim64_mask(launch_params, configure);
+    } else {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim64_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim64(launch_params, configure);
+    }
   } else if (launch_params.params.d <= 128) {
-    run_fmha_fwd_hdim128(launch_params, configure);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim128_mask_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim128_mask(launch_params, configure);
+    } else {
+      if (need_attn_bias)
+        run_fmha_fwd_hdim128_bias(launch_params, configure);
+      else
+        run_fmha_fwd_hdim128(launch_params, configure);
+    }
   }
 }
 
 void run_fmha_bwd(FMHA_dgrad_params& params, cudaStream_t stream) {
+  auto need_attn_mask = !(params.attn_mask_ptr == nullptr);
+  auto need_attn_bias = !(params.attn_bias_ptr == nullptr);
   if (params.d <= 32) {
-    run_fmha_bwd_hdim32(params, stream);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim32_mask_bias(params, stream);
+      else
+        run_fmha_bwd_hdim32_mask(params, stream);
+    } else {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim32_bias(params, stream);
+      else
+        run_fmha_bwd_hdim32(params, stream);
+    }
   } else if (params.d <= 64) {
-    run_fmha_bwd_hdim64(params, stream);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim64_mask_bias(params, stream);
+      else
+        run_fmha_bwd_hdim64_mask(params, stream);
+    } else {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim64_bias(params, stream);
+      else
+        run_fmha_bwd_hdim64(params, stream);
+    }
   } else if (params.d <= 128) {
-    run_fmha_bwd_hdim128(params, stream);
+    if (need_attn_mask) {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim128_mask_bias(params, stream);
+      else
+        run_fmha_bwd_hdim128_mask(params, stream);
+    } else {
+      if (need_attn_bias)
+        run_fmha_bwd_hdim128_bias(params, stream);
+      else
+        run_fmha_bwd_hdim128(params, stream);
+    }
   }
 }
 
@@ -449,7 +514,7 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
       uint64_t offset = kernel_state->offset(counter_offset);
       launch_params.params.philox_args = at::PhiloxCudaState(seed, offset);
     }
-    run_fmha_bwd(launch_params, stream);
+    run_fmha_bwd(launch_params.params, stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

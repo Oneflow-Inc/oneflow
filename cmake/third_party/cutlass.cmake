@@ -106,18 +106,14 @@ if(WITH_CUTLASS)
       set(OF_FLASH_ATTENTION_INCLUDE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include/csrc/flash_attn/src)
       FetchContent_Declare(
           flash-attention
-          URL     https://github.com/Oneflow-Inc/flash-attention/archive/58e98e3492c14fa9f2fd1de5fe9056a14dc6400c.zip
-          URL_HASH MD5=7c3760af96534b68a243d6efda689510
+          URL     https://github.com/Oneflow-Inc/flash-attention/archive/05df5a136c38f51cc89b0441f22d5e87dd8c7139.zip
+          URL_HASH MD5=08223f2deba9c979d8bba42bd3d0f184
           SOURCE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include
       )
       FetchContent_MakeAvailable(flash-attention)
-      set(OF_FLASH_ATTENTION_SRC_FILES 
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim32.cu
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim64.cu
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim128.cu
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim32.cu
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim64.cu
-          ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim128.cu)
+      file(GLOB OF_FLASH_ATTENTION_SRC_FILES 
+                ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim*.cu 
+                ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim*.cu)
 
       add_library(of_flash_attention ${OF_FLASH_ATTENTION_SRC_FILES})
       add_dependencies(of_flash_attention cutlass)
