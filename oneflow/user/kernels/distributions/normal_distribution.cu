@@ -21,6 +21,19 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename T, typename ComputeType>
+struct NormalTransformFunctor {
+  NormalTransformFunctor(ComputeType mean, ComputeType std) {
+    this->mean = mean;
+    this->std = std;
+  }
+  __device__ T operator()(ComputeType random_val) const {
+    return static_cast<T>(random_val * std + mean);
+  }
+  ComputeType mean;
+  ComputeType std;
+};
+
 template<typename T>
 void NormalDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
@@ -40,25 +53,23 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
   uint64_t seed = gen->current_seed();
   uint64_t offset = gen->get_philox_offset(counter_offset);
 
-  DistributionElementwiseGridStrideParams params;
-  params.numel = elem_cnt;
-  params.seed = seed;
-  params.offset = offset;
-  params.dst = dptr;
-
   using ComputeType = typename distribution::DefaultComputeType<T>::type;
 
-  params.attr0 = Scalar(static_cast<ComputeType>(mean_));
-  params.attr1 = Scalar(static_cast<ComputeType>(std_));
+  NormalTransformFunctor<T, ComputeType> transform_functor(static_cast<ComputeType>(mean_),
+                                                           static_cast<ComputeType>(std_));
 
   if (std::is_same<T, double>::value) {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, DistributionOp::kNormal2Double,
-                                            TransformOp::kNormal>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+    DistributionFunctor<DistributionOp::kNormal2Double> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
   } else {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, DistributionOp::kNormal4,
-                                            TransformOp::kNormal>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+    DistributionFunctor<DistributionOp::kNormal4> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
   }
 }
 

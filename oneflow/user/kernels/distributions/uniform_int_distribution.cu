@@ -24,6 +24,20 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename T, typename ComputeType>
+struct UniformIntTransformFunctor {
+  UniformIntTransformFunctor(ComputeType low, ComputeType high) {
+    this->low = low;
+    this->high = high;
+  }
+  __device__ T operator()(ComputeType rand_num) const {
+    if (rand_num == 1.0) { rand_num = 0.0; }
+    return static_cast<T>(static_cast<int64_t>(rand_num * (high - low) + low));
+  }
+  ComputeType low;
+  ComputeType high;
+};
+
 template<typename T>
 void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
@@ -43,24 +57,22 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
   uint64_t seed = gen->current_seed();
   uint64_t offset = gen->get_philox_offset(counter_offset);
 
-  DistributionElementwiseGridStrideParams params;
-  params.numel = elem_cnt;
-  params.seed = seed;
-  params.offset = offset;
-  params.dst = dptr;
-  params.attr0 = Scalar(low_);
-  params.attr1 = Scalar(high_);
-
   using ComputeType = typename distribution::DefaultComputeType<T>::type;
 
+  UniformIntTransformFunctor<T, ComputeType> transform_functor(low_, high_);
+
   if (std::is_same<T, double>::value) {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, DistributionOp::kUniform2Double,
-                                            TransformOp::kUniformInt>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+    DistributionFunctor<DistributionOp::kUniform2Double> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
   } else {
-    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, DistributionOp::kUniform4,
-                                            TransformOp::kUniformInt>
-        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+    DistributionFunctor<DistributionOp::kUniform4> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
   }
 }
 

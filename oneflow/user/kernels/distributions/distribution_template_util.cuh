@@ -93,146 +93,60 @@ struct DistributionFunctor;
 
 template<>
 struct DistributionFunctor<DistributionOp::kNormal4> {
-  __device__ __forceinline__ DistributionFunctor() {}
+  DistributionFunctor() {}
 
-  __device__ __forceinline__ float4 operator()(curandStatePhilox4_32_10_t* state) const {
+  __device__ float4 operator()(curandStatePhilox4_32_10_t* state) const {
     return curand_normal4(state);
   }
 };
 
 template<>
 struct DistributionFunctor<DistributionOp::kNormal2Double> {
-  __device__ __forceinline__ DistributionFunctor() {}
+  DistributionFunctor() {}
 
-  __device__ __forceinline__ double2 operator()(curandStatePhilox4_32_10_t* state) const {
+  __device__ double2 operator()(curandStatePhilox4_32_10_t* state) const {
     return curand_normal2_double(state);
   }
 };
 
 template<>
 struct DistributionFunctor<DistributionOp::kUniform4> {
-  __device__ __forceinline__ DistributionFunctor() {}
+  DistributionFunctor() {}
 
-  __device__ __forceinline__ float4 operator()(curandStatePhilox4_32_10_t* state) const {
+  __device__ float4 operator()(curandStatePhilox4_32_10_t* state) const {
     return curand_uniform4(state);
   }
 };
 
 template<>
 struct DistributionFunctor<DistributionOp::kUniform2Double> {
-  __device__ __forceinline__ DistributionFunctor() {}
+  DistributionFunctor() {}
 
-  __device__ __forceinline__ double2 operator()(curandStatePhilox4_32_10_t* state) const {
+  __device__ double2 operator()(curandStatePhilox4_32_10_t* state) const {
     return curand_uniform2_double(state);
   }
 };
 
-enum class TransformOp {
-  kNormal,
-  kExponential,
-  kUniform,
-  kUniformInt,
-};
-
-template<TransformOp transform_op, typename T, typename ComputeType>
-struct TransformFunctor;
-
-template<typename T, typename ComputeType>
-struct TransformFunctor<TransformOp::kNormal, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType mean, ComputeType std) {
-    this->mean = mean;
-    this->std = std;
-  }
-  __device__ __forceinline__ T operator()(ComputeType random_val) const {
-    return static_cast<T>(random_val * std + mean);
-  }
-  ComputeType mean;
-  ComputeType std;
-};
-
-template<typename T, typename ComputeType>
-struct TransformFunctor<TransformOp::kExponential, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType epsilon, ComputeType lambd) {
-    this->epsilon = epsilon;
-    this->lambd = lambd;
-  }
-  __device__ __forceinline__ T operator()(ComputeType random_val) const {
-    ComputeType log_rand = ::log(static_cast<ComputeType>(random_val));
-    // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
-    // we need log to be not 0, and not underflow when converted to half
-    // fast __logf approximation can underflow, so set log to -epsilon/2 for 1 or close to 1
-    // args
-    ComputeType log =
-        static_cast<ComputeType>(random_val) >= static_cast<ComputeType>(1.) - epsilon / 2
-            ? -epsilon / 2
-            : log_rand;
-    return static_cast<ComputeType>(-1.0) / lambd * log;
-  }
-  ComputeType epsilon;
-  ComputeType lambd;
-};
-
-template<typename T, typename ComputeType>
-struct TransformFunctor<TransformOp::kUniform, T, ComputeType> {
-  __device__ __forceinline__ TransformFunctor(ComputeType low, ComputeType high) {
-    this->low = low;
-    this->high = high;
-  }
-  __device__ __forceinline__ T operator()(ComputeType rand_num) const {
-    if (rand_num == static_cast<ComputeType>(1.0)) { rand_num = static_cast<ComputeType>(0.0); }
-    return static_cast<T>(rand_num * (high - low) + low);
-  }
-  ComputeType low;
-  ComputeType high;
-};
-
-template<typename T, typename ComputeType>
-struct TransformFunctor<TransformOp::kUniformInt, T, ComputeType> {
-  __device__ __host__ __forceinline__ TransformFunctor(ComputeType low, ComputeType high) {
-    this->low = low;
-    this->high = high;
-  }
-  __device__ __forceinline__ T operator()(ComputeType rand_num) const {
-    if (rand_num == 1.0) { rand_num = 0.0; }
-    return static_cast<T>(static_cast<int64_t>(rand_num * (high - low) + low));
-  }
-  ComputeType low;
-  ComputeType high;
-};
-
-struct DistributionElementwiseGridStrideParams {
-  int32_t numel;
-  uint64_t seed;
-  uint64_t offset;
-  void* dst{};
-  Scalar attr0;
-  Scalar attr1;
-};
-
-template<typename T, typename ComputeType, int unroll_factor, DistributionOp distribution_op,
-         TransformOp transform_op>
+template<typename T, typename ComputeType, int unroll_factor, typename Distribution,
+         typename Transform>
 OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
 __global__
-    void DistributionElementwiseGridStrideKernel(DistributionElementwiseGridStrideParams params) {
+    void DistributionElementwiseGridStrideKernel(int64_t numel, uint64_t seed, uint64_t offset,
+                                                 T* out_ptr, Distribution dist_func,
+                                                 Transform transform_func) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(params.seed, idx, params.offset, &state);
+  curand_init(seed, idx, offset, &state);
 
-  int rounded_size = ((params.numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1)
-                     * blockDim.x * gridDim.x * unroll_factor;
-  T* out_ptr = reinterpret_cast<T*>(params.dst);
-  DistributionFunctor<distribution_op> dist_functor;
-  TransformFunctor<transform_op, T, ComputeType> transform_functor(
-      params.attr0.Value<ComputeType>(), params.attr1.Value<ComputeType>());
+  int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
+                     * gridDim.x * unroll_factor;
   for (int32_t linear_index = idx; linear_index < rounded_size;
        linear_index += blockDim.x * gridDim.x * unroll_factor) {
-    auto rand = dist_functor(&state);
+    auto rand = dist_func(&state);
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
       int li = linear_index + blockDim.x * gridDim.x * ii;
-      if (li < params.numel) {
-        out_ptr[li] = transform_functor(static_cast<ComputeType>((&rand.x)[ii]));
-      }
+      if (li < numel) { out_ptr[li] = transform_func(static_cast<ComputeType>((&rand.x)[ii])); }
     }
   }
 }

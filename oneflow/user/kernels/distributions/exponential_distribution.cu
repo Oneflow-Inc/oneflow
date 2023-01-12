@@ -23,6 +23,28 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename T, typename ComputeType>
+struct ExponentialTransformFunctor {
+  ExponentialTransformFunctor(ComputeType epsilon, ComputeType lambd) {
+    this->epsilon = epsilon;
+    this->lambd = lambd;
+  }
+  __device__ T operator()(ComputeType random_val) const {
+    ComputeType log_rand = ::log(static_cast<ComputeType>(random_val));
+    // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
+    // we need log to be not 0, and not underflow when converted to half
+    // fast __logf approximation can underflow, so set log to -epsilon/2 for 1 or close to 1
+    // args
+    ComputeType log =
+        static_cast<ComputeType>(random_val) >= static_cast<ComputeType>(1.) - epsilon / 2
+            ? -epsilon / 2
+            : log_rand;
+    return static_cast<ComputeType>(-1.0) / lambd * log;
+  }
+  ComputeType epsilon;
+  ComputeType lambd;
+};
+
 template<>
 void ExponentialDistribution<DeviceType::kCUDA, double>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, double* dptr,
@@ -40,17 +62,14 @@ void ExponentialDistribution<DeviceType::kCUDA, double>::operator()(
   uint64_t seed = gen->current_seed();
   uint64_t offset = gen->get_philox_offset(counter_offset);
 
-  DistributionElementwiseGridStrideParams params;
-  params.numel = elem_cnt;
-  params.seed = seed;
-  params.offset = offset;
-  params.dst = dptr;
-  params.attr0 = Scalar(std::numeric_limits<double>::epsilon());
-  params.attr1 = Scalar(lambd_);
+  ExponentialTransformFunctor<double, double> transform_functor(
+      std::numeric_limits<double>::epsilon(), static_cast<double>(lambd_));
+  DistributionFunctor<DistributionOp::kUniform2Double> dist_functor;
 
-  DistributionElementwiseGridStrideKernel<double, double, 2, DistributionOp::kUniform2Double,
-                                          TransformOp::kExponential>
-      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+  DistributionElementwiseGridStrideKernel<double, double, 2, decltype(dist_functor),
+                                          decltype(transform_functor)>
+      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
 }
 
 template<>
@@ -70,17 +89,14 @@ void ExponentialDistribution<DeviceType::kCUDA, float>::operator()(
   uint64_t seed = gen->current_seed();
   uint64_t offset = gen->get_philox_offset(counter_offset);
 
-  DistributionElementwiseGridStrideParams params;
-  params.numel = elem_cnt;
-  params.seed = seed;
-  params.offset = offset;
-  params.dst = dptr;
-  params.attr0 = Scalar(std::numeric_limits<float>::epsilon());
-  params.attr1 = Scalar(lambd_);
+  ExponentialTransformFunctor<float, float> transform_functor(std::numeric_limits<float>::epsilon(),
+                                                              static_cast<float>(lambd_));
+  DistributionFunctor<DistributionOp::kUniform4> dist_functor;
 
-  DistributionElementwiseGridStrideKernel<float, float, 4, DistributionOp::kUniform4,
-                                          TransformOp::kExponential>
-      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(params);
+  DistributionElementwiseGridStrideKernel<float, float, 4, decltype(dist_functor),
+                                          decltype(transform_functor)>
+      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
 }
 
 }  // namespace oneflow
