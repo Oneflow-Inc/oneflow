@@ -23,87 +23,87 @@ namespace oneflow {
 
 namespace {
 
-void run_fmha_fwd(Launch_params<FMHA_fprop_params>& launch_params, const bool configure) {
+void run_fmha_fwd(Launch_params<FMHA_fprop_params>& launch_params) {
   auto need_attn_mask = !(launch_params.params.attn_mask_ptr == nullptr);
   auto need_attn_bias = !(launch_params.params.attn_bias_ptr == nullptr);
   if (launch_params.params.d <= 32) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_fwd_hdim32_mask_bias(launch_params, configure);
+        run_fmha_fwd_hdim32_mask_bias(launch_params);
       else
-        run_fmha_fwd_hdim32_mask(launch_params, configure);
+        run_fmha_fwd_hdim32_mask(launch_params);
     } else {
       if (need_attn_bias)
-        run_fmha_fwd_hdim32_bias(launch_params, configure);
+        run_fmha_fwd_hdim32_bias(launch_params);
       else
-        run_fmha_fwd_hdim32(launch_params, configure);
+        run_fmha_fwd_hdim32(launch_params);
     }
 
   } else if (launch_params.params.d <= 64) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_fwd_hdim64_mask_bias(launch_params, configure);
+        run_fmha_fwd_hdim64_mask_bias(launch_params);
       else
-        run_fmha_fwd_hdim64_mask(launch_params, configure);
+        run_fmha_fwd_hdim64_mask(launch_params);
     } else {
       if (need_attn_bias)
-        run_fmha_fwd_hdim64_bias(launch_params, configure);
+        run_fmha_fwd_hdim64_bias(launch_params);
       else
-        run_fmha_fwd_hdim64(launch_params, configure);
+        run_fmha_fwd_hdim64(launch_params);
     }
   } else if (launch_params.params.d <= 128) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_fwd_hdim128_mask_bias(launch_params, configure);
+        run_fmha_fwd_hdim128_mask_bias(launch_params);
       else
-        run_fmha_fwd_hdim128_mask(launch_params, configure);
+        run_fmha_fwd_hdim128_mask(launch_params);
     } else {
       if (need_attn_bias)
-        run_fmha_fwd_hdim128_bias(launch_params, configure);
+        run_fmha_fwd_hdim128_bias(launch_params);
       else
-        run_fmha_fwd_hdim128(launch_params, configure);
+        run_fmha_fwd_hdim128(launch_params);
     }
   }
 }
 
-void run_fmha_bwd(FMHA_dgrad_params& params, cudaStream_t stream) {
+void run_fmha_bwd(FMHA_dgrad_params& params, cudaStream_t stream, const bool configure) {
   auto need_attn_mask = !(params.attn_mask_ptr == nullptr);
   auto need_attn_bias = !(params.attn_bias_ptr == nullptr);
   if (params.d <= 32) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_bwd_hdim32_mask_bias(params, stream);
+        run_fmha_bwd_hdim32_mask_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim32_mask(params, stream);
+        run_fmha_bwd_hdim32_mask(params, stream, configure);
     } else {
       if (need_attn_bias)
-        run_fmha_bwd_hdim32_bias(params, stream);
+        run_fmha_bwd_hdim32_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim32(params, stream);
+        run_fmha_bwd_hdim32(params, stream, configure);
     }
   } else if (params.d <= 64) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_bwd_hdim64_mask_bias(params, stream);
+        run_fmha_bwd_hdim64_mask_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim64_mask(params, stream);
+        run_fmha_bwd_hdim64_mask(params, stream, configure);
     } else {
       if (need_attn_bias)
-        run_fmha_bwd_hdim64_bias(params, stream);
+        run_fmha_bwd_hdim64_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim64(params, stream);
+        run_fmha_bwd_hdim64(params, stream, configure);
     }
   } else if (params.d <= 128) {
     if (need_attn_mask) {
       if (need_attn_bias)
-        run_fmha_bwd_hdim128_mask_bias(params, stream);
+        run_fmha_bwd_hdim128_mask_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim128_mask(params, stream);
+        run_fmha_bwd_hdim128_mask(params, stream, configure);
     } else {
       if (need_attn_bias)
-        run_fmha_bwd_hdim128_bias(params, stream);
+        run_fmha_bwd_hdim128_bias(params, stream, configure);
       else
-        run_fmha_bwd_hdim128(params, stream);
+        run_fmha_bwd_hdim128(params, stream, configure);
     }
   }
 }
@@ -120,6 +120,7 @@ void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
                       void* q_ptr, void* k_ptr, void* v_ptr, void* cu_seqlens_q_d,
                       void* cu_seqlens_k_d, void* o_packed_d, void* o_tmp_d, void* s_d,
                       void* softmax_lse_d, float p_dropout, float softmax_scale, bool is_causal,
+                      int num_splits,
                       // add attn mask&bias
                       void* attn_mask, void* attn_bias, int bias_mod_size, int mask_head_mod_size,
                       int mask_seq_mod_size) {
@@ -187,6 +188,7 @@ void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
   set_alpha(params.scale_dropout, params.rp_dropout, data_type);
 
   params.is_causal = is_causal;
+  params.num_splits = num_splits;
 }
 
 // copy from https://github.com/HazyResearch/flash-attention/blob/main/csrc/flash_attn/fmha_api.cpp
@@ -201,7 +203,7 @@ void set_params_dgrad(FMHA_dgrad_params& params, bool is_bf16,
                       void* q_ptr, void* k_ptr, void* v_ptr, void* dq_ptr, void* dk_ptr,
                       void* dv_ptr, void* cu_seqlens_q_d, void* cu_seqlens_k_d, void* o_packed_d,
                       void* dq_tmp_d, void* do_packed_d, void* softmax_lse_d, void* dsoftmax_sum_d,
-                      float p_dropout, float softmax_scale, bool is_causal,
+                      float p_dropout, float softmax_scale, bool is_causal, int num_splits,
                       // add attn mask&bias
                       void* attn_mask, void* attn_bias, void* attn_ds, int bias_mod_size,
                       int mask_head_mod_size, int mask_seq_mod_size) {
@@ -209,8 +211,8 @@ void set_params_dgrad(FMHA_dgrad_params& params, bool is_bf16,
                    k_row_stride, v_row_stride, q_head_stride, k_head_stride, v_head_stride, q_ptr,
                    k_ptr, v_ptr, cu_seqlens_q_d, cu_seqlens_k_d, o_packed_d,
                    dq_tmp_d,  // Reusing the o_tmp_ptr variable to store dq_tmp
-                   nullptr, softmax_lse_d, p_dropout, softmax_scale, is_causal, attn_mask,
-                   attn_bias, bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
+                   nullptr, softmax_lse_d, p_dropout, softmax_scale, is_causal, num_splits,
+                   attn_mask, attn_bias, bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
   // Set the pointers and strides.
   params.dq_ptr = dq_ptr;
@@ -276,6 +278,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     // Note: deafult should be 1.f / sqrtf(head_size)
     const float softmax_scale = ctx->Attr<float>("softmax_scale");
     const bool is_causal = ctx->Attr<bool>("causal");
+    const int num_splits = ctx->Attr<int>("num_splits");
     const float dropout_rate = ctx->Attr<float>("dropout_rate");
     bool is_dropout = dropout_rate > 0.0;
     cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
@@ -340,7 +343,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                      const_cast<void*>(cu_seqlens_k->dptr()), out->mut_dptr(),
                      loop ? tmp_buffer->mut_dptr() : nullptr,
                      /*not return softmax*/ nullptr, softmax_lse->mut_dptr(), dropout_rate,
-                     softmax_scale, is_causal,
+                     softmax_scale, is_causal, num_splits,
                      ctx->has_input("mask", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr())
                          : nullptr,
@@ -348,12 +351,11 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
                          : nullptr,
                      bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
-    run_fmha_fwd(launch_params, /*configure=*/true);
+
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state
-
-    // state
-    int64_t counter_offset = launch_params.elts_per_thread;
+    // We use a custom RNG that increases the offset by batch_size * nheads * 32.
+    int64_t counter_offset = launch_params.params.b * launch_params.params.h * 32;
 
     if (is_dropout) {
       auto* kernel_state = dynamic_cast<FlashAttentionKernelState*>(state);
@@ -368,7 +370,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
       launch_params.params.philox_args = at::PhiloxCudaState(seed, offset);
     }
 
-    run_fmha_fwd(launch_params, /*configure=*/false);
+    run_fmha_fwd(launch_params);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -415,12 +417,13 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     // Note: deafult should be 1.f / sqrtf(head_size)
     const float softmax_scale = ctx->Attr<float>("softmax_scale");
     const bool is_causal = ctx->Attr<bool>("causal");
+    const int num_splits = ctx->Attr<int>("num_splits");
     const float dropout_rate = ctx->Attr<float>("dropout_rate");
     bool is_dropout = dropout_rate > 0.0;
     cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const cudaDeviceProp& device_props = ctx->stream()->As<ep::CudaStream>()->device_properties();
-    Launch_params<FMHA_dgrad_params> launch_params(&device_props, stream, is_dropout,
-                                                   /*return_softmax*/ false);
+    FMHA_dgrad_params params;
+
     const int64_t q_axes = query->shape_view().NumAxes();
     const int64_t batch_size =
         (q_axes == 4) ? query->shape_view().At(0) : (cu_seqlens_k->shape_view().elem_cnt() - 1);
@@ -478,16 +481,15 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     user_op::Tensor* bias_grad = nullptr;
     if (ctx->has_input("bias", 0)) { bias_grad = ctx->Tensor4ArgNameAndIndex("bias_grad", 0); }
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
-    set_params_dgrad(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k,
-                     num_head, head_size, row_stride, row_stride, row_stride, head_stride,
-                     head_stride, head_stride, const_cast<void*>(query->dptr()),
-                     const_cast<void*>(key->dptr()), const_cast<void*>(value->dptr()),
-                     query_grad->mut_dptr(), key_grad->mut_dptr(), value_grad->mut_dptr(),
-                     const_cast<void*>(cu_seqlens_q->dptr()),
+    set_params_dgrad(params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k, num_head, head_size,
+                     row_stride, row_stride, row_stride, head_stride, head_stride, head_stride,
+                     const_cast<void*>(query->dptr()), const_cast<void*>(key->dptr()),
+                     const_cast<void*>(value->dptr()), query_grad->mut_dptr(), key_grad->mut_dptr(),
+                     value_grad->mut_dptr(), const_cast<void*>(cu_seqlens_q->dptr()),
                      const_cast<void*>(cu_seqlens_k->dptr()), const_cast<void*>(out->dptr()),
-                     loop ? query_grad_tmp_ptr : nullptr, const_cast<void*>(out_grad->dptr()),
-                     const_cast<void*>(softmax_lse->dptr()), dsoftmax_sum_ptr, dropout_rate,
-                     softmax_scale, is_causal,
+                     (loop || params.num_splits > 1) ? query_grad_tmp_ptr : nullptr,
+                     const_cast<void*>(out_grad->dptr()), const_cast<void*>(softmax_lse->dptr()),
+                     dsoftmax_sum_ptr, dropout_rate, softmax_scale, is_causal, num_splits,
                      ctx->has_input("mask", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr())
                          : nullptr,
@@ -497,10 +499,12 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                      ctx->has_input("bias", 0) ? const_cast<void*>(bias_grad->dptr()) : nullptr,
                      bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
+    run_fmha_bwd(params, stream, /*configure=*/true);
+
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state
-    int64_t counter_offset = launch_params.elts_per_thread;
-    at::PhiloxCudaState rng_engine_inputs;
+    // We use a custom RNG that increases the offset by batch_size * nheads * 32.
+    int64_t counter_offset = params.b * params.h * 32;
 
     if (is_dropout) {
       auto* kernel_state = dynamic_cast<FlashAttentionKernelState*>(state);
@@ -512,9 +516,12 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
           CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
       uint64_t seed = cuda_generator->current_seed();
       uint64_t offset = kernel_state->offset(counter_offset);
-      launch_params.params.philox_args = at::PhiloxCudaState(seed, offset);
+      params.philox_args = at::PhiloxCudaState(seed, offset);
     }
-    run_fmha_bwd(launch_params.params, stream);
+    run_fmha_bwd(params, stream, /*configure=*/false);
+    // if (params.num_splits > 1) {
+    //     query_grad.copy_(query_grad_tmp_ptr);
+    // }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

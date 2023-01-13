@@ -41,6 +41,7 @@ struct FlashAttentionCaptureState : public AutoGradCaptureState {
   float softmax_scale = 0.0;
   bool causal = false;
   float dropout_rate = 0.0;
+  int num_splits = 0;
   int bias_mod_size;
   int mask_head_mod_size;
   int mask_seq_mod_size;
@@ -100,8 +101,8 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
         saved_tensors.at(ctx->cu_seqlens_k_index),
         ctx->mask_index > 0 ? saved_tensors.at(ctx->mask_index) : nullptr,
         ctx->bias_index > 0 ? saved_tensors.at(ctx->bias_index) : nullptr, ctx->max_seqlen_q,
-        ctx->max_seqlen_k, ctx->softmax_scale, ctx->causal, ctx->dropout_rate, ctx->bias_mod_size,
-        ctx->mask_head_mod_size, ctx->mask_seq_mod_size));
+        ctx->max_seqlen_k, ctx->softmax_scale, ctx->causal, ctx->dropout_rate, ctx->num_splits,
+        ctx->bias_mod_size, ctx->mask_head_mod_size, ctx->mask_seq_mod_size));
 
     if (ctx->query_requires_grad) { (*in_grads)[0] = results->at(0); }
     if (ctx->key_requires_grad) { (*in_grads)[1] = results->at(1); }

@@ -1270,12 +1270,12 @@ class FlashAttentionGradFunctor {
       const std::shared_ptr<one::Tensor>& cu_seqlens_k, const Optional<one::Tensor>& mask,
       const Optional<one::Tensor>& bias, const int32_t max_seqlen_q, const int32_t max_seqlen_k,
       const float softmax_scale, const bool causal, const float dropout_rate,
-      const int32_t bias_mod_size, const int32_t mask_head_mod_size,
+      const int32_t num_splits, const int32_t bias_mod_size, const int32_t mask_head_mod_size,
       const int32_t mask_seq_mod_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale",
-                                                 "causal", "dropout_rate", "bias_mod_size",
-                                                 "mask_head_mod_size", "mask_seq_mod_size");
-    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate,
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "max_seqlen_q", "max_seqlen_k", "softmax_scale", "causal", "dropout_rate", "num_splits",
+        "bias_mod_size", "mask_head_mod_size", "mask_seq_mod_size");
+    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate, num_splits,
                       bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
     if (mask) {
       if (bias) {
