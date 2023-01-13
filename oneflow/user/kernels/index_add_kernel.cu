@@ -18,11 +18,13 @@ limitations under the License.
 #include <cstdint>
 #include "_deps/glog-build/glog/logging.h"
 #include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_hob.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -331,7 +333,8 @@ __global__ void indexFuncLargeIndex(TensorInfo<IndexType> dst,
 //   In this case, we choose the CUDA kernel that processes the data in
 //   "elementInSlice-major order".  For example, each thread can process element
 //   #0 of every slice, and then element #1 of every slice, and so on.
-bool indexShouldBeMajor(TensorInfo<int32_t> &info,
+template <typename IndexT>
+bool indexShouldBeMajor(TensorInfo<IndexT> &info,
                                     int sliceDim)
 {
   // The stride between adjacent slices (e.g., between element #0 of slice #100
@@ -349,7 +352,7 @@ bool indexShouldBeMajor(TensorInfo<int32_t> &info,
 
 };  // namespace
 
-template<typename T>
+template<typename T, typename IndexT>
 class IndexAddGpuKernel final : public user_op::OpKernel {
  public:
   IndexAddGpuKernel() = default;
@@ -419,45 +422,45 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const T alpha_value = static_cast<T>(alpha);
 
     if (canUse32BitIndexMath(self_shape, self_stride) && canUse32BitIndexMath(source_shape, source_stride) && canUse32BitIndexMath(index_shape, index_stride)) {
-      TensorInfo<int32_t> selfInfo = getTensorInfo<int32_t>(self_shape, self_stride);
+      TensorInfo<IndexT> selfInfo = getTensorInfo<IndexT>(self_shape, self_stride);
       const int32_t selfAddDim = dim;
       selfInfo.reduceDim(dim);
-      TensorInfo<int32_t> sourceInfo = getTensorInfo<int32_t>(source_shape, source_stride);
+      TensorInfo<IndexT> sourceInfo = getTensorInfo<IndexT>(source_shape, source_stride);
       const int32_t sourceAddDim = dim;
       sourceInfo.reduceDim(dim);
-      TensorInfo<int32_t> indexInfo = getTensorInfo<int32_t>(index_shape, index_stride);
+      TensorInfo<IndexT> indexInfo = getTensorInfo<IndexT>(index_shape, index_stride);
 
       if(numIndex <= 16){
         if (selfInfo.dims == 1 && sourceInfo.dims == 1 && indContig) {
-            SMALL_INDEX(T, int32_t, 1, 1, -2);
+            SMALL_INDEX(T, IndexT, 1, 1, -2);
           } else if (selfInfo.dims == 2 && sourceInfo.dims == 2 && indContig) {
-            SMALL_INDEX(T, int32_t, 2, 2, -2);
+            SMALL_INDEX(T, IndexT, 2, 2, -2);
           } else if (selfInfo.dims == 3 && sourceInfo.dims == 3 && indContig) {
-            SMALL_INDEX(T, int32_t, 3, 3, -2);
+            SMALL_INDEX(T, IndexT, 3, 3, -2);
           } else {
-            SMALL_INDEX(T, int32_t, -1, -1, -1);
+            SMALL_INDEX(T, IndexT, -1, -1, -1);
           }
       }
       else {
-          const bool indexIsMajor = indexShouldBeMajor(selfInfo, selfAddDim);
+          const bool indexIsMajor = indexShouldBeMajor<IndexT>(selfInfo, selfAddDim);
 
           if (selfInfo.dims == 1 && sourceInfo.dims == 1 && indContig) {
-            LARGE_INDEX(T, int32_t, 1, 1, -2, true);}
-      //     } else if (selfInfo.dims == 2 && sourceInfo.dims == 2 && indContig) {
-      //       if (indexIsMajor) {
-      //         LARGE_INDEX(T, int32_t, 2, 2, -2, true);
-      //       } else {
-      //         LARGE_INDEX(T, int32_t, 2, 2, -2, false);
-      //       }
-      //     } else if (selfInfo.dims == 3 && sourceInfo.dims == 3 && indContig) {
-      //       if (indexIsMajor) {
-      //         LARGE_INDEX(T, int32_t, 3, 3, -2, true);
-      //       } else {
-      //         LARGE_INDEX(T, int32_t, 3, 3, -2, false);
-      //       }
-      //     } else {
-      //       LARGE_INDEX(T, int32_t, -1, -1, -1, true);
-      //     }
+            LARGE_INDEX(T, IndexT, 1, 1, -2, true);
+          } else if (selfInfo.dims == 2 && sourceInfo.dims == 2 && indContig) {
+            if (indexIsMajor) {
+              LARGE_INDEX(T, IndexT, 2, 2, -2, true);
+            } else {
+              LARGE_INDEX(T, IndexT, 2, 2, -2, false);
+            }
+          } else if (selfInfo.dims == 3 && sourceInfo.dims == 3 && indContig) {
+            if (indexIsMajor) {
+              LARGE_INDEX(T, IndexT, 3, 3, -2, true);
+            } else {
+              LARGE_INDEX(T, IndexT, 3, 3, -2, false);
+            }
+          } else {
+            LARGE_INDEX(T, IndexT, -1, -1, -1, true);
+          }
         }
     }
     else{
@@ -467,14 +470,18 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_INDEX_ADD_CUDA_KERNEL(dtype)                          \
+#define REGISTER_INDEX_ADD_CUDA_KERNEL(dtype, index_dtype)                          \
   REGISTER_USER_KERNEL("index_add")                                    \
-      .SetCreateFn<IndexAddGpuKernel<dtype>>()                         \
+      .SetCreateFn<IndexAddGpuKernel<dtype, index_dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("output", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("index", 0) == GetDataType<index_dtype>::value));
 
-REGISTER_INDEX_ADD_CUDA_KERNEL(float)
-REGISTER_INDEX_ADD_CUDA_KERNEL(half)
-REGISTER_INDEX_ADD_CUDA_KERNEL(double)
+REGISTER_INDEX_ADD_CUDA_KERNEL(float, int32_t)
+REGISTER_INDEX_ADD_CUDA_KERNEL(float, int64_t)
+REGISTER_INDEX_ADD_CUDA_KERNEL(half, int32_t)
+REGISTER_INDEX_ADD_CUDA_KERNEL(half, int64_t)
+REGISTER_INDEX_ADD_CUDA_KERNEL(double, int32_t)
+REGISTER_INDEX_ADD_CUDA_KERNEL(double, int64_t)
 
 }  // namespace oneflow
