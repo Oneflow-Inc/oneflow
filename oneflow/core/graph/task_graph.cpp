@@ -1063,9 +1063,6 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
   if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
   auto task_iter = iter->second.parallel_id2task().find(parallel_id);
-  // CHECK_OR_RETURN(task_iter != iter->second.parallel_id2task().end())
-  //     << "Rank " << current_rank_ << " can't find rank " << parallel_id << " task in "
-  //     << iter->second.DebugString();
   if (task_iter == iter->second.parallel_id2task().end()) { return nullptr; }
   int64_t task_id = task_iter->second.task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
