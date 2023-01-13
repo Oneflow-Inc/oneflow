@@ -100,9 +100,12 @@ void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->t
 
 Maybe<double> TensorStorage::cost(size_t override_size) const {
   const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
-  size_t size = override_size == 0 ? blob_bytes_ : override_size;
+  size_t size = 1;
+  if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTE>() || EnvBool<ONEFLOW_DTR_HEURISTIC_DTR>()) {
+    size = override_size == 0 ? blob_bytes_ : override_size;
+  }
   return (EnvBool<ONEFLOW_DTR_NEIGHBOR>() ? approx_neighbor_cost() : compute_time_)
-         / time_since_last_access;
+         / time_since_last_access / static_cast<double>(size);
 }
 
 double TensorStorage::approx_neighbor_cost() const {
