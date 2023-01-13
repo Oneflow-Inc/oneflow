@@ -1062,7 +1062,12 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   const auto& op_name = op_node->op().op_name();
   auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
   if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
-  int64_t task_id = JUST(MapAt(iter->second.parallel_id2task(), parallel_id)).task_id();
+  auto task_iter = iter->second.parallel_id2task().find(parallel_id);
+  // CHECK_OR_RETURN(task_iter != iter->second.parallel_id2task().end())
+  //     << "Rank " << current_rank_ << " can't find rank " << parallel_id << " task in "
+  //     << iter->second.DebugString();
+  if (task_iter == iter->second.parallel_id2task().end()) { return nullptr; }
+  int64_t task_id = task_iter->second.task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
   CHECK_NOTNULL_OR_RETURN(comp_task_node) << "invalid task_type. task_id: " << task_id;
@@ -1202,14 +1207,14 @@ bool RankTaskGraph::IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) 
 }
 
 template<typename DoEachRankT>
-Maybe<void> RankTaskGraph::ForEachDutyRank(const ParallelDesc& parallel_desc,
-                                           const DoEachRankT& DoEachRank) {
+Maybe<void> RankTaskGraph::DoRankDuty(const ParallelDesc& parallel_desc,
+                                      const DoEachRankT& DoWithRank) {
   if (current_rank_ == 0) {
     // make sure master knows at least one op_node.
-    DoEachRank(JUST(parallel_desc.MachineId4ParallelId(0)));
+    DoWithRank(JUST(parallel_desc.MachineId4ParallelId(0)));
   } else if (parallel_desc.HasMachineId(current_rank_)) {
     // workers only care their own rank.
-    DoEachRank(current_rank_);
+    DoWithRank(current_rank_);
   } else {
     // Do nothing.
   }
@@ -1240,23 +1245,26 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
-  // Note that tasks added are from BoxingTaskGraph, so they are all boxing related.
+  // Note that tasks currently added in above code are from BoxingTaskGraph, so they are all boxing
+  // related.
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
-    JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
+    JUST(DoRankDuty(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
       JUST(CreateOrFindRankCompTaskNodeByRank(op_node, rank));
       return Maybe<void>::Ok();
     }));
-    if (var_op_names.count(op_node->op().op_name()) > 0) {
-      // To makes sure all ranks know all var_op_names, at least one task is needed.
+    if (var_op_names.count(op_node->op().op_name()) > 0
+        && !IsDutyRank(op_node->parallel_desc(), current_rank_)) {
+      // To makes sure all ranks know all var_op_names, at least one task for variable op is needed
+      // in the plan.
       JUST(CreateOrFindRankCompTaskNodeByParallelId(op_node, /*parallel_id=*/0));
     }
     return Maybe<void>::Ok();
   }));
 
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
-    return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
-                           [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
+    return DoRankDuty(op_edge->src_node()->parallel_desc(),
+                      [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
 
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
@@ -1264,8 +1272,8 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
         CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
             << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
             << dst->parallel_desc_sym()->data().DebugString();
-        CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
-                                   [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
+        CHECK_JUST(DoRankDuty(src->parallel_desc(),
+                              [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }

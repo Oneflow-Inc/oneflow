@@ -201,7 +201,7 @@ class RankTaskGraph final : public TaskGraph {
   Maybe<void> InitTransportTaskNodesFromProto();
   Maybe<void> InitRegstDescsConsumers();
   template<typename DoEachRankT>
-  Maybe<void> ForEachDutyRank(const ParallelDesc& parallel_desc, const DoEachRankT& DoEachRank);
+  Maybe<void> DoRankDuty(const ParallelDesc& parallel_desc, const DoEachRankT& DoWithRank);
 
   Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
   Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByParallelId(const OpNode* op_node,

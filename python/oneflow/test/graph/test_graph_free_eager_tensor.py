@@ -182,7 +182,7 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class GlobalFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
-    def _test_global_eager_tensor_to(test_case):
+    def test_global_eager_tensor_to(test_case):
         rank = flow.env.get_rank()
         placement = flow.placement("cpu", ranks=[0, 1])
         t_l = flow.tensor([1.0, 2.0], dtype=flow.float32)
