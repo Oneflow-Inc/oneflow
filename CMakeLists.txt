@@ -261,6 +261,22 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
 endif()
 
+if((ENABLE_ASAN OR ENABLE_UBSAN) AND ENABLE_TSAN)
+  message(FATAL_ERROR "Only ASAN and UBSAN can be enabled at the same time.")
+endif()
+if(ENABLE_ASAN)
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address -fno-omit-frame-pointer)
+endif()
+if(ENABLE_UBSAN)
+  add_compile_options(-fsanitize=undefined)
+  add_link_options(-fsanitize=undefined)
+endif()
+if(ENABLE_TSAN)
+  add_compile_options(-fsanitize=thread)
+  add_link_options(-fsanitize=thread)
+endif()
+
 if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
@@ -277,18 +293,21 @@ set(ROBIN_HOOD_HASHING_URL
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
-set(FMT_URL https://github.com/fmtlib/fmt/archive/e9ca7ea472a387639cef65a93037afcee26e4733.zip)
+set(FMT_URL https://github.com/fmtlib/fmt/archive/fc07217d85e6dcec52878807d6bbd89a9d9156a5.zip)
 use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
-set(FMT_MD5 f126df4cffec775e118837db0c64b920)
+set(FMT_MD5 7d9bb2ececc9ede29cd35bdc42a7e22c)
 
 set(KINETO_URL
     https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
+set(CUTLASS_URL
+    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
+use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
+set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
+
 include(cuda)
-add_subdirectory(external)
-include(third_party)
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
@@ -316,14 +335,21 @@ if(BUILD_CUDA)
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
     endif()
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)
-    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual)
-    else()
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-virtual)
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+      # NVIDIA H100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
     endif()
   endif()
+
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
 
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
@@ -335,11 +361,14 @@ if(BUILD_CUDA)
       set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
       list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
     endif()
-
+    list(APPEND CUDA_NVCC_FLAGS "-Xcompiler=-fno-strict-aliasing")
     message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()
 endif()
+
+add_subdirectory(external)
+include(third_party)
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 

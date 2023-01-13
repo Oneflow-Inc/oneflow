@@ -32,7 +32,6 @@ def _autoset_linewidth():
 def _try_convert_to_local_tensor(tensor):
     if tensor.is_global:
         tensor = tensor.to_global(
-            placement=flow.env.all_device_placement(tensor.placement.type),
-            sbp=flow.sbp.broadcast,
+            placement=flow.placement.all(tensor.placement.type), sbp=flow.sbp.broadcast,
         ).to_local()
     return tensor

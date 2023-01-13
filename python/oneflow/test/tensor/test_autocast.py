@@ -42,6 +42,22 @@ class TestAutoCast(flow.unittest.TestCase):
             y = x + c
         return x.float() + y.float()
 
+    def test_autocast_graph(test_case):
+        class LinearGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(3, 4, bias=False).cuda().half()
+
+            def build(self, x):
+                return self.linear(x)
+
+        x = flow.Tensor(3, 3).cuda()
+
+        with flow.autocast(device_type="cuda"):
+            linear = LinearGraph()
+            y = linear(x)
+            test_case.assertTrue(y.dtype == flow.float16)
+
 
 if __name__ == "__main__":
     unittest.main()

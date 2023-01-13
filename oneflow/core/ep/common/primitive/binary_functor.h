@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
+#include <cmath>
 
 namespace oneflow {
 
@@ -125,6 +126,39 @@ struct BinaryFunctor<device, BinaryOp::kGreaterEqual, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseEqualNan, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    close |= (std::isnan(src0) and std::isnan(src1));
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsClose, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogicalAnd, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -159,6 +193,13 @@ struct BinaryFunctor<device, BinaryOp::kFloorDiv, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return src0 / src1; }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kTruncDiv, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 / src1); }
 };
 
 template<DeviceType device, typename Src, typename Dst>

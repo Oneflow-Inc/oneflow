@@ -106,7 +106,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
+  return ReplicationPad1DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));

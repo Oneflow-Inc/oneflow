@@ -56,6 +56,7 @@ Maybe<void> GetSbp4ScalarMul(user_op::SbpContext* ctx) {
 
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarAdd, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFloordiv, GetSbp4ScalarMath)
+IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTruncdiv, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFmod, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarMul, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarDiv, GetSbp4ScalarMul)

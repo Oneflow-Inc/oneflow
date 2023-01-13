@@ -28,13 +28,29 @@ import oneflow as flow
 
 @flow.unittest.skip_unless_1n1d()
 class TestContiguous(flow.unittest.TestCase):
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5)
     def test_transpose_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         z = y.contiguous()
-        return y
+        return z
+
+    @autotest(n=5, auto_backward=False)
+    def test_transpose_with_bool_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.bool)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
+
+    @autotest(n=5, auto_backward=False)
+    def test_transpose_with_int_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.int)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
 
     @autotest(n=5, auto_backward=False)
     def test_contiguous_with_half_data(test_case):

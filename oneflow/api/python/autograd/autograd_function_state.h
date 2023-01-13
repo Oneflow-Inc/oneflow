@@ -26,8 +26,8 @@ namespace one {
 
 typedef struct {
   PyObject_HEAD;
-  std::shared_ptr<FunctionAutoGradCaptureState> data;
   PyObject* dynamic_attr_dict;
+  std::weak_ptr<FunctionAutoGradCaptureState> data;
 } PyAutogradFunctionState;
 
 extern PyTypeObject PyAutogradFunctionState_Type;

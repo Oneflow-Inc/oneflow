@@ -22,12 +22,8 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-from oneflow.test_utils.automated_test_util import *
 import time
 import os
-
-os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
-os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "1"
 
 
 def _test_general_basic_communication_2d_to_2d(test_case, src_nd_sbp, dst_nd_sbp):
@@ -84,6 +80,9 @@ def gen_nd_sbp():
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
     def test_general_basic_communication(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "1"
+
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()

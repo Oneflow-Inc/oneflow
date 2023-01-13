@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_DEVICE_STREAM_MAX_SIZE, 16);
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_STREAM_ENABLE_H2D_STREAM, false);
 
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_

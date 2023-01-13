@@ -36,7 +36,17 @@ limitations under the License.
 
 namespace oneflow {
 
+template<>
+struct IsScalarType<bfloat16> final {
+  static const bool value = true;
+};
+
 typedef half_float::half float16;
+
+template<>
+struct IsScalarType<float16> final {
+  static const bool value = true;
+};
 
 template<typename T>
 struct IsFloat16;
@@ -253,6 +263,7 @@ struct DevDType<DeviceType::kCUDA, bfloat16> {
 bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsPODAndHalfDataType(DataType data_type);
@@ -271,11 +282,6 @@ void CheckDataType(DataType data_type) {
                  && data_type != DataType::kChar && data_type != GetDataType<T>::value))
       << data_type << " " << GetDataType<T>::value;
 }
-
-int64_t GetIntMaxVal(DataType datatype);
-int64_t GetIntMinVal(DataType datatype);
-double GetFloatMaxVal(DataType datatype);
-double GetFloatMinVal(DataType datatype);
 
 }  // namespace oneflow
 

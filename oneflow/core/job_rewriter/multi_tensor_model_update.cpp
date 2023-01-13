@@ -196,7 +196,8 @@ class MultiTensorModelUpdatePass final : public JobPass {
   ~MultiTensorModelUpdatePass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ParseBooleanFromEnv("ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE", false);
+    return ctx.job_desc().enable_multi_tensor_update()
+           || ParseBooleanFromEnv("ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE", false);
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 

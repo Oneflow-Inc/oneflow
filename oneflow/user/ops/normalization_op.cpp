@@ -309,14 +309,13 @@ namespace {
 
 void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n, int64_t c,
                                 int64_t h, int64_t w, size_t* reserve_space_size) {
-  cudnnHandle_t cudnn_handle;
-  OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
+  cudnnHandle_t cudnn_handle = Singleton<CudnnHandlePool>::Get()->Get();
   CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, data_type, n, c, h, w);
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
       cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
       reserve_space_size));
-  OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+  Singleton<CudnnHandlePool>::Get()->Put(cudnn_handle);
 }
 
 }  // namespace

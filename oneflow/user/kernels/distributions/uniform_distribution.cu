@@ -15,55 +15,60 @@ limitations under the License.
 */
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/distributions/uniform_distribution.h"
+#include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-__device__ T GenUniform(curandState* state, const T low, const T high);
-
-template<>
-__device__ float GenUniform<float>(curandState* state, const float low, const float high) {
-  auto rand_num = curand_uniform(state);
-  // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
-  if (rand_num == 1.0) { rand_num = 0.0; }
-  return rand_num * (high - low) + low;
-}
-
-template<>
-__device__ double GenUniform<double>(curandState* state, const double low, const double high) {
-  auto rand_num = curand_uniform_double(state);
-  // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
-  if (rand_num == 1.0) { rand_num = 0.0; }
-  return rand_num * (high - low) + low;
-}
-
-template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T low,
-                            const T high) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
-  state[id] = localState;
-}
-
-}  // namespace
+template<typename T, typename ComputeType>
+struct UniformTransformFunctor {
+  UniformTransformFunctor(ComputeType low, ComputeType high) : low(low), high(high) {}
+  __device__ T operator()(ComputeType rand_num) const {
+    if (rand_num == static_cast<ComputeType>(1.0)) { rand_num = static_cast<ComputeType>(0.0); }
+    return static_cast<T>(rand_num * (high - low) + low);
+  }
+  ComputeType low;
+  ComputeType high;
+};
 
 template<typename T>
 void UniformDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
+  if (elem_cnt == 0) return;
   const auto device_index = stream->device()->device_index();
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-  int32_t block_num = gen->max_block_num();
-  int32_t thread_num = gen->max_thread_num();
-  auto* curand_states = gen->curand_states();
-  GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, elem_cnt, dptr, low_, high_);
+
+  ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+  auto execution_policy = gen->CalcExecutionPolicy(elem_cnt, cuda_stream);
+
+  auto counter_offset = std::get<0>(execution_policy);
+  auto grid = std::get<1>(execution_policy);
+  auto block = std::get<2>(execution_policy);
+
+  uint64_t seed = gen->current_seed();
+  uint64_t offset = gen->get_philox_offset(counter_offset);
+
+  using ComputeType = typename distribution::DefaultComputeType<T>::type;
+
+  UniformTransformFunctor<T, ComputeType> transform_functor(static_cast<ComputeType>(low_),
+                                                            static_cast<ComputeType>(high_));
+
+  if (std::is_same<T, double>::value) {
+    DistributionFunctor<DistributionOp::kUniform2Double> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 2, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
+  } else {
+    DistributionFunctor<DistributionOp::kUniform4> dist_functor;
+    DistributionElementwiseGridStrideKernel<T, ComputeType, 4, decltype(dist_functor),
+                                            decltype(transform_functor)>
+        <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
+  }
 }
 
 #define INITIATE_CUDA_UNIFORM_DISTRIBUTION(T, typeproto)               \
@@ -72,5 +77,6 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+INITIATE_CUDA_UNIFORM_DISTRIBUTION(half, DataType::kFloat16)
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ from typing import Optional, Tuple, Union
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class Interpolate(Module):
@@ -121,16 +121,6 @@ class Interpolate(Module):
             raise ValueError(
                 "recompute_scale_factor is not meaningful with an explicit size."
             )
-        if isinstance(scale_factors, (list, tuple)):
-            scale_factors = [
-                float(_.numpy()) if (flow.is_tensor(_) and len(_.size()) == 0) else _
-                for _ in scale_factors
-            ]
-        if isinstance(output_size, (list, tuple)):
-            output_size = [
-                int(_.numpy()) if (flow.is_tensor(_) and len(_.size()) == 0) else _
-                for _ in output_size
-            ]
         if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
         if self.recompute_scale_factor is True:

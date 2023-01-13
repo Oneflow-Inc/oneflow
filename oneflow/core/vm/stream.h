@@ -72,6 +72,8 @@ class Stream final : public intrusive::Base {
     return transport_dependences_;
   }
 
+  char* CheckSizeAndGetTmpSmallPinnedMemPtr(size_t size);
+
  private:
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
   void MoveFromZombieListToFreeList();
@@ -86,6 +88,7 @@ class Stream final : public intrusive::Base {
         stream_type_(StreamType::kInvalid),
         stream_policy_(),
         on_scheduler_thread_(false),
+        small_pinned_mem_ptr_(),
         running_instruction_list_(),
         active_stream_hook_(),
         thread_ctx_stream_hook_() {}
@@ -96,6 +99,7 @@ class Stream final : public intrusive::Base {
   StreamType stream_type_;
   std::shared_ptr<StreamPolicy> stream_policy_;
   bool on_scheduler_thread_;
+  std::unique_ptr<char, std::function<void(char*)>> small_pinned_mem_ptr_;
   // lists
   DispatchedInstructionList running_instruction_list_;
 

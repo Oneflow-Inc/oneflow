@@ -226,6 +226,7 @@ Tensor class reference
     Tensor.dtype 
     Tensor.element_size
     Tensor.eq
+    Tensor.equal
     Tensor.erf
     Tensor.erfc
     Tensor.erfinv
@@ -250,6 +251,8 @@ Tensor class reference
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point
@@ -282,8 +285,10 @@ Tensor class reference
     Tensor.min
     Tensor.minimum
     Tensor.mish
+    Tensor.mode
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
@@ -328,9 +333,11 @@ Tensor class reference
     Tensor.sqrt
     Tensor.square
     Tensor.squeeze
+    Tensor.squeeze_
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -359,6 +366,9 @@ Tensor class reference
     Tensor.unfold
     Tensor.uniform_
     Tensor.unsqueeze
+    Tensor.unsqueeze_
+    Tensor.as_strided
+    Tensor.as_strided_
     Tensor.var
     Tensor.view
     Tensor.view_as
@@ -368,4 +378,14 @@ Tensor class reference
     Tensor.pin_memory
     Tensor.is_pinned
     Tensor.cross
-
+    Tensor.scatter
+    Tensor.scatter_
+    Tensor.scatter_add
+    Tensor.scatter_add_
+    Tensor.bernoulli
+    Tensor.bernoulli_
+    Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
+    Tensor.broadcast_to
+    Tensor.unique

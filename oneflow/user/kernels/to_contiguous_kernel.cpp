@@ -100,14 +100,16 @@ class ToContiguousKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TO_CONTIGUOUS_KERNEL(device_type, T)            \
-  REGISTER_USER_KERNEL("to_contiguous")                          \
-      .SetCreateFn<ToContiguousKernel<device_type, T>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type) \
-                       && (user_op::HobDataType("in", 0) == GetDataType<T>::value));
+#define REGISTER_TO_CONTIGUOUS_KERNEL(device_type, cpp_type, data_type) \
+  REGISTER_USER_KERNEL("to_contiguous")                                 \
+      .SetCreateFn<ToContiguousKernel<device_type, cpp_type>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)        \
+                       && (user_op::HobDataType("in", 0) == data_type));
 
-#define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, T)
-#define REGISTER_TO_CONTIGUOUS_CUDA_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCUDA, T)
+#define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(cpp_type, data_type) \
+  REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, cpp_type, data_type)
+#define REGISTER_TO_CONTIGUOUS_CUDA_KERNEL(cpp_type, data_type) \
+  REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCUDA, cpp_type, data_type)
 
 #define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES \
   OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CPU_KERNEL, TO_CONTIGUOUS_CPU_TYPES)

@@ -75,6 +75,23 @@ const char* CurandGetErrorString(curandStatus_t error) {
   }
 }
 
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error) {
+  switch (error) {
+    case CUSOLVER_STATUS_SUCCESS: return "CUSOLVER_STATUS_SUCCESS";
+    case CUSOLVER_STATUS_NOT_INITIALIZED: return "CUSOLVER_STATUS_NOT_INITIALIZED";
+    case CUSOLVER_STATUS_ALLOC_FAILED: return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_INVALID_VALUE: return "CUSOLVER_STATUS_INVALID_VALUE";
+    case CUSOLVER_STATUS_ARCH_MISMATCH: return "CUSOLVER_STATUS_ARCH_MISMATCH";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_INTERNAL_ERROR: return "CUSOLVER_STATUS_INTERNAL_ERROR";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default: return "Unknown cusolver status";
+  }
+}
+#endif
+
 #if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error) {
@@ -183,6 +200,10 @@ Maybe<double> GetCUDAMemoryUsed() {
 
   int deviceCount = 0;
   cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if (error_id != cudaSuccess) {
+    return Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :"
+                                 << cudaGetErrorString(error_id);
+  }
 
   CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
 

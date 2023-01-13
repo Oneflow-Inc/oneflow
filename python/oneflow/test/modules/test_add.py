@@ -156,6 +156,17 @@ def _test_inplace_add(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
 
 
+def _test_inplace_add_with_type_promotion(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape), device=flow.device(device), dtype=flow.float16
+    )
+    y = flow.tensor(
+        np.random.randn(*shape), device=flow.device(device), dtype=flow.float32
+    )
+    x += y
+    test_case.assertTrue(x.dtype == flow.float16)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
@@ -164,6 +175,7 @@ class TestAddModule(flow.unittest.TestCase):
             _test_add_forward,
             _test_add_backward,
             _test_inplace_add,
+            _test_inplace_add_with_type_promotion,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]

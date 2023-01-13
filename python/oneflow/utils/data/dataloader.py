@@ -369,7 +369,7 @@ class DataLoader(Generic[T_co]):
         if self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
-            else:
+            elif not self._iterator._status_reset:
                 self._iterator._reset(self)
             return self._iterator
         else:
@@ -511,11 +511,13 @@ class _BaseDataLoaderIter(object):
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
             self.__class__.__name__
         )
+        self._status_reset = True
 
     def __iter__(self) -> "_BaseDataLoaderIter":
         return self
 
     def _reset(self, loader, first_iter=False):
+        self._status_reset = True
         self._sampler_iter = iter(self._index_sampler)
         self._num_yielded = 0
         self._IterableDataset_len_called = loader._IterableDataset_len_called
@@ -527,6 +529,7 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
+        self._status_reset = False
         if self._sampler_iter is None:
             self._reset()
         data = self._next_data()
@@ -543,6 +546,7 @@ class _BaseDataLoaderIter(object):
             if self._num_workers > 1:
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
+
         return data
 
     next = __next__
@@ -888,7 +892,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
     def __init__(self, loader):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
-
         assert not flow.env.rdma_is_initialized(), (
             "RDMA is initialized! Could not create _MultiProcessingDataLoaderIter any more. "
             "Please make sure Dataloader is created before invoking oneflow.env.init_rdma(). "

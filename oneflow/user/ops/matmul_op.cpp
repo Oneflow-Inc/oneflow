@@ -286,7 +286,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
     const int64_t a_batch_dim = GetABatchDim(i);
     const int64_t b_batch_dim = GetBBatchDim(i);
     CHECK(((a_batch_dim != 1 && b_batch_dim == 1) || (a_batch_dim == 1 && b_batch_dim != 1)
-           || (a_batch_dim == 1 && b_batch_dim == 1)))
+           || (a_batch_dim == b_batch_dim)))
         << "Batch Dims could not broadcast, please check. ";
     out_dim_vec[i] = std::max(a_batch_dim, b_batch_dim);
   }
