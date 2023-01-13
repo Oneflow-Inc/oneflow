@@ -1271,9 +1271,12 @@ class FlashAttentionGradFunctor {
       const Optional<one::Tensor>& bias, const int32_t max_seqlen_q, const int32_t max_seqlen_k,
       const float softmax_scale, const bool causal, const float dropout_rate,
       const int32_t num_splits) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        "max_seqlen_q", "max_seqlen_k", "softmax_scale", "causal", "dropout_rate", "num_splits");
-    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate, num_splits);
+    const bool has_mask = bool(mask);
+    const bool has_bias = bool(bias);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale",
+                                                 "causal", "dropout_rate", "num_splits", "has_mask", "has_bias");
+    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate, 
+                      num_splits, has_mask, has_bias);
     if (mask) {
       if (bias) {
         return OpInterpUtil::Dispatch<TensorTuple>(

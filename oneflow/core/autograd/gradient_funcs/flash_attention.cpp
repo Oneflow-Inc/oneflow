@@ -55,9 +55,9 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     ctx->key_requires_grad = inputs.at(1)->requires_grad();    // key
     ctx->value_requires_grad = inputs.at(2)->requires_grad();  // value
     int idx = 5;
-    bool has_mask = JUST(attrs.GetAttr<int>("mask_head_mod_size")) == 0;
+    bool has_mask = JUST(attrs.GetAttr<bool>("has_mask"));
     if (has_mask) ctx->mask_index = idx++;
-    bool has_bias = JUST(attrs.GetAttr<int>("bias_mod_size")) == 0;
+    bool has_bias = JUST(attrs.GetAttr<int>("has_bias"));
     if (has_bias) {
       ctx->bias_index = idx++;
       ctx->bias_requires_grad = inputs.at(idx)->requires_grad();
