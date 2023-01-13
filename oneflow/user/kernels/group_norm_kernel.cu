@@ -20,9 +20,12 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/cuda/layer_norm.cuh"
 
-#if !defined(WITH_ROCM)
-
+#ifdef WITH_ROCM
+#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 #ifdef WITH_CUTLASS
@@ -403,9 +406,7 @@ class GroupNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     const double epsilon = ctx->Attr<double>("epsilon");
     const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-#ifdef WITH_ROCM
-    CHECK_GE(epsilon, HIPDNN_BN_MIN_EPSILON);
-#else
+#ifdef WITH_CUDA
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
 #endif
     const int64_t num_instances = mean->shape_view().elem_cnt();  // N*num_groups
@@ -500,46 +501,46 @@ constexpr int kReduceBlockSize = 512;
 constexpr int kBlockSize = 128;
 constexpr int kNumWaves = 32;
 
-inline cudaError_t GetReduceNumBlocks(int64_t n, int* num_blocks) {
+inline GPU(Error_t) GetReduceNumBlocks(int64_t n, int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
+    if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPUMaxThreadsPerMultiProcessor, dev);
+    if (err != GPU(Success)) { return err; }
   }
   *num_blocks =
       std::max<int>(1, std::min<int64_t>(n, sm_count * tpm / kReduceBlockSize * kNumWaves));
-  return cudaSuccess;
+  return GPU(Success);
 }
 
-inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
+inline GPU(Error_t) GetNumBlocks(int64_t n, int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(GetDevice)(&dev);
+    if (err != GPU(Success)) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev);
+    if (err != GPU(Success)) { return err; }
   }
   int tpm;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
+    GPU(Error_t) err = GPU(DeviceGetAttribute)(&tpm, GPUMaxThreadsPerMultiProcessor, dev);
+    if (err != GPU(Success)) { return err; }
   }
   *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
                                                    sm_count * tpm / kBlockSize * kNumWaves));
-  return cudaSuccess;
+  return GPU(Success);
 }
 
 template<typename T>
@@ -626,7 +627,11 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const ComputeT
     }
 
     __syncthreads();
+#ifdef WITH_ROCM
+    typedef hipcub::BlockReduce<ComputeType, kReduceBlockSize> BlockReduce;
+#else
     typedef cub::BlockReduce<ComputeType, kReduceBlockSize> BlockReduce;
+#endif
     __shared__ typename BlockReduce::TempStorage temp_storage1;
     __shared__ typename BlockReduce::TempStorage temp_storage2;
     ComputeType ds_sum_result = BlockReduce(temp_storage1).Reduce(ds_sum, SumOp<ComputeType>());
@@ -762,5 +767,3 @@ REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16, float)
 #endif
 
 }  // namespace oneflow
-
-#endif

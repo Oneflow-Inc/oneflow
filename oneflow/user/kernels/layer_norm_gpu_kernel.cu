@@ -18,12 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
-#ifdef WITH_ROCM
-#include "hip/hip_runtime.h"
-#include <hipcub/hipcub.hpp>
-#else
-#include <cub/cub.cuh>
-#endif
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -33,6 +27,9 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 
+#ifdef WITH_CUDA
+
+#include <cub/cub.cuh>
 namespace oneflow {
 
 namespace {
@@ -213,13 +210,13 @@ int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
   const int max_grid_dim_y = (num_instances + tile_size - 1) / tile_size;
   const int block_size = block_dim_x * block_dim_y;
   int max_active_blocks = 0;
-  OF_CUDA_CHECK(GPU(OccupancyMaxActiveBlocksPerMultiprocessor)(
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormParamGrad<T, ComputeType>, block_size, 0));
   int waves = 1;
   int dev;
-  OF_CUDA_CHECK(GPU(GetDevice)(&dev));
+  OF_CUDA_CHECK(cudaGetDevice(&dev));
   int sm_count;
-  OF_CUDA_CHECK(GPU(DeviceGetAttribute)(&sm_count, GPUMultiProcessorCount, dev));
+  OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev));
   int num_blocks = max_active_blocks * sm_count * waves;
   int grid_dim_y = std::min(max_grid_dim_y, static_cast<int>(num_blocks / grid_dim_x));
   return std::max(grid_dim_y, 1);
@@ -319,9 +316,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     const double epsilon = ctx->Attr<double>("epsilon");
-#ifdef WITH_ROCM
-    CHECK_GE(epsilon, HIPDNN_BN_MIN_EPSILON);
-#else
+#ifdef WITH_CUDA
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
 #endif
     const int64_t num_instances = mean->shape_view().elem_cnt();
@@ -488,3 +483,660 @@ REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
 #endif
 
 }  // namespace oneflow
+
+#endif
+
+#ifdef WITH_ROCM
+
+#include "hip/hip_runtime.h"
+#include <thrust/pair.h>
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+template <typename T, bool is_cuda>
+struct AccumulateType { };
+
+#if defined(__HIPCC__)
+template <> struct AccumulateType<half, true> { using type = float; };
+#endif
+template <> struct AccumulateType<float, true> { using type = float; };
+template <> struct AccumulateType<double, true> { using type = double; };
+template <> struct AccumulateType<int8_t, true> { using type = int64_t; };
+template <> struct AccumulateType<uint8_t, true> { using type = int64_t; };
+template <> struct AccumulateType<char, true> { using type = int64_t; };
+template <> struct AccumulateType<int16_t, true> { using type = int64_t; };
+template <> struct AccumulateType<int32_t, true> { using type = int64_t; };
+template <> struct AccumulateType<int64_t, true> { using type = int64_t; };
+template <> struct AccumulateType<bool, true> {using type = bool; };
+template <> struct AccumulateType<float, false> { using type = double; };
+template <> struct AccumulateType<double, false> { using type = double; };
+template <> struct AccumulateType<int8_t, false> { using type = int64_t; };
+template <> struct AccumulateType<uint8_t, false> { using type = int64_t; };
+template <> struct AccumulateType<char, false> { using type = int64_t; };
+template <> struct AccumulateType<int16_t, false> { using type = int64_t; };
+template <> struct AccumulateType<int32_t, false> { using type = int64_t; };
+template <> struct AccumulateType<int64_t, false> { using type = int64_t; };
+template <> struct AccumulateType<bool, false> {using type = bool; };
+
+template<typename T, bool is_cuda>
+using acc_type = typename AccumulateType<T, is_cuda>::type;
+
+#define C10_HOST_DEVICE __host__ __device__
+#define C10_DEVICE __device__
+#define C10_HOST __host__
+#define C10_WARP_SIZE 64
+
+#define VEC 4
+typedef int64_t IndexType ;
+
+constexpr int BlockReduceNumThreads=512;
+constexpr int NumThreads = 256;
+constexpr int ColwiseReduceTileSize = 32;
+
+template <typename scalar_t, typename index_t, typename combine_t>
+struct WelfordData {
+  scalar_t mean;
+  scalar_t m2;
+  index_t n;
+  combine_t nf;
+
+  C10_HOST_DEVICE WelfordData() : mean(0), m2(0), n(0), nf(0) {}
+
+  C10_HOST_DEVICE WelfordData(
+      scalar_t mean,
+      scalar_t m2,
+      index_t n,
+      combine_t nf)
+      : mean(mean), m2(m2), n(n), nf(nf) {}
+};
+
+
+template <typename scalar_t, typename acc_scalar_t, typename index_t, typename combine_t, typename res_t>
+struct WelfordOps {
+ public:
+  using acc_t = WelfordData<acc_scalar_t, index_t, combine_t>;
+  inline C10_DEVICE acc_t reduce(acc_t acc, scalar_t data) const {
+    acc_scalar_t delta = data - acc.mean;
+    // using acc.nf(combine_t) here, as acc.n(index_t) would still be converted
+    // accumulation in reduce is done through index_T
+    acc_scalar_t new_mean = acc.mean + delta / (acc.nf + 1);
+    acc_scalar_t new_delta = data - new_mean;
+    return {
+      new_mean,
+      acc.m2 + delta * new_delta,
+      acc.n + 1,
+      combine_t(acc.n + 1), // accumulate for combine_t uses index_t
+    };
+  }
+  inline C10_DEVICE acc_t combine(acc_t a, acc_t b) const {
+    if (a.nf == 0) {
+      return b;
+    }
+    if (b.nf == 0) {
+      return a;
+    }
+    acc_scalar_t delta = b.mean - a.mean;
+    combine_t new_count = a.nf + b.nf;
+    acc_scalar_t nb_over_n = b.nf / new_count;
+    return {
+      a.mean + delta * nb_over_n,
+      a.m2 + b.m2 + delta * delta * a.nf * nb_over_n,
+      // setting acc.n as -1 since acc.n might not be able to represent the count
+      // correctly within its range, setting it to -1 to avoid confusion
+      -1,
+      new_count
+    };
+  }
+  inline C10_DEVICE res_t project(acc_t acc) const {
+    return res_t(acc.m2 / acc.nf, static_cast<scalar_t>(acc.mean));
+  }
+
+  inline __device__ acc_t warp_shfl_down(acc_t acc, int offset) const {
+    return {
+      __shfl_down(acc.mean, offset)
+      , __shfl_down(acc.m2, offset)
+      , __shfl_down(acc.n, offset)
+      , __shfl_down(acc.nf, offset)
+    };
+  }
+};
+
+template <typename T, class ReduceOp>
+__inline__ __device__ T WarpReduce(T val, const ReduceOp& op) {
+#pragma unroll
+  for (int offset = (C10_WARP_SIZE >> 1); offset > 0; offset >>= 1) {
+    val = op.combine(val, op.warp_shfl_down(val, offset));
+  }
+  return val;
+}
+
+template <typename T, class ReduceOp>
+__inline__ __device__ T WarpReduce(T val,int max,const ReduceOp& op) {
+#pragma unroll
+  for (int offset = max; offset > 0; offset >>= 1) {
+    val = op.combine(val, op.warp_shfl_down(val, offset));
+  }
+  return val;
+}
+
+template <typename T, class ReduceOp>
+__inline__ __device__ T
+BlockReduce(T val, const ReduceOp& op, T* shared) {
+  const int lid = threadIdx.x % C10_WARP_SIZE;
+  const int wid = threadIdx.x / C10_WARP_SIZE;
+  val = WarpReduce(val, op);
+  __syncthreads();
+  if (lid == 0) {
+    shared[wid] = val;
+  }
+  __syncthreads();
+  if (wid == 0) {
+    val= shared[lid];
+    val = WarpReduce(val,blockDim.x / C10_WARP_SIZE / 2,op);
+  }
+  return val;
+}
+
+template <typename T>
+__inline__ __device__ T WarpReduceSum(T val) {
+#pragma unroll
+  for (int offset = (C10_WARP_SIZE >> 1); offset > 0; offset >>= 1) {
+    val += __shfl_down(val, offset);
+  }
+  return val;
+}
+
+template <typename T>
+__inline__ __device__ T WarpReduceSum(T val,int max) {
+#pragma unroll
+  for (int offset = max; offset > 0; offset >>= 1) {
+    val += __shfl_down(val, offset);
+  }
+  return val;
+}
+
+
+template <typename T>
+__inline__ __device__ T BlockReduceSum(T val, T* shared) {
+  const int lid = threadIdx.x % C10_WARP_SIZE;
+  const int wid = threadIdx.x / C10_WARP_SIZE;
+  val = WarpReduceSum(val);
+  __syncthreads();
+  if (lid == 0) {
+    shared[wid] = val;
+  }
+  __syncthreads();
+  if (wid == 0) {
+    val= shared[lid];
+    val = WarpReduceSum(val,blockDim.x / C10_WARP_SIZE / 2);
+  }
+  return val;
+}
+
+template <typename scalar_t>
+__global__ void layernorm_forward_kernel(const scalar_t* input,scalar_t* ret,acc_type<scalar_t, true>* mean,acc_type<scalar_t, true>* rstd,
+                                            const scalar_t* gamma,const scalar_t* beta,IndexType cols,double eps)
+{
+  //dropout do nothing in val mode
+  IndexType i=blockIdx.x;
+  // add + layernorm get mean and rstd
+  using T_ACC = acc_type<scalar_t, true>;
+  using WelfordType = WelfordData<T_ACC, IndexType, T_ACC>;
+  using WelfordOp = WelfordOps<T_ACC, T_ACC, IndexType, T_ACC, thrust::pair<T_ACC, T_ACC>>;
+  __shared__ typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::type val_shared[BlockReduceNumThreads/C10_WARP_SIZE];
+  WelfordType* val_shared_ptr = reinterpret_cast<WelfordType*>(val_shared);
+  WelfordOp welford_op;
+  WelfordType val;
+
+  #pragma unroll
+  for (IndexType j = threadIdx.x; j < cols; j += blockDim.x) {
+    IndexType index = i * cols + j;
+    val = welford_op.reduce(val, static_cast<T_ACC>(input[index]));
+  }
+  val = BlockReduce(val,welford_op,val_shared_ptr);
+
+  __shared__ T_ACC s_mean;
+  __shared__ T_ACC s_rstd;
+  if (threadIdx.x == 0) {
+    thrust::tie(s_rstd, s_mean) = welford_op.project(val);
+    mean[i] = s_mean;
+    s_rstd=rsqrt(s_rstd + static_cast<T_ACC>(eps));
+    rstd[i] = s_rstd;
+  }
+  __syncthreads();
+  //layernorm  (x-mean)*rstd*gamma+beta
+  #pragma unroll
+  for (IndexType j = threadIdx.x; j < cols; j += blockDim.x) {
+    IndexType index = i * cols + j;
+    ret[index] = (static_cast<T_ACC>(input[index]) - s_mean)*s_rstd * (gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j])) 
+    + (beta == nullptr ? T_ACC(0) : static_cast<T_ACC>(beta[j]));
+  }
+}
+
+template <typename T>
+void LayerNormKernelImplInternal(
+    oneflow::ep::Stream* stream, 
+    const T* X,
+    const T* gamma,
+    const T* beta,
+    int64_t M,
+    int64_t N,
+    double eps,
+    T* Y,
+    acc_type<T, true>* mean,
+    acc_type<T, true>* rstd) {
+  using T_ACC = acc_type<T, true>;
+  const T* X_data = X;
+  const T* gamma_data = gamma;
+  const T* beta_data = beta;
+  T* Y_data = Y;
+  T_ACC* mean_data = mean;
+  T_ACC* rstd_data = rstd;
+  hipStream_t cuda_stream = stream->As<oneflow::ep::CudaStream>()->cuda_stream();
+  layernorm_forward_kernel<T><<<M, BlockReduceNumThreads, 0, cuda_stream>>>(
+                                   X_data,Y_data,mean_data,rstd_data,gamma_data,beta_data,N,eps);
+}
+
+template <typename scalar_t>
+__global__ void GammaBetaBackwardSimple(IndexType M,IndexType N,const scalar_t* dY,const scalar_t* X,const acc_type<scalar_t, true>* mean,
+                                                   const acc_type<scalar_t, true>* rstd,scalar_t* dg,scalar_t* db)
+{
+   using T_ACC = acc_type<scalar_t, true>;
+  const int64_t j = blockIdx.x * blockDim.x + threadIdx.x;
+  if (j < N) {
+    T_ACC sum1 = 0;
+    T_ACC sum2 = 0;
+    for (int64_t i = 0; i < M; ++i) {
+      const int64_t index = i * N + j;
+      sum1 += dg == nullptr ? T_ACC(0)
+                            : static_cast<T_ACC>(dY[index]) *
+              (static_cast<T_ACC>(X[index]) - static_cast<T_ACC>(mean[i])) *
+              static_cast<T_ACC>(rstd[i]);
+      sum2 += db == nullptr ? T_ACC(0) : static_cast<T_ACC>(dY[index]);
+    }
+    if (dg != nullptr) {
+      dg[j] = sum1;
+    }
+    if (db != nullptr) {
+      db[j] = sum2;
+    }
+  }
+}
+
+template <typename scalar_t>
+__global__ void GammaBetaBackward(IndexType M,IndexType N,const scalar_t* dY,const scalar_t* X,const acc_type<scalar_t, true>* mean,
+                                  const acc_type<scalar_t, true>* rstd,scalar_t* dg,scalar_t* db)
+{
+  using T_ACC = acc_type<scalar_t, true>;
+  __shared__ T_ACC g_shared[ColwiseReduceTileSize][ColwiseReduceTileSize + 1];
+  __shared__ T_ACC b_shared[ColwiseReduceTileSize][ColwiseReduceTileSize + 1];
+  const int64_t j = blockIdx.x * blockDim.x + threadIdx.x;
+  T_ACC dg_sum1 = 0;
+  T_ACC dg_sum2 = 0;
+  T_ACC db_sum1 = 0;
+  T_ACC db_sum2 = 0;
+  if (j < N) {
+    for (int64_t i = threadIdx.y; i < M; i += blockDim.y * 2) {
+      const int64_t i1 = i;
+      const int64_t i2 = i + blockDim.y;
+      const int64_t index1 = i1 * N + j;
+      const int64_t index2 = i2 * N + j;
+      dg_sum1 += dg == nullptr ? T_ACC(0)
+                               : static_cast<T_ACC>(dY[index1]) *
+              (static_cast<T_ACC>(X[index1]) - static_cast<T_ACC>(mean[i1])) *
+              static_cast<T_ACC>(rstd[i1]);
+      db_sum1 += db == nullptr ? T_ACC(0) : static_cast<T_ACC>(dY[index1]);
+      if (i2 < M) {
+        dg_sum2 += dg == nullptr ? T_ACC(0)
+                                 : static_cast<T_ACC>(dY[index2]) *
+                (static_cast<T_ACC>(X[index2]) - static_cast<T_ACC>(mean[i2])) *
+                static_cast<T_ACC>(rstd[i2]);
+        db_sum2 += db == nullptr ? T_ACC(0) : static_cast<T_ACC>(dY[index2]);
+      }
+    }
+  }
+  g_shared[threadIdx.y][threadIdx.x] = dg_sum1;
+  g_shared[threadIdx.y + blockDim.y][threadIdx.x] = dg_sum2;
+  b_shared[threadIdx.y][threadIdx.x] = db_sum1;
+  b_shared[threadIdx.y + blockDim.y][threadIdx.x] = db_sum2;
+  __syncthreads();
+  T_ACC sum1 = g_shared[threadIdx.x][threadIdx.y];
+  T_ACC sum2 = b_shared[threadIdx.x][threadIdx.y];
+  sum1 = WarpReduceSum(sum1);
+  sum2 = WarpReduceSum(sum2);
+  if (threadIdx.x == 0) {
+    const int64_t j = blockIdx.x * blockDim.x + threadIdx.y;
+    if (j < N) {
+      if (dg != nullptr) {
+        dg[j] = sum1;
+      }
+      if (db != nullptr) {
+        db[j] = sum2;
+      }
+    }
+  }
+  sum1 = g_shared[threadIdx.x][threadIdx.y + blockDim.y];
+  sum2 = b_shared[threadIdx.x][threadIdx.y + blockDim.y];
+  sum1 = WarpReduceSum(sum1);
+  sum2 = WarpReduceSum(sum2);
+  if (threadIdx.x == 0) {
+    const int64_t j = blockIdx.x * blockDim.x + threadIdx.y + blockDim.y;
+    if (j < N) {
+      if (dg != nullptr) {
+        dg[j] = sum1;
+      }
+      if (db != nullptr) {
+        db[j] = sum2;
+      }
+    }
+  }
+}
+
+template <typename scalar_t>
+__global__ void LayerNormBackward_kernel(IndexType N,const scalar_t* dY,const scalar_t* X,const scalar_t* gamma,const acc_type<scalar_t, true>* mean,
+                                         const acc_type<scalar_t, true>* rstd, scalar_t* dX)
+{
+  using T_ACC = acc_type<scalar_t, true>;
+  __shared__ T_ACC ds_shared[C10_WARP_SIZE];
+  __shared__ T_ACC db_shared[C10_WARP_SIZE];
+  const IndexType i = blockIdx.x;
+  T_ACC sum1 = 0;
+  T_ACC sum2 = 0;
+  #pragma unroll
+  for (IndexType j = threadIdx.x; j < N; j += blockDim.x) {
+    const IndexType index = i * N + j;
+    const T_ACC gamma_v = gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j]);
+    sum1 += static_cast<T_ACC>(dY[index]) * static_cast<T_ACC>(X[index]) * gamma_v;
+    sum2 += static_cast<T_ACC>(dY[index]) * gamma_v;
+  }
+  sum1 = BlockReduceSum<T_ACC>(sum1, ds_shared);
+  sum2 = BlockReduceSum<T_ACC>(sum2, db_shared);
+  const T_ACC s = T_ACC(1) / static_cast<T_ACC>(N);
+  __shared__ T_ACC b;
+  __shared__ T_ACC c;
+  if (threadIdx.x == 0) {
+    b = (sum2 * static_cast<T_ACC>(mean[i]) - sum1) * static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(rstd[i]) *static_cast<T_ACC>(rstd[i]) * s;
+    c = -(b * static_cast<T_ACC>(mean[i]) + sum2 * static_cast<T_ACC>(rstd[i]) * s);
+  }
+  __syncthreads();
+  #pragma unroll
+  for (IndexType j = threadIdx.x; j < N; j += blockDim.x) {
+    const IndexType index = i * N + j;
+    const T_ACC gamma_v = gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j]);
+    dX[index] = static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(dY[index]) * gamma_v + b * static_cast<T_ACC>(X[index]) + c;
+  }
+}
+
+template <typename T>
+void LayerNormBackwardKernelImplInternal(
+    oneflow::ep::Stream* stream,
+    const T* dY,
+    const T* X,
+    const acc_type<T, true>* mean,
+    const acc_type<T, true>* rstd,
+    const T* gamma,
+    int64_t M,
+    int64_t N,
+    T* dX) {
+  using T_ACC = acc_type<T, true>;
+  const T* dY_data = dY;
+  const T* X_data = X;
+  const T_ACC* mean_data = mean;
+  const T_ACC* rstd_data = rstd;
+  const T* gamma_data = gamma;
+  T* dX_data = dX;
+  hipStream_t cuda_stream = stream->As<oneflow::ep::CudaStream>()->cuda_stream();
+  if (dX_data != nullptr) {
+    LayerNormBackward_kernel<T><<<M, BlockReduceNumThreads, 0, cuda_stream>>>(
+                  N, dY_data, X_data,gamma_data,mean_data,rstd_data,dX_data);
+  }
+}
+
+template <typename T>
+void LayerNormBackwardKernelImplInternalParam(
+    oneflow::ep::Stream* stream,
+    const T* dY,
+    const T* X,
+    const acc_type<T, true>* mean,
+    const acc_type<T, true>* rstd,
+    int64_t M,
+    int64_t N,
+    T* dgamma,
+    T* dbeta) {
+  using T_ACC = acc_type<T, true>;
+  const T* dY_data = dY;
+  const T* X_data = X;
+  const T_ACC* mean_data = mean;
+  const T_ACC* rstd_data = rstd;
+  hipStream_t cuda_stream = stream->As<oneflow::ep::CudaStream>()->cuda_stream();
+  T* dgamma_data = dgamma;
+  T* dbeta_data = dbeta;
+  if (M < 512) {
+    // For small batch size, do colwise reduce directly.
+    const int64_t B = (N + NumThreads - 1) / NumThreads;
+    GammaBetaBackwardSimple<T>
+        <<<B, NumThreads, 0, cuda_stream>>>(
+            M,
+            N,
+            dY_data,
+            X_data,
+            mean_data,
+            rstd_data,
+            dgamma_data,
+            dbeta_data);
+  } else {
+    const int64_t B =
+        (N + ColwiseReduceTileSize - 1) / ColwiseReduceTileSize;
+    constexpr int kThreadX = ColwiseReduceTileSize;
+    constexpr int kThreadY = ColwiseReduceTileSize / 2;
+    GammaBetaBackward<T>
+        <<<B, dim3(kThreadX, kThreadY), 0, cuda_stream>>>(
+            M,
+            N,
+            dY_data,
+            X_data,
+            mean_data,
+            rstd_data,
+            dgamma_data,
+            dbeta_data);
+  }
+}
+
+namespace oneflow {
+
+template<typename T>
+class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  LayerNormGpuKernel() = default;
+  ~LayerNormGpuKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    double epsilon = ctx->Attr<double>("epsilon");
+    int64_t num_instances = mean->shape_view().elem_cnt();
+    int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    const T* gamma_ptr = nullptr;
+    const T* beta_ptr = nullptr;
+    if (ctx->has_input("gamma", 0)) {
+      const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+      gamma_ptr = gamma->dptr<T>();
+      CHECK_EQ(gamma->shape_view().elem_cnt(), norm_size);
+    }
+    if (ctx->has_input("beta", 0)) { beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>(); }
+    // DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
+    //                                gamma_ptr, beta_ptr, y->mut_dptr<T>(), mean, inv_variance);
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+    LayerNormKernelImplInternal<T>(ctx->stream(), x->dptr<T>(), gamma_ptr, beta_ptr, num_instances, norm_size, epsilon, 
+                                  y->mut_dptr<T>(), mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
+  };
+};
+
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("layer_norm")                                   \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_LAYER_NORM_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(double)
+REGISTER_LAYER_NORM_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
+
+template<typename T>
+class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  LayerNormGradGpuKernel() = default;
+  ~LayerNormGradGpuKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    int64_t num_instances = mean->shape_view().elem_cnt();
+    int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    const T* gamma_ptr = nullptr;
+    if (ctx->has_input("gamma", 0)) {
+      gamma_ptr = ctx->Tensor4ArgNameAndIndex("gamma", 0)->dptr<T>();
+    }
+    const T* add_to_output_ptr = nullptr;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), dx->data_type());
+      CHECK_EQ(add_to_output->shape_view(), dx->shape_view());
+      add_to_output_ptr = add_to_output->dptr<T>();
+    }
+    // LaunchLayerNormBackward<T>(ctx->stream(), num_instances, norm_size, dy->dptr<T>(), x->dptr<T>(),
+    //                            mean, inv_variance, gamma_ptr, add_to_output_ptr, dx->mut_dptr<T>());
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+    LayerNormBackwardKernelImplInternal<T>(ctx->stream(), dy->dptr<T>(), x->dptr<T>(), mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), 
+                                        gamma_ptr, num_instances, norm_size, dx->mut_dptr<T>());
+  };
+};
+
+#define REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
+      .SetCreateFn<LayerNormGradGpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
+      .SetInplaceProposalFn(                                                               \
+          [](const user_op::InferContext& ctx,                                             \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {       \
+            if (ctx.has_input("_add_to_output", 0)) {                                      \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true)); \
+            }                                                                              \
+            return Maybe<void>::Ok();                                                      \
+          });
+
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
+
+template<typename T>
+class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
+ public:
+  LayerNormParamGradGpuKernel() = default;
+  ~LayerNormParamGradGpuKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    int64_t num_instances = mean->shape_view().elem_cnt();
+    int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    // const DataType data_type = dy->data_type();
+    // const int grid_dim_x = (norm_size + tile_size - 1) / tile_size;
+    // const int grid_dim_y = GetGirdDimY<T>(num_instances, norm_size);
+    // const size_t tmp_gamma_diff_size = grid_dim_y * norm_size * sizeof(T);
+    // T* tmp_gamma_diff_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
+    // T* tmp_beta_diff_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + tmp_gamma_diff_size);
+    // T* reduce_buf_ptr =
+    //     reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + 2 * tmp_gamma_diff_size);
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+    // LayerNormParamGrad<T, ComputeType><<<dim3(grid_dim_x, grid_dim_y), dim3(32, 32 / num_per_block),
+    //                                      0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    //     num_instances, norm_size, dy->dptr<T>(), x->dptr<T>(), mean->dptr<ComputeType>(),
+    //     inv_variance->dptr<ComputeType>(), tmp_gamma_diff_ptr, tmp_beta_diff_ptr);
+    // const int32_t m = norm_size;
+    // const int32_t n = 1;
+    // const int32_t k = grid_dim_y;
+    // std::unique_ptr<ep::primitive::Fill> fill =
+    //     ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+    //                                                             data_type);
+    // CHECK(fill);
+    // fill->Launch(ctx->stream(), reduce_buf_ptr, 1.0, grid_dim_y);
+    // std::unique_ptr<ep::primitive::Matmul> matmul =
+    //     ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(
+    //         ctx->stream()->device_type(), data_type, ep::primitive::BlasTransposeType::T,
+    //         ep::primitive::BlasTransposeType::N);
+    // CHECK(matmul);
+    // if (ctx->has_output("gamma_diff", 0)) {
+    //   user_op::Tensor* gamma_diff = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0);
+    //   matmul->Launch(ctx->stream(), m, n, k, 1.0, tmp_gamma_diff_ptr, reduce_buf_ptr, 0.0,
+    //                  gamma_diff->mut_dptr());
+    // }
+    // if (ctx->has_output("beta_diff", 0)) {
+    //   user_op::Tensor* beta_diff = ctx->Tensor4ArgNameAndIndex("beta_diff", 0);
+    //   matmul->Launch(ctx->stream(), m, n, k, 1.0, tmp_beta_diff_ptr, reduce_buf_ptr, 0.0,
+    //                  beta_diff->mut_dptr());
+    // }
+    T* gamma_diff_ptr = nullptr;
+    T* beta_diff_ptr = nullptr;
+    if (ctx->has_output("gamma_diff", 0)) {
+      gamma_diff_ptr = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0)->mut_dptr<T>();
+    }
+    if (ctx->has_output("beta_diff", 0)) {
+      beta_diff_ptr = ctx->Tensor4ArgNameAndIndex("beta_diff", 0)->mut_dptr<T>();
+    }
+    LayerNormBackwardKernelImplInternalParam<T>(ctx->stream(), dy->dptr<T>(), x->dptr<T>(), mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), 
+                                                num_instances, norm_size, gamma_diff_ptr, beta_diff_ptr);
+  };
+};
+
+#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                                             \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");          \
+        const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);                       \
+        const bool has_beta_diff = ctx->has_output("beta_diff", 0);                         \
+        const auto& dy = ctx->InputTensorDesc("dy", 0);                                     \
+        const int64_t num_instances = dy.shape().Count(0, begin_params_axis);               \
+        const int64_t norm_size = dy.shape().Count(begin_params_axis);                      \
+        const int grid_dim_y = num_instances;                                               \
+        size_t tmp_buffer_size = (2 * grid_dim_y * norm_size + grid_dim_y) * sizeof(dtype); \
+        return tmp_buffer_size;                                                             \
+      });
+
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
+#endif
+
+}
+
+#endif

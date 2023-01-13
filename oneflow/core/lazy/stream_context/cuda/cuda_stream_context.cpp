@@ -160,7 +160,6 @@ CudaStreamContext::CudaStreamContext(int device_index)
                     "to a truthy "
                     "value, it will impact performance";
     kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
-    // LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been not surpported for ROCM for now";
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
