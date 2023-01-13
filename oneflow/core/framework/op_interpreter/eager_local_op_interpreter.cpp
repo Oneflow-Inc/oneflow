@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -96,7 +97,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
 
   for (int i = 0; i < outputs->size(); i++) {
-    if (!outputs->at(i)) {
+    if (!outputs->at(i) || EnvBool<ONEFLOW_DTR_COPY_ON_WRITE>()) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).

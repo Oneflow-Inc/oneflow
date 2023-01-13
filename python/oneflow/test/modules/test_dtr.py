@@ -54,6 +54,20 @@ def assert_no_small_piece_optimization(f):
     return new_f
 
 
+def only_fbip():
+    if os.getenv("ONEFLOW_DTR_COPY_ON_WRITE") is None:
+        return lambda f: f
+    else:
+        return unittest.skip("")
+
+
+def only_copy_on_write():
+    if os.getenv("ONEFLOW_DTR_COPY_ON_WRITE") is not None:
+        return lambda f: f
+    else:
+        return unittest.skip("")
+
+
 @contextmanager
 def generate_placeholder(size_mb, device):
     global placeholder_size
@@ -100,6 +114,7 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_1(self):
         x1 = flow.ones(1024 * 1024) # 4MB
@@ -116,6 +131,7 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_2(self):
         x1 = flow.ones(1024 * 1024) # 4MB
@@ -132,6 +148,7 @@ class TestDTR(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @unittest.skip("mutation other than inplace is not supported yet")
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_3(self):
         x1 = flow.ones(1024 * 1024) # 4MB
@@ -143,6 +160,7 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(12, 'cuda')
     def test_dtr_work_on_fbip_4(self):
         x1 = flow.ones(1024 * 1024).to('cuda') # 4MB
@@ -314,6 +332,7 @@ class TestDTR(flow.unittest.TestCase):
         flow._oneflow_internal.dtr.disable_eviction(target)
         ITER_NUM = 5
         for i in range(ITER_NUM):
+            print('start allocated_memory(cpu):', allocated_memory('cpu'))
             output = model(x)
             loss = criterion(output, target)
             del output
@@ -324,22 +343,36 @@ class TestDTR(flow.unittest.TestCase):
             del loss
             optimizer.step()
             optimizer.zero_grad()
+            print('end allocated_memory(cpu):', allocated_memory('cpu'))
+
         # check there is more than 10 recomputations each iteration
         # so the correctness check makes sense.
         self.assertGreater(flow._oneflow_internal.dtr.recomputation_num(), ITER_NUM * 10)
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(220, 'cpu')
     def test_resnet18(self):
         self._test_resnet18(False, [0.6304041147232056])
 
     @flow.unittest.skip_unless_1n2d()
     @assert_no_small_piece_optimization
+    @only_fbip()
     @memory_budget(220, 'cpu')
     def test_resnet18_ddp_1n2d(self):
         # 2 devices, 2 losses
         self._test_resnet18(True, [1.8890058994293213, 1.8992782831192017])
+
+    @flow.unittest.skip_unless_1n1d()
+    @assert_no_small_piece_optimization
+    @only_copy_on_write()
+    @memory_budget(20, 'cpu')
+    def test_copy_on_write(self):
+        x1 = flow.ones(1024 * 1024) # 4MB
+        x2 = flow.ones(1024 * 1024)
+        x2 += x1
+        print(x2.numpy())
 
 
 if __name__ == "__main__":

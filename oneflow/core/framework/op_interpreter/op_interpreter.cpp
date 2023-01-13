@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
@@ -91,6 +92,12 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+  TensorTuple tensor_to_be_mutated(op_expr.output_size());
+  if (EnvBool<ONEFLOW_DTR_COPY_ON_WRITE>()) {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if (outputs->at(i)) { tensor_to_be_mutated.at(i) = outputs->at(i); }
+    }
+  }
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
@@ -120,6 +127,17 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     // Capture inputs and outputs after `AddNode` because of that grad function
     // node has been attached to them.
     JUST(grad_closure->Capture(inputs, *outputs, ctx));
+  }
+  // With DTR if inplace, set grad_fn_node for inputs(mut_inputs) the same as the outputs
+  if (EnvBool<ONEFLOW_DTR_COPY_ON_WRITE>()) {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if (tensor_to_be_mutated.at(i)) {
+        JUST(tensor_to_be_mutated.at(i)->set_data(outputs->at(i)));
+        if (requires_grad) {
+          tensor_to_be_mutated.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+        }
+      }
+    }
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
