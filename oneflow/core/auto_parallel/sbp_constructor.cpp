@@ -406,6 +406,7 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   return Maybe<void>::Ok();
 }
 
+// TODO: delete this, this is for variable op only
 Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {

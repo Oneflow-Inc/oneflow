@@ -221,9 +221,6 @@ void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs, const OpGraph&
     op_name2topo_structs[topo_struct->op_node->op().op_name()] = topo_struct;
   }
 
-  // Find all the control edges
-  auto op_node2ctrl_in_op_names = CHECK_JUST(GetMutableOpCtrlDeps(op_graph));
-
   // Traverse the operator graph
   op_graph.ForEachNode([&](OpNode* node) {
     auto& this_topo_struct = op_name2topo_structs.at(node->op().op_name());
@@ -238,14 +235,11 @@ void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs, const OpGraph&
       this_topo_struct->out_topo_struct.insert(op_name2topo_structs.at(out->op().op_name()));
     });
     // Initialize input nodes for control edges
-    auto it = op_node2ctrl_in_op_names->find(node);
-    if (it != op_node2ctrl_in_op_names->end()) {
-      for (const auto& ctrl_in_op_name : it->second) {
-        auto& ctrl_in_topo_struct = op_name2topo_structs.at(ctrl_in_op_name);
-        this_topo_struct->in_topo_struct.insert(ctrl_in_topo_struct);
-        // Initialize output nodes for this control edge simultaneously
-        ctrl_in_topo_struct->out_topo_struct.insert(this_topo_struct);
-      }
+    for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+      auto& ctrl_in_topo_struct = op_name2topo_structs.at(ctrl_in_op_name);
+      this_topo_struct->in_topo_struct.insert(ctrl_in_topo_struct);
+      // Initialize output nodes for this control edge simultaneously
+      ctrl_in_topo_struct->out_topo_struct.insert(this_topo_struct);
     }
   });
 }
@@ -288,6 +282,8 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
 
 }  // anonymous namespace
 
+// TODO: Use straighten order
+// Use two function
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Generate topological data structure for each sbp node
   HashMap<SbpNode*, TopoStruct> sbp_node2topo_struct;
