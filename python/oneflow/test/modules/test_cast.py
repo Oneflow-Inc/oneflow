@@ -103,7 +103,7 @@ class TestCast(flow.unittest.TestCase):
         x = x.permute(perm_list)
         y = x.to(dtype=torch.float64, device=device)
         return y
-    
+
     @autotest(n=5, auto_backward=False)
     # NOTE:if set auto_backward=True, both oneflow and pytorch will raise RuntimeError:
     # element 0 of tensors does not require grad and does not have a grad_fn
