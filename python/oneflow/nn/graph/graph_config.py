@@ -320,7 +320,7 @@ class GraphConfig(object):
         It might speed up the training by 2%.
         If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
 
-        straighten_algorithm_tag 4: DelayShortGpu
+        straighten_algorithm_tag 5: DelayShortGpu
         Under the fifth configuration, the straighten algorithm would try to delay the cpu nodes.
         Such procedure would reduce the gaps of the execution on gpus.
         It might speed up the validation (or training).
@@ -332,7 +332,7 @@ class GraphConfig(object):
             or mode == "MemoryFirst"
             or mode == "OverlapCpuGpu"
             or mode == "DelayShortGpu"
-        )
+        ), "please choose one type among {Disable, SpeedFirst, MemoryFirst, OverlapCpuGpu, DelayShortGpu}"
         if mode == "Disable":
             self.proto.straighten_algorithm_tag_in_task_graph = 1
         elif mode == "SpeedFirst":
