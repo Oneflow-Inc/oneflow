@@ -723,9 +723,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
   for (int64_t i = 0; i < nccl_op_infos.size(); ++i) {
     auto& info = nccl_op_infos.at(i);
-    if (i == 0) {
-      info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_tick_op_name);
-    } 
+    if (i == 0) { info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_tick_op_name); }
 
     nccl_op_confs->emplace_back(info.nccl_op_conf);
     nccl_op_parallel_confs->emplace_back(info.nccl_parallel_conf);
@@ -819,9 +817,7 @@ void InsertNcclLogicalOpsInSubGraph(
     const std::string& pre_op_name = pre_node->op().op_name();
     CHECK(subgraph_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).second);
     // build ctrl edge if need.
-    if (!IsReachable(pre_op_name, this_op_name)) {
-      mut_op_names.insert(this_op_name);
-    }
+    if (!IsReachable(pre_op_name, this_op_name)) { mut_op_names.insert(this_op_name); }
   }
 
   std::vector<OperatorConf> nccl_op_confs;
