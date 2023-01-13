@@ -304,6 +304,14 @@ class TestDTR(flow.unittest.TestCase):
         optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
         x = flow.rand(10, 3, 224, 224).to(device)
         target = flow.randint(low=0, high=1000, size=(x.shape[0],)).to(device).to(flow.int32)
+        # NOTE: there is a bug in current implementation about random ops:
+        # x1 = flow.rand(5)
+        # x2 = x1 + 1
+        # del x1   <--- we cannot block the eviction of x1 here because it is controlled by the user
+        # evict(x2)
+        # recompute(x2) <-- recomputing x2 triggers the recomputation of x1 and causes inconsistentness
+        flow._oneflow_internal.dtr.disable_eviction(x)
+        flow._oneflow_internal.dtr.disable_eviction(target)
         ITER_NUM = 5
         for i in range(ITER_NUM):
             output = model(x)
