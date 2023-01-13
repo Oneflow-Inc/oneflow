@@ -33,6 +33,10 @@ Maybe<void> DelayVariableOpExecutionPass::Apply(Job* job, JobPassCtx* ctx) const
   }
   const JobConfigProto& job_conf = ctx->job_desc().job_conf();
   if (job_conf.has_train_conf()) { return Maybe<void>::Ok(); }
+  if (job_conf.has_num_gradient_accumulation_steps()
+      && job_conf.num_gradient_accumulation_steps() > 1) {
+    return Maybe<void>::Ok();
+  }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
