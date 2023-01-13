@@ -319,12 +319,19 @@ class GraphConfig(object):
         Such procedure would reduce the gaps of the execution on gpus.
         It might speed up the training by 2%.
         If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
+
+        straighten_algorithm_tag 4: DelayShortGpu
+        Under the fifth configuration, the straighten algorithm would try to delay the cpu nodes.
+        Such procedure would reduce the gaps of the execution on gpus.
+        It might speed up the validation (or training).
+        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
         """
         assert (
             mode == "Disable"
             or mode == "SpeedFirst"
             or mode == "MemoryFirst"
             or mode == "OverlapCpuGpu"
+            or mode == "DelayShortGpu"
         )
         if mode == "Disable":
             self.proto.straighten_algorithm_tag_in_task_graph = 1
@@ -332,8 +339,10 @@ class GraphConfig(object):
             self.proto.straighten_algorithm_tag_in_task_graph = 2
         elif mode == "MemoryFirst":
             self.proto.straighten_algorithm_tag_in_task_graph = 3
-        else:
+        elif mode == "OverlapCpuGpu":
             self.proto.straighten_algorithm_tag_in_task_graph = 4
+        else:
+            self.proto.straighten_algorithm_tag_in_task_graph = 5
 
     def enable_compress_memory(self, mode: bool = True):
         """If true, then the graph will try its best to find the minimum memory allocation strategy.
