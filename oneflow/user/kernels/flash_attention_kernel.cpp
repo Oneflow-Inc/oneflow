@@ -325,7 +325,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     int mask_head_mod_size = 0;
     int mask_seq_mod_size = 0;
     if (ctx->has_input("mask", 0)) {
-      const user_op::Tensor* attn_mask = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      const user_op::Tensor* attn_mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
       const auto mask_shape = attn_mask->shape_view();
       // last two dimension
       mask_head_mod_size = mask_shape.At(1);
