@@ -41,7 +41,13 @@ __global__ void GenerateGpu(uint64_t seed, uint64_t offset, const int64_t n, con
   Pack pack;
   CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
 #pragma unroll
-    for (int j = 0; j < sizeof(PackType); ++j) { pack.b_value[j] = GenMask(&state, rate); }
+    for (int j = 0; j < sizeof(PackType); j += 4) {
+      auto rand = curand_uniform4(&state);
+      pack.b_value[j] = (&rand.x)[0] > rate;
+      pack.b_value[j + 1] = (&rand.x)[1] > rate;
+      pack.b_value[j + 2] = (&rand.x)[2] > rate;
+      pack.b_value[j + 3] = (&rand.x)[3] > rate;
+    }
     pack_mask[i] = pack.p_value;
   }
 
