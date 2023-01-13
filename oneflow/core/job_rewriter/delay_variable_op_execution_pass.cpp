@@ -37,13 +37,13 @@ Maybe<void> DelayVariableOpExecutionPass::Apply(Job* job, JobPassCtx* ctx) const
       && job_conf.num_gradient_accumulation_steps() > 1) {
     return Maybe<void>::Ok();
   }
+  if (GlobalProcessCtx::WorldSize() > 1) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return Maybe<void>::Ok(); }
     if (!op_conf.ctrl_in_op_name().empty()) { return Maybe<void>::Ok(); }
-    if (GlobalProcessCtx::WorldSize() > 1) { return Maybe<void>::Ok(); }
     if (op_conf.variable_conf().has_tick()) { return Maybe<void>::Ok(); }
     if (node->out_edges().size() != 1) { return Maybe<void>::Ok(); }
     if (node->parallel_desc().parallel_num() != 1) { return Maybe<void>::Ok(); }
