@@ -24,23 +24,42 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename ComputeType>
-struct ExponentialTransformFunctor {
-  ExponentialTransformFunctor(ComputeType epsilon, ComputeType lambd)
-      : epsilon(epsilon), lambd(lambd) {}
-  __device__ T operator()(ComputeType random_val) const {
-    ComputeType log_rand = ::log(static_cast<ComputeType>(random_val));
+struct ExponentialTransformFunctor;
+
+template<>
+struct ExponentialTransformFunctor<float, float> {
+  ExponentialTransformFunctor(float epsilon, float lambd) : epsilon(epsilon), lambd(lambd) {}
+  __device__ float operator()(float random_val) const {
+    float log_rand = __logf(static_cast<float>(random_val));
     // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
     // we need log to be not 0, and not underflow when converted to half
     // fast __logf approximation can underflow, so set log to -epsilon/2 for 1 or close to 1
     // args
-    ComputeType log =
-        static_cast<ComputeType>(random_val) >= static_cast<ComputeType>(1.) - epsilon / 2
-            ? -epsilon / 2
-            : log_rand;
-    return static_cast<ComputeType>(-1.0) / lambd * log;
+    float log = static_cast<float>(random_val) >= static_cast<float>(1.) - epsilon / 2
+                    ? -epsilon / 2
+                    : log_rand;
+    return static_cast<float>(-1.0) / lambd * log;
   }
-  ComputeType epsilon;
-  ComputeType lambd;
+  float epsilon;
+  float lambd;
+};
+
+template<>
+struct ExponentialTransformFunctor<double, double> {
+  ExponentialTransformFunctor(double epsilon, double lambd) : epsilon(epsilon), lambd(lambd) {}
+  __device__ double operator()(double random_val) const {
+    double log_rand = ::log(static_cast<double>(random_val));
+    // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
+    // we need log to be not 0, and not underflow when converted to half
+    // fast __logf approximation can underflow, so set log to -epsilon/2 for 1 or close to 1
+    // args
+    double log = static_cast<double>(random_val) >= static_cast<double>(1.) - epsilon / 2
+                     ? -epsilon / 2
+                     : log_rand;
+    return static_cast<double>(-1.0) / lambd * log;
+  }
+  double epsilon;
+  double lambd;
 };
 
 template<>
