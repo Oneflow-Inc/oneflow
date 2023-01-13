@@ -15,9 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/core/vm/op_call_instruction_policy.h"
+#include <fmt/format.h>
+#include <algorithm>
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/dtr_ep_allocator.h"
-#include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/vm/dtr_disjoint_set.h"
 #include "oneflow/core/vm/dtr_env.h"
 #include "oneflow/core/eager/dtr_util.h"
@@ -28,12 +29,126 @@ limitations under the License.
 #include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/vm/stream_get_allocator_stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace vm {
 
 namespace {
-static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
+
+std::string SortKey(const std::string& key) {
+  const auto shape_finish_at = key.rfind(")");
+  if (shape_finish_at == std::string::npos || shape_finish_at + 2 == key.size()) { return key; }
+  const auto name_and_shape = key.substr(0, shape_finish_at + 1);
+  auto attrs = key.substr(shape_finish_at + 2);
+  if (attrs.substr(attrs.size() - 2) == ", ") { attrs = attrs.substr(0, attrs.size() - 2); }
+
+  const auto need_find_next = [](const std::string& s, size_t index) {
+    const size_t final_pos = index + 2;
+    if (final_pos >= s.size()) { return false; }
+    if (s.at(index + 1) != ' ') { return true; }
+    if (!(s.at(final_pos) >= 'a' && s.at(final_pos) <= 'z')) { return true; }
+    return false;
+  };
+  
+  const auto split = [&need_find_next](const std::string& s, std::vector<std::string>& tokens,
+                                       const std::string& delimiters) {
+    std::string::size_type lastPos = s.find_first_not_of(delimiters, 0);
+    std::string::size_type pos = s.find_first_of(delimiters, lastPos);
+    while (std::string::npos != pos && need_find_next(s, pos)) {
+      pos = s.find_first_of(delimiters, pos + 1);
+    }
+    while (std::string::npos != pos || std::string::npos != lastPos) {
+      tokens.push_back(s.substr(lastPos, pos - lastPos));
+      lastPos = s.find_first_not_of(delimiters, pos);
+      pos = s.find_first_of(delimiters, lastPos);
+      while (std::string::npos != pos && need_find_next(s, pos)) {
+        pos = s.find_first_of(delimiters, pos + 1);
+      }
+    }
+  };
+  std::vector<std::string> attrs_splited;
+  split(attrs, attrs_splited, ", ");
+  std::sort(attrs_splited.begin(), attrs_splited.end());
+  return fmt::format("{} {}, ", name_and_shape, fmt::join(attrs_splited, ", "));
+}
+
+using json = nlohmann::json;
+
+json LoadTimeDataset() {
+  json j;
+  if (const char* c = std::getenv("ONEFLOW_DTR_OP_TIME_DATASET")) {
+    std::ifstream i(c);
+    i >> j;
+    i.close();
+  }
+  json new_j;
+
+  for (json::iterator iter = j.begin(); iter != j.end(); ++iter) {
+    new_j[SortKey(iter.key())] = iter.value();
+  }
+  return new_j;
+}
+
+Maybe<double> GetDatasetComputeTime(const json& j, OpCallInstructionPolicy* operand) {
+  if (operand->outputs().empty()) {
+    LOG(INFO) << operand->opkernel().op_type_name();
+    return 0;
+  }
+  const std::vector<std::string> zero_time_list{"empty",
+                                                "identity",
+                                                "constant",
+                                                "copy",
+                                                "zero_like",
+                                                "expand_dims",
+                                                "flatten",
+                                                "reduce_sum",
+                                                "reshape",
+                                                "reshape_like",
+                                                "squeeze",
+                                                "transpose",
+                                                "nll",
+                                                "nll_grad",
+                                                "uniform",
+                                                "fill_",
+                                                "slice_update",
+                                                "normal",
+                                                "scalar_add",
+                                                "adaptive_avg_pool2d",
+                                                "adaptive_avg_pool2d_grad"};
+  for (const auto& x : zero_time_list) {
+    if (operand->opkernel().op_type_name() == x) { return 0; }
+  }
+
+  const std::string op_type_str = operand->opkernel().op_type_name();
+  const std::string input_shape_str = [&]() {
+    std::stringstream ss;
+    for (size_t i = 0; i < operand->inputs().size(); i++) {
+      ss << operand->inputs().at(i)->shape();
+      if (i != operand->inputs().size() - 1) { ss << ", "; }
+    }
+    return ss.str();
+  }();
+  // const auto& attrs = operand->composed_attrs();
+  // const std::string attr_str = fmt::format(
+  //     "data_format={}, dilation_rate={}, filters={}, groups={}, kernel_size={}, "
+  //     "padding_before={}, strides={}, ",
+  //     attrs.Attr4Name("data_format")->ToString(), attrs.Attr4Name("dilation_rate")->ToString(),
+  //     attrs.Attr4Name("filters")->ToString(), attrs.Attr4Name("groups")->ToString(),
+  //     attrs.Attr4Name("kernel_size")->ToString(), attrs.Attr4Name("padding_before")->ToString(),
+  //     attrs.Attr4Name("strides")->ToString());
+  const std::string attr_str = operand->composed_attrs().ToString();
+  std::string key = op_type_str + " " + input_shape_str + " " + attr_str;
+  key = SortKey(key);
+  CHECK_OR_RETURN(j.contains(key)) << "key " << key << " not found";
+  CHECK_OR_RETURN(j[key].is_number_float()) << "key " << key << " is not float, but " << j[key];
+  return j[key].get<double>();
+}
+
+static Maybe<double> GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
+  const static json time_dataset = LoadTimeDataset();
+  if (!time_dataset.empty()) { return GetDatasetComputeTime(time_dataset, operand); }
+
   const auto& inputs = operand->inputs();
   const auto& outputs = operand->outputs();
   size_t estimated_compute_time = 0;
@@ -45,6 +160,7 @@ static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
   }
   return estimated_compute_time;
 }
+
 }  // namespace
 
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
@@ -94,8 +210,8 @@ struct OpCallInstructionUtil final {
                                     vm::Stream* vm_stream, bool first, bool recompute) {
     Singleton<dtr::Env>::Get()->current_op_type_name =
         op_call_instruction_policy->opkernel().op_type_name();
-    VLOG(2) << "set current op type name to "
-            << Singleton<dtr::Env>::Get()->current_op_type_name << std::endl;
+    VLOG(2) << "set current op type name to " << Singleton<dtr::Env>::Get()->current_op_type_name
+            << std::endl;
     if (first) { JUST(IncReferenceNumOfRecomputedTensor(*op_call_instruction_policy)); }
     if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
@@ -175,7 +291,7 @@ struct OpCallInstructionUtil final {
       x->tensor_storage()->set_eviction_disabled(true);
     }
 
-    Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));
+    Singleton<dtr::Env>::Get()->add_time(JUST(GetEstimatedComputeTime(op_call_instruction_policy)));
     VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     Singleton<dtr::Env>::Get()->current_op_type_name = "None";
     return Maybe<void>::Ok();
