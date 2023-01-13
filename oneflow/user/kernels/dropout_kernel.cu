@@ -180,8 +180,6 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(uint64_t seed, uint64_t offse
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
 }
 
 template<typename T, int pack_size, bool tail, bool has_addend>
@@ -255,8 +253,6 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(uint64_t seed, uint64_t offset
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
 }
 
 template<typename T, int pack_size, bool tail, bool has_addend>
@@ -318,8 +314,6 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(uint64_t seed, uint64_t offs
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
 }
 
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
