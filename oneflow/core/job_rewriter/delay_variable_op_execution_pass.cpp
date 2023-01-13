@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -54,8 +55,6 @@ Maybe<void> DelayVariableOpExecutionPass::Apply(Job* job, JobPassCtx* ctx) const
       break;
     }
     if (none_variable_edge == nullptr) { return Maybe<void>::Ok(); }
-    LOG(ERROR) << "Delay " << op_conf.name() << " after "
-               << none_variable_edge->src_node()->op().op_conf().name();
     OperatorConf new_varibale_conf = op_conf;
     new_varibale_conf.mutable_variable_conf()->set_tick(
         GenLogicalBlobName(none_variable_edge->lbis().front()));
