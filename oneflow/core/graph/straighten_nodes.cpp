@@ -337,6 +337,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
     case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
+    case StraightenOrder::kMaxLayerAscend: return sign * max_layer;
     default: return 0;
   }
 }
@@ -440,6 +441,10 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
   } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+  } else if (sat == StraightenAlgorithmTag::kDelayShortGpu) {
+    decide_parameters->push_back(StraightenOrder::kExceedTimeAscend);
+    decide_parameters->push_back(StraightenOrder::kMaxLayerAscend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
   } else {
     // sat == StraightenAlgorithmTag::kDisable
