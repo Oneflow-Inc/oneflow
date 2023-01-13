@@ -360,7 +360,7 @@ static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Oper
       GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
   SmallVector<Operation*, 4> ops = {cast_op, mul_op};
   auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-  auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
+  auto created = rewriter.create<oneflow::MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
   if (failed(DumpAssembly(rewriter, created, created.op_name()))) { exit(1); }
   cast_op->dropAllUses();
   cast_op.erase();

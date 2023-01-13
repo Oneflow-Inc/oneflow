@@ -1090,7 +1090,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<MulCastPattern>(patterns.getContext());
+  // patterns.add<MulCastPattern>(patterns.getContext());
+  populateMulCastPattern(patterns);
 }
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
