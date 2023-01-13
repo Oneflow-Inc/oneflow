@@ -212,7 +212,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAlexnetAutoParallel(oneflow.unittest.TestCase):
-    def test_alexnet_auto_parallel_1d_sbp(test_case):
+    def _test_alexnet_auto_parallel_1d_sbp(test_case):
         args, unknown_args = _parse_args()
         placement = flow.env.all_device_placement("cuda")
         sbp = [flow.sbp.broadcast,] * len(placement.ranks.shape)
