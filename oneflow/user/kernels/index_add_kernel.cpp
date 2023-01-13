@@ -47,7 +47,7 @@ class IndexAddCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* index = ctx->Tensor4ArgNameAndIndex("index", 0);
     const user_op::Tensor* source = ctx->Tensor4ArgNameAndIndex("source", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const int64_t dim = ctx->Attr<int64_t>("dim");
+    const int32_t dim = ctx->Attr<int32_t>("dim");
     const float alpha = ctx->Attr<float>("alpha");
     const ShapeView& input_shape = input->shape_view();
     const ShapeView& source_shape = source->shape_view();

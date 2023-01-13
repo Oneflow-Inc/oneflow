@@ -3563,7 +3563,7 @@ class IndexAddFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
     CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
@@ -3576,7 +3576,7 @@ class IndexAddFunctor {
         << " , but "
            "desires to be int32_t or int64_t";
     const float alpha_value = alpha.As<float>();
-    int64_t dim_ = dim;
+    int32_t dim_ = dim;
     dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
     attrs.SetAllAttrs(dim_, alpha_value);
@@ -3602,7 +3602,7 @@ class IndexAddInplaceFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& source, const Scalar& alpha) const {
     CHECK_OR_RETURN(source->ndim() == 0 || index->shape()->Count(0) == source->shape()->At(dim))
@@ -3615,7 +3615,7 @@ class IndexAddInplaceFunctor {
         << " , but "
            "desires to be int32_t or int64_t";
     const float alpha_value = alpha.As<float>();
-    int64_t dim_ = dim;
+    int32_t dim_ = dim;
     dim_ = JUST(maybe_wrap_dim(dim_, input->ndim()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "alpha");
     attrs.SetAllAttrs(dim_, alpha_value);

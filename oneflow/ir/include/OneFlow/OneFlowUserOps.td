@@ -10349,7 +10349,7 @@ def OneFlow_IndexAddOp : OneFlow_BaseOp<"index_add", [NoSideEffect, DeclareOpInt
     OneFlow_Tensor:$output
   );
   let attrs = (ins
-    SI64Attr: $dim,
+    SI32Attr: $dim,
     F32Attr: $alpha
   );
   let has_logical_tensor_desc_infer_fn = 1;
