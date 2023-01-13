@@ -22,8 +22,8 @@ limitations under the License.
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "fmha.h"
-#include "fmha_flash_attention.h"
+#include "trt_flash_attention/fmha.h"
+#include "trt_flash_attention/fmha_flash_attention.h"
 
 namespace oneflow {
 
