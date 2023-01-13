@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/blob.h"
-#include <memory>
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {

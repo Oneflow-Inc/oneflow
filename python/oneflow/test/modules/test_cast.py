@@ -93,6 +93,17 @@ class TestCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=5)
+    def test_cast_with_strided_input(test_case):
+        device = random_device()
+        x = random_tensor()
+        x = x.to(dtype=torch.float32, device=device)
+        perm_list = [0, 1, 2, 3]
+        shuffle(perm_list)
+        x = x.permute(perm_list)
+        y = x.to(dtype=torch.float64, device=device)
+        return y
+    
     @autotest(n=5, auto_backward=False)
     # NOTE:if set auto_backward=True, both oneflow and pytorch will raise RuntimeError:
     # element 0 of tensors does not require grad and does not have a grad_fn
@@ -102,17 +113,6 @@ class TestCast(flow.unittest.TestCase):
         y = x.to(dtype=torch.float64, device=device)
         z = y.to(dtype=torch.int8, device=device)
         return z
-
-    @autotest(n=5)
-    def test_cast_with_stride_input(test_case):
-        device = random_device()
-        x = random_tensor()
-        x = x.to(dtype=torch.float32, device=device)
-        perm_list = [0, 1, 2, 3]
-        shuffle(perm_list)
-        x = x.permute(perm_list)
-        y = x.to(dtype=torch.float64, device=device)
-        return y
 
 
 if __name__ == "__main__":
