@@ -56,6 +56,7 @@ class TopoStruct {
   int32_t exceed_time = -1;
   int32_t min_lifetime = -1;
   int64_t memory_volume = -1;
+  int32_t max_layer = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -65,6 +66,7 @@ class TopoStruct {
   void DropTributaryLayer(int32_t upper_bound);
 
   void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
+  void ComputeMaxLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   void SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
@@ -221,6 +223,12 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
   counter--;
 }
 
+void TopoStruct::ComputeMaxLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  node->ForEachNodeOnOutEdge([&](TaskNode* out) {
+    max_layer = std::max(max_layer, task_node2topo_struct->at(out).min_layer);
+  });
+}
+
 // Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
 void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
@@ -358,6 +366,9 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     // Set the min_distance2overlap for each topological structure
     pair.second.GetMinDistance2Overlap(task_node2topo_struct);
   }
+
+  // The computation of maximum layer must behind those of minimum layer for the whole graph.
+  for (auto& pair : *task_node2topo_struct) { pair.second.ComputeMaxLayer(task_node2topo_struct); }
 }
 
 // Find the minimum life time of the task graph,
