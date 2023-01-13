@@ -145,6 +145,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
     compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
   }
 #endif  // WITH_CUDA
+  JUST(JobPass4Name("StraightenOpGraphPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   JUST(CheckOpGraph(OpGraph(*job)));
