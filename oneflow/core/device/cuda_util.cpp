@@ -81,6 +81,23 @@ const char* CurandGetErrorString(curandStatus_t error) {
   }
 }
 
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error) {
+  switch (error) {
+    case CUSOLVER_STATUS_SUCCESS: return "CUSOLVER_STATUS_SUCCESS";
+    case CUSOLVER_STATUS_NOT_INITIALIZED: return "CUSOLVER_STATUS_NOT_INITIALIZED";
+    case CUSOLVER_STATUS_ALLOC_FAILED: return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_INVALID_VALUE: return "CUSOLVER_STATUS_INVALID_VALUE";
+    case CUSOLVER_STATUS_ARCH_MISMATCH: return "CUSOLVER_STATUS_ARCH_MISMATCH";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_INTERNAL_ERROR: return "CUSOLVER_STATUS_INTERNAL_ERROR";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default: return "Unknown cusolver status";
+  }
+}
+#endif
+
 #if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error) {
@@ -311,6 +328,21 @@ const char* CurandGetErrorString(hiprandStatus_t error) {
     case HIPRAND_STATUS_ARCH_MISMATCH: return "HIPRAND_STATUS_ARCH_MISMATCH";
     case HIPRAND_STATUS_INTERNAL_ERROR: return "HIPRAND_STATUS_INTERNAL_ERROR";
     default: return "Unknown hiprand status";
+  }
+}
+
+const char* CusovlerGetErrorString(hipsolverStatus_t error) {
+  switch (error) {
+    case HIPSOLVER_STATUS_SUCCESS: return "HIPSOLVER_STATUS_SUCCESS";
+    case HIPSOLVER_STATUS_NOT_INITIALIZED: return "HIPSOLVER_STATUS_NOT_INITIALIZED";
+    case HIPSOLVER_STATUS_ALLOC_FAILED: return "HIPSOLVER_STATUS_ALLOC_FAILED";
+    case HIPSOLVER_STATUS_INVALID_VALUE: return "HIPSOLVER_STATUS_INVALID_VALUE";
+    case HIPSOLVER_STATUS_ARCH_MISMATCH: return "HIPSOLVER_STATUS_ARCH_MISMATCH";
+    case HIPSOLVER_STATUS_EXECUTION_FAILED: return "HIPSOLVER_STATUS_EXECUTION_FAILED";
+    case HIPSOLVER_STATUS_INTERNAL_ERROR: return "HIPSOLVER_STATUS_INTERNAL_ERROR";
+    case HIPSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "HIPSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default: return "Unknown cusolver status";
   }
 }
 

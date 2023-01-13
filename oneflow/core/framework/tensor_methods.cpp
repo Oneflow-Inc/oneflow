@@ -80,7 +80,7 @@ static int64_t MinStorageSize(const std::vector<int64_t>& sizes,
 }
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        int64_t storage_offset) {
+                        const int64_t storage_offset) {
   /**
    * This function provides basic view capabilities which
    * accept input tensor with target shape, and return viewed tensor.
@@ -93,8 +93,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_stride, int64_t storage_offset) {
-  // TODO(): Check shape compatible.
+                        const Stride& target_stride, const int64_t storage_offset) {
   auto device = JUST(input->device());
   auto tensor_meta =
       SymbolOf(LocalTensorMeta(target_shape, target_stride, input->dtype()->data_type(), device));
@@ -118,7 +117,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_stride, int64_t storage_offset) {
+                        const Stride& target_stride, const int64_t storage_offset) {
   const auto* tensor_impl = JUST(input->mut_eager_local_tensor_impl());
   const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
   Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
@@ -217,7 +216,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   return output;
 }
 
-Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t expand_dim) {
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
@@ -260,7 +259,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
   return output;
 }
 
-Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
+Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t expand_dim) {
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
@@ -449,8 +448,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
   return output;
 }
 
-Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
-                     const int64_t& length) {
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t dim, const int64_t start,
+                     const int64_t length) {
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
@@ -493,7 +492,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
 Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
                             const std::shared_ptr<one::Tensor>& input,
                             const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
-                            const int64_t& storage_offset) {
+                            const int64_t storage_offset) {
   CHECK_OR_RETURN(input->is_local()) << "input must be local tensor.";
   // reference: torch/csrc/autograd/FunctionsManual.cpp
   const size_t odim = dy->ndim();
@@ -615,7 +614,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
 
 Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
                         const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
-                        const int64_t& storage_offset) {
+                        const int64_t storage_offset) {
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), sizes.begin(), sizes.end());
   Shape target_shape(dim_vec);
@@ -642,7 +641,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> InplaceAsStrided(const std::shared_ptr<one::Tensor>& input,
                              const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
-                             const int64_t& storage_offset) {
+                             const int64_t storage_offset) {
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), sizes.begin(), sizes.end());
   Shape target_shape(dim_vec);
@@ -710,8 +709,8 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   return output;
 }
 
-Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
-                           const int32_t& size, const int32_t& step) {
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t dimension,
+                           const int32_t size, const int32_t step) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();

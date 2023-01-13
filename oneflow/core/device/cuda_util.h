@@ -21,6 +21,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include <cublas_v2.h>
+#if CUDA_VERSION >= 11000
+#include <cusolverDn.h>
+#endif
 #include <cuda.h>
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
@@ -48,6 +51,10 @@ const char* CublasGetErrorString(cublasStatus_t error);
 
 const char* CurandGetErrorString(curandStatus_t error);
 
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error);
+#endif
+
 #if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error);
@@ -70,6 +77,15 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
        _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
              << " (" << _of_cublas_check_status << ") "
+
+#if CUDA_VERSION >= 11000
+#define OF_CUSOLVER_CHECK(condition)                                        \
+  for (cusolverStatus_t _of_cusolver_check_status = (condition);            \
+       _of_cusolver_check_status != CUSOLVER_STATUS_SUCCESS;)               \
+    LOG(FATAL) << "Check failed: " #condition " : "                         \
+               << CusovlerGetErrorString(_of_cusolver_check_status) << " (" \
+               << _of_cusolver_check_status << ") ";
+#endif
 
 #define OF_CURAND_CHECK(condition)                                                                 \
   for (curandStatus_t _of_curand_check_status = (condition);                                       \
@@ -185,6 +201,7 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 #include <miopen/miopen.h>
 #include "oneflow/core/hipdnn/hipdnn.h"
 #include <hiprand.h>
+#include <hipsolver.h>
 #include <rccl.h>
 #include <hip/hip_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
@@ -199,6 +216,8 @@ namespace oneflow {
 const char* CublasGetErrorString(hipblasStatus_t error);
 
 const char* CurandGetErrorString(hiprandStatus_t error);
+
+const char* CusovlerGetErrorString(hipsolverStatus_t error);
 
 #define OF_CUDA_CHECK(condition)                                                               \
   for (hipError_t _of_cuda_check_status = (condition); _of_cuda_check_status != hipSuccess;) \
@@ -222,6 +241,13 @@ const char* CurandGetErrorString(hiprandStatus_t error);
        _of_curand_check_status != HIPRAND_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << CurandGetErrorString(_of_curand_check_status) \
              << " (" << _of_curand_check_status << ") "
+
+#define OF_CUSOLVER_CHECK(condition)                                        \
+  for (hipsolverStatus_t _of_cusolver_check_status = (condition);            \
+       _of_cusolver_check_status != HIPSOLVER_STATUS_SUCCESS;)               \
+    LOG(FATAL) << "Check failed: " #condition " : "                         \
+               << CusovlerGetErrorString(_of_cusolver_check_status) << " (" \
+               << _of_cusolver_check_status << ") ";
 
 #define OF_NCCL_CHECK(condition)                                                                \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \

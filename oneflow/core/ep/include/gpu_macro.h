@@ -21,6 +21,7 @@ limitations under the License.
 
 #define GPU(str) hip##str
 #define GPURAND(str) hiprand##str
+#define GPUSOLVER(str) hipsolver##str
 #define GPUMultiProcessorCount hipDeviceAttributeMultiprocessorCount
 #define GPUMaxThreadsPerMultiProcessor hipDeviceAttributeMaxThreadsPerMultiProcessor
 #define GPUMaxSharedMemoryPerBlockOptin hipDeviceAttributeSharedMemPerBlockOptin
@@ -35,6 +36,7 @@ __device__ __forceinline__ void TRAP()
 
 #define GPU(str) cuda##str
 #define GPURAND(str) curand##str
+#define GPUSOLVER(str) cusolver##str
 #define GPUMultiProcessorCount cudaDevAttrMultiProcessorCount
 #define GPUMaxThreadsPerMultiProcessor cudaDevAttrMaxThreadsPerMultiProcessor
 #define GPUMaxSharedMemoryPerBlockOptin cudaDevAttrMaxSharedMemoryPerBlockOptin

@@ -86,6 +86,9 @@ class CudaStream : public Stream {
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
+#if CUDA_VERSION >= 11000
+  cusolverDnHandle_t cusolver_dn_handle() const;
+#endif
 
 #if CUDA_VERSION >= 10010
 
@@ -143,6 +146,9 @@ class CudaStream : public Stream {
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
+#if CUDA_VERSION >= 11000
+  cusolverDnHandle_t cusolver_dn_handle_{};
+#endif
 
 #if CUDA_VERSION >= 10010
 
@@ -233,6 +239,7 @@ class CudaStream : public Stream {
 
   hipStream_t cuda_stream() const;
   hipblasHandle_t cublas_handle() const;
+  hipsolverDnHandle_t cusolver_dn_handle() const;
 
   hipdnnHandle_t cudnn_handle() const;
   void* cublas_workspace() const;
@@ -284,6 +291,7 @@ class CudaStream : public Stream {
  private:
   hipStream_t cuda_stream_{};
   hipblasHandle_t cublas_handle_{};
+  hipsolverDnHandle_t cusolver_dn_handle_{};
 
   hipdnnHandle_t cudnn_handle_{};
   int device_index_;
