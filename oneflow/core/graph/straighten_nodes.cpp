@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/straighten_nodes.h"
@@ -53,6 +54,8 @@ class TopoStruct {
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
   int32_t exceed_time = -1;
+  int32_t min_lifetime = -1;
+  int64_t memory_volume = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -75,6 +78,9 @@ class TopoStruct {
   // For most operators, the execution time on gpu exceed the execution time on cpu.
   // However, overlap is needed if time of cpu > time of gpu.
   void ComputeExceedTime();
+
+  // Memory volume is memory * lifetime, but we might change the formula
+  void ComputeMemoryVolume();
 
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
@@ -173,7 +179,15 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
       return TaskClassifier::kWaitingMainComputation;
     }
   }
-  if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingOverlapNode; }
+  if (IsTransferNode(task_type)) {
+    if (sat == StraightenAlgorithmTag::kCompressMemory
+        && Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+      // Overlap is not the first consideration, memory is
+      return TaskClassifier::kWaitingMainComputation;
+    } else {
+      return TaskClassifier::kWaitingOverlapNode;
+    }
+  }
   if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
   if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
   CHECK(false) << "Unclassified or invalid task type (" << task_type << ") showing up";
@@ -278,17 +292,30 @@ void TopoStruct::ComputeExceedTime() {
   }
 }
 
+// Memory volume is memory * lifetime, but we might change the formula
+void TopoStruct::ComputeMemoryVolume() {
+  // We might get a large tensor multiply by a long life time, we need some rescaling
+  memory_volume = int64_t(
+      (memory_increment * pow(double(min_lifetime), ParseFloatFromEnv("LifetimeOrder", 1.0)))
+      / 1000.0);
+  // We need to distinguish zero or negative memory increment from slight positive memory increment.
+  // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
+  if (memory_increment > 0) { memory_volume += 1; }
+}
+
 // deciding parameter
 // kTributaryLayerAscend = 0,     // small tributary layers go first
 // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
 // kLayerAscend = 2,              // first in first out
 // kMemoryIncrementAscend = 3,    // small memory increment go first
 // kExceedTimeAscend = 4,         // small exceed time go first
+// kMemoryVolumeAscend = 5,       // small memory volume go first
 // kTributaryLayerDescend = 100,     // large tributary layers go first
 // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
 // kLayerDescend = 102,              // last in first out
 // kMemoryIncrementDescend = 103,    // large memory increment go first
 // kExceedTimeDescend = 104,         // large exceed time go first
+// kMemoryVolumeAscend = 105,        // large memory volume go first
 int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
   if (so >= kDiff4AscendDescend) {
@@ -301,6 +328,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
+    case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
     default: return 0;
   }
 }
@@ -329,6 +357,35 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     pair.second.SpreadTributaryLayer(task_node2topo_struct);
     // Set the min_distance2overlap for each topological structure
     pair.second.GetMinDistance2Overlap(task_node2topo_struct);
+  }
+}
+
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  // Find the maximum consumer layer
+  for (auto& pair : *task_node2topo_struct) {
+    int32_t curr_min_layer = pair.second.min_layer;
+    pair.first->ForEachNodeOnInDataEdge([&](TaskNode* in) {
+      auto& max_consumer_layer = task_node2topo_struct->at(in).min_lifetime;
+      if (max_consumer_layer < curr_min_layer) { max_consumer_layer = curr_min_layer; }
+    });
+  }
+  // Compute the life time
+  for (auto& pair : *task_node2topo_struct) {
+    if (pair.second.min_layer >= pair.second.min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      pair.second.min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      pair.second.min_lifetime -= pair.second.min_layer - 1;
+    }
+    pair.second.ComputeMemoryVolume();
   }
 }
 
@@ -363,6 +420,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
                           std::vector<StraightenOrder>* decide_parameters) {
   decide_parameters->clear();
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters->push_back(StraightenOrder::kMemoryVolumeAscend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
     decide_parameters->push_back(StraightenOrder::kTributaryLayerAscend);
   } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
@@ -373,9 +431,33 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
   } else {
-    // sat == StraightenAlgorithmTag::kDisableStraighten
+    // sat == StraightenAlgorithmTag::kDisable
     decide_parameters->push_back(StraightenOrder::kLayerAscend);
   }
+}
+
+// Maximum overlap number
+// While running an overlap operator, we would run some other operators simultaneously.
+int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
+  if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    // 10 operators on GPU is enough to cover the time for a CPU operator
+    return 10;
+  }
+  // This condition should be following the sat == StraightenAlgorithmTag::kOverlap4CpuGpu
+  // Since the kOverlap4CpuGpu would not be affected by transfer.
+  if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    // Using nccl compute stream would disable the overlap for transfer
+    // We need to reduce it to 1
+    return 1;
+  }
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    // Actually we do not need the overlap.
+    // Time is not the main consideration, memory is.
+    return 2;
+  }
+  // The default number is 10. Mainly for sat == StraightenAlgorithmTag::kOverlap4Transfer
+  // sat == StraightenAlgorithmTag::kDisable does not need a maximum overlap number.
+  return 10;
 }
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
@@ -452,6 +534,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Generate other parameters in the topological data structure
   FindTrunk(&task_node2topo_struct);
+  FindMinLifetime(&task_node2topo_struct);
 
   // Update sat, since sat might be changed in previous jobs
   UpdateSat(task_node2topo_struct, &sat);
@@ -575,6 +658,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // straightening
+  int32_t maximum_overlap_num = MaximumOverlapNum(sat);
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
       if (waiting_lists[TaskClassifier::kWaitingOverlapNode].empty()) {
@@ -591,11 +675,12 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           execute(TaskClassifier::kWaitingMainComputation, 1);
         }
       } else {
-        int32_t computation_num =
+        int32_t computation_num = std::min(
             std::min(int32_t(waiting_lists[TaskClassifier::kWaitingMainComputation].size()
                              / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
                      remain_task_nums[TaskClassifier::kWaitingMainComputation]
-                         / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
+                         / remain_task_nums[TaskClassifier::kWaitingOverlapNode]),
+            maximum_overlap_num);
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
