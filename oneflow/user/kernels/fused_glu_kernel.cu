@@ -750,4 +750,5 @@ REGISTER_GPU_FUSED_GLU_KERNEL(nv_bfloat16)
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 10020
+#endif  // CUDA_VERSION >= 11020
+
