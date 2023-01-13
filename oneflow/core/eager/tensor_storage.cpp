@@ -1,3 +1,5 @@
+#include "nlohmann/json.hpp"
+
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
@@ -12,7 +14,60 @@ int64_t unique_id_2() {
   return id++;
 }
 
+static Maybe<double> GetDatasetComputeTime(const OpCallInstructionPolicy& operand) {
+  if (operand.outputs().size() == 0) {
+    LOG(INFO) << operand.opkernel().op_type_name();
+    return 0;
+  }
+  if (operand.opkernel().op_type_name() == "empty"
+      || operand.opkernel().op_type_name() == "identity"
+      || operand.opkernel().op_type_name() == "constant"
+      || operand.opkernel().op_type_name() == "copy"
+      || operand.opkernel().op_type_name() == "zero_like"
+      || operand.opkernel().op_type_name() == "expand_dims"
+      || operand.opkernel().op_type_name() == "flatten"
+      || operand.opkernel().op_type_name() == "reduce_sum"
+      || operand.opkernel().op_type_name() == "reshape"
+      || operand.opkernel().op_type_name() == "reshape_like"
+      || operand.opkernel().op_type_name() == "squeeze"
+      || operand.opkernel().op_type_name() == "transpose"
+      || operand.opkernel().op_type_name() == "nll"
+      || operand.opkernel().op_type_name() == "nll_grad") {
+    return 0;
+  }
+  using json = nlohmann::json;
+  std::string op_time_datatset_path;
+  if (const char* c = std::getenv("ONEFLOW_DTR_OP_TIME_DATASET")) {
+    op_time_datatset_path = c;
+  } else {
+    op_time_datatset_path = "/home/dev/op_time_dataset.json";
+  }
+  static const json j = [&]() {
+    json j;
+    std::ifstream i(op_time_datatset_path);
+    i >> j;
+    return j;
+  }();
+  const std::string op_type_str = operand.opkernel().op_type_name();
+  const std::string input_shape_str = [&]() {
+    std::stringstream ss;
+    for (size_t i = 0; i < operand.inputs().size(); i++) {
+      ss << operand.inputs().at(i)->shape();
+      if (i != operand.inputs().size() - 1) { ss << ", "; }
+    }
+    return ss.str();
+  }();
+  const std::string attr_str = operand.composed_attrs().ToString();
+  const std::string key = op_type_str + " " + input_shape_str + " " + attr_str;
+  CHECK_OR_RETURN(j.contains(key)) << "key " << key << " not found";
+  CHECK_OR_RETURN(j[key].is_number_float()) << "key " << key << " is not float, but " << j[key];
+  return j[key].get<double>();
+}
+
 static double GetEstimatedComputeTime(const OpCallInstructionPolicy& operand) {
+  if (EnvBool<ONEFLOW_DTR_USE_DATASET_TIME>()) {
+    return CHECK_JUST(GetDatasetComputeTime(operand));
+  }
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
   size_t estimated_compute_time = 0;
