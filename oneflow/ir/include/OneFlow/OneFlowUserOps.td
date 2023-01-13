@@ -2696,10 +2696,7 @@ def OneFlow_FlashAttentionOp : OneFlow_BaseOp<"flash_attention", [NoSideEffect, 
     DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
     DefaultValuedAttr<BoolAttr, "false">:$causal,
     DefaultValuedAttr<F32Attr, "0.">:$dropout_rate,
-    DefaultValuedAttr<SI32Attr, "0">:$num_splits,
-    DefaultValuedAttr<SI32Attr, "-1">:$bias_mod_size,
-    DefaultValuedAttr<SI32Attr, "-1">:$mask_head_mod_size,
-    DefaultValuedAttr<SI32Attr, "-1">:$mask_seq_mod_size
+    DefaultValuedAttr<SI32Attr, "0">:$num_splits
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2733,9 +2730,7 @@ def OneFlow_FlashAttentionGradOp : OneFlow_BaseOp<"flash_attention_grad", [NoSid
     DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
     DefaultValuedAttr<BoolAttr, "false">:$causal,
     DefaultValuedAttr<F32Attr, "0.">:$dropout_rate,
-    DefaultValuedAttr<SI32Attr, "-1">:$bias_mod_size,
-    DefaultValuedAttr<SI32Attr, "-1">:$mask_head_mod_size,
-    DefaultValuedAttr<SI32Attr, "-1">:$mask_seq_mod_size
+    DefaultValuedAttr<SI32Attr, "0">:$num_splits
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
