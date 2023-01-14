@@ -30,6 +30,94 @@ namespace oneflow {
 
 namespace {
 
+/*
+[collapse dims] Updates sizes, and strides to reflect a "collapse" of
+the info, possibly excluding the optional excludeDim. A "collapsed" version
+of the info is the fewest dims that order the tensor's elements in the same
+way as the original info. If excludeDim is specified, the collapse is the
+fewest dims that order the tensor's elements as the original and preserve the
+excluded dimension, unless the tensor collapses to a point.
+
+This function returns a pair of values.
+
+1) The (new) index of the preserved dimension if excludeDim is
+specified. 0 if the tensor is collapsed to a point. -1
+otherwise.
+
+2) The new number of dimensions.
+*/
+template <typename T>
+inline std::pair<int64_t, int64_t> collapse_dims(
+    T* sizes,
+    T* strides,
+    int64_t dims,
+    const int excludeDim = -1) {
+  CHECK_EQ(
+      excludeDim >= -1 && excludeDim < dims, true) <<
+      "expected excluded dim between -1 and dims - 1";
+
+  int64_t stopDim = (excludeDim == -1) ? dims : excludeDim;
+  int64_t newIndex = -1;
+  int64_t oldIndex = 0;
+  int64_t remappedExcludedDim = -1;
+
+  while (oldIndex < dims) {
+    // Finds a dimension to collapse into
+    for (; oldIndex < stopDim; ++oldIndex) {
+      if (sizes[oldIndex] == 1) {
+        continue;
+      }
+
+      ++newIndex;
+      sizes[newIndex] = sizes[oldIndex];
+      strides[newIndex] = strides[oldIndex];
+      ++oldIndex;
+      break;
+    }
+
+    // Collapses dims
+    for (; oldIndex < stopDim; ++oldIndex) {
+      if (sizes[oldIndex] == 1) {
+        continue;
+      }
+
+      if (strides[newIndex] == sizes[oldIndex] * strides[oldIndex]) {
+        sizes[newIndex] *= sizes[oldIndex];
+        strides[newIndex] = strides[oldIndex];
+      } else {
+        ++newIndex;
+        sizes[newIndex] = sizes[oldIndex];
+        strides[newIndex] = strides[oldIndex];
+      }
+    }
+
+    // Handles excludeDim being set (oldIndex == excludeDim)
+    if (oldIndex != dims) {
+      // Preserves excluded dimension
+      ++newIndex;
+      sizes[newIndex] = sizes[oldIndex];
+      strides[newIndex] = strides[oldIndex];
+      remappedExcludedDim = newIndex;
+
+      // Restarts iteration after excludeDim
+      ++oldIndex;
+      stopDim = dims;
+    }
+  }
+
+  // Handles special case of all dims size 1
+  if (newIndex == -1 || (newIndex == 0 && sizes[0] == 1)) {
+    dims = 1;
+    sizes[0] = 1;
+    strides[0] = 1;
+
+    return std::pair<int64_t, int64_t>(0, 1);
+  }
+
+  dims = newIndex + 1;
+  return std::pair<int64_t, int64_t>(remappedExcludedDim, dims);
+}
+
 bool IsContiguous(size_t num_dims, const ShapeView& t, const Stride& stride) {
   DimVector t_shape_dim;
   t.ToDimVector(&t_shape_dim);
@@ -42,8 +130,6 @@ bool IsContiguous(size_t num_dims, const ShapeView& t, const Stride& stride) {
   }
   return true;
 }
-
-// The index_add cuda kernel mostly referenced from https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Indexing.cu#L712
 
 // CUDA kernel argument that defines tensor layout
 template <typename IndexType>
@@ -58,6 +144,9 @@ struct TensorInfo {
   // slice)
   void reduceDim(int dim);
 
+  // See note on [collapse dims].
+  int collapseDims(const int excludeDim = -1);
+
   // Contiguous tensors of more than one dimension are collapsed down
   // to one tensor
   OF_DEVICE_FUNCTION bool isContiguous() const {
@@ -68,6 +157,11 @@ struct TensorInfo {
   IndexType strides[SHAPE_MAX_AXIS_SIZE];
   int dims;
 };
+
+template <typename IndexType>
+TensorInfo<IndexType>::TensorInfo() {
+  dims = 0;
+}
 
 template <typename IndexType>
 TensorInfo<IndexType>::TensorInfo(int dim,
@@ -87,6 +181,14 @@ void
 TensorInfo<IndexType>::reduceDim(int dim) {
   CHECK_EQ(dim < dims && dim >= 0, true) << "expected dim between 0 and dims - 1";
   sizes[dim] = 1;
+}
+
+template <typename IndexType>
+int
+TensorInfo<IndexType>::collapseDims(const int excludeDim) {
+  auto result = collapse_dims(sizes, strides, dims, excludeDim);
+  dims = std::get<1>(result);
+  return std::get<0>(result);
 }
 
 // Translate a linear index for the apply to a T* offset;
@@ -252,37 +354,94 @@ __global__ void indexFuncSmallIndex(TensorInfo<IndexType> dst,
   }
 }
 
-template<typename T, typename IndexT>
-__global__ void index_add_large_index_cuda_kernel(const int64_t sourceTotalSize, const T* input, const IndexT* index,
-                                      const T* source, T* output, const int64_t stride,
-                                      const int64_t source_dim, const int64_t delta,
-                                      const float alpha) {
-  // For x = flow.ones(5, 3)
-  // source = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float)
-  // index = flow.tensor([0, 4, 2])
-  // dim = 0
-  // We have:
-  // stride = 3
-  // source_dim = 3
-  // stride * source_dim = 9
-  // alpha = 1.0
-  // delta = 5 - 3 = 2
+// We prefer this kernel to balance parallelism across index points,
+// if there are a large number of indices.
+// This kernel in fact works for all choices of problem size, but if
+// the number of indices chosen is small, then the
+// indexFuncSmallIndex kernel is a better choice to reduce memory
+// accesses.
+template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim,
+          bool IndexIsMajor, typename func_t>
+__global__ void indexFuncLargeIndex(TensorInfo<IndexType> dst,
+                                    TensorInfo<IndexType> src,
+                                    TensorInfo<IndexType> indices,
+                                    const IndexType* indices_data, 
+                                    const T* src_data,
+                                    T* dst_data,
+                                    int32_t dstAddDim,
+                                    int32_t srcAddDim,
+                                    IndexType totalSize,
+                                    IndexType innerSize,
+                                    int32_t dstAddDimSize,
+                                    int32_t dstNumel,
+                                    const func_t& op,
+                                    T alpha) {
+  // We stride over the output including the indexed dimension
+  // (totalSize), and calculate the destination index point based on that
+  for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+       linearIndex < totalSize;
+       linearIndex += gridDim.x * blockDim.x) {
+    IndexType srcIndex, elementInSlice;
+    if (IndexIsMajor) {
+      srcIndex = linearIndex / innerSize;
+      elementInSlice = linearIndex % innerSize;
+    }
+    else {
+      elementInSlice = linearIndex / innerSize;
+      srcIndex = linearIndex % innerSize;
+    }
 
-  // For i = 8
-  // pre_index = i / stride_source_dim = 8 / 9 = 0
-  // dim_index = i % stride_source_dim / stride = 8 % 9 / 3 = 0
-  // source_dim_idx = index[dim_index] = index[0] = 0
-  // output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride = 9 + (2 * 0 + 0 -
-  // 0) * 3 = 9 cuda::atomic::Add(output + output_index, static_cast<T>(alpha) * source[i])=>
-  // output[9] += 1.0 * 9 = 10.0
-  const int64_t stride_source_dim = stride * source_dim;
-  CUDA_1D_KERNEL_LOOP(i, sourceTotalSize) {
-    int64_t pre_index = i / stride_source_dim;
-    int64_t dim_index = (i - pre_index * stride_source_dim) / stride;
-    IndexT source_dim_idx = index[dim_index];
-    int64_t output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride;
-    cuda::atomic::FastAdd(output, output_index, sourceTotalSize, static_cast<T>(alpha) * source[i]);
+    // Lua indices begin at 1
+    IndexType dstIndex =
+        indices_data[IndexToOffset<IndexType, IdxDim>::get(srcIndex, indices)];
+    assert(dstIndex < dstAddDimSize);
+
+    IndexType dstOffset =
+      IndexToOffset<IndexType, DstDim>::get(elementInSlice, dst);
+    dstOffset += dstIndex * dst.strides[dstAddDim];
+
+    IndexType srcOffset =
+      IndexToOffset<IndexType, SrcDim>::get(elementInSlice, src);
+    srcOffset += srcIndex * src.strides[srcAddDim];
+
+    T val = src_data[srcOffset] * alpha;
+    op(dst_data, dstOffset, dstNumel, &val);
   }
+}
+
+// Compare the stride between adjacent slices (sliceStride) with strides in the
+// other dimensions (i.e., strides *inside* each slice).
+//
+// - Returns true if some dimension inside the slice has lower stride than
+//   sliceStride.  The simplest example is a 2-D contiguous tensor with sliceDim
+//   == 0 (that is, each slice is a row).
+//
+//   In this case, we choose the CUDA kernel that processes the data in
+//   "index-major order".  For example, if thread count equals slice size, then
+//   all threads process slice #0 in lockstep, and then slice #1, and so on.
+//
+// - Otherwise (i.e., sliceStride has the lowest value), this function returns
+//   false.  The simplest example is a 2-D contiguous tensor with sliceDim == 1
+//   (each slice is a column).
+//
+//   In this case, we choose the CUDA kernel that processes the data in
+//   "elementInSlice-major order".  For example, each thread can process element
+//   #0 of every slice, and then element #1 of every slice, and so on.
+template <typename IndexT>
+bool indexShouldBeMajor(TensorInfo<IndexT> &info,
+                                    int sliceDim)
+{
+  // The stride between adjacent slices (e.g., between element #0 of slice #100
+  // and element #0 of slice #101).
+  unsigned int sliceStride = info.strides[sliceDim];
+
+  for (size_t i = 0; i < info.dims; i++) {
+    if (i != sliceDim && info.sizes[i] > 1 && info.strides[i] < sliceStride) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 };  // namespace
@@ -312,11 +471,6 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const Stride& self_stride = self->stride();
     const Stride& index_stride = index->stride();
     const Stride& source_stride = source->stride();
-
-    std::vector<int64_t> self_stride_vector(self->stride().begin(), self->stride().end());
-    const int64_t stride = self_stride_vector[dim];
-    const int64_t source_dim = source_shape.At(dim);
-    const int64_t delta = self_shape.At(dim) - source_dim;
 
     Memcpy<DeviceType::kCUDA>(
         ctx->stream(), output->mut_dptr<void>(), self->dptr<void>(),
@@ -352,7 +506,7 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
       (IDX_IS_MAJOR) ? sliceSize : numIndex,                                \
       selfAddDimSize, selfNumel, reduce_add, alpha_value);                  \
 
-    const bool indContig = IsContiguous(numIndex, index_shape, index_stride);
+    const bool indContig = IsContiguous(index_shape_dim.size(), index_shape, index_stride);
     const int mpc = static_cast<uint32_t>(ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount);
     const dim3 smallIndexGrid(std::min(ceil_div(sliceSize, (int32_t)128), (int32_t)(mpc * 8)));
     const dim3 smallIndexBlock(std::min(sliceSize, (int32_t)128));
@@ -361,15 +515,18 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const dim3 largeIndexBlock(std::min(sourceTotalSize, (int32_t)128));
     const T alpha_value = static_cast<T>(alpha);
 
-    if (canUse32BitIndexMath(self_shape, self_stride) && canUse32BitIndexMath(source_shape, source_stride) && canUse32BitIndexMath(index_shape, index_stride)) {
-      TensorInfo<IndexT> selfInfo = getTensorInfo<IndexT>(self_shape, self_stride);
-      const int32_t selfAddDim = dim;
-      selfInfo.reduceDim(dim);
-      TensorInfo<IndexT> sourceInfo = getTensorInfo<IndexT>(source_shape, source_stride);
-      const int32_t sourceAddDim = dim;
-      sourceInfo.reduceDim(dim);
-      TensorInfo<IndexT> indexInfo = getTensorInfo<IndexT>(index_shape, index_stride);
+    TensorInfo<IndexT> selfInfo = getTensorInfo<IndexT>(self_shape, self_stride);
+    // const int32_t selfAddDim = dim;
+    const int selfAddDim = selfInfo.collapseDims(dim);
+    selfInfo.reduceDim(dim);
+    TensorInfo<IndexT> sourceInfo = getTensorInfo<IndexT>(source_shape, source_stride);
+    // const int32_t sourceAddDim = dim;
+    const int sourceAddDim = sourceInfo.collapseDims(dim);
+    sourceInfo.reduceDim(dim);
+    TensorInfo<IndexT> indexInfo = getTensorInfo<IndexT>(index_shape, index_stride);
+    indexInfo.collapseDims();
 
+    if (canUse32BitIndexMath(self_shape, self_stride) && canUse32BitIndexMath(source_shape, source_stride) && canUse32BitIndexMath(index_shape, index_stride)) {
       if(numIndex <= 16){
         if (selfInfo.dims == 1 && sourceInfo.dims == 1 && indContig) {
             SMALL_INDEX(T, IndexT, 1, 1, -2);
@@ -382,15 +539,29 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
           }
       }
       else {
-          RUN_CUDA_KERNEL((index_add_large_index_cuda_kernel<T, IndexT>), ctx->stream(), sourceTotalSize, sourceTotalSize, self->dptr<T>(),
-                      index->dptr<IndexT>(), source->dptr<T>(), output->mut_dptr<T>(), stride,
-                      source_dim, delta, alpha);
-      }
+          const bool indexIsMajor = indexShouldBeMajor<IndexT>(selfInfo, selfAddDim);
+
+          if (selfInfo.dims == 1 && sourceInfo.dims == 1 && indContig) {
+            LARGE_INDEX(T, IndexT, 1, 1, -2, true);
+          } else if (selfInfo.dims == 2 && sourceInfo.dims == 2 && indContig) {
+            if (indexIsMajor) {
+              LARGE_INDEX(T, IndexT, 2, 2, -2, true);
+            } else {
+              LARGE_INDEX(T, IndexT, 2, 2, -2, false);
+            }
+          } else if (selfInfo.dims == 3 && sourceInfo.dims == 3 && indContig) {
+            if (indexIsMajor) {
+              LARGE_INDEX(T, IndexT, 3, 3, -2, true);
+            } else {
+              LARGE_INDEX(T, IndexT, 3, 3, -2, false);
+            }
+          } else {
+            LARGE_INDEX(T, IndexT, -1, -1, -1, true);
+          }
+        }
     }
     else{
-      RUN_CUDA_KERNEL((index_add_large_index_cuda_kernel<T, IndexT>), ctx->stream(), sourceTotalSize, sourceTotalSize, self->dptr<T>(),
-                      index->dptr<IndexT>(), source->dptr<T>(), output->mut_dptr<T>(), stride,
-                      source_dim, delta, alpha);
+      LARGE_INDEX(T, IndexT, -1, -1, -1, true);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
