@@ -23,10 +23,7 @@ namespace {
 
 template<typename Context>
 auto NewPrimitive(Context* ctx) -> std::unique_ptr<ep::primitive::Where> {
-  const DataType cond_type = ctx->TensorDesc4ArgNameAndIndex("cond", 0)->data_type();
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::WhereFactory>(ctx->device_type(), data_type,
-                                                                  cond_type);
+  return ep::primitive::NewPrimitive<ep::primitive::WhereFactory>(ctx->device_type());
 }
 
 auto PrimitiveExists() {
@@ -50,8 +47,9 @@ class WhereKernel final : public user_op::OpKernel, public user_op::CudaGraphSup
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     auto primitive = NewPrimitive(ctx);
-    primitive->Launch(ctx->stream(), cond->shape_view().size(), cond->shape_view().ptr(),
-                      cond->dptr(), x->shape_view().size(), x->shape_view().ptr(), x->dptr(),
+    primitive->Launch(ctx->stream(), cond->data_type(), cond->shape_view().size(),
+                      cond->shape_view().ptr(), cond->dptr(), x->data_type(),
+                      x->shape_view().size(), x->shape_view().ptr(), x->dptr(),
                       y->shape_view().size(), y->shape_view().ptr(), y->dptr(), out->mut_dptr());
   }
 };

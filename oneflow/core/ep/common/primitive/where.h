@@ -16,13 +16,40 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_COMMON_PRIMITIVE_WHERE_H_
 #define ONEFLOW_CORE_EP_COMMON_PRIMITIVE_WHERE_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 namespace ep {
 namespace primitive {
 
-namespace where_details {
+namespace where_impl {
+
+constexpr size_t kMaxNumDims = 8;
+
+template<typename T>
+struct WhereFunctor {
+  OF_DEVICE_FUNC WhereFunctor() {}
+
+  OF_DEVICE_FUNC T operator()(bool cond, T x, T y) const { return cond ? x : y; }
+};
+
+template<size_t NDIM, typename IndexType>
+struct BroadcastElementwiseWhereParams {
+  NdIndexOffsetHelper<IndexType, NDIM> cond_index_helper;
+  NdIndexOffsetHelper<IndexType, NDIM> x_index_helper;
+  NdIndexOffsetHelper<IndexType, NDIM> y_index_helper;
+  NdIndexOffsetHelper<IndexType, NDIM> z_index_helper;
+  IndexType cond_index_mask[NDIM];
+  IndexType x_index_mask[NDIM];
+  IndexType y_index_mask[NDIM];
+  IndexType elem_cnt{};
+  const void* cond{};
+  const void* x{};
+  const void* y{};
+  void* z{};
+};
 
 inline bool IsDimsEquals(size_t ndim, const int64_t* a_dims, const int64_t* b_dims) {
   for (size_t i = 0; i < ndim; ++i) {
@@ -80,13 +107,6 @@ inline void GetCompactBroadcastDims(const size_t cond_ndim, const int64_t* cond_
   }
 }
 
-template<typename T, typename CondT>
-struct WhereFunctor {
-  OF_DEVICE_FUNC WhereFunctor() {}
-
-  OF_DEVICE_FUNC T operator()(CondT cond, T x, T y) const { return cond ? x : y; }
-};
-
 template<typename T, int N>
 struct GetPackType {
   using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
@@ -104,7 +124,175 @@ union Pack {
   T elem[N];
 };
 
-}  // namespace where_details
+template<typename IndexType, size_t ndim, size_t cond_type_size, size_t data_type_size,
+         size_t cond_pack_size, size_t x_pack_size, size_t y_pack_size>
+void LaunchKernel(Stream* stream, const int64_t* cond_dims, const void* cond, const int64_t* x_dims,
+                  const void* x, const int64_t* y_dims, const void* y, const int64_t* z_dims,
+                  void* z);
+
+template<size_t ndim, size_t cond_type_size, size_t data_type_size, size_t cond_pack_size,
+         size_t x_pack_size, size_t y_pack_size>
+void LaunchByDispatchIndexType(Stream* stream, const int64_t* cond_dims, const void* cond,
+                               const int64_t* x_dims, const void* x, const int64_t* y_dims,
+                               const void* y, const int64_t* z_dims, void* z) {
+  const size_t elem_cnt = GetElementCount(ndim, z_dims);
+  if (elem_cnt < GetMaxVal<int32_t>()) {
+    return LaunchKernel<int32_t, ndim, cond_type_size, data_type_size, cond_pack_size, x_pack_size,
+                        y_pack_size>(stream, cond_dims, cond, x_dims, x, y_dims, y, z_dims, z);
+  } else {
+    return LaunchKernel<int64_t, ndim, cond_type_size, data_type_size, cond_pack_size, x_pack_size,
+                        y_pack_size>(stream, cond_dims, cond, x_dims, x, y_dims, y, z_dims, z);
+  }
+}
+
+template<size_t ndim, size_t cond_type_size, size_t data_type_size, size_t max_pack_size>
+size_t GetPackSize(const int64_t* cond_dims, const void* cond, const int64_t* x_dims, const void* x,
+                   const int64_t* y_dims, const void* y, const int64_t* z_dims, const void* z) {
+  static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
+  using T = typename std::aligned_storage<data_type_size, data_type_size>::type;
+  using CondT = typename std::aligned_storage<cond_type_size, cond_type_size>::type;
+  CHECK_GT(z_dims[ndim - 1], 1);
+  for (size_t pack_size = max_pack_size; pack_size >= 2; pack_size /= 2) {
+    if (!IsPackSizeSupported<T>(pack_size, ndim, z_dims, z)) { continue; }
+    if (x_dims[ndim - 1] != 1 && !IsPackSizeSupported<T>(pack_size, ndim, x_dims, x)) { continue; }
+    if (y_dims[ndim - 1] != 1 && !IsPackSizeSupported<T>(pack_size, ndim, y_dims, y)) { continue; }
+    if (cond_dims[ndim - 1] != 1 && !IsPackSizeSupported<CondT>(pack_size, ndim, cond_dims, cond)) {
+      continue;
+    }
+    return pack_size;
+  }
+  return 1;
+}
+
+template<size_t ndim, size_t cond_type_size, size_t data_type_size>
+void LaunchByDispatchPackSize(Stream* stream, int64_t* cond_dims, const void* cond, int64_t* x_dims,
+                              const void* x, int64_t* y_dims, const void* y, int64_t* z_dims,
+                              void* z) {
+  constexpr size_t kMaxPackSize = 4;
+  size_t pack_size = GetPackSize<ndim, cond_type_size, data_type_size, kMaxPackSize>(
+      cond_dims, cond, x_dims, x, y_dims, y, z_dims, z);
+  size_t cond_pack_size = 1;
+  size_t x_pack_size = 1;
+  size_t y_pack_size = 1;
+  if (pack_size > 1) {
+    if (cond_dims[ndim - 1] != 1) {
+      cond_dims[ndim - 1] /= pack_size;
+      cond_pack_size = pack_size;
+    }
+    if (x_dims[ndim - 1] != 1) {
+      x_dims[ndim - 1] /= pack_size;
+      x_pack_size = pack_size;
+    }
+    if (y_dims[ndim - 1] != 1) {
+      y_dims[ndim - 1] /= pack_size;
+      y_pack_size = pack_size;
+    }
+    z_dims[ndim - 1] /= pack_size;
+  }
+
+  void (*func)(Stream* /*stream*/, const int64_t* /*cond_dims*/, const void* /*cond*/,
+               const int64_t* /*x_dims*/, const void* /*x*/, const int64_t* /*y_dims*/,
+               const void* /*y*/, const int64_t* /*z_dims*/, void* /*z*/) = nullptr;
+
+#define IF(c, x, y)                                                                  \
+  if (cond_pack_size == c && x_pack_size == x && y_pack_size == y) {                 \
+    func = LaunchByDispatchIndexType<ndim, cond_type_size, data_type_size, c, x, y>; \
+  }
+#define ELIF(c, x, y) else IF(c, x, y)
+#define ELSE         \
+  else {             \
+    UNIMPLEMENTED(); \
+  }
+
+  if (pack_size == 1) {
+    func = LaunchByDispatchIndexType<ndim, cond_type_size, data_type_size, 1, 1, 1>;
+  } else if (pack_size == 2) {
+    IF(2, 2, 2)
+    ELIF(1, 2, 2)
+    ELIF(1, 2, 1)
+    ELIF(1, 1, 2)
+    ELIF(2, 1, 2)
+    ELIF(2, 1, 1)
+    ELIF(2, 2, 1)
+    ELSE
+  } else if (pack_size == 4) {
+    IF(4, 4, 4)
+    ELIF(1, 4, 4)
+    ELIF(1, 4, 1)
+    ELIF(1, 1, 4)
+    ELIF(4, 1, 4)
+    ELIF(4, 1, 1)
+    ELIF(4, 4, 1)
+    ELSE
+  }
+
+#undef IF
+#undef ELIF
+#undef ELSE
+
+  func(stream, cond_dims, cond, x_dims, x, y_dims, y, z_dims, z);
+}
+
+template<size_t ndim>
+void LaunchByDispatchTypeSize(Stream* stream, DataType cond_type, DataType data_type,
+                              int64_t* cond_dims, const void* cond, int64_t* x_dims, const void* x,
+                              int64_t* y_dims, const void* y, int64_t* z_dims, void* z) {
+  size_t cond_type_size = GetSizeOfDataType(cond_type);
+  size_t data_type_size = GetSizeOfDataType(data_type);
+
+#define IF(c, d)                                                                                \
+  if (cond_type_size == c && data_type_size == d) {                                             \
+    LaunchByDispatchPackSize<ndim, c, d>(stream, cond_dims, cond, x_dims, x, y_dims, y, z_dims, \
+                                         z);                                                    \
+  }
+#define ELIF(c, d) else IF(c, d)
+#define ELSE         \
+  else {             \
+    UNIMPLEMENTED(); \
+  }
+
+  IF(1, 1)
+  ELIF(1, 2)
+  ELIF(1, 4)
+  ELIF(1, 8)
+  ELIF(4, 1)
+  ELIF(4, 2)
+  ELIF(4, 4)
+  ELIF(4, 8)
+  ELSE
+
+#undef IF
+#undef ELIF
+#undef ELSE
+}
+
+void LaunchByDispatchNDim(Stream* stream, DataType cond_type, DataType data_type, size_t ndim,
+                          int64_t* cond_dims, const void* cond, int64_t* x_dims, const void* x,
+                          int64_t* y_dims, const void* y, int64_t* z_dims, void* z) {
+#define IF(n)                                                                                     \
+  if (ndim == n) {                                                                                \
+    LaunchByDispatchTypeSize<n>(stream, cond_type, data_type, cond_dims, cond, x_dims, x, y_dims, \
+                                y, z_dims, z);                                                    \
+  }
+#define ELIF(n) else IF(n)
+#define ELSE         \
+  else {             \
+    UNIMPLEMENTED(); \
+  }
+
+  CHECK_GT(ndim, 0);
+  IF(1)
+  ELIF(2)
+  ELIF(3)
+  ELIF(4)
+  ELSE
+
+#undef IF
+#undef ELIF
+#undef ELSE
+}
+
+}  // namespace where_impl
 
 }  // namespace primitive
 }  // namespace ep

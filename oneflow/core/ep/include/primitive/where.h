@@ -28,9 +28,10 @@ class Where : public Primitive {
   Where() = default;
   ~Where() override = default;
 
-  virtual void Launch(Stream* stream, size_t cond_ndim, const int64_t* cond_dims, const void* cond,
-                      size_t x_ndim, const int64_t* x_dims, const void* x, size_t y_ndim,
-                      const int64_t* y_dims, const void* y, void* z) = 0;
+  virtual void Launch(Stream* stream, DataType cond_type, size_t cond_ndim,
+                      const int64_t* cond_dims, const void* cond, DataType data_type, size_t x_ndim,
+                      const int64_t* x_dims, const void* x, size_t y_ndim, const int64_t* y_dims,
+                      const void* y, void* z) = 0;
 };
 
 class WhereFactory : public Factory<Where> {
@@ -39,7 +40,7 @@ class WhereFactory : public Factory<Where> {
   WhereFactory() = default;
   ~WhereFactory() override = default;
 
-  virtual std::unique_ptr<Where> New(DataType data_type, DataType cond_type) = 0;
+  virtual std::unique_ptr<Where> New() = 0;
 };
 
 }  // namespace primitive
