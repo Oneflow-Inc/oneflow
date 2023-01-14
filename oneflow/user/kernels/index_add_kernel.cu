@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include "_deps/glog-build/glog/logging.h"
 #include "oneflow/core/common/bfloat16.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
@@ -46,6 +43,8 @@ bool IsContiguous(size_t num_dims, const ShapeView& t, const Stride& stride) {
   return true;
 }
 
+// The index_add cuda kernel mostly referenced from https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Indexing.cu#L712
+
 // CUDA kernel argument that defines tensor layout
 template <typename IndexType>
 struct TensorInfo {
@@ -71,11 +70,6 @@ struct TensorInfo {
 };
 
 template <typename IndexType>
-TensorInfo<IndexType>::TensorInfo() {
-  dims = 0;
-}
-
-template <typename IndexType>
 TensorInfo<IndexType>::TensorInfo(int dim,
                                      IndexType sz[SHAPE_MAX_AXIS_SIZE],
                                      IndexType st[SHAPE_MAX_AXIS_SIZE]) {
@@ -94,8 +88,6 @@ TensorInfo<IndexType>::reduceDim(int dim) {
   CHECK_EQ(dim < dims && dim >= 0, true) << "expected dim between 0 and dims - 1";
   sizes[dim] = 1;
 }
-
-// TODO(add collapseDims function)
 
 // Translate a linear index for the apply to a T* offset;
 // specialized on `Dims` to reduce nvcc compilation time
@@ -260,94 +252,37 @@ __global__ void indexFuncSmallIndex(TensorInfo<IndexType> dst,
   }
 }
 
-// We prefer this kernel to balance parallelism across index points,
-// if there are a large number of indices.
-// This kernel in fact works for all choices of problem size, but if
-// the number of indices chosen is small, then the
-// indexFuncSmallIndex kernel is a better choice to reduce memory
-// accesses.
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim,
-          bool IndexIsMajor, typename func_t>
-__global__ void indexFuncLargeIndex(TensorInfo<IndexType> dst,
-                                    TensorInfo<IndexType> src,
-                                    TensorInfo<IndexType> indices,
-                                    const IndexType* indices_data, 
-                                    const T* src_data,
-                                    T* dst_data,
-                                    int32_t dstAddDim,
-                                    int32_t srcAddDim,
-                                    IndexType totalSize,
-                                    IndexType innerSize,
-                                    int32_t dstAddDimSize,
-                                    int32_t dstNumel,
-                                    const func_t& op,
-                                    T alpha) {
-  // We stride over the output including the indexed dimension
-  // (totalSize), and calculate the destination index point based on that
-  for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
-       linearIndex < totalSize;
-       linearIndex += gridDim.x * blockDim.x) {
-    IndexType srcIndex, elementInSlice;
-    if (IndexIsMajor) {
-      srcIndex = linearIndex / innerSize;
-      elementInSlice = linearIndex % innerSize;
-    }
-    else {
-      elementInSlice = linearIndex / innerSize;
-      srcIndex = linearIndex % innerSize;
-    }
+template<typename T, typename IndexT>
+__global__ void index_add_large_index_cuda_kernel(const int64_t sourceTotalSize, const T* input, const IndexT* index,
+                                      const T* source, T* output, const int64_t stride,
+                                      const int64_t source_dim, const int64_t delta,
+                                      const float alpha) {
+  // For x = flow.ones(5, 3)
+  // source = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=flow.float)
+  // index = flow.tensor([0, 4, 2])
+  // dim = 0
+  // We have:
+  // stride = 3
+  // source_dim = 3
+  // stride * source_dim = 9
+  // alpha = 1.0
+  // delta = 5 - 3 = 2
 
-    // Lua indices begin at 1
-    IndexType dstIndex =
-        indices_data[IndexToOffset<IndexType, IdxDim>::get(srcIndex, indices)];
-    assert(dstIndex < dstAddDimSize);
-
-    IndexType dstOffset =
-      IndexToOffset<IndexType, DstDim>::get(elementInSlice, dst);
-    dstOffset += dstIndex * dst.strides[dstAddDim];
-
-    IndexType srcOffset =
-      IndexToOffset<IndexType, SrcDim>::get(elementInSlice, src);
-    srcOffset += srcIndex * src.strides[srcAddDim];
-
-    T val = src_data[srcOffset] * alpha;
-    op(dst_data, dstOffset, dstNumel, &val);
+  // For i = 8
+  // pre_index = i / stride_source_dim = 8 / 9 = 0
+  // dim_index = i % stride_source_dim / stride = 8 % 9 / 3 = 0
+  // source_dim_idx = index[dim_index] = index[0] = 0
+  // output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride = 9 + (2 * 0 + 0 -
+  // 0) * 3 = 9 cuda::atomic::Add(output + output_index, static_cast<T>(alpha) * source[i])=>
+  // output[9] += 1.0 * 9 = 10.0
+  const int64_t stride_source_dim = stride * source_dim;
+  CUDA_1D_KERNEL_LOOP(i, sourceTotalSize) {
+    int64_t pre_index = i / stride_source_dim;
+    int64_t dim_index = (i - pre_index * stride_source_dim) / stride;
+    IndexT source_dim_idx = index[dim_index];
+    int64_t output_index = i + (delta * pre_index + source_dim_idx - dim_index) * stride;
+    cuda::atomic::FastAdd(output, output_index, sourceTotalSize, static_cast<T>(alpha) * source[i]);
   }
-}
-
-// Compare the stride between adjacent slices (sliceStride) with strides in the
-// other dimensions (i.e., strides *inside* each slice).
-//
-// - Returns true if some dimension inside the slice has lower stride than
-//   sliceStride.  The simplest example is a 2-D contiguous tensor with sliceDim
-//   == 0 (that is, each slice is a row).
-//
-//   In this case, we choose the CUDA kernel that processes the data in
-//   "index-major order".  For example, if thread count equals slice size, then
-//   all threads process slice #0 in lockstep, and then slice #1, and so on.
-//
-// - Otherwise (i.e., sliceStride has the lowest value), this function returns
-//   false.  The simplest example is a 2-D contiguous tensor with sliceDim == 1
-//   (each slice is a column).
-//
-//   In this case, we choose the CUDA kernel that processes the data in
-//   "elementInSlice-major order".  For example, each thread can process element
-//   #0 of every slice, and then element #1 of every slice, and so on.
-template <typename IndexT>
-bool indexShouldBeMajor(TensorInfo<IndexT> &info,
-                                    int sliceDim)
-{
-  // The stride between adjacent slices (e.g., between element #0 of slice #100
-  // and element #0 of slice #101).
-  unsigned int sliceStride = info.strides[sliceDim];
-
-  for (size_t i = 0; i < info.dims; i++) {
-    if (i != sliceDim && info.sizes[i] > 1 && info.strides[i] < sliceStride) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 };  // namespace
@@ -377,6 +312,11 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
     const Stride& self_stride = self->stride();
     const Stride& index_stride = index->stride();
     const Stride& source_stride = source->stride();
+
+    std::vector<int64_t> self_stride_vector(self->stride().begin(), self->stride().end());
+    const int64_t stride = self_stride_vector[dim];
+    const int64_t source_dim = source_shape.At(dim);
+    const int64_t delta = self_shape.At(dim) - source_dim;
 
     Memcpy<DeviceType::kCUDA>(
         ctx->stream(), output->mut_dptr<void>(), self->dptr<void>(),
@@ -442,29 +382,15 @@ class IndexAddGpuKernel final : public user_op::OpKernel {
           }
       }
       else {
-          const bool indexIsMajor = indexShouldBeMajor<IndexT>(selfInfo, selfAddDim);
-
-          if (selfInfo.dims == 1 && sourceInfo.dims == 1 && indContig) {
-            LARGE_INDEX(T, IndexT, 1, 1, -2, true);
-          } else if (selfInfo.dims == 2 && sourceInfo.dims == 2 && indContig) {
-            if (indexIsMajor) {
-              LARGE_INDEX(T, IndexT, 2, 2, -2, true);
-            } else {
-              LARGE_INDEX(T, IndexT, 2, 2, -2, false);
-            }
-          } else if (selfInfo.dims == 3 && sourceInfo.dims == 3 && indContig) {
-            if (indexIsMajor) {
-              LARGE_INDEX(T, IndexT, 3, 3, -2, true);
-            } else {
-              LARGE_INDEX(T, IndexT, 3, 3, -2, false);
-            }
-          } else {
-            LARGE_INDEX(T, IndexT, -1, -1, -1, true);
-          }
-        }
+          RUN_CUDA_KERNEL((index_add_large_index_cuda_kernel<T, IndexT>), ctx->stream(), sourceTotalSize, sourceTotalSize, self->dptr<T>(),
+                      index->dptr<IndexT>(), source->dptr<T>(), output->mut_dptr<T>(), stride,
+                      source_dim, delta, alpha);
+      }
     }
     else{
-      UNIMPLEMENTED() << "index_add kernel only support tensor which can use 32 bit index math caculate for now.";
+      RUN_CUDA_KERNEL((index_add_large_index_cuda_kernel<T, IndexT>), ctx->stream(), sourceTotalSize, sourceTotalSize, self->dptr<T>(),
+                      index->dptr<IndexT>(), source->dptr<T>(), output->mut_dptr<T>(), stride,
+                      source_dim, delta, alpha);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
