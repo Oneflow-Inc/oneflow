@@ -36,6 +36,8 @@ def is_in_memory(tensor):
 placeholder_size = 0
 
 def allocated_memory(device, include_test_placeholder=False):
+    if not flow._oneflow_internal.flags.with_cuda():
+        return 0
     return flow._oneflow_internal.dtr.allocated_memory(device) - (0 if include_test_placeholder else placeholder_size)
 
 
