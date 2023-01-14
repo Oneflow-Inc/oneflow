@@ -50,7 +50,7 @@ std::string SortKey(const std::string& key) {
     if (!(s.at(final_pos) >= 'a' && s.at(final_pos) <= 'z')) { return true; }
     return false;
   };
-  
+
   const auto split = [&need_find_next](const std::string& s, std::vector<std::string>& tokens,
                                        const std::string& delimiters) {
     std::string::size_type lastPos = s.find_first_not_of(delimiters, 0);
@@ -77,6 +77,7 @@ using json = nlohmann::json;
 
 json LoadTimeDataset() {
   json j;
+  if (EnvBool<ENABLE_PROFILE_FOR_DTR>()) { return j; }
   if (const char* c = std::getenv("ONEFLOW_DTR_OP_TIME_DATASET")) {
     std::ifstream i(c);
     i >> j;
