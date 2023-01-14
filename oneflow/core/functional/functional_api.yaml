@@ -945,6 +945,12 @@
     String channel_pos="channels_first") => Conv3d'
   bind_python: True
 
+- name: "upfirdn2d"
+  signature:
+    'Tensor (Tensor input, Tensor kernel, Int32List[2] up=1,
+    Int32List[2] down=1, Int32List[4] pad=0) => UpFirDn2d'
+  bind_python: True
+
 - name: "fake_quantization"
   signature:
     "Tensor (Tensor in, Tensor scale, Tensor zero_point, String quantization_formula,

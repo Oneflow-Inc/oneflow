@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -222,6 +224,25 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
+};
+
+class UpFirDn2dFunctor {
+ public:
+  UpFirDn2dFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("upfirdn2d").Input("input").Input("kernel").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& kernel,
+                           const std::vector<int32_t>& up, const std::vector<int32_t>& down,
+                           const std::vector<int32_t>& pad) const {
+    auto& upfirdn_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("up", "down", "pad");
+    upfirdn_attrs.SetAllAttrs(up, down, pad);
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, kernel}, upfirdn_attrs));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class EmbeddingReNormFunctor {
@@ -4965,6 +4986,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
+  m.add_functor<impl::UpFirDn2dFunctor>("UpFirDn2d");
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");

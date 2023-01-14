@@ -979,8 +979,8 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoSideEffect, Decl
 #endif // GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
 // Group: CONV
-// conv1d, conv2d, conv3d, conv_bias_grad, conv_data_grad, conv_filter_grad, deconv1d, deconv2d, deconv3d,deform_conv2d, deform_conv2d_input_grad,deform_conv2d_param_grad
-// Total: 12
+// conv1d, conv2d, conv3d, conv_bias_grad, conv_data_grad, conv_filter_grad, deconv1d, deconv2d, deconv3d, deform_conv2d, deform_conv2d_input_grad, deform_conv2d_param_grad, upfirdn2d, upfirdn2d_grad
+// Total: 14
 
 #ifdef GET_ONEFLOW_CONV_OP_DEFINITIONS
 
@@ -1224,6 +1224,25 @@ DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
     DefaultValuedAttr<BoolAttr, "false">:$use_mask
   );
 
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_Upfirdn2dOp : OneFlow_BaseOp<"upfirdn2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$kernel
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$up,
+    SI32ArrayAttr:$down,
+    SI32ArrayAttr:$pad
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
