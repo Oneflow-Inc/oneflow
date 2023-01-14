@@ -27,36 +27,38 @@ namespace where_cuda_impl {
 using cuda::elementwise::GetNumBlocks;
 using cuda::elementwise::kBlockSize;
 using where_impl::BroadcastElementwiseWhereParams;
+using where_impl::GetCompactBroadcastDims;
+using where_impl::IsDimsEquals;
 using where_impl::Pack;
 using where_impl::PackType;
 using where_impl::WhereFunctor;
 
-template<typename IndexType, size_t ndim, size_t cond_type_size, size_t data_type_size,
-         size_t cond_pack_size, size_t x_pack_size, size_t y_pack_size>
+template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
+         size_t x_pack_size, size_t y_pack_size>
 __global__ void BroadcastElementwiseWhereCudaKernel(
-    BroadcastElementwiseWhereParams<ndim, IndexType> params) {
+    BroadcastElementwiseWhereParams<ndim, IndexT> params) {
   constexpr size_t _pack_size = (x_pack_size > y_pack_size) ? x_pack_size : y_pack_size;
   constexpr size_t pack_size = (cond_pack_size > _pack_size) ? cond_pack_size : _pack_size;
   static_assert(cond_pack_size == pack_size || cond_pack_size == 1, "");
   static_assert(x_pack_size == pack_size || x_pack_size == 1, "");
   static_assert(y_pack_size == pack_size || y_pack_size == 1, "");
-
-  using T = typename std::aligned_storage<data_type_size, data_type_size>::type;
-  using CondT = typename std::aligned_storage<cond_type_size, cond_type_size>::type;
+  constexpr bool cond_pack_one = !(cond_pack_size == pack_size);
+  constexpr bool x_pack_one = !(x_pack_size == pack_size);
+  constexpr bool y_pack_one = !(y_pack_size == pack_size);
 
   const auto* cond = reinterpret_cast<const PackType<CondT, cond_pack_size>*>(params.cond);
   const auto* x = reinterpret_cast<const PackType<T, x_pack_size>*>(params.x);
   const auto* y = reinterpret_cast<const PackType<T, y_pack_size>*>(params.y);
   auto* z = reinterpret_cast<PackType<T, pack_size>*>(params.z);
 
-  IndexType cond_index[ndim];
-  IndexType x_index[ndim];
-  IndexType y_index[ndim];
-  IndexType z_index[ndim];
+  IndexT cond_index[ndim];
+  IndexT x_index[ndim];
+  IndexT y_index[ndim];
+  IndexT z_index[ndim];
 
-  WhereFunctor<T> where_fn{};
+  WhereFunctor<T, CondT> where_fn{};
 
-  CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.elem_cnt) {
+  CUDA_1D_KERNEL_LOOP_T(IndexT, offset, params.elem_cnt) {
     params.z_index_helper.OffsetToNdIndex(offset, z_index);
 #pragma unroll
     for (size_t i = 0; i < ndim; ++i) {
@@ -64,9 +66,9 @@ __global__ void BroadcastElementwiseWhereCudaKernel(
       x_index[i] = params.x_index_mask[i] * z_index[i];
       y_index[i] = params.y_index_mask[i] * z_index[i];
     }
-    const IndexType cond_offset = params.cond_index_helper.NdIndexToOffset(cond_index);
-    const IndexType x_offset = params.x_index_helper.NdIndexToOffset(x_index);
-    const IndexType y_offset = params.y_index_helper.NdIndexToOffset(y_index);
+    const IndexT cond_offset = params.cond_index_helper.NdIndexToOffset(cond_index);
+    const IndexT x_offset = params.x_index_helper.NdIndexToOffset(x_index);
+    const IndexT y_offset = params.y_index_helper.NdIndexToOffset(y_index);
 
     Pack<CondT, cond_pack_size> cond_pack;
     Pack<T, x_pack_size> x_pack;
@@ -78,31 +80,31 @@ __global__ void BroadcastElementwiseWhereCudaKernel(
     Pack<T, pack_size> z_pack;
 #pragma unroll
     for (size_t j = 0; j < pack_size; ++j) {
-      const CondT cond_val = (cond_pack_size == pack_size) ? cond_pack.elem[j] : cond_pack.elem[0];
-      const T x_val = (x_pack_size == pack_size) ? x_pack.elem[j] : x_pack.elem[0];
-      const T y_val = (y_pack_size == pack_size) ? y_pack.elem[j] : y_pack.elem[0];
+      const CondT cond_val = cond_pack_one ? cond_pack.elem[0] : cond_pack.elem[j];
+      const T x_val = x_pack_one ? x_pack.elem[0] : x_pack.elem[j];
+      const T y_val = y_pack_one ? y_pack.elem[0] : y_pack.elem[j];
       z_pack.elem[j] = where_fn(cond_val, x_val, y_val);
     }
     z[offset] = z_pack.storage;
   }
 }
 
-template<typename IndexType, size_t ndim, size_t cond_type_size, size_t data_type_size,
-         size_t cond_pack_size, size_t x_pack_size, size_t y_pack_size>
-cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, const void* cond,
-                             const int64_t* x_dims, const void* x, const int64_t* y_dims,
-                             const void* y, const int64_t* z_dims, void* z) {
-  BroadcastElementwiseWhereParams<ndim, IndexType> params;
-  params.cond_index_helper = NdIndexOffsetHelper<IndexType, ndim>(cond_dims);
-  params.x_index_helper = NdIndexOffsetHelper<IndexType, ndim>(x_dims);
-  params.y_index_helper = NdIndexOffsetHelper<IndexType, ndim>(y_dims);
-  params.z_index_helper = NdIndexOffsetHelper<IndexType, ndim>(z_dims);
+template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
+         size_t x_pack_size, size_t y_pack_size>
+cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, const int64_t* x_dims,
+                             const int64_t* y_dims, const int64_t* z_dims, const void* cond,
+                             const void* x, const void* y, void* z) {
+  BroadcastElementwiseWhereParams<ndim, IndexT> params;
+  params.cond_index_helper = NdIndexOffsetHelper<IndexT, ndim>(cond_dims);
+  params.x_index_helper = NdIndexOffsetHelper<IndexT, ndim>(x_dims);
+  params.y_index_helper = NdIndexOffsetHelper<IndexT, ndim>(y_dims);
+  params.z_index_helper = NdIndexOffsetHelper<IndexT, ndim>(z_dims);
   for (size_t i = 0; i < ndim; ++i) {
     params.cond_index_mask[i] = (cond_dims[i] == 1) ? 0 : 1;
     params.x_index_mask[i] = (x_dims[i] == 1) ? 0 : 1;
     params.y_index_mask[i] = (y_dims[i] == 1) ? 0 : 1;
   }
-  params.elem_cnt = static_cast<IndexType>(GetElementCount(ndim, z_dims));
+  params.elem_cnt = static_cast<IndexT>(GetElementCount(ndim, z_dims));
   params.cond = cond;
   params.x = x;
   params.y = y;
@@ -113,9 +115,8 @@ cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, cons
     cudaError_t err = GetNumBlocks(params.elem_cnt, &num_blocks);
     if (err != cudaSuccess) { return err; }
   }
-  BroadcastElementwiseWhereCudaKernel<IndexType, ndim, cond_type_size, data_type_size,
-                                      cond_pack_size, x_pack_size, y_pack_size>
-      <<<num_blocks, kBlockSize, 0, stream>>>(params);
+  BroadcastElementwiseWhereCudaKernel<T, CondT, IndexT, ndim, cond_pack_size, x_pack_size,
+                                      y_pack_size><<<num_blocks, kBlockSize, 0, stream>>>(params);
   return cudaPeekAtLastError();
 }
 
@@ -149,8 +150,9 @@ class WhereCudaImpl : public Where {
       // cuda_stream));
     } else {
       // broadcast
-      LaunchByDispatchNDim(stream, cond_type, data_type, compact_ndim, compact_cond_dims, cond,
-                           compact_x_dims, x, compact_y_dims, y, compact_z_dims, z);
+      where_impl::LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims,
+                                       compact_y_dims, compact_z_dims, cond_type, data_type, cond,
+                                       x, y, z);
     }
   }
 };
@@ -170,15 +172,15 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, WhereFactory, WhereFactoryCudaImpl
 
 namespace where_impl {
 
-template<typename IndexType, size_t ndim, size_t cond_type_size, size_t data_type_size,
-         size_t cond_pack_size, size_t x_pack_size, size_t y_pack_size>
-void LaunchKernel(Stream* stream, const int64_t* cond_dims, const void* cond, const int64_t* x_dims,
-                  const void* x, const int64_t* y_dims, const void* y, const int64_t* z_dims,
-                  void* z) {
-  auto cuda_stream = stream->As<CudaStream>().cuda_stream();
-  OF_CUDA_CHECK(
-      LaunchCudaKernel<IndexType, ndim, cond_type_size, data_type_size, cond_pack_size, x_pack_size,
-                       y_pack_size>(cuda_stream, cond_dims, cond, x_dims, x, y_dims, y, z_dims, z));
+template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
+         size_t x_pack_size, size_t y_pack_size>
+void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
+                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
+                  const void* y, void* z) {
+  auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
+  OF_CUDA_CHECK((where_cuda_impl::LaunchCudaKernel<T, CondT, IndexT, ndim, cond_pack_size,
+                                                   x_pack_size, y_pack_size>(
+      cuda_stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z)));
 }
 
 }  // namespace where_impl
