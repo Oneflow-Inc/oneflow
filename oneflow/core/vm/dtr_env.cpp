@@ -1,4 +1,6 @@
 #include "oneflow/core/vm/dtr_env.h"
+#include "nlohmann/json.hpp"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/eager/tensor_storage.h"
 
 namespace oneflow {
@@ -106,6 +108,29 @@ Env::~Env() {
   LOG(INFO) << "eager eviction num: " << eager_eviction_num_;
   LOG(INFO) << "recomputation num: " << recomputation_num_;
   LOG(INFO) << "duration: " << time_now_;
+
+  const char* prefix = std::getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX");
+  if (prefix != nullptr && GlobalProcessCtx::LocalRank() == 0) {
+    using json = nlohmann::json;
+    json cpp_summary{{"forced eviction", forced_eviction_num_},
+                     {"eager eviction", eager_eviction_num_},
+                     {"recomputation", recomputation_num_},
+                     {"dataset time", time_now_}};
+
+    json full_json;
+    // std::fstream has strange default append semantic
+    {
+      std::ifstream fs(std::string(prefix) + ".json");
+      if (fs.is_open()) {
+        fs >> full_json;
+      }
+    }
+    full_json.merge_patch(cpp_summary);
+    {
+      std::ofstream fs(std::string(prefix) + ".json");
+      fs << full_json;
+    }
+  }
 }
 
 }  // namespace dtr
