@@ -28,12 +28,15 @@ namespace where_impl {
 
 constexpr size_t kMaxNumDims = 8;
 
-template<typename T, typename CondT>
-struct WhereFunctor {
-  OF_DEVICE_FUNC WhereFunctor() {}
+template<typename R, typename Cond, typename X, typename Y>
+struct WhereElemwiseFunctor {
+  OF_DEVICE_FUNC WhereElemwiseFunctor() {}
 
-  OF_DEVICE_FUNC T operator()(CondT cond, T x, T y) const { return cond ? x : y; }
+  OF_DEVICE_FUNC R operator()(Cond cond, X x, Y y) const { return cond ? x : y; }
 };
+
+template<typename T, typename CondT>
+using WhereFunctor = WhereElemwiseFunctor<T, CondT, T, T>;
 
 template<size_t NDIM, typename IndexType>
 struct BroadcastElementwiseWhereParams {

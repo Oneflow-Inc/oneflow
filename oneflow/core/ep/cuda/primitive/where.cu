@@ -31,6 +31,7 @@ using where_impl::GetCompactBroadcastDims;
 using where_impl::IsDimsEquals;
 using where_impl::Pack;
 using where_impl::PackType;
+using where_impl::WhereElemwiseFunctor;
 using where_impl::WhereFunctor;
 
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
@@ -120,6 +121,41 @@ cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, cons
   return cudaPeekAtLastError();
 }
 
+cudaError_t LaunchElemwiseTenary(cudaStream_t stream, int64_t elem_cnt, DataType cond_type,
+                                 DataType data_type, const void* cond, const void* x, const void* y,
+                                 void* z) {
+  const size_t data_type_size = GetSizeOfDataType(data_type);
+
+#define IF(ctype, dtype_size)                                                    \
+  if (cond_type == ctype && data_type_size == dtype_size) {                      \
+    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;       \
+    using CondT = DataTypeToType<ctype>;                                         \
+    WhereElemwiseFunctor<T, CondT, T, T> where_fn{};                             \
+    return cuda::elementwise::Ternary<decltype(where_fn), T, CondT, T, T>(       \
+        where_fn, elem_cnt, static_cast<T*>(z), static_cast<const CondT*>(cond), \
+        static_cast<const T*>(x), static_cast<const T*>(y), stream);             \
+  }
+#define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
+#define ELSE         \
+  else {             \
+    UNIMPLEMENTED(); \
+  }
+
+  IF(DataType::kBool, 1)
+  ELIF(DataType::kBool, 2)
+  ELIF(DataType::kBool, 4)
+  ELIF(DataType::kBool, 8)
+  ELIF(DataType::kInt32, 1)
+  ELIF(DataType::kInt32, 2)
+  ELIF(DataType::kInt32, 4)
+  ELIF(DataType::kInt32, 8)
+  ELSE
+
+#undef IF
+#undef ELIF
+#undef ELSE
+}
+
 class WhereCudaImpl : public Where {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WhereCudaImpl);
@@ -142,12 +178,10 @@ class WhereCudaImpl : public Where {
         && IsDimsEquals(compact_ndim, compact_z_dims, compact_x_dims)
         && IsDimsEquals(compact_ndim, compact_z_dims, compact_y_dims)) {
       // elementwise
-      // using T = typename std::aligned_storage<data_type_size, data_type_size>::type;
-      // using CondT = typename std::aligned_storage<cond_type_size, cond_type_size>::type;
-      // const size_t elem_cnt = GetElementCount(compact_ndim, compact_z_dims);
-      // auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
-      // OF_CUDA_CHECK(cuda::elementwise::Ternary(WhereFunctor<T>(), elem_cnt, z, cond, x, y,
-      // cuda_stream));
+      const size_t elem_cnt = GetElementCount(compact_ndim, compact_z_dims);
+      auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
+      OF_CUDA_CHECK(
+          (LaunchElemwiseTenary(cuda_stream, elem_cnt, cond_type, data_type, cond, x, y, z)));
     } else {
       // broadcast
       where_impl::LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims,
