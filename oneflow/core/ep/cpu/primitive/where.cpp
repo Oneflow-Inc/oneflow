@@ -22,7 +22,7 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-namespace where_impl {
+namespace {
 
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
@@ -137,7 +137,7 @@ class WhereFactoryImpl : public WhereFactory {
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, WhereFactory, WhereFactoryImpl);
 
-}  // namespace where_impl
+}  // namespace
 
 }  // namespace primitive
 }  // namespace ep

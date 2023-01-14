@@ -22,17 +22,10 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-namespace where_cuda_impl {
+namespace {
 
 using cuda::elementwise::GetNumBlocks;
 using cuda::elementwise::kBlockSize;
-using where_impl::BroadcastElementwiseWhereParams;
-using where_impl::GetCompactBroadcastDims;
-using where_impl::IsDimsEquals;
-using where_impl::Pack;
-using where_impl::PackType;
-using where_impl::WhereElemwiseFunctor;
-using where_impl::WhereFunctor;
 
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
@@ -121,6 +114,16 @@ cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, cons
   return cudaPeekAtLastError();
 }
 
+template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
+         size_t x_pack_size, size_t y_pack_size>
+void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
+                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
+                  const void* y, void* z) {
+  auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
+  OF_CUDA_CHECK((LaunchCudaKernel<T, CondT, IndexT, ndim, cond_pack_size, x_pack_size, y_pack_size>(
+      cuda_stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z)));
+}
+
 cudaError_t LaunchElemwiseTenary(cudaStream_t stream, int64_t elem_cnt, DataType cond_type,
                                  DataType data_type, const void* cond, const void* x, const void* y,
                                  void* z) {
@@ -149,6 +152,10 @@ cudaError_t LaunchElemwiseTenary(cudaStream_t stream, int64_t elem_cnt, DataType
   ELIF(DataType::kInt32, 2)
   ELIF(DataType::kInt32, 4)
   ELIF(DataType::kInt32, 8)
+  ELIF(DataType::kInt64, 1)
+  ELIF(DataType::kInt64, 2)
+  ELIF(DataType::kInt64, 4)
+  ELIF(DataType::kInt64, 8)
   ELSE
 
 #undef IF
@@ -184,9 +191,8 @@ class WhereCudaImpl : public Where {
           (LaunchElemwiseTenary(cuda_stream, elem_cnt, cond_type, data_type, cond, x, y, z)));
     } else {
       // broadcast
-      where_impl::LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims,
-                                       compact_y_dims, compact_z_dims, cond_type, data_type, cond,
-                                       x, y, z);
+      LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
+                           compact_z_dims, cond_type, data_type, cond, x, y, z);
     }
   }
 };
@@ -202,22 +208,7 @@ class WhereFactoryCudaImpl : public WhereFactory {
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, WhereFactory, WhereFactoryCudaImpl);
 
-}  // namespace where_cuda_impl
-
-namespace where_impl {
-
-template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
-         size_t x_pack_size, size_t y_pack_size>
-void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
-                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
-                  const void* y, void* z) {
-  auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
-  OF_CUDA_CHECK((where_cuda_impl::LaunchCudaKernel<T, CondT, IndexT, ndim, cond_pack_size,
-                                                   x_pack_size, y_pack_size>(
-      cuda_stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z)));
-}
-
-}  // namespace where_impl
+}  // namespace
 
 }  // namespace primitive
 }  // namespace ep

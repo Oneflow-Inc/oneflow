@@ -24,7 +24,7 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-namespace where_impl {
+namespace {
 
 constexpr size_t kMaxNumDims = 8;
 
@@ -287,6 +287,10 @@ inline void LaunchByDispatchType(Stream* stream, size_t ndim, int64_t* cond_dims
   ELIF(DataType::kInt32, 2)
   ELIF(DataType::kInt32, 4)
   ELIF(DataType::kInt32, 8)
+  ELIF(DataType::kInt64, 1)
+  ELIF(DataType::kInt64, 2)
+  ELIF(DataType::kInt64, 4)
+  ELIF(DataType::kInt64, 8)
   ELSE
 
 #undef IF
@@ -294,7 +298,7 @@ inline void LaunchByDispatchType(Stream* stream, size_t ndim, int64_t* cond_dims
 #undef ELSE
 }
 
-}  // namespace where_impl
+}  // namespace
 
 }  // namespace primitive
 }  // namespace ep
