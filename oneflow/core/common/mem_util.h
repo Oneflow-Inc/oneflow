@@ -21,9 +21,11 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 void ProcessMemUsage(double* vm_usage, double* resident_set);
+Maybe<double> GetCPUMemoryUsed();
 }  // namespace oneflow
 
 #define LOG_MEM(...)                                                                \
