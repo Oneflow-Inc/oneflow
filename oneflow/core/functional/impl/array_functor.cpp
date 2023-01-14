@@ -460,9 +460,10 @@ class WhereScalarXYFunctor {
     } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
       double x_val = x_scalar.As<double>();
       double y_val = y_scalar.As<double>();
-      if (x_val >= GetFloatMinVal(DataType::kFloat) && x_val <= GetFloatMaxVal(DataType::kFloat)
-          && y_val >= GetFloatMinVal(DataType::kFloat)
-          && y_val <= GetFloatMaxVal(DataType::kFloat)) {
+      if (x_val >= GetMinVal<DataTypeToType<DataType::kFloat>>()
+          && x_val <= GetMaxVal<DataTypeToType<DataType::kFloat>>()
+          && y_val >= GetMinVal<DataTypeToType<DataType::kFloat>>()
+          && y_val <= GetMaxVal<DataTypeToType<DataType::kFloat>>()) {
         dtype = DataType::kFloat;
       } else {
         dtype = DataType::kDouble;
@@ -471,7 +472,8 @@ class WhereScalarXYFunctor {
       if (x_scalar.IsUnsigned() && y_scalar.IsUnsigned()) {
         uint64_t x_val = x_scalar.As<uint64_t>();
         uint64_t y_val = y_scalar.As<uint64_t>();
-        if (x_val <= GetIntMaxVal(DataType::kUInt32) && y_val <= GetIntMaxVal(DataType::kUInt32)) {
+        if (x_val <= GetMaxVal<DataTypeToType<DataType::kUInt32>>()
+            && y_val <= GetMaxVal<DataTypeToType<DataType::kUInt32>>()) {
           dtype = DataType::kUInt32;
         } else {
           dtype = DataType::kUInt64;
@@ -479,8 +481,10 @@ class WhereScalarXYFunctor {
       } else if (x_scalar.IsSigned() && y_scalar.IsSigned()) {
         int64_t x_val = x_scalar.As<int64_t>();
         int64_t y_val = y_scalar.As<int64_t>();
-        if (x_val >= GetIntMinVal(DataType::kInt32) && x_val <= GetIntMaxVal(DataType::kInt32)
-            && y_val >= GetIntMinVal(DataType::kInt32) && y_val <= GetIntMaxVal(DataType::kInt32)) {
+        if (x_val >= GetMinVal<DataTypeToType<DataType::kInt32>>()
+            && x_val <= GetMaxVal<DataTypeToType<DataType::kInt32>>()
+            && y_val >= GetMinVal<DataTypeToType<DataType::kInt32>>()
+            && y_val <= GetMaxVal<DataTypeToType<DataType::kInt32>>()) {
           dtype = DataType::kInt32;
         } else {
           dtype = DataType::kInt64;
