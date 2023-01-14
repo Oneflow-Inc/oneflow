@@ -66,13 +66,7 @@ static Maybe<double> GetDatasetComputeTime(const OpCallInstructionPolicy& operan
 
 static double GetEstimatedComputeTime(const OpCallInstructionPolicy& operand) {
   if (EnvBool<ONEFLOW_DTR_USE_DATASET_TIME>()) {
-    auto ret = GetDatasetComputeTime(operand);
-    // CHECK_JUST has a bug so we unwrap it manually
-    if (!ret.IsOk()) {
-      LOG(FATAL) << ret.GetSerializedError();
-    } else {
-      return ret.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
-    }
+    return CHECK_JUST(GetDatasetComputeTime(operand));
   }
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
