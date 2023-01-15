@@ -496,7 +496,7 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                      ctx->has_input("bias", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
                          : nullptr,
-                     ctx->has_input("bias", 0) ? const_cast<void*>(bias_grad->dptr()) : nullptr,
+                     ctx->has_input("bias", 0) ? const_cast<void*>(bias_grad->mut_dptr()) : nullptr,
                      bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
     run_fmha_bwd(params, stream, /*configure=*/true);

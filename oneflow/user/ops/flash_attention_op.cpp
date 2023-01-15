@@ -123,6 +123,10 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   ctx->SetOutputShape("query_grad", 0, q_shape);
   ctx->SetOutputShape("key_grad", 0, k_shape);
   ctx->SetOutputShape("value_grad", 0, v_shape);
+  if (ctx->has_input("bias", 0)) {
+    const Shape& bias_shape = ctx->InputShape("bias", 0);
+    ctx->SetOutputShape("bias_grad", 0, bias_shape);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -150,6 +154,7 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   ctx->SetOutputDType("query_grad", 0, ctx->InputDType("query", 0));
   ctx->SetOutputDType("key_grad", 0, ctx->InputDType("key", 0));
   ctx->SetOutputDType("value_grad", 0, ctx->InputDType("value", 0));
+  if (ctx->has_input("bias", 0)) ctx->SetOutputDType("bias_grad", 0, ctx->InputDType("bias", 0));
   return Maybe<void>::Ok();
 }
 

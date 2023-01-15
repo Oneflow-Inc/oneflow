@@ -57,10 +57,10 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     int idx = 5;
     bool has_mask = JUST(attrs.GetAttr<bool>("has_mask"));
     if (has_mask) ctx->mask_index = idx++;
-    bool has_bias = JUST(attrs.GetAttr<int>("has_bias"));
+    bool has_bias = JUST(attrs.GetAttr<bool>("has_bias"));
     if (has_bias) {
-      ctx->bias_index = idx++;
       ctx->bias_requires_grad = inputs.at(idx)->requires_grad();
+      ctx->bias_index = idx++;
     }
     CHECK_EQ_OR_RETURN(inputs.size(), idx);
     ctx->query_index = ctx->SaveTensorForBackward(inputs.at(0));           // query
@@ -82,12 +82,12 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
 
   Maybe<void> Apply(const FlashAttentionCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    if (!(ctx->query_requires_grad || ctx->key_requires_grad || ctx->value_requires_grad)) {
+    if (!(ctx->query_requires_grad || ctx->key_requires_grad || ctx->value_requires_grad
+          || ctx->bias_requires_grad)) {
       return Maybe<void>::Ok();
     }
-    in_grads->resize(5);
+    in_grads->resize(5 + ((ctx->bias_index) > 0) + ((ctx->mask_index) > 0));
     const auto& saved_tensors = ctx->SavedTensors();
-
     const auto& results = JUST(functional::FlashAttentionGrad(
         out_grads.at(0), saved_tensors.at(ctx->out_index), saved_tensors.at(ctx->softmax_lse_index),
         saved_tensors.at(ctx->query_index), saved_tensors.at(ctx->key_index),
@@ -100,7 +100,10 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     if (ctx->query_requires_grad) { (*in_grads)[0] = results->at(0); }
     if (ctx->key_requires_grad) { (*in_grads)[1] = results->at(1); }
     if (ctx->value_requires_grad) { (*in_grads)[2] = results->at(2); }
-    if (ctx->bias_requires_grad) { (*in_grads)[ctx->bias_index] = results->at(3); }
+    if (ctx->bias_requires_grad) {
+      (*in_grads)[ctx->bias_index] = JUST(functional::ReduceSum(results->at(3), {0}, true));
+    }
+
     return Maybe<void>::Ok();
   }
 };
