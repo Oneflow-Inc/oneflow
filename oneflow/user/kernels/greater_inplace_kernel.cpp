@@ -13,21 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
+#include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/user/kernels/greater_inplace_kernel_util.h"
 
 namespace oneflow {
 
-template<typename T>
-class CpuGreaterInplaceKernel final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class GreaterInplaceKernel final : public user_op::OpKernel {
  public:
-  CpuGreaterInplaceKernel() = default;
-  ~CpuGreaterInplaceKernel() = default;
+  GreaterInplaceKernel() = default;
+  ~GreaterInplaceKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const int32_t elem_cnt = x->shape_view().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -38,52 +40,39 @@ class CpuGreaterInplaceKernel final : public user_op::OpKernel {
     T* broadcast_y_ptr = tmp_buffer->mut_dptr<T>();
 
     if (x->shape_view() == y->shape_view()) {
-      FOR_RANGE(int32_t, i, 0, elem_cnt) {
-        out_ptr[i] = x_ptr[i] > y_ptr[i] ? static_cast<T>(1) : static_cast<T>(0);
-      }
+      GreaterInplaceKernelUtil<device_type, T>::Forward(ctx->stream(), elem_cnt, x_ptr, y_ptr,
+                                                        out_ptr);
+      return;
     }
-
-    int64_t like_ndim = x->shape_view().NumAxes();
-    int64_t x_ndim = y->shape_view().NumAxes();
-    int64_t num_prepend = like_ndim - x_ndim;
-    std::vector<int64_t> prepend_shape(num_prepend, 1);
-    std::vector<int32_t> broadcast_axes;
-    for (int i = 0; i < x_ndim; ++i) { prepend_shape.emplace_back(y->shape_view().At(i)); }
-    for (int i = 0; i < num_prepend; ++i) { broadcast_axes.emplace_back(i); }
-    for (int i = num_prepend; i < prepend_shape.size(); ++i) {
-      if (prepend_shape[i] != x->shape_view().At(i)) {
-        if (prepend_shape[i] == 1) { broadcast_axes.emplace_back(i); }
-      }
-    }
-    const Shape& reduced_shape = CreateReducedShapeOrOnesShape(
-        x->shape_view(), {broadcast_axes.begin(), broadcast_axes.end()});
-    NdarrayUtil<DeviceType::kCUDA, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(x->shape_view(), broadcast_y_ptr),
-        XpuVarNdarray<const T>(x->shape_view(), y_ptr));
-
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      out_ptr[i] = x_ptr[i] > broadcast_y_ptr[i] ? static_cast<T>(1) : static_cast<T>(0);
-    }
+    GreaterInplaceKernelUtil<device_type, T>::YBroadcastToX(
+        ctx->stream(), elem_cnt, x_ptr, y_ptr, broadcast_y_ptr, x->shape_view(), y->shape_view());
+    GreaterInplaceKernelUtil<device_type, T>::Forward(ctx->stream(), elem_cnt, x_ptr,
+                                                      broadcast_y_ptr, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GREATER_INPLACE_KERNEL(dtype)                                       \
+#define REGISTER_GREATER_INPLACE_KERNEL(device_type, dtype)                              \
   REGISTER_USER_KERNEL("broadcast_inplace_greater")                                      \
-      .SetCreateFn<CpuGreaterInplaceKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
+      .SetCreateFn<GreaterInplaceKernel<device_type, dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                         \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
         const Shape& x_shape = ctx->InputShape("x", 0);                                  \
         return GetCudaAlignedSize(x_shape.elem_cnt() * sizeof(dtype));                   \
       });
 
-REGISTER_CPU_GREATER_INPLACE_KERNEL(float)
-REGISTER_CPU_GREATER_INPLACE_KERNEL(double)
-// TODO(hujiakui): BroadcastTo doesn't support uint8_t
-// REGISTER_CPU_GREATER_INPLACE_KERNEL(uint8_t)
-REGISTER_CPU_GREATER_INPLACE_KERNEL(int8_t)
-REGISTER_CPU_GREATER_INPLACE_KERNEL(int32_t)
-REGISTER_CPU_GREATER_INPLACE_KERNEL(int64_t)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCPU, float)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCPU, double)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int8_t)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int32_t)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int64_t)
+
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, half)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, float)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, double)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int8_t)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int32_t)
+REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int64_t)
 
 }  // namespace oneflow

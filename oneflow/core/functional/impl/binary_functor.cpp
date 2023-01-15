@@ -450,15 +450,8 @@ class InplaceBroadcastGreaterFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    // broadcast y
-    std::shared_ptr<Tensor> broadcast_y = y;
-    if (x->shape() != y->shape()) {
-      broadcast_y = JUST(functional::BroadcastTo(y, *x->shape()));
-    }
-
-    // inplace greater
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, broadcast_y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
