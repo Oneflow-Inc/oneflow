@@ -56,11 +56,27 @@ struct numeric_limits<half> {
 
 namespace oneflow {
 
+namespace detail {
+
+template<typename>
+struct IsFloat16Helper : std::false_type {};
+
+template<typename>
+struct IsFloatingHelper : std::false_type {};
+
+template<typename>
+struct IsIntegralHelper : std::false_type {};
+
+template<typename>
+struct IsUnsignedIntegralHelper : std::false_type {};
+
+}  // namespace detail
+
 using float16 = half_float::half;
 
-#define _DEFINE_SPEC(_Trait, _Type, _Value) \
+#define DEFINE_SPEC(Trait, Type, Value) \
   template<>                                \
-  struct _Trait<_Type> : std::integral_constant<bool, _Value> {};
+  struct Trait<Type> : std::integral_constant<bool, Value> {};
 
 // Type Trait: extened IsScalarType
 
@@ -78,65 +94,57 @@ struct IsScalarType<
 
 // Type Trait: IsFloat16
 
-template<typename>
-struct __IsFloat16_helper : std::false_type {};
-_DEFINE_SPEC(__IsFloat16_helper, float16, true)
+DEFINE_SPEC(detail::IsFloat16Helper, float16, true)
 #ifdef WITH_CUDA
-_DEFINE_SPEC(__IsFloat16_helper, half, true)
+DEFINE_SPEC(detail::IsFloat16Helper, half, true)
 #endif  // WITH_CUDA
 
 template<typename T>
 struct IsFloat16
-    : std::integral_constant<bool, (__IsFloat16_helper<typename std::remove_cv<T>::type>::value)> {
+    : std::integral_constant<bool, (detail::IsFloat16Helper<typename std::remove_cv<T>::type>::value)> {
 };
 
 // Type Trait: IsFloating
-template<typename>
-struct __IsFloating_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
-  _DEFINE_SPEC(__IsFloating_helper, type_cpp, true)
+  DEFINE_SPEC(detail::IsFloatingHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_FLOATING
-_DEFINE_SPEC(__IsFloating_helper, float16, true)
+DEFINE_SPEC(detail::IsFloatingHelper, float16, true)
 #ifdef WITH_CUDA
-_DEFINE_SPEC(__IsFloating_helper, half, true)
+DEFINE_SPEC(detail::IsFloatingHelper, half, true)
 #endif  // WITH_CUDA
 
 template<typename T>
 struct IsFloating
-    : std::integral_constant<bool, (__IsFloating_helper<typename std::remove_cv<T>::type>::value)> {
+    : std::integral_constant<bool, (detail::IsFloatingHelper<typename std::remove_cv<T>::type>::value)> {
 };
 
 // Type Trait: IsIntegral
-template<typename>
-struct __IsIntegral_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  _DEFINE_SPEC(__IsIntegral_helper, type_cpp, true)
+  DEFINE_SPEC(detail::IsIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<typename T>
 struct IsIntegral
-    : std::integral_constant<bool, (__IsIntegral_helper<typename std::remove_cv<T>::type>::value)> {
+    : std::integral_constant<bool, (detail::IsIntegralHelper<typename std::remove_cv<T>::type>::value)> {
 };
 
 // Type Trait: IsUnsignedIntegral
-template<typename>
-struct __IsUnsignedIntegral_helper : std::false_type {};
 
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  _DEFINE_SPEC(__IsUnsignedIntegral_helper, type_cpp, true)
+  DEFINE_SPEC(detail::IsUnsignedIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<typename T>
 struct IsUnsignedIntegral
     : std::integral_constant<
-          bool, (__IsUnsignedIntegral_helper<typename std::remove_cv<T>::type>::value)> {};
+          bool, (detail::IsUnsignedIntegralHelper<typename std::remove_cv<T>::type>::value)> {};
 
-#undef _DEFINE_SPEC
+#undef DEFINE_SPEC
 
 // Type Trait: GetDataType
 
