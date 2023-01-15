@@ -52,7 +52,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
       }
       return std::make_shared<EventRecorder>(event);
     }
-#else  // WITH_CUDA
+#else
     if (pmgr->use_cpu_) {
       return std::make_shared<EventRecorder>(KernelEvent::Create(name, description_getter()));
     }
