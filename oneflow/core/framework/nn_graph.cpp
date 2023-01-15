@@ -324,20 +324,23 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
+Maybe<void> NNGraph::AlignStatesAfterLogicalGraphCompile() {
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
-  // A global variable to get graph configurations.
-  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
-
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
-
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
   // Clear all backward pass scope
   ClearAllBackwardPassScope();
+  compile_tc->Count("[GraphCompile]" + name_ + " AlignStates", 0);
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
@@ -417,10 +420,10 @@ Maybe<void> NNGraph::InitRuntime() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(AlignStatesAfterLogicalGraphCompile());
   JUST(CompleteLogicalGraphForRuntime());
   JUST(CompilePlanForRuntime());
   JUST(InitRuntime());
-
   return Maybe<void>::Ok();
 }
 

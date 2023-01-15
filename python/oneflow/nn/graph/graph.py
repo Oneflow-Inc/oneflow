@@ -857,6 +857,7 @@ class Graph(object):
                 self._debug_max_py_stack_depth,
                 self._debug_only_user_py_stack,
             ):
+                self._c_nn_graph.align_states_after_logical_graph_compile()
                 self._c_nn_graph.complete_graph_for_runtime()
                 # Get compiled job
                 compiled_job_str = self._c_nn_graph.get_current_job_str()

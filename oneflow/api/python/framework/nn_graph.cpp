@@ -80,6 +80,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
            &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
+      .def("align_states_after_logical_graph_compile",
+           &NNGraph::AlignStatesAfterLogicalGraphCompile)
       .def("complete_graph_for_runtime", &NNGraph::CompleteLogicalGraphForRuntime)
       .def("compile_plan_for_runtime", &NNGraph::CompilePlanForRuntime)
       .def("init_runtime", &NNGraph::InitRuntime)

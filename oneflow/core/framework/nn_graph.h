@@ -73,6 +73,8 @@ class NNGraph final : public NNGraphIf {
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
   Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
+  // After logical graph compile, some state variables should be cleaned or built.
+  Maybe<void> AlignStatesAfterLogicalGraphCompile();
   // Add special operators into logical graph for lazy runtime.
   Maybe<void> CompleteLogicalGraphForRuntime();
   // Generate execution plan for lazy runtime. Oneflow lazy runtime is an actor based runtime.
