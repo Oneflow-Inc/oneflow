@@ -450,7 +450,6 @@ class InplaceBroadcastGreaterFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());

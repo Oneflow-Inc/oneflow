@@ -26,7 +26,8 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 struct GreaterInplaceKernelUtil {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out);
-  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand, T* out);
+  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand,
+                            T* out);
   static void YBroadcastToX(ep::Stream* stream, const int64_t n, const T* x, const T* y,
                             T* broadcast_y, const ShapeView& x_shape, const ShapeView& y_shape) {
     int64_t x_ndim = x_shape.NumAxes();

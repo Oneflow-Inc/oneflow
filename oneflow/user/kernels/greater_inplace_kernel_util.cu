@@ -28,16 +28,19 @@ __global__ void GreaterInplacForwardGpu(const int64_t n, const T* x, const T* y,
 }
 
 template<typename T>
-__global__ void ScalarGreaterInplacForwardGpu(const int64_t n, const T* x, const Scalar* operand, T* out) {
+__global__ void ScalarGreaterInplacForwardGpu(const int64_t n, const T* x, const Scalar* operand,
+                                              T* out) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
     out[i] = x[i] > operand->As<T>() ? static_cast<T>(1) : static_cast<T>(0);
   }
 }
 
 template<>
-__global__ void ScalarGreaterInplacForwardGpu<half>(const int64_t n, const half* x, const Scalar* operand, half* out) {
+__global__ void ScalarGreaterInplacForwardGpu<half>(const int64_t n, const half* x,
+                                                    const Scalar* operand, half* out) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
-    out[i] = x[i] > __float2half(operand->As<float>()) ? static_cast<half>(1) : static_cast<half>(0);
+    out[i] =
+        x[i] > __float2half(operand->As<float>()) ? static_cast<half>(1) : static_cast<half>(0);
   }
 }
 
@@ -49,7 +52,8 @@ struct GreaterInplaceKernelUtil<DeviceType::kCUDA, T> {
     RUN_CUDA_KERNEL((GreaterInplacForwardGpu<T>), stream, n, n, x, y, out);
   }
 
-  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand, T* out) {
+  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand,
+                            T* out) {
     RUN_CUDA_KERNEL((ScalarGreaterInplacForwardGpu<T>), stream, n, n, x, operand, out);
   }
 };

@@ -98,15 +98,16 @@ class ScalarGreaterInplaceKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    GreaterInplaceKernelUtil<device_type, T>::ScalarForward(ctx->stream(), elem_cnt, in_ptr, &scalar_operand, out_ptr);
+    GreaterInplaceKernelUtil<device_type, T>::ScalarForward(ctx->stream(), elem_cnt, in_ptr,
+                                                            &scalar_operand, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALAR_GREATER_INPLACE_KERNEL(device_type, dtype)                              \
-  REGISTER_USER_KERNEL("scalar_logical_inplace_greater")                                      \
-      .SetCreateFn<ScalarGreaterInplaceKernel<device_type, dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                         \
+#define REGISTER_SCALAR_GREATER_INPLACE_KERNEL(device_type, dtype)   \
+  REGISTER_USER_KERNEL("scalar_logical_inplace_greater")             \
+      .SetCreateFn<ScalarGreaterInplaceKernel<device_type, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)     \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, float)

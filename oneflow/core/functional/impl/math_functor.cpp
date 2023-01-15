@@ -2216,8 +2216,7 @@ class InplaceScalarLogicalGreaterFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("scalar_logical_inplace_greater").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Scalar& scalar) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
