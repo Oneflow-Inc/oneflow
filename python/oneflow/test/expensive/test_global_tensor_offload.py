@@ -66,6 +66,8 @@ def _test_global_tensor_offload_d2h(test_case, input, tensor_mem):
         test_case.assertTrue((before_used - after_used) == tensor_mem)
     elif offload_tensor_test_mem_mode == 2:
         test_case.assertTrue(before_used > after_used)
+    elif offload_tensor_test_mem_mode == 3:
+        print("Device:",flow.env.get_rank(),". cuda mem change value:",before_used - after_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -103,6 +105,8 @@ def _test_global_tensor_load_h2d(test_case, input, tensor_mem):
         test_case.assertTrue((after_used - before_used) == tensor_mem)
     elif offload_tensor_test_mem_mode == 2:
         test_case.assertTrue(after_used > before_used)
+    elif offload_tensor_test_mem_mode == 3:
+        print("Device:",flow.env.get_rank(),". cuda mem change value:",after_used - before_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -166,6 +170,8 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 after_id = id(input)
                 if offload_tensor_test_mem_mode == 2:
                     test_case.assertTrue(after_used > before_used)
+                elif offload_tensor_test_mem_mode == 3:
+                    print("cpu mem change value:",after_used - before_used)
                 test_case.assertEqual(before_id, after_id)
 
                 cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
@@ -175,6 +181,8 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 after_id = id(input)
                 if offload_tensor_test_mem_mode == 2:
                     test_case.assertTrue(after_used < cur_used)
+                elif offload_tensor_test_mem_mode == 3:
+                    print("cpu mem change value:",cur_used - after_used)
                 test_case.assertEqual(before_id, after_id)
 
 
