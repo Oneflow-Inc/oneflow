@@ -130,56 +130,29 @@ union Pack {
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
 void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
-                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
-                  const void* y, void* z);
+                  const int64_t* y_dims, const int64_t* z_dims, const CondT* cond, const T* x,
+                  const T* y, T* z);
 
-template<typename T, typename CondT, typename IndexT, size_t cond_pack_size, size_t x_pack_size,
+template<typename T, typename CondT>
+void LaunchScalarKernel(Stream* stream, const CondT* cond, const T* x, const T* y, T* z);
+
+template<typename T, typename CondT, size_t ndim, size_t cond_pack_size, size_t x_pack_size,
          size_t y_pack_size>
-void LaunchByDispatchNDim(Stream* stream, size_t ndim, const int64_t* cond_dims,
-                          const int64_t* x_dims, const int64_t* y_dims, const int64_t* z_dims,
-                          const void* cond, const void* x, const void* y, void* z) {
-  CHECK_GT(ndim, 0);
-
-#define IF(n)                                                                    \
-  if (ndim == n) {                                                               \
-    LaunchKernel<T, CondT, IndexT, n, cond_pack_size, x_pack_size, y_pack_size>( \
-        stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);               \
-  }
-#define ELIF(n) else IF(n)
-#define ELSE         \
-  else {             \
-    UNIMPLEMENTED(); \
-  }
-
-  IF(1)
-  ELIF(2)
-  ELIF(3)
-  ELIF(4)
-  ELSE
-
-#undef IF
-#undef ELIF
-#undef ELSE
-}
-
-template<typename T, typename CondT, size_t cond_pack_size, size_t x_pack_size, size_t y_pack_size>
-void LaunchByDispatchIndexType(Stream* stream, size_t ndim, int64_t* cond_dims, int64_t* x_dims,
-                               int64_t* y_dims, int64_t* z_dims, const void* cond, const void* x,
-                               const void* y, void* z) {
+void LaunchByDispatchIndexType(Stream* stream, int64_t* cond_dims, int64_t* x_dims, int64_t* y_dims,
+                               int64_t* z_dims, const CondT* cond, const T* x, const T* y, T* z) {
   const size_t elem_cnt = GetElementCount(ndim, z_dims);
   if (elem_cnt < GetMaxVal<int32_t>()) {
-    return LaunchByDispatchNDim<T, CondT, int32_t, cond_pack_size, x_pack_size, y_pack_size>(
-        stream, ndim, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
+    return LaunchKernel<T, CondT, int32_t, ndim, cond_pack_size, x_pack_size, y_pack_size>(
+        stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
   } else {
-    return LaunchByDispatchNDim<T, CondT, int64_t, cond_pack_size, x_pack_size, y_pack_size>(
-        stream, ndim, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
+    return LaunchKernel<T, CondT, int64_t, ndim, cond_pack_size, x_pack_size, y_pack_size>(
+        stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
   }
 }
 
-template<typename T, typename CondT, size_t max_pack_size>
-size_t GetPackSize(size_t ndim, const int64_t* cond_dims, const int64_t* x_dims,
-                   const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
-                   const void* y, const void* z) {
+template<typename T, typename CondT, size_t ndim, size_t max_pack_size>
+size_t GetPackSize(const int64_t* cond_dims, const int64_t* x_dims, const int64_t* y_dims,
+                   const int64_t* z_dims, const CondT* cond, const T* x, const T* y, const T* z) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
   CHECK_GT(z_dims[ndim - 1], 1);
   for (size_t pack_size = max_pack_size; pack_size >= 2; pack_size /= 2) {
@@ -194,13 +167,13 @@ size_t GetPackSize(size_t ndim, const int64_t* cond_dims, const int64_t* x_dims,
   return 1;
 }
 
-template<typename T, typename CondT>
-void LaunchByDispatchPackSize(Stream* stream, size_t ndim, int64_t* cond_dims, int64_t* x_dims,
-                              int64_t* y_dims, int64_t* z_dims, const void* cond, const void* x,
-                              const void* y, void* z) {
+template<typename T, typename CondT, size_t ndim>
+void LaunchByDispatchPackSize(Stream* stream, int64_t* cond_dims, int64_t* x_dims, int64_t* y_dims,
+                              int64_t* z_dims, const CondT* cond, const T* x, const T* y, T* z) {
+  static_assert(ndim > 0, "");
   constexpr size_t kMaxPackSize = 4;
   size_t pack_size =
-      GetPackSize<T, CondT, kMaxPackSize>(ndim, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
+      GetPackSize<T, CondT, ndim, kMaxPackSize>(cond_dims, x_dims, y_dims, z_dims, cond, x, y, z);
   size_t cond_pack_size = 1;
   size_t x_pack_size = 1;
   size_t y_pack_size = 1;
@@ -222,8 +195,8 @@ void LaunchByDispatchPackSize(Stream* stream, size_t ndim, int64_t* cond_dims, i
 
 #define IF(cp, xp, yp)                                                                       \
   if (cond_pack_size == cp && x_pack_size == xp && y_pack_size == yp) {                      \
-    LaunchByDispatchIndexType<T, CondT, cp, xp, yp>(stream, ndim, cond_dims, x_dims, y_dims, \
-                                                    z_dims, cond, x, y, z);                  \
+    LaunchByDispatchIndexType<T, CondT, ndim, cp, xp, yp>(stream, cond_dims, x_dims, y_dims, \
+                                                          z_dims, cond, x, y, z);            \
   }
 #define ELIF(cp, xp, yp) else IF(cp, xp, yp)
 #define ELSE         \
@@ -260,18 +233,45 @@ void LaunchByDispatchPackSize(Stream* stream, size_t ndim, int64_t* cond_dims, i
 #undef ELSE
 }
 
+template<typename T, typename CondT>
+void LaunchByDispatchNDim(Stream* stream, size_t ndim, int64_t* cond_dims, int64_t* x_dims,
+                          int64_t* y_dims, int64_t* z_dims, const CondT* cond, const T* x,
+                          const T* y, T* z) {
+#define ELIF(n)                                                                                  \
+  else if (ndim == n) {                                                                          \
+    LaunchByDispatchPackSize<T, CondT, n>(stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, \
+                                          z);                                                    \
+  }
+#define ELSE         \
+  else {             \
+    UNIMPLEMENTED(); \
+  }
+
+  if (ndim == 0) { LaunchScalarKernel<T, CondT>(stream, cond, x, y, z); }
+  ELIF(1)
+  ELIF(2)
+  ELIF(3)
+  ELIF(4)
+  ELSE
+
+#undef IF
+#undef ELIF
+#undef ELSE
+}
+
 inline void LaunchByDispatchType(Stream* stream, size_t ndim, int64_t* cond_dims, int64_t* x_dims,
                                  int64_t* y_dims, int64_t* z_dims, DataType cond_type,
                                  DataType data_type, const void* cond, const void* x, const void* y,
                                  void* z) {
   const size_t data_type_size = GetSizeOfDataType(data_type);
 
-#define IF(ctype, dtype_size)                                                                    \
-  if (cond_type == ctype && data_type_size == dtype_size) {                                      \
-    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;                       \
-    using CondT = DataTypeToType<ctype>;                                                         \
-    LaunchByDispatchPackSize<T, CondT>(stream, ndim, cond_dims, x_dims, y_dims, z_dims, cond, x, \
-                                       y, z);                                                    \
+#define IF(ctype, dtype_size)                                                                 \
+  if (cond_type == ctype && data_type_size == dtype_size) {                                   \
+    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;                    \
+    using CondT = DataTypeToType<ctype>;                                                      \
+    LaunchByDispatchNDim<T, CondT>(stream, ndim, cond_dims, x_dims, y_dims, z_dims,           \
+                                   static_cast<const CondT*>(cond), static_cast<const T*>(x), \
+                                   static_cast<const T*>(y), static_cast<T*>(z));             \
   }
 #define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
 #define ELSE         \

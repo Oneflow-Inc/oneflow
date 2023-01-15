@@ -78,11 +78,18 @@ void BroadcastElementwiseWhereKernel(CpuStream* cpu_stream,
   });
 }
 
+template<typename T, typename CondT>
+void ScalarWhereKernel(const CondT* cond, const T* x, const T* y, T* z) {
+  WhereFunctor<T, CondT> where_fn{};
+  *z = where_fn(*cond, *x, *y);
+}
+
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
 void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
-                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
-                  const void* y, void* z) {
+                  const int64_t* y_dims, const int64_t* z_dims, const CondT* cond, const T* x,
+                  const T* y, T* z) {
+  static_assert(ndim > 0, "");
   BroadcastElementwiseWhereParams<ndim, IndexT> params;
   params.cond_index_helper = NdIndexOffsetHelper<IndexT, ndim>(cond_dims);
   params.x_index_helper = NdIndexOffsetHelper<IndexT, ndim>(x_dims);
@@ -102,6 +109,11 @@ void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dim
   auto* cpu_stream = stream->As<CpuStream>();
   BroadcastElementwiseWhereKernel<T, CondT, IndexT, ndim, cond_pack_size, x_pack_size, y_pack_size>(
       cpu_stream, params);
+}
+
+template<typename T, typename CondT>
+void LaunchScalarKernel(Stream* stream, const CondT* cond, const T* x, const T* y, T* z) {
+  ScalarWhereKernel(cond, x, y, z);
 }
 
 class WhereImpl : public Where {

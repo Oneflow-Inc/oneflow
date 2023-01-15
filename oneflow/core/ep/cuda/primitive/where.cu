@@ -86,8 +86,8 @@ __global__ void BroadcastElementwiseWhereCudaKernel(
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
 cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, const int64_t* x_dims,
-                             const int64_t* y_dims, const int64_t* z_dims, const void* cond,
-                             const void* x, const void* y, void* z) {
+                             const int64_t* y_dims, const int64_t* z_dims, const CondT* cond,
+                             const T* x, const T* y, T* z) {
   BroadcastElementwiseWhereParams<ndim, IndexT> params;
   params.cond_index_helper = NdIndexOffsetHelper<IndexT, ndim>(cond_dims);
   params.x_index_helper = NdIndexOffsetHelper<IndexT, ndim>(x_dims);
@@ -117,26 +117,34 @@ cudaError_t LaunchCudaKernel(cudaStream_t stream, const int64_t* cond_dims, cons
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>
 void LaunchKernel(Stream* stream, const int64_t* cond_dims, const int64_t* x_dims,
-                  const int64_t* y_dims, const int64_t* z_dims, const void* cond, const void* x,
-                  const void* y, void* z) {
+                  const int64_t* y_dims, const int64_t* z_dims, const CondT* cond, const T* x,
+                  const T* y, T* z) {
+  static_assert(ndim > 0, "");
   auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
   OF_CUDA_CHECK((LaunchCudaKernel<T, CondT, IndexT, ndim, cond_pack_size, x_pack_size, y_pack_size>(
       cuda_stream, cond_dims, x_dims, y_dims, z_dims, cond, x, y, z)));
 }
 
-cudaError_t LaunchElemwiseTenary(cudaStream_t stream, int64_t elem_cnt, DataType cond_type,
-                                 DataType data_type, const void* cond, const void* x, const void* y,
-                                 void* z) {
-  const size_t data_type_size = GetSizeOfDataType(data_type);
+template<typename T, typename CondT>
+void LaunchScalarKernel(Stream* stream, const CondT* cond, const T* x, const T* y, T* z) {
+  // should dispatch to elemwise tenary
+  UNIMPLEMENTED();
+}
 
-#define IF(ctype, dtype_size)                                                    \
-  if (cond_type == ctype && data_type_size == dtype_size) {                      \
-    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;       \
-    using CondT = DataTypeToType<ctype>;                                         \
-    WhereElemwiseFunctor<T, CondT, T, T> where_fn{};                             \
-    return cuda::elementwise::Ternary<decltype(where_fn), T, CondT, T, T>(       \
-        where_fn, elem_cnt, static_cast<T*>(z), static_cast<const CondT*>(cond), \
-        static_cast<const T*>(x), static_cast<const T*>(y), stream);             \
+void LaunchElemwiseTenary(CudaStream* stream, int64_t elem_cnt, DataType cond_type,
+                          DataType data_type, const void* cond, const void* x, const void* y,
+                          void* z) {
+  const size_t data_type_size = GetSizeOfDataType(data_type);
+  cudaStream_t cuda_stream = stream->cuda_stream();
+
+#define IF(ctype, dtype_size)                                                      \
+  if (cond_type == ctype && data_type_size == dtype_size) {                        \
+    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;         \
+    using CondT = DataTypeToType<ctype>;                                           \
+    WhereElemwiseFunctor<T, CondT, T, T> where_fn{};                               \
+    OF_CUDA_CHECK((cuda::elementwise::Ternary<decltype(where_fn), T, CondT, T, T>( \
+        where_fn, elem_cnt, static_cast<T*>(z), static_cast<const CondT*>(cond),   \
+        static_cast<const T*>(x), static_cast<const T*>(y), cuda_stream)));        \
   }
 #define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
 #define ELSE         \
@@ -186,9 +194,7 @@ class WhereCudaImpl : public Where {
         && IsDimsEquals(compact_ndim, compact_z_dims, compact_y_dims)) {
       // elementwise
       const size_t elem_cnt = GetElementCount(compact_ndim, compact_z_dims);
-      auto cuda_stream = stream->As<CudaStream>()->cuda_stream();
-      OF_CUDA_CHECK(
-          (LaunchElemwiseTenary(cuda_stream, elem_cnt, cond_type, data_type, cond, x, y, z)));
+      LaunchElemwiseTenary(stream->As<CudaStream>(), elem_cnt, cond_type, data_type, cond, x, y, z);
     } else {
       // broadcast
       LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
