@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+DEFINE_THREAD_LOCAL_ENV_BOOL(MULTI_IN, false);
+
 class JobCompleter final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobCompleter);

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include <memory>
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/autotick.h"
@@ -23,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/common/cost_util.h"
 
@@ -42,6 +44,22 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
     if (out_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf()); }
     return Maybe<void>::Ok();
   }));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReInferLogicalBlobDesc(Job* job) {
+  for (auto& op_conf : *job->mutable_net()->mutable_op()) {
+    if (op_conf.has_input_conf()) {
+      InputOpConf* input_conf = op_conf.mutable_input_conf();
+      InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
+      // input_tensor->shape()->ToProto(blob_conf->mutable_shape());
+      Shape dummy_shape{4, 3};
+      dummy_shape.ToProto(blob_conf->mutable_shape());
+    }
+  }
+  // Use OpGraph init to InferLogicalBlobDesc with new input shape.
+  auto op_graph = std::make_unique<OpGraph>(*job);
+  op_graph->DumpLogicalBlobDesc(job);
   return Maybe<void>::Ok();
 }
 
@@ -148,6 +166,8 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
 #endif  // WITH_CUDA
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
+
+  if (ThreadLocalEnvBool<MULTI_IN>()) { JUST(ReInferLogicalBlobDesc(job)); }
 
   auto op_graph = std::make_unique<OpGraph>(*job);
   // Check op graph.
