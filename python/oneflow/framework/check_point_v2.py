@@ -208,6 +208,7 @@ def tensor_getstate(self):
             return {
                 "data": self.numpy(),
                 "dtype": self.dtype,
+                "device": "cpu",
             }
 
         if self.is_local:
@@ -580,14 +581,7 @@ def save(
 
     obj = {"protocol_version": PROTOCOL_VERSION, ONEFLOW_MAGIC_KEY: None, "data": obj}
 
-    def context():
-        return (
-            tensor_pickling_context(path, global_dst_rank, None, save_as_external_data)
-            if save_as_external_data
-            else contextlib.nullcontext()
-        )
-
-    with context():
+    with tensor_pickling_context(path, global_dst_rank, None, save_as_external_data):
         pickled_bytes = pickle.dumps(obj)
 
     def write_file():
