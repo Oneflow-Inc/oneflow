@@ -28,11 +28,16 @@ inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ON
 DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
 inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
 
-inline bool IsPythonStackGetterEnabled() {
+inline bool IsPythonStackGetterEnabledByDebugBuild() {
   if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr && std::getenv("ONEFLOW_DEBUG") == nullptr
       && std::getenv("ONEFLOW_PYTHON_STACK_GETTER") == nullptr) {
     return std::string(OF_PP_STRINGIZE(ONEFLOW_CMAKE_BUILD_TYPE)) == "Debug";
   }
+  return false;
+}
+
+inline bool IsPythonStackGetterEnabled() {
+  if (IsPythonStackGetterEnabledByDebugBuild()) { return true; }
   return ParseBooleanFromEnv("ONEFLOW_PYTHON_STACK_GETTER", IsInDebugMode());
 }
 
