@@ -22,6 +22,10 @@ struct GreaterInplaceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out) {
     FOR_RANGE(int32_t, i, 0, n) { out[i] = x[i] > y[i] ? static_cast<T>(1) : static_cast<T>(0); }
   }
+
+  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand, T* out) {
+    FOR_RANGE(int32_t, i, 0, n) { out[i] = x[i] > operand->As<T>() ? static_cast<T>(1) : static_cast<T>(0); }
+  }
 };
 
 #define INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CPU(cpp_data_type, data_type) \

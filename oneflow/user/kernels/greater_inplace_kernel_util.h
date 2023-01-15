@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_GREATER_INPLACE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_GREATER_INPLACE_KERNEL_UTIL_H_
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
@@ -25,6 +26,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 struct GreaterInplaceKernelUtil {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out);
+  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand, T* out);
   static void YBroadcastToX(ep::Stream* stream, const int64_t n, const T* x, const T* y,
                             T* broadcast_y, const ShapeView& x_shape, const ShapeView& y_shape) {
     int64_t x_ndim = x_shape.NumAxes();
@@ -47,4 +49,4 @@ struct GreaterInplaceKernelUtil {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_GREATER_INPLACE_KERNEL_UTIL_H_

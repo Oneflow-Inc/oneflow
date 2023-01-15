@@ -46,7 +46,7 @@ bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
 
 /*static*/ Maybe<void> BroadcastInplaceGreaterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  return BroadcastInplaceGreaterOp::InferLogicalTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> BroadcastInplaceGreaterOp::GetSbp(user_op::SbpContext* ctx) {
@@ -63,6 +63,33 @@ bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
 
 /*static*/ Maybe<void> BroadcastInplaceGreaterOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ScalarLogicalInplaceGreaterOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ScalarLogicalInplaceGreaterOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return ScalarLogicalInplaceGreaterOp::InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ScalarLogicalInplaceGreaterOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .Split(user_op::OpArg("out", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ScalarLogicalInplaceGreaterOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

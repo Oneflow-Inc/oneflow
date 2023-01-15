@@ -445,11 +445,12 @@ class BroadcastGreaterFunctor : public BinaryFunctor {
 class InplaceBroadcastGreaterFunctor {
  public:
   InplaceBroadcastGreaterFunctor() {
-    broadcast_greater_op_ = CHECK_JUST(
+    op_ = CHECK_JUST(
         one::OpBuilder("broadcast_inplace_greater").Input("x").Input("y").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
@@ -460,12 +461,12 @@ class InplaceBroadcastGreaterFunctor {
     JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    JUST(OpInterpUtil::Dispatch(*broadcast_greater_op_, input_vec, outputs.get()));
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get()));
     return outputs->at(0);
   }
 
  private:
-  std::shared_ptr<OpExpr> broadcast_greater_op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastGreaterEqualFunctor : public BinaryFunctor {
