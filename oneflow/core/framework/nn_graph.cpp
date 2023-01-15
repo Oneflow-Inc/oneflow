@@ -324,10 +324,11 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
+Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
-  CHECK_OR_RETURN(!runtime_inited_)
-      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
+
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
@@ -337,15 +338,16 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // Clear all backward pass scope
   ClearAllBackwardPassScope();
 
-  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
-
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::CompilePlanForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
@@ -389,7 +391,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0, true);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::InitRuntime() {
+  CHECK_OR_RETURN(!runtime_inited_)
+      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
@@ -402,7 +411,16 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0, true);
   JUST(LogProgress("[GraphCompile]" + name_ + " Done", true));
+
   runtime_inited_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(CompleteLogicalGraphForRuntime());
+  JUST(CompilePlanForRuntime());
+  JUST(InitRuntime());
+
   return Maybe<void>::Ok();
 }
 

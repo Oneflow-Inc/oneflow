@@ -795,7 +795,7 @@ class Graph(object):
     def _compile(self, *args, **kwargs):
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
-        self.finish_complie_and_init_runtime()
+        self.finish_compile_and_init_runtime()
         return eager_outputs
 
     def build_graph(self, *args, **kwargs):
@@ -831,7 +831,7 @@ class Graph(object):
             )
             raise
 
-    def finish_complie_and_init_runtime(self):
+    def finish_compile_and_init_runtime(self):
         additional_var_names = list()
         additional_var_tensors = list()
         for name, tensor in self._additional_variable_tobe_loaded.items():
@@ -857,11 +857,14 @@ class Graph(object):
                 self._debug_max_py_stack_depth,
                 self._debug_only_user_py_stack,
             ):
-                self._c_nn_graph.complie_and_init_runtime()
-            # Get compiled job
-            compiled_job_str = self._c_nn_graph.get_current_job_str()
-            self._compiled_job_proto = job_pb.Job()
-            self._compiled_job_proto.ParseFromString(compiled_job_str)
+                self._c_nn_graph.complete_graph_for_runtime()
+                # Get compiled job
+                compiled_job_str = self._c_nn_graph.get_current_job_str()
+                self._compiled_job_proto = job_pb.Job()
+                self._compiled_job_proto.ParseFromString(compiled_job_str)
+
+                self._c_nn_graph.compile_plan_for_runtime()
+                self._c_nn_graph.init_runtime()
 
             compile_and_init_end = time.perf_counter()
             self.__print(
@@ -980,7 +983,7 @@ class Graph(object):
             oneflow._oneflow_internal.FillVariableTensorMgr(
                 state_op_names, self._state_tensor_tuple
             )
-            # Complete the graph job proto
+            # Optimize the graph with compile passes.
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
@@ -1005,6 +1008,7 @@ class Graph(object):
                 self._shallow_repr()
                 + " end re-building graph outputs for optimizatioin.",
             )
+            # Create a c nn graph to run with lazy runtime.
             self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
                 self._name,
                 self._full_job_proto.SerializeToString(),

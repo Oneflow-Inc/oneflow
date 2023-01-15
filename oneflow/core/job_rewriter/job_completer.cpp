@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include <memory>
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/autotick.h"
@@ -147,8 +148,18 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
 #endif  // WITH_CUDA
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
-  JUST(CheckOpGraph(OpGraph(*job)));
-  compile_tc->Count("[GraphCompile]" + job_name + " CheckOpGraph", 1, true);
+
+  auto op_graph = std::make_unique<OpGraph>(*job);
+  // Check op graph.
+  JUST(CheckOpGraph(*op_graph));
+  // Log op graph.
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    const JobDesc& job_desc = GlobalJobDesc();
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+    op_graph->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                + "_op_graph.dot");
+  }
+  compile_tc->Count("[GraphCompile]" + job_name + " CheckAndLogOpGraph", 1, true);
   return Maybe<void>::Ok();
 }
 
