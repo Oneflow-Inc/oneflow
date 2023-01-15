@@ -29,6 +29,10 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
+#define CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ \
+  CUDA_PRIMITIVE_UINT32_TYPE_SEQ         \
+  CUDA_PRIMITIVE_ALL_TYPE_SEQ
+
 constexpr size_t kMaxPackSize = 4;
 
 template<size_t max_pack_size, typename Src, typename Dst>
@@ -358,8 +362,6 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   Scalar attr0, attr1;
 };
 
-#define BROADCAST_ELEMENTWISE_CAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCast)
-
 template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
                                                                         Scalar attr1) {
@@ -408,7 +410,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
-                CUDA_PRIMITIVE_ALL_TYPE_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+                CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ, CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY

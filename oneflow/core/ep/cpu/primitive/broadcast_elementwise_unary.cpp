@@ -30,6 +30,10 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
+#define CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ \
+  CPU_PRIMITIVE_UINT32_TYPE_SEQ         \
+  CPU_PRIMITIVE_ALL_TYPE_SEQ
+
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {
     if ((i == num_dims - 1 && strides[i] != 1)
@@ -171,8 +175,6 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   Scalar attr0, attr1;
 };
 
-#define BROADCAST_ELEMENTWISE_CAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCast)
-
 template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
                                                                         Scalar attr1) {
@@ -221,7 +223,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
-                CPU_PRIMITIVE_ALL_TYPE_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ, CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
