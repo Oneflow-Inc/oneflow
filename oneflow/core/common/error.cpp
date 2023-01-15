@@ -342,9 +342,14 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
                        "Related Python stack trace:");
         if (IsPythonStackGetterEnabledByDebugBuild()) {
-          fmt::format_to(std::back_inserter(error_str), " (You are seeing this stack trace because you compiled OneFlow with CMAKE_BUILD_TYPE=Debug. If you want to see it even with other CMAKE_BUILD_TYPEs, you can set ONEFLOW_DEBUG or ONEFLOW_PYTHON_STACK_GETTER to 1)");
+          fmt::format_to(
+              std::back_inserter(error_str),
+              " (You are seeing this stack trace because you compiled OneFlow with "
+              "CMAKE_BUILD_TYPE=Debug. If you want to see it even with other CMAKE_BUILD_TYPEs, "
+              "you can set ONEFLOW_DEBUG or ONEFLOW_PYTHON_STACK_GETTER to 1)");
         }
-        fmt::format_to(std::back_inserter(error_str), "\n{}", stack_getter->GetFormattedStack(frame));
+        fmt::format_to(std::back_inserter(error_str), "\n{}",
+                       stack_getter->GetFormattedStack(frame));
       } else {
         fmt::format_to(
             std::back_inserter(error_str),
