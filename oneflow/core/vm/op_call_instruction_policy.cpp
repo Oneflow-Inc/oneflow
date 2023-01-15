@@ -91,10 +91,6 @@ json LoadTimeDataset() {
 }
 
 Maybe<double> GetDatasetComputeTime(const json& j, OpCallInstructionPolicy* operand) {
-  if (operand->outputs().empty()) {
-    LOG(INFO) << operand->opkernel().op_type_name();
-    return 0;
-  }
   const std::vector<std::string> zero_time_list{"empty",
                                                 "identity",
                                                 "constant",
@@ -110,12 +106,19 @@ Maybe<double> GetDatasetComputeTime(const json& j, OpCallInstructionPolicy* oper
                                                 "nll",
                                                 "nll_grad",
                                                 "uniform",
+                                                "uniform_int",
                                                 "fill_",
                                                 "slice_update",
                                                 "normal",
-                                                "scalar_add",
-                                                "adaptive_avg_pool2d",
-                                                "adaptive_avg_pool2d_grad"};
+                                                // ddp
+                                                "eager_ccl_broadcast",
+                                                "eager_ccl_all_reduce",
+                                                "eager_nccl_touch",
+                                                "scalar_mul",
+                                                
+                                                // "adaptive_avg_pool2d",
+                                                // "adaptive_avg_pool2d_grad"
+  };
   for (const auto& x : zero_time_list) {
     if (operand->opkernel().op_type_name() == x) { return 0; }
   }

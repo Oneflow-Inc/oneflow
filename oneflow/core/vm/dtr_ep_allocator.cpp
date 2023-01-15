@@ -83,6 +83,7 @@ DtrEpAllocator::offset_t DtrEpAllocator::get_offset(const char* mem_ptr) const {
 void DtrEpAllocator::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo->tensor_storage().get();
+  CHECK_NOTNULL(piece->tensor);
   if (dtr::debug_level() >= 1) {
     LOG(INFO) << "tensor " << ebo->tensor_storage()->id() << " is allocated at "
               << get_offset(mem_ptr) << ", left: " << piece->is_left;
@@ -119,11 +120,13 @@ void DtrEpAllocator::DeallocatePiece(Piece* piece) {
 }
 
 void DtrEpAllocator::InsertPiece2PtrMap(Piece* piece) {
+  VLOG(2) << "insert piece, offset " << get_offset(piece->ptr);
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
 
 void DtrEpAllocator::ErasePieceFromPtrMap(Piece* piece) {
+  VLOG(2) << "erase piece, offset " << get_offset(piece->ptr);
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
@@ -144,6 +147,34 @@ double get_cost(const vm::TensorStorage* storage, size_t size) {
 
   CHECK(!std::isnan(cost));
   return cost;
+}
+
+void DtrEpAllocator::CheckPieces() {
+  auto it = ptr2piece_.cbegin();
+  for (int i = 0; i < ptr2piece_.size(); ++i) {
+    Piece* piece = it->second;
+    if (piece->tensor == nullptr) {
+      CHECK(piece->is_free);
+    }
+    if (piece->is_free) {
+      CHECK_ISNULL(piece->tensor);
+    }
+    if (i != 0) {
+      CHECK_EQ(piece->prev->next, piece);
+      CHECK_EQ(piece->prev->ptr + piece->prev->size, piece->ptr);
+      auto it2 = it;
+      --it2;
+      CHECK_EQ(piece->prev, it2->second);
+    }
+    if (i != ptr2piece_.size() - 1) {
+      CHECK_EQ(piece->next->prev, piece);
+      CHECK_EQ(piece->ptr + piece->size, piece->next->ptr);
+      auto it2 = it;
+      ++it2;
+      CHECK_EQ(piece->next, it2->second);
+    }
+    it++;
+  }
 }
 
 void DtrEpAllocator::DisplayAllPieces() {
@@ -259,6 +290,7 @@ auto DtrEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piec
     CHECK_LE(offset_in_piece, piece->size);
     Piece* new_piece = AllocatePiece();
     new_piece->ptr = piece->ptr + offset_in_piece;
+    VLOG(2) << get_offset(piece->ptr);
     new_piece->size = piece->size - offset_in_piece;
     piece->size = offset_in_piece;
 
@@ -297,7 +329,7 @@ auto DtrEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piec
     // piece1 is already free
     InsertToFreeList(piece1);
   }
-  piece2->is_free = false;
+  // piece2->is_free = false;
   if (piece3 != nullptr) {
     piece3->is_free = true;
     InsertToFreeList(piece3);
@@ -418,7 +450,9 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
         PNT3(offset_in_memory);
         if (offset_in_memory != SIZE_MAX) {
           const offset_t offset_in_piece = offset_in_memory - get_offset(piece->ptr);
-          return AllocateMemoryInPiece(piece, offset_in_piece, aligned_size);
+          auto ret = AllocateMemoryInPiece(piece, offset_in_piece, aligned_size);
+          CheckPieces();
+          return ret;
         }
       }
     }
@@ -645,6 +679,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   }
   *mem_ptr = piece->ptr;
   total_allocate_bytes_ += size;
+  piece->is_free = false;
 
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
@@ -674,20 +709,26 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   Piece* next_p = piece->next;
   Piece* prev_p = piece->prev;
 
+  VLOG(2) << "deallocate offset: " << get_offset(piece->ptr) << ", size: " << piece->size
+    << ", prev: " << prev_p << ", next: " << next_p;
+
   if (next_p != nullptr && next_p->is_free) {
     CHECK_EQ(next_p->ptr, piece->ptr + piece->size);
     EraseFromFreeList(next_p);
+    VLOG(2) << "merge with next_p";
     MergeNeighbourFreePiece(piece, next_p);
   }
 
   if (prev_p != nullptr && prev_p->is_free) {
     CHECK_EQ(piece->ptr, prev_p->ptr + prev_p->size);
     EraseFromFreeList(prev_p);
+    VLOG(2) << "merge with prev_p";
     MergeNeighbourFreePiece(prev_p, piece);
     last_piece_insert_to_free_list = prev_p;
   }
   InsertToFreeList(last_piece_insert_to_free_list);
   total_deallocate_bytes_ += size;
+  CheckPieces();
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "id: " << id_ << "deallocate " << (size / 1024. / 1024.)
   //             << "MB, total deallocate bytes: " << (total_deallocate_bytes_ / 1024. / 1024.)
