@@ -48,7 +48,7 @@ def _test_tensor_offload_d2h(test_case, input, tensor_mem):
         if tensor_mem != 0:
             test_case.assertTrue(before_used > after_used)
     elif offload_tensor_test_mem_mode == 3:
-        print("cuda mem change value:",before_used - after_used)
+        print("cuda mem change value:", before_used - after_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -71,7 +71,7 @@ def _test_tensor_load_h2d(test_case, input, tensor_mem):
         if tensor_mem != 0:
             test_case.assertTrue(after_used > before_used)
     elif offload_tensor_test_mem_mode == 3:
-        print("cuda mem change value:",after_used - before_used)
+        print("cuda mem change value:", after_used - before_used)
     test_case.assertEqual(before_id, after_id)
 
 
@@ -209,7 +209,7 @@ class TestTensorOffload(flow.unittest.TestCase):
         if offload_tensor_test_mem_mode == 2:
             test_case.assertTrue(after_used > before_used)
         elif offload_tensor_test_mem_mode == 3:
-            print("cpu mem change value:",after_used - before_used)
+            print("cpu mem change value:", after_used - before_used)
         test_case.assertEqual(before_id, after_id)
 
         cur_used = flow._oneflow_internal.GetCPUMemoryUsed()
@@ -220,7 +220,7 @@ class TestTensorOffload(flow.unittest.TestCase):
         if offload_tensor_test_mem_mode == 2:
             test_case.assertTrue(after_used < cur_used)
         elif offload_tensor_test_mem_mode == 3:
-            print("cpu mem change value:",cur_used - after_used)
+            print("cpu mem change value:", cur_used - after_used)
         test_case.assertEqual(before_id, after_id)
 
 
