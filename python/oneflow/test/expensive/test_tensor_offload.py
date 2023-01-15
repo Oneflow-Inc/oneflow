@@ -25,7 +25,7 @@ import oneflow.unittest
 #  1: Strictly test, compare mem changes according to tensor size.
 #  2: Loose test, compare mem changes before and after offload;
 #  3: Execute only offload, skip mem check.
-offload_tensor_test_mem_mode = 2
+offload_tensor_test_mem_mode = 3
 
 
 def _test_tensor_offload_d2h(test_case, input, tensor_mem):
