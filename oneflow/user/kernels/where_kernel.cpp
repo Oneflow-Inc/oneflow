@@ -45,7 +45,7 @@ class WhereKernel final : public user_op::OpKernel, public user_op::CudaGraphSup
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
+    if (out->shape_view().elem_cnt() == 0) { return; }
     auto primitive = NewPrimitive(ctx);
     primitive->Launch(ctx->stream(), cond->data_type(), cond->shape_view().size(),
                       cond->shape_view().ptr(), cond->dptr(), x->data_type(),

@@ -21,20 +21,30 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
-  if (a_shape == b_shape) { return a_shape; }
-  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
-  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
-  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, broadcast_shape.NumAxes()) {
-    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
-                    || a_extend_shape.At(i) == b_extend_shape.At(i))
-        << Error::RuntimeError() << "The size of tensor a (" << a_extend_shape.At(i)
-        << ") must match the size of tensor b (" << b_extend_shape.At(i)
-        << ") at non-singleton dimension " << i;
-    broadcast_shape.Set(i, std::max(a_extend_shape.At(i), b_extend_shape.At(i)));
+Maybe<Shape> GetBroadcastShape(const Shape& cond_shape, const Shape& x_shape,
+                               const Shape& y_shape) {
+  size_t ndim = std::max(x_shape.size(), y_shape.size());
+  ndim = std::max(ndim, cond_shape.size());
+
+  DimVector broadcast_dim_vec(ndim);
+  for (size_t i = 0; i < ndim; ++i) {
+    size_t cond_lpad = ndim - cond_shape.size();
+    size_t x_lpad = ndim - x_shape.size();
+    size_t y_lpad = ndim - y_shape.size();
+    int64_t cond_dim = (i < cond_lpad) ? 1 : cond_shape[i - cond_lpad];
+    int64_t x_dim = (i < x_lpad) ? 1 : x_shape[i - x_lpad];
+    int64_t y_dim = (i < y_lpad) ? 1 : y_shape[i - y_lpad];
+    int64_t max_dim = std::max(x_dim, y_dim);
+    max_dim = std::max(max_dim, cond_dim);
+    broadcast_dim_vec[i] = max_dim;
+    if ((cond_dim == 1 && cond_dim != max_dim) || (x_dim == 1 && x_dim != max_dim)
+        || (y_dim == 1 && y_dim != max_dim)) {
+      return Error::RuntimeError() << "The tensor cond with size " << cond_shape.ToString()
+                                   << ", x with size " << x_shape.ToString() << " and y with size "
+                                   << y_shape.ToString() << " are not broadcastable.";
+    }
   }
-  return broadcast_shape;
+  return Shape(broadcast_dim_vec);
 }
 
 }  // namespace
@@ -43,10 +53,7 @@ Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
-
-  Shape broadcast_shape = *JUST(GetBroadcastShape(x_shape, y_shape));
-  broadcast_shape = *JUST(GetBroadcastShape(broadcast_shape, cond_shape));
-  ctx->SetOutputShape("out", 0, broadcast_shape);
+  ctx->SetOutputShape("out", 0, *JUST(GetBroadcastShape(cond_shape, x_shape, y_shape)));
   return Maybe<void>::Ok();
 }
 
@@ -69,8 +76,7 @@ Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
   const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  Shape broadcast_shape = *JUST(GetBroadcastShape(x_shape, y_shape));
-  broadcast_shape = *JUST(GetBroadcastShape(broadcast_shape, cond_shape));
+  Shape broadcast_shape = *JUST(GetBroadcastShape(cond_shape, x_shape, y_shape));
   const size_t ndim = broadcast_shape.size();
 
   std::vector<user_op::OpArg> broadcast_args;
