@@ -12,19 +12,6 @@ int64_t unique_id_2() {
   return id++;
 }
 
-static double GetEstimatedComputeTime(const OpCallInstructionPolicy& operand) {
-  const auto& inputs = operand.inputs();
-  const auto& outputs = operand.outputs();
-  size_t estimated_compute_time = 0;
-  for (const auto& input : inputs) {
-    estimated_compute_time += input->tensor_storage()->blob_bytes();
-  }
-  for (const auto& output : outputs) {
-    estimated_compute_time += output->tensor_storage()->blob_bytes();
-  }
-  return estimated_compute_time;
-}
-
 }  // namespace
 
 TensorStorage::TensorStorage()
@@ -85,7 +72,7 @@ void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
   // copy a new OpCallInstructionPolicy
   compute_op_ = std::make_shared<DtrOpCallInstructionPolicy>(compute_op);
   Singleton<dtr::Env>::Get()->ops.push_back(compute_op_.get());
-  compute_time_ = GetEstimatedComputeTime(compute_op);
+  compute_time_ = CHECK_JUST(dtr::GetComputeTime(compute_op));
 }
 
 std::string TensorStorage::compute_op_type_name() const {
