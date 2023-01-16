@@ -1907,6 +1907,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mode,
+    """
+    See :func:`oneflow.mode`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sum,
     """
     input.sum(dim=None, keepdim=False) -> Tensor
