@@ -36,7 +36,7 @@ def is_in_memory(tensor):
 placeholder_size = 0
 
 def allocated_memory(device, include_test_placeholder=False):
-    if not flow._oneflow_internal.flags.with_cuda():
+    if device == 'cuda' and not flow.sysconfig.with_cuda():
         return 0
     return flow._oneflow_internal.dtr.allocated_memory(device) - (0 if include_test_placeholder else placeholder_size)
 
@@ -84,6 +84,8 @@ def generate_placeholder(size_mb, device):
 
 
 def memory_budget(budget_mb, device):
+    if device == 'cuda' and not oneflow.sysconfig.with_cuda():
+        return unittest.skip("Skip CUDA tests on CPU build")
     def deco(f):
         @functools.wraps(f)
         def new_f(*args, **kwargs):
