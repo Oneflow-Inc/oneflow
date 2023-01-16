@@ -406,6 +406,9 @@ static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewrit
   }
   return failure();
 }
+static LogicalResult IsNotNestedInJit(PatternRewriter& rewriter, Operation* mul) {
+  return success(mul->getParentOfType<oneflow::Job>());
+}
 
 }  // namespace
 
@@ -436,6 +439,7 @@ void populateConstraints(RewritePatternSet& patterns) {
 #define PDLL_REGISTER(NAME) pdll_patterns.registerConstraintFunction(#NAME, NAME);
 
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
+  PDLL_REGISTER(IsNotNestedInJit);
 
 #undef PDLL_REGISTER
 }
