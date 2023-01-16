@@ -115,6 +115,11 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
+  // For offloading between devices
+  virtual Maybe<void> offload() = 0;
+  virtual Maybe<void> load() = 0;
+  virtual Maybe<bool> is_offloaded() const = 0;
+
   virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
     OF_UNIMPLEMENTED();
   };
@@ -278,6 +283,10 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
+  Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
   Maybe<LocalTensor> AsLocalTensor() override;
   Maybe<GlobalTensor> AsGlobalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
@@ -426,6 +435,11 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
+  virtual Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  virtual Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
+  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
   virtual Maybe<LocalTensor> AsLocalTensor() override {
     if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
       return local_tensor;
@@ -565,6 +579,10 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
+  Maybe<void> offload() override;
+  Maybe<void> load() override;
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
+
   Maybe<void> set_impl(std::shared_ptr<LocalTensorImpl> impl) {
     impl_ = impl;
     return Maybe<void>::Ok();
@@ -581,6 +599,8 @@ class LocalTensor final : public TensorIf<LocalTensor> {
 
  private:
   std::shared_ptr<LocalTensorImpl> impl_;
+  std::shared_ptr<LocalTensorImpl> offloaded_impl_;
+  bool is_offloaded_{false};
 };
 
 class GlobalTensor final : public TensorIf<GlobalTensor> {
@@ -690,6 +710,10 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
+  Maybe<void> offload() override;
+  Maybe<void> load() override;
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
+
   Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<GlobalTensor> AsGlobalTensor() override {
     return std::dynamic_pointer_cast<GlobalTensor>(shared_from_this());
@@ -697,6 +721,8 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 
  private:
   std::shared_ptr<GlobalTensorImpl> impl_;
+  std::shared_ptr<GlobalTensorImpl> offloaded_impl_;
+  bool is_offloaded_{false};
 };
 
 }  // namespace one

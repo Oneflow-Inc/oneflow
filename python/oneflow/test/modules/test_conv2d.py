@@ -1865,6 +1865,31 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=5)
+    def test_conv2d_auto_squeeze_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim0=channels).to(device)
+        y = m(x)
+        return y
+
     @autotest(n=5, check_graph=False)
     def test_conv2d_0size_with_random_data(test_case):
         channels = random(1, 6)

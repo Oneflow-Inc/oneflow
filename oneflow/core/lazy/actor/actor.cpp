@@ -520,8 +520,10 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst) {
   CHECK_EQ(regst_reading_cnt_it->second, 0);
 
   int64_t real_consumer_cnt = 0;
+  ActorMsg tpl_msg = ActorMsg::BuildRegstMsgToConsumer(actor_id_, 0, regst);
   for (int64_t consumer : regst->consumers_actor_id()) {
-    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+    tpl_msg.set_dst_actor_id(consumer);
+    EnqueueAsyncMsg(tpl_msg);
     real_consumer_cnt += 1;
   }
   total_reading_cnt_ += real_consumer_cnt;
@@ -660,7 +662,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
-    Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+    sync_msg_queue_.emplace_back(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
   }
@@ -687,6 +689,11 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 }
 
 void Actor::AsyncSendQueuedMsg() {
+  if (!sync_msg_queue_.empty()) {
+    Singleton<ActorMsgBus>::Get()->SendMsgsWithoutCommNet(sync_msg_queue_.data(),
+                                                          sync_msg_queue_.size(), thrd_id_);
+    sync_msg_queue_.clear();
+  }
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
