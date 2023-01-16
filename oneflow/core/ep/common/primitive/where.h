@@ -54,6 +54,16 @@ struct BroadcastElementwiseWhereParams {
   void* z{};
 };
 
+template<typename T, int pack_size>
+struct alignas(sizeof(T) * pack_size) Packed {
+  OF_DEVICE_FUNC Packed() {
+    // do nothing
+  }
+  union {
+    T elem[pack_size];
+  };
+};
+
 inline bool IsDimsEquals(size_t ndim, const int64_t* a_dims, const int64_t* b_dims) {
   for (size_t i = 0; i < ndim; ++i) {
     if (a_dims[i] != b_dims[i]) { return false; }
@@ -109,23 +119,6 @@ inline void GetCompactBroadcastDims(const size_t cond_ndim, const int64_t* cond_
     }
   }
 }
-
-template<typename T, int N>
-struct GetPackType {
-  using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
-};
-
-template<typename T, int N>
-using PackType = typename GetPackType<T, N>::type;
-
-template<typename T, int N>
-union Pack {
-  static_assert(sizeof(PackType<T, N>) == sizeof(T) * N, "");
-  OF_DEVICE_FUNC Pack() {}
-
-  PackType<T, N> storage;
-  T elem[N];
-};
 
 template<typename T, typename CondT, typename IndexT, size_t ndim, size_t cond_pack_size,
          size_t x_pack_size, size_t y_pack_size>

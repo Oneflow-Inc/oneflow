@@ -34,10 +34,10 @@ void BroadcastElementwiseWhereKernel(CpuStream* cpu_stream,
   static_assert(x_pack_size == pack_size || x_pack_size == 1, "");
   static_assert(y_pack_size == pack_size || y_pack_size == 1, "");
 
-  const auto* cond = reinterpret_cast<const PackType<CondT, cond_pack_size>*>(params.cond);
-  const auto* x = reinterpret_cast<const PackType<T, x_pack_size>*>(params.x);
-  const auto* y = reinterpret_cast<const PackType<T, y_pack_size>*>(params.y);
-  auto* z = reinterpret_cast<PackType<T, pack_size>*>(params.z);
+  const auto* cond_pack = reinterpret_cast<const Packed<CondT, cond_pack_size>*>(params.cond);
+  const auto* x_pack = reinterpret_cast<const Packed<T, x_pack_size>*>(params.x);
+  const auto* y_pack = reinterpret_cast<const Packed<T, y_pack_size>*>(params.y);
+  auto* z_pack = reinterpret_cast<Packed<T, pack_size>*>(params.z);
 
   WhereFunctor<T, CondT> where_fn{};
 
@@ -58,22 +58,15 @@ void BroadcastElementwiseWhereKernel(CpuStream* cpu_stream,
       const IndexT x_offset = params.x_index_helper.NdIndexToOffset(x_index);
       const IndexT y_offset = params.y_index_helper.NdIndexToOffset(y_index);
 
-      Pack<CondT, cond_pack_size> cond_pack;
-      Pack<T, x_pack_size> x_pack;
-      Pack<T, y_pack_size> y_pack;
-      cond_pack.storage = cond[cond_offset];
-      x_pack.storage = x[x_offset];
-      y_pack.storage = y[y_offset];
-
-      Pack<T, pack_size> z_pack;
       for (size_t j = 0; j < pack_size; ++j) {
-        const CondT cond_val =
-            (cond_pack_size == pack_size) ? cond_pack.elem[j] : cond_pack.elem[0];
-        const T x_val = (x_pack_size == pack_size) ? x_pack.elem[j] : x_pack.elem[0];
-        const T y_val = (y_pack_size == pack_size) ? y_pack.elem[j] : y_pack.elem[0];
-        z_pack.elem[j] = where_fn(static_cast<bool>(cond_val), x_val, y_val);
+        const CondT cond_val = (cond_pack_size == pack_size) ? cond_pack[cond_offset].elem[j]
+                                                             : cond_pack[cond_offset].elem[0];
+        const T x_val =
+            (x_pack_size == pack_size) ? x_pack[x_offset].elem[j] : x_pack[x_offset].elem[0];
+        const T y_val =
+            (y_pack_size == pack_size) ? y_pack[y_offset].elem[j] : y_pack[y_offset].elem[0];
+        z_pack[offset].elem[j] = where_fn(static_cast<bool>(cond_val), x_val, y_val);
       }
-      z[offset] = z_pack.storage;
     }
   });
 }
