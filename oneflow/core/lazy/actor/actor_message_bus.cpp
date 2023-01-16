@@ -52,4 +52,8 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   Singleton<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
 }
 
+void ActorMsgBus::SendMsgsWithoutCommNet(const ActorMsg* msgs, size_t n, int64_t thrd_id) {
+  Singleton<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msgs, msgs + n);
+}
+
 }  // namespace oneflow
