@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -26,12 +24,10 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
-
-#include <sstream>
-#include <bitset>
 
 namespace oneflow {
 namespace one {
@@ -891,6 +887,40 @@ class MedianWithIndicesFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
                                 const bool& keepdim) const {
+    int32_t axis = dim;
+    const int64_t ndim = x->ndim();
+    axis = JUST(maybe_wrap_dim(axis, ndim));
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
+    if (axis != ndim - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ModeFunctor {
+ public:
+  ModeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("mode").Input("input").Output("values").Output("indices").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool keepdim) const {
     int32_t axis = dim;
     const int64_t ndim = x->ndim();
     axis = JUST(maybe_wrap_dim(axis, ndim));
@@ -1903,6 +1933,72 @@ class InvFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DetFunctor {
+ public:
+  DetFunctor() {
+    det_op_ = CHECK_JUST(one::OpBuilder("det").Input("x").Output("y").Build());
+    lu_decomposition_op_ = CHECK_JUST(
+        one::OpBuilder("lu_decomposition").Input("x").Output("LU").Output("pivot").Build());
+  }
+  Maybe<Tensor> GetPivotDet(const std::shared_ptr<Tensor>& pivot) const {
+    std::shared_ptr<Tensor> arange = nullptr;
+    int64_t end = pivot->shape()->At(pivot->ndim() - 1) + 1;
+    if (pivot->is_local()) {
+      arange = JUST(functional::Arange(1, end, 1, pivot->dtype(), JUST(pivot->device())));
+    } else {
+      auto pivot_nd_sbp = JUST(pivot->nd_sbp());
+      std::vector<Symbol<SbpParallel>> nd_sbp(pivot_nd_sbp->sbp_parallel_size());
+      {
+        for (int i = 0; i < nd_sbp.size(); ++i) { nd_sbp[i] = pivot_nd_sbp->sbp_parallel(i); }
+      }
+      arange = JUST(functional::GlobalArange(1, end, 1, pivot->dtype(),
+                                             JUST(pivot->parallel_desc()), nd_sbp));
+    }
+    return sequence_function(functional::BroadcastNotEqual)
+        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false); })
+        .then([](const auto& x) { return functional::ScalarFMod(x, Scalar(2), true); })
+        .then([](const auto& x) { return functional::ScalarMul(x, Scalar(-2), true); })
+        .then([](const auto& x) { return functional::ScalarAdd(x, Scalar(1), Scalar(1), true); })
+        .call(arange, pivot);
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    const int64_t xdims = x->ndim();
+    if (xdims < 2) {
+      return Error::RuntimeError() << "linalg.det: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(xdims - 1) != x->dim(xdims - 2)) {
+      return Error::RuntimeError()
+             << "linalg.det: A must be batches of square matrices, "
+             << "but they are " << x->dim(xdims - 2) << " by " << x->dim(xdims - 1) << " matrices";
+    }
+
+    DeviceType x_device_type = DeviceType::kInvalidDevice;
+    if (x->is_local()) {
+      x_device_type = JUST(x->device())->enum_type();
+    } else if (x->is_global()) {
+      x_device_type = JUST(x->parallel_desc())->device_type();
+    }
+
+    if (x_device_type == DeviceType::kCPU) {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*det_op_, {x}, {}));
+    } else if (x_device_type == DeviceType::kCUDA) {
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*lu_decomposition_op_, {x}, {}));
+      auto LU = result->at(0);
+      auto pivot = result->at(1);
+      auto LU_det = JUST(
+          functional::ReduceProd(JUST(functional::Diagonal(LU, 0, -2, -1)), {-1}, false, NullOpt));
+      return functional::Mul(JUST(GetPivotDet(pivot)), LU_det);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Det: Only support cpu and cuda device.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> det_op_;
+  std::shared_ptr<OpExpr> lu_decomposition_op_;
+};
+
 class ClampGradFunctor {
  public:
   ClampGradFunctor() {
@@ -2283,8 +2379,8 @@ class StandardDeviationFunctor {
 
       when we are in the last sqrt,
       if the value in the radical is <= 0, it may cause the result gradient to appear
-      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are different.
-      Use abs(absolute value) can keep it consistent with pytorch:
+      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are
+      different. Use abs(absolute value) can keep it consistent with pytorch:
 
       const auto& abs = JUST(functional::Abs(sub));
       return functional::Sqrt(abs);
@@ -2743,12 +2839,12 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
   }
 
   // we now work with the following permutations / shapes.
-  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
-  // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
-  // "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro, summed, ro"
-  // permuted with rpermutation and the three flattened then the permuted output is a view of
-  // bmm(left, right) finally, opermutation reverts the permutation to the original order of
-  // dimensions
+  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output
+  // -> permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions
+  // left: "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro,
+  // summed, ro" permuted with rpermutation and the three flattened then the permuted output is a
+  // view of bmm(left, right) finally, opermutation reverts the permutation to the original order
+  // of dimensions
   std::vector<int32_t> out_size;
   for (auto& d : lro) out_size.push_back(left->shape()->At(d));
   for (auto& d : lo) out_size.push_back(left->shape()->At(d));
@@ -3896,6 +3992,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AminFunctor>("Amin");
   m.add_functor<MedianFunctor>("Median");
   m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
+  m.add_functor<ModeFunctor>("Mode");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
@@ -3985,6 +4082,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
+  m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<StftFunctor>("Stft");
