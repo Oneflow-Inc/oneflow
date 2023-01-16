@@ -56,7 +56,7 @@ Maybe<void> Upfirdn2dOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   }
 
   out->set_is_dynamic(input.is_dynamic());
-  out->set_shape(Shape(out_shape));
+  out->set_shape(Shape(input_shape));
 
   return Maybe<void>::Ok();
 }

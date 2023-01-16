@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/atomic.cuh"
@@ -33,6 +34,7 @@ struct UpFirDn2DKernelParams {
   int32_t pad_y1;
 
   int32_t major_dim;
+  int32_t in_c;
   int32_t in_h;
   int32_t in_w;
   int32_t minor_dim;
@@ -42,6 +44,7 @@ struct UpFirDn2DKernelParams {
   int32_t out_w;
   int32_t loop_major;
   int32_t loop_x;
+  int32_t flip = 0;
 };
 
 struct UpFirDn2DModeParams {
@@ -91,8 +94,8 @@ __global__ void UpFirDn2DLargeForward(const T* input, const T* kernel, T* out,
       int32_t x_py = p.in_w * p.minor_dim;
       int32_t k_py = -p.up_y * p.kernel_w;
 
-      for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
+      for (int32_t y = 0; y < h; y++) {
+        for (int32_t x = 0; x < w; x++) {
           v += static_cast<T>(*x_p) * static_cast<T>(*k_p);
           x_p += x_px;
           k_p += k_px;
@@ -109,38 +112,42 @@ __global__ void UpFirDn2DLargeForward(const T* input, const T* kernel, T* out,
 }
 
 template<typename T, int32_t up_x, int32_t up_y, int32_t down_x, int32_t down_y, int32_t kernel_h,
-         int32_t kernel_w, int32_t tile_out_h, int32_t tile_out_w>
-__global__ void UpFirDn2DForward(const T* input, const T* kernel, T* out,
+         int32_t kernel_w, int32_t tile_out_h, int32_t tile_out_w, int32_t loop_minor>
+static __global__ void UpFirDn2DForward(const T* input, const T* kernel, T* out,
                                  const UpFirDn2DKernelParams p) {
   const int32_t tile_in_h = ((tile_out_h - 1) * down_y + kernel_h - 1) / up_y + 1;
   const int32_t tile_in_w = ((tile_out_w - 1) * down_x + kernel_w - 1) / up_x + 1;
 
   __shared__ volatile float sk[kernel_h][kernel_w];
-  __shared__ volatile float sx[tile_in_h][tile_in_w];
+  __shared__ volatile float sx[tile_in_h][tile_in_w][loop_minor];
 
-  int32_t minor_idx = blockIdx.x;
-  int32_t tile_out_y = minor_idx / p.minor_dim;
-  minor_idx -= tile_out_y * p.minor_dim;
+  int32_t minor_base = blockIdx.x;
+  int32_t tile_out_y = minor_base / p.minor_dim;
+  minor_base -= tile_out_y * p.minor_dim;
+  minor_base *= loop_minor;
   tile_out_y *= tile_out_h;
   int32_t tile_out_x_base = blockIdx.y * p.loop_x * tile_out_w;
-  int32_t major_idx_base = blockIdx.z * p.loop_major;
+  int32_t major_base = blockIdx.z * p.loop_major;
 
-  if (tile_out_x_base >= p.out_w | tile_out_y >= p.out_h | major_idx_base >= p.major_dim) {
+  if (tile_out_x_base >= p.out_w | tile_out_y >= p.out_h | major_idx_base >= p.major_dim)
     return;
-  }
 
   for (int32_t tap_idx = threadIdx.x; tap_idx < kernel_h * kernel_w; tap_idx += blockDim.x) {
     int32_t ky = tap_idx / kernel_w;
     int32_t kx = tap_idx - ky * kernel_w;
-    T v = 0.0;
+    T v = 0;
     if (kx < p.kernel_w & ky < p.kernel_h) {
-      v = kernel[(p.kernel_h - 1 - ky) * p.kernel_w + (p.kernel_w - 1 - kx)];
+      int kkx = (p.flip) ? kx : p.kernel_w - 1 - kx;
+      int kky = (p.flip) ? ky : p.kernel_h - 1 - ky;
+      v = kernel[kkx * p.kernel_w + kky * p.kernel_h];
     }
     sk[ky][kx] = v;
   }
 
-  for (int32_t loop_major = 0, major_idx = major_idx_base;
-       loop_major < p.loop_major & major_idx < p.major_dim; loop_major++, major_idx++) {
+  for (int32_t major_idx = 0, major = major_base; major_idx < p.loop_major & major < p.major_dim; major_idx++, major++) {
+    int32_t nc_base = major * p.major_dim + minor_base;
+    int32_t n = nc_base / p.in_c;
+    int32_t c_base = nc_base - n * p.in_c;
     for (int32_t loop_x = 0, tile_out_x = tile_out_x_base; loop_x < p.loop_x & tile_out_x < p.out_w;
          loop_x++, tile_out_x += tile_out_w) {
       int32_t tile_mid_x = tile_out_x * down_x + up_x - 1 - p.pad_x0;
@@ -150,27 +157,33 @@ __global__ void UpFirDn2DForward(const T* input, const T* kernel, T* out,
 
       __syncthreads();
 
-      for (int32_t in_idx = threadIdx.x; in_idx < tile_in_h * tile_in_w; in_idx += blockDim.x) {
+      for (int32_t in_idx = threadIdx.x; in_idx < tile_in_h * tile_in_w * loop_minor; in_idx += blockDim.x) {
+        int32_t rel_c = in_idx;
         int32_t rel_in_y = in_idx / tile_in_w;
-        int32_t rel_in_x = in_idx - rel_in_y * tile_in_w;
+        int32_t rel_in_x = rel_c / loop_minor;
+        rel_c -= rel_in_x * loop_minor;
+        rel_in_x -= rel_in_y * tile_in_w;
+        int32_t c = c_base + rel_c;
         int32_t in_x = rel_in_x + tile_in_x;
         int32_t in_y = rel_in_y + tile_in_y;
 
-        T v = 0.0;
+        T v = 0;
 
-        if (in_x >= 0 & in_y >= 0 & in_x < p.in_w & in_y < p.in_h) {
-          v = input[((major_idx * p.in_h + in_y) * p.in_w + in_x) * p.minor_dim + minor_idx];
+        if (in_x >= 0 & in_y >= 0 & in_x < p.in_w & in_y < p.in_h & c < p.in_c) {
+          v = input[in_x * p.inStride.x + in_y * p.inStride.y + c * p.inStride.z + n * p.inStride.w];
         }
 
-        sx[rel_in_y][rel_in_x] = v;
+        sx[rel_in_y][rel_in_x][rel_c] = v;
       }
 
       __syncthreads();
 
-      for (int32_t out_idx = threadIdx.x; out_idx < tile_out_h * tile_out_w;
+      for (int32_t out_idx = threadIdx.x; out_idx < tile_out_h * tile_out_w * loop_minor;
            out_idx += blockDim.x) {
-        int32_t rel_out_y = out_idx / tile_out_w;
-        int32_t rel_out_x = out_idx - rel_out_y * tile_out_w;
+        int32_t rel_c = out_idx;
+        int32_t rel_out_x = rel_c / loop_minor;
+        int32_t rel_out_y = rel_out_x / tile_out_w;
+        rel_c -= rel_out_x
         int32_t out_x = rel_out_x + tile_out_x;
         int32_t out_y = rel_out_y + tile_out_y;
 
@@ -222,9 +235,9 @@ UpFirDn2DKernelParams infer_upfirdn_params(
 }
 
 UpFirDn2DModeParams infer_upfirdn_mode(UpFirDn2DKernelParams p, UpFirDn2DModeParams m) {
-  m.mode = -1;
-  m.tile_out_h = -1;
-  m.tile_out_w = -1;
+  m.mode = 0;
+  m.tile_out_h = 0;
+  m.tile_out_w = 0;
 
   if (p.up_x == 1 && p.up_y == 1 && p.down_x == 1 && p.down_y == 1 && p.kernel_h <= 4
       && p.kernel_w <= 4) {
@@ -283,17 +296,19 @@ void DispatchUpFirDn2d(ep::Stream* stream, const T* input, const T* kernel, T* o
   if (tile_out_h > 0 && tile_out_w > 0) {
     p.loop_major = (p.major_dim - 1) / 16384 + 1;
     p.loop_x = 1;
-    block_size = dim3(32 * 8, 1, 1);
+    block_size = dim3(256, 1, 1);
     grid_size =
         dim3(((p.out_h - 1) / tile_out_h + 1) * p.minor_dim,
-             (p.out_w - 1) / (p.loop_x * tile_out_w) + 1, (p.major_dim - 1) / p.loop_major + 1);
+             (p.out_w - 1) / (p.loop_x * tile_out_w) + 1, 
+             (p.major_dim - 1) / p.loop_major + 1);
   } else {
     p.loop_major = (p.major_dim - 1) / 16384 + 1;
     p.loop_x = 4;
     block_size = dim3(4, 32, 1);
     grid_size =
         dim3((p.out_h * p.minor_dim - 1) / block_size.x + 1,
-             (p.out_w - 1) / (p.loop_x * block_size.y) + 1, (p.major_dim - 1) / p.loop_major + 1);
+             (p.out_w - 1) / (p.loop_x * block_size.y) + 1, 
+             (p.major_dim - 1) / p.loop_major + 1);
   }
 
   switch (mode) {
@@ -356,6 +371,7 @@ class Upfirdn2dKernel final : public user_op::OpKernel {
 
     DispatchUpFirDn2d<T>(ctx->stream(), input->dptr<T>(), kernel->dptr<T>(), out->mut_dptr<T>(), p,
                          m);
+    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
