@@ -60,13 +60,12 @@ struct Conv2dOperationCacheKey {
       return std::all_of(stride.cbegin(), stride.cend(),
                          [&](const int64_t& s) { return s % n == 0; });
     };
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.A) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.B) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.C) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.D) % kCudaAlignSize, 0);
     const auto IsAligned = [&](size_t n) {
-      return reinterpret_cast<uintptr_t>(arguments.A) % n == 0
-             && reinterpret_cast<uintptr_t>(arguments.B) % n == 0
-             && reinterpret_cast<uintptr_t>(arguments.C) % n == 0
-             && reinterpret_cast<uintptr_t>(arguments.D) % n == 0
-             && IsStrideAligned(configuraion.stride_a, n)
-             && IsStrideAligned(configuraion.stride_b, n)
+      return IsStrideAligned(configuraion.stride_a, n) && IsStrideAligned(configuraion.stride_b, n)
              && IsStrideAligned(configuraion.stride_c, n);
     };
     if (IsAligned(8)) {
@@ -144,6 +143,20 @@ inline bool operator==(const Conv2dOperationCacheKey& lhs, const Conv2dOperation
          && lhs.alignment == rhs.alignment;
 }
 
+size_t GetTensorSize(cutlass::library::NumericTypeID element, cutlass::library::LayoutTypeID layout,
+                     const cutlass::Tensor4DCoord& extent, const std::vector<int64_t>& stride) {
+  const size_t element_size = cutlass::library::sizeof_bits(element) / 8;
+  size_t capacity = 0;
+  if (layout == cutlass::library::LayoutTypeID::kTensorNHWC) {
+    CHECK_EQ(stride.size(), 3);
+    capacity =
+        cutlass::layout::TensorNHWC(stride.at(0), stride.at(1), stride.at(2)).capacity(extent);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return capacity * element_size;
+}
+
 };  // namespace
 
 using CacheMap = std::unordered_map<Conv2dOperationCacheKey, const cutlass::library::Operation*,
@@ -178,6 +191,37 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
     if (it != device_cache.end()) { return it->second; }
   }
 
+  cutlass::library::ConvArguments benchmark_arguments = arguments;
+  void* benchmark_workspace = workspace;
+  cudaStream_t benchmark_stream = stream->cuda_stream();
+#ifdef WITH_CUDA_GRAPHS
+  cudaStreamCaptureMode mode = cudaStreamCaptureModeRelaxed;
+  if (stream->IsGraphCapturing()) {
+    OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+    OF_CUDA_CHECK(cudaStreamCreate(&benchmark_stream));
+    OF_CUDA_CHECK(cudaMalloc(&benchmark_workspace, workspace_size));
+    const size_t a_size =
+        GetTensorSize(functional_key.element_A, functional_key.layout_A,
+                      configuraion.problem_size.activation_extent(), configuraion.stride_a);
+    OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.A, a_size));
+    const size_t b_size =
+        GetTensorSize(functional_key.element_B, functional_key.layout_B,
+                      configuraion.problem_size.filter_extent(), configuraion.stride_b);
+    OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.B, b_size));
+    const size_t c_size =
+        GetTensorSize(functional_key.element_C, functional_key.layout_C,
+                      configuraion.problem_size.output_extent(), configuraion.stride_c);
+    OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.C, c_size));
+
+    const size_t d_size = GetTensorSize(
+        functional_key.element_C, functional_key.layout_C,
+        configuraion.problem_size.output_extent(),
+        {configuraion.problem_size.K, configuraion.problem_size.K * configuraion.problem_size.Q,
+         configuraion.problem_size.K * configuraion.problem_size.Q * configuraion.problem_size.P});
+    OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.D, d_size));
+  }
+#endif  // WITH_CUDA_GRAPHS
+
   constexpr int turing_warmup_iters = 2;
   constexpr int turing_iters = 5;
   cudaEvent_t start{};
@@ -209,31 +253,31 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
                  < stream->cuda_arch()) {
         continue;
       }
-      auto status = operation->can_implement(&configuraion, &arguments);
+      auto status = operation->can_implement(&configuraion, &benchmark_arguments);
       if (status != cutlass::Status::kSuccess) { continue; }
       const size_t host_workspace_size = operation->get_host_workspace_size(&configuraion);
       const size_t device_workspace_size = operation->get_device_workspace_size(&configuraion);
       if (device_workspace_size > workspace_size) { continue; }
       std::vector<uint8_t> host_workspace(host_workspace_size, 0);
-      if (operation->initialize(&configuraion, host_workspace.data(), workspace,
-                                stream->cuda_stream())
+      if (operation->initialize(&configuraion, host_workspace.data(), benchmark_workspace,
+                                benchmark_stream)
           != cutlass::Status::kSuccess) {
         continue;
       }
 
       const auto Run = [&]() {
-        auto init_status = operation->initialize(&configuraion, host_workspace.data(), workspace,
-                                                 stream->cuda_stream());
+        auto init_status = operation->initialize(&configuraion, host_workspace.data(),
+                                                 benchmark_workspace, benchmark_stream);
         CHECK(init_status == cutlass::Status::kSuccess);
-        auto run_status =
-            operation->run(&arguments, host_workspace.data(), workspace, stream->cuda_stream());
+        auto run_status = operation->run(&benchmark_arguments, host_workspace.data(),
+                                         benchmark_workspace, benchmark_stream);
         CHECK(run_status == cutlass::Status::kSuccess);
       };
-      OF_CUDA_CHECK(cudaStreamSynchronize(stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaStreamSynchronize(benchmark_stream));
       for (int i = 0; i < turing_warmup_iters; ++i) { Run(); }
-      OF_CUDA_CHECK(cudaEventRecord(start, stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaEventRecord(start, benchmark_stream));
       for (int i = 0; i < turing_iters; ++i) { Run(); }
-      OF_CUDA_CHECK(cudaEventRecord(end, stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaEventRecord(end, benchmark_stream));
       OF_CUDA_CHECK(cudaEventSynchronize(end));
       float time = 0;
       OF_CUDA_CHECK(cudaEventElapsedTime(&time, start, end));
@@ -247,6 +291,18 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
   }
   OF_CUDA_CHECK(cudaEventDestroy(start));
   OF_CUDA_CHECK(cudaEventDestroy(end));
+#ifdef WITH_CUDA_GRAPHS
+  if (stream->IsGraphCapturing()) {
+    OF_CUDA_CHECK(cudaStreamSynchronize(benchmark_stream));
+    OF_CUDA_CHECK(cudaStreamDestroy(benchmark_stream));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.A)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.B)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.C)));
+    OF_CUDA_CHECK(cudaFree(benchmark_arguments.D));
+    OF_CUDA_CHECK(cudaFree(benchmark_workspace));
+    OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+  }
+#endif  // WITH_CUDA_GRAPHS
   if (fastest_operation != nullptr) {
     VLOG(3) << "Fastest: " << fastest_operation->description().name << " " << fastest_time;
     {
