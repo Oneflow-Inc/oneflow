@@ -484,6 +484,22 @@ class all_placement(generator):
         return self._calc_all_placement()
 
 
+class all_cpu_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cpu"]
+
+
+class all_cuda_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cuda"]
+
+
 class random_placement(all_placement):
     def __init__(self):
         super().__init__()
@@ -627,6 +643,8 @@ __all__ = [
     "random_cpu_placement",
     "random_gpu_placement",
     "all_placement",
+    "all_cpu_placement",
+    "all_cuda_placement",
     "random_sbp",
     "all_sbp",
     "random",
