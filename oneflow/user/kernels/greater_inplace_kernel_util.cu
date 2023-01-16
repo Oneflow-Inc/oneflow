@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/greater_inplace_kernel_util.h"
 
@@ -38,7 +37,7 @@ __global__ void ScalarGreaterInplacForwardGpu(const int64_t n, const T* x, const
 
 template<>
 __global__ void ScalarGreaterInplacForwardGpu<half, int64_t>(const int64_t n, const half* x,
-                                                            const Scalar operand, half* out) {
+                                                             const Scalar operand, half* out) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
     float operator_value = static_cast<float>(operand.Value<int64_t>());
     out[i] = x[i] > __float2half(operator_value) ? static_cast<half>(1) : static_cast<half>(0);
@@ -72,13 +71,14 @@ struct ScalarGreaterInplaceKernelUtil<DeviceType::kCUDA, T, ValueT> {
 };
 
 #define INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA(data_type, other) \
-  template struct GreaterInplaceKernelUtil<DeviceType::kCUDA,  data_type>;
+  template struct GreaterInplaceKernelUtil<DeviceType::kCUDA, data_type>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA,
                      GREATER_INPLACE_DATA_TYPE_SEQ_CUDA)
 #undef INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA
 
-#define INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA(data_type, value_data_type) \
-  template struct ScalarGreaterInplaceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type), OF_PP_PAIR_FIRST(value_data_type)>;
+#define INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA(data_type, value_data_type)          \
+  template struct ScalarGreaterInplaceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type), \
+                                                 OF_PP_PAIR_FIRST(value_data_type)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA,
                                  GREATER_INPLACE_DATA_TYPE_SEQ_CUDA, SCALAR_VALUE_DATA_TYPE_SEQ)
 #undef INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA

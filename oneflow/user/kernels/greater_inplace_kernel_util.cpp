@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/greater_inplace_kernel_util.h"
-#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -38,12 +37,12 @@ struct ScalarGreaterInplaceKernelUtil<DeviceType::kCPU, T, ValueT> {
 
 #define INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CPU(data_type, other) \
   template struct GreaterInplaceKernelUtil<DeviceType::kCPU, data_type>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CPU,
-                     GREATER_INPLACE_DATA_TYPE_SEQ_CPU)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CPU, GREATER_INPLACE_DATA_TYPE_SEQ_CPU)
 #undef INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CPU
 
-#define INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CPU(data_type, value_data_type) \
-  template struct ScalarGreaterInplaceKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type), OF_PP_PAIR_FIRST(value_data_type)>;
+#define INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CPU(data_type, value_data_type)          \
+  template struct ScalarGreaterInplaceKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type), \
+                                                 OF_PP_PAIR_FIRST(value_data_type)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CPU,
                                  GREATER_INPLACE_DATA_TYPE_SEQ_CPU, SCALAR_VALUE_DATA_TYPE_SEQ)
 #undef INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CPU

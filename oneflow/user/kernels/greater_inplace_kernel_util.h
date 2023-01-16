@@ -57,14 +57,14 @@ struct GreaterInplaceKernelUtil {
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define GREATER_INPLACE_DATA_TYPE_SEQ_CPU         \
-  FLOATING_DATA_TYPE_SEQ \
+#define GREATER_INPLACE_DATA_TYPE_SEQ_CPU \
+  FLOATING_DATA_TYPE_SEQ                  \
   SIGNED_INT_DATA_TYPE_SEQ
 
 #ifdef WITH_CUDA
-#define GREATER_INPLACE_DATA_TYPE_SEQ_CUDA        \
-  FLOATING_DATA_TYPE_SEQ \
-  SIGNED_INT_DATA_TYPE_SEQ \
+#define GREATER_INPLACE_DATA_TYPE_SEQ_CUDA \
+  FLOATING_DATA_TYPE_SEQ                   \
+  SIGNED_INT_DATA_TYPE_SEQ                 \
   HALF_DATA_TYPE_SEQ
 #endif
 
