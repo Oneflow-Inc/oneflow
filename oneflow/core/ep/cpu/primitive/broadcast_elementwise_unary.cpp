@@ -149,7 +149,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
-    bool permutable = inferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_src_dims, 
+    bool permutable = InferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_src_dims, 
                                                     simplified_dst_dims, permutation_list, permutation_src_dims, unary_op);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
@@ -218,7 +218,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_IDENTITY_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 

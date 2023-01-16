@@ -197,7 +197,7 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
 }
 
 template<size_t max_num_dims>
-inline bool inferPermutable(size_t simplified_num_dims, const int64_t* simplified_src_strides,
+inline bool InferPermutable(size_t simplified_num_dims, const int64_t* simplified_src_strides,
                             const int64_t* simplified_src_dims, const int64_t* simplified_dst_dims, int* permutation_list, 
                             int64_t* permutation_src_dims, UnaryOp unary_op) {
   if (unary_op != UnaryOp::kIdentity) {
@@ -232,7 +232,7 @@ inline bool inferPermutable(size_t simplified_num_dims, const int64_t* simplifie
 }
 
 template<size_t max_num_dims>
-inline bool inferPermutable(size_t num_src_dims, const int64_t* src_dims,
+inline bool InferPermutable(size_t num_src_dims, const int64_t* src_dims,
                                   const int64_t* src_strides, size_t num_dst_dims,
                                   const int64_t* dst_dims, const int64_t* dst_strides,
                                   size_t* simplified_num_dims, int64_t* simplified_src_dims,
@@ -242,7 +242,7 @@ inline bool inferPermutable(size_t num_src_dims, const int64_t* src_dims,
   SimplifyBroadcastDims<max_num_dims>(num_src_dims, src_dims, src_strides, num_dst_dims, dst_dims, dst_strides,
     simplified_num_dims, simplified_src_dims, simplified_src_strides, simplified_dst_dims, simplified_dst_dims);
 
-  return inferPermutable<max_num_dims>(*simplified_num_dims, simplified_src_strides, simplified_src_dims, simplified_dst_dims,
+  return InferPermutable<max_num_dims>(*simplified_num_dims, simplified_src_strides, simplified_src_dims, simplified_dst_dims,
                                         permutation_list, permutation_src_dims, unary_op);
 }
 
