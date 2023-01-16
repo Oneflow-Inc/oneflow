@@ -37,8 +37,8 @@ Maybe<Shape> GetBroadcastShape(const Shape& cond_shape, const Shape& x_shape,
     int64_t max_dim = std::max(x_dim, y_dim);
     max_dim = std::max(max_dim, cond_dim);
     broadcast_dim_vec[i] = max_dim;
-    if ((cond_dim == 1 && cond_dim != max_dim) || (x_dim == 1 && x_dim != max_dim)
-        || (y_dim == 1 && y_dim != max_dim)) {
+    if ((cond_dim != 1 && cond_dim != max_dim) || (x_dim != 1 && x_dim != max_dim)
+        || (y_dim != 1 && y_dim != max_dim)) {
       return Error::RuntimeError() << "The tensor cond with size " << cond_shape.ToString()
                                    << ", x with size " << x_shape.ToString() << " and y with size "
                                    << y_shape.ToString() << " are not broadcastable.";
