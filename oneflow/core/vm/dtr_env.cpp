@@ -2,6 +2,7 @@
 #include "nlohmann/json.hpp"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/common/env_var/dtr.h"
 
 namespace oneflow {
 namespace dtr {
