@@ -198,6 +198,8 @@ TEST_F(PrimitiveTest, TestWhere) {
                                   {3, 1}, {1, 7});
   test::TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
                                   {4, 1, 8}, {1, 1, 8});
+  test::TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
+                                  {4, 4, 8}, {1});
   test::TestWhere<float, bool, 4>(&device_manager_registry_, available_device_types_, {2, 1, 4, 8},
                                   {1, 3, 4, 1}, {4, 8});
 }
