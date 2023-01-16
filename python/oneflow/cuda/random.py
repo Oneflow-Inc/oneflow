@@ -18,7 +18,8 @@ from oneflow import Tensor
 from typing import Union, List
 from . import current_device, device_count
 
-def get_rng_state(device: Union[int, str, flow.device] = 'cuda') -> Tensor:
+
+def get_rng_state(device: Union[int, str, flow.device] = "cuda") -> Tensor:
     r"""Returns the random number generator state of the specified GPU as a ByteTensor.
 
     Args:
@@ -30,7 +31,7 @@ def get_rng_state(device: Union[int, str, flow.device] = 'cuda') -> Tensor:
     if isinstance(device, str):
         device = flow.device(device)
     elif isinstance(device, int):
-        device = flow.device('cuda', device)
+        device = flow.device("cuda", device)
     idx = device.index
     if idx is None:
         idx = current_device()
