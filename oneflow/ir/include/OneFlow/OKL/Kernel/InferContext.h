@@ -14,25 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_INFERCONTEXT_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_INFERCONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "OneFlow/kernel_launch/KernelLaunchState.h"
-#include "OneFlow/kernel_launch/RegContext.h"
-
-#include <memory>
-#include <utility>
+#include "OneFlow/OKL/Kernel/RegContext.h"
 
 namespace oneflow {
 namespace okl {
 
 class InferContext final : public user_op::InferContext {
  public:
-  static size_t InferTmpSize(user_op::InferContext* ctx);
-
-  explicit InferContext(RegContext* reg_ctx);
+  explicit InferContext(RegContext const* reg_ctx);
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
@@ -117,10 +111,10 @@ class InferContext final : public user_op::InferContext {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override;
 
-  RegContext* reg_ctx_;
+  RegContext const* reg_ctx_;
 };
 
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERMISC_INFERCONTEXT_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_INFERCONTEXT_H_

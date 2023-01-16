@@ -31,7 +31,7 @@ limitations under the License.
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
-#include "OneFlow/Transform/AggregateComputeOps.h"
+#include "OneFlow/Transform/AggregateOps.h"
 #include "OneFlow/Transform/CSEWithAttributesIgnored.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
@@ -52,7 +52,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns);
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns);
+void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
+                                         const std::string& mode);
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
@@ -62,6 +63,10 @@ void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
 void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+
+namespace okl_func {
+const auto OKL_FUNC = "okl_func";
+}  // namespace okl_func
 
 }  // namespace oneflow
 

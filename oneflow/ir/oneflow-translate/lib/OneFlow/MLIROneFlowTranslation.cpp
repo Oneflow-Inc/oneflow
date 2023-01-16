@@ -16,13 +16,14 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/UserOpReflection.h"
-#include "OneFlow/Transform/AggregateComputeOps.h"
+#include "OneFlow/Transform/AggregateOps.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -717,7 +718,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf, false))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }

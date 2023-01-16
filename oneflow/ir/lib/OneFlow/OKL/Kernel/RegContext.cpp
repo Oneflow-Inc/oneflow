@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/UserOpConversion.h"
 #include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -20,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "OneFlow/kernel_launch/InferMisc/InferContext.h"
-#include "OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/OKL/Kernel/InferContext.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -35,7 +36,7 @@ namespace okl {
 static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
                                                  bool is_mapping_size = false) {
   OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
+  if (mlir::failed(mlir::oneflow::user_op::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
     op->emitError("fail to convert user op attributes");
     exit(1);
   }
@@ -116,7 +117,7 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
   return user_op_conf().Attr4Name(attr_name);
 }
 
-size_t RegContext::GetTmpBufferSize() {
+const size_t RegContext::GetTmpBufferSize() const {
   if (reg_res_->need_temp_storage) {
     InferContext infer_ctx(this);
     return reg_res_->infer_tmp_size_fn(&infer_ctx);
