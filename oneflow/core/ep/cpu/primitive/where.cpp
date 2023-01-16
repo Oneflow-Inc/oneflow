@@ -115,17 +115,18 @@ class WhereImpl : public Where {
   explicit WhereImpl() = default;
   ~WhereImpl() override = default;
 
-  void Launch(Stream* stream, DataType cond_type, size_t cond_ndim, const int64_t* cond_dims,
-              const void* cond, DataType data_type, size_t x_ndim, const int64_t* x_dims,
-              const void* x, size_t y_ndim, const int64_t* y_dims, const void* y,
+  void Launch(Stream* stream, DataType cond_type, size_t num_cond_dims, const int64_t* cond_dims,
+              const void* cond, DataType data_type, size_t num_x_dims, const int64_t* x_dims,
+              const void* x, size_t num_y_dims, const int64_t* y_dims, const void* y,
               void* z) override {
     size_t compact_ndim = 0;
     int64_t compact_cond_dims[kMaxNumDims] = {};
     int64_t compact_x_dims[kMaxNumDims] = {};
     int64_t compact_y_dims[kMaxNumDims] = {};
     int64_t compact_z_dims[kMaxNumDims] = {};
-    GetCompactBroadcastDims(cond_ndim, cond_dims, x_ndim, x_dims, y_ndim, y_dims, compact_ndim,
-                            compact_cond_dims, compact_x_dims, compact_y_dims, compact_z_dims);
+    GetCompactBroadcastDims(num_cond_dims, cond_dims, num_x_dims, x_dims, num_y_dims, y_dims,
+                            compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
+                            compact_z_dims);
     LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
                          compact_z_dims, cond_type, data_type, cond, x, y, z);
   }

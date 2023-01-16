@@ -28,10 +28,10 @@ class Where : public Primitive {
   Where() = default;
   ~Where() override = default;
 
-  virtual void Launch(Stream* stream, DataType cond_type, size_t cond_ndim,
-                      const int64_t* cond_dims, const void* cond, DataType data_type, size_t x_ndim,
-                      const int64_t* x_dims, const void* x, size_t y_ndim, const int64_t* y_dims,
-                      const void* y, void* z) = 0;
+  virtual void Launch(Stream* stream, DataType cond_type, size_t num_cond_dims,
+                      const int64_t* cond_dims, const void* cond, DataType data_type,
+                      size_t num_x_dims, const int64_t* x_dims, const void* x, size_t num_y_dims,
+                      const int64_t* y_dims, const void* y, void* z) = 0;
 };
 
 class WhereFactory : public Factory<Where> {
