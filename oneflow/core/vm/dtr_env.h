@@ -44,5 +44,8 @@ class Env {
   int recomputation_num_ = 0;
 
 };
+
+Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand);
+
 }  // namespace dtr
 }  // namespace oneflow

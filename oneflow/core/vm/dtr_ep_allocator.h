@@ -41,6 +41,7 @@ class DtrEpAllocator final : public Allocator {
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void Mark(EagerBlobObject* ebo, const char* mem_ptr);
+  void CheckPieces();
   void DisplayAllPieces();
   nlohmann::json DumpSearchFreeMemCost();
   size_t allocated_memory();
@@ -67,7 +68,7 @@ class DtrEpAllocator final : public Allocator {
   struct Piece {
     size_t size = 0;
     char* ptr = nullptr;
-    bool is_free = false;
+    bool is_free = true;
     Piece* prev = nullptr;
     Piece* next = nullptr;
     vm::TensorStorage* tensor = nullptr;

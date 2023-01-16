@@ -388,6 +388,7 @@ Maybe<void> InstructionsBuilder::Call(
   stream = JUST(StreamGuard::TryConvertStream(stream));
   Symbol<Stream> allocator_stream = JUST(GetAllocatorStream(stream));
   if (stream != allocator_stream) {
+    VLOG(2) << "allocate tensors: " << opkernel->op_type_name();
     JUST(AllocateTensors(output_eager_blob_objects, allocator_stream));
   }
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
