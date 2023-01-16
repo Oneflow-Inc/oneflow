@@ -15,10 +15,27 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/thread/thread_manager.h"
-#include <random>
+#include "oneflow/user/kernels/distributions/common.h"
 
 namespace oneflow {
+
+namespace {
+
+template<typename T, typename V>
+static T uniform_real(V val, T from, T to) {
+  constexpr auto MASK =
+      static_cast<V>((static_cast<uint64_t>(1) << std::numeric_limits<T>::digits) - 1);
+  constexpr auto DIVISOR =
+      static_cast<T>(1) / (static_cast<uint64_t>(1) << std::numeric_limits<T>::digits);
+  T x = (val & MASK) * DIVISOR;
+  return (x * (to - from) + from);
+}
+
+static uint64_t make64BitsFrom32Bits(uint32_t hi, uint32_t lo) {
+  return (static_cast<uint64_t>(hi) << 32) | lo;
+}
+
+}  // namespace
 
 template<typename T>
 class CpuRReluKernel final : public user_op::OpKernel {
@@ -26,8 +43,15 @@ class CpuRReluKernel final : public user_op::OpKernel {
   CpuRReluKernel() = default;
   ~CpuRReluKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    return std::make_shared<DistributionKernelState>(generator);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const int64_t size = in->shape_view().elem_cnt();
     if (size == 0) return;
@@ -41,29 +65,27 @@ class CpuRReluKernel final : public user_op::OpKernel {
     T* noise_ptr = noise_data->mut_dptr<T>();
     const T* in_ptr = in->dptr<T>();
 
-    const int64_t thread_num = (int64_t)Singleton<ThreadPool>::Get()->thread_num();
-    const BalancedSplitter bs(size, thread_num);
-    BlockingCounter bc(thread_num);
+    auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
+    CHECK_NOTNULL(distribution_state);
+    const auto& generator = distribution_state->generator();
+    CHECK_NOTNULL(generator);
+    auto cpu_gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    std::lock_guard<std::mutex> lock(cpu_gen->mutex_);
+    one::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
 
-    std::mt19937 gen{std::random_device{}()};
-    std::uniform_real_distribution<> uni_random_float(lower, upper);
-    FOR_RANGE(int64_t, thread_id, 0, thread_num) {
-      const Range range = bs.At(thread_id);
-      Singleton<ThreadPool>::Get()->AddWork([=, &bc, &gen, &uni_random_float]() {
-        FOR_RANGE(int64_t, i, range.begin(), range.end()) {
-          if (*(in_ptr + i) >= 0) {
-            noise_ptr[i] = 1;
-            out_ptr[i] = in_ptr[i];
-          } else {
-            T random_data = uni_random_float(gen);
-            noise_ptr[i] = random_data;
-            out_ptr[i] = in_ptr[i] * random_data;
-          }
-        }
-        bc.Decrease();
-      });
+    FOR_RANGE(int64_t, i, 0, size) {
+      if (*(in_ptr + i) >= 0) {
+        noise_ptr[i] = 1;
+        out_ptr[i] = in_ptr[i];
+      } else {
+        uint32_t random1 = engine();
+        uint32_t random2 = engine();
+        uint64_t rand_unit = make64BitsFrom32Bits(random1, random2);
+        T uniform_sample = uniform_real(rand_unit, lower, upper);
+        noise_ptr[i] = uniform_sample;
+        out_ptr[i] = in_ptr[i] * uniform_sample;
+      }
     }
-    bc.WaitForeverUntilCntEqualZero();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -73,7 +95,6 @@ class CpuRReluKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_RRelu_KERNEL(float) 
-REGISTER_CPU_RRelu_KERNEL(double)
+REGISTER_CPU_RRelu_KERNEL(float) REGISTER_CPU_RRelu_KERNEL(double)
 
 }  // namespace oneflow
