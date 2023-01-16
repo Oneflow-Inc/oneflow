@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/eager/tensor_storage.h"
 
 namespace oneflow {
 namespace one {
@@ -132,7 +133,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   if (EnvBool<ONEFLOW_DTR_COPY_ON_WRITE>()) {
     for (int i = 0; i < outputs->size(); ++i) {
       if (tensor_to_be_mutated.at(i)) {
+        bool is_eviction_disabled = JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->is_eviction_disabled();
+        JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->set_eviction_disabled(false);
         JUST(tensor_to_be_mutated.at(i)->set_data(outputs->at(i)));
+        JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->set_eviction_disabled(is_eviction_disabled);
         if (requires_grad) {
           tensor_to_be_mutated.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
         }

@@ -1053,6 +1053,7 @@ class Module(object):
             if buf is not None:
                 if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
+                    flow._oneflow_internal.dtr.disable_eviction(buf_applied)
                     self._buffers[key] = buf_applied
                     self._oneflow_internal_module_tensor_applied_dict__[
                         buf

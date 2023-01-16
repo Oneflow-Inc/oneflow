@@ -57,6 +57,21 @@ OpCallInstructionPolicy TensorStorage::compute_op() const {
   return OpCallInstructionPolicy(*compute_op_);
 }
 
+std::shared_ptr<DtrOpCallInstructionPolicy> TensorStorage::dtr_compute_op() const {
+  return compute_op_;
+}
+
+void TensorStorage::Pin() {
+  ++num_pinned_;
+  VLOG(3) << "pin storage " << id_ << ", num_pinned: " << num_pinned_;
+}
+
+void TensorStorage::Unpin() {
+  CHECK_GT(num_pinned_, 0);
+  --num_pinned_;
+  VLOG(3) << "unpin storage " << id_ << ", num_pinned: " << num_pinned_;
+}
+
 void TensorStorage::clear_compute_op() {
   if (compute_op_ == nullptr) { return; }
   Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
@@ -64,15 +79,14 @@ void TensorStorage::clear_compute_op() {
   compute_time_ = -1;
 }
 
-void TensorStorage::set_compute_op(const OpCallInstructionPolicy& compute_op) {
+void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time) {
   if (compute_op_) {
     CHECK(false);
     // Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
   }
-  // copy a new OpCallInstructionPolicy
-  compute_op_ = std::make_shared<DtrOpCallInstructionPolicy>(compute_op);
+  compute_op_ = compute_op;
   Singleton<dtr::Env>::Get()->ops.push_back(compute_op_.get());
-  compute_time_ = CHECK_JUST(dtr::GetComputeTime(compute_op));
+  compute_time_ = compute_time;
 }
 
 std::string TensorStorage::compute_op_type_name() const {

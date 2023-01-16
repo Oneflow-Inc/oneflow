@@ -34,16 +34,15 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-
-}  // namespace
-
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
     const OpCallInstructionPolicy& op_call_instruction_policy, int& pinned_num,
-    std::set<vm::TensorStorage*>& visited_storages) {
+    std::set<const DtrOpCallInstructionPolicy*>& visited_ops) {
+  VLOG(1) << "op is " << op_call_instruction_policy.opkernel().op_type_name();
   for (int i = 0; i < op_call_instruction_policy.inputs().size(); i++) {
     const auto& input = op_call_instruction_policy.inputs().at(i);
     input->tensor_storage()->Pin();
+    VLOG(1) << "No." << i << " input is in memory? " << input->tensor_storage()->is_in_memory()
+            << ". opkernel is " << &input->tensor_storage()->dtr_compute_op()->opkernel();
     if (!input->tensor_storage()->is_in_memory()) {
       OpCallInstructionPolicy tmp_op = input->tensor_storage()->compute_op();
       if (!input->tensor_storage()->is_needed_by_backward()) {
@@ -51,23 +50,23 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
             input->tensor_storage().get());
       }
 
-      if (visited_storages.find(input->tensor_storage().get()) == visited_storages.end()) {
-        visited_storages.insert(input->tensor_storage().get());
-        JUST(_IncReferenceNumOfRecomputedTensor(tmp_op, pinned_num, visited_storages));
+      if (visited_ops.find(input->tensor_storage()->dtr_compute_op().get()) == visited_ops.end()) {
+        visited_ops.insert(input->tensor_storage()->dtr_compute_op().get());
+        JUST(_IncReferenceNumOfRecomputedTensor(tmp_op, pinned_num, visited_ops));
       }
     } else {
       pinned_num++;
     }
   }
+  VLOG(1) << "op " << op_call_instruction_policy.opkernel().op_type_name() << " end";
   return Maybe<void>::Ok();
 }
 
 Maybe<int> IncReferenceNumOfRecomputedTensor(
     const OpCallInstructionPolicy& op_call_instruction_policy) {
   int pinned_num = 0;
-  std::set<vm::TensorStorage*> visited_storages;
-  JUST(
-      _IncReferenceNumOfRecomputedTensor(op_call_instruction_policy, pinned_num, visited_storages));
+  std::set<const DtrOpCallInstructionPolicy*> visited_ops;
+  JUST(_IncReferenceNumOfRecomputedTensor(op_call_instruction_policy, pinned_num, visited_ops));
   return pinned_num;
 }
 
@@ -102,34 +101,39 @@ struct OpCallInstructionUtil final {
       const auto& x = op_call_instruction_policy->inputs().at(i);
       if (!x->tensor_storage()->is_in_memory()) {
         VLOG(1) << "recompute No." << i << " input by "
-                << x->tensor_storage()->compute_op_type_name();
-        VLOG(2) << "storage id: " << x->tensor_storage()->id();
+                << x->tensor_storage()->compute_op_type_name()
+                << ". Storage id: " << x->tensor_storage()->id();
         OpCallInstructionPolicy tmp_op = x->tensor_storage()->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false, true));
         // JUST(vm_stream->mut_stream_policy()->stream()->Sync());
         // CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
     }
-    const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
-      auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
+    {
+      const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
+        auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
+        for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
+          const auto& y = op_call_instruction_policy->outputs().at(i);
+          if (y->tensor_storage()->is_eviction_disabled()) { continue; }
+          if (storage_is_initialized[i] && !recompute) {
+            VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
+                    << y->tensor_storage()->compute_op_type_name() << std::endl;
+            compute_op = std::make_unique<OpCallInstructionPolicy>(
+                Singleton<dtr::Env>::Get()->update_tensor_with_storage(y->tensor_storage().get(),
+                                                                       op_call_instruction_policy));
+          }
+        }
+        return compute_op;
+      }();
+      std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op =
+          std::make_shared<DtrOpCallInstructionPolicy>(*compute_op);
+      double compute_time = JUST(dtr::GetComputeTime(*compute_op));
       for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
         const auto& y = op_call_instruction_policy->outputs().at(i);
-        if (y->tensor_storage()->is_eviction_disabled()) { continue; }
-        if (storage_is_initialized[i] && !recompute) {
-          VLOG(1) << "y->tensor_storage()->is_initialized(), y's op is "
-                  << y->tensor_storage()->compute_op_type_name() << std::endl;
-          compute_op = std::make_unique<OpCallInstructionPolicy>(
-              Singleton<dtr::Env>::Get()->update_tensor_with_storage(y->tensor_storage().get(),
-                                                                     op_call_instruction_policy));
+        y->tensor_storage()->Pin();
+        if (!recompute && !y->tensor_storage()->is_eviction_disabled()) {
+          y->tensor_storage()->set_compute_op(dtr_compute_op, compute_time);
         }
-      }
-      return compute_op;
-    }();
-    for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
-      const auto& y = op_call_instruction_policy->outputs().at(i);
-      y->tensor_storage()->Pin();
-      if (!recompute && !y->tensor_storage()->is_eviction_disabled()) {
-        y->tensor_storage()->set_compute_op(*compute_op);
       }
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
@@ -176,6 +180,14 @@ struct OpCallInstructionUtil final {
     Singleton<dtr::Env>::Get()->add_time(JUST(dtr::GetComputeTime(*op_call_instruction_policy)));
     VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     Singleton<dtr::Env>::Get()->current_op_type_name = "None";
+    if (first) {
+      if (!need_eager_eviction_storages.empty()) {
+        for (const auto& storage : need_eager_eviction_storages) {
+          VLOG(1) << "not empty, storage id: " << storage->id();
+        }
+      }
+      CHECK_OR_RETURN(need_eager_eviction_storages.empty());
+    }
     return Maybe<void>::Ok();
   }
 

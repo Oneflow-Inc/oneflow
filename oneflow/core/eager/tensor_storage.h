@@ -58,12 +58,13 @@ class TensorStorage {
     storage_delete_hooks_.emplace_back(hook);
   }
 
-  void set_compute_op(const OpCallInstructionPolicy& compute_op);
+  void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time);
   void clear_compute_op();
   OpCallInstructionPolicy compute_op() const;
+  std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op() const;
   void Evict(bool eager_eviction);
-  void Pin() { num_pinned_++; }
-  void Unpin() { num_pinned_--; }
+  void Pin();
+  void Unpin();
   void Access();
   bool is_in_memory() const { return blob_bytes_ == 0 || blob_dptr_ != nullptr; }
   bool is_pinned() const { return num_pinned() > 0; }

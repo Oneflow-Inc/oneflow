@@ -84,7 +84,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     }
   }
   // set compute_op_ and compute_time_
-  new_storage->set_compute_op(storage->compute_op());
+  new_storage->set_compute_op(storage->dtr_compute_op(), storage->compute_time());
   // set blob_bytes_
   new_storage->set_blob_dptr(nullptr, storage->blob_bytes());
   // set is_initialized_
