@@ -100,13 +100,13 @@ class CudaRReluKernel final : public user_op::OpKernel {
 
     if (std::is_same<T, double>::value) {
       DistributionFunctor<DistributionOp::kUniform2Double> dist_functor;
-      compute_rrelu<T, 2,decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
+      compute_rrelu<T, 2, decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
           in_ptr, out_ptr, noise_ptr, size, lower, upper, seed, offset, dist_functor);
 
     } else {
       // float
-       DistributionFunctor<DistributionOp::kUniform4> dist_functor;
-      compute_rrelu<T, 4,decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
+      DistributionFunctor<DistributionOp::kUniform4> dist_functor;
+      compute_rrelu<T, 4, decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
           in_ptr, out_ptr, noise_ptr, size, lower, upper, seed, offset, dist_functor);
     }
   }
