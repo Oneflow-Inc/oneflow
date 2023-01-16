@@ -208,10 +208,12 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
         GetTensorSize(functional_key.element_B, functional_key.layout_B,
                       configuraion.problem_size.filter_extent(), configuraion.stride_b);
     OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.B, b_size));
-    const size_t c_size =
-        GetTensorSize(functional_key.element_C, functional_key.layout_C,
-                      configuraion.problem_size.output_extent(), configuraion.stride_c);
-    OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.C, c_size));
+    if (benchmark_arguments.C != nullptr) {
+      const size_t c_size =
+          GetTensorSize(functional_key.element_C, functional_key.layout_C,
+                        configuraion.problem_size.output_extent(), configuraion.stride_c);
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.C, c_size));
+    }
 
     const size_t d_size = GetTensorSize(
         functional_key.element_C, functional_key.layout_C,
