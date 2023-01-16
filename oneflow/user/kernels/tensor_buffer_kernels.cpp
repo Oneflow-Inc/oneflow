@@ -84,7 +84,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
     }
     const Shape instance_shape(instance_dim_vec);
     const auto data_type = in->data_type();
-    CHECK(IsPODDataType(data_type));
+    CHECK(IsTriviallyCopyableDataType(data_type));
     const int64_t instance_size = instance_shape.elem_cnt() * GetSizeOfDataType(data_type);
     const auto* in_ptr = in->dptr<char>();
     auto* out_ptr = out->mut_dptr<TensorBuffer>();
@@ -153,7 +153,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
     CHECK_GT(in->shape_view().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
     const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
-    CHECK(IsPODDataType(out_dtype));
+    CHECK(IsTriviallyCopyableDataType(out_dtype));
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
     MultiThreadLoop(in->shape_view().elem_cnt(), [&](size_t i) {
@@ -192,7 +192,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
     MultiThreadLoop(in->shape_view().elem_cnt(), [&](size_t i) {
-      CHECK(IsPODDataType(out_dtypes[i]));
+      CHECK(IsTriviallyCopyableDataType(out_dtypes[i]));
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtypes[i], tensor_buffer->data_type());
