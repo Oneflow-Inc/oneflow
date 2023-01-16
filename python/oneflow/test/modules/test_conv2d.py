@@ -1864,7 +1864,7 @@ class TestConv2d(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
-    
+
     @unittest.skipIf(
         version.parse(torch_original.__version__) <= version.parse("1.13.0"),
         "conv module don't support unbatched input in PyTorch before '1.13.0'",
