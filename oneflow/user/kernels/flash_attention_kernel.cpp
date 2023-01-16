@@ -453,7 +453,7 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     DataType tmp_buf_type = softmax_lse->data_type();
     size_t query_grad_tmp_bytes =
         GetCudaAlignedSize(query_grad->shape_view().elem_cnt() * GetSizeOfDataType(tmp_buf_type));
-    // why dsoftmax_sum?
+    // dp_sum
     void* dsoftmax_sum_ptr =
         reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + query_grad_tmp_bytes);
 
@@ -487,20 +487,20 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                      const_cast<void*>(value->dptr()), query_grad->mut_dptr(), key_grad->mut_dptr(),
                      value_grad->mut_dptr(), const_cast<void*>(cu_seqlens_q->dptr()),
                      const_cast<void*>(cu_seqlens_k->dptr()), const_cast<void*>(out->dptr()),
-                     (loop || params.num_splits > 1) ? query_grad_tmp_ptr : nullptr,
-                     const_cast<void*>(out_grad->dptr()), const_cast<void*>(softmax_lse->dptr()),
-                     dsoftmax_sum_ptr, dropout_rate, softmax_scale, is_causal, num_splits,
+                     loop ? query_grad_tmp_ptr : nullptr, const_cast<void*>(out_grad->dptr()),
+                     const_cast<void*>(softmax_lse->dptr()), dsoftmax_sum_ptr, dropout_rate,
+                     softmax_scale, is_causal, num_splits,
                      ctx->has_input("mask", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr())
                          : nullptr,
                      ctx->has_input("bias", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
                          : nullptr,
-                     ctx->has_input("bias", 0) ? const_cast<void*>(bias_grad->mut_dptr()) : nullptr,
-                     bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
+                     ctx->has_input("bias", 0) ? bias_grad->mut_dptr() : nullptr, bias_mod_size,
+                     mask_head_mod_size, mask_seq_mod_size);
 
     run_fmha_bwd(params, stream, /*configure=*/true);
-
+    if (params.num_splits > 1) params.o_tmp_ptr = query_grad_tmp_ptr;
     // number of times random will be generated per thread, to offset philox counter in thc random
     // state
     // We use a custom RNG that increases the offset by batch_size * nheads * 32.
