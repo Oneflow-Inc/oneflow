@@ -23,11 +23,15 @@ limitations under the License.
 
 namespace oneflow {
 
+template<DeviceType device_type, typename T, typename ValueT>
+struct ScalarGreaterInplaceKernelUtil {
+  static void Forward(ep::Stream* stream, const int64_t n, const T* x, const Scalar operand,
+                      T* out);
+};
+
 template<DeviceType device_type, typename T>
 struct GreaterInplaceKernelUtil {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out);
-  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand,
-                            T* out);
   static void YBroadcastToX(ep::Stream* stream, const int64_t n, const T* x, const T* y,
                             T* broadcast_y, const ShapeView& x_shape, const ShapeView& y_shape) {
     int64_t x_ndim = x_shape.NumAxes();
@@ -48,6 +52,22 @@ struct GreaterInplaceKernelUtil {
                                              XpuVarNdarray<const T>(reduced_shape, y));
   }
 };
+
+#define SCALAR_VALUE_DATA_TYPE_SEQ                \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
+
+#define GREATER_INPLACE_DATA_TYPE_SEQ_CPU         \
+  FLOATING_DATA_TYPE_SEQ \
+  SIGNED_INT_DATA_TYPE_SEQ
+
+#ifdef WITH_CUDA
+#define GREATER_INPLACE_DATA_TYPE_SEQ_CUDA        \
+  FLOATING_DATA_TYPE_SEQ \
+  SIGNED_INT_DATA_TYPE_SEQ \
+  HALF_DATA_TYPE_SEQ
+#endif
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_GREATER_INPLACE_KERNEL_UTIL_H_

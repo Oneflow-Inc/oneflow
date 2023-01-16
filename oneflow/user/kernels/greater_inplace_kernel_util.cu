@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/greater_inplace_kernel_util.h"
 
@@ -27,20 +28,29 @@ __global__ void GreaterInplacForwardGpu(const int64_t n, const T* x, const T* y,
   }
 }
 
-template<typename T>
-__global__ void ScalarGreaterInplacForwardGpu(const int64_t n, const T* x, const Scalar* operand,
+template<typename T, typename ValueT>
+__global__ void ScalarGreaterInplacForwardGpu(const int64_t n, const T* x, const Scalar operand,
                                               T* out) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
-    out[i] = x[i] > operand->As<T>() ? static_cast<T>(1) : static_cast<T>(0);
+    out[i] = x[i] > static_cast<T>(operand.Value<ValueT>()) ? static_cast<T>(1) : static_cast<T>(0);
   }
 }
 
 template<>
-__global__ void ScalarGreaterInplacForwardGpu<half>(const int64_t n, const half* x,
-                                                    const Scalar* operand, half* out) {
+__global__ void ScalarGreaterInplacForwardGpu<half, int64_t>(const int64_t n, const half* x,
+                                                            const Scalar operand, half* out) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
-    out[i] =
-        x[i] > __float2half(operand->As<float>()) ? static_cast<half>(1) : static_cast<half>(0);
+    float operator_value = static_cast<float>(operand.Value<int64_t>());
+    out[i] = x[i] > __float2half(operator_value) ? static_cast<half>(1) : static_cast<half>(0);
+  }
+}
+
+template<>
+__global__ void ScalarGreaterInplacForwardGpu<half, double>(const int64_t n, const half* x,
+                                                            const Scalar operand, half* out) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, n) {
+    float operator_value = static_cast<float>(operand.Value<double>());
+    out[i] = x[i] > __float2half(operator_value) ? static_cast<half>(1) : static_cast<half>(0);
   }
 }
 
@@ -51,19 +61,26 @@ struct GreaterInplaceKernelUtil<DeviceType::kCUDA, T> {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out) {
     RUN_CUDA_KERNEL((GreaterInplacForwardGpu<T>), stream, n, n, x, y, out);
   }
+};
 
-  static void ScalarForward(ep::Stream* stream, const int64_t n, const T* x, const Scalar* operand,
-                            T* out) {
-    RUN_CUDA_KERNEL((ScalarGreaterInplacForwardGpu<T>), stream, n, n, x, operand, out);
+template<typename T, typename ValueT>
+struct ScalarGreaterInplaceKernelUtil<DeviceType::kCUDA, T, ValueT> {
+  static void Forward(ep::Stream* stream, const int64_t n, const T* x, const Scalar operand,
+                      T* out) {
+    RUN_CUDA_KERNEL((ScalarGreaterInplacForwardGpu<T, ValueT>), stream, n, n, x, operand, out);
   }
 };
 
-#define INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA(cpp_data_type, data_type) \
-  template struct GreaterInplaceKernelUtil<DeviceType::kCUDA, cpp_data_type>;
-
+#define INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA(data_type, other) \
+  template struct GreaterInplaceKernelUtil<DeviceType::kCUDA,  data_type>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA,
-                     FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ)
-
+                     GREATER_INPLACE_DATA_TYPE_SEQ_CUDA)
 #undef INSTANTIATE_GREATER_INPLACE_KERNEL_UTIL_CUDA
+
+#define INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA(data_type, value_data_type) \
+  template struct ScalarGreaterInplaceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type), OF_PP_PAIR_FIRST(value_data_type)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA,
+                                 GREATER_INPLACE_DATA_TYPE_SEQ_CUDA, SCALAR_VALUE_DATA_TYPE_SEQ)
+#undef INSTANTIATE_SCALAR_GREATER_INPLACE_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

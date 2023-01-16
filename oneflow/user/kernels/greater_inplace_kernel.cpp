@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/greater_inplace_kernel_util.h"
 
@@ -76,7 +77,7 @@ REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int32_t)
 REGISTER_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int64_t)
 #endif  // WITH_CUDA
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename ValueT>
 class ScalarGreaterInplaceKernel final : public user_op::OpKernel {
  public:
   ScalarGreaterInplaceKernel() = default;
@@ -100,31 +101,31 @@ class ScalarGreaterInplaceKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    GreaterInplaceKernelUtil<device_type, T>::ScalarForward(ctx->stream(), elem_cnt, in_ptr,
-                                                            &scalar_operand, out_ptr);
+    ScalarGreaterInplaceKernelUtil<device_type, T, ValueT>::Forward(ctx->stream(), elem_cnt, in_ptr,
+                                                                    scalar_operand, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALAR_GREATER_INPLACE_KERNEL(device_type, dtype)   \
-  REGISTER_USER_KERNEL("scalar_logical_inplace_greater")             \
-      .SetCreateFn<ScalarGreaterInplaceKernel<device_type, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)     \
+#define REGISTER_SCALAR_GREATER_INPLACE_KERNEL(device_type, dtype, value_type)   \
+  REGISTER_USER_KERNEL("scalar_logical_inplace_greater")                         \
+      .SetCreateFn<ScalarGreaterInplaceKernel<device_type, dtype, value_type>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                 \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, float)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, double)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int8_t)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, float, double)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, double, double)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int8_t, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int32_t, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCPU, int64_t, int64_t)
 
 #ifdef WITH_CUDA
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, half)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, float)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, double)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int8_t)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int32_t)
-REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, half, double)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, float, double)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, double, double)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int8_t, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int32_t, int64_t)
+REGISTER_SCALAR_GREATER_INPLACE_KERNEL(DeviceType::kCUDA, int64_t, int64_t)
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

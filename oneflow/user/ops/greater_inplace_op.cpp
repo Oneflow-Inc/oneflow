@@ -78,8 +78,8 @@ bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
 }
 
 /*static*/ Maybe<void> ScalarLogicalInplaceGreaterOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
+  const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
     ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
   return Maybe<void>::Ok();
