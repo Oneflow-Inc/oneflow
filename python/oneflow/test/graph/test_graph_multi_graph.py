@@ -60,6 +60,27 @@ def _test_linear_multi_graph(test_case, device):
     print(linear_g._compiled_graph_proto)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
+    linear_g1 = LinearGraph()
+    linear_g1._share_from(linear_g)
+    input_arr1 = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.35217619, -0.67095644, -1.58943879],
+            [0.08086036, -1.81075924, 1.20752494],
+        ],
+        dtype=np.float32,
+    )
+    x1 = flow.tensor(input_arr1, device=device)
+    of_lazy_out1 = linear_g1(x1)
+    of_eager_out1 = linear(x1)
+    test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+
+    # linear_g2 = LinearGraph()
+    # linear_g2._share_from(linear_g)
+    # x2 = ...
+    # of_lazy_out2 = linear_g2(x2)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()

@@ -161,6 +161,10 @@ class Graph(object):
         self._c_nn_graph = None
         self.env_enable_mlir_inference_opt = None
 
+        # For build graph from another graph with different input shape.
+        self._build_with_shared_graph = False
+        self._is_compiled_with_shared = False
+
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
@@ -231,10 +235,13 @@ class Graph(object):
         """
 
         if not self._is_compiled:
-            self._compile(*args, **kwargs)
-            self.__print(
-                0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-            )
+            if not self._build_with_shared_graph:
+                self._compile(*args, **kwargs)
+                self.__print(
+                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                )
+            else:
+                self._compile_from_shared(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -798,6 +805,32 @@ class Graph(object):
         self.finish_compile_and_init_runtime()
         return eager_outputs
 
+    def _share_from(self, shared_graph: "Graph") -> None:
+        assert isinstance(
+            shared_graph, Graph
+        ), "shared_graph must be an instance of nn.Graph."
+        assert shared_graph._is_compiled, "shared_graph must have been compiled."
+        self._shared_graph = shared_graph
+        self._build_with_shared_graph = True
+        print("shared_graph ", self._shared_graph)
+
+    def _compile_from_shared(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
+
+        _, eager_outputs = self.build_graph(*args, **kwargs)
+
+        # self._c_nn_graph.align_states_after_logical_graph_compile()
+        # self._c_nn_graph.complete_graph_for_runtime()
+        # Get compiled job
+        compiled_job_str = self._c_nn_graph.get_current_job_str()
+        self._compiled_job_proto = job_pb.Job()
+        self._compiled_job_proto.ParseFromString(compiled_job_str)
+
+        self._c_nn_graph.compile_plan_for_runtime()
+        self._c_nn_graph.init_runtime()
+        self._is_compiled = True
+        return eager_outputs
+
     def build_graph(self, *args, **kwargs):
         # Build graph
         try:
@@ -813,7 +846,10 @@ class Graph(object):
                 self._debug_max_py_stack_depth,
                 self._debug_only_user_py_stack,
             ):
-                outputs = self.__build_graph(*args, **kwargs)
+                if not self._build_with_shared_graph:
+                    outputs = self.__build_graph(*args, **kwargs)
+                else:
+                    outputs = self.__build_graph_from_shared(*args, **kwargs)
             build_graph_end = time.perf_counter()
             self.__print(
                 0,
@@ -1037,6 +1073,43 @@ class Graph(object):
         # Clear useless dict used in graph build.
         self._unique_global_op_dict.clear()
         self._unique_identity_op_dict.clear()
+
+        # Always pack outputs to remain type of outputs
+        return (
+            self._full_job_proto,
+            seq_to_func_return(self._eager_outputs_buffer[0], True),
+        )
+
+    def __build_graph_from_shared(self, *args, **kwargs):
+        with graph_build_util.graph_build_context(self.config.proto, self._session):
+            self._job_id = (
+                oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
+            )
+            self.__rebuild_outputs(out2name)
+            # Create a c nn graph to run with lazy runtime.
+            self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+                self._name,
+                self._full_job_proto.SerializeToString(),
+                self._job_id,
+                self._session._session_ctx,
+            )
+            # Register input/output/variable/buffer to _c_nn_graph
+            self._c_nn_graph.register_input_op_names_and_tensors(
+                arg_op_names,
+                convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
+            )
+            self._c_nn_graph.register_output_op_names_and_tensors(
+                output_op_names, self._outputs_tensor_tuple
+            )
+            (
+                state_op_names,
+                state_tensors,
+            ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+
+            self._c_nn_graph.register_variable_op_names_and_tensors(
+                state_op_names, self._state_tensor_tuple
+            )
 
         # Always pack outputs to remain type of outputs
         return (
