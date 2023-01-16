@@ -114,6 +114,12 @@ class TestDTR(flow.unittest.TestCase):
         self.assertEqual(allocated_memory('cpu'), 0)
         self.assertEqual(allocated_memory('cuda'), 0)
 
+    def tearDown(self):
+        super().tearDown()
+        # check the memory is empty at the end of every test case
+        self.assertEqual(allocated_memory('cpu'), 0)
+        self.assertEqual(allocated_memory('cuda'), 0)
+
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @only_fbip()
@@ -350,9 +356,10 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
-    # @only_fbip()
+    @only_fbip()
     @memory_budget(220, 'cpu')
     def test_resnet18(self, _):
+        # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(False, [0.6304041147232056])
 
     @flow.unittest.skip_unless_1n2d()
@@ -361,6 +368,7 @@ class TestDTR(flow.unittest.TestCase):
     @memory_budget(220, 'cpu')
     def test_resnet18_ddp_1n2d(self, _):
         # 2 devices, 2 losses
+        # NOTE: these losses are only correct in my environment on 21
         self._test_resnet18(True, [1.8890058994293213, 1.8992782831192017])
 
     @flow.unittest.skip_unless_1n1d()
