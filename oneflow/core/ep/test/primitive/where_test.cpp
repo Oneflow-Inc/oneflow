@@ -184,8 +184,6 @@ TEST_F(PrimitiveTest, TestWhere) {
                                    {1, 8}, {1, 8});
   test::TestWhere<bool, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
                                     {4, 8}, {1});
-  test::TestWhere<uint8_t, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
-                                       {4, 8}, {1});
   test::TestWhere<int32_t, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
                                        {4, 8}, {1});
   test::TestWhere<float, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
@@ -194,6 +192,14 @@ TEST_F(PrimitiveTest, TestWhere) {
                                            {1, 8}, {4, 8}, {1});
   test::TestWhere<double, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
                                       {4, 8}, {1});
+  test::TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {1, 6},
+                                  {2, 6}, {2, 1});
+  test::TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {3, 7},
+                                  {3, 1}, {1, 7});
+  test::TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
+                                  {4, 1, 8}, {1, 1, 8});
+  test::TestWhere<float, bool, 4>(&device_manager_registry_, available_device_types_, {2, 1, 4, 8},
+                                  {1, 3, 4, 1}, {4, 8});
 }
 
 }  // namespace test
