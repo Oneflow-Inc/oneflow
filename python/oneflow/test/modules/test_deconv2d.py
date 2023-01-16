@@ -24,7 +24,8 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-
+import torch as torch_original
+from packaging import version
 
 def _test_deconv_bias_false(test_case, device):
     np_arr = np.array(
@@ -892,6 +893,10 @@ class TestDeconv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "deconv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
     @autotest(n=5)
     def test_deconv2d_auto_squeeze_with_random_data(test_case):
         channels = random(1, 6)
