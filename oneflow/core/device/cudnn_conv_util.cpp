@@ -853,35 +853,37 @@ CudnnConvArgs::CudnnConvArgs(const user_op::InferContext& ctx, DataType x_data_t
       wdesc(w_data_type, w_shape, data_format),
       cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, ctx),
       heuristic(heuristic_search),
-      deterministic(use_deterministic_algo_only) {
-  std::memset(&params, 0, sizeof(CudnnConvParams));
-  OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.x_data_type, &params.x_ndim, params.x_dims,
-                                            params.x_strides));
-  OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.y_data_type, &params.y_ndim, params.y_dims,
-                                            params.y_strides));
-  OF_CUDNN_CHECK(hipdnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.w_data_type, &params.w_format, &params.w_ndim,
-                                            params.w_dims));
-  hipdnnConvolutionMode_t mode;
-  int conv_dim_size = x_shape.NumAxes() - 2;
+      deterministic(use_deterministic_algo_only),
+      max_ws_size(max_workspace_size) {
+  // std::memset(&params, 0, sizeof(CudnnConvParams));
+  // OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.x_data_type, &params.x_ndim, params.x_dims,
+  //                                           params.x_strides));
+  // OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.y_data_type, &params.y_ndim, params.y_dims,
+  //                                           params.y_strides));
+  // OF_CUDNN_CHECK(hipdnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.w_data_type, &params.w_format, &params.w_ndim,
+  //                                           params.w_dims));
+  // hipdnnConvolutionMode_t mode;
+  // int conv_dim_size = x_shape.NumAxes() - 2;
 
-  for (int i=0; i<3; i++) {
-    params.padding[i] = cdesc.CD_padding[i];
-    params.stride[i] = cdesc.CD_stride[i];
-    params.dilation[i] = cdesc.CD_dilation[i];
-  }
+  // for (int i=0; i<3; i++) {
+  //   params.padding[i] = cdesc.CD_padding[i];
+  //   params.stride[i] = cdesc.CD_stride[i];
+  //   params.dilation[i] = cdesc.CD_dilation[i];
+  // }
   
-  mode = cdesc.CD_mode;
-  params.data_type = cdesc.CD_data_type;
+  // mode = cdesc.CD_mode;
+  // params.data_type = cdesc.CD_data_type;
   
-  CHECK_EQ(params.x_data_type, params.w_data_type);
-  CHECK_EQ(params.x_ndim, params.w_ndim);
-  // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  // CHECK_EQ(params.x_data_type, params.w_data_type);
+  // CHECK_EQ(params.x_ndim, params.w_ndim);
+  // // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
 
-  params.groups = cdesc.CD_groups;
-  params.max_ws_size = max_workspace_size;
+  // params.groups = cdesc.CD_groups;
+  // params.max_ws_size = max_workspace_size;
+
 }
 
 CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType x_data_type,
@@ -895,43 +897,49 @@ CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType 
       wdesc(w_data_type, w_shape, data_format),
       cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, ctx),
       heuristic(heuristic_search),
-      deterministic(use_deterministic_algo_only) {
-  std::memset(&params, 0, sizeof(CudnnConvParams));
-  OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.x_data_type, &params.x_ndim, params.x_dims,
-                                            params.x_strides));
-  OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.y_data_type, &params.y_ndim, params.y_dims,
-                                            params.y_strides));
-  OF_CUDNN_CHECK(hipdnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
-                                            &params.w_data_type, &params.w_format, &params.w_ndim,
-                                            params.w_dims));
-  hipdnnConvolutionMode_t mode;
-  int conv_dim_size = x_shape.NumAxes() - 2;
+      deterministic(use_deterministic_algo_only),
+      max_ws_size(max_workspace_size) {
+  // std::memset(&params, 0, sizeof(CudnnConvParams));
+  // OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.x_data_type, &params.x_ndim, params.x_dims,
+  //                                           params.x_strides));
+  // OF_CUDNN_CHECK(hipdnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.y_data_type, &params.y_ndim, params.y_dims,
+  //                                           params.y_strides));
+  // OF_CUDNN_CHECK(hipdnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
+  //                                           &params.w_data_type, &params.w_format, &params.w_ndim,
+  //                                           params.w_dims));
+  // hipdnnConvolutionMode_t mode;
+  // int conv_dim_size = x_shape.NumAxes() - 2;
 
-  for (int i=0; i<3; i++) {
-    params.padding[i] = cdesc.CD_padding[i];
-    params.stride[i] = cdesc.CD_stride[i];
-    params.dilation[i] = cdesc.CD_dilation[i];
-  }
+  // for (int i=0; i<3; i++) {
+  //   params.padding[i] = cdesc.CD_padding[i];
+  //   params.stride[i] = cdesc.CD_stride[i];
+  //   params.dilation[i] = cdesc.CD_dilation[i];
+  // }
 
-  mode = cdesc.CD_mode;
-  params.data_type = cdesc.CD_data_type;
+  // mode = cdesc.CD_mode;
+  // params.data_type = cdesc.CD_data_type;
   
-  CHECK_EQ(params.x_data_type, params.w_data_type);
-  CHECK_EQ(params.x_ndim, params.w_ndim);
-  // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  // CHECK_EQ(params.x_data_type, params.w_data_type);
+  // CHECK_EQ(params.x_ndim, params.w_ndim);
+  // // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
 
-  params.groups = cdesc.CD_groups;
-  params.max_ws_size = max_workspace_size;
+  // params.groups = cdesc.CD_groups;
+  // params.max_ws_size = max_workspace_size;
+
 }
 
 ManagedCudnnConvResource::ManagedCudnnConvResource(const CudnnConvArgs& args)
     : handle_(nullptr), x_dptr_(nullptr), w_dptr_(nullptr), y_dptr_(nullptr), ws_dptr_(nullptr) {
-  x_byte_size_ = ByteSize4Tensor(args.params.x_dims, args.params.x_ndim, args.params.x_data_type);
-  w_byte_size_ = ByteSize4Tensor(args.params.w_dims, args.params.w_ndim, args.params.w_data_type);
-  y_byte_size_ = ByteSize4Tensor(args.params.y_dims, args.params.y_ndim, args.params.y_data_type);
-  ws_byte_size_ = args.params.max_ws_size;
+  // x_byte_size_ = ByteSize4Tensor(args.params.x_dims, args.params.x_ndim, args.params.x_data_type);
+  // w_byte_size_ = ByteSize4Tensor(args.params.w_dims, args.params.w_ndim, args.params.w_data_type);
+  // y_byte_size_ = ByteSize4Tensor(args.params.y_dims, args.params.y_ndim, args.params.y_data_type);
+  // ws_byte_size_ = args.params.max_ws_size;
+  x_byte_size_ = 0;
+  w_byte_size_ = 0;
+  y_byte_size_ = 0;
+  ws_byte_size_ = 0;
 }
 
 ManagedCudnnConvResource::~ManagedCudnnConvResource() {
@@ -1030,20 +1038,12 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionFwdAlgoPerf_t> {
   static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
                                perf_t* perf) {
     int found_algo_cnt = 0;
-    size_t ws = 0;
-    hipdnnConvolutionFwdAlgo_t algo;
-    hipdnnGetConvolutionForwardWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
-                                                 args.wdesc.Get(), args.cdesc.Get(),
-                                                 args.ydesc.Get(), algo, &ws);
-    res->ws_byte_size_ = ws;
-    res->set_ws();
-    args.params.max_ws_size = ws;
     
     OF_CUDNN_CHECK(hipdnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
         1, &found_algo_cnt, perf, res->ws_dptr(),
-        args.params.max_ws_size));
+        args.max_ws_size));
   }
 };
 
@@ -1059,21 +1059,12 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionBwdDataAlgoPerf_t> {
   static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
                                perf_t* perf) {
     int found_algo_cnt = 0;
-    size_t ws = 0;
-    hipdnnConvolutionBwdDataAlgo_t algo;
-    hipdnnGetConvolutionBackwardDataWorkspaceSize(res->cudnn_handle(), args.wdesc.Get(),
-                                                      args.ydesc.Get(), args.cdesc.Get(),
-                                                      args.xdesc.Get(), algo, &ws);
-
-    res->ws_byte_size_ = ws;
-    res->set_ws();
-    args.params.max_ws_size = ws;
 
     OF_CUDNN_CHECK(hipdnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
         1, &found_algo_cnt, perf, res->ws_dptr(),
-        args.params.max_ws_size));
+        args.max_ws_size));
   }
 };
 
@@ -1089,21 +1080,12 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionBwdFilterAlgoPerf_t> {
   static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
                                perf_t* perf) {
     int found_algo_cnt = 0;
-    size_t ws = 0;
-    hipdnnConvolutionBwdFilterAlgo_t algo;
-    hipdnnGetConvolutionBackwardFilterWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
-                                                        args.ydesc.Get(), args.cdesc.Get(),
-                                                        args.wdesc.Get(), algo, &ws);
-
-    res->ws_byte_size_ = ws;
-    res->set_ws();
-    args.params.max_ws_size = ws;
 
     OF_CUDNN_CHECK(hipdnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
         1, &found_algo_cnt, perf, res->ws_dptr(),
-        args.params.max_ws_size));
+        args.max_ws_size));
   }
 };
 
@@ -1150,6 +1132,7 @@ EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(hipdnnConvolutionBwdDataAlgoP
 EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(hipdnnConvolutionBwdFilterAlgoPerf_t)
 
 }  // namespace oneflow
+
 
 #endif  // WITH_ROCM
 
