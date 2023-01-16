@@ -47,6 +47,20 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckAndLogOpGraph(const Job& job) {
+  auto op_graph = std::make_unique<OpGraph>(job);
+  // Check op graph.
+  JUST(CheckOpGraph(*op_graph));
+  // Log op graph.
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    const JobDesc& job_desc = GlobalJobDesc();
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(job);
+    op_graph->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                + "_op_graph.dot");
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> ReInferLogicalBlobDesc(Job* job) {
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
     if (op_conf.has_input_conf()) {
@@ -124,7 +138,7 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
 
 }  // namespace
 
-Maybe<void> JobCompleter::Complete(Job* job) const {
+Maybe<void> JobCompleter::Complete(Job* job) {
   const auto& job_name = job->job_conf().job_name();
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
@@ -167,19 +181,14 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
 
-  if (ThreadLocalEnvBool<MULTI_IN>()) { JUST(ReInferLogicalBlobDesc(job)); }
-
-  auto op_graph = std::make_unique<OpGraph>(*job);
-  // Check op graph.
-  JUST(CheckOpGraph(*op_graph));
-  // Log op graph.
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    const JobDesc& job_desc = GlobalJobDesc();
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    op_graph->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                + "_op_graph.dot");
-  }
+  JUST(CheckAndLogOpGraph(*job));
   compile_tc->Count("[GraphCompile]" + job_name + " CheckAndLogOpGraph", 1, true);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobCompleter::CompleteWithNewInput(Job* job) {
+  JUST(ReInferLogicalBlobDesc(job));
+  JUST(CheckAndLogOpGraph(*job));
   return Maybe<void>::Ok();
 }
 

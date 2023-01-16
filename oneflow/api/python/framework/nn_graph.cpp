@@ -83,6 +83,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def("align_states_after_logical_graph_compile",
            &NNGraph::AlignStatesAfterLogicalGraphCompile)
       .def("complete_graph_for_runtime", &NNGraph::CompleteLogicalGraphForRuntime)
+      .def("infer_shape_with_new_input_for_runtime", &NNGraph::InferShapeWithNewInputForRuntime)
       .def("compile_plan_for_runtime", &NNGraph::CompilePlanForRuntime)
       .def("init_runtime", &NNGraph::InitRuntime)
       .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob);

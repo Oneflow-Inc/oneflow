@@ -57,7 +57,7 @@ def _test_linear_multi_graph(test_case, device):
     linear_g = LinearGraph()
     linear_g.debug(0)
     of_lazy_out = linear_g(x)
-    print(linear_g._compiled_graph_proto)
+    # print(linear_g._compiled_graph_proto)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
     linear_g1 = LinearGraph()
