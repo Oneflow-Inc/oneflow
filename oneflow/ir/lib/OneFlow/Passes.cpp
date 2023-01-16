@@ -964,7 +964,11 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
+    if (op.getBody().getNumArguments()) {
+      if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) {
+        return success();
+      }
+    }
     op = ExtractArgTensors(op, rewriter);
     op = ExtractRetTensors(op, rewriter);
     return success();
