@@ -43,7 +43,6 @@ class TopoStruct {
   // TODO: remove tributary layer
   // This node should be finished before tributary layer
   int32_t tributary_layer = -1;
-  bool on_trunk = false;
 
   HashSet<TopoStruct*> in_topo_structs;
   HashSet<TopoStruct*> out_topo_structs;
@@ -55,8 +54,6 @@ class TopoStruct {
   int32_t ComputeMinLayer();
   // Compute the maximum layer of this node
   void ComputeMaxLayer(int32_t max_min_layer);
-  // Find the trunk
-  void SpreadTrunk();
   // Compute the tributary layer
   int32_t ComputeTributaryLayer(int32_t max_min_layer);
   // Decide whether all the produced registers are reusable
@@ -179,40 +176,26 @@ int32_t TopoStruct::ComputeMinLayer() {
 void TopoStruct::ComputeMaxLayer(int32_t max_min_layer) {
   // Execute those optimizer as soon as possible to release the register of weight_diff
   if (out_topo_structs.empty()) {
-    max_layer = min_layer + 1;
+    max_layer = min_layer;
     return;
   }
   max_layer = max_min_layer;
   for (auto& out_topo_struct : out_topo_structs) {
-    if (max_layer < out_topo_struct->min_layer) { max_layer = out_topo_struct->min_layer; }
+    if (max_layer > out_topo_struct->min_layer) { max_layer = out_topo_struct->min_layer; }
   }
-}
-
-// Find the trunk
-void TopoStruct::SpreadTrunk() {
-  if (on_trunk) { return; }
-  on_trunk = true;
-  // If I am in the trunk, then all the children with (min_layer >= my layer id - 1) would be
-  // considered as in the trunk
-  for (auto& in_topo_struct : in_topo_structs) {
-    if (in_topo_struct->min_layer == min_layer - 1) { in_topo_struct->SpreadTrunk(); }
-  }
+  --max_layer;
 }
 
 // Compute the tributary layer
 int32_t TopoStruct::ComputeTributaryLayer(int32_t max_min_layer) {
   if (tributary_layer >= 0) { return tributary_layer; }
-  if (on_trunk) {
-    tributary_layer = min_layer;
-  } else {
-    tributary_layer = max_min_layer;
-    for (auto& out_topo_struct : out_topo_structs) {
-      if (tributary_layer > out_topo_struct->ComputeTributaryLayer(max_min_layer)) {
-        tributary_layer = out_topo_struct->tributary_layer;
-      }
+  tributary_layer = max_min_layer;
+  for (auto& out_topo_struct : out_topo_structs) {
+    if (tributary_layer > out_topo_struct->ComputeTributaryLayer(max_min_layer)) {
+      tributary_layer = out_topo_struct->tributary_layer;
     }
   }
-  return tributary_layer;
+  return --tributary_layer;
 }
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
@@ -317,11 +300,6 @@ void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
   max_min_layer++;
   // Compute the maximum layer for the whole graph
   for (auto& topo_struct : *topo_structs) { topo_struct->ComputeMaxLayer(max_min_layer); }
-  // The last 5 layers would be considered as in trunk anyway.
-  int32_t trunk_end_id = max_min_layer - 5;
-  for (auto& topo_struct : *topo_structs) {
-    if (topo_struct->min_layer >= trunk_end_id) { topo_struct->SpreadTrunk(); }
-  }
   // Compute the tributary layer
   for (auto& topo_struct : *topo_structs) { topo_struct->ComputeTributaryLayer(max_min_layer); }
 }
