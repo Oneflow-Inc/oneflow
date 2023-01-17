@@ -760,7 +760,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
   m.add_functor<impl::RReluFunctor>("RRelu");
-  m.add_functor<impl::RReluGradFunctor>("RRelu_grad");
+  m.add_functor<impl::RReluGradFunctor>("RReluGrad");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");

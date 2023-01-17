@@ -903,6 +903,7 @@ class LeakyReLU(Module):
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
 
+
 class RReLU(Module):
     """Applies the randomized leaky rectified liner unit function, element-wise:
 
@@ -938,7 +939,9 @@ class RReLU(Module):
        
     """
 
-    def __init__(self, lower: float = 1./8,  upper: float = 1./3, inplace: bool = False):
+    def __init__(
+        self, lower: float = 1.0 / 8, upper: float = 1.0 / 3, inplace: bool = False
+    ):
         super().__init__()
         self.lower = lower
         self.upper = upper
