@@ -148,15 +148,16 @@ class TestSaveLoad(flow.unittest.TestCase):
         state_dict2 = m2.state_dict()
         state_dict = {"m1": state_dict1, "m2": state_dict2}
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.TemporaryDirectory() as dir:
+            filename = os.path.join(dir, "tmp")
             with test_case.assertRaises(Exception):
-                flow.save(state_dict, f.name)
+                flow.save(state_dict, filename)
 
             global_src_dst_rank = 0
-            flow.save(state_dict, f.name, global_dst_rank=global_src_dst_rank)
+            flow.save(state_dict, filename, global_dst_rank=global_src_dst_rank)
             rank = flow.env.get_rank()
             if rank != global_src_dst_rank:
-                test_case.assertFalse(os.path.exists(f.name))
+                test_case.assertFalse(os.path.exists(filename))
 
             m1 = CustomModule()
             m1 = m1.to_global(
@@ -170,10 +171,10 @@ class TestSaveLoad(flow.unittest.TestCase):
             ).to_global(sbp=[flow.sbp.broadcast, flow.sbp.split(1)])
 
             with test_case.assertRaises(Exception):
-                loaded_state_dict = flow.load(f)
+                loaded_state_dict = flow.load(filename)
                 m1.load_state_dict(loaded_state_dict["m1"])
 
-            loaded_state_dict = flow.load(f, global_src_rank=global_src_dst_rank)
+            loaded_state_dict = flow.load(filename, global_src_rank=global_src_dst_rank)
             test_case.assertEqual(len(loaded_state_dict), 2)
             m1.load_state_dict(loaded_state_dict["m1"])
             m2.load_state_dict(loaded_state_dict["m2"])
