@@ -2249,6 +2249,54 @@ class ScalarLogicalGreater2Functor {
   }
 };
 
+class InplaceScalarLogicalGreaterFunctor {
+ public:
+  InplaceScalarLogicalGreaterFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scalar_logical_inplace_greater").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (scalar.IsFloatingPoint()) {
+      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalGreaterEqualFunctor()
@@ -4052,6 +4100,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");
   m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<InplaceScalarLogicalGreaterFunctor>("InplaceScalarLogicalGreater");
   m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
       "ScalarLogicalGreaterEqual");
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
