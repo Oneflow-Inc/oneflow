@@ -974,7 +974,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   rewrites::populateRewrites(patterns);
   constraints::populateConstraints(patterns);
-  populateMulCastPattern(patterns);
+  populateElementwiseFusionPatterns(patterns);
 }
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {

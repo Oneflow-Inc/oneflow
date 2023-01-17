@@ -24,13 +24,13 @@ limitations under the License.
 
 using namespace mlir;
 
-#include "oneflow/ir/lib/OneFlow/PDLL/MulCastPattern.h.inc"
+#include "oneflow/ir/lib/OneFlow/PDLL/ElementwiseFusionPatterns.h.inc"
 
 namespace mlir {
 
 namespace oneflow {
 
-void populateMulCastPattern(RewritePatternSet& patterns) {
+void populateElementwiseFusionPatterns(RewritePatternSet& patterns) {
   populateGeneratedPDLLPatterns(patterns);
 }
 
