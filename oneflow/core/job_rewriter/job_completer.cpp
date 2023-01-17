@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include <memory>
+#include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
@@ -62,6 +63,12 @@ Maybe<void> CheckAndLogOpGraph(const Job& job) {
 }
 
 Maybe<void> ReInferLogicalBlobDesc(Job* job) {
+  const auto& new_job_name = job->job_conf().job_name();
+#define UPDATE_JOB_NAME(op_conf_name)                             \
+  if (op_conf.has_##op_conf_name()) {                             \
+    op_conf.mutable_##op_conf_name()->set_job_name(new_job_name); \
+  }
+
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
     if (op_conf.has_input_conf()) {
       InputOpConf* input_conf = op_conf.mutable_input_conf();
@@ -70,7 +77,15 @@ Maybe<void> ReInferLogicalBlobDesc(Job* job) {
       Shape dummy_shape{4, 3};
       dummy_shape.ToProto(blob_conf->mutable_shape());
     }
+    // These op execution depends on new job name.
+    UPDATE_JOB_NAME(input_conf);
+    UPDATE_JOB_NAME(output_conf);
+    UPDATE_JOB_NAME(callback_notify_conf);
+    UPDATE_JOB_NAME(wait_and_send_ids_conf);
+    UPDATE_JOB_NAME(return_conf);
   }
+
+#undef UPDATE_JOB_NAME
   // Use OpGraph init to InferLogicalBlobDesc with new input shape.
   auto op_graph = std::make_unique<OpGraph>(*job);
   op_graph->DumpLogicalBlobDesc(job);

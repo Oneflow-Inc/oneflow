@@ -305,7 +305,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+  const auto& var_get_func = [&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
     OpGraph op_graph(job_);
     JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -314,8 +314,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
       return Maybe<void>::Ok();
     }));
     return variable_names_;
-  }()
-                                                      .GetOrThrow();
+  };
+  std::set<std::string> variable_names = *JUST(var_get_func());
 
   auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {

@@ -244,6 +244,7 @@ class Graph(object):
             else:
                 self._compile_from_shared(*args, **kwargs)
 
+        print("try to run ===== ")
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
@@ -816,13 +817,16 @@ class Graph(object):
         print("shared_graph ", self._shared_graph)
 
     def _compile_from_shared(self, *args, **kwargs):
+        # Generate new config.
         self._generate_config_proto()
+        # Generate new job id.
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             self._job_id = (
                 oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
             )
-
+        # Copy the completed graph from the shared graph and reuse it.
         self._compiled_job_proto = deepcopy(self._shared_graph._compiled_graph_proto)
+        self._compiled_job_proto.job_conf.job_name = self._name
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name,
@@ -833,10 +837,9 @@ class Graph(object):
 
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
 
-        # self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.infer_shape_with_new_input_for_runtime()
 
-        # Get compiled job
+        # Get new compiled job proto
         compiled_job_str = self._c_nn_graph.get_current_job_str()
         self._compiled_job_proto = job_pb.Job()
         self._compiled_job_proto.ParseFromString(compiled_job_str)
@@ -848,36 +851,27 @@ class Graph(object):
             self._shared_graph._build_eager_outputs,
         )
 
-        print("======finish rebuild outputs=======", self._eager_outputs)
-
         # Register input/output/variable/buffer to _c_nn_graph
         self._c_nn_graph.register_input_op_names_and_tensors(
-            arg_op_names,
+            self._shared_graph._arg_op_names,
             convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
         )
         self._c_nn_graph.register_output_op_names_and_tensors(
-            output_op_names, self._outputs_tensor_tuple
+            self._shared_graph._output_op_names, self._outputs_tensor_tuple
         )
-        (
-            state_op_names,
-            state_tensors,
-        ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
-        self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
-
+        self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
         self._c_nn_graph.register_variable_op_names_and_tensors(
-            state_op_names, self._state_tensor_tuple
+            self._shared_graph._state_op_names, self._state_tensor_tuple
         )
 
-        # Always pack outputs to remain type of outputs
-        return (
-            self._full_job_proto,
-            seq_to_func_return(self._eager_outputs_buffer[0], True),
-        )
-
+        # Init runtime.
+        # TODO(strint): align states needs to care about free eager tensor.
+        self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.compile_plan_for_runtime()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
-        return eager_outputs
+
+        return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -995,7 +989,13 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
+            (
+                self._arg_op_names,
+                lazy_args,
+                lazy_kwargs,
+                self._args_repr,
+                _,
+            ) = self.__build_io(
                 "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
@@ -1011,7 +1011,7 @@ class Graph(object):
             outputs = (outputs,)
 
             (
-                output_op_names,
+                self._output_op_names,
                 self._build_eager_outputs,
                 _,  # empty kwargs return
                 self._outs_repr,
@@ -1101,20 +1101,20 @@ class Graph(object):
             )
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
-                arg_op_names,
+                self._arg_op_names,
                 convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
             )
             self._c_nn_graph.register_output_op_names_and_tensors(
-                output_op_names, self._outputs_tensor_tuple
+                self._output_op_names, self._outputs_tensor_tuple
             )
             (
-                state_op_names,
-                state_tensors,
+                self._state_op_names,
+                self._state_tensors,
             ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
-            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+            self._state_tensor_tuple = convert_to_tensor_tuple(self._state_tensors)
 
             self._c_nn_graph.register_variable_op_names_and_tensors(
-                state_op_names, self._state_tensor_tuple
+                self._state_op_names, self._state_tensor_tuple
             )
 
         # Clear useless dict used in graph build.
