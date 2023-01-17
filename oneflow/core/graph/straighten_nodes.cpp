@@ -302,10 +302,9 @@ void TopoStruct::ComputeExceedTime() {
 
 // Memory volume is memory * lifetime, but we might change the formula
 void TopoStruct::ComputeMemoryVolume() {
+  static float lifetime_order = ParseFloatFromEnv("LifetimeOrder", 1.0);
   // We might get a large tensor multiply by a long life time, we need some rescaling
-  memory_volume = int64_t(
-      (memory_increment * pow(double(min_lifetime), ParseFloatFromEnv("LifetimeOrder", 1.0)))
-      / 1000.0);
+  memory_volume = int64_t((memory_increment * pow(double(min_lifetime), lifetime_order)) / 1000.0);
   // We need to distinguish zero or negative memory increment from slight positive memory increment.
   // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
   if (memory_increment > 0) { memory_volume += 1; }
@@ -370,35 +369,6 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 
   // The computation of maximum layer must behind those of minimum layer for the whole graph.
   for (auto& pair : *task_node2topo_struct) { pair.second.ComputeMaxLayer(task_node2topo_struct); }
-}
-
-// Find the minimum life time of the task graph,
-// which is the maximum of the minimum layer among all the consumers.
-// The function must be executed after generating min layer
-void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
-  // Find the maximum consumer layer
-  for (auto& pair : *task_node2topo_struct) {
-    int32_t curr_min_layer = pair.second.min_layer;
-    pair.first->ForEachNodeOnInDataEdge([&](TaskNode* in) {
-      auto& max_consumer_layer = task_node2topo_struct->at(in).min_lifetime;
-      if (max_consumer_layer < curr_min_layer) { max_consumer_layer = curr_min_layer; }
-    });
-  }
-  // Compute the life time
-  for (auto& pair : *task_node2topo_struct) {
-    if (pair.second.min_layer >= pair.second.min_lifetime) {
-      // No consumer, the register will be killed after the execution of the current operator
-      // The life time is 1 (including the current operator)
-      pair.second.min_lifetime = 1;
-    } else {
-      // The life time is the distance between two operators + 1
-      // For example, a ---(x)---> b
-      // Register x is created while executing a, and x is killed after the execution of b.
-      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
-      pair.second.min_lifetime -= pair.second.min_layer - 1;
-    }
-    pair.second.ComputeMemoryVolume();
-  }
 }
 
 // Find the minimum life time of the task graph,
