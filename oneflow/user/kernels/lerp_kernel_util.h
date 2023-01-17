@@ -31,11 +31,13 @@ struct LerpKernelUtil {
                        const T* end, const T* out_diff, T* start_diff, T* weight_diff, T* end_diff);
 };
 
-// template<DeviceType device_type, typename T, typename ValueT>
-// struct ScalarLerpKernelUtil {
-//   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const Scalar operand, T*
-//   out);
-// };
+template<DeviceType device_type, typename T, typename ValueT>
+struct ScalarLerpKernelUtil {
+  static void Forward(ep::Stream* stream, const int64_t n, const T* start, const T* end,
+                      const Scalar operand, T* out);
+  static void Backward(ep::Stream* stream, const int64_t n, const T* start, const T* end,
+                       const T* out_diff, const Scalar operand, T* start_diff, T* end_diff);
+};
 
 #define SCALAR_VALUE_DATA_TYPE_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64) \

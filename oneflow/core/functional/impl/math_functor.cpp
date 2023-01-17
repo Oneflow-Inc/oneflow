@@ -2287,6 +2287,103 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+class ScalarLerpFunctor {
+ public:
+  ScalarLerpFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("scalar_lerp").Input("start").Input("end").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (scalar.IsFloatingPoint()) {
+      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[start->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = start->dtype();
+      }
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[start->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = start->dtype();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+
+    JUST(tensor_processor.AddInputs({start, end}, lowest_dtype).Apply());
+    TensorTuple inputs = JUST(tensor_processor.GetInputs());
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, inputs, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarLerpGradFunctor {
+ public:
+  ScalarLerpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scalar_lerp_grad")
+                         .Input("start")
+                         .Input("end")
+                         .Input("out_diff")
+                         .Output("start_diff")
+                         .Output("end_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end,
+                           const std::shared_ptr<one::Tensor>& out_diff,
+                           const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (scalar.IsFloatingPoint()) {
+      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[start->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = start->dtype();
+      }
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[start->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = start->dtype();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+
+    JUST(tensor_processor.AddInputs({start, end, out_diff}, lowest_dtype).Apply());
+    TensorTuple inputs = JUST(tensor_processor.GetInputs());
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, inputs, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
@@ -4040,6 +4137,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<StftFunctor>("Stft");
+  m.add_functor<ScalarLerpFunctor>("ScalarLerp");
+  m.add_functor<ScalarLerpGradFunctor>("ScalarLerpGrad");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");

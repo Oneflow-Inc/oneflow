@@ -38,7 +38,9 @@ class TestLerp(flow.unittest.TestCase):
         start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
-        return torch.lerp(start, end, weight)
+        return torch.lerp(
+            start, end, oneof(weight, random().to(int), random().to(float))
+        )
 
     @autotest()
     def test_tesnor_lerp_with_random_data(test_case):

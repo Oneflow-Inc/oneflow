@@ -22,17 +22,93 @@ namespace {
 
 template<typename T>
 __global__ void LerpForwardGpu(const int n, const T* start, const T* weight, const T* end, T* out) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = start[i] + weight[i] * (end[i] - start[i]); }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const T start_i = start[i];
+    out[i] = start_i + weight[i] * (end[i] - start_i);
+  }
+}
+
+template<typename T, typename ValueT>
+__global__ void ScalarLerpForwardGpu(const int n, const T* start, const ValueT weight, const T* end,
+                                     T* out) {
+  const T weight_clac = static_cast<T>(weight);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const T start_i = start[i];
+    out[i] = start_i + weight_clac * (end[i] - start_i);
+  }
+}
+
+template<>
+__global__ void ScalarLerpForwardGpu<half, int64_t>(const int n, const half* start,
+                                                    const int64_t weight, const half* end,
+                                                    half* out) {
+  const half weight_clac = __double2half(static_cast<double>(weight));
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const half start_i = start[i];
+    out[i] = start_i + weight_clac * (end[i] - start_i);
+  }
+}
+
+template<>
+__global__ void ScalarLerpForwardGpu<half, double>(const int n, const half* start,
+                                                   const double weight, const half* end,
+                                                   half* out) {
+  const half weight_clac = __double2half(static_cast<double>(weight));
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const half start_i = start[i];
+    out[i] = start_i + weight_clac * (end[i] - start_i);
+  }
 }
 
 template<typename T>
 __global__ void LerpBackwardGpu(const int n, const T* start, const T* weight, const T* end,
                                 const T* out_diff, T* start_diff, T* weight_diff, T* end_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T out_diff_i = out_diff[i];
-    start_diff[i] = (static_cast<T>(1.0) - weight[i]) * out_diff_i;
+    const T out_diff_i = out_diff[i];
+    const T start_diff_i = (static_cast<T>(1.0) - weight[i]) * out_diff_i;
+    start_diff[i] = start_diff_i;
     weight_diff[i] = (end[i] - start[i]) * out_diff_i;
-    end_diff[i] = weight[i] * out_diff_i;
+    end_diff[i] = out_diff_i - start_diff_i;
+  }
+}
+
+template<typename T, typename ValueT>
+__global__ void ScalarLerpBackwardGpu(const int n, const T* start, const ValueT weight,
+                                      const T* end, const T* out_diff, T* start_diff, T* end_diff) {
+  const T weight_clac = static_cast<T>(weight);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    T out_diff_i = out_diff[i];
+    const T start_diff_i = (static_cast<T>(1.0) - weight_clac) * out_diff_i;
+    start_diff[i] = start_diff_i;
+    end_diff[i] = out_diff_i - start_diff_i;
+  }
+}
+
+template<>
+__global__ void ScalarLerpBackwardGpu<half, int64_t>(const int n, const half* start,
+                                                     const int64_t weight, const half* end,
+                                                     const half* out_diff, half* start_diff,
+                                                     half* end_diff) {
+  const half weight_clac = __double2half(static_cast<double>(weight));
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    half out_diff_i = out_diff[i];
+    const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;
+    start_diff[i] = start_diff_i;
+    end_diff[i] = out_diff_i - start_diff_i;
+  }
+}
+
+template<>
+__global__ void ScalarLerpBackwardGpu<half, double>(const int n, const half* start,
+                                                    const double weight, const half* end,
+                                                    const half* out_diff, half* start_diff,
+                                                    half* end_diff) {
+  const half weight_clac = __double2half(static_cast<double>(weight));
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    half out_diff_i = out_diff[i];
+    const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;
+    start_diff[i] = start_diff_i;
+    end_diff[i] = out_diff_i - start_diff_i;
   }
 }
 
@@ -48,8 +124,24 @@ struct LerpKernelUtil<DeviceType::kCUDA, T> {
   static void Backward(ep::Stream* stream, const int64_t n, const T* start, const T* weight,
                        const T* end, const T* out_diff, T* start_diff, T* weight_diff,
                        T* end_diff) {
-    RUN_CUDA_KERNEL((LerpBackwardGpu<T>), stream, n, n, start, weight, end, out_diff,
-                    start_diff, weight_diff, end_diff);
+    RUN_CUDA_KERNEL((LerpBackwardGpu<T>), stream, n, n, start, weight, end, out_diff, start_diff,
+                    weight_diff, end_diff);
+  }
+};
+
+template<typename T, typename ValueT>
+struct ScalarLerpKernelUtil<DeviceType::kCUDA, T, ValueT> {
+  static void Forward(ep::Stream* stream, const int64_t n, const T* start, const T* end,
+                      const Scalar operand, T* out) {
+    ValueT weight = operand.Value<ValueT>();
+    RUN_CUDA_KERNEL((ScalarLerpForwardGpu<T, ValueT>), stream, n, n, start, weight, end, out);
+  }
+
+  static void Backward(ep::Stream* stream, const int64_t n, const T* start, const T* end,
+                       const T* out_diff, const Scalar operand, T* start_diff, T* end_diff) {
+    ValueT weight = operand.Value<ValueT>();
+    RUN_CUDA_KERNEL((ScalarLerpBackwardGpu<T, ValueT>), stream, n, n, start, weight, end, out_diff,
+                    start_diff, end_diff);
   }
 };
 
@@ -57,5 +149,12 @@ struct LerpKernelUtil<DeviceType::kCUDA, T> {
   template struct LerpKernelUtil<DeviceType::kCUDA, data_type>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LERP_KERNEL_UTIL_CUDA, LERP_DATA_TYPE_SEQ_CUDA)
 #undef INSTANTIATE_LERP_KERNEL_UTIL_CUDA
+
+#define INSTANTIATE_SCALAR_LERP_KERNEL_UTIL_CUDA(data_type, value_data_type)           \
+  template struct ScalarLerpKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type), \
+                                       OF_PP_PAIR_FIRST(value_data_type)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCALAR_LERP_KERNEL_UTIL_CUDA, LERP_DATA_TYPE_SEQ_CUDA,
+                                 SCALAR_VALUE_DATA_TYPE_SEQ)
+#undef INSTANTIATE_SCALAR_LERP_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow
