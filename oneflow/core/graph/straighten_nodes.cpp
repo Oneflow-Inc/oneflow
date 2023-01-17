@@ -56,6 +56,7 @@ class TopoStruct {
   int32_t exceed_time = -1;
   int32_t min_lifetime = -1;
   int64_t memory_volume = -1;
+  int32_t max_layer = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -65,6 +66,7 @@ class TopoStruct {
   void DropTributaryLayer(int32_t upper_bound);
 
   void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
+  void ComputeMaxLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   void SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
@@ -221,6 +223,12 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
   counter--;
 }
 
+void TopoStruct::ComputeMaxLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  node->ForEachNodeOnOutEdge([&](TaskNode* out) {
+    max_layer = std::max(max_layer, task_node2topo_struct->at(out).min_layer);
+  });
+}
+
 // Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
 void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
@@ -329,6 +337,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
     case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
+    case StraightenOrder::kMaxLayerAscend: return sign * max_layer;
     default: return 0;
   }
 }
@@ -357,6 +366,38 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     pair.second.SpreadTributaryLayer(task_node2topo_struct);
     // Set the min_distance2overlap for each topological structure
     pair.second.GetMinDistance2Overlap(task_node2topo_struct);
+  }
+
+  // The computation of maximum layer must behind those of minimum layer for the whole graph.
+  for (auto& pair : *task_node2topo_struct) { pair.second.ComputeMaxLayer(task_node2topo_struct); }
+}
+
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  // Find the maximum consumer layer
+  for (auto& pair : *task_node2topo_struct) {
+    int32_t curr_min_layer = pair.second.min_layer;
+    pair.first->ForEachNodeOnInDataEdge([&](TaskNode* in) {
+      auto& max_consumer_layer = task_node2topo_struct->at(in).min_lifetime;
+      if (max_consumer_layer < curr_min_layer) { max_consumer_layer = curr_min_layer; }
+    });
+  }
+  // Compute the life time
+  for (auto& pair : *task_node2topo_struct) {
+    if (pair.second.min_layer >= pair.second.min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      pair.second.min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      pair.second.min_lifetime -= pair.second.min_layer - 1;
+    }
+    pair.second.ComputeMemoryVolume();
   }
 }
 
@@ -429,6 +470,10 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
   } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     decide_parameters->push_back(StraightenOrder::kExceedTimeDescend);
     decide_parameters->push_back(StraightenOrder::kLayerDescend);
+    decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
+  } else if (sat == StraightenAlgorithmTag::kDelayShortGpu) {
+    decide_parameters->push_back(StraightenOrder::kExceedTimeAscend);
+    decide_parameters->push_back(StraightenOrder::kMaxLayerAscend);
     decide_parameters->push_back(StraightenOrder::kMemoryIncrementAscend);
   } else {
     // sat == StraightenAlgorithmTag::kDisable

@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_USER_KERNELS_FUSED_RNN_CELL_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_FUSED_RNN_CELL_KERNEL_UTIL_H_
+
 // NOTE(Liang Depeng): Modified from
 // https://github.com/pytorch/pytorch/blob/master/c10/macros/Macros.h#L256
 #if defined(__CUDACC__)
@@ -62,3 +65,5 @@ constexpr uint32_t CUDA_THREADS_PER_BLOCK_FALLBACK = 256;
   __launch_bounds__((OF_MAX_THREADS_PER_BLOCK((max_threads_per_block))), \
                     (OF_MIN_BLOCKS_PER_SM((max_threads_per_block), (min_blocks_per_sm))))
 #endif
+
+#endif  // ONEFLOW_USER_KERNELS_FUSED_RNN_CELL_KERNEL_UTIL_H_
