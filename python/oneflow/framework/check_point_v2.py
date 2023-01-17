@@ -173,18 +173,12 @@ def _broadcast_py_object(obj, src: int = 0):
 def tensor_getstate(self):
     # context_data is not None means setstate/getstate is called inside
     # flow.save or flow.load
-    if context_data is not None and context_data.save_as_external_data:
+    if context_data is not None:
         if context_data.global_rank is None:
-            assert self.is_local
-            rel_dir_name = id_util.UniqueStr("tensor_")
-            abs_dir_name = context_data.path / rel_dir_name
-
+            assert self.is_local, "Please set global_dst_rank in `flow.save` to save global tensor"
             tensor = self
         else:
             assert not self.is_local
-            rel_dir_name = f"global_tensor_{self.global_id()}"
-            abs_dir_name = context_data.path / rel_dir_name
-
             # Boxing to cpu firstly to avoid extra gpu memory usage
             tensor = (
                 self.to_global(
@@ -196,21 +190,27 @@ def tensor_getstate(self):
                 )
                 .to_local()
             )
-        if (
-            context_data.global_rank is None
-            or context_data.global_rank == flow.env.get_rank()
-        ):
-            _save_tensor_to_disk(tensor, abs_dir_name)
+        if context_data.save_as_external_data:
+            if context_data.global_rank is None:
+                rel_dir_name = id_util.UniqueStr("tensor_")
+            else:
+                rel_dir_name = f"global_tensor_{self.global_id()}"
+            abs_dir_name = context_data.path / rel_dir_name
 
-        return {"path": rel_dir_name}
-    else:
-        if context_data is not None:
+            if (
+                context_data.global_rank is None
+                or context_data.global_rank == flow.env.get_rank()
+            ):
+                _save_tensor_to_disk(tensor, abs_dir_name)
+
+            return {"path": rel_dir_name}
+        else:
             return {
-                "data": self.numpy(),
-                "dtype": self.dtype,
+                "data": tensor.numpy(),
+                "dtype": tensor.dtype,
                 "device": "cpu",
             }
-
+    else:
         if self.is_local:
             if self.is_cuda:
                 device = "cuda"
