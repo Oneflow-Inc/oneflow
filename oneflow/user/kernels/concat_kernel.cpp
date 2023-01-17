@@ -26,7 +26,7 @@ std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
 }
 
-class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport  {
+class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConcatKernel() = default;
   ~ConcatKernel() = default;
