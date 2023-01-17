@@ -912,6 +912,9 @@ class RReLU(Module):
             x, & \\text{ if } x \\geq 0 \\\\
             a \\times x, & \\text{ otherwise }
         \\end{cases}
+        
+    where :math:`a` is randomly sampled from uniform distribution
+    :math:`\mathcal{U}(\text{lower}, \text{upper})`.
     
     .. note::
         See `Empirical Evaluation of Rectified Activations in Convolution Network: <https://arxiv.org/pdf/1505.00853.pdf>`_
