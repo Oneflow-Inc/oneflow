@@ -44,7 +44,7 @@ static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
   return conf_wrapper_;
 }
 
-RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op)) {
+RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op, true)) {
   const auto handle_operands_or_results =
       [&op, this](const auto& arg_ids, const auto& get_operand_or_result, ArgVec& arg_vec) {
         for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {

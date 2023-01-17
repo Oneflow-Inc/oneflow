@@ -1080,8 +1080,7 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
   bool IsOpCudaGraphSupport(mlir::Operation* op) const {
     ::oneflow::okl::RegContext reg_ctx(op);
     auto* kernel = const_cast<::oneflow::user_op::OpKernel*>(reg_ctx.GetKernel());
-    if (dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel)) { return true; }
-    return false;
+    return dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel);
   }
 
   bool IsSameCudaGraphSupport(std::vector<Operation*>& ops, mlir::Operation* op) const {
