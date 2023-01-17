@@ -46,8 +46,8 @@ class OfCollectiveBoxingKernelState final : public KernelState {
   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveBoxingKernelState);
   explicit OfCollectiveBoxingKernelState(const RankDesc& rank_desc)
       : coll_id_(Singleton<CollectiveMgr>::Get()->KernelGetCollId(rank_desc)), // GlobalProcessCtx::Rank()
-        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(rank_desc.rank())) {
-          VLOG(1) << "coll_id " << coll_id_ << " make_shared<OfCollectiveBoxingKernelState> with rank = " << rank_desc.rank() << " ofccl_rank_ctx_ @ " << ofccl_rank_ctx_;
+        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(GlobalProcessCtx::Rank())) {
+          VLOG(2) << "coll_id " << coll_id_ << " make_shared<OfCollectiveBoxingKernelState> with rank = " << GlobalProcessCtx::Rank() << " ofccl_rank_ctx_ @ " << ofccl_rank_ctx_;
         }
   ~OfCollectiveBoxingKernelState() = default;
 
@@ -129,7 +129,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
     CallbackFunc cb_func = cb_lambda;
     
-    VLOG(1) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
+    VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
   }

@@ -63,7 +63,7 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc, int coll_id) : desc_(des
 }
 
 void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
-  // VLOG(1) << "OfRequestStore job_id = " << job_id;
+  // VLOG(2) << "OfRequestStore job_id = " << job_id;
   std::vector<std::unique_ptr<OfRequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
   CHECK_EQ(request_entry_vec.size(), 0);
   for (const RequestDesc& desc : request_set.request()) {
@@ -76,7 +76,7 @@ void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
     const std::unique_ptr<OfRequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), OfRequestId(job_id, i)).second);
 
-    VLOG(1) << "OCCL job_id = " << job_id << " coll_id = " << entry->coll_id() << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
+    VLOG(2) << "OCCL job_id = " << job_id << " coll_id = " << entry->coll_id() << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
   }
 }
 

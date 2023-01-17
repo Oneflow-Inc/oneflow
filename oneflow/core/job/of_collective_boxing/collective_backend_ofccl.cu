@@ -196,7 +196,7 @@ struct CollectiveBackendOfccl::Impl {
           if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
             device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
             ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], curr_device_id);
-            VLOG(1) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
+            VLOG(2) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
           }
 
           // 获取count和datatype、op信息。
@@ -241,7 +241,7 @@ struct CollectiveBackendOfccl::Impl {
   }
 
   ofcclRankCtx_t RetrieveOfcclRankCtx(int rank) {
-    CHECK(device_id2ofccl_rank_ctx.find(rank) != device_id2ofccl_rank_ctx.end());
+    CHECK(device_id2ofccl_rank_ctx.find(rank) != device_id2ofccl_rank_ctx.end()) << " rank = " << rank;
     return device_id2ofccl_rank_ctx[rank];
   }
 
