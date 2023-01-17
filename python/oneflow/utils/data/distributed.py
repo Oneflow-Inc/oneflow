@@ -85,12 +85,7 @@ class DistributedSampler(Sampler[T_co]):
             num_replicas = flow.env.get_world_size()
         if rank is None:
             rank = flow.env.get_rank()
-        print(
-            "flow.env.get_world_size() >>>>> ",
-            flow.env.get_world_size(),
-            "flow.env.get_rank() >>>>>",
-            flow.env.get_rank(),
-        )
+
         if rank >= num_replicas or rank < 0:
             raise ValueError(
                 "Invalid rank {}, rank should be in the interval"

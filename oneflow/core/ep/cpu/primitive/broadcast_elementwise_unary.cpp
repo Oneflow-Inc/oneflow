@@ -30,6 +30,10 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
+#define CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ \
+  CPU_PRIMITIVE_UINT32_TYPE_SEQ         \
+  CPU_PRIMITIVE_ALL_TYPE_SEQ
+
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {
     if ((i == num_dims - 1 && strides[i] != 1)
@@ -213,13 +217,25 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
    NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair), \
                                 OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)>},
 
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_dtype_pair, dst_dtype_pair) \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_dtype_pair),                              \
+                   OF_PP_PAIR_SECOND(dst_dtype_pair)),                                       \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair), \
+                                OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
+
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_IDENTITY_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_IDENTITY_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)
 
+            // For Cast OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
+                CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ, CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ)};
+
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =

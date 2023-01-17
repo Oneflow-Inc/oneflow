@@ -544,6 +544,13 @@ struct UnaryFunctor<device, UnaryOp::kNanAssign, Dst, Src> {
   }
 };
 
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kCast, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src); }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
