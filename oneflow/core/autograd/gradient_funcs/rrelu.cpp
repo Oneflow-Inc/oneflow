@@ -21,9 +21,9 @@ namespace one {
 
 struct RReluCaptureState : public AutoGradCaptureState {
   bool requires_grad = true;
-  float lower=1.0/8;
-  float upper=1.0/3;
-  bool training=false;
+  float lower = 1.0 / 8;
+  float upper = 1.0 / 3;
+  bool training = false;
   int x_index = -1;
   int noise_data_index = -1;
 };
