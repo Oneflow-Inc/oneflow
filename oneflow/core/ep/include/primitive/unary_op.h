@@ -83,6 +83,9 @@ enum class UnaryOp {
   // logical op
   kLogicalNot,
 
+  // cast op
+  kCast,
+
   // utils op
   kIsInf,
   kIsNan,
