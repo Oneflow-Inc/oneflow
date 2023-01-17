@@ -175,7 +175,9 @@ def tensor_getstate(self):
     # flow.save or flow.load
     if context_data is not None:
         if context_data.global_rank is None:
-            assert self.is_local, "Please set global_dst_rank in `flow.save` to save global tensor"
+            assert (
+                self.is_local
+            ), "Please set global_dst_rank in `flow.save` to save global tensor"
             tensor = self
         else:
             assert not self.is_local
