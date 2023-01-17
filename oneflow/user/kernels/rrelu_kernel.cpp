@@ -93,9 +93,9 @@ class CpuRReluKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_RRelu_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("rrelu").SetCreateFn<CpuRReluKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
-      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
-REGISTER_CPU_RRelu_KERNEL(float) 
-REGISTER_CPU_RRelu_KERNEL(double)
+REGISTER_CPU_RRelu_KERNEL(float);
+REGISTER_CPU_RRelu_KERNEL(double);
 
 }  // namespace oneflow
