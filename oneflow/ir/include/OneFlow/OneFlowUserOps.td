@@ -646,8 +646,8 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceM
 #endif // GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
 // Group: BROADCAST
-// broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_sub, broadcast_isclose_eq_nan, broadcast_isclose_neq_nan
-// Total: 22
+// broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_inplace_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_sub, broadcast_isclose_eq_nan, broadcast_isclose_neq_nan
+// Total: 23
 
 #ifdef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
@@ -744,6 +744,20 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffe
   );
   let output = (outs
     OneFlow_Tensor:$z
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_BroadCastInplaceGreaterOp : OneFlow_BaseOp<"broadcast_inplace_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8258,8 +8272,8 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
 #endif // GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
 // Group: SCALAR
-// clip_by_scalar, clip_by_scalar_grad, clip_by_scalar_max, clip_by_scalar_max_grad, clip_by_scalar_min, clip_by_scalar_min_grad, scalar_add, scalar_add_by_tensor, scalar_div_by_tensor, scalar_floordiv, scalar_truncdiv, scalar_fmod, scalar_logical_and, scalar_logical_equal, scalar_logical_greater, scalar_logical_greater_equal, scalar_logical_less, scalar_logical_less_equal, scalar_logical_not_equal, scalar_logical_or, scalar_logical_xor, scalar_mul, scalar_mul_by_tensor, scalar_pow, scalar_pow_grad, scalar_reverse_pow, scalar_reverse_pow_grad, scalar_sub_by_tensor
-// Total: 28
+// clip_by_scalar, clip_by_scalar_grad, clip_by_scalar_max, clip_by_scalar_max_grad, clip_by_scalar_min, clip_by_scalar_min_grad, scalar_add, scalar_add_by_tensor, scalar_div_by_tensor, scalar_floordiv, scalar_truncdiv, scalar_fmod, scalar_logical_and, scalar_logical_equal, scalar_logical_greater, scalar_logical_greater_equal, scalar_logical_inplace_greater, scalar_logical_less, scalar_logical_less_equal, scalar_logical_not_equal, scalar_logical_or, scalar_logical_xor, scalar_mul, scalar_mul_by_tensor, scalar_pow, scalar_pow_grad, scalar_reverse_pow, scalar_reverse_pow_grad, scalar_sub_by_tensor
+// Total: 29
 
 #ifdef GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
@@ -8535,6 +8549,25 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
 }
 
 def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScalarLogicalInplaceGreaterOp : OneFlow_BaseOp<"scalar_logical_inplace_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -9670,7 +9703,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, Cpu
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
