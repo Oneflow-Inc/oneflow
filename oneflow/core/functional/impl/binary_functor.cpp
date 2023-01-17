@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -281,14 +282,29 @@ class InplaceDivFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+
+    // NOTE: div operator will cast inputs to float when dtype is integral
     TensorProcessor tensor_processor;
-    if (y->requires_grad()) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x)), y})
-               .Apply());
-    } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple tensor_processor_inputs;
+    {
+      if (tensor_y->requires_grad()) {
+        tensor_processor_inputs.assign({JUST(Identity(tensor_x)), tensor_y});
+      } else {
+        tensor_processor_inputs.assign({tensor_x, tensor_y});
+      }
     }
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
+      tensor_processor.AddInputs(tensor_processor_inputs, DType::Float());
+    } else {
+      tensor_processor.AddInputs(tensor_processor_inputs)
+          .PromoteInputsToCommonDtype(true)
+          .PromoteIntegerInputsToFloatDtype(true);
+    }
+    JUST(tensor_processor.Apply());
+
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
@@ -388,6 +404,27 @@ class BroadcastEqualFunctor : public BinaryFunctor {
   BroadcastEqualFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
   }
+};
+
+class EqualFunctor {
+ public:
+  EqualFunctor() {
+    broadcast_equal_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<bool> operator()(const std::shared_ptr<one::Tensor>& x,
+                         const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() != *y->shape()) { return false; }
+    if (x->nelement() == 0) { return true; }
+
+    std::shared_ptr<Tensor> output = JUST(
+        ReduceAllWhole(JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_equal_op_, {x, y}, {}))));
+    bool status = JUST(GetItemInScalarTensor<bool>(output));
+    return status;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> broadcast_equal_op_;
 };
 
 class BroadcastNotEqualFunctor : public BinaryFunctor {
@@ -524,6 +561,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
+  m.add_functor<impl::EqualFunctor>("Equal");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
