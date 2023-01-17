@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -wrap-ops-to-kernel-launch="mode=normal" \
+// RUN: -wrap-ops-to-kernel-launch="mode=simple" \
 // RUN: | FileCheck %s
 
 // CHECK-NOT:  func.func @wrap1
