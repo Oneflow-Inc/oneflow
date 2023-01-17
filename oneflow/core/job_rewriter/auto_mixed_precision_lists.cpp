@@ -37,6 +37,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "cublas_fused_mlp_grad",
                                "fused_matmul_bias",
                                "cublas_bias_add_relu_matmul_grad",
+                               "fused_glu",
                                "fused_matmul_bias_add_relu_dropout",
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",

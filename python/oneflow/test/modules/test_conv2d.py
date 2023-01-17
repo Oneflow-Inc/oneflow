@@ -25,6 +25,8 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 test_conv2d_weight = np.array(
     [
@@ -1587,7 +1589,19 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         img = torch.ones((1, 3, 224, 224), requires_grad=True).to(device)
         kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
-        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=3)
+    def test_nn_functional_conv2d_3dinput(test_case):
+        device = random_device()
+        img = torch.ones((3, 224, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
         return y
 
     def test_conv2d(test_case):
@@ -1848,6 +1862,31 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=5)
+    def test_conv2d_auto_squeeze_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim0=channels).to(device)
         y = m(x)
         return y
 

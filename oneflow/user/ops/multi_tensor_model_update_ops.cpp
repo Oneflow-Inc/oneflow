@@ -304,7 +304,7 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferWeightUpdateTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferYoloV5WeightUpdateTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model_i = ctx->InputTensorDesc("model", i);
@@ -315,7 +315,7 @@ Maybe<void> InferWeightUpdateTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferWeightUpdateDataType(user_op::InferContext* ctx) {
+Maybe<void> InferYoloV5WeightUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckLearningRateDataType(ctx));
   const user_op::TensorDesc& first_model_desc = ctx->InputTensorDesc("model", 0);
   const int64_t input_size = ctx->input_size("model");
@@ -329,8 +329,8 @@ Maybe<void> InferWeightUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                   const user_op::UserOpConfWrapper& conf) {
+Maybe<void> YoloV5WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                         const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_update", i));
@@ -487,7 +487,7 @@ Maybe<void> WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputA
 
 /* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  return InferWeightUpdateTensorDesc(ctx);
+  return InferYoloV5WeightUpdateTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferPhysicalTensorDesc(
@@ -502,12 +502,12 @@ Maybe<void> WeightInputArgModifyFn(const user_op::GetInputArgModifier& GetInputA
 
 /* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
-  return WeightInputArgModifyFn(GetInputArgModifierFn, conf);
+  return YoloV5WeightInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
 /* static */ Maybe<void> MultiTensorYoloV5WeightUpdateOp::InferDataType(
     user_op::InferContext* ctx) {
-  return InferWeightUpdateDataType(ctx);
+  return InferYoloV5WeightUpdateDataType(ctx);
 }
 
 }  // namespace oneflow
