@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/common/cost_util.h"
+#include "oneflow/core/common/buffer_manager.h"
 
 namespace oneflow {
 
@@ -83,6 +84,26 @@ Maybe<void> ReInferLogicalBlobDesc(Job* job) {
     UPDATE_JOB_NAME(callback_notify_conf);
     UPDATE_JOB_NAME(wait_and_send_ids_conf);
     UPDATE_JOB_NAME(return_conf);
+    if (op_conf.has_critical_section_wait_tick_conf()) {
+      const auto& buffer_name = op_conf.critical_section_wait_tick_conf().buffer_name();
+      if (buffer_name.rfind(kInputCriticalSectionWaitBufferNamePrefix, 0) == 0) {
+        op_conf.mutable_critical_section_wait_tick_conf()->set_buffer_name(
+            GetInputCriticalSectionWaitBufferName(new_job_name));
+      } else if (buffer_name.rfind(kOutputCriticalSectionWaitBufferNamePrefix, 0) == 0) {
+        op_conf.mutable_critical_section_wait_tick_conf()->set_buffer_name(
+            GetOutputCriticalSectionWaitBufferName(new_job_name));
+      }
+    }
+    if (op_conf.has_critical_section_callback_tick_conf()) {
+      const auto& buffer_name = op_conf.critical_section_callback_tick_conf().buffer_name();
+      if (buffer_name.rfind(kInputCriticalSectionCallbackBufferNamePrefix, 0) == 0) {
+        op_conf.mutable_critical_section_callback_tick_conf()->set_buffer_name(
+            GetInputCriticalSectionCallbackBufferName(new_job_name));
+      } else if (buffer_name.rfind(kOutputCriticalSectionCallbackBufferNamePrefix, 0) == 0) {
+        op_conf.mutable_critical_section_callback_tick_conf()->set_buffer_name(
+            GetOutputCriticalSectionCallbackBufferName(new_job_name));
+      }
+    }
   }
 
 #undef UPDATE_JOB_NAME

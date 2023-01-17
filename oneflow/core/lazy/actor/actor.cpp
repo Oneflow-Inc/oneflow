@@ -422,6 +422,15 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    const auto& op_name = actor_ctx_->task_proto()
+                              .exec_sequence()
+                              .exec_node(0)
+                              .kernel_conf()
+                              .op_attribute()
+                              .op_conf()
+                              .name();
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
+              << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -433,6 +442,9 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " finish to act count "
+              << act_cnt_;
+    ++act_cnt_;
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();

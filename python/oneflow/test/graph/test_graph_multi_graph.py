@@ -59,6 +59,7 @@ def _test_linear_multi_graph(test_case, device):
     of_lazy_out = linear_g(x)
     # print(linear_g._compiled_graph_proto)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
+    print(" graph 0 out ", of_lazy_out)
 
     linear_g1 = LinearGraph()
     linear_g1._share_from(linear_g)
@@ -73,9 +74,9 @@ def _test_linear_multi_graph(test_case, device):
     )
     x1 = flow.tensor(input_arr1, device=device)
     of_lazy_out1 = linear_g1(x1)
-    print(of_lazy_out1)
-    # of_eager_out1 = linear(x1)
-    # test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+    print(" graph 1 out ", of_lazy_out1)
+    of_eager_out1 = linear(x1)
+    test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
 
     # linear_g2 = LinearGraph()
     # linear_g2._share_from(linear_g)
