@@ -71,7 +71,6 @@ bool LauncherContext::Infer(user_op::KernelComputeContext* compute_context) {
 
 void LauncherContext::Launch(int index) {
   if (!inferred_) { LOG(FATAL) << "Not infer yet when launch kernels"; }
-  run_ctx_vec_[index].GetRegContext()->GetOp()->dump();
   run_ctx_vec_[index].Run();
 }
 

@@ -80,11 +80,7 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
  private:
   Option<std::string> wrap_ops_mode_{*this, "mode",
                                      llvm::cl::desc("the mode of this pass to wrap ops"),
-#ifdef WITH_CUDA_GRAPHS
-                                     llvm::cl::init(wrap_mode::CUDA_GRAPH)};
-#else
                                      llvm::cl::init(wrap_mode::NORMAL)};
-#endif
 };
 
 class ExtractKernelLaunchTensorPass
