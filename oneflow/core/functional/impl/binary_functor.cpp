@@ -274,6 +274,30 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class DivFunctorMode {
+ public:
+  DivFunctorMode() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    if (rmode == "floor") {
+      return JUST(functional::FloorDiv(x, y));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::TruncDiv(x, y));
+    }
+    CHECK_OR_RETURN(rmode == "") << "div expected rounding_mode to be one of None,"
+                                    " 'trunc', or 'floor' but found "
+                                 << rmode;
+    return JUST(functional::Div(x, y));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceDivFunctor {
  public:
   InplaceDivFunctor() {
@@ -558,6 +582,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
+  m.add_functor<impl::DivFunctorMode>("DivMode");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
