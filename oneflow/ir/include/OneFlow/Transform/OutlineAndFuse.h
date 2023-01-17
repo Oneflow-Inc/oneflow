@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 
 namespace wrap_mode {
+const std::string SIMPLE = "simple";
 const std::string NORMAL = "normal";
 const std::string CUDA_GRAPH = "cuda_graph";
 }  // namespace wrap_mode

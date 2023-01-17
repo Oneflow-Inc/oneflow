@@ -877,14 +877,16 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   return {function, proto.first};
 };
 
-KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
-                                      mlir::PatternRewriter& rewriter, int& name_index) {
-  if (!wrap_ops.size()) return nullptr;
+KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
+                                int& name_index) {
+  if (wrap_ops.size() < 2) {
+    wrap_ops.clear();
+    return nullptr;
+  }
+  auto loc = wrap_ops.front()->getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
 
-  auto wrap_res = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
-  auto wrap_func = wrap_res.first;
-  auto wrap_ins = wrap_res.second;
+  auto [wrap_func, wrap_ins] = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -1002,72 +1004,95 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
 
-  mlir::LogicalResult matchAndRewrite(oneflow::Job op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    auto& ops = op->getRegion(0).front();
-    if (ops.empty()) { return success(); }
-    std::vector<StringRef> white_list{
+  virtual bool IsContinuous(std::vector<Operation*>&, mlir::Operation*) const { return true; };
+
+  virtual bool IsPackagable(mlir::Operation* op) const {
+    static std::vector<StringRef> black_list{
         KernelLaunchOp::getOperationName(),
         OutputOp::getOperationName(),
         InputOp::getOperationName(),
         VariableOp::getOperationName(),
     };
+    return GetModuleOpFromJobBodyOp<Job>(&(*op)) && op->getAttr("op_name")
+           && !std::count(black_list.begin(), black_list.end(), op->getName().getStringRef());
+  }
+
+  mlir::LogicalResult matchAndRewrite(oneflow::Job op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto& ops = op->getRegion(0).front();
+    if (ops.empty()) { return success(); }
+
     int name_index = 0;
-    std::vector<Operation*> wrap_ops;
+    std::vector<Operation*> current_wrap_ops;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
-      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
-          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
-        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+      auto current_op = &(*op_it);
+      if (!IsPackagable(current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
         continue;
       }
-      wrap_ops.push_back(&(*op_it));
+
+      if (!IsContinuous(current_wrap_ops, current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
+      }
+      current_wrap_ops.push_back(current_op);
     }
-    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
+    if (!current_wrap_ops.empty()) { ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index); }
     return success();
   }
 };
 
-struct KernelLaunchWithCudaGraphPattern : public mlir::OpRewritePattern<oneflow::Job> {
-  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+struct KernelLaunchSimplePattern : public KernelLaunchPattern {
+  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context) : KernelLaunchPattern(context) {}
 
-  static bool IsOpCudaGraphSupport(mlir::Operation* op) {
+  bool IsSameDevice(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+
+    auto device_tag = op->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto device_name = op->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+    auto cmp_device_tag = ops.front()->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto cmp_device_name = ops.front()->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+
+    if (!device_tag || !device_name || !cmp_device_tag || !cmp_device_name) { return false; }
+
+    auto same_device_tag = device_tag.str() == cmp_device_tag.str();
+    auto same_device_name =
+        std::equal(device_name.begin(), device_name.end(), cmp_device_name.begin(),
+                   [](const Attribute a, const Attribute b) {
+                     auto a_str = a.dyn_cast_or_null<StringAttr>();
+                     auto b_str = b.dyn_cast_or_null<StringAttr>();
+                     if (!a_str || !b_str) { return false; }
+                     return a_str.str() == b_str.str();
+                   });
+
+    return same_device_tag && same_device_name;
+  }
+
+  bool IsContinuous(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op);
+  }
+};
+
+struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
+  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
+      : KernelLaunchSimplePattern(context) {}
+
+  bool IsOpCudaGraphSupport(mlir::Operation* op) const {
     ::oneflow::okl::RegContext reg_ctx(op);
     auto* kernel = const_cast<::oneflow::user_op::OpKernel*>(reg_ctx.GetKernel());
     if (dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel)) { return true; }
     return false;
   }
 
-  mlir::LogicalResult matchAndRewrite(oneflow::Job op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    auto& ops = op->getRegion(0).front();
-    if (ops.empty()) { return success(); }
-    std::vector<StringRef> white_list{
-        KernelLaunchOp::getOperationName(),
-        OutputOp::getOperationName(),
-        InputOp::getOperationName(),
-        VariableOp::getOperationName(),
-    };
-    int name_index = 0;
-    std::vector<Operation*> wrap_ops;
-    bool is_cuda_graph_support_this_block = false;
-    for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
-      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
-          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
-        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
-        continue;
-      }
-      bool is_cuda_graph_support_this_op = IsOpCudaGraphSupport(&(*op_it));
-      if (is_cuda_graph_support_this_block != is_cuda_graph_support_this_op) {
-        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
-        is_cuda_graph_support_this_block = is_cuda_graph_support_this_op;
-        wrap_ops.push_back(&(*op_it));
-      } else {
-        wrap_ops.push_back(&(*op_it));
-      }
-    }
-    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
-    return success();
+  bool IsSameCudaGraphSupport(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+    auto cuda_support = IsOpCudaGraphSupport(op);
+    return cuda_support == IsOpCudaGraphSupport(ops.front());
+  }
+
+  bool IsContinuous(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op) && IsSameCudaGraphSupport(ops, op);
   }
 };
 
@@ -1149,8 +1174,8 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
                                          const std::string& mode) {
-  if (mode == wrap_mode::NORMAL) {
-    patterns.add<KernelLaunchPattern>(patterns.getContext());
+  if (mode == wrap_mode::SIMPLE) {
+    patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
   } else if (mode == wrap_mode::CUDA_GRAPH) {
 #ifdef WITH_CUDA_GRAPHS
     patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
