@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
+bool CheckBroadCastAble(const Shape& shape, const Shape& broadcast_shape) {
   int left_pad = broadcast_shape.size() - shape.size();
   if (left_pad < 0) { return false; }
   for (int i = 0; i < shape.size(); ++i) {
@@ -32,24 +32,24 @@ bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
 
 }  // namespace
 
-/*static*/ Maybe<void> BroadcastInplaceGreaterOp::InferLogicalTensorDesc(
+/*static*/ Maybe<void> BroadCastInplaceGreaterOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const auto& x_desc = ctx->InputTensorDesc("x", 0);
   const auto& y_desc = ctx->InputTensorDesc("y", 0);
   auto x_shape = x_desc.shape();
   auto y_shape = y_desc.shape();
-  bool broadcast_status = CheckBroadcastable(y_shape, x_shape);
+  bool broadcast_status = CheckBroadCastAble(y_shape, x_shape);
   CHECK_OR_RETURN(broadcast_status);
   ctx->SetOutputShape("out", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> BroadcastInplaceGreaterOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> BroadCastInplaceGreaterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  return BroadcastInplaceGreaterOp::InferLogicalTensorDesc(ctx);
+  return BroadCastInplaceGreaterOp::InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> BroadcastInplaceGreaterOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> BroadCastInplaceGreaterOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -61,7 +61,7 @@ bool CheckBroadcastable(const Shape& shape, const Shape& broadcast_shape) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> BroadcastInplaceGreaterOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> BroadCastInplaceGreaterOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }

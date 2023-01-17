@@ -751,7 +751,7 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffe
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_BroadcastInplaceGreaterOp : OneFlow_BaseOp<"broadcast_inplace_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadCastInplaceGreaterOp : OneFlow_BaseOp<"broadcast_inplace_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$y

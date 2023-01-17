@@ -34,9 +34,9 @@ struct GreaterInplaceKernelUtil {
   static void Forward(ep::Stream* stream, const int64_t n, const T* x, const T* y, T* out);
   static void YBroadcastToX(ep::Stream* stream, const int64_t n, const T* x, const T* y,
                             T* broadcast_y, const ShapeView& x_shape, const ShapeView& y_shape) {
-    int64_t x_ndim = x_shape.NumAxes();
-    int64_t y_ndim = y_shape.NumAxes();
-    int64_t num_prepend = x_ndim - y_ndim;
+    const int64_t x_ndim = x_shape.NumAxes();
+    const int64_t y_ndim = y_shape.NumAxes();
+    const int64_t num_prepend = x_ndim - y_ndim;
     std::vector<int64_t> prepend_shape(num_prepend, 1);
     std::vector<int32_t> broadcast_axes;
     for (int i = 0; i < y_ndim; ++i) { prepend_shape.emplace_back(y_shape.At(i)); }
