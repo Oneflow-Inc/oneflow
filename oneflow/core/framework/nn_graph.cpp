@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <cstdint>
+#include <memory>
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/cost_util.h"
@@ -26,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -347,12 +351,30 @@ Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::InferShapeWithNewInputForRuntime() {
+Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
+    const std::vector<std::string>& inputs_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
+  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size());  // NOLINE
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // Register inputs.
+  JUST(RegisterInputOpNamesAndTensors(inputs_op_names, input_tensors));
+
+  HashMap<std::string, std::shared_ptr<one::Tensor>> input_name2tensor;
+  for (int64_t idx = 0; idx < inputs_op_names.size(); ++idx) {
+    input_name2tensor.emplace(inputs_op_names[idx], input_tensors[idx]);
+  }
+  const auto& InputTensor4Name =
+      [&input_name2tensor](const std::string& op_name) -> Maybe<std::shared_ptr<one::Tensor>> {
+    auto iter = input_name2tensor.find(op_name);
+    CHECK_OR_RETURN(iter != input_name2tensor.end())
+        << "Can't find input tensor of " << op_name << ".";
+    return iter->second;
+  };
+
   // A global variable to get graph configurations.
   auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter::CompleteWithNewInput(&job_));
+  JUST(JobCompleter::CompleteSharedGraphForNewInput(&job_, InputTensor4Name));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
   return Maybe<void>::Ok();
 }

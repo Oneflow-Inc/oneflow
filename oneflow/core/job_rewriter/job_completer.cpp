@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
-#include <memory>
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
@@ -63,7 +62,9 @@ Maybe<void> CheckAndLogOpGraph(const Job& job) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReInferLogicalBlobDesc(Job* job) {
+Maybe<void> ReInferLogicalBlobDesc(
+    Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
+                  InputTensor4Name) {
   const auto& new_job_name = job->job_conf().job_name();
 #define UPDATE_JOB_NAME(op_conf_name)                             \
   if (op_conf.has_##op_conf_name()) {                             \
@@ -71,19 +72,21 @@ Maybe<void> ReInferLogicalBlobDesc(Job* job) {
   }
 
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
+    // Input op needs to be updated with new input tensor.
     if (op_conf.has_input_conf()) {
       InputOpConf* input_conf = op_conf.mutable_input_conf();
       InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
-      // input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-      Shape dummy_shape{4, 3};
-      dummy_shape.ToProto(blob_conf->mutable_shape());
+      auto input_tensor = *JUST(InputTensor4Name(op_conf.name()));
+      input_tensor->shape()->ToProto(blob_conf->mutable_shape());
+      blob_conf->set_data_type(input_tensor->dtype()->data_type());
     }
-    // These op execution depends on new job name.
+    // These operators' execution depends on new job name.
     UPDATE_JOB_NAME(input_conf);
     UPDATE_JOB_NAME(output_conf);
     UPDATE_JOB_NAME(callback_notify_conf);
     UPDATE_JOB_NAME(wait_and_send_ids_conf);
     UPDATE_JOB_NAME(return_conf);
+    // Critical section operators depend job_name related buffer_name.
     if (op_conf.has_critical_section_wait_tick_conf()) {
       const auto& buffer_name = op_conf.critical_section_wait_tick_conf().buffer_name();
       if (buffer_name.rfind(kInputCriticalSectionWaitBufferNamePrefix, 0) == 0) {
@@ -105,8 +108,8 @@ Maybe<void> ReInferLogicalBlobDesc(Job* job) {
       }
     }
   }
-
 #undef UPDATE_JOB_NAME
+
   // Use OpGraph init to InferLogicalBlobDesc with new input shape.
   auto op_graph = std::make_unique<OpGraph>(*job);
   op_graph->DumpLogicalBlobDesc(job);
@@ -222,8 +225,10 @@ Maybe<void> JobCompleter::Complete(Job* job) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobCompleter::CompleteWithNewInput(Job* job) {
-  JUST(ReInferLogicalBlobDesc(job));
+Maybe<void> JobCompleter::CompleteSharedGraphForNewInput(
+    Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
+                  InputTensor4Name) {
+  JUST(ReInferLogicalBlobDesc(job, InputTensor4Name));
   JUST(CheckAndLogOpGraph(*job));
   return Maybe<void>::Ok();
 }

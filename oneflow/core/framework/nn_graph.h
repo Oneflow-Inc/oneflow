@@ -77,8 +77,10 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> AlignStatesAfterLogicalGraphCompile();
   // Add special operators into logical graph for lazy runtime.
   Maybe<void> CompleteLogicalGraphForRuntime();
-  // Infer shape with new input from a completed graph.
-  Maybe<void> InferShapeWithNewInputForRuntime();
+  // Build graph with new inputs from a completed job of a shared graph.
+  Maybe<void> BuildWithNewInputFromSharedGraph(
+      const std::vector<std::string>& inputs_op_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
   // Generate execution plan for lazy runtime. Oneflow lazy runtime is an actor based runtime.
   Maybe<void> CompilePlanForRuntime();
   // Initialize lazy runtime.

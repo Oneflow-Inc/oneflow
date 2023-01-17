@@ -244,7 +244,6 @@ class Graph(object):
             else:
                 self._compile_from_shared(*args, **kwargs)
 
-        print("try to run ===== ")
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
@@ -814,7 +813,6 @@ class Graph(object):
         assert shared_graph._is_compiled, "shared_graph must have been compiled."
         self._shared_graph = shared_graph
         self._build_with_shared_graph = True
-        print("shared_graph ", self._shared_graph)
 
     def _compile_from_shared(self, *args, **kwargs):
         # Generate new config.
@@ -835,9 +833,12 @@ class Graph(object):
             self._session._session_ctx,
         )
 
+        # Build graph with new inputs from a compiled job of a shared graph.
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
-
-        self._c_nn_graph.infer_shape_with_new_input_for_runtime()
+        self._c_nn_graph.build_with_new_input_from_shared_graph(
+            self._shared_graph._arg_op_names,
+            convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
+        )
 
         # Get new compiled job proto
         compiled_job_str = self._c_nn_graph.get_current_job_str()
@@ -851,11 +852,7 @@ class Graph(object):
             self._shared_graph._build_eager_outputs,
         )
 
-        # Register input/output/variable/buffer to _c_nn_graph
-        self._c_nn_graph.register_input_op_names_and_tensors(
-            self._shared_graph._arg_op_names,
-            convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
-        )
+        # Register output/variable/buffer to _c_nn_graph
         self._c_nn_graph.register_output_op_names_and_tensors(
             self._shared_graph._output_op_names, self._outputs_tensor_tuple
         )

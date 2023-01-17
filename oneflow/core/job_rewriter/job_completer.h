@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 
@@ -31,7 +32,11 @@ class JobCompleter final {
   ~JobCompleter() = default;
 
   static Maybe<void> Complete(Job* job);
-  static Maybe<void> CompleteWithNewInput(Job* job);
+  // The job is copied from a shared graph, it needs to be modified
+  // for a new graph with different input.
+  static Maybe<void> CompleteSharedGraphForNewInput(
+      Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
+                    InputTensor4Name);
 };
 
 }  // namespace oneflow
