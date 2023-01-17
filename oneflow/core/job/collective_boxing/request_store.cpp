@@ -27,6 +27,15 @@ namespace boxing {
 
 namespace collective {
 
+std::string get_device_set(const DeviceSet& ds) {
+  std::string ret = "";
+  for (int64_t global_rank = 0; global_rank < ds.device().size(); ++global_rank) {
+    const DeviceDesc& device = ds.device(global_rank);
+    ret += std::to_string(device.machine_id()) + " ";
+  }
+  return ret;
+}
+
 RequestEntry::RequestEntry(const RequestDesc& desc) : desc_(desc) {
   std::set<int64_t> node_ids;
   for (int64_t global_rank = 0; global_rank < desc.device_set().device().size(); ++global_rank) {
@@ -82,7 +91,7 @@ void RequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<RequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), RequestId(job_id, i)).second);
-    // VLOG(1) << "RequestStore job_id = " << job_id << " coll_id = " << i << " op_type = " << entry->desc().op_desc().op_type();
+    VLOG(1) << "NCCL job_id = " << job_id << " coll_id = " << name2request_id_.at(entry->desc().op_desc().name()).request_index << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
   }
 }
 

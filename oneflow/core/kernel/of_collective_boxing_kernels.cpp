@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdint>
 #include <memory>
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/of_collective_boxing/collective_manager.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/of_collective_boxing_actor_context.h"
 #include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/lazy/actor/actor_message_bus.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -43,8 +45,10 @@ class OfCollectiveBoxingKernelState final : public KernelState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveBoxingKernelState);
   explicit OfCollectiveBoxingKernelState(const RankDesc& rank_desc)
-      : coll_id_(Singleton<CollectiveMgr>::Get()->KernelGetCollId(rank_desc)),
-        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(rank_desc.rank())) {}
+      : coll_id_(Singleton<CollectiveMgr>::Get()->KernelGetCollId(rank_desc)), // GlobalProcessCtx::Rank()
+        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(rank_desc.rank())) {
+          VLOG(1) << "coll_id " << coll_id_ << " make_shared<OfCollectiveBoxingKernelState> with rank = " << rank_desc.rank() << " ofccl_rank_ctx_ @ " << ofccl_rank_ctx_;
+        }
   ~OfCollectiveBoxingKernelState() = default;
 
   int coll_id() { return coll_id_; }
@@ -125,7 +129,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
     CallbackFunc cb_func = cb_lambda;
     
-    VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id;
+    VLOG(1) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
   }

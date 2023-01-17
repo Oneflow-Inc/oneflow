@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/of_collective_boxing/of_request_store.h"
+#include <string>
+#include "oneflow/core/graph/boxing/of_collective_boxing.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -26,6 +28,15 @@ namespace oneflow {
 namespace boxing {
 
 namespace of_collective {
+
+std::string get_device_set(const DeviceSet& ds) {
+  std::string ret = "";
+  for (int64_t global_rank = 0; global_rank < ds.device().size(); ++global_rank) {
+    const DeviceDesc& device = ds.device(global_rank);
+    ret += std::to_string(device.machine_id()) + " ";
+  }
+  return ret;
+}
 
 OfRequestEntry::OfRequestEntry(const RequestDesc& desc, int coll_id) : desc_(desc), coll_id_(coll_id) {
   std::set<int64_t> node_ids;
@@ -43,8 +54,6 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc, int coll_id) : desc_(des
   size_in_bytes_ = elem_cnt_ * GetSizeOfDataType(desc.op_desc().data_type());
   device_set_symbol_.reset(desc.device_set());
 
-  // VLOG(1) << "coll_id = " << coll_id << " dependency_depth = " << desc.dependency_depth() << " order = " << desc.order();
-
   FOR_EACH(id7nego_tree_info, desc.negotiation_tree_topo()) {
     auto nego_tree_info = RuntimeNegoTreeInfo();
     nego_tree_info.upstream_id = id7nego_tree_info->second.upstream_id();
@@ -58,12 +67,16 @@ void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
   std::vector<std::unique_ptr<OfRequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
   CHECK_EQ(request_entry_vec.size(), 0);
   for (const RequestDesc& desc : request_set.request()) {
-    request_entry_vec.emplace_back(std::make_unique<OfRequestEntry>(desc, coll_id_counter_++));
+    auto entry = std::make_unique<OfRequestEntry>(desc, desc.order());
+    if (entry->HasRankOnThisNode()) {
+      request_entry_vec.emplace_back(std::move(entry));
+    }
   }
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<OfRequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), OfRequestId(job_id, i)).second);
-    // VLOG(1) << "OfRequestStore job_id = " << job_id << " coll_id = " << entry->coll_id() << " op_type = " << entry->desc().op_desc().op_type();
+
+    VLOG(1) << "OCCL job_id = " << job_id << " coll_id = " << entry->coll_id() << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
   }
 }
 

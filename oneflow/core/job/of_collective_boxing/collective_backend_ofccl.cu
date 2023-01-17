@@ -187,7 +187,8 @@ struct CollectiveBackendOfccl::Impl {
         ); // 准备好了comm，接下来还需要count和datatype、op、rankCtx才可以进行prepare
         // 创建rankCtx之前，要set好device
 
-        for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) {
+        // VLOG(2) << "coll_id = " << coll_id << " local_rank_count = " << coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count();
+        for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) { // 其实是预期这里只有一个
           // 准备rank_ctx
           int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).device_id();
           OF_CUDA_CHECK(cudaSetDevice(curr_device_id));
@@ -195,6 +196,7 @@ struct CollectiveBackendOfccl::Impl {
           if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
             device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
             ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], curr_device_id);
+            VLOG(1) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
           }
 
           // 获取count和datatype、op信息。

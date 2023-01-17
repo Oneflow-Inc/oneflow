@@ -141,6 +141,7 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
     impl_->collective_builder->InitJob(job_id);
   }
+  VLOG(1) << "CollectiveMgr::AddPlan success";
   return new CollectiveMgrPlanToken(job_ids);
 }
 
