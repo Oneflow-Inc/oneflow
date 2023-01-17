@@ -122,75 +122,47 @@ void LaunchScalarKernel(Stream* stream, const CondT* cond, const T* x, const T* 
   UNIMPLEMENTED();
 }
 
-void LaunchElemwiseTenary(CudaStream* stream, int64_t elem_cnt, DataType cond_type,
-                          DataType data_type, const void* cond, const void* x, const void* y,
-                          void* z) {
-  const size_t data_type_size = GetSizeOfDataType(data_type);
+template<typename T, typename CondT>
+void LaunchElemwiseTenary(CudaStream* stream, int64_t elem_cnt, const CondT* cond, const T* x,
+                          const T* y, T* z) {
   cudaStream_t cuda_stream = stream->cuda_stream();
 
-#define IF(ctype, dtype_size)                                                      \
-  if (cond_type == ctype && data_type_size == dtype_size) {                        \
-    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;         \
-    using CondT = DataTypeToType<ctype>;                                           \
-    WhereElemwiseFunctor<T, CondT, T, T> where_fn{};                               \
-    OF_CUDA_CHECK((cuda::elementwise::Ternary<decltype(where_fn), T, CondT, T, T>( \
-        where_fn, elem_cnt, static_cast<T*>(z), static_cast<const CondT*>(cond),   \
-        static_cast<const T*>(x), static_cast<const T*>(y), cuda_stream)));        \
-  }
-#define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
-#define ELSE         \
-  else {             \
-    UNIMPLEMENTED(); \
-  }
-
-  IF(DataType::kBool, 1)
-  ELIF(DataType::kBool, 2)
-  ELIF(DataType::kBool, 4)
-  ELIF(DataType::kBool, 8)
-  ELIF(DataType::kInt32, 1)
-  ELIF(DataType::kInt32, 2)
-  ELIF(DataType::kInt32, 4)
-  ELIF(DataType::kInt32, 8)
-  ELIF(DataType::kInt64, 1)
-  ELIF(DataType::kInt64, 2)
-  ELIF(DataType::kInt64, 4)
-  ELIF(DataType::kInt64, 8)
-  ELSE
-
-#undef IF
-#undef ELIF
-#undef ELSE
+  WhereElemwiseFunctor<T, CondT, T, T> where_fn{};
+  OF_CUDA_CHECK((cuda::elementwise::Ternary<decltype(where_fn), T, CondT, T, T>(
+      where_fn, elem_cnt, z, cond, x, y, cuda_stream)));
 }
 
+template<typename T, typename CondT>
 class WhereCudaImpl : public Where {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WhereCudaImpl);
   explicit WhereCudaImpl() = default;
   ~WhereCudaImpl() override = default;
 
-  void Launch(Stream* stream, DataType cond_type, size_t num_cond_dims, const int64_t* cond_dims,
-              const void* cond, DataType data_type, size_t num_x_dims, const int64_t* x_dims,
-              const void* x, size_t num_y_dims, const int64_t* y_dims, const void* y,
-              void* z) override {
-    size_t compact_ndim = 0;
+  void Launch(Stream* stream, size_t num_cond_dims, const int64_t* cond_dims, const void* cond,
+              size_t num_x_dims, const int64_t* x_dims, const void* x, size_t num_y_dims,
+              const int64_t* y_dims, const void* y, void* z) override {
+    size_t compact_num_dims = 0;
     int64_t compact_cond_dims[kMaxNumDims] = {};
     int64_t compact_x_dims[kMaxNumDims] = {};
     int64_t compact_y_dims[kMaxNumDims] = {};
     int64_t compact_z_dims[kMaxNumDims] = {};
     GetCompactBroadcastDims(num_cond_dims, cond_dims, num_x_dims, x_dims, num_y_dims, y_dims,
-                            compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
+                            &compact_num_dims, compact_cond_dims, compact_x_dims, compact_y_dims,
                             compact_z_dims);
 
-    if (IsDimsEquals(compact_ndim, compact_z_dims, compact_cond_dims)
-        && IsDimsEquals(compact_ndim, compact_z_dims, compact_x_dims)
-        && IsDimsEquals(compact_ndim, compact_z_dims, compact_y_dims)) {
+    if (IsDimsEquals(compact_num_dims, compact_z_dims, compact_cond_dims)
+        && IsDimsEquals(compact_num_dims, compact_z_dims, compact_x_dims)
+        && IsDimsEquals(compact_num_dims, compact_z_dims, compact_y_dims)) {
       // elementwise
-      const size_t elem_cnt = GetElementCount(compact_ndim, compact_z_dims);
-      LaunchElemwiseTenary(stream->As<CudaStream>(), elem_cnt, cond_type, data_type, cond, x, y, z);
+      const size_t elem_cnt = GetElementCount(compact_num_dims, compact_z_dims);
+      LaunchElemwiseTenary(stream->As<CudaStream>(), elem_cnt, static_cast<const CondT*>(cond),
+                           static_cast<const T*>(x), static_cast<const T*>(y), static_cast<T*>(z));
     } else {
       // broadcast
-      LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
-                           compact_z_dims, cond_type, data_type, cond, x, y, z);
+      LaunchByDispatchNDim(stream, compact_num_dims, compact_cond_dims, compact_x_dims,
+                           compact_y_dims, compact_z_dims, static_cast<const CondT*>(cond),
+                           static_cast<const T*>(x), static_cast<const T*>(y), static_cast<T*>(z));
     }
   }
 };
@@ -201,7 +173,9 @@ class WhereFactoryCudaImpl : public WhereFactory {
   WhereFactoryCudaImpl() = default;
   ~WhereFactoryCudaImpl() override = default;
 
-  std::unique_ptr<Where> New() override { return std::unique_ptr<Where>(new WhereCudaImpl()); }
+  std::unique_ptr<Where> New(DataType cond_type, DataType data_type, size_t max_num_dims) override {
+    return NewWhere<WhereCudaImpl>(cond_type, data_type, max_num_dims);
+  }
 };
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, WhereFactory, WhereFactoryCudaImpl);

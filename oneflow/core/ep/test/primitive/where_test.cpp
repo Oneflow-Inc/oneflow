@@ -131,7 +131,8 @@ void TestWhere(const std::vector<Device*>& devices, size_t num_cond_dims, const 
     ep::test::StreamGuard stream(device);
     auto h2d = NewPrimitive<MemcpyFactory>(device->device_type(), MemcpyKind::kHtoD);
     auto d2h = NewPrimitive<MemcpyFactory>(device->device_type(), MemcpyKind::kDtoH);
-    auto where = NewPrimitive<WhereFactory>(device->device_type());
+    auto where = NewPrimitive<WhereFactory>(device->device_type(), GetDataType<CondT>(),
+                                            GetDataType<T>(), ndim);
     ASSERT_TRUE(d2h.operator bool());
     ASSERT_TRUE(h2d.operator bool());
     ASSERT_TRUE(where.operator bool());
@@ -139,9 +140,8 @@ void TestWhere(const std::vector<Device*>& devices, size_t num_cond_dims, const 
     h2d->Launch(stream.stream(), cond.ptr(), host_cond.ptr(), cond_byte_size);
     h2d->Launch(stream.stream(), x.ptr(), host_x.ptr(), x_byte_size);
     h2d->Launch(stream.stream(), y.ptr(), host_y.ptr(), y_byte_size);
-    where->Launch(stream.stream(), GetDataType<CondT>(), num_cond_dims, cond_dims, cond.ptr(),
-                  GetDataType<T>(), num_x_dims, x_dims, x.ptr(), num_y_dims, y_dims, y.ptr(),
-                  z.ptr());
+    where->Launch(stream.stream(), num_cond_dims, cond_dims, cond.ptr(), num_x_dims, x_dims,
+                  x.ptr(), num_y_dims, y_dims, y.ptr(), z.ptr());
     d2h->Launch(stream.stream(), host_z.ptr(), z.ptr(), z_byte_size);
     CHECK_JUST(stream.stream()->Sync());
 
@@ -149,7 +149,7 @@ void TestWhere(const std::vector<Device*>& devices, size_t num_cond_dims, const 
                                                                                 tensor_z.size());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<T*>(host_z.ptr()), z_size);
-    ASSERT_TRUE(eigen_out.template isApprox(of_out, static_cast<T>(1e-5)));
+    ASSERT_TRUE(eigen_out.template isApprox(of_out));
   }
 }
 
@@ -167,41 +167,136 @@ void TestWhere(DeviceManagerRegistry* registry, const std::set<DeviceType>& devi
                             x_dims.data(), y_dims.size(), y_dims.data());
 }
 
+template<typename T, typename = void>
+struct random {};
+
+template<>
+struct random<bool, void> {
+  bool operator()() {
+    static std::default_random_engine e;
+    static std::uniform_int_distribution<> dis(0, 1);
+    return static_cast<bool>(dis(e));
+  }
+};
+
+template<typename T>
+struct random<T, std::enable_if_t<std::is_integral<T>::value>> {
+  T operator()() {
+    static std::default_random_engine e;
+    static std::normal_distribution<> dis(0, 2);
+    return dis(e);
+  }
+};
+
+template<>
+struct random<Eigen::half, void> {
+  Eigen::half operator()() {
+    static std::default_random_engine e;
+    static std::uniform_real_distribution<> dis(-1, 1);
+    return Eigen::half{dis(e)};
+  }
+};
+
+template<typename T>
+struct random<T, std::enable_if_t<std::is_floating_point<T>::value>> {
+  T operator()() {
+    static std::default_random_engine e;
+    static std::uniform_real_distribution<> dis(-1, 1);
+    return dis(e);
+  }
+};
+
+template<typename T, typename CondT>
+void TestScalarWhere(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
+  std::vector<Device*> devices;
+  for (const auto& device_type : device_types) {
+    auto device_ptr = registry->GetDevice(device_type, 0);
+    ASSERT_TRUE(device_ptr);
+    Device* device = device_ptr.get();
+
+    CondT cond = random<bool>()();
+    T x = random<T>()();
+    T y = random<T>()();
+    T z = cond ? x : y;
+
+    ep::test::PinnedMemoryGuard host_cond(device, sizeof(CondT));
+    ep::test::PinnedMemoryGuard host_x(device, sizeof(T));
+    ep::test::PinnedMemoryGuard host_y(device, sizeof(T));
+    ep::test::DeviceMemoryGuard device_cond(device, sizeof(CondT));
+    ep::test::DeviceMemoryGuard device_x(device, sizeof(T));
+    ep::test::DeviceMemoryGuard device_y(device, sizeof(T));
+    ep::test::DeviceMemoryGuard device_z(device, sizeof(T));
+    ep::test::PinnedMemoryGuard host_z(device, sizeof(T));
+
+    std::memcpy(host_cond.ptr(), &cond, sizeof(CondT));
+    std::memcpy(host_x.ptr(), &x, sizeof(T));
+    std::memcpy(host_y.ptr(), &y, sizeof(T));
+
+    ep::test::StreamGuard stream(device);
+    auto h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
+    auto d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
+    auto where = NewPrimitive<WhereFactory>(device_type, GetDataType<CondT>(), GetDataType<T>(), 0);
+    ASSERT_TRUE(d2h.operator bool());
+    ASSERT_TRUE(h2d.operator bool());
+    ASSERT_TRUE(where.operator bool());
+
+    h2d->Launch(stream.stream(), device_cond.ptr(), host_cond.ptr(), sizeof(CondT));
+    h2d->Launch(stream.stream(), device_x.ptr(), host_x.ptr(), sizeof(T));
+    h2d->Launch(stream.stream(), device_y.ptr(), host_y.ptr(), sizeof(T));
+    where->Launch(stream.stream(), 0, nullptr, device_cond.ptr(), 0, nullptr, device_x.ptr(), 0,
+                  nullptr, device_y.ptr(), device_z.ptr());
+    d2h->Launch(stream.stream(), host_z.ptr(), device_z.ptr(), sizeof(T));
+    CHECK_JUST(stream.stream()->Sync());
+
+    ASSERT_TRUE(*host_z.ptr<T>() == z);
+  }
+}
+
 }  // namespace
 
 TEST_F(PrimitiveTest, TestWhere) {
-  test::TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {4, 8},
-                                  {4, 8}, {4, 8});
-  test::TestWhere<bool, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1}, {1, 8},
-                                 {1, 8});
-  test::TestWhere<uint8_t, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1},
-                                    {1, 8}, {1, 8});
-  test::TestWhere<int32_t, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1},
-                                    {1, 8}, {1, 8});
-  test::TestWhere<Eigen::half, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1},
-                                        {1, 8}, {1, 8});
-  test::TestWhere<double, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1},
-                                   {1, 8}, {1, 8});
-  test::TestWhere<bool, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
-                                    {4, 8}, {1});
-  test::TestWhere<int32_t, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
-                                       {4, 8}, {1});
-  test::TestWhere<float, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
+  TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {4, 8}, {4, 8},
+                            {4, 8});
+  TestWhere<bool, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1}, {1, 8},
+                           {1, 8});
+  TestWhere<uint8_t, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1}, {1, 8},
+                              {1, 8});
+  TestWhere<int32_t, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1}, {1, 8},
+                              {1, 8});
+  TestWhere<Eigen::half, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1},
+                                  {1, 8}, {1, 8});
+  TestWhere<double, bool, 2>(&device_manager_registry_, available_device_types_, {4, 1}, {1, 8},
+                             {1, 8});
+  TestWhere<bool, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8}, {4, 8},
+                              {1});
+  TestWhere<int32_t, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8}, {4, 8},
+                                 {1});
+  TestWhere<float, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8}, {4, 8},
+                               {1});
+  TestWhere<Eigen::half, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
                                      {4, 8}, {1});
-  test::TestWhere<Eigen::half, int32_t, 2>(&device_manager_registry_, available_device_types_,
-                                           {1, 8}, {4, 8}, {1});
-  test::TestWhere<double, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8},
-                                      {4, 8}, {1});
-  test::TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {1, 6},
-                                  {2, 6}, {2, 1});
-  test::TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {3, 7},
-                                  {3, 1}, {1, 7});
-  test::TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
-                                  {4, 1, 8}, {1, 1, 8});
-  test::TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
-                                  {4, 4, 8}, {1});
-  test::TestWhere<float, bool, 4>(&device_manager_registry_, available_device_types_, {2, 1, 4, 8},
-                                  {1, 3, 4, 1}, {4, 8});
+  TestWhere<double, int32_t, 2>(&device_manager_registry_, available_device_types_, {1, 8}, {4, 8},
+                                {1});
+  TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {1, 6}, {2, 6},
+                            {2, 1});
+  TestWhere<float, bool, 2>(&device_manager_registry_, available_device_types_, {3, 7}, {3, 1},
+                            {1, 7});
+  TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
+                            {4, 1, 8}, {1, 1, 8});
+  TestWhere<float, bool, 3>(&device_manager_registry_, available_device_types_, {1, 4, 8},
+                            {4, 4, 8}, {1});
+  TestWhere<float, bool, 4>(&device_manager_registry_, available_device_types_, {2, 1, 4, 8},
+                            {1, 3, 4, 1}, {4, 8});
+  TestScalarWhere<bool, bool>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<float, bool>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<Eigen::half, bool>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<double, bool>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<int32_t, bool>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<bool, int32_t>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<float, int32_t>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<Eigen::half, int32_t>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<double, int32_t>(&device_manager_registry_, available_device_types_);
+  TestScalarWhere<int32_t, int32_t>(&device_manager_registry_, available_device_types_);
 }
 
 }  // namespace test

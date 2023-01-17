@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_COMMON_PRIMITIVE_WHERE_H_
 #define ONEFLOW_CORE_EP_COMMON_PRIMITIVE_WHERE_H_
 
+#include "oneflow/core/ep/include/primitive/where.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/common/primitive/util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -71,28 +72,30 @@ inline bool IsDimsEquals(size_t ndim, const int64_t* a_dims, const int64_t* b_di
   return true;
 }
 
-inline void GetCompactBroadcastDims(const size_t cond_ndim, const int64_t* cond_dims,
-                                    const size_t x_ndim, const int64_t* x_dims, const size_t y_ndim,
-                                    const int64_t* y_dims, size_t& compt_ndim,
-                                    int64_t* cmpt_cond_dims, int64_t* cmpt_x_dims,
-                                    int64_t* cmpt_y_dims, int64_t* cmpt_z_dims) {
-  size_t max_ndim = std::max(x_ndim, y_ndim);
-  max_ndim = std::max(max_ndim, cond_ndim);
-  CHECK_LE(max_ndim, kMaxNumDims);
+inline void GetCompactBroadcastDims(const size_t num_cond_ndims, const int64_t* cond_dims,
+                                    const size_t num_x_dims, const int64_t* x_dims,
+                                    const size_t num_y_dims, const int64_t* y_dims,
+                                    size_t* compact_num_dims, int64_t* compact_cond_dims,
+                                    int64_t* compact_x_dims, int64_t* compact_y_dims,
+                                    int64_t* compact_z_dims) {
+  size_t max_num_dims = std::max(num_x_dims, num_y_dims);
+  max_num_dims = std::max(max_num_dims, num_cond_ndims);
+  CHECK_LE(max_num_dims, kMaxNumDims);
 
-  auto MakeGetDimSize = [max_ndim](size_t ndim, const int64_t* dims) {
-    size_t lpad = max_ndim - ndim;
+  auto MakeGetDimSize = [max_num_dims](size_t ndim, const int64_t* dims) {
+    size_t lpad = max_num_dims - ndim;
     return [lpad, dims](int dim) -> int64_t { return dim < lpad ? 1 : dims[dim - lpad]; };
   };
-  auto GetCondDimSize = MakeGetDimSize(cond_ndim, cond_dims);
-  auto GetXDimSize = MakeGetDimSize(x_ndim, x_dims);
-  auto GetYDimSize = MakeGetDimSize(y_ndim, y_dims);
+  auto GetCondDimSize = MakeGetDimSize(num_cond_ndims, cond_dims);
+  auto GetXDimSize = MakeGetDimSize(num_x_dims, x_dims);
+  auto GetYDimSize = MakeGetDimSize(num_y_dims, y_dims);
 
-  compt_ndim = 0;
+  size_t& num_dims = *compact_num_dims;
+  num_dims = 0;
   bool cond_pred_dim_broadcast = false;
   bool x_pred_dim_broadcast = false;
   bool y_pred_dim_broadcast = false;
-  for (int i = 0; i < max_ndim; ++i) {
+  for (int i = 0; i < max_num_dims; ++i) {
     int64_t cond_dim_size = GetCondDimSize(i);
     int64_t x_dim_size = GetXDimSize(i);
     int64_t y_dim_size = GetYDimSize(i);
@@ -101,18 +104,18 @@ inline void GetCompactBroadcastDims(const size_t cond_ndim, const int64_t* cond_
     bool cond_broadcast = (cond_dim_size == 1);
     bool x_broadcast = (x_dim_size == 1);
     bool y_broadcast = (y_dim_size == 1);
-    if (compt_ndim > 0 && cond_broadcast == cond_pred_dim_broadcast
+    if (*compact_num_dims > 0 && cond_broadcast == cond_pred_dim_broadcast
         && x_broadcast == x_pred_dim_broadcast && y_broadcast == y_pred_dim_broadcast) {
-      cmpt_cond_dims[compt_ndim - 1] *= cond_dim_size;
-      cmpt_x_dims[compt_ndim - 1] *= x_dim_size;
-      cmpt_y_dims[compt_ndim - 1] *= y_dim_size;
-      cmpt_z_dims[compt_ndim - 1] *= dim_size;
+      compact_cond_dims[num_dims - 1] *= cond_dim_size;
+      compact_x_dims[num_dims - 1] *= x_dim_size;
+      compact_y_dims[num_dims - 1] *= y_dim_size;
+      compact_z_dims[num_dims - 1] *= dim_size;
     } else {
-      cmpt_cond_dims[compt_ndim] = cond_dim_size;
-      cmpt_x_dims[compt_ndim] = x_dim_size;
-      cmpt_y_dims[compt_ndim] = y_dim_size;
-      cmpt_z_dims[compt_ndim] = dim_size;
-      compt_ndim += 1;
+      compact_cond_dims[num_dims] = cond_dim_size;
+      compact_x_dims[num_dims] = x_dim_size;
+      compact_y_dims[num_dims] = y_dim_size;
+      compact_z_dims[num_dims] = dim_size;
+      num_dims += 1;
       cond_pred_dim_broadcast = cond_broadcast;
       x_pred_dim_broadcast = x_broadcast;
       y_pred_dim_broadcast = y_broadcast;
@@ -252,19 +255,17 @@ void LaunchByDispatchNDim(Stream* stream, size_t ndim, int64_t* cond_dims, int64
 #undef ELSE
 }
 
-inline void LaunchByDispatchType(Stream* stream, size_t ndim, int64_t* cond_dims, int64_t* x_dims,
-                                 int64_t* y_dims, int64_t* z_dims, DataType cond_type,
-                                 DataType data_type, const void* cond, const void* x, const void* y,
-                                 void* z) {
+template<template<typename, typename> class Prim>
+std::unique_ptr<Where> NewWhere(DataType cond_type, DataType data_type, size_t max_num_dims) {
+  if (max_num_dims > kMaxNumDims) { return nullptr; }
+
   const size_t data_type_size = GetSizeOfDataType(data_type);
 
-#define IF(ctype, dtype_size)                                                                 \
-  if (cond_type == ctype && data_type_size == dtype_size) {                                   \
-    using T = typename std::aligned_storage<dtype_size, dtype_size>::type;                    \
-    using CondT = DataTypeToType<ctype>;                                                      \
-    LaunchByDispatchNDim<T, CondT>(stream, ndim, cond_dims, x_dims, y_dims, z_dims,           \
-                                   static_cast<const CondT*>(cond), static_cast<const T*>(x), \
-                                   static_cast<const T*>(y), static_cast<T*>(z));             \
+#define IF(ctype, dtype_size)                                              \
+  if (cond_type == ctype && data_type_size == dtype_size) {                \
+    using T = typename std::aligned_storage<dtype_size, dtype_size>::type; \
+    using CondT = DataTypeToType<ctype>;                                   \
+    return std::unique_ptr<Where>(new Prim<T, CondT>());                   \
   }
 #define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
 #define ELSE         \

@@ -109,26 +109,27 @@ void LaunchScalarKernel(Stream* stream, const CondT* cond, const T* x, const T* 
   ScalarWhereKernel(cond, x, y, z);
 }
 
+template<typename T, typename CondT>
 class WhereImpl : public Where {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WhereImpl);
   explicit WhereImpl() = default;
   ~WhereImpl() override = default;
 
-  void Launch(Stream* stream, DataType cond_type, size_t num_cond_dims, const int64_t* cond_dims,
-              const void* cond, DataType data_type, size_t num_x_dims, const int64_t* x_dims,
-              const void* x, size_t num_y_dims, const int64_t* y_dims, const void* y,
-              void* z) override {
-    size_t compact_ndim = 0;
+  void Launch(Stream* stream, size_t num_cond_dims, const int64_t* cond_dims, const void* cond,
+              size_t num_x_dims, const int64_t* x_dims, const void* x, size_t num_y_dims,
+              const int64_t* y_dims, const void* y, void* z) override {
+    size_t compact_num_dims = 0;
     int64_t compact_cond_dims[kMaxNumDims] = {};
     int64_t compact_x_dims[kMaxNumDims] = {};
     int64_t compact_y_dims[kMaxNumDims] = {};
     int64_t compact_z_dims[kMaxNumDims] = {};
     GetCompactBroadcastDims(num_cond_dims, cond_dims, num_x_dims, x_dims, num_y_dims, y_dims,
-                            compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
+                            &compact_num_dims, compact_cond_dims, compact_x_dims, compact_y_dims,
                             compact_z_dims);
-    LaunchByDispatchType(stream, compact_ndim, compact_cond_dims, compact_x_dims, compact_y_dims,
-                         compact_z_dims, cond_type, data_type, cond, x, y, z);
+    LaunchByDispatchNDim(stream, compact_num_dims, compact_cond_dims, compact_x_dims,
+                         compact_y_dims, compact_z_dims, static_cast<const CondT*>(cond),
+                         static_cast<const T*>(x), static_cast<const T*>(y), static_cast<T*>(z));
   }
 };
 
@@ -138,7 +139,9 @@ class WhereFactoryImpl : public WhereFactory {
   WhereFactoryImpl() = default;
   ~WhereFactoryImpl() override = default;
 
-  std::unique_ptr<Where> New() override { return std::unique_ptr<Where>(new WhereImpl()); }
+  std::unique_ptr<Where> New(DataType cond_type, DataType data_type, size_t max_num_dims) override {
+    return NewWhere<WhereImpl>(cond_type, data_type, max_num_dims);
+  }
 };
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, WhereFactory, WhereFactoryImpl);
