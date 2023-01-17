@@ -48,6 +48,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)},
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
+       {"fused_matmul_bias", user_op::OpArg("out", 0)},
        {"broadcast_matmul", user_op::OpArg("out", 0)},
        {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashSet<std::string> consumer_op_names;

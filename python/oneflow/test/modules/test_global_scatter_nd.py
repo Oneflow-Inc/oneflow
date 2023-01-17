@@ -25,12 +25,12 @@ from oneflow.test_utils.automated_test_util import *
 def _test_scatter_nd(test_case, placement, sbp):
     indices = (
         flow.tensor(np.array([[1], [6], [4]]), dtype=flow.int)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp)
     )
     update = (
         flow.tensor(np.array([10.2, 5.1, 12.7]), dtype=flow.float)
-        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(flow.placement.all("cpu"), [flow.sbp.broadcast,])
         .to_global(placement, sbp)
         .requires_grad_()
     )
@@ -38,7 +38,7 @@ def _test_scatter_nd(test_case, placement, sbp):
 
     # forward
     of_local = output.to_global(
-        flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,]
+        flow.placement.all("cpu"), [flow.sbp.broadcast,]
     ).to_local()
     np_out = np.array([0.0, 10.2, 0.0, 0.0, 12.7, 0.0, 5.1, 0.0])
     test_case.assertTrue(np.allclose(of_local.numpy(), np_out, 1e-4, 1e-4))
@@ -46,7 +46,7 @@ def _test_scatter_nd(test_case, placement, sbp):
     # backward
     output.sum().backward()
     of_grad_local = update.grad.to_global(
-        flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,]
+        flow.placement.all("cpu"), [flow.sbp.broadcast,]
     ).to_local()
     test_case.assertTrue(np.allclose(of_grad_local.numpy(), np.ones((3)), 1e-4, 1e-4))
 

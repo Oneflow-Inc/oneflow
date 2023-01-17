@@ -18,7 +18,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from typing import Any, TypeVar
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 def _norm_except_dim_0(v: Tensor):

@@ -26,4 +26,6 @@ def __getattr__(name: str):
 
 
 # register importer in meta path
-sys.meta_path.insert(0, OneflowImporter())
+oneflow_importer = OneflowImporter()
+oneflow_importer.enable = True
+sys.meta_path.insert(0, oneflow_importer)
