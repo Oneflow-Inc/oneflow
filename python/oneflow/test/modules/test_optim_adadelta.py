@@ -71,9 +71,9 @@ def compare_with_numpy_adadelta(
                 state_dict = adadelta.state_dict()
                 adadelta = flow.optim.Adadelta([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 adadelta.load_state_dict(state_dict)
         return x
 
@@ -159,9 +159,9 @@ def compare_with_numpy_adadelta_clip_grad(
                 state_dict = adadelta.state_dict()
                 adadelta = flow.optim.Adadelta([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 adadelta.load_state_dict(state_dict)
         return x
 
