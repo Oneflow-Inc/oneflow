@@ -24,17 +24,19 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& positions_shape = ctx->InputShape("positions", 0);
-  CHECK_EQ_OR_RETURN(positions_shape.NumAxes(), 1)
-      << "number of axes of \'positions\' should be exactly 1, yet get " << positions_shape.NumAxes();
+  CHECK_GE_OR_RETURN(positions_shape.NumAxes(), 1)
+      << "number of axes of \'positions\' should be greater than or equal to 1, yet get " << positions_shape.NumAxes();
   
   const int embedding_dim = ctx->Attr<int>("embedding_dim");
   CHECK_GT_OR_RETURN(embedding_dim, 0)
       << "embedding_dim should be greater than 0, yet get " << embedding_dim;
 
-  Shape out_shape(2);
-  out_shape[0] = positions_shape.At(0);
-  out_shape[1] = embedding_dim;
-
+  Shape out_shape(positions_shape.NumAxes()+1);
+  for (int i = 0; i < positions_shape.NumAxes(); i++) {
+    out_shape[i] = positions_shape.At(i);
+  }
+  out_shape[positions_shape.NumAxes()] = embedding_dim;
+  
   ctx->SetOutputShape("encoded_positions", 0, out_shape);
 
   return Maybe<void>::Ok();

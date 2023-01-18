@@ -770,8 +770,8 @@ class FusedSinusoidalPositionalEncodeFunctor {
                            const float scale, const int max_period) const {
     const auto& positions_shape = positions->shape();
 
-    CHECK_EQ_OR_RETURN(positions_shape->NumAxes(), 1)
-        << Error::RuntimeError() << "positions' dim size should == 1";
+    CHECK_GE_OR_RETURN(positions_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "positions' dim size should >= 1";
     CHECK_GT_OR_RETURN(embedding_dim, 0)
         << Error::RuntimeError() << "embedding_dim should > 0";
     

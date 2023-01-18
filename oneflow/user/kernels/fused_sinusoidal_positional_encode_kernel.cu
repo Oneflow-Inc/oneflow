@@ -27,9 +27,9 @@ struct FusedSinusoidalPositionalEncodeParam {
     float* out_ptr;
     int N;
     int half_dim;
-    int next_stride;
-    int init_offset;
-    int stride;
+    int next_stride;  // stride of next element
+    int init_offset;  // offset of the first element
+    int stride;       // offset of next row
     float downscale_freq_shift;
     float scale;
     int max_period;
@@ -105,10 +105,10 @@ class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, pu
     const user_op::Tensor* positions = ctx->Tensor4ArgNameAndIndex("positions", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("encoded_positions", 0);
 
-    const int N = positions->shape_view().At(0);
+    const int N = positions->shape_view().Count(0, positions->shape_view().NumAxes());
     const int embedding_dim = ctx->Attr<int>("embedding_dim");
     const int half_dim = embedding_dim / 2;
-    EncodingPattern pattern = static_cast<EncodingPattern>(ctx->Attr<int>("pattern")); //TODO: should be four different types
+    EncodingPattern pattern = static_cast<EncodingPattern>(ctx->Attr<int>("pattern"));
     const float downscale_freq_shift = ctx->Attr<float>("downscale_freq_shift");
     const float scale = ctx->Attr<float>("scale");
     const int max_period = ctx->Attr<int>("max_period");

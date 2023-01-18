@@ -24,7 +24,14 @@ def get_timestep_embedding(
     :param embedding_dim: the dimension of the output. :param max_period: controls the minimum frequency of the
     embeddings. :return: an [N x dim] Tensor of positional embeddings.
     """
-    assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array"
+    N = 1
+
+    origin_shape = timesteps.shape
+
+    for i in range(len(timesteps.shape)):
+        N = N * timesteps.shape[i]
+    
+    timesteps = timesteps.reshape((N, -1)).squeeze()
 
     half_dim = embedding_dim // 2
     exponent = -math.log(max_period) * flow.arange(start=0, end=half_dim, dtype=flow.float32)
@@ -47,6 +54,8 @@ def get_timestep_embedding(
     # zero pad
     if embedding_dim % 2 == 1:
         emb = flow.nn.functional.pad(emb, (0, 1, 0, 0))
+    
+    emb = emb.reshape((*origin_shape, embedding_dim)).squeeze()
     return emb
 
 def get_interleaved_timestep_embedding(
@@ -64,7 +73,14 @@ def get_interleaved_timestep_embedding(
     :param embedding_dim: the dimension of the output. :param max_period: controls the minimum frequency of the
     embeddings. :return: an [N x dim] Tensor of positional embeddings.
     """
-    assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array"
+    N = 1
+
+    origin_shape = timesteps.shape
+
+    for i in range(len(timesteps.shape)):
+        N = N * timesteps.shape[i]
+    
+    timesteps = timesteps.reshape((N, -1)).squeeze()
 
     half_dim = embedding_dim // 2
     exponent = -math.log(max_period) * flow.arange(start=0, end=half_dim, dtype=flow.float32)
@@ -75,7 +91,6 @@ def get_interleaved_timestep_embedding(
 
     # scale embeddings
     emb = scale * emb
-
 
     # concat sine and cosine embeddings
     emb0 = flow.sin(emb[:, 0])
@@ -100,6 +115,8 @@ def get_interleaved_timestep_embedding(
     # zero pad
     if embedding_dim % 2 == 1:
         emb0 = flow.nn.functional.pad(emb0, (0, 1, 0, 0))
+    
+    emb0 = emb0.reshape((*origin_shape, embedding_dim)).squeeze()
     return emb0
 
 def navie_embedding(timesteps: flow.Tensor,
@@ -119,9 +136,13 @@ def navie_embedding(timesteps: flow.Tensor,
         return get_interleaved_timestep_embedding(timesteps, embedding_dim, True, downscale_freq_shift, scale, max_period)
 
 def _test_fused_sinusoidal_positional_encode(
-    test_case, length, embedding_dim, pattern, downscale_freq_shift, scale, max_period
+    test_case, src_type, length, embedding_dim, pattern, downscale_freq_shift, scale, max_period
 ):
-    positions = flow.tensor(np.arange(length), dtype=flow.int32, device="cuda", requires_grad=False)
+    if src_type == np.int32:
+        positions = flow.tensor(np.random.randint(low=1024, size=length, dtype=src_type), dtype=flow.int32, device="cuda", requires_grad=False)
+    elif src_type == np.float32:
+        positions = flow.tensor(np.random.rand(*length), dtype=flow.float32, device="cuda", requires_grad=False)
+
     fused = flow._C.fused_sinusoidal_positional_encode(positions, embedding_dim, pattern, downscale_freq_shift, scale, max_period)
     naive = navie_embedding(positions, embedding_dim, pattern, downscale_freq_shift, scale, max_period)
 
@@ -134,15 +155,19 @@ class TestFusedSinusoidalPositionalEncode(flow.unittest.TestCase):
     def test_fused_matmul_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_sinusoidal_positional_encode]
+        args_dict["src_type"] = [np.int32, np.float32]
         args_dict["length"] = [
-            3
+            (7,),
+            (512,),
+            (5, 64),
+            (2, 3, 4, 5)
         ]
-        args_dict["embedding_dim"] = [13, 16, 177]
-        args_dict["pattern"] = [0]
+        args_dict["embedding_dim"] = [17, 32, 512]
+        args_dict["pattern"] = [0, 1, 2, 3]
         args_dict["downscale_freq_shift"] = [0.3]
 
         args_dict["scale"] = [3.3]
-        args_dict["max_period"] = [277, 10000]
+        args_dict["max_period"] = [27, 10000]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
