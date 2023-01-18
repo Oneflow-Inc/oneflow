@@ -60,6 +60,19 @@ class IsFiniteFunctor final : public UtilOpsFunctor {
   }
 };
 
+class DependFunctor {
+ public:
+  DependFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("depend").Input("in").Input("depend_tensor").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const std::shared_ptr<one::Tensor>& depend_tensor) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, depend_tensor});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -67,6 +80,7 @@ using namespace impl;
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsNanFunctor>("IsNan"); };
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsInfFunctor>("IsInf"); };
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<IsFiniteFunctor>("IsFinite"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<DependFunctor>("Depend"); };
 
 }  // namespace functional
 }  // namespace one

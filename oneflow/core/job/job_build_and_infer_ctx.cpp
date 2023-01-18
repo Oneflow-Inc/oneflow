@@ -1005,6 +1005,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // pinned identity can be pruned since GenerateOptimizerOpConfs pass has
     // already construct a complete computational graph
     JUST(DoPass("PrunePinnedIdentityOpPass"));
+    // prune depend OP and and add ctrl_in_op to op_conf accordingly
+    // to express the same semantics and avoid performance loss
+    JUST(DoPass("PruneDependOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("SequentialOneEmbeddingOpsPass"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
