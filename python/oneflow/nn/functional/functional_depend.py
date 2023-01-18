@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import os
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
+
 def depend(
-    input: Tensor,
-    depend_tesor: Tensor,
+        input: Tensor,
+        depend_tesor: Tensor,
 ) -> Tensor:
     r"""
     Add control dependency to guarantee OP A is executed before OP B.
@@ -64,9 +64,9 @@ def depend(
     # avoid performance loss in eager mode
     if not input.is_lazy:
         return input
- 
+
     # avoid self-loop
     if input is depend_tesor:
-         raise RuntimeError("\"input\" and \"depend_tesor\" can NOT be the same tensor.")
+        raise RuntimeError("\"input\" and \"depend_tesor\" can NOT be the same tensor.")
 
     return flow._C.depend(input, depend_tesor)
