@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -360,22 +359,8 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
   // TODO: Deal with the ctrl edges
   // Initialization
   for (auto& topo_struct : *topo_structs) {
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << "Looking at " << topo_struct->op_node->op().op_name();
     topo_struct->counter = topo_struct->op_node->in_edges().size();
-    if (GlobalProcessCtx::Rank() == 0) std::cout << ", in edge size: " << topo_struct->counter;
-    if (topo_struct->counter == 0) {
-      if (GlobalProcessCtx::Rank() == 0) {
-        if (op_node2topo_struct.find(topo_struct->op_node) == op_node2topo_struct.end()) {
-          std::cout << "Can not find this op!" << std::endl;
-        } else {
-          std::cout << "Find this op: " << topo_struct->op_node << std::endl;
-        }
-      }
-      wait(topo_struct->op_node);
-    }
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << ", wait? " << (topo_struct->counter == 0) << std::endl;
+    if (topo_struct->counter == 0) { wait(topo_struct->op_node); }
   }
 
   // Finish execution
@@ -391,15 +376,6 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
   // Make sure to check that waiting list is not empty before execution
   auto execute = [&]() {
     auto first_topo_struct = *waiting_list.begin();
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
-      // std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() <<
-      // std::endl; std::cout << "Min layer: " << first_topo_struct->min_layer
-      //           << ", max layer: " << first_topo_struct->max_layer
-      //           << ", tributary layer: " << first_topo_struct->tributary_layer << std::endl;
-      // for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ",
-      // "; } std::cout << std::endl;
-    }
     // Set the order of execution for sbp nodes
     ordered_topo_structs->push_back(first_topo_struct);
     waiting_list.erase(waiting_list.begin());
@@ -544,9 +520,6 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op
   op_graph.ForEachNode([&](OpNode* node) {
     op_node2topo_struct.insert({node, TopoStruct(node)});
     topo_structs.push_back(&op_node2topo_struct.at(node));
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Generating " << node->op().op_name() << std::endl;
-    }
   });
 
   // Construct the map from a lbi to its id, consumers, blob size
