@@ -141,7 +141,10 @@ add_docstr(
 
 add_docstr(
     oneflow.div,
-    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    r"""
+    div(x, y, *, rounding_mode=None)
+
+    Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -150,6 +153,10 @@ add_docstr(
     Args:
         input (Union[int, float, oneflow.Tensor]): input.
         other (Union[int, float, oneflow.Tensor]): other.
+
+    Keyword Arguments:
+        rounding_mode (str, optional): It can be set as ``"floor"`` (roudning the results down)
+            or ``"trunc"`` (rounding the results towards zero). None for default (no rounding).
 
     For example:
 
@@ -179,6 +186,14 @@ add_docstr(
         >>> out.shape
         (2, 3)
 
+        # rounding_mode
+        >>> x = flow.tensor([ 0.3810,  1.2774, -0.2972, -0.3719,  0.4637])
+        >>> flow.div(x, 0.5)
+        tensor([ 0.7620,  2.5548, -0.5944, -0.7438,  0.9274], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="floor")
+        tensor([ 0.,  2., -1., -1.,  0.], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="trunc")
+        tensor([0., 2., -0., -0., 0.], dtype=oneflow.float32)
     """,
 )
 
