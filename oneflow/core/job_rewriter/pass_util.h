@@ -78,6 +78,10 @@ class OpConfCache {
 std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph);
 bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name);
 
+void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
+                           std::function<bool(const std::string&, const std::string&)>& IsReachable,
+                           HashMap<std::string, OperatorConf>* mut_op_name2conf);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_REWRITER_PASS_UTIL_H_

@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/pass_util.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -74,5 +77,58 @@ std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const Op
 bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 }
+
+void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
+                           std::function<bool(const std::string&, const std::string&)>& IsReachable,
+                           HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+  if (GlobalProcessCtx::Rank() == 0) {
+    // op_graph.ForEachNode([&](OpNode* in) {
+    //   op_graph.ForEachNode([&](OpNode* out) {
+    //     std::cout << "asking " << in->op().op_name() << " to " << out->op().op_name() << ",
+    //     reach? "
+    //               << IsReachable(in->op().op_name(), out->op().op_name()) << std::endl;
+    //   });
+    // });
+    for (int32_t i = 0; i < ordered_op_nodes.size() - 1; i++) {
+      const auto& in = ordered_op_nodes.at(i);
+      const auto& out = ordered_op_nodes.at(i + 1);
+      std::cout << "asking2 " << in->op().op_name() << " to " << out->op().op_name() << ", reach? "
+                << IsReachable(in->op().op_name(), out->op().op_name()) << ", reverse? "
+                << IsReachable(out->op().op_name(), in->op().op_name()) << std::endl;
+    }
+  }
+
+  for (int64_t i = 1; i < ordered_op_nodes.size(); ++i) {
+    const OpNode* this_node = CHECK_JUST(VectorAt(ordered_op_nodes, i));
+    const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
+    const std::string& this_op_name = this_node->op().op_name();
+    const std::string& prev_op_name = prev_node->op().op_name();
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Try ctrl edges from " << prev_op_name << " to " << this_op_name
+                << " but fail, size: ";
+      std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << ", a reach b? "
+                << IsReachable(prev_op_name, this_op_name) << ", b reach a? "
+                << IsReachable(this_op_name, prev_op_name) << std::endl;
+    }
+    // If there exist a path from the source node to the target node,
+    // then we do not need to add the control edge since the target node is already controlled.
+    // If there exist a path from the target node to the source node,
+    // then we can not add the control edge since it will cyclize them.
+    // a -> ... -> b -> c -> a
+    if (!(IsReachable(prev_op_name, this_op_name) || IsReachable(this_op_name, prev_op_name))) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        // Not working???
+        std::cout << "Add ctrl edges from " << prev_op_name << " to " << this_op_name << ", size: ";
+        std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << std::endl;
+      }
+      auto it = mut_op_name2conf->find(this_op_name);
+      // If this op have not been modified, put it in the map.
+      if (it == mut_op_name2conf->end()) {
+        it = mut_op_name2conf->emplace(this_op_name, this_node->op().op_conf()).first;
+      }
+      it->second.add_ctrl_in_op_name(prev_op_name);
+    }
+  }
+};
 
 }  // namespace oneflow
