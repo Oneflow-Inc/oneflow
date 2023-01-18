@@ -231,7 +231,8 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t expa
       cnt++;
     }
     target_dim_vec[expand_dim] = 1;
-    target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim+1) : 1;
+    target_stride_vec[expand_dim] =
+        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
@@ -274,7 +275,8 @@ Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t
       cnt++;
     }
     target_dim_vec[expand_dim] = 1;
-    target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim+1): 1;
+    target_stride_vec[expand_dim] =
+        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
