@@ -32,7 +32,12 @@ def _test_unsqueeze(test_case, device):
     y = flow.unsqueeze(x, dim=1)
     output = np.expand_dims(np_arr, axis=1)
     test_case.assertTrue(np.allclose(output, y.numpy(), 1e-05, 1e-05))
-
+    x_flow=flow.randn(5)
+    x_flow=flow.unsqueeze(x_flow, 0)
+    test_case.assertTrue(np.array_equal(x_flow.stride(), (5, 1)))
+    x_flow=flow.randn(5, 2)
+    x_flow=flow.unsqueeze(x_flow,0)
+    test_case.assertTrue(np.array_equal(x_flow.stride(), (10, 2, 1)))
 
 def _test_unsqueeze_tensor_function(test_case, device):
     np_arr = np.random.rand(2, 3, 4)
