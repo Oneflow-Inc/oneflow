@@ -59,6 +59,7 @@ REQUIRED_PACKAGES = [
     "requests",
     "pillow",
     "rich",
+    "onefx",
 ]
 
 ONEFLOW_VERSION = get_version()
