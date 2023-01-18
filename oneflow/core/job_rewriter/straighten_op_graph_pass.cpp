@@ -32,6 +32,7 @@ class StraightenOpGraphPass final : public JobPass {
   ~StraightenOpGraphPass() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
