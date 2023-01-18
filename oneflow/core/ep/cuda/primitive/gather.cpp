@@ -28,7 +28,7 @@ bool IsSafeUseIndex32(int64_t outer_dim_size, int64_t gather_dim_size, int64_t i
 }
 
 template<typename MovementType, typename IndexType>
-void DispatchIndexType(cudaStream_t cuda_stream, int64_t outer_dim_size, int64_t gather_dim_size, int64_t inner_dim_byte_size,
+void DispatchIndexSize(cudaStream_t cuda_stream, int64_t outer_dim_size, int64_t gather_dim_size, int64_t inner_dim_byte_size,
 int64_t num_indices, int64_t offset, const IndexType *indices, const void *in, void *out){
     const out_elem_cnt = outer_dim_size * num_indices + inner_dim_size;
     if(IsSafeUseIndex32(outer_dim_size, gather_dim_size, inner_dim_size, num_indices)){
@@ -40,7 +40,6 @@ int64_t num_indices, int64_t offset, const IndexType *indices, const void *in, v
       NdIndexOffsetHelper<int64_t, 3> out_helper(outer_dim_size, num_indices, inner_dim_size);
     }
 }
-
 
 template<typename IndexType, typename MovementType>
 bool TryDispatchMovementType(cudaStream_t cuda_stream, int64_t outer_dim_size, int64_t gather_dim_size, int64_t inner_dim_byte_size, int64_t num_indices, int64_t offset, const IndexType *indices, const void *in, void *out){
@@ -113,8 +112,6 @@ class GatherImpl : public Gather {
     DispatchMovementSize<IndexType>(cuda_stream, outer_dim_size, gather_dim_size, inner_dim_size*sizeof(T), num_indices, offset, indices, in, out); 
   } 
 };
-
-  
 
 } // namespace internel
 
