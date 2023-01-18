@@ -268,9 +268,9 @@ std::unique_ptr<Where> NewWhere(DataType cond_type, DataType data_type, size_t m
     return std::unique_ptr<Where>(new Prim<T, CondT>());                   \
   }
 #define ELIF(ctype, dtype_size) else IF(ctype, dtype_size)
-#define ELSE         \
-  else {             \
-    UNIMPLEMENTED(); \
+#define ELSE        \
+  else {            \
+    return nullptr; \
   }
 
   IF(DataType::kBool, 1)

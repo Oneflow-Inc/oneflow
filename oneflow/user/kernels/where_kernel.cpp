@@ -23,7 +23,7 @@ namespace {
 
 template<typename Context>
 auto NewPrimitive(Context* ctx) -> std::unique_ptr<ep::primitive::Where> {
-  const user_op::TensorDesc* cond_desc = ctx->TensorDesc4ArgNameAndIndex("cond", 0);
+  const user_op::TensorDesc* cond_desc = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
   const user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   return ep::primitive::NewPrimitive<ep::primitive::WhereFactory>(
       ctx->device_type(), cond_desc->data_type(), out_desc->data_type(),
