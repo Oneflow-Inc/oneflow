@@ -30,7 +30,7 @@ namespace oneflow {
 
 namespace {
 
-class Conv2dCutlassKernel final : public user_op::OpKernel {
+class Conv2dCutlassKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   Conv2dCutlassKernel() = default;
   ~Conv2dCutlassKernel() override = default;
