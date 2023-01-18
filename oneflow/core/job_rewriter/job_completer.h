@@ -35,8 +35,11 @@ class JobCompleter final {
   // The job is copied from a shared graph, it needs to be modified
   // for a new graph with different input.
   static Maybe<void> CompleteSharedGraphForNewInput(
-      Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
-                    InputTensor4Name);
+      Job* job,
+      const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
+          InputTensor4Name,
+      const std::function<Maybe<const OperatorConf*>(const std::string& shared_op_name)>&
+          NewOp4SharedOpName);
 };
 
 }  // namespace oneflow

@@ -164,7 +164,6 @@ class Graph(object):
 
         # For build graph from another graph with different input shape.
         self._build_with_shared_graph = False
-        self._is_compiled_with_shared = False
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -815,13 +814,52 @@ class Graph(object):
         self._build_with_shared_graph = True
 
     def _compile_from_shared(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
+
+        self.__ensure_state_tensors_contiguous()
+        # Filter to get unique states in graph
+        state_op_names = self._filter_states()
         # Generate new config.
         self._generate_config_proto()
-        # Generate new job id.
+        # Deal with parameter and buffer
+        self._create_states_builder()
+
+        # Build current forward graph to generate some new attributes of this graph.
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             self._job_id = (
                 oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
             )
+            # Deal with inputs
+            (arg_op_names, lazy_args, lazy_kwargs, args_repr, _,) = self.__build_io(
+                "input", graph_build_util.build_graph_input_arg, *args, **kwargs
+            )
+
+            # Deal with module in self.build(*args)
+            outputs = self.build(*lazy_args, **lazy_kwargs)
+
+            # Always pack output to remain type of outputs
+            outputs = (outputs,)
+            (
+                output_op_names,
+                build_eager_outputs,
+                _,  # empty kwargs return
+                outs_repr,
+                out2name,
+            ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
+
+            # Save forward graph job proto
+            self._forward_job_proto = c_api_util.GetCurrentJob()
+
+        # Create op name vectors from shared graph and this graph.
+        assert len(self._forward_job_proto.net.op) == len(
+            self._shared_graph._forward_job_proto.net.op
+        )
+        shared_op_names = []
+        for op_idx in range(len(self._forward_job_proto.net.op)):
+            shared_op_names.append(
+                self._shared_graph._forward_job_proto.net.op[op_idx].name
+            )
+
         # Copy the completed graph from the shared graph and reuse it.
         self._compiled_job_proto = deepcopy(self._shared_graph._compiled_graph_proto)
         self._compiled_job_proto.job_conf.job_name = self._name
@@ -834,10 +872,11 @@ class Graph(object):
         )
 
         # Build graph with new inputs from a compiled job of a shared graph.
-        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         self._c_nn_graph.build_with_new_input_from_shared_graph(
             self._shared_graph._arg_op_names,
             convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
+            shared_op_names,
+            self._forward_job_proto.SerializeToString(),
         )
 
         # Get new compiled job proto

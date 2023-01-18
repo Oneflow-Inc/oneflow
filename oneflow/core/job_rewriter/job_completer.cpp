@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
@@ -63,14 +65,11 @@ Maybe<void> CheckAndLogOpGraph(const Job& job) {
 }
 
 Maybe<void> ReInferLogicalBlobDesc(
-    Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
-                  InputTensor4Name) {
+    Job* job,
+    const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>& InputTensor4Name,
+    const std::function<Maybe<const OperatorConf*>(const std::string& shared_op_name)>&
+        NewOp4SharedOpName) {
   const auto& new_job_name = job->job_conf().job_name();
-#define UPDATE_JOB_NAME(op_conf_name)                             \
-  if (op_conf.has_##op_conf_name()) {                             \
-    op_conf.mutable_##op_conf_name()->set_job_name(new_job_name); \
-  }
-
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
     // Input op needs to be updated with new input tensor.
     if (op_conf.has_input_conf()) {
@@ -80,12 +79,37 @@ Maybe<void> ReInferLogicalBlobDesc(
       input_tensor->shape()->ToProto(blob_conf->mutable_shape());
       blob_conf->set_data_type(input_tensor->dtype()->data_type());
     }
+    // Some op attributes need to be updated with the new traced graph.
+    if (op_conf.has_user_conf()) {
+      for (auto& pair : *op_conf.mutable_user_conf()->mutable_attr()) {
+        if (pair.second.has_at_shape()) {
+          const auto* new_op_conf = JUST(NewOp4SharedOpName(op_conf.name()));
+          CHECK_EQ_OR_RETURN(new_op_conf->user_conf().op_type_name(),
+                             op_conf.user_conf().op_type_name())
+              << " new op " << new_op_conf->DebugString() << " is not corresponding with "
+              << op_conf.DebugString();
+          auto attr_iter = new_op_conf->user_conf().attr().find(pair.first);
+          CHECK_OR_RETURN(attr_iter != new_op_conf->user_conf().attr().end())
+              << " There is not attr " << pair.first << " in new op " << new_op_conf->DebugString();
+          *pair.second.mutable_at_shape() = attr_iter->second.at_shape();
+        }
+      }
+    }
+
     // These operators' execution depends on new job name.
+#define UPDATE_JOB_NAME(op_conf_name)                             \
+  if (op_conf.has_##op_conf_name()) {                             \
+    op_conf.mutable_##op_conf_name()->set_job_name(new_job_name); \
+  }
+
     UPDATE_JOB_NAME(input_conf);
     UPDATE_JOB_NAME(output_conf);
     UPDATE_JOB_NAME(callback_notify_conf);
     UPDATE_JOB_NAME(wait_and_send_ids_conf);
     UPDATE_JOB_NAME(return_conf);
+
+#undef UPDATE_JOB_NAME
+
     // Critical section operators depend job_name related buffer_name.
     if (op_conf.has_critical_section_wait_tick_conf()) {
       const auto& buffer_name = op_conf.critical_section_wait_tick_conf().buffer_name();
@@ -108,7 +132,6 @@ Maybe<void> ReInferLogicalBlobDesc(
       }
     }
   }
-#undef UPDATE_JOB_NAME
 
   // Use OpGraph init to InferLogicalBlobDesc with new input shape.
   auto op_graph = std::make_unique<OpGraph>(*job);
@@ -226,9 +249,11 @@ Maybe<void> JobCompleter::Complete(Job* job) {
 }
 
 Maybe<void> JobCompleter::CompleteSharedGraphForNewInput(
-    Job* job, const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
-                  InputTensor4Name) {
-  JUST(ReInferLogicalBlobDesc(job, InputTensor4Name));
+    Job* job,
+    const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>& InputTensor4Name,
+    const std::function<Maybe<const OperatorConf*>(const std::string& shared_op_name)>&
+        NewOp4SharedOpName) {
+  JUST(ReInferLogicalBlobDesc(job, InputTensor4Name, NewOp4SharedOpName));
   JUST(CheckAndLogOpGraph(*job));
   return Maybe<void>::Ok();
 }

@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/nn_graph.h"
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
@@ -352,16 +354,18 @@ Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
 }
 
 Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
-    const std::vector<std::string>& inputs_op_names,
-    const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
-  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size());  // NOLINE
+    const std::vector<std::string>& shared_inputs_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
+    const std::vector<std::string>& shared_op_names, const std::string& new_serialized_job) {
+  CHECK_EQ_OR_RETURN(shared_inputs_op_names.size(), new_input_tensors.size());  // NOLINE
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   // Register inputs.
-  JUST(RegisterInputOpNamesAndTensors(inputs_op_names, input_tensors));
+  JUST(RegisterInputOpNamesAndTensors(shared_inputs_op_names, new_input_tensors));
 
+  // Generate new input tensor getter.
   HashMap<std::string, std::shared_ptr<one::Tensor>> input_name2tensor;
-  for (int64_t idx = 0; idx < inputs_op_names.size(); ++idx) {
-    input_name2tensor.emplace(inputs_op_names[idx], input_tensors[idx]);
+  for (int64_t idx = 0; idx < shared_inputs_op_names.size(); ++idx) {
+    input_name2tensor.emplace(shared_inputs_op_names[idx], new_input_tensors[idx]);
   }
   const auto& InputTensor4Name =
       [&input_name2tensor](const std::string& op_name) -> Maybe<std::shared_ptr<one::Tensor>> {
@@ -371,10 +375,30 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
     return iter->second;
   };
 
+  // Generate new OperatorConf getter.
+  Job new_build_job;
+  CHECK_OR_RETURN(new_build_job.ParseFromString(new_serialized_job))
+      << "nn.Graph " << name_ << " parse job proto of new build graph failed.";
+  CHECK_EQ_OR_RETURN(new_build_job.net().op_size(), shared_op_names.size())
+      << "nn.Graph " << name_ << " new_build_job op size and shared_op_names size are not equal.";
+  HashMap<std::string, const OperatorConf*> shared_op_name2_new_op;
+  for (int64_t op_idx = 0; op_idx < shared_op_names.size(); ++op_idx) {
+    // Assume that the new graph and the shared graph from nn.Graph.build have the same op order.
+    const auto& op = new_build_job.mutable_net()->mutable_op()->at(op_idx);
+    shared_op_name2_new_op.emplace(shared_op_names[op_idx], &op);
+  }
+  const auto& NewOp4SharedOpName =
+      [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
+    auto iter = shared_op_name2_new_op.find(shared_op_name);
+    CHECK_OR_RETURN(iter != shared_op_name2_new_op.end())
+        << "Can't find new operator conf of " << shared_op_name << ".";
+    return iter->second;
+  };
+
   // A global variable to get graph configurations.
   auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter::CompleteSharedGraphForNewInput(&job_, InputTensor4Name));
+  JUST(JobCompleter::CompleteSharedGraphForNewInput(&job_, InputTensor4Name, NewOp4SharedOpName));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
   return Maybe<void>::Ok();
 }
