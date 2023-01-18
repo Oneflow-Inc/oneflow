@@ -122,7 +122,7 @@ def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
     )
 
 
-def test_fused_glu(test_case, params: dict, dtype=flow.float32):
+def tst_fused_glu(test_case, params: dict, dtype=flow.float32):
     print(f"========== Start Testing ==========")
     print(f"weight tensor: merged")
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
@@ -172,7 +172,7 @@ def test_fused_glu(test_case, params: dict, dtype=flow.float32):
     print("\n")
 
 
-def test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
+def tst_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     print(f"========== Start Testing ==========")
     print(f"weight tensor: splited")
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
@@ -242,8 +242,8 @@ class TestFusedGlu(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         # set up test functions
         arg_dict["test_fun"] = [
-            test_fused_glu,
-            test_fused_glu_split,
+            tst_fused_glu,
+            tst_fused_glu_split,
         ]
 
         # set up env valuable if necessary
