@@ -26,7 +26,7 @@ struct FusedSinusoidalPositionalEncodeParam {
     const void*  in_ptr;
     float* out_ptr;
     int N;
-    int embedding_dim;
+    int half_dim;
     int next_stride;
     int init_offset;
     int stride;
@@ -42,43 +42,53 @@ enum class EncodingPattern {
     INTERLEAVED_COS_SIN
 };
 
-template<typename Src>
-__global__ void ComputeCosKernel(struct FusedSinusoidalPositionalEncodeParam param) {
+enum class EncodeType {
+    SIN,
+    COS
+};
+
+template<typename Src, EncodeType type>
+__global__ void ComputeKernel(struct FusedSinusoidalPositionalEncodeParam param) {
     const Src* in_ptr = reinterpret_cast<const Src*>(param.in_ptr);
     float* out_ptr = param.out_ptr;
 
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.N * param.embedding_dim; offset += blockDim.x * gridDim.x) {
-        float position = in_ptr[offset / param.embedding_dim];
-        int dim = (offset % param.embedding_dim);
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.N * param.half_dim; offset += blockDim.x * gridDim.x) {
+        float position = in_ptr[offset / param.half_dim];
+        int dim = (offset % param.half_dim);
         float exponent = -logf(param.max_period) * dim;
-        exponent = exponent / (param.embedding_dim - param.downscale_freq_shift);
+        exponent = exponent / (param.half_dim - param.downscale_freq_shift);
         float emb = expf(exponent) * position * param.scale;
 
-        out_ptr[(offset % param.embedding_dim) * param.next_stride + 
-            (offset / param.embedding_dim) * param.stride] = cosf(emb);
-    }
-}
-
-template<typename Src>
-__global__ void ComputeSinKernel(struct FusedSinusoidalPositionalEncodeParam param) {
-    const Src* in_ptr = reinterpret_cast<const Src*>(param.in_ptr);
-    float* out_ptr = param.out_ptr;
-
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.N * param.embedding_dim; offset += blockDim.x * gridDim.x) {
-        float position = in_ptr[offset / param.embedding_dim];
-        int dim = (offset % param.embedding_dim);
-        float exponent = -logf(param.max_period) * dim;
-        exponent = exponent / (param.embedding_dim - param.downscale_freq_shift);
-        float emb = expf(exponent) * position * param.scale;
-
-        out_ptr[(offset % param.embedding_dim) * param.next_stride + 
-            (offset / param.embedding_dim) * param.stride] = sinf(emb);
+        if (type == EncodeType::SIN) {
+            out_ptr[(offset % param.half_dim) * param.next_stride + 
+                (offset / param.half_dim) * param.stride] = sinf(emb);
+        } else {
+            out_ptr[(offset % param.half_dim) * param.next_stride + 
+                (offset / param.half_dim) * param.stride] = cosf(emb);
+        }
     }
 }
 
 __global__ void PaddingKernel(float* out_ptr, int N, int embedding_dim) {
     for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < N; offset += blockDim.x * gridDim.x) {
         out_ptr[embedding_dim * offset + embedding_dim - 1] = 0.0;
+    }
+}
+
+template<typename Src>
+void DispatchEncodeType(EncodeType type, struct FusedSinusoidalPositionalEncodeParam& param) {
+    if (type == EncodeType::SIN) {
+        ComputeKernel<Src, EncodeType::SIN><<<BlocksNum4ThreadsNum(param.N * param.half_dim), kCudaThreadsNumPerBlock>>>(param);
+    } else if (type == EncodeType::COS){
+        ComputeKernel<Src, EncodeType::COS><<<BlocksNum4ThreadsNum(param.N * param.half_dim), kCudaThreadsNumPerBlock>>>(param);
+    }
+}
+
+void DispatchSrcType(DataType src, EncodeType type, struct FusedSinusoidalPositionalEncodeParam& param) {
+    if (src == DataType::kInt32) {
+        DispatchEncodeType<int>(type, param);
+    } else if (src == DataType::kFloat) {
+        DispatchEncodeType<float>(type, param);
     }
 }
 
@@ -110,9 +120,6 @@ class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, pu
         reinterpret_cast<float*>(out->mut_dptr()) + half_dim, N, half_dim, 1, half_dim,
         embedding_dim, downscale_freq_shift, scale, max_period};
 
-    const int num_threads = 256;
-    const int num_blocks = MIN((N * half_dim + num_threads - 1) / num_threads, 8192);
-
     if (pattern == EncodingPattern::SIN_COS) {
         // do nothing
     } else if (pattern == EncodingPattern::COS_SIN) {
@@ -133,15 +140,15 @@ class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, pu
         cos_param.init_offset = half_dim;
         sin_param.init_offset = 0;
     } else {
-        //TODO: alarm
+        return;
     }
 
-    //TODO: Dispatch Src
-    ComputeSinKernel<int><<<num_blocks, num_threads>>>(sin_param);
-    ComputeCosKernel<int><<<num_blocks, num_threads>>>(cos_param);
+    DispatchSrcType(positions->data_type(), EncodeType::SIN, sin_param);
+    DispatchSrcType(positions->data_type(), EncodeType::COS, cos_param);
 
     if (embedding_dim % 2 == 1) {
-        PaddingKernel<<<(N + 255) / 256, 256>>>(reinterpret_cast<float*>(out->mut_dptr()), N, embedding_dim);
+        PaddingKernel<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock>>>
+            (reinterpret_cast<float*>(out->mut_dptr()), N, embedding_dim);
     }
   }
 
