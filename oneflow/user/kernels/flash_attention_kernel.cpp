@@ -295,14 +295,9 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     const size_t row_stride =
         num_head * head_size;  // if qkv packed, row_stride should be 3 * num_head * head_size
     const size_t head_stride = head_size;
-    CHECK(head_size == 16 || head_size == 32 || head_size == 64 || head_size == 128)
-        << "flash-attention only support head_size in (16, 32, 64, 128).";
-    bool is_sm75 = device_props.major == 7 && device_props.minor == 5;
-    bool is_sm80 = device_props.major == 8 && device_props.minor == 0;
-    int blocksize_c = ((head_size == 128 && (is_dropout || !is_sm80))
-                       || (is_sm75 && head_size == 64 && is_dropout))
-                          ? 128
-                          : 256;
+    CHECK((head_size % 8 == 0) && (head_size <= 128))
+        << "flash-attention only support head_size: (head_size % 8 == 0) && (head_size <= 128).";
+    int blocksize_c = head_size > 64 ? 128 : 256;
     // Need to round max_seqlen_k to multiples of blocksize_c
     max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
     if (origin_max_seqlen_k <= 128) {
@@ -435,11 +430,7 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     const size_t head_stride = head_size;
 
     bool is_sm75 = device_props.major == 7 && device_props.minor == 5;
-    bool is_sm80 = device_props.major == 8 && device_props.minor == 0;
-    int blocksize_c = ((head_size == 128 && (is_dropout || !is_sm80))
-                       || (is_sm75 && head_size == 64 && is_dropout))
-                          ? 128
-                          : 256;
+    int blocksize_c = (head_size > 64 || (is_sm75 && head_size > 32)) ? 128 : 256;
     // Need to round max_seqlen_k to multiples of blocksize_c
     max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
     if (origin_max_seqlen_k <= 128) {
