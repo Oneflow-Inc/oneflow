@@ -72,14 +72,20 @@ inline bool IsDimsEquals(size_t ndim, const int64_t* a_dims, const int64_t* b_di
   return true;
 }
 
+// Calculate compact broadcast dimensions
+// For example:
+//   [1, 2, 8] and [4, 2, 8] can be compacted to [1, 16] and [4, 16]
+//   [4, 1, 8] and [8] -> [4, 8] and [1, 8]
+//   [1, 1, 8] and [4, 2, 8] -> [1, 8] and [8, 8]
+// after compacting, cond, x, y will have the same number of dims,
+// z_dims is the broadcast dims of compacted cond, x, y dims.
 inline void GetCompactBroadcastDims(const size_t num_cond_ndims, const int64_t* cond_dims,
                                     const size_t num_x_dims, const int64_t* x_dims,
                                     const size_t num_y_dims, const int64_t* y_dims,
                                     size_t* compact_num_dims, int64_t* compact_cond_dims,
                                     int64_t* compact_x_dims, int64_t* compact_y_dims,
                                     int64_t* compact_z_dims) {
-  size_t max_num_dims = std::max(num_x_dims, num_y_dims);
-  max_num_dims = std::max(max_num_dims, num_cond_ndims);
+  size_t max_num_dims = std::max(std::max(num_x_dims, num_y_dims), num_cond_ndims);
   CHECK_LE(max_num_dims, kMaxNumDims);
 
   auto MakeGetDimSize = [max_num_dims](size_t ndim, const int64_t* dims) {
