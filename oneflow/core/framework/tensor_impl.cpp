@@ -39,8 +39,7 @@ namespace one {
 Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
   if (requires_grad) {
     const DataType tensor_dtype = dtype();
-    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
-                    || tensor_dtype == DataType::kFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype))
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
   autograd_meta_->set_requires_grad(requires_grad);
@@ -81,15 +80,25 @@ EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
-  tensor_storage_->set_releaser_hook(
-      [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
-        CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          if (eager_blob_object->producer_stream().has_value()) {
-            JUST(builder->ReleaseTensor(eager_blob_object));
-          }
-          return Maybe<void>::Ok();
-        }));
-      });
+  tensor_storage_->set_releaser_hook([eager_blob_object](
+                                         const std::shared_ptr<vm::TensorStorage>&) {
+    auto ret = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      if (eager_blob_object->producer_stream().has_value()) {
+        JUST(builder->ReleaseTensor(eager_blob_object));
+      }
+      return Maybe<void>::Ok();
+    });
+    // We should not use CHECK_JUST here because it will throw an exception
+    // in destructor.
+    if (!ret.IsOk()) {
+      LOG(WARNING)
+          << "Release hook gets an error. Release hooks are executed in destructor, so the error "
+             "is possibly only a secondary error caused by another unrelated exception.";
+      LOG(WARNING) << "======= Error message begin =======";
+      LOG(WARNING) << ret.GetSerializedError();
+      LOG(WARNING) << "======= Error message end =======";
+    }
+  });
   return Maybe<void>::Ok();
 }
 
