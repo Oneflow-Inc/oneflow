@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -391,12 +392,13 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
   auto execute = [&]() {
     auto first_topo_struct = *waiting_list.begin();
     if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
-      std::cout << "Min layer: " << first_topo_struct->min_layer
-                << ", max layer: " << first_topo_struct->max_layer
-                << ", tributary layer: " << first_topo_struct->tributary_layer << std::endl;
-      for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ", "; }
-      std::cout << std::endl;
+      std::cout << "Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
+      // std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() <<
+      // std::endl; std::cout << "Min layer: " << first_topo_struct->min_layer
+      //           << ", max layer: " << first_topo_struct->max_layer
+      //           << ", tributary layer: " << first_topo_struct->tributary_layer << std::endl;
+      // for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ",
+      // "; } std::cout << std::endl;
     }
     // Set the order of execution for sbp nodes
     ordered_topo_structs->push_back(first_topo_struct);
@@ -414,14 +416,17 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
 // Use two function
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Generate topological data structure for each sbp node
-  HashMap<SbpNode*, TopoStruct> sbp_node2topo_struct;
+  HashMap<OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
+  std::vector<TopoStruct*> ordered_topo_structs;
+
   // Traverse all the nodes in the sbp graph
   for (const auto& sbp_node : sbp_graph->GetNodeList()) {
-    CHECK(sbp_node->GetOperatorNode() != nullptr)
+    auto* op_node = sbp_node->GetOperatorNode();
+    CHECK(op_node != nullptr)
         << "No proxy node allow at this status. InitMemory() should be run before sbp collector!";
-    sbp_node2topo_struct.insert({sbp_node, TopoStruct(sbp_node)});
-    topo_structs.push_back(&sbp_node2topo_struct.at(sbp_node));
+    op_node2topo_struct.insert({op_node, TopoStruct(sbp_node)});
+    topo_structs.push_back(&op_node2topo_struct.at(op_node));
   }
 
   // Construct the map from a lbi to its id, consumers, blob size
@@ -429,44 +434,8 @@ void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_comp
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  InitAllParameters(op_graph, &topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
-
-  std::set<TopoStruct*, comp> waiting_list;
-
-  // Order of execution for topological structs
-  std::vector<TopoStruct*> ordered_topo_structs;
-
-  // Wait in the list
-  auto wait = [&](SbpNode* sbp_node) { waiting_list.insert(&sbp_node2topo_struct.at(sbp_node)); };
-
-  // Initialization
-  for (auto& topo_struct : topo_structs) {
-    topo_struct->counter = topo_struct->sbp_node->GetEdgesIn().size();
-    if (topo_struct->counter == 0) { wait(topo_struct->sbp_node); }
-  }
-
-  // Finish execution
-  auto finish_execution = [&](SbpNode* sbp_node) {
-    for (const auto& edge_out : sbp_node->GetEdgesOut()) {
-      SbpNode* end_node = edge_out->GetEndNode();
-      int32_t& end_node_counter = sbp_node2topo_struct.at(end_node).counter;
-      --end_node_counter;
-      if (end_node_counter == 0) { wait(end_node); }
-    }
-  };
-
-  // Execute the first node in the waiting list
-  // Make sure to check that waiting list is not empty before execution
-  auto execute = [&]() {
-    auto first_topo_struct = *waiting_list.begin();
-    // Set the order of execution for sbp nodes
-    ordered_topo_structs.push_back(first_topo_struct);
-    waiting_list.erase(waiting_list.begin());
-    finish_execution(first_topo_struct->sbp_node);
-  };
-
-  // straightening
-  while (!waiting_list.empty()) { execute(); }
+  StraightenOpNodes(op_graph, op_node2topo_struct, &topo_structs, &lbi2id,
+                    &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
 
   // Mark the memory support, which contains two part:
   // All the non-reusable memory and those blobs which is a part of the maximum reusable memory
@@ -588,9 +557,9 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op
   StraightenOpNodes(op_graph, op_node2topo_struct, &topo_structs, &lbi2id,
                     &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
 
-                    for(auto& ordered_topo_struct : ordered_topo_structs){
-                      ordered_op_nodes->push_back(ordered_topo_struct->op_node);
-                    }
+  for (auto& ordered_topo_struct : ordered_topo_structs) {
+    ordered_op_nodes->push_back(ordered_topo_struct->op_node);
+  }
 }
 
 }  // namespace auto_parallel
