@@ -97,7 +97,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   void Compute(Instruction* instruction) override {
     auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
 
-    thread_local int64_t run_cnt = 1;
+    static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
@@ -108,15 +108,11 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
-      LOG(INFO) << "vm run lazy " << job_name << " push callback"
-                << " run count " << run_cnt;
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
-      LOG(INFO) << "vm run lazy " << job_name << " push source tick "
-                << " run count " << run_cnt;
     }
+    OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
-    ++run_cnt;
   }
 
  private:
