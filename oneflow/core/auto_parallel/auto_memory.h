@@ -17,12 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_AUTO_PARALLEL_AUTO_MEMORY_H_
 
 #include "oneflow/core/auto_parallel/sbp_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 namespace oneflow {
 
 namespace auto_parallel {
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream);
 
-void StraightenOpGraph(const OpGraph& op_graph);
+void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op_nodes);
 
 }  // namespace auto_parallel
 }  // namespace oneflow

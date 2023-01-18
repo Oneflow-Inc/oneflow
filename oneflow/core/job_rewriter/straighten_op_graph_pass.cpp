@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -41,6 +42,8 @@ class StraightenOpGraphPass final : public JobPass {
 
 Maybe<void> StraightenOpGraphPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::cout << "Straighten op graph is working!" << std::endl;
+  std::vector<OpNode*> ordered_op_nodes;
+  auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
   return Maybe<void>::Ok();
 }
 

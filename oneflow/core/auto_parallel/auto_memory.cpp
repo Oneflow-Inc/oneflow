@@ -343,6 +343,71 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
   for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 }
 
+void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op_node2topo_struct,
+                       std::vector<TopoStruct*>* topo_structs,
+                       HashMap<LogicalBlobId, int32_t>* lbi2id,
+                       std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
+                       std::vector<int64_t>* id2blob_size,
+                       std::vector<TopoStruct*>* ordered_topo_structs) {
+  InitAllParameters(op_graph, topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
+
+  std::set<TopoStruct*, comp> waiting_list;
+
+  // Wait in the list
+  auto wait = [&](OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
+
+  // TODO: Deal with the ctrl edges
+  // Initialization
+  for (auto& topo_struct : *topo_structs) {
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << "Looking at " << topo_struct->op_node->op().op_name();
+    topo_struct->counter = topo_struct->op_node->in_edges().size();
+    if (GlobalProcessCtx::Rank() == 0) std::cout << ", in edge size: " << topo_struct->counter;
+    if (topo_struct->counter == 0) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        if (op_node2topo_struct.find(topo_struct->op_node) == op_node2topo_struct.end()) {
+          std::cout << "Can not find this op!" << std::endl;
+        } else {
+          std::cout << "Find this op: " << topo_struct->op_node << std::endl;
+        }
+      }
+      wait(topo_struct->op_node);
+    }
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << ", wait? " << (topo_struct->counter == 0) << std::endl;
+  }
+
+  // Finish execution
+  auto finish_execution = [&](OpNode* op_node) {
+    op_node->ForEachNodeOnOutEdge([&](OpNode* out) {
+      int32_t& out_node_counter = op_node2topo_struct.at(out).counter;
+      out_node_counter--;
+      if (out_node_counter == 0) { wait(out); }
+    });
+  };
+
+  // Execute the first node in the waiting list
+  // Make sure to check that waiting list is not empty before execution
+  auto execute = [&]() {
+    auto first_topo_struct = *waiting_list.begin();
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
+      std::cout << "Min layer: " << first_topo_struct->min_layer
+                << ", max layer: " << first_topo_struct->max_layer
+                << ", tributary layer: " << first_topo_struct->tributary_layer << std::endl;
+      for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ", "; }
+      std::cout << std::endl;
+    }
+    // Set the order of execution for sbp nodes
+    ordered_topo_structs->push_back(first_topo_struct);
+    waiting_list.erase(waiting_list.begin());
+    finish_execution(first_topo_struct->op_node);
+  };
+
+  // straightening
+  while (!waiting_list.empty()) { execute(); }
+}
+
 }  // anonymous namespace
 
 // TODO: Use straighten order
@@ -500,10 +565,12 @@ void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_comp
   }
 }
 
-void StraightenOpGraph(const OpGraph& op_graph) {
+void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op_nodes) {
   // Generate topological data structure for each op node
   HashMap<OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
+  std::vector<TopoStruct*> ordered_topo_structs;
+
   // Traverse all the nodes in the op graph
   op_graph.ForEachNode([&](OpNode* node) {
     op_node2topo_struct.insert({node, TopoStruct(node)});
@@ -518,63 +585,12 @@ void StraightenOpGraph(const OpGraph& op_graph) {
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  InitAllParameters(op_graph, &topo_structs, &lbi2id, &id2consumer_topo_structs, &id2blob_size);
+  StraightenOpNodes(op_graph, op_node2topo_struct, &topo_structs, &lbi2id,
+                    &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
 
-  std::set<TopoStruct*, comp> waiting_list;
-
-  // Order of execution for topological structs
-  std::vector<TopoStruct*> ordered_topo_structs;
-
-  // Wait in the list
-  auto wait = [&](OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
-
-  // TODO: Deal with the ctrl edges
-  // Initialization
-  for (auto& topo_struct : topo_structs) {
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << "Looking at " << topo_struct->op_node->op().op_name();
-    topo_struct->counter = topo_struct->op_node->in_edges().size();
-    if (GlobalProcessCtx::Rank() == 0) std::cout << ", in edge size: " << topo_struct->counter;
-    if (topo_struct->counter == 0) {
-      if (GlobalProcessCtx::Rank() == 0) {
-        if (op_node2topo_struct.find(topo_struct->op_node) == op_node2topo_struct.end()) {
-          std::cout << "Can not find this op!" << std::endl;
-        } else {
-          std::cout << "Find this op: " << topo_struct->op_node << std::endl;
-        }
-      }
-      wait(topo_struct->op_node);
-    }
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << ", wait? " << (topo_struct->counter == 0) << std::endl;
-  }
-
-  // Finish execution
-  auto finish_execution = [&](OpNode* op_node) {
-    op_node->ForEachNodeOnOutEdge([&](OpNode* out) {
-      int32_t& out_node_counter = op_node2topo_struct.at(out).counter;
-      out_node_counter--;
-      if (out_node_counter == 0) { wait(out); }
-    });
-  };
-
-  // Execute the first node in the waiting list
-  // Make sure to check that waiting list is not empty before execution
-  auto execute = [&]() {
-    auto first_topo_struct = *waiting_list.begin();
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "OpNode Executing " << first_topo_struct->op_node->op().op_name() << std::endl;
-      for (auto& topo_struct : waiting_list) { std::cout << topo_struct->memory_increment << ", "; }
-      std::cout << std::endl;
-    }
-    // Set the order of execution for sbp nodes
-    ordered_topo_structs.push_back(first_topo_struct);
-    waiting_list.erase(waiting_list.begin());
-    finish_execution(first_topo_struct->op_node);
-  };
-
-  // straightening
-  while (!waiting_list.empty()) { execute(); }
+                    for(auto& ordered_topo_struct : ordered_topo_structs){
+                      ordered_op_nodes->push_back(ordered_topo_struct->op_node);
+                    }
 }
 
 }  // namespace auto_parallel
