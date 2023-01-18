@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -25,7 +26,7 @@ std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
 }
 
-class ConcatKernel final : public user_op::OpKernel {
+class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConcatKernel() = default;
   ~ConcatKernel() = default;
