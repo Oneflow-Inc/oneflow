@@ -32,28 +32,6 @@ from contextlib import contextmanager
 from oneflow.test_utils.automated_test_util import *
 
 
-if sys.platform == "win32":
-
-    @contextmanager
-    def TemporaryDirectoryName(suffix=None):
-        # This is used to create tempDir, and remove it automatically
-        # On Windows the directory created by TemporaryDirectory is likely to be removed prematurely,
-        # so we first create the directory using mkdtemp and then remove it manually
-        try:
-            dir_name = tempfile.mkdtemp(suffix=suffix)
-            yield dir_name
-        finally:
-            shutil.rmtree(dir_name)
-
-
-else:
-
-    @contextmanager  # noqa: T484
-    def TemporaryDirectoryName(suffix=None):
-        with tempfile.TemporaryDirectory(suffix=suffix) as d:
-            yield d
-
-
 class TestPrune(flow.unittest.TestCase):
     def test_validate_pruning_amount_init(self):
         r"""Test the first util function that validates the pruning
@@ -823,9 +801,9 @@ class TestPrune(flow.unittest.TestCase):
 
         pruned_weight = model[0].weight
 
-        with TemporaryDirectoryName() as fname:
-            flow.save(model, fname)
-            new_model = flow.load(fname)
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(model, f.name)
+            new_model = flow.load(f.name)
 
         # check that the original weight and the new mask are present
         self.assertIn("0.weight_orig", new_model.state_dict())
