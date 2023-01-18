@@ -82,6 +82,9 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+      "Tensor (Tensor input, Tensor other, *, String rounding_mode=None) => DivMode",
+      "Tensor (Tensor input, Scalar other, *, String rounding_mode=None) => ScalarDivMode",
+      "Tensor (Scalar input, Tensor other, *, String rounding_mode=None) => ScalarDivMode",
     ]
   bind_python: true
 
@@ -125,6 +128,14 @@
       "Tensor (Tensor input, Tensor other) => BroadcastGreater",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater",
+    ]
+  bind_python: true
+
+- name: "greater_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceBroadcastGreater",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarLogicalGreater",
     ]
   bind_python: true
 
@@ -2005,6 +2016,10 @@
   signature: "Tensor (Tensor input, Tensor other, Int64 dim=None) => LinalgCross"
   bind_python: True
 
+- name: "det"
+  signature: "Tensor (Tensor x) => Det"
+  bind_python: True
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
@@ -3125,4 +3140,8 @@
   
 - name: "throw_error"
   signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
+
+- name: "mode"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
   bind_python: True

@@ -266,6 +266,7 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
 DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
 DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
+DIRECT_PASS_FUNC(PyTensorObject_gt_, functional::greater_)
 DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
 DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
@@ -318,6 +319,7 @@ DIRECT_PASS_FUNC(PyTensorObject_unsqueeze, functional::unsqueeze)
 DIRECT_PASS_FUNC(PyTensorObject_max, functional::max)
 DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
+DIRECT_PASS_FUNC(PyTensorObject_mode, functional::mode)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
@@ -962,6 +964,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
     {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"gt_", (PyCFunction)PyTensorObject_gt_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1005,6 +1008,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"max", (PyCFunction)PyTensorObject_max, METH_VARARGS | METH_KEYWORDS, NULL},
     {"min", (PyCFunction)PyTensorObject_min, METH_VARARGS | METH_KEYWORDS, NULL},
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mode", (PyCFunction)PyTensorObject_mode, METH_VARARGS | METH_KEYWORDS, NULL},
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},

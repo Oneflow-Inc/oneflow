@@ -191,3 +191,6 @@ def empty_cache() -> None:
 
     """
     return flow._oneflow_internal.EmptyCache()
+
+
+from .random import *  # noqa: F403
