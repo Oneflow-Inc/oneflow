@@ -23,7 +23,7 @@ namespace oneflow {
 namespace auto_parallel {
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream);
 
-void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op_nodes);
+void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes);
 
 }  // namespace auto_parallel
 }  // namespace oneflow

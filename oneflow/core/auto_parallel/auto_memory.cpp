@@ -31,7 +31,7 @@ namespace {
 class TopoStruct {
  public:
   SbpNode* sbp_node = nullptr;
-  OpNode* op_node = nullptr;
+  const OpNode* op_node = nullptr;
   // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
   int32_t exceed_time = -1;
@@ -48,7 +48,7 @@ class TopoStruct {
   HashSet<TopoStruct*> out_topo_structs;
 
   explicit TopoStruct(SbpNode* sbp_node_);
-  explicit TopoStruct(OpNode* op_node_);
+  explicit TopoStruct(const OpNode* op_node_);
 
   // Compute the minimum layer of this node
   int32_t ComputeMinLayer();
@@ -122,7 +122,7 @@ TopoStruct::TopoStruct(SbpNode* sbp_node_)
   ComputeExceedTime();
 }
 
-TopoStruct::TopoStruct(OpNode* op_node_) : op_node(op_node_) {
+TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) {
   ComputeIsReusable();
   ComputeExceedTime();
 }
@@ -343,7 +343,8 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
   for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 }
 
-void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op_node2topo_struct,
+void StraightenOpNodes(const OpGraph& op_graph,
+                       HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
                        std::vector<TopoStruct*>* topo_structs,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
@@ -354,7 +355,7 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
   std::set<TopoStruct*, comp> waiting_list;
 
   // Wait in the list
-  auto wait = [&](OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
+  auto wait = [&](const OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
 
   // TODO: Deal with the ctrl edges
   // Initialization
@@ -364,7 +365,7 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
   }
 
   // Finish execution
-  auto finish_execution = [&](OpNode* op_node) {
+  auto finish_execution = [&](const OpNode* op_node) {
     op_node->ForEachNodeOnOutEdge([&](OpNode* out) {
       int32_t& out_node_counter = op_node2topo_struct.at(out).counter;
       out_node_counter--;
@@ -392,7 +393,7 @@ void StraightenOpNodes(const OpGraph& op_graph, HashMap<OpNode*, TopoStruct>& op
 // Use two function
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Generate topological data structure for each sbp node
-  HashMap<OpNode*, TopoStruct> op_node2topo_struct;
+  HashMap<const OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
   std::vector<TopoStruct*> ordered_topo_structs;
 
@@ -510,9 +511,9 @@ void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_comp
   }
 }
 
-void StraightenOpGraph(const OpGraph& op_graph, std::vector<OpNode*>* ordered_op_nodes) {
+void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes) {
   // Generate topological data structure for each op node
-  HashMap<OpNode*, TopoStruct> op_node2topo_struct;
+  HashMap<const OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
   std::vector<TopoStruct*> ordered_topo_structs;
 

@@ -43,7 +43,7 @@ class StraightenOpGraphPass final : public JobPass {
 
 Maybe<void> StraightenOpGraphPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::cout << "Straighten op graph is working!" << std::endl;
-  std::vector<OpNode*> ordered_op_nodes;
+  std::vector<const OpNode*> ordered_op_nodes;
   auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
   return Maybe<void>::Ok();
 }
