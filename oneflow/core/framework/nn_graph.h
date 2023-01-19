@@ -41,6 +41,14 @@ class NNGraph final : public NNGraphIf {
         session_ctx_(session_ctx),
         runtime_inited_(false),
         is_closed_(false) {}
+  explicit NNGraph(const std::string& name, const Plan& plan, int64_t job_id,
+                   const std::shared_ptr<MultiClientSessionContext>& session_ctx)
+      : name_(name),
+        job_id_(job_id),
+        session_ctx_(session_ctx),
+        plan_(plan),
+        runtime_inited_(false),
+        is_closed_(false) {}
   OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 

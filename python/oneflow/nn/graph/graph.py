@@ -939,7 +939,7 @@ class Graph(object):
 
     def runtime_state_dict(
         self, destination=None
-    ) -> Dict[str, Union[Dict[str, Tensor], Tensor, str]]:
+    ) -> Dict[str, Union[Dict[str, Tensor], str]]:
         assert (
             self._enable_save_runtime_states
         ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_states is set with True."
@@ -954,6 +954,7 @@ class Graph(object):
             destination._metadata = OrderedDict()
 
         destination["graph_name"] = self.name
+        destination["job_id"] = self._job_id
 
         def _fill_sub_destination(dest_dict, name_list, tensor_tuple):
             assert len(tensor_tuple) == len(name_list)
@@ -966,6 +967,8 @@ class Graph(object):
         )
         destination["inputs"] = inputs_sub_destination
 
+        # This is original outputs is needed to build output buffer.
+        destination["outputs_original"] = self._eager_outputs
         outputs_sub_destination = OrderedDict()
         _fill_sub_destination(
             outputs_sub_destination, self._output_op_names, self._outputs_tensor_tuple
@@ -982,21 +985,64 @@ class Graph(object):
 
         return destination
 
+    def _build_from_runtime_state_dict(
+        self, state_dict: Dict[str, Union[Dict[str, Tensor], str]]
+    ) -> None:
+        # Generate new config.
+        self._name = state_dict["graph_name"]
+        self._generate_config_proto()
+        self._job_id = state_dict["job_id"]
+        # Create a c nn graph to run with lazy runtime.
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+            self._name,
+            state_dict["exe_plan"],
+            self._job_id,
+            self._session._session_ctx,
+            True,  # Init from plan
+        )
+
+        def _load_list_from_state_dict(state_dict):
+            name_list = []
+            tensor_list = []
+            for name, item in state_dict.items():
+                name_list.append(name)
+                tensor_list.append(item)
+            return (name_list, convert_to_tensor_tuple(tensor_list))
+
+        self._input_op_names, self._inputs_tensor_tuple = _load_list_from_state_dict(
+            state_dict["inputs"]
+        )
+        self._eager_outputs = state_dict["outputs_original"]
+        self._output_op_names, self._outputs_tensor_tuple = _load_list_from_state_dict(
+            state_dict["outputs"]
+        )
+        self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
+            state_dict["states"]
+        )
+
+        self.__build_outputs_buffer()
+
+        self._c_nn_graph.register_input_op_names_and_tensors(
+            self._input_op_names, self._inputs_tensor_tuple
+        )
+        self._c_nn_graph.register_output_op_names_and_tensors(
+            self._output_op_names, self._outputs_tensor_tuple
+        )
+        self._c_nn_graph.register_variable_op_names_and_tensors(
+            self._state_op_names, self._state_tensor_tuple
+        )
+        self._c_nn_graph.align_states_after_logical_graph_compile()
+        self._c_nn_graph.init_runtime()
+        self._is_compiled = True
+
+    @classmethod
     def load_runtime_state_dict(
-        self, state_dict: Dict[str, Union[Dict[str, Tensor], Tensor]],
-    ):
-        assert (
-            not self._is_compiled
-        ), "nn.Graph's runtime state dict can only be loaded before the first call of a graph."
-        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
-        for name, item in state_dict.items():
-            if name in self._blocks:
-                # 1 load parameter/buffer to Modules
-                self._blocks[name].to(Module).load_state_dict(item, strict)
-            else:
-                # 2 store other state to CNNGraph, CNNGraph load them after job pass
-                assert isinstance(item, Tensor)
-                self._additional_variable_tobe_loaded[name] = item
+        cls, state_dict: Dict[str, Union[Dict[str, Tensor], str, int]],
+    ) -> "Graph":
+        new_graph = cls()
+        new_graph._build_from_runtime_state_dict(state_dict)
+        print(new_graph)
+        return new_graph
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -1287,6 +1333,13 @@ class Graph(object):
 
             return eager_out
 
+        self._eager_outputs, _ = self.__map_io(
+            "output", build_real_output, *build_eager_outputs
+        )
+
+        self.__build_outputs_buffer()
+
+    def __build_outputs_buffer(self):
         def convert_to_synced_tensor_tuple(*args):
             tensor_tuple = convert_to_tensor_tuple(*args)
             # tensors acting as buffer should be synced once upon created.
@@ -1294,10 +1347,6 @@ class Graph(object):
                 tensor_tuple, self._c_nn_graph
             )
             return tensor_tuple
-
-        self._eager_outputs, _ = self.__map_io(
-            "output", build_real_output, *build_eager_outputs
-        )
 
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self.__flatten_io("output", *self._eager_outputs)
@@ -1319,6 +1368,7 @@ class Graph(object):
                 self.__flatten_io("output", *outputs_buffer_item)
             )
             self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
+
         self.__check_outputs_buffer()
 
     def __check_outputs_buffer(self):

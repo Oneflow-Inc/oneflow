@@ -17,6 +17,7 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
+import time
 
 import oneflow as flow
 import oneflow.unittest
@@ -254,11 +255,23 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
 
     def test_linear_multi_graph_save_load_gpu(test_case):
+        # A graph runtime state dict
         state_dict_list = _test_linear_multi_graph_save(
             test_case, flow.device("cuda"), False
         )
-        print("runtime state dict list", state_dict_list)
-        # _test_linear_multi_graph_load(test_case, flow.device("cuda"), False, state_dict_list)
+        # print("runtime state dict list", state_dict_list)
+
+        # Close session to avoid the buffer name duplicate error.
+        oneflow.framework.session_context.TryCloseDefaultSession()
+        time.sleep(20)
+        flow.framework.session_context.NewDefaultSession(
+            flow._oneflow_global_unique_env
+        )
+
+        # Resume a graph from a graph runtime state dict
+        _test_linear_multi_graph_load(
+            test_case, flow.device("cuda"), False, state_dict_list
+        )
 
 
 if __name__ == "__main__":

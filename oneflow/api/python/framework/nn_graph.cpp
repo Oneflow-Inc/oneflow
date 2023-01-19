@@ -55,9 +55,23 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
                        const std::shared_ptr<MultiClientSessionContext>& session_ctx) {
         Job job;
         if (!job.ParseFromString(serialized_job)) {
-          PyErr_SetString(PyExc_TypeError, "the second argument is not a valid job");
+          PyErr_SetString(PyExc_TypeError, "The second argument is not a valid job");
         }
         return std::make_shared<NNGraph>(name, job, job_id, session_ctx);
+      }))
+      .def(py::init([](const std::string& name, const std::string& serialized_plan, int64_t job_id,
+                       const std::shared_ptr<MultiClientSessionContext>& session_ctx,
+                       bool init_from_plan) {
+        if (!init_from_plan) {
+          PyErr_SetString(
+              PyExc_TypeError,
+              "init_from_plan must be True when init CNNGraph with this bool parameter.");
+        }
+        Plan plan;
+        if (!plan.ParseFromString(serialized_plan)) {
+          PyErr_SetString(PyExc_TypeError, "The second argument is not a valid plan");
+        }
+        return std::make_shared<NNGraph>(name, plan, job_id, session_ctx);
       }))
       .def_property_readonly("name", &NNGraph::job_name)
       .def_property(
