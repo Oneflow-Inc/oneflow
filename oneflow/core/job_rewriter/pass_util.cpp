@@ -15,7 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -81,6 +84,7 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
 void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
                            std::function<bool(const std::string&, const std::string&)>& IsReachable,
                            HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+  // TODO: Remove debug code
   if (GlobalProcessCtx::Rank() == 0) {
     // op_graph.ForEachNode([&](OpNode* in) {
     //   op_graph.ForEachNode([&](OpNode* out) {
@@ -98,35 +102,48 @@ void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
     }
   }
 
-  for (int64_t i = 1; i < ordered_op_nodes.size(); ++i) {
+  HashMap<ParallelDesc, const OpNode*> placement2op_node;
+
+  for (int64_t i = 0; i < ordered_op_nodes.size(); ++i) {
     const OpNode* this_node = CHECK_JUST(VectorAt(ordered_op_nodes, i));
-    const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
-    const std::string& this_op_name = this_node->op().op_name();
-    const std::string& prev_op_name = prev_node->op().op_name();
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Try ctrl edges from " << prev_op_name << " to " << this_op_name
-                << " but fail, size: ";
-      std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << ", a reach b? "
-                << IsReachable(prev_op_name, this_op_name) << ", b reach a? "
-                << IsReachable(this_op_name, prev_op_name) << std::endl;
-    }
-    // If there exist a path from the source node to the target node,
-    // then we do not need to add the control edge since the target node is already controlled.
-    // If there exist a path from the target node to the source node,
-    // then we can not add the control edge since it will cyclize them.
-    // a -> ... -> b -> c -> a
-    if (!(IsReachable(prev_op_name, this_op_name) || IsReachable(this_op_name, prev_op_name))) {
+    auto it_placement7op_node = placement2op_node.find(this_node->parallel_desc());
+    if (it_placement7op_node == placement2op_node.end()) {
+      // Update previous op
+      placement2op_node[this_node->parallel_desc()] = this_node;
+    } else {
+      // const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
+      auto& prev_node = it_placement7op_node->second;
+      const std::string& this_op_name = this_node->op().op_name();
+      const std::string& prev_op_name = prev_node->op().op_name();
       if (GlobalProcessCtx::Rank() == 0) {
-        // Not working???
-        std::cout << "Add ctrl edges from " << prev_op_name << " to " << this_op_name << ", size: ";
-        std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << std::endl;
+        std::cout << "Try ctrl edges from " << prev_op_name << " to " << this_op_name
+                  << " but fail, size: ";
+        std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << ", a reach b? "
+                  << IsReachable(prev_op_name, this_op_name) << ", b reach a? "
+                  << IsReachable(this_op_name, prev_op_name) << std::endl;
       }
-      auto it = mut_op_name2conf->find(this_op_name);
-      // If this op have not been modified, put it in the map.
-      if (it == mut_op_name2conf->end()) {
-        it = mut_op_name2conf->emplace(this_op_name, this_node->op().op_conf()).first;
+      // If there exist a path from the source node to the target node,
+      // then we do not need to add the control edge since the target node is already controlled.
+      // If there exist a path from the target node to the source node,
+      // then we can not add the control edge since it will cyclize them.
+      // a -> ... -> b -> c -> a
+      if (!(IsReachable(prev_op_name, this_op_name) || IsReachable(this_op_name, prev_op_name))) {
+        if (GlobalProcessCtx::Rank() == 0) {
+          // Not working???
+          std::cout << "Add ctrl edges from " << prev_op_name << " to " << this_op_name
+                    << ", size: ";
+          std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << std::endl;
+        }
+        auto it = mut_op_name2conf->find(this_op_name);
+        // If this op have not been modified, put it in the map.
+        if (it == mut_op_name2conf->end()) {
+          it = mut_op_name2conf->emplace(this_op_name, this_node->op().op_conf()).first;
+        }
+        it->second.add_ctrl_in_op_name(prev_op_name);
       }
-      it->second.add_ctrl_in_op_name(prev_op_name);
+
+      // Update previous op
+      prev_node = this_node;
     }
   }
 };
