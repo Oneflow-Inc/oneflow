@@ -195,6 +195,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "pinned_identity",
                                "to_contiguous",
                                "copy",
+                               "where",
                                "upsample_nearest_2d",
                                "fill_"};
 
