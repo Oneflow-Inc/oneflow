@@ -163,7 +163,11 @@ class Graph(object):
         self.env_enable_mlir_inference_opt = None
 
         # For build graph from another graph with different input shape.
+        self._enable_shared_from_this = False
         self._build_with_shared_graph = False
+
+        # For load graph from runtime states.
+        self._enable_save_runtime_states = False
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -805,12 +809,26 @@ class Graph(object):
         self.finish_compile_and_init_runtime()
         return eager_outputs
 
-    def _share_from(self, shared_graph: "Graph") -> None:
+    def enable_shared(self, mode: bool = True):
+        if mode:
+            assert (
+                not self._is_compiled
+            ), " enable_shared must be set before graph compile."
+            # If enable shared, graph compile will generate more data for sharing.
+            self._enable_shared_from_this = True
+        else:
+            self._enable_shared_from_this = False
+
+    def share_from(self, shared_graph: "Graph") -> None:
         assert isinstance(
             shared_graph, Graph
         ), "shared_graph must be an instance of nn.Graph."
+        assert (
+            shared_graph._enable_shared_from_this
+        ), "shared_graph must have been enabled to be shared."
         assert shared_graph._is_compiled, "shared_graph must have been compiled."
         self._shared_graph = shared_graph
+        self._enable_shared_from_this = False
         self._build_with_shared_graph = True
 
     def _compile_from_shared(self, *args, **kwargs):
@@ -873,7 +891,7 @@ class Graph(object):
 
         # Build graph with new inputs from a compiled job of a shared graph.
         self._c_nn_graph.build_with_new_input_from_shared_graph(
-            self._shared_graph._arg_op_names,
+            self._shared_graph._input_op_names,
             convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
             shared_op_names,
             self._forward_job_proto.SerializeToString(),
@@ -908,6 +926,77 @@ class Graph(object):
         self._is_compiled = True
 
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
+
+    def enable_save_runtime_states(self, mode: bool = True):
+        if mode:
+            assert (
+                not self._is_compiled
+            ), " enable_save_runtime_states must be set before graph compile."
+            # If enable save runtime states, graph compile will generate more data for save.
+            self._enable_save_runtime_states = True
+        else:
+            self._enable_save_runtime_states = False
+
+    def runtime_state_dict(
+        self, destination=None
+    ) -> Dict[str, Union[Dict[str, Tensor], Tensor, str]]:
+        assert (
+            self._enable_save_runtime_states
+        ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_states is set with True."
+        assert (
+            self._is_compiled
+        ), "nn.Graph's runtime state dict can only be got after the first call of a graph."
+
+        # Sync to make sure states has been updated.
+        oneflow._oneflow_internal.eager.Sync()
+        if destination is None:
+            destination = OrderedDict()
+            destination._metadata = OrderedDict()
+
+        destination["graph_name"] = self.name
+
+        def _fill_sub_destination(dest_dict, name_list, tensor_tuple):
+            assert len(tensor_tuple) == len(name_list)
+            for name_idx in range(len(name_list)):
+                dest_dict[name_list[name_idx]] = tensor_tuple[name_idx]
+
+        inputs_sub_destination = OrderedDict()
+        _fill_sub_destination(
+            inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
+        )
+        destination["inputs"] = inputs_sub_destination
+
+        outputs_sub_destination = OrderedDict()
+        _fill_sub_destination(
+            outputs_sub_destination, self._output_op_names, self._outputs_tensor_tuple
+        )
+        destination["outputs"] = outputs_sub_destination
+
+        states_sub_destination = OrderedDict()
+        _fill_sub_destination(
+            states_sub_destination, self._state_op_names, self._state_tensor_tuple
+        )
+        destination["states"] = states_sub_destination
+
+        destination["exe_plan"] = self._c_nn_graph.plan
+
+        return destination
+
+    def load_runtime_state_dict(
+        self, state_dict: Dict[str, Union[Dict[str, Tensor], Tensor]],
+    ):
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's runtime state dict can only be loaded before the first call of a graph."
+        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
+        for name, item in state_dict.items():
+            if name in self._blocks:
+                # 1 load parameter/buffer to Modules
+                self._blocks[name].to(Module).load_state_dict(item, strict)
+            else:
+                # 2 store other state to CNNGraph, CNNGraph load them after job pass
+                assert isinstance(item, Tensor)
+                self._additional_variable_tobe_loaded[name] = item
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -1026,7 +1115,7 @@ class Graph(object):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             (
-                self._arg_op_names,
+                self._input_op_names,
                 lazy_args,
                 lazy_kwargs,
                 self._args_repr,
@@ -1136,10 +1225,14 @@ class Graph(object):
                 self._session._session_ctx,
             )
             # Register input/output/variable/buffer to _c_nn_graph
-            self._c_nn_graph.register_input_op_names_and_tensors(
-                self._arg_op_names,
-                convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
+            inputs_tensor_tuple = convert_to_tensor_tuple(
+                self.__flatten_io("input", *args, **kwargs)
             )
+            self._c_nn_graph.register_input_op_names_and_tensors(
+                self._input_op_names, inputs_tensor_tuple
+            )
+            if self._enable_save_runtime_states:
+                self._inputs_tensor_tuple = inputs_tensor_tuple
             self._c_nn_graph.register_output_op_names_and_tensors(
                 self._output_op_names, self._outputs_tensor_tuple
             )

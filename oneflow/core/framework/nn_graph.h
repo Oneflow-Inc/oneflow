@@ -46,7 +46,11 @@ class NNGraph final : public NNGraphIf {
 
   const std::string& job_name() const override { return name_; }
   const Job& job() const { return job_; }
+  void restore_job(const Job& job) { job_ = job; }
   int64_t job_id() const { return job_id_; }
+  void restore_job_id(int64_t job_id) { job_id_ = job_id; }
+  const Plan& plan() const { return plan_; }
+  void restore_plan(const Plan& plan) { plan_ = plan; }
   const std::vector<std::string>& inputs_op_names() const override;
   const std::vector<std::string>& outputs_op_names() const override;
   const std::vector<bool>& inputs_valid() const override;
@@ -55,9 +59,6 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
   const std::shared_ptr<vm::EagerBlobObjectList>& var_blobs() const;
-
-  void restore_job(const Job& job) { job_ = job; }
-  void restore_job_id(int64_t job_id) { job_id_ = job_id; }
 
   Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       const std::vector<std::string>& additional_var_names,

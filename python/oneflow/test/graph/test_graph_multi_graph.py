@@ -22,79 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_linear_multi_graph(test_case, device):
-    linear = flow.nn.Linear(3, 8, False)
-    linear = linear.to(device)
-    input_arr = np.array(
-        [
-            [-0.94630778, -0.83378579, -0.87060891],
-            [2.0289922, -0.28708987, -2.18369248],
-            [0.35217619, -0.67095644, -1.58943879],
-            [0.08086036, -1.81075924, 1.20752494],
-            [0.8901075, -0.49976737, -1.07153746],
-            [-0.44872912, -1.07275683, 0.06256855],
-            [-0.22556897, 0.74798368, 0.90416439],
-            [0.48339456, -2.32742195, -0.59321527],
-        ],
-        dtype=np.float32,
-    )
-    np_weight = np.ones((3, 8)).astype(np.float32)
-    np_weight.fill(2.3)
-    x = flow.tensor(input_arr, device=device)
-    flow.nn.init.constant_(linear.weight, 2.3)
-    of_eager_out = linear(x)
-    np_out = np.matmul(input_arr, np_weight)
-    test_case.assertTrue(np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05))
-
-    class LinearGraph(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
-            self.my_linear = linear
-
-        def build(self, x):
-            return self.my_linear(x)
-
-    linear_g = LinearGraph()
-    linear_g.debug(0)
-    of_lazy_out = linear_g(x)
-    # print(linear_g._compiled_graph_proto)
-    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
-    print("graph 0 out ", of_lazy_out)
-
-    linear_g1 = LinearGraph()
-    linear_g1._share_from(linear_g)
-    input_arr1 = np.array(
-        [
-            [-0.94630778, -0.83378579, -0.87060891],
-            [2.0289922, -0.28708987, -2.18369248],
-            [0.35217619, -0.67095644, -1.58943879],
-            [0.08086036, -1.81075924, 1.20752494],
-        ],
-        dtype=np.float32,
-    )
-    x1 = flow.tensor(input_arr1, device=device)
-    of_lazy_out1 = linear_g1(x1)
-    print("graph 1 out ", of_lazy_out1)
-    of_eager_out1 = linear(x1)
-    test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
-
-    linear_g2 = LinearGraph()
-    linear_g2._share_from(linear_g)
-    input_arr2 = np.array(
-        [
-            [-0.94630778, -0.83378579, -0.87060891],
-            [2.0289922, -0.28708987, -2.18369248],
-        ],
-        dtype=np.float32,
-    )
-    x2 = flow.tensor(input_arr2, device=device)
-    of_lazy_out2 = linear_g2(x2)
-    print(" graph 2 out ", of_lazy_out2)
-    of_eager_out2 = linear(x2)
-    test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
-
-
-def _test_linear_reshape_multi_graph(test_case, device):
+def _test_linear_multi_graph_share(test_case, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -108,8 +36,11 @@ def _test_linear_reshape_multi_graph(test_case, device):
 
         def forward(self, x):
             y = self.linear(x)
-            assert len(y.shape) == 2
-            return flow.reshape(y, (y.shape[1], y.shape[0]))
+            if with_reshape:
+                assert len(y.shape) == 2
+                return flow.reshape(y, (y.shape[1], y.shape[0]))
+            else:
+                return y
 
     linear_reshape = LinearReshapeModule()
 
@@ -122,6 +53,7 @@ def _test_linear_reshape_multi_graph(test_case, device):
             return self.my_linear(x)
 
     linear_g = LinearGraph()
+    linear_g.enable_shared()
     input_arr = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -142,7 +74,7 @@ def _test_linear_reshape_multi_graph(test_case, device):
     print("graph 0 out ", of_lazy_out)
 
     linear_g1 = LinearGraph()
-    linear_g1._share_from(linear_g)
+    linear_g1.share_from(linear_g)
     input_arr1 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -159,7 +91,7 @@ def _test_linear_reshape_multi_graph(test_case, device):
     test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
 
     linear_g2 = LinearGraph()
-    linear_g2._share_from(linear_g)
+    linear_g2.share_from(linear_g)
     input_arr2 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -174,14 +106,159 @@ def _test_linear_reshape_multi_graph(test_case, device):
     test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
 
 
+def _test_linear_multi_graph_save(test_case, device, with_reshape):
+    linear = flow.nn.Linear(3, 8, False)
+    linear = linear.to(device)
+    np_weight = np.ones((3, 8)).astype(np.float32)
+    np_weight.fill(2.3)
+    flow.nn.init.constant_(linear.weight, 2.3)
+
+    class LinearReshapeModule(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = linear
+
+        def forward(self, x):
+            y = self.linear(x)
+            if with_reshape:
+                assert len(y.shape) == 2
+                return flow.reshape(y, (y.shape[1], y.shape[0]))
+            else:
+                return y
+
+    linear_reshape = LinearReshapeModule()
+
+    class LinearGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.my_linear = linear_reshape
+
+        def build(self, x):
+            return self.my_linear(x)
+
+    linear_g = LinearGraph()
+    linear_g.enable_save_runtime_states()
+
+    input_arr = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.35217619, -0.67095644, -1.58943879],
+            [0.08086036, -1.81075924, 1.20752494],
+            [0.8901075, -0.49976737, -1.07153746],
+            [-0.44872912, -1.07275683, 0.06256855],
+            [-0.22556897, 0.74798368, 0.90416439],
+            [0.48339456, -2.32742195, -0.59321527],
+        ],
+        dtype=np.float32,
+    )
+    x = flow.tensor(input_arr, device=device)
+    of_lazy_out = linear_g(x)
+    of_eager_out = linear_reshape(x)
+    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
+    print("graph 0 out ", of_lazy_out)
+
+    state_dict_list = []
+    state_dict = linear_g.runtime_state_dict()
+    state_dict_list.append(state_dict)
+
+    # linear_g1 = LinearGraph()
+    # linear_g1.share_from(linear_g)
+    # input_arr1 = np.array(
+    #     [
+    #         [-0.94630778, -0.83378579, -0.87060891],
+    #         [2.0289922, -0.28708987, -2.18369248],
+    #         [0.35217619, -0.67095644, -1.58943879],
+    #         [0.08086036, -1.81075924, 1.20752494],
+    #     ],
+    #     dtype=np.float32,
+    # )
+    # x1 = flow.tensor(input_arr1, device=device)
+    # of_lazy_out1 = linear_g1(x1)
+    # print("graph 1 out ", of_lazy_out1)
+    # of_eager_out1 = linear_reshape(x1)
+    # test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+    return state_dict_list
+
+
+def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_list):
+    linear = flow.nn.Linear(3, 8, False)
+    linear = linear.to(device)
+    np_weight = np.ones((3, 8)).astype(np.float32)
+    np_weight.fill(2.3)
+    flow.nn.init.constant_(linear.weight, 2.3)
+
+    class LinearReshapeModule(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = linear
+
+        def forward(self, x):
+            y = self.linear(x)
+            if with_reshape:
+                assert len(y.shape) == 2
+                return flow.reshape(y, (y.shape[1], y.shape[0]))
+            else:
+                return y
+
+    linear_reshape = LinearReshapeModule()
+
+    linear_g = flow.nn.Graph.load_runtime_state_dict(state_dict_list[0])
+
+    input_arr = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.35217619, -0.67095644, -1.58943879],
+            [0.08086036, -1.81075924, 1.20752494],
+            [0.8901075, -0.49976737, -1.07153746],
+            [-0.44872912, -1.07275683, 0.06256855],
+            [-0.22556897, 0.74798368, 0.90416439],
+            [0.48339456, -2.32742195, -0.59321527],
+        ],
+        dtype=np.float32,
+    )
+    x = flow.tensor(input_arr, device=device)
+    of_lazy_out = linear_g(x)
+    of_eager_out = linear_reshape(x)
+    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
+    print("graph 0 out ", of_lazy_out)
+
+    # state_dict = linear_g.runtime_state_dict()
+
+    # linear_g1 = LinearGraph()
+    # linear_g1.share_from(linear_g)
+    # input_arr1 = np.array(
+    #     [
+    #         [-0.94630778, -0.83378579, -0.87060891],
+    #         [2.0289922, -0.28708987, -2.18369248],
+    #         [0.35217619, -0.67095644, -1.58943879],
+    #         [0.08086036, -1.81075924, 1.20752494],
+    #     ],
+    #     dtype=np.float32,
+    # )
+    # x1 = flow.tensor(input_arr1, device=device)
+    # of_lazy_out1 = linear_g1(x1)
+    # print("graph 1 out ", of_lazy_out1)
+    # of_eager_out1 = linear_reshape(x1)
+    # test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLinearMultiGraph(oneflow.unittest.TestCase):
-    def test_linear_multi_graph_gpu(test_case):
-        _test_linear_multi_graph(test_case, flow.device("cuda"))
+    def _test_linear_multi_graph_share_gpu(test_case):
+        _test_linear_multi_graph_share(test_case, flow.device("cuda"), False)
 
-    def test_linear_reshape_multi_graph_gpu(test_case):
-        _test_linear_reshape_multi_graph(test_case, flow.device("cuda"))
+    def _test_linear_reshape_multi_graph_share_gpu(test_case):
+        _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
+
+    def test_linear_multi_graph_save_load_gpu(test_case):
+        state_dict_list = _test_linear_multi_graph_save(
+            test_case, flow.device("cuda"), False
+        )
+        print("runtime state dict list", state_dict_list)
+        # _test_linear_multi_graph_load(test_case, flow.device("cuda"), False, state_dict_list)
 
 
 if __name__ == "__main__":

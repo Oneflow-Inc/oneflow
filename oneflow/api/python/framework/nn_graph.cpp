@@ -73,6 +73,17 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
           })
       .def_property("job_id", &NNGraph::job_id,
                     [](NNGraph& nn_graph, int64_t job_id) { nn_graph.restore_job_id(job_id); })
+      .def_property(
+          "plan", /*getter*/
+          [](const NNGraph& nn_graph) { return py::bytes(nn_graph.plan().SerializeAsString()); },
+          /*setter*/
+          [](NNGraph& nn_graph, const std::string& serialized_plan) {
+            Plan plan;
+            if (!plan.ParseFromString(serialized_plan)) {
+              PyErr_SetString(PyExc_TypeError, "the value is not a valid plan");
+            }
+            nn_graph.restore_plan(plan);
+          })
       .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)
       .def("register_variable_op_names_and_tensors", &NNGraph::RegisterVariableOpNamesAndTensors)
