@@ -809,6 +809,17 @@ void InsertNcclLogicalOpsInSubGraph(
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
 
+  // add ctrl for strict order.
+  for (int64_t i = 1; i < subgraph_order.size(); ++i) {
+    const OpNode* this_node = subgraph_order.at(i);
+    const OpNode* pre_node = subgraph_order.at(i - 1);
+    const std::string& this_op_name = this_node->op().op_name();
+    const std::string& pre_op_name = pre_node->op().op_name();
+    CHECK(subgraph_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).second);
+    // build ctrl edge if need.
+    if (!IsReachable(pre_op_name, this_op_name)) { mut_op_names.insert(this_op_name); }
+  }
+
   std::vector<OperatorConf> nccl_op_confs;
   std::vector<ParallelConf> nccl_op_parallel_confs;
   // NOTE(chengcheng): ONLY support insert nccl to dst for memory.
