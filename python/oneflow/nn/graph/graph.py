@@ -848,10 +848,9 @@ class Graph(object):
                 oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
             )
             # Deal with inputs
-            (arg_op_names, lazy_args, lazy_kwargs, args_repr, _,) = self.__build_io(
+            (input_op_names, lazy_args, lazy_kwargs, args_repr, _,) = self.__build_io(
                 "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
-
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args, **lazy_kwargs)
 
@@ -890,13 +889,16 @@ class Graph(object):
         )
 
         # Build graph with new inputs from a compiled job of a shared graph.
+        inputs_tensor_tuple = convert_to_tensor_tuple(
+            self.__flatten_io("input", *args, **kwargs)
+        )
+        input_op_names = self._shared_graph._input_op_names
         self._c_nn_graph.build_with_new_input_from_shared_graph(
-            self._shared_graph._input_op_names,
-            convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
+            input_op_names,
+            inputs_tensor_tuple,
             shared_op_names,
             self._forward_job_proto.SerializeToString(),
         )
-
         # Get new compiled job proto
         compiled_job_str = self._c_nn_graph.get_current_job_str()
         self._compiled_job_proto = job_pb.Job()
@@ -910,13 +912,19 @@ class Graph(object):
         )
 
         # Register output/variable/buffer to _c_nn_graph
+        output_op_names = self._shared_graph._output_op_names
         self._c_nn_graph.register_output_op_names_and_tensors(
-            self._shared_graph._output_op_names, self._outputs_tensor_tuple
+            output_op_names, self._outputs_tensor_tuple
         )
         self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
         self._c_nn_graph.register_variable_op_names_and_tensors(
             self._shared_graph._state_op_names, self._state_tensor_tuple
         )
+
+        if self.enable_save_runtime_states:
+            self._input_op_names = input_op_names
+            self._inputs_tensor_tuple = inputs_tensor_tuple
+            self._output_op_names = output_op_names
 
         # Init runtime.
         # TODO(strint): align states needs to care about free eager tensor.
@@ -975,17 +983,18 @@ class Graph(object):
         )
         destination["outputs"] = outputs_sub_destination
 
-        states_sub_destination = OrderedDict()
-        _fill_sub_destination(
-            states_sub_destination, self._state_op_names, self._state_tensor_tuple
-        )
-        destination["states"] = states_sub_destination
+        if not self._build_with_shared_graph:
+            states_sub_destination = OrderedDict()
+            _fill_sub_destination(
+                states_sub_destination, self._state_op_names, self._state_tensor_tuple
+            )
+            destination["states"] = states_sub_destination
 
         destination["exe_plan"] = self._c_nn_graph.plan
 
         return destination
 
-    def _build_from_runtime_state_dict(
+    def load_runtime_state_dict(
         self, state_dict: Dict[str, Union[Dict[str, Tensor], str]]
     ) -> None:
         # Generate new config.
@@ -1016,9 +1025,13 @@ class Graph(object):
         self._output_op_names, self._outputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["outputs"]
         )
-        self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
-            state_dict["states"]
-        )
+        if self._build_with_shared_graph:
+            self._state_op_names = self._shared_graph._state_op_names
+            self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
+        else:
+            self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
+                state_dict["states"]
+            )
 
         self.__build_outputs_buffer()
 
@@ -1034,15 +1047,6 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
-
-    @classmethod
-    def load_runtime_state_dict(
-        cls, state_dict: Dict[str, Union[Dict[str, Tensor], str, int]],
-    ) -> "Graph":
-        new_graph = cls()
-        new_graph._build_from_runtime_state_dict(state_dict)
-        print(new_graph)
-        return new_graph
 
     def build_graph(self, *args, **kwargs):
         # Build graph
