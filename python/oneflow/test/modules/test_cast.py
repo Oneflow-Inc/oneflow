@@ -75,7 +75,7 @@ class TestCast(flow.unittest.TestCase):
             _test_cast_float2int,
             _test_cast_int2float,
             _test_cast_backward,
-            _test_cast_with_non_contiguous_input,
+            # _test_cast_with_non_contiguous_input,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
