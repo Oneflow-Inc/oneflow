@@ -198,12 +198,8 @@ class EagerBlobObject final : public user_op::Tensor,
 
   size_t ByteSizeOfBlobBody() const {
     size_t capacity = 1;
-    if (shape().NumAxes() > 0) {
-      size_t max_stride_idx = 0;
-      for (size_t i = 1; i < shape().NumAxes(); ++i) {
-        if (stride().at(i) > stride().at(max_stride_idx)) { max_stride_idx = i; }
-      }
-      capacity = shape().at(max_stride_idx) * stride().at(max_stride_idx);
+    for (size_t i = 0; i < shape().NumAxes(); ++i) {
+      capacity = std::max<size_t>(capacity, stride().at(i) * shape().at(i));
     }
     // TODO(lijunchneg): remove this
     capacity = std::max<size_t>(capacity, shape().elem_cnt());
