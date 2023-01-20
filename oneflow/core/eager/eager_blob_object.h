@@ -205,6 +205,8 @@ class EagerBlobObject final : public user_op::Tensor,
       }
       capacity = shape().at(max_stride_idx) * stride().at(max_stride_idx);
     }
+    // TODO(lijunchneg): remove this
+    capacity = std::max<size_t>(capacity, shape().elem_cnt());
     return capacity * GetSizeOfDataType(data_type_);
   }
   size_t AlignedByteSizeOfBlobBody() const {
