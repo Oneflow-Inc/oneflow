@@ -196,7 +196,17 @@ class EagerBlobObject final : public user_op::Tensor,
   std::shared_ptr<const Shape> shape_ptr() const;
   std::shared_ptr<const Stride> stride_ptr() const;
 
-  size_t ByteSizeOfBlobBody() const { return shape().elem_cnt() * GetSizeOfDataType(data_type_); }
+  size_t ByteSizeOfBlobBody() const {
+    size_t capacity = 1;
+    if (shape().NumAxes() > 0) {
+      size_t max_stride_idx = 0;
+      for (size_t i = 1; i < shape().NumAxes(); ++i) {
+        if (stride().at(i) > stride().at(max_stride_idx)) { max_stride_idx = i; }
+      }
+      capacity = shape().at(max_stride_idx) * stride().at(max_stride_idx);
+    }
+    return capacity * GetSizeOfDataType(data_type_);
+  }
   size_t AlignedByteSizeOfBlobBody() const {
     return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
   }
