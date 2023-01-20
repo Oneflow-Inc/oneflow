@@ -18,11 +18,37 @@ import os
 import unittest
 import numpy as np
 import time
+import tempfile
 
 import oneflow as flow
 import oneflow.unittest
 
 
+def _reset_session():
+    # Close session to avoid the buffer name duplicate error.
+    oneflow.framework.session_context.TryCloseDefaultSession()
+    time.sleep(5)
+    flow.framework.session_context.NewDefaultSession(flow._oneflow_global_unique_env)
+
+
+def _with_new_session(fn):
+    def new_fn(*args, **kwargs):
+        # Avoid Singleton value duplication such as buffer names.
+        # saved and loaded graph runtime share the same buffer names(job names).
+        print(
+            "function ",
+            fn.__name__,
+            " session reset to avoid Singleton value duplication ...",
+        )
+        _reset_session()
+        out = fn(*args, **kwargs)
+        _reset_session()
+        return out
+
+    return new_fn
+
+
+@_with_new_session
 def _test_linear_multi_graph_share(test_case, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -107,6 +133,7 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
 
 
+@_with_new_session
 def _test_linear_multi_graph_save(test_case, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -187,6 +214,7 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
     return state_dict_list
 
 
+@_with_new_session
 def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_list):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -254,29 +282,31 @@ def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_li
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLinearMultiGraph(oneflow.unittest.TestCase):
-    def _test_linear_multi_graph_share_gpu(test_case):
+    def test_linear_multi_graph_share_gpu(test_case):
+        # _reset_session()
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), False)
+        # _reset_session()
 
-    def _test_linear_reshape_multi_graph_share_gpu(test_case):
+    def test_linear_reshape_multi_graph_share_gpu(test_case):
+        # _reset_session()
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
+        # _reset_session()
 
     def test_linear_multi_graph_save_load_gpu(test_case):
+        # _reset_session()
         # A graph runtime state dict
         state_dict_list = _test_linear_multi_graph_save(
             test_case, flow.device("cuda"), True
         )
-        # print("runtime state dict list", state_dict_list)
 
-        # Close session to avoid the buffer name duplicate error.
-        oneflow.framework.session_context.TryCloseDefaultSession()
-        time.sleep(20)
-        flow.framework.session_context.NewDefaultSession(
-            flow._oneflow_global_unique_env
-        )
+        # print("runtime state dict list", state_dict_list)
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save(state_dict_list, save_dir)
+            state_dict_list_loaded = flow.load(save_dir, map_location="cuda")
 
         # Resume a graph from a graph runtime state dict
         _test_linear_multi_graph_load(
-            test_case, flow.device("cuda"), True, state_dict_list
+            test_case, flow.device("cuda"), True, state_dict_list_loaded
         )
 
 
