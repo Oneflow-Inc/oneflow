@@ -40,10 +40,10 @@ __global__ void BroadcastElementwiseWhereCudaKernel(
   constexpr bool x_pack_one = !(x_pack_size == pack_size);
   constexpr bool y_pack_one = !(y_pack_size == pack_size);
 
-  const auto* cond_pack = reinterpret_cast<const Packed<CondT, cond_pack_size>*>(params.cond);
-  const auto* x_pack = reinterpret_cast<const Packed<T, x_pack_size>*>(params.x);
-  const auto* y_pack = reinterpret_cast<const Packed<T, y_pack_size>*>(params.y);
-  auto* z_pack = reinterpret_cast<Packed<T, pack_size>*>(params.z);
+  const auto* cond_pack_ptr = reinterpret_cast<const Packed<CondT, cond_pack_size>*>(params.cond);
+  const auto* x_pack_ptr = reinterpret_cast<const Packed<T, x_pack_size>*>(params.x);
+  const auto* y_pack_ptr = reinterpret_cast<const Packed<T, y_pack_size>*>(params.y);
+  auto* z_pack_ptr = reinterpret_cast<Packed<T, pack_size>*>(params.z);
 
   IndexT cond_index[ndim];
   IndexT x_index[ndim];
@@ -63,14 +63,18 @@ __global__ void BroadcastElementwiseWhereCudaKernel(
     const IndexT cond_offset = params.cond_index_helper.NdIndexToOffset(cond_index);
     const IndexT x_offset = params.x_index_helper.NdIndexToOffset(x_index);
     const IndexT y_offset = params.y_index_helper.NdIndexToOffset(y_index);
+    Packed<CondT, cond_pack_size> cond_pack = cond_pack_ptr[cond_offset];
+    Packed<T, x_pack_size> x_pack = x_pack_ptr[x_offset];
+    Packed<T, y_pack_size> y_pack = y_pack_ptr[y_offset];
+    Packed<T, pack_size> z_pack;
 #pragma unroll
     for (size_t j = 0; j < pack_size; ++j) {
-      const CondT cond_val =
-          cond_pack_one ? cond_pack[cond_offset].elem[0] : cond_pack[cond_offset].elem[j];
-      const T x_val = x_pack_one ? x_pack[x_offset].elem[0] : x_pack[x_offset].elem[j];
-      const T y_val = y_pack_one ? y_pack[y_offset].elem[0] : y_pack[y_offset].elem[j];
-      z_pack[offset].elem[j] = where_fn(cond_val, x_val, y_val);
+      const CondT cond_val = cond_pack_one ? cond_pack.elem[0] : cond_pack.elem[j];
+      const T x_val = x_pack_one ? x_pack.elem[0] : x_pack.elem[j];
+      const T y_val = y_pack_one ? y_pack.elem[0] : y_pack.elem[j];
+      z_pack.elem[j] = where_fn(cond_val, x_val, y_val);
     }
+    z_pack_ptr[offset] = z_pack;
   }
 }
 
