@@ -203,7 +203,7 @@ class EagerBlobObject final : public user_op::Tensor,
     for (size_t i = 0; i < shape().NumAxes(); ++i) {
       capacity = std::max<size_t>(capacity, stride().at(i) * shape().at(i));
     }
-    // TODO(lijunchneg): remove this
+    // TODO(liujuncheng): remove this
     capacity = std::max<size_t>(capacity, elem_cnt);
     return capacity * GetSizeOfDataType(data_type_);
   }
