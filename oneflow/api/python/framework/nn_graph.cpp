@@ -55,9 +55,23 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
                        const std::shared_ptr<MultiClientSessionContext>& session_ctx) {
         Job job;
         if (!job.ParseFromString(serialized_job)) {
-          PyErr_SetString(PyExc_TypeError, "the second argument is not a valid job");
+          PyErr_SetString(PyExc_TypeError, "The second argument is not a valid job");
         }
         return std::make_shared<NNGraph>(name, job, job_id, session_ctx);
+      }))
+      .def(py::init([](const std::string& name, const std::string& serialized_plan, int64_t job_id,
+                       const std::shared_ptr<MultiClientSessionContext>& session_ctx,
+                       bool init_from_plan) {
+        if (!init_from_plan) {
+          PyErr_SetString(
+              PyExc_TypeError,
+              "init_from_plan must be True when init CNNGraph with this bool parameter.");
+        }
+        Plan plan;
+        if (!plan.ParseFromString(serialized_plan)) {
+          PyErr_SetString(PyExc_TypeError, "The second argument is not a valid plan");
+        }
+        return std::make_shared<NNGraph>(name, plan, job_id, session_ctx);
       }))
       .def_property_readonly("name", &NNGraph::job_name)
       .def_property(
@@ -73,6 +87,17 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
           })
       .def_property("job_id", &NNGraph::job_id,
                     [](NNGraph& nn_graph, int64_t job_id) { nn_graph.restore_job_id(job_id); })
+      .def_property(
+          "plan", /*getter*/
+          [](const NNGraph& nn_graph) { return py::bytes(nn_graph.plan().SerializeAsString()); },
+          /*setter*/
+          [](NNGraph& nn_graph, const std::string& serialized_plan) {
+            Plan plan;
+            if (!plan.ParseFromString(serialized_plan)) {
+              PyErr_SetString(PyExc_TypeError, "the value is not a valid plan");
+            }
+            nn_graph.restore_plan(plan);
+          })
       .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)
       .def("register_variable_op_names_and_tensors", &NNGraph::RegisterVariableOpNamesAndTensors)
