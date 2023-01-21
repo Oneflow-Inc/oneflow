@@ -64,7 +64,9 @@ class TestAlexNet(flow.unittest.TestCase):
         gm: flow.fx.GraphModule = flow.fx.symbolic_trace(m)
         for i in range(5):
             input = flow.randn(1, 3, 224, 224)
-            test_case.assertTrue(np.allclose(gm(input).numpy(), m(input).numpy(), equal_nan=True))
+            test_case.assertTrue(
+                np.allclose(gm(input).numpy(), m(input).numpy(), equal_nan=True)
+            )
 
 
 if __name__ == "__main__":
