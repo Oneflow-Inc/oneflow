@@ -455,7 +455,6 @@ from . import (
     backends,
     amp,
     hub,
-    fx,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
@@ -473,3 +472,5 @@ if oneflow._oneflow_internal.flags.with_mlir():
     ):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+
+import oneflow.fx
