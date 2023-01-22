@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDataTypeConversion.h"
+#include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Transform/AggregateOps.h"
 #include "oneflow/core/common/util.h"
@@ -828,15 +829,22 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createFuseNormalizationOps());
   }
   if (job_wrapper.IsLastIRPass()
-      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
 
     auto wrap_pass = createWrapOpsToKernelLaunchPass();
-    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-      (void)wrap_pass->initializeOptions("mode=cuda_graph");
-    } else {
-      (void)wrap_pass->initializeOptions("mode=simple");
-    }
+    std::string options =
+        "mode="
+        + (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)
+               ? wrap_options::mode::CUDA_GRAPH
+               : wrap_options::mode::SIMPLE);
+
+    options += " tensor="
+               + (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_KERNEL_ENABLE_MEMREF", false)
+                      ? wrap_options::tensor::TRIM
+                      : wrap_options::tensor::NORMAL);
+
+    (void)wrap_pass->initializeOptions(options);
     pm.addPass(std::move(wrap_pass));
   }
   pm.addPass(createCanonicalizerPass());

@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/Transform/BufferizableOpInterfaceImpl.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "OneFlow/OKL/OKLDialect.h"
@@ -84,5 +85,7 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::gpu::GPUDialect>();
   registry.insert<mlir::AffineDialect>();
   registry.insert<mlir::bufferization::BufferizationDialect>();
+
+  mlir::oneflow::registerBufferizableOpInterfaceExternalModels(registry);
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

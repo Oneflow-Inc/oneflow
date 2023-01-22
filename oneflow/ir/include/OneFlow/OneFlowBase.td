@@ -23,7 +23,9 @@ def OneFlow_OFRecordElement: TypeDef<OneFlow_Dialect, "OFRecordElement"> {
 def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
 def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
 
-def OneFlow_Tensor : TensorOf<[AnyType]>;
+def OneFlow_Tensor :
+  AnyTypeOf<[AnyMemRef, AnyRankedTensor], "tensor", "::mlir::ShapedType">;
+
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}

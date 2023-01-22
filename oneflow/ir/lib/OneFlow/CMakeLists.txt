@@ -58,6 +58,7 @@ oneflow_add_mlir_dialect_library(
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp
+  Transform/BufferizableOpInterfaceImpl.cpp
   TransposeHelpers.cpp
   Passes.cpp
   OneFlowCanonicalizers.cpp

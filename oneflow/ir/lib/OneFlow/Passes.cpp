@@ -829,42 +829,64 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   }
 };
 
-// {func, ins}
-std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
-    mlir::Location loc, std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
-    int& name_index) {
-  auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
-    std::vector<Value> ins, outs, diff_ins;
+// {func, ins, outs_mapping}
+std::tuple<func::FuncOp, std::vector<Value>, std::vector<std::vector<int>>>
+CreateWrapFuncAndReturnWithIns(mlir::Location loc, std::vector<Operation*>& wrap_ops,
+                               mlir::PatternRewriter& rewriter, int& name_index, bool trim) {
+  auto context = rewriter.getContext();
+  auto getProto =
+      [&]() -> std::tuple<std::vector<Value>, std::vector<Value>, std::vector<std::vector<int>>> {
+    std::vector<Value> whole_ins, whole_outs, ins, outs;
+    std::vector<std::vector<int>> outs_mapping;
     for (auto op : wrap_ops) {
       auto operands = op->getOperands();
       auto results = op->getResults();
-      for (auto it = operands.begin(); it != operands.end(); ++it) { ins.push_back(*it); }
-      for (auto it = results.begin(); it != results.end(); ++it) { outs.push_back(*it); }
+      for (auto it = operands.begin(); it != operands.end(); ++it) { whole_ins.push_back(*it); }
+
+      std::vector<int> map;
+      auto add_res = [&](mlir::OpResult res) {
+        map.push_back(outs.size());
+        outs.push_back(res);
+      };
+      for (auto it = results.begin(); it != results.end(); ++it) {
+        whole_outs.push_back(*it);
+        if (!trim) {
+          add_res(*it);
+          continue;
+        }
+        for (auto user : (*it).getUsers()) {
+          if (std::find(wrap_ops.begin(), wrap_ops.end(), user) == wrap_ops.end()) {
+            add_res(*it);
+            break;
+          }
+        }
+      }
+      outs_mapping.push_back(map);
     }
-    for (auto in : ins) {
-      if (std::find(outs.begin(), outs.end(), in) == outs.end()) { diff_ins.push_back(in); }
+
+    for (auto in : whole_ins) {
+      if (std::find(whole_outs.begin(), whole_outs.end(), in) == whole_outs.end()) {
+        ins.push_back(in);
+      }
     }
-    return {diff_ins, outs};
+    return {ins, outs, outs_mapping};
   };
 
-  std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
-  auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(proto.first))),
-                                            TypeRange(ValueRange(ArrayRef<Value>(proto.second))));
+  auto [ins, outs, map] = getProto();
+  auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(ins))),
+                                            TypeRange(ValueRange(ArrayRef<Value>(outs))));
   auto func_name = "wrap" + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
-  if (!module) {
-    emitError(loc) << "Fail to find parent ModuleOp";
-    return {nullptr, {}};
-  }
+  if (!module) { LOG(FATAL) << "Fail to find parent ModuleOp"; }
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
   auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.getBody().emplaceBlock();
-  for (auto arg : proto.first) { function.getBody().addArgument(arg.getType(), loc); }
+  for (auto arg : ins) { function.getBody().addArgument(arg.getType(), loc); }
 
   BlockAndValueMapping mapping;
-  for (auto args_pair : llvm::zip(proto.first, function.getBody().getArguments())) {
+  for (auto args_pair : llvm::zip(ins, function.getBody().getArguments())) {
     mapping.map(std::get<0>(args_pair), std::get<1>(args_pair));
   }
   rewriter.setInsertionPointToStart(&function.getBody().front());
@@ -872,13 +894,13 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   for (auto op : wrap_ops) { new_block.clone(*op, mapping); }
 
   SmallVector<::mlir::Value, 4> mapped_results;
-  for (auto result : proto.second) { mapped_results.push_back(mapping.lookup(result)); }
+  for (auto result : outs) { mapped_results.push_back(mapping.lookup(result)); }
   rewriter.create<func::ReturnOp>(loc, mapped_results);
-  return {function, proto.first};
+  return {function, ins, map};
 };
 
 KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
-                                int& name_index) {
+                                int& name_index, bool trim) {
   if (wrap_ops.size() < 2) {
     wrap_ops.clear();
     return nullptr;
@@ -886,7 +908,8 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
   auto loc = wrap_ops.front()->getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
 
-  auto [wrap_func, wrap_ins] = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
+  auto [wrap_func, wrap_ins, map] =
+      CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index, trim);
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -902,13 +925,19 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
   auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func,
                                               ArrayRef<NamedAttribute>(attrs), wrap_ins);
 
-  if (failed(DumpAssembly(rewriter, func, func_name))) { exit(1); }
-  int res_idx = 0;
-  for (auto op : wrap_ops) {
-    std::vector<Value> vals;
-    for (int idx = 0; idx < op->getNumResults(); ++idx) {
-      vals.push_back(func->getResult(res_idx++));
+  if (failed(DumpAssembly(rewriter, func, func_name))) {
+    LOG(FATAL) << "Fail to dumping asm to kernel launch op.";
+  }
+  for (auto it : llvm::zip(map, wrap_ops)) {
+    auto op = std::get<1>(it);
+    auto list = std::get<0>(it);
+    if (!list.size()) {
+      op->dropAllUses();
+      rewriter.eraseOp(op);
+      continue;
     }
+    std::vector<Value> vals;
+    for (auto idx : list) { vals.push_back(func->getResult(idx)); }
     rewriter.replaceOp(op, vals);
   }
   wrap_ops.clear();
@@ -1001,8 +1030,9 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
 };
 
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
-  explicit KernelLaunchPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+  const bool is_tensor_trimmed_;
+  explicit KernelLaunchPattern(mlir::MLIRContext* context, bool trim = false)
+      : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0), is_tensor_trimmed_(trim) {}
 
   virtual bool IsContinuous(std::vector<Operation*>&, mlir::Operation*) const { return true; };
 
@@ -1027,22 +1057,25 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       auto current_op = &(*op_it);
       if (!IsPackagable(current_op)) {
-        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index, is_tensor_trimmed_);
         continue;
       }
 
       if (!IsContinuous(current_wrap_ops, current_op)) {
-        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index, is_tensor_trimmed_);
       }
       current_wrap_ops.push_back(current_op);
     }
-    if (!current_wrap_ops.empty()) { ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index); }
+    if (!current_wrap_ops.empty()) {
+      ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index, is_tensor_trimmed_);
+    }
     return success();
   }
 };
 
 struct KernelLaunchSimplePattern : public KernelLaunchPattern {
-  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context) : KernelLaunchPattern(context) {}
+  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context, bool trim = false)
+      : KernelLaunchPattern(context, trim) {}
 
   bool IsSameDevice(std::vector<Operation*>& ops, mlir::Operation* op) const {
     if (ops.empty()) { return true; }
@@ -1074,8 +1107,8 @@ struct KernelLaunchSimplePattern : public KernelLaunchPattern {
 };
 
 struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
-  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
-      : KernelLaunchSimplePattern(context) {}
+  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context, bool trim = false)
+      : KernelLaunchSimplePattern(context, trim) {}
 
   bool IsOpCudaGraphSupport(mlir::Operation* op) const {
     ::oneflow::okl::RegContext reg_ctx(op);
@@ -1172,14 +1205,15 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
-                                         const std::string& mode) {
-  if (mode == wrap_mode::SIMPLE) {
-    patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
-  } else if (mode == wrap_mode::CUDA_GRAPH) {
+                                         const std::string& mode, const std::string& tensor) {
+  bool tensor_trimmed = tensor == wrap_options::tensor::TRIM;
+  if (mode == wrap_options::mode::SIMPLE) {
+    patterns.add<KernelLaunchSimplePattern>(patterns.getContext(), tensor_trimmed);
+  } else if (mode == wrap_options::mode::CUDA_GRAPH) {
 #ifdef WITH_CUDA_GRAPHS
-    patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
+    patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext(), tensor_trimmed);
 #else
-    patterns.add<KernelLaunchPattern>(patterns.getContext());
+    patterns.add<KernelLaunchPattern>(patterns.getContext(), tensor_trimmed);
 #endif
   } else {
     LOG(FATAL) << "Found an unsupported mode in wrap-ops-to-kernel-launch pass";
