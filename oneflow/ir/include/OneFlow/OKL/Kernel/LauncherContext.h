@@ -34,6 +34,8 @@ class LauncherContext final {
   bool Infer(user_op::KernelComputeContext* compute_context);
   // launch kernel with index
   void Launch(int index);
+  // launch all kernels
+  void LaunchAll();
 
  private:
   bool inferred_ = false;

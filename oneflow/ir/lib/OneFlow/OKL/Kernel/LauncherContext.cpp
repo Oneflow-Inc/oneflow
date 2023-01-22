@@ -74,5 +74,10 @@ void LauncherContext::Launch(int index) {
   run_ctx_vec_[index].Run();
 }
 
+void LauncherContext::LaunchAll() {
+  if (!inferred_) { LOG(FATAL) << "Not infer yet when launch kernels"; }
+  for (auto& run_ctx : run_ctx_vec_) { run_ctx.Run(); }
+}
+
 }  // namespace okl
 }  // namespace oneflow

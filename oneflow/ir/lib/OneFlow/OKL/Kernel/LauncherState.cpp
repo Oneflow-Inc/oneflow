@@ -73,7 +73,7 @@ bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
 
 void LauncherState::DoCompute(user_op::KernelComputeContext* ctx) {
   launcher_context_.Infer(ctx);
-  engine_.Run(mlir::oneflow::okl_func::OKL_FUNC, &launcher_context_);
+  launcher_context_.LaunchAll();
 }
 
 }  // namespace okl
