@@ -165,7 +165,7 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
             return self.my_linear(x)
 
     linear_g = LinearGraph()
-    linear_g.enable_save_runtime_states()
+    linear_g.enable_save_runtime_state_dict()
     linear_g.enable_shared()
 
     input_arr = np.array(
@@ -188,7 +188,7 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
     print("graph 0 out ", of_lazy_out)
 
     linear_g1 = LinearGraph()
-    linear_g1.enable_save_runtime_states()
+    linear_g1.enable_save_runtime_state_dict()
     linear_g1.share_from(linear_g)
     input_arr1 = np.array(
         [
@@ -283,17 +283,12 @@ def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_li
 @flow.unittest.skip_unless_1n1d()
 class TestLinearMultiGraph(oneflow.unittest.TestCase):
     def test_linear_multi_graph_share_gpu(test_case):
-        # _reset_session()
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), False)
-        # _reset_session()
 
     def test_linear_reshape_multi_graph_share_gpu(test_case):
-        # _reset_session()
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
-        # _reset_session()
 
     def test_linear_multi_graph_save_load_gpu(test_case):
-        # _reset_session()
         # A graph runtime state dict
         state_dict_list = _test_linear_multi_graph_save(
             test_case, flow.device("cuda"), True

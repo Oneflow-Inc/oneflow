@@ -167,7 +167,7 @@ class Graph(object):
         self._build_with_shared_graph = False
 
         # For load graph from runtime states.
-        self._enable_save_runtime_states = False
+        self._enable_save_runtime_state_dict = False
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -921,7 +921,7 @@ class Graph(object):
             self._shared_graph._state_op_names, self._state_tensor_tuple
         )
 
-        if self.enable_save_runtime_states:
+        if self._enable_save_runtime_state_dict:
             self._input_op_names = input_op_names
             self._inputs_tensor_tuple = inputs_tensor_tuple
             self._output_op_names = output_op_names
@@ -935,22 +935,22 @@ class Graph(object):
 
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
-    def enable_save_runtime_states(self, mode: bool = True):
+    def enable_save_runtime_state_dict(self, mode: bool = True):
         if mode:
             assert (
                 not self._is_compiled
-            ), " enable_save_runtime_states must be set before graph compile."
+            ), " enable_save_runtime_state_dict must be set before graph compile."
             # If enable save runtime states, graph compile will generate more data for save.
-            self._enable_save_runtime_states = True
+            self._enable_save_runtime_state_dict = True
         else:
-            self._enable_save_runtime_states = False
+            self._enable_save_runtime_state_dict = False
 
     def runtime_state_dict(
         self, destination=None
     ) -> Dict[str, Union[Dict[str, Tensor], str]]:
         assert (
-            self._enable_save_runtime_states
-        ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_states is set with True."
+            self._enable_save_runtime_state_dict
+        ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_state_dict is set with True."
         assert (
             self._is_compiled
         ), "nn.Graph's runtime state dict can only be got after the first call of a graph."
@@ -1281,7 +1281,7 @@ class Graph(object):
             self._c_nn_graph.register_input_op_names_and_tensors(
                 self._input_op_names, inputs_tensor_tuple
             )
-            if self._enable_save_runtime_states:
+            if self._enable_save_runtime_state_dict:
                 self._inputs_tensor_tuple = inputs_tensor_tuple
             self._c_nn_graph.register_output_op_names_and_tensors(
                 self._output_op_names, self._outputs_tensor_tuple
