@@ -684,7 +684,8 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
         << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
         << "tensor meta each step is the same as the input of first call graph.\nThe excepted "
         << "tensor meta is: " << static_meta_str
-        << ", but the actual tensor meta is: " << tensor_meta_str;
+        << ", but the actual tensor meta is: " << tensor_meta_str
+        << ". The input index is " << i << ".";
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)

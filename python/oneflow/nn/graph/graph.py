@@ -967,7 +967,8 @@ class Graph(object):
         def _fill_sub_destination(dest_dict, name_list, tensor_tuple):
             assert len(tensor_tuple) == len(name_list)
             for name_idx in range(len(name_list)):
-                dest_dict[name_list[name_idx]] = tensor_tuple[name_idx]
+                tensor_item = tensor_tuple[name_idx]
+                dest_dict[name_list[name_idx]] = (tensor_item, tensor_item.device.type)
 
         inputs_sub_destination = OrderedDict()
         _fill_sub_destination(
@@ -976,7 +977,16 @@ class Graph(object):
         destination["inputs"] = inputs_sub_destination
 
         # This is original outputs is needed to build output buffer.
-        destination["outputs_original"] = self._eager_outputs
+        tuple_idx = -1
+        def gen_index_tensor_in_tuple(eager_out):
+            nonlocal tuple_idx
+            tuple_idx += 1
+            return oneflow.tensor(tuple_idx)
+        _eager_outputs, _ = self.__map_io(
+            "output", gen_index_tensor_in_tuple, *self._eager_outputs
+        )
+        destination["outputs_original"] = _eager_outputs
+        assert len(self._outputs_tensor_tuple) == tuple_idx + 1
         outputs_sub_destination = OrderedDict()
         _fill_sub_destination(
             outputs_sub_destination, self._output_op_names, self._outputs_tensor_tuple
@@ -1015,16 +1025,23 @@ class Graph(object):
             tensor_list = []
             for name, item in state_dict.items():
                 name_list.append(name)
-                tensor_list.append(item)
+                tensor_of_item, device_of_item = item
+                tensor_list.append(tensor_of_item.to(device_of_item))
             return (name_list, convert_to_tensor_tuple(tensor_list))
 
         self._input_op_names, self._inputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["inputs"]
         )
-        self._eager_outputs = state_dict["outputs_original"]
         self._output_op_names, self._outputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["outputs"]
         )
+        _eager_outputs_index = state_dict["outputs_original"]
+        def get_tensor_in_tuple(index_tensor):
+            return self._outputs_tensor_tuple[index_tensor.item()]
+        _eager_outputs, _ = self.__map_io(
+            "output", get_tensor_in_tuple, *_eager_outputs_index
+        )
+        self._eager_outputs = _eager_outputs
         if self._build_with_shared_graph:
             self._state_op_names = self._shared_graph._state_op_names
             self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
