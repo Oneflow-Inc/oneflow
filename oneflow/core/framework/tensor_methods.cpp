@@ -119,8 +119,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, const int64_t storage_offset) {
-  const auto* tensor_impl = JUST(input->mut_eager_local_tensor_impl());
-  const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
   Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
       target_shape, target_stride, input->dtype()->data_type(), JUST(input->device())));
 
@@ -229,12 +227,13 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t expa
     int cnt = 0;
     for (int i = 0; i < ndim; i++) {
       if (i == expand_dim) { cnt++; }
-      target_dim_vec[cnt] = shape->At(i);
+      target_dim_vec[cnt] = shape->at(i);
       target_stride_vec[cnt] = strides->at(i);
       cnt++;
     }
     target_dim_vec[expand_dim] = 1;
-    target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) : 1;
+    target_stride_vec[expand_dim] =
+        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
@@ -272,12 +271,13 @@ Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t
     int cnt = 0;
     for (int i = 0; i < ndim; i++) {
       if (i == expand_dim) { cnt++; }
-      target_dim_vec[cnt] = shape->At(i);
+      target_dim_vec[cnt] = shape->at(i);
       target_stride_vec[cnt] = strides->at(i);
       cnt++;
     }
     target_dim_vec[expand_dim] = 1;
-    target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) : 1;
+    target_stride_vec[expand_dim] =
+        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
