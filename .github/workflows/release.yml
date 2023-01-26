@@ -81,7 +81,7 @@ jobs:
         if: ${{ matrix.entry !='cpu' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
