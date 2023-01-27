@@ -33,6 +33,7 @@ def clip_grad_norm_(
     max_norm: float,
     norm_type: float = 2.0,
     error_if_nonfinite: bool = False,
+    fused: bool = False,
 ) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
@@ -142,6 +143,16 @@ def clip_grad_norm_(
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
             p.grad.detach().mul_(clip_coef_clamped.to_global(placement=p.placement))
+    elif fused:
+        assert not error_if_nonfinite
+        param_grad_list = []
+        for param in parameters:
+            param_grad_list.append(param.grad)
+        total_norm = flow._C.fused_clip_grad(
+            param_grad_list,
+            max_norm,
+            norm_type,
+        )
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):

@@ -60,6 +60,9 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    T* out_ptr = out->mut_dptr<T>();
+
     const int32_t input_size = ctx->input_size("model_diff");
     const float max_norm = ctx->Attr<float>("max_norm");
     const float norm_type = ctx->Attr<float>("norm_type");
@@ -73,43 +76,41 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
     }
 
     T* temp = (ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0))->mut_dptr<T>();
-    T *total_norm = nullptr;
-    OF_CUDA_CHECK(cudaMalloc(&total_norm, sizeof(T)));
 
     bool not_special = false;
     if (norm_type == 0) {
       PowByZero<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_add{};
-      reduce_add(ctx->stream(), func, params, GetZeroVal<T>(), total_norm, temp);
+      reduce_add(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == INFINITY) {
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMax<T>> reduce_max{};
-      reduce_max(ctx->stream(), func, params, GetZeroVal<T>(), total_norm, temp);
+      reduce_max(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == -INFINITY) {
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMin<T>> reduce_min{};
-      reduce_min(ctx->stream(), func, params, std::numeric_limits<T>::max(), total_norm, temp);
+      reduce_min(ctx->stream(), func, params, std::numeric_limits<T>::max(), out_ptr, temp);
     } else if (norm_type == 1) {
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), total_norm, temp);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else {
       not_special = true;
       AbsPow<T> func{norm_type};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), total_norm, temp);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     }
 
     T *h_total_norm = nullptr;
     OF_CUDA_CHECK(cudaMallocHost(&h_total_norm, sizeof(T)));
-    OF_CUDA_CHECK(cudaMemcpy(h_total_norm, total_norm, sizeof(T), cudaMemcpyDeviceToHost));
+    OF_CUDA_CHECK(cudaMemcpy(h_total_norm, out_ptr, sizeof(T), cudaMemcpyDeviceToHost));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
 
     if (not_special) {
       h_total_norm[0] = std::pow(h_total_norm[0], 1. / norm_type);
     }
     h_total_norm[0] = max_norm / (h_total_norm[0] + 1e-6);
-    OF_CUDA_CHECK(cudaMemcpy(total_norm, h_total_norm, sizeof(T), cudaMemcpyHostToDevice));
+    OF_CUDA_CHECK(cudaMemcpy(out_ptr, h_total_norm, sizeof(T), cudaMemcpyHostToDevice));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     if (h_total_norm[0] < 1.) {
       std::vector<MultiScaleMulParam<T>> mut_params;
@@ -120,11 +121,10 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
         mut_params[i].data = (ctx->Tensor4ArgNameAndIndex("model_diff", i))->mut_dptr<T>();
       }
       MultiScaleMul<device_type, T> scale_mul{};
-      scale_mul(ctx->stream(), mut_params, total_norm);
+      scale_mul(ctx->stream(), mut_params, out_ptr);
     }
 
     OF_CUDA_CHECK(cudaFreeHost(h_total_norm));
-    OF_CUDA_CHECK(cudaFree(total_norm));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
