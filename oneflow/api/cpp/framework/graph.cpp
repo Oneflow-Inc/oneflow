@@ -317,8 +317,7 @@ of::Maybe<std::vector<Tensor>> Graph::GraphImpl::Run(const std::vector<Tensor>& 
   const auto input_tensor_tuple = std::make_shared<of::one::TensorTuple>();
   for (const auto& tensor : inputs) { input_tensor_tuple->emplace_back(tensor.tensor_); }
 
-  JUST(of::RunLazyNNGraph(*input_tensor_tuple, *output_tensor_tuple_, *parameter_tensor_tuple_,
-                          graph_));
+  JUST(of::RunLazyNNGraph(*input_tensor_tuple, *output_tensor_tuple_, graph_));
   JUST(of::SoftSyncNNGraphBuffers(*output_tensor_tuple_, graph_));
 
   std::vector<Tensor> outputs;

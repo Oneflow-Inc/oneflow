@@ -90,6 +90,7 @@ from oneflow._C import sinh
 from oneflow._C import tan
 from oneflow._C import greater
 from oneflow._C import greater as gt
+from oneflow._C import greater_ as gt_
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
@@ -110,6 +111,7 @@ from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import as_strided
+from oneflow._C import as_strided_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softshrink
@@ -155,6 +157,7 @@ from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
 from oneflow._C import median
+from oneflow._C import mode
 from oneflow._C import pow
 from oneflow._C import reduce_prod as prod
 from oneflow._C import reduce_sum as sum
@@ -185,6 +188,7 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+from oneflow._C import stft
 from oneflow._C import var
 from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
 from oneflow._C import atleast_1d, atleast_2d, atleast_3d
@@ -230,6 +234,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import det
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
@@ -296,8 +301,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    oneflow.framework.session_context.TryCloseDefaultSession()
     __oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
+    oneflow.framework.session_context.TryCloseDefaultSession()
 
 
 atexit.register(atexit_hook, hook)

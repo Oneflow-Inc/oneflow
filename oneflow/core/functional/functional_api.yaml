@@ -82,6 +82,9 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+      "Tensor (Tensor input, Tensor other, *, String rounding_mode=None) => DivMode",
+      "Tensor (Tensor input, Scalar other, *, String rounding_mode=None) => ScalarDivMode",
+      "Tensor (Scalar input, Tensor other, *, String rounding_mode=None) => ScalarDivMode",
     ]
   bind_python: true
 
@@ -125,6 +128,14 @@
       "Tensor (Tensor input, Tensor other) => BroadcastGreater",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater",
+    ]
+  bind_python: true
+
+- name: "greater_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceBroadcastGreater",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarLogicalGreater",
     ]
   bind_python: true
 
@@ -421,6 +432,10 @@
 - name: "as_strided_grad"
   signature: "Tensor (Tensor dy, Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStridedGrad"
   bind_python: False
+
+- name: "as_strided_"
+  signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => InplaceAsStrided"
+  bind_python: True
 
 - name: "select"
   signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
@@ -922,21 +937,21 @@
 
 - name: "conv1d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[1] stride=1,
     Int32List[1] padding=0, Int32List[1] dilation=1, Int32 groups=1,
     String channel_pos="channels_first") => Conv1d'
   bind_python: True
 
 - name: "conv2d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[2] stride=1,
     Int32List[2] padding=0, Int32List[2] dilation=1, Int32 groups=1,
     String channel_pos="channels_first") => Conv2d'
   bind_python: True
 
 - name: "conv3d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[3] stride=1,
     Int32List[3] padding=0, Int32List[3] dilation=1, Int32 groups=1,
     String channel_pos="channels_first") => Conv3d'
   bind_python: True
@@ -988,21 +1003,21 @@
 
 - name: "deconv1d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[1] stride=1,
     Int32List[1] padding=0, Int32List[1] output_padding=0, Int32 groups=1,
     Int32List[1] dilation=1, String data_format="channels_first") => Deconv1d'
   bind_python: True
 
 - name: "deconv2d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[2] stride=1,
     Int32List[2] padding=0, Int32List[2] output_padding=0, Int32 groups=1,
     Int32List[2] dilation=1, String data_format="channels_first") => Deconv2d'
   bind_python: True
 
 - name: "deconv3d"
   signature:
-    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride=1,
+    'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[3] stride=1,
     Int32List[3] padding=0, Int32List[3] output_padding=0, Int32 groups=1,
     Int32List[3] dilation=1, String data_format="channels_first") => Deconv3d'
   bind_python: True
@@ -1047,8 +1062,16 @@
   signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
   bind_python: False
 
+- name: "unsqueeze_"
+  signature: "Tensor (Tensor input, Int32 dim) => InplaceUnsqueeze"
+  bind_python: True
+
 - name: "squeeze"
-  signature: ["Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"]
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"
+  bind_python: True
+
+- name: "squeeze_"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => InplaceSqueeze"
   bind_python: True
 
 - name: "exp"
@@ -1993,6 +2016,10 @@
   signature: "Tensor (Tensor input, Tensor other, Int64 dim=None) => LinalgCross"
   bind_python: True
 
+- name: "det"
+  signature: "Tensor (Tensor x) => Det"
+  bind_python: True
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
@@ -2635,7 +2662,7 @@
   bind_python: True
 
 - name: "topk"
-  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopK"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=None, Bool largest=True, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"
@@ -3075,6 +3102,11 @@
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
 
+- name: "stft"
+  signature: 
+    'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
+  bind_python: True
+
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
@@ -3093,8 +3125,8 @@
 
 - name: "unique"
   signature: [
-    "Tensor (Tensor x, DataType dtype=kInt32) => Unique",
-    "TensorTuple (Tensor x, Bool return_inverse=False, Bool return_counts=False, DataType dtype=kInt32) => UniqueWithCounts"
+    "Tensor (Tensor x, Bool sorted=True, DataType dtype=kInt32) => Unique",
+    "TensorTuple (Tensor x, Bool sorted=True, Bool return_inverse=False, Bool return_counts=False, DataType dtype=kInt32) => UniqueWithCounts"
   ]
   bind_python: True
 
@@ -3108,4 +3140,8 @@
   
 - name: "throw_error"
   signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
+
+- name: "mode"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
   bind_python: True

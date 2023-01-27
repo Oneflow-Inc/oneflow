@@ -189,6 +189,14 @@ def _new_zeros(
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
+def _squeeze_inplace(self, dim=None):
+    return flow._C.squeeze_(self, dim=dim)
+
+
+def _unsqueeze_inplace(self, dim=None):
+    return flow._C.unsqueeze_(self, dim=dim)
+
+
 def _new_full(
     self,
     size,
@@ -394,10 +402,6 @@ def _T(self):
     return flow._C.T(self)
 
 
-def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    return flow.topk(self, k, dim, largest, sorted)
-
-
 def _nms(boxes, scores, iou_threshold: float):
     return flow.nms(boxes, scores, iou_threshold)
 
@@ -416,10 +420,6 @@ def _masked_select(self, mask):
 
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
-
-
-def _type_as(self, target):
-    return self.to(dtype=target.dtype)
 
 
 def _where(self, x=None, y=None):
@@ -561,6 +561,10 @@ def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
 
+def _as_strided_inplace(self, size, stride, storage_offset=0):
+    return flow._C.as_strided_(self, size, stride, storage_offset)
+
+
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
@@ -604,6 +608,8 @@ def RegisterMethods():
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.new_full = _new_full
+    Tensor.squeeze_ = _squeeze_inplace
+    Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
@@ -616,9 +622,7 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.sort = _sort
-    Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
     Tensor.prod = _prod
@@ -639,6 +643,7 @@ def RegisterMethods():
     Tensor.index_add = _index_add
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
+    Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
 
 

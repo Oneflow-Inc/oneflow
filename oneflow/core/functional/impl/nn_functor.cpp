@@ -70,12 +70,23 @@ class ConvBaseFunctor {
     enable_fused_conv_bias_ = ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "conv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "conv2d";
+    } else {
+      func_name = "conv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
@@ -93,14 +104,20 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
+                                            conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {unsqueezed_input, weight}, conv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_conv_output = conv_out;
+    if (!is_batched) {
+      squeezed_conv_output = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
-      return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
+      return functional::BiasAdd(squeezed_conv_output, JUST(bias), channel_idx);
     } else {
-      return conv_out;
+      return squeezed_conv_output;
     }
   }
 
@@ -148,13 +165,25 @@ class DeConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "deconv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "deconv2d";
+    } else {
+      func_name = "deconv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
+    int32_t channel_idx = 1;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
@@ -168,13 +197,19 @@ class DeConvBaseFunctor {
     deconv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(1) * groups), kernel_size_vec,
                              padding, output_padding, stride, dilation, groups, data_format);
     std::shared_ptr<one::Tensor> deconv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {unsqueezed_input, weight}, deconv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_deconv_output = deconv_out;
+    if (!is_batched) {
+      squeezed_deconv_output = JUST(functional::Squeeze(deconv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
-      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(channel_idx));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {squeezed_deconv_output, JUST(bias)},
+                                            bias_attrs);
     } else {
-      return deconv_out;
+      return squeezed_deconv_output;
     }
   }
 
@@ -692,7 +727,7 @@ class FusedMatmulBiasFunctor {
     CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
         << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
 
-#if CUDA_VERSION >= 10200
+#if CUDA_VERSION >= 11020
     DeviceType device_type{};
     if (x->is_global()) {
       device_type = JUST(x->parallel_desc())->device_type();
@@ -707,7 +742,7 @@ class FusedMatmulBiasFunctor {
       }
       return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
     }
-#endif  // CUDA_VERSION >= 10200
+#endif  // CUDA_VERSION >= 11020
 
     auto matmul_bias = JUST(functional::BiasAdd(
         JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
@@ -2513,8 +2548,7 @@ class ConstantPadFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("padding", "floating_constant_value",
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
-    if (IsFloatingDataType(input->dtype()->data_type())
-        || input->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);

@@ -111,6 +111,13 @@ class TestSqueeze(flow.unittest.TestCase):
         y = torch.squeeze(x, random(1, 3).to(int))
         return y
 
+    @autotest(n=10, check_graph=False, auto_backward=False)
+    def test_inplace_squeeze_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(requires_grad=False).to(device)
+        y = x.squeeze_(random(1, 3).to(int))
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_squeeze_with_0_size_data(test_case):
         device = random_device()
