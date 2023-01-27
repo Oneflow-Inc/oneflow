@@ -204,7 +204,9 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
     auto new_input_grads = hook(input_grads, output_grads);
     if (new_input_grads.has_value()) {
       auto new_input_grads_value = *JUST(new_input_grads);
-      CHECK_EQ_OR_RETURN(new_input_grads_value.size(), input_grads.size());
+      CHECK_EQ_OR_RETURN(new_input_grads_value.size(), input_grads.size())
+          << "The number of input grads returned by hook is not correct, expected "
+          << input_grads.size() << ", but got " << new_input_grads_value.size() << ".";
       for (int i = 0; i < input_grads.size(); ++i) { input_grads[i] = new_input_grads_value[i]; }
     }
   }

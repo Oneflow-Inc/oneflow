@@ -512,6 +512,7 @@ class TestModule(flow.unittest.TestCase):
         y = m(x)
         y.sum().backward()
         test_case.assertTrue(hook_triggered)
+        test_case.assertTrue(np.array_equal(x.grad, [1, 0]))
 
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook_with_return_value(test_case):

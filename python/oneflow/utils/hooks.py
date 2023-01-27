@@ -1,4 +1,4 @@
-# This file is mostly copied from PyTorch.
+# This file is mostly copied from PyTorch's torch/utils/hooks.py
 import oneflow as flow
 import oneflow.nn.modules._functions
 from collections import OrderedDict
