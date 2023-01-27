@@ -76,7 +76,7 @@ void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
     const std::unique_ptr<OfRequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), OfRequestId(job_id, i)).second);
 
-    VLOG(2) << "OCCL job_id = " << job_id << " coll_id = " << entry->coll_id() << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
+    VLOG(1) << "OCCL job_id = " << job_id << " coll_id = " << entry->coll_id() << " dependency_depth = " << entry->desc().dependency_depth() << " order = " << entry->desc().order() << " op_type = " << entry->desc().op_desc().op_type() << " device_set = " << get_device_set(entry->desc().device_set());
   }
 }
 
