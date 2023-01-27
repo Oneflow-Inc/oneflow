@@ -162,7 +162,9 @@ class Module(object):
 
         bw_hook = None
         if len(self._backward_hooks) > 0:
-            bw_hook = flow.utils.hooks.BackwardHook(self, self._backward_hooks.values(), [])
+            bw_hook = flow.utils.hooks.BackwardHook(
+                self, self._backward_hooks.values(), []
+            )
             args = bw_hook.setup_input_hook(args)
         res = self.forward(*args, **kwargs)
 

@@ -259,6 +259,7 @@ class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook(test_case):
         hook_triggered = False
+
         def hook(_, grad_input, grad_output):
             nonlocal hook_triggered
             hook_triggered = True
@@ -270,7 +271,7 @@ class TestModule(flow.unittest.TestCase):
         m = flow.nn.ReLU()
         m.register_full_backward_hook(hook)
 
-        x = flow.tensor([1., -1], requires_grad=True)
+        x = flow.tensor([1.0, -1], requires_grad=True)
         y = m(x)
         y.sum().backward()
         test_case.assertTrue(hook_triggered)
@@ -279,6 +280,7 @@ class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook_with_return_value(test_case):
         hook_triggered = False
+
         def hook(_, grad_input, grad_output):
             nonlocal hook_triggered
             hook_triggered = True
@@ -291,7 +293,7 @@ class TestModule(flow.unittest.TestCase):
         m = flow.nn.ReLU()
         m.register_full_backward_hook(hook)
 
-        x0 = flow.tensor([1., -1], requires_grad=True)
+        x0 = flow.tensor([1.0, -1], requires_grad=True)
         x = x0 + 1
         y = m(x)
         y.sum().backward()

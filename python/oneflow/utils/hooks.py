@@ -66,7 +66,9 @@ class BackwardHook(object):
                 # the Module's input without " passing through the Module's
                 # output, e.g. when you're doing double backward.
                 return
-            res = self._pack_with_none(self.input_tensors_index, grad_input, self.n_inputs)
+            res = self._pack_with_none(
+                self.input_tensors_index, grad_input, self.n_inputs
+            )
 
             for hook in self.user_hooks:
                 out = hook(self.module, res, self.grad_outputs)
@@ -75,8 +77,10 @@ class BackwardHook(object):
                     continue
 
                 if len(out) != len(res):
-                    raise RuntimeError("Backward hook returned an invalid number of grad_input, "
-                                       "got {}, but expected {}".format(len(out), len(res)))
+                    raise RuntimeError(
+                        "Backward hook returned an invalid number of grad_input, "
+                        "got {}, but expected {}".format(len(out), len(res))
+                    )
 
                 res = out
 
@@ -108,12 +112,21 @@ class BackwardHook(object):
             new_tensors = (new_tensors,)
 
         if len(new_tensors) == 0:
-            raise RuntimeError("Cannot set Module backward hook for a Module with no input Tensors.")
+            raise RuntimeError(
+                "Cannot set Module backward hook for a Module with no input Tensors."
+            )
 
-        grad_fns = [t.grad_fn for t in new_tensors if t.grad_fn is not None and t.grad_fn.name() == "BackwardHookFunction_backward"]
+        grad_fns = [
+            t.grad_fn
+            for t in new_tensors
+            if t.grad_fn is not None
+            and t.grad_fn.name() == "BackwardHookFunction_backward"
+        ]
         if len(grad_fns) == 0:
-            raise RuntimeError("Error while setting up backward hooks. Please open "
-                               "an issue with a code sample to reproduce this.")
+            raise RuntimeError(
+                "Error while setting up backward hooks. Please open "
+                "an issue with a code sample to reproduce this."
+            )
 
         fn(grad_fns[0])
 
@@ -135,21 +148,27 @@ class BackwardHook(object):
     def setup_output_hook(self, args):
         def fn(grad_fn):
             def hook(_, grad_output):
-                self.grad_outputs = self._pack_with_none(self.output_tensors_index,
-                                                         grad_output,
-                                                         self.n_outputs)
+                self.grad_outputs = self._pack_with_none(
+                    self.output_tensors_index, grad_output, self.n_outputs
+                )
 
                 if self.user_pre_hooks:
                     expected_len = len(self.grad_outputs)
                     for user_pre_hook in self.user_pre_hooks:
-                        hook_grad_outputs = user_pre_hook(self.module, self.grad_outputs)
+                        hook_grad_outputs = user_pre_hook(
+                            self.module, self.grad_outputs
+                        )
                         if hook_grad_outputs is None:
                             continue
 
                         actual_len = len(hook_grad_outputs)
                         if actual_len != expected_len:
-                            raise RuntimeError("Backward pre hook returned an invalid number of grad_output, "
-                                               "got {}, but expected {}".format(actual_len, expected_len))
+                            raise RuntimeError(
+                                "Backward pre hook returned an invalid number of grad_output, "
+                                "got {}, but expected {}".format(
+                                    actual_len, expected_len
+                                )
+                            )
                         self.grad_outputs = hook_grad_outputs
 
                 # Special case if no input required gradients, this hook should call the user
@@ -158,10 +177,15 @@ class BackwardHook(object):
                     grad_inputs = self._pack_with_none([], [], self.n_inputs)
                     for user_hook in self.user_hooks:
                         res = user_hook(self.module, grad_inputs, self.grad_outputs)
-                        if res is not None and not (isinstance(res, tuple) and all(el is None for el in res)):
-                            raise RuntimeError("Backward hook for Modules where no input requires "
-                                               "gradient should always return None or None for all gradients.")
+                        if res is not None and not (
+                            isinstance(res, tuple) and all(el is None for el in res)
+                        ):
+                            raise RuntimeError(
+                                "Backward hook for Modules where no input requires "
+                                "gradient should always return None or None for all gradients."
+                            )
                     self.grad_outputs = None
+
             grad_fn.register_hook(hook)
 
         is_tuple = True
