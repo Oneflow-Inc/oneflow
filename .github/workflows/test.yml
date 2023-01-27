@@ -199,7 +199,7 @@ jobs:
             build
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu112
+            cu117
             cpu
             cpu-asan-ubsan
             cpu-tsan
@@ -296,7 +296,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow@llvm15
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
-        if: ${{ matrix.entry =='cu112' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu117' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
@@ -305,7 +305,7 @@ jobs:
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
           self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: "11.2"
+          cuda-version: "11.7"
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
