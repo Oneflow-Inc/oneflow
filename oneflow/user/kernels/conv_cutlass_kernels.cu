@@ -153,8 +153,11 @@ REGISTER_USER_KERNEL("conv2d")
                      && (user_op::HobAttr<std::string>("data_format") == "channels_last")
                      && (user_op::HobAttr<int32_t>("groups") == 1)
                      && (user_op::HobDataType("in", 0) == DataType::kFloat16)
-                     && (user_op::HobTrue()
-                         == ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false)))
+                     && (user_op::HobEnvBool(
+                             // Compatible with typo `KERENL`
+                             "ONEFLOW_KERNEL_CONV_ENABLE_CUTLASS_IMPL",
+                             ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false))
+                         == true))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
       // use static workspace size
       return 128 * 1024 * 1024;
