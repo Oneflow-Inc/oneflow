@@ -271,11 +271,12 @@ class TestModule(flow.unittest.TestCase):
         m = flow.nn.ReLU()
         m.register_full_backward_hook(hook)
 
-        x = flow.tensor([1.0, -1], requires_grad=True)
+        x0 = flow.tensor([1.0, -1], requires_grad=True)
+        x = x0 + 1
         y = m(x)
         y.sum().backward()
         test_case.assertTrue(hook_triggered)
-        test_case.assertTrue(np.array_equal(x.grad, [1, 0]))
+        test_case.assertTrue(np.array_equal(x0.grad, [1, 0]))
 
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook_with_return_value(test_case):
