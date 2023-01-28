@@ -978,12 +978,12 @@ class Graph(object):
 
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
-        def gen_index_tensor_in_tuple(eager_out):
+        def gen_index_in_tuple(eager_out):
             nonlocal tuple_idx
             tuple_idx += 1
-            return oneflow.tensor(tuple_idx)
+            return "_OFTPI" + str(tuple_idx)
         _eager_outputs, _ = self.__map_io(
-            "output", gen_index_tensor_in_tuple, *self._eager_outputs
+            "output", gen_index_in_tuple, *self._eager_outputs
         )
         destination["outputs_original"] = _eager_outputs
         assert len(self._outputs_tensor_tuple) == tuple_idx + 1
@@ -1036,10 +1036,14 @@ class Graph(object):
             state_dict["outputs"]
         )
         _eager_outputs_index = state_dict["outputs_original"]
-        def get_tensor_in_tuple(index_tensor):
-            return self._outputs_tensor_tuple[index_tensor.item()]
-        _eager_outputs, _ = self.__map_io(
-            "output", get_tensor_in_tuple, *_eager_outputs_index
+        def get_tensor_in_tuple(map_item):
+            if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
+                of_idx = int(map_item[6:])
+                return self._outputs_tensor_tuple[of_idx]
+            else:
+                return map_item
+        _eager_outputs, _ = self.__map_io_lite(
+            get_tensor_in_tuple, *_eager_outputs_index
         )
         self._eager_outputs = _eager_outputs
         if self._build_with_shared_graph:
@@ -1063,7 +1067,7 @@ class Graph(object):
                     if s_name in states_from_eager:
                         state_tensor_from_eager = states_from_eager[s_name]
                         # Note: compare value has extra cost.
-                        assert oneflow.allclose(state_tensor_from_eager, self._state_tensor_tuple[s_idx])
+                        # assert oneflow.allclose(state_tensor_from_eager, self._state_tensor_tuple[s_idx])
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()
@@ -1584,6 +1588,13 @@ class Graph(object):
                 )
 
         out = args_tree.map_leaf(leaf_arg_fn)
+        mapped_args = out[0]
+        mapped_kwargs = out[1]
+        return mapped_args, mapped_kwargs
+
+    def __map_io_lite(self, func, *args, **kwargs):
+        args_tree = ArgsTree((args, kwargs), False)
+        out = args_tree.map_leaf(func)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
