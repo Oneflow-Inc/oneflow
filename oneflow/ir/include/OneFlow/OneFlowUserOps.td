@@ -2288,7 +2288,7 @@ def OneFlow_FusedSinusoidalPositionalEncodeOp : OneFlow_BaseOp<"fused_sinusoidal
   );
   let attrs = (ins
     SI32Attr:$embedding_dim,
-    DefaultValuedAttr<SI32Attr, "0">:$pattern,
+    DefaultValuedAttr<SI32Attr, "0">:$layout,
     DefaultValuedAttr<F32Attr, "1">:$downscale_freq_shift,
     DefaultValuedAttr<F32Attr, "1">:$scale,
     DefaultValuedAttr<SI32Attr, "10000">:$max_period

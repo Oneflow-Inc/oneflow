@@ -147,7 +147,7 @@ class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, pu
     const int num_row = positions->shape_view().Count(0, positions->shape_view().NumAxes());
     const int embedding_dim = ctx->Attr<int>("embedding_dim");
     const int half_dim = embedding_dim / 2;
-    EncodingLayout layout = static_cast<EncodingLayout>(ctx->Attr<int>("pattern"));
+    EncodingLayout layout = static_cast<EncodingLayout>(ctx->Attr<int>("layout"));
     const float downscale_freq_shift = ctx->Attr<float>("downscale_freq_shift");
     const float scale = ctx->Attr<float>("scale");
     const int max_period = ctx->Attr<int>("max_period");

@@ -121,30 +121,30 @@ def get_interleaved_timestep_embedding(
 
 def navie_embedding(timesteps: flow.Tensor,
     embedding_dim: int,
-    pattern: int = 0,
+    layout: int = 0,
     downscale_freq_shift: float = 1,
     scale: float = 1,
     max_period: int = 10000,
 ):
-    if pattern == 0:
+    if layout == 0:
         return get_timestep_embedding(timesteps, embedding_dim, False, downscale_freq_shift, scale, max_period)
-    elif pattern == 1:
+    elif layout == 1:
         return get_timestep_embedding(timesteps, embedding_dim, True, downscale_freq_shift, scale, max_period)
-    elif pattern == 2:
+    elif layout == 2:
         return get_interleaved_timestep_embedding(timesteps, embedding_dim, False, downscale_freq_shift, scale, max_period)
     else:
         return get_interleaved_timestep_embedding(timesteps, embedding_dim, True, downscale_freq_shift, scale, max_period)
 
 def _test_fused_sinusoidal_positional_encode(
-    test_case, src_type, length, embedding_dim, pattern, downscale_freq_shift, scale, max_period
+    test_case, src_type, length, embedding_dim, layout, downscale_freq_shift, scale, max_period
 ):
     if src_type == np.int32:
         positions = flow.tensor(np.random.randint(low=1024, size=length, dtype=src_type), dtype=flow.int32, device="cuda", requires_grad=False)
     elif src_type == np.float32:
         positions = flow.tensor(np.random.rand(*length), dtype=flow.float32, device="cuda", requires_grad=False)
 
-    fused = flow._C.fused_sinusoidal_positional_encode(positions, embedding_dim, pattern, downscale_freq_shift, scale, max_period)
-    naive = navie_embedding(positions, embedding_dim, pattern, downscale_freq_shift, scale, max_period)
+    fused = flow._C.fused_sinusoidal_positional_encode(positions, embedding_dim, layout, downscale_freq_shift, scale, max_period)
+    naive = navie_embedding(positions, embedding_dim, layout, downscale_freq_shift, scale, max_period)
 
     test_case.assertTrue(
             np.allclose(naive.numpy(), fused.numpy(), atol=1e-2, rtol=1e-2)
@@ -163,7 +163,7 @@ class TestFusedSinusoidalPositionalEncode(flow.unittest.TestCase):
             (2, 3, 4, 5)
         ]
         args_dict["embedding_dim"] = [17, 32, 512]
-        args_dict["pattern"] = [0, 1, 2, 3]
+        args_dict["layout"] = [0, 1, 2, 3]
         args_dict["downscale_freq_shift"] = [0.3]
 
         args_dict["scale"] = [3.3]

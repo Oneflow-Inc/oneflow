@@ -766,7 +766,7 @@ class FusedSinusoidalPositionalEncodeFunctor {
                                             .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& positions,
-                           const int embedding_dim, const int pattern, const float downscale_freq_shift,
+                           const int embedding_dim, const int layout, const float downscale_freq_shift,
                            const float scale, const int max_period) const {
     const auto& positions_shape = positions->shape();
 
@@ -776,8 +776,8 @@ class FusedSinusoidalPositionalEncodeFunctor {
         << Error::RuntimeError() << "embedding_dim should > 0";
     
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        "embedding_dim", "pattern", "downscale_freq_shift", "scale", "max_period");
-    attrs.SetAllAttrs(embedding_dim, pattern, downscale_freq_shift, scale, max_period);
+        "embedding_dim", "layout", "downscale_freq_shift", "scale", "max_period");
+    attrs.SetAllAttrs(embedding_dim, layout, downscale_freq_shift, scale, max_period);
     
     return OpInterpUtil::Dispatch<Tensor>(*_fused_sinusoidal_positional_encode_op, {positions}, attrs);
   }

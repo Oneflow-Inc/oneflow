@@ -1133,7 +1133,7 @@
   bind_python: True
 
 - name: "fused_sinusoidal_positional_encode"
-  signature: "Tensor (Tensor positions, Int32 embedding_dim, Int32 pattern=0, Float downscale_freq_shift=1.0, Float scale=1.0, Int32 max_period=10000) => FusedSinusoidalPositionalEncode"
+  signature: "Tensor (Tensor positions, Int32 embedding_dim, Int32 layout=0, Float downscale_freq_shift=1.0, Float scale=1.0, Int32 max_period=10000) => FusedSinusoidalPositionalEncode"
   bind_python: True
 
 - name: "fused_mlp_grad"
