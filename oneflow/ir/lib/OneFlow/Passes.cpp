@@ -816,10 +816,11 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index++))) {
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index))) {
         op.emitError("Failed to lowering OneFlow op to okl dialect.");
         return failure();
       }
+      index += 1;
     }
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
