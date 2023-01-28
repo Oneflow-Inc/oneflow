@@ -199,10 +199,11 @@ class EagerBlobObject final : public user_op::Tensor,
   size_t ByteSizeOfBlobBody() const {
     const size_t elem_cnt = shape().elem_cnt();
     if (elem_cnt == 0) { return 0; }
-    size_t capacity = 1;
+    size_t max_offset = 0;
     for (size_t i = 0; i < shape().NumAxes(); ++i) {
-      capacity = std::max<size_t>(capacity, stride().at(i) * shape().at(i));
+      max_offset += (shape().at(i) - 1) * stride().at(i);
     }
+    size_t capacity = max_offset + 1;
     // TODO(liujuncheng): remove this
     capacity = std::max<size_t>(capacity, elem_cnt);
     return capacity * GetSizeOfDataType(data_type_);
