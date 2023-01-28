@@ -2,6 +2,7 @@
 #include "OneFlow/OKM/OKMOps.h"
 #include "OneFlow/OKM/passes.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -26,7 +27,6 @@ const auto* TAG_NAME = "compiled";
 const auto* GRAPH_NAME = "subgraph";
 const auto* MEM_GRAPH_NAME = "mem_subgraph";
 const auto* WRAP_GRAPH_NAME = "mem_wrap_subgraph";
-const auto* OPT_GRAPH_NAME = "mem_opt_subgraph";
 }  // namespace func_name
 struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static void ExtractArgTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
@@ -234,6 +234,25 @@ class WrapOKMKernelPass : public WrapOKMKernelPassBase<WrapOKMKernelPass> {
 std::unique_ptr<Pass> createWrapOKMKernelPass() { return std::make_unique<WrapOKMKernelPass>(); }
 
 struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static void SimpleMerge(func::FuncOp func, mlir::PatternRewriter& rewriter) {
+    OpBuilder::InsertionGuard insertGuard(rewriter);
+    auto& ops = func.getBody().front();
+
+    rewriter.setInsertionPointToStart(&ops);
+    auto mem_type = MemRefType::get({0}, rewriter.getI8Type());
+    rewriter.create<AllocMemrefOp>(rewriter.getUnknownLoc(), mem_type);
+    BlockAndValueMapping mapper;
+    auto size = 0;
+    for (auto& op : ops) {
+      if (auto alloc_op = llvm::dyn_cast_or_null<AllocMemrefOp>(op)) {
+        // static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
+        // ::mlir::TypeRange resultTypes, ::mlir::Value source, ::mlir::Value byte_shift,
+        // ::mlir::ValueRange sizes);
+        rewriter.replaceOpWithNewOp<memref::ViewOp>(&op, op.getResultTypes(), );
+      }
+    }
+  }
+
   explicit OptOKMMemrefPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
@@ -241,10 +260,8 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::WRAP_GRAPH_NAME)) {
       if (op->getAttr(func_name::TAG_NAME)) { return success(); }
-      // rename function
-      const auto index = sym_name.substr(strlen(func_name::WRAP_GRAPH_NAME)).str();
-      const std::string rename = func_name::OPT_GRAPH_NAME + index;
       // opt alloc
+      SimpleMerge(op, rewriter);
       op->setAttr(func_name::TAG_NAME, rewriter.getBoolAttr(true));
       return success();
     }
