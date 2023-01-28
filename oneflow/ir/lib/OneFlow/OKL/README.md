@@ -78,7 +78,7 @@ module {
 }
 ```
 ### 3. OKLDialectToLLVMDialect
-通过四个Pass将OKL的IR转换为LLVMM的IR形式作为运行时的输入
+通过四个Pass将OKL的IR转换为LLVM的IR形式作为运行时的输入
 - lower-launcher-to-llvm-ptr
 - lower-okl-to-llvm-call
 - reconcile-unrealized-casts
