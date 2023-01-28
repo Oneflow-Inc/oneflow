@@ -1166,7 +1166,7 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
 }
 
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
+void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                          const std::string& mode) {
   if (mode == wrap_mode::SIMPLE) {
     patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
