@@ -1167,7 +1167,7 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
-                                         const std::string& mode) {
+                                           const std::string& mode) {
   if (mode == wrap_mode::SIMPLE) {
     patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
   } else if (mode == wrap_mode::CUDA_GRAPH) {
