@@ -255,16 +255,11 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (auto& op : ops) { raw_ops.push_back(&op); }
     for (auto op : raw_ops) {
       if (auto alloc_op = llvm::dyn_cast_or_null<AllocMemrefOp>(op)) {
-        llvm::errs() << 1;
         rewriter.setInsertionPoint(op);
-        llvm::errs() << 1;
         auto off_set = rewriter.create<arith::ConstantIndexOp>(rewriter.getUnknownLoc(), size);
-        llvm::errs() << 1;
         auto type = op->getResult(0).getType();
         rewriter.replaceOpWithNewOp<memref::ViewOp>(op, type, global_buffer, off_set, ValueRange{});
-        llvm::errs() << 1;
         FreshSize(size, type.dyn_cast<MemRefType>());
-        llvm::errs() << 1;
       }
     }
     mem_type = MemRefType::get({size}, rewriter.getI8Type());
