@@ -4,15 +4,19 @@
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "mlir-c/BuiltinTypes.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -234,23 +238,38 @@ class WrapOKMKernelPass : public WrapOKMKernelPassBase<WrapOKMKernelPass> {
 std::unique_ptr<Pass> createWrapOKMKernelPass() { return std::make_unique<WrapOKMKernelPass>(); }
 
 struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static void FreshSize(int& size, MemRefType type) {
+    auto base = type.getElementTypeBitWidth() / 8;
+    for (auto i : type.getShape()) { base *= i; }
+    size += base;
+  }
   static void SimpleMerge(func::FuncOp func, mlir::PatternRewriter& rewriter) {
     OpBuilder::InsertionGuard insertGuard(rewriter);
     auto& ops = func.getBody().front();
 
     rewriter.setInsertionPointToStart(&ops);
     auto mem_type = MemRefType::get({0}, rewriter.getI8Type());
-    rewriter.create<AllocMemrefOp>(rewriter.getUnknownLoc(), mem_type);
-    BlockAndValueMapping mapper;
+    auto global_buffer = rewriter.create<memref::AllocOp>(rewriter.getUnknownLoc(), mem_type);
     auto size = 0;
-    for (auto& op : ops) {
+    SmallVector<Operation*> raw_ops;
+    for (auto& op : ops) { raw_ops.push_back(&op); }
+    for (auto op : raw_ops) {
       if (auto alloc_op = llvm::dyn_cast_or_null<AllocMemrefOp>(op)) {
-        // static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
-        // ::mlir::TypeRange resultTypes, ::mlir::Value source, ::mlir::Value byte_shift,
-        // ::mlir::ValueRange sizes);
-        rewriter.replaceOpWithNewOp<memref::ViewOp>(&op, op.getResultTypes(), );
+        llvm::errs() << 1;
+        rewriter.setInsertionPoint(op);
+        llvm::errs() << 1;
+        auto off_set = rewriter.create<arith::ConstantIndexOp>(rewriter.getUnknownLoc(), size);
+        llvm::errs() << 1;
+        auto type = op->getResult(0).getType();
+        rewriter.replaceOpWithNewOp<memref::ViewOp>(op, type, global_buffer, off_set, ValueRange{});
+        llvm::errs() << 1;
+        FreshSize(size, type.dyn_cast<MemRefType>());
+        llvm::errs() << 1;
       }
     }
+    mem_type = MemRefType::get({size}, rewriter.getI8Type());
+    rewriter.setInsertionPoint(global_buffer);
+    rewriter.replaceOpWithNewOp<memref::AllocOp>(global_buffer, mem_type);
   }
 
   explicit OptOKMMemrefPattern(mlir::MLIRContext* context)
@@ -274,6 +293,7 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
     registry.insert<oneflow::OneFlowDialect>();
     registry.insert<OKMDialect>();
     registry.insert<bufferization::BufferizationDialect>();
+    registry.insert<arith::ArithmeticDialect>();
   }
 
   void runOnOperation() override {
@@ -284,7 +304,7 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
   }
 };
 
-std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<WrapOKMKernelPass>(); }
+std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
 }  // namespace okm
 
