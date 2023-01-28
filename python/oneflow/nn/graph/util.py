@@ -204,13 +204,68 @@ class GraphIR(object):
             self._op2placement = dict()
             for group in self._graph_proto.placement.placement_group:
                 parallel_conf = group.parallel_conf
-                for op_name in group.op_set.op_name:
-                    self._op2placement[op_name] = oneflow.placement(
+                for this_op_name in group.op_set.op_name:
+                    self._op2placement[this_op_name] = oneflow.placement(
                         proto_str=text_format.MessageToString(parallel_conf)
                     )
         if op_name not in self._op2placement:
             return None
         return self._op2placement[op_name]
+
+
+def _op_signature(
+    op: op_conf_util.OperatorConf,
+    graph_proto: job_pb.Job,
+    graph_ir: GraphIR,
+    show_op_loc: bool,
+) -> Tuple[bool, str]:
+    bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
+        op.name
+    ].bn_in_op2nd_sbp
+    lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
+    signature_template = Template(
+        op.name
+        + "($input) -> ($output)"
+        + ", placement=("
+        + str(graph_ir.get_op_placement(op.name))
+        + ")"
+    )
+    input_sig_str = "..."
+    output_sig_str = "..."
+
+    # Only deal with UserOpConf and VariableOpConf for now.
+    if op.HasField("user_conf"):
+        input_sig_str, output_sig_str = _get_user_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("variable_conf"):
+        input_sig_str, output_sig_str = _get_var_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("identity_conf"):
+        input_sig_str, output_sig_str = _get_iden_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("input_conf"):
+        input_sig_str, output_sig_str = _get_input_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("output_conf"):
+        input_sig_str, output_sig_str = _get_output_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.name.startswith("System-"):
+        return False, ""
+
+    op_str = "(OPERATOR: "
+    op_str += signature_template.substitute(input=input_sig_str, output=output_sig_str)
+
+    if show_op_loc and op.loc:
+        op_str += ", location=(" + op.loc + ")"
+
+    op_str += ")"
+
+    return True, op_str
 
 
 def operators_repr(
@@ -221,65 +276,13 @@ def operators_repr(
     r"""Generate operators' string representation of this module
     """
     graph_proto = graph_ir._graph_proto
-
-    def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
-        bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
-            op.name
-        ].bn_in_op2nd_sbp
-        lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
-        signature_template = Template(
-            op.name
-            + "($input) -> ($output)"
-            + ", placement=("
-            + str(graph_ir.get_op_placement(op.name))
-            + ")"
-        )
-        input_sig_str = "..."
-        output_sig_str = "..."
-
-        # Only deal with UserOpConf and VariableOpConf for now.
-        if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("identity_conf"):
-            input_sig_str, output_sig_str = _get_iden_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("input_conf"):
-            input_sig_str, output_sig_str = _get_input_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("output_conf"):
-            input_sig_str, output_sig_str = _get_output_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.name.startswith("System-"):
-            return False, ""
-
-        op_str = "(OPERATOR: "
-        op_str += signature_template.substitute(
-            input=input_sig_str, output=output_sig_str
-        )
-
-        if show_op_loc and op.loc:
-            op_str += ", location=(" + op.loc + ")"
-
-        op_str += ")"
-
-        return True, op_str
-
     ops_strs = []
     for op in ops:
         op_conf = graph_ir.get_op_conf(op)
         if op_conf is None:
             continue
         assert isinstance(op_conf, op_conf_util.OperatorConf)
-        got_repr, op_str = _op_signature(op_conf)
+        got_repr, op_str = _op_signature(op_conf, graph_proto, graph_ir, show_op_loc)
         if got_repr:
             ops_strs.append(op_str)
     return ops_strs
