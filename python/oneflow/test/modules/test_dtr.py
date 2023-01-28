@@ -315,7 +315,7 @@ class TestDTR(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad()
 
-    def _test_resnet18(self, ddp, expected_loss):
+    def _test_resnet18(self, optimizer_fn, ddp, expected_loss):
         flow.manual_seed(flow.env.get_rank())
         device = 'cpu'
 
@@ -326,7 +326,8 @@ class TestDTR(flow.unittest.TestCase):
 
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to(device)
-        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
+        # optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
+        optimizer = optimizer_fn(model.parameters())
         x = flow.rand(10, 3, 224, 224).to(device)
         target = flow.randint(low=0, high=1000, size=(x.shape[0],)).to(device).to(flow.int32)
         # NOTE: there is a bug in current implementation about random ops:
@@ -340,17 +341,19 @@ class TestDTR(flow.unittest.TestCase):
         ITER_NUM = 5
         for i in range(ITER_NUM):
             print('start allocated_memory(cpu):', allocated_memory('cpu'))
+            print('recomputation num: ', flow._oneflow_internal.dtr.recomputation_num())
             output = model(x)
             loss = criterion(output, target)
             del output
             print(loss.numpy().item())
-            if i == 4:
+            if i == 4 and expected_loss is not None:
                 self.assertTrue(loss.numpy().item() in expected_loss)
             loss.backward()
             del loss
             optimizer.step()
             optimizer.zero_grad()
             print('end allocated_memory(cpu):', allocated_memory('cpu'))
+            print('recomputation num: ', flow._oneflow_internal.dtr.recomputation_num())
 
         # check there is more than 10 recomputations each iteration
         # so the correctness check makes sense.
@@ -360,18 +363,34 @@ class TestDTR(flow.unittest.TestCase):
     @assert_no_small_piece_optimization
     @only_fbip()
     @memory_budget(220, 'cpu')
-    def test_resnet18(self, _):
+    def test_resnet18_naive_sgd(self, _):
         # NOTE: this loss is only correct in my environment on 21
-        self._test_resnet18(False, [0.6304041147232056])
+        self._test_resnet18(lambda params: flow.optim.SGD(params, lr=0.1, momentum=0), False, [0.6304041147232056])
 
     @flow.unittest.skip_unless_1n2d()
     @assert_no_small_piece_optimization
     @only_fbip()
     @memory_budget(220, 'cpu')
-    def test_resnet18_ddp_1n2d(self, _):
+    def test_resnet18_naive_sgd_ddp_1n2d(self, _):
         # 2 devices, 2 losses
         # NOTE: these losses are only correct in my environment on 21
-        self._test_resnet18(True, [1.8890058994293213, 1.8992782831192017])
+        self._test_resnet18(lambda params: flow.optim.SGD(params, lr=0.1, momentum=0), True, [1.8890058994293213, 1.8992782831192017])
+
+    @flow.unittest.skip_unless_1n1d()
+    @assert_no_small_piece_optimization
+    @only_fbip()
+    @memory_budget(220, 'cpu')
+    def test_resnet18_momentum_sgd(self, _):
+        # NOTE: this loss is only correct in my environment on 21
+        self._test_resnet18(lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), False, None)
+
+    @flow.unittest.skip_unless_1n1d()
+    @assert_no_small_piece_optimization
+    @only_fbip()
+    @memory_budget(320, 'cpu')
+    def test_resnet18_adam(self, _):
+        # NOTE: this loss is only correct in my environment on 21
+        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), False, None)
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
