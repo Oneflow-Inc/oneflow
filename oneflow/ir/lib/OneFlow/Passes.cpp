@@ -1007,14 +1007,9 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   virtual bool IsContinuous(std::vector<Operation*>&, mlir::Operation*) const { return true; };
 
   virtual bool IsPackagable(mlir::Operation* op) const {
-    static std::vector<StringRef> black_list{
-        KernelLaunchOp::getOperationName(),
-        OutputOp::getOperationName(),
-        InputOp::getOperationName(),
-        VariableOp::getOperationName(),
-    };
     return GetModuleOpFromJobBodyOp<Job>(&(*op)) && op->getAttr("op_name")
-           && !std::count(black_list.begin(), black_list.end(), op->getName().getStringRef());
+           && dyn_cast<UserOpCompatible>(op)
+           && op->getName().getStringRef() != KernelLaunchOp::getOperationName();
   }
 
   mlir::LogicalResult matchAndRewrite(oneflow::Job op,
