@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -26,12 +24,10 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/profiler/profiler.h"
-
-#include <sstream>
-#include <bitset>
 
 namespace oneflow {
 namespace one {
@@ -217,10 +213,52 @@ class ScalarDivFunctor : public ScalarMathBaseFunctor {
   }
 };
 
+class ScalarDivModeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(x, scalar));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
+  }
+};
+
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return functional::ScalarMul(JUST(functional::Reciprocal(x)), scalar, /*inplace=*/false);
+  }
+};
+
+class ScalarDivMode2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(scalar, x));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
   }
 };
 
@@ -748,8 +786,7 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
-                    || x->dtype()->data_type() == DataType::kFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
@@ -767,8 +804,7 @@ class ReduceMeanFunctor {
     // ReduceMean only calculate floating values.
     // NOTE: Should use original reduce_mean op/kernel rather than current way(ReduceSum /
     // reduce_count) because it could encounter precision problem(like overflow) in float16 case.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
-                    || x->dtype()->data_type() == DataType::kFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
 
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
@@ -849,6 +885,40 @@ class MedianWithIndicesFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
                                 const bool& keepdim) const {
+    int32_t axis = dim;
+    const int64_t ndim = x->ndim();
+    axis = JUST(maybe_wrap_dim(axis, ndim));
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
+    if (axis != ndim - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ModeFunctor {
+ public:
+  ModeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("mode").Input("input").Output("values").Output("indices").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool keepdim) const {
     int32_t axis = dim;
     const int64_t ndim = x->ndim();
     axis = JUST(maybe_wrap_dim(axis, ndim));
@@ -1327,8 +1397,7 @@ class ClampBaseFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
-    if (IsFloatingDataType(x->dtype()->data_type())
-        || x->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());
@@ -1861,6 +1930,72 @@ class InvFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DetFunctor {
+ public:
+  DetFunctor() {
+    det_op_ = CHECK_JUST(one::OpBuilder("det").Input("x").Output("y").Build());
+    lu_decomposition_op_ = CHECK_JUST(
+        one::OpBuilder("lu_decomposition").Input("x").Output("LU").Output("pivot").Build());
+  }
+  Maybe<Tensor> GetPivotDet(const std::shared_ptr<Tensor>& pivot) const {
+    std::shared_ptr<Tensor> arange = nullptr;
+    int64_t end = pivot->shape()->At(pivot->ndim() - 1) + 1;
+    if (pivot->is_local()) {
+      arange = JUST(functional::Arange(1, end, 1, pivot->dtype(), JUST(pivot->device())));
+    } else {
+      auto pivot_nd_sbp = JUST(pivot->nd_sbp());
+      std::vector<Symbol<SbpParallel>> nd_sbp(pivot_nd_sbp->sbp_parallel_size());
+      {
+        for (int i = 0; i < nd_sbp.size(); ++i) { nd_sbp[i] = pivot_nd_sbp->sbp_parallel(i); }
+      }
+      arange = JUST(functional::GlobalArange(1, end, 1, pivot->dtype(),
+                                             JUST(pivot->parallel_desc()), nd_sbp));
+    }
+    return sequence_function(functional::BroadcastNotEqual)
+        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false); })
+        .then([](const auto& x) { return functional::ScalarFMod(x, Scalar(2), true); })
+        .then([](const auto& x) { return functional::ScalarMul(x, Scalar(-2), true); })
+        .then([](const auto& x) { return functional::ScalarAdd(x, Scalar(1), Scalar(1), true); })
+        .call(arange, pivot);
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    const int64_t xdims = x->ndim();
+    if (xdims < 2) {
+      return Error::RuntimeError() << "linalg.det: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(xdims - 1) != x->dim(xdims - 2)) {
+      return Error::RuntimeError()
+             << "linalg.det: A must be batches of square matrices, "
+             << "but they are " << x->dim(xdims - 2) << " by " << x->dim(xdims - 1) << " matrices";
+    }
+
+    DeviceType x_device_type = DeviceType::kInvalidDevice;
+    if (x->is_local()) {
+      x_device_type = JUST(x->device())->enum_type();
+    } else if (x->is_global()) {
+      x_device_type = JUST(x->parallel_desc())->device_type();
+    }
+
+    if (x_device_type == DeviceType::kCPU) {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*det_op_, {x}, {}));
+    } else if (x_device_type == DeviceType::kCUDA) {
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*lu_decomposition_op_, {x}, {}));
+      auto LU = result->at(0);
+      auto pivot = result->at(1);
+      auto LU_det = JUST(
+          functional::ReduceProd(JUST(functional::Diagonal(LU, 0, -2, -1)), {-1}, false, NullOpt));
+      return functional::Mul(JUST(GetPivotDet(pivot)), LU_det);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Det: Only support cpu and cuda device.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> det_op_;
+  std::shared_ptr<OpExpr> lu_decomposition_op_;
+};
+
 class ClampGradFunctor {
  public:
   ClampGradFunctor() {
@@ -2114,6 +2249,54 @@ class ScalarLogicalGreater2Functor {
   }
 };
 
+class InplaceScalarLogicalGreaterFunctor {
+ public:
+  InplaceScalarLogicalGreaterFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scalar_logical_inplace_greater").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (scalar.IsFloatingPoint()) {
+      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalGreaterEqualFunctor()
@@ -2241,8 +2424,8 @@ class StandardDeviationFunctor {
 
       when we are in the last sqrt,
       if the value in the radical is <= 0, it may cause the result gradient to appear
-      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are different.
-      Use abs(absolute value) can keep it consistent with pytorch:
+      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are
+      different. Use abs(absolute value) can keep it consistent with pytorch:
 
       const auto& abs = JUST(functional::Abs(sub));
       return functional::Sqrt(abs);
@@ -2701,12 +2884,12 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
   }
 
   // we now work with the following permutations / shapes.
-  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
-  // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
-  // "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro, summed, ro"
-  // permuted with rpermutation and the three flattened then the permuted output is a view of
-  // bmm(left, right) finally, opermutation reverts the permutation to the original order of
-  // dimensions
+  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output
+  // -> permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions
+  // left: "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro,
+  // summed, ro" permuted with rpermutation and the three flattened then the permuted output is a
+  // view of bmm(left, right) finally, opermutation reverts the permutation to the original order
+  // of dimensions
   std::vector<int32_t> out_size;
   for (auto& d : lro) out_size.push_back(left->shape()->At(d));
   for (auto& d : lo) out_size.push_back(left->shape()->At(d));
@@ -3839,6 +4022,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AddCDivFunctor>("AddCDiv");
   m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<ScalarDivModeFunctor, ScalarDivMode2Functor>("ScalarDivMode");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarReversePowFunctor>("ScalarReversePow");
@@ -3853,6 +4037,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AminFunctor>("Amin");
   m.add_functor<MedianFunctor>("Median");
   m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
+  m.add_functor<ModeFunctor>("Mode");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
@@ -3915,6 +4100,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");
   m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<InplaceScalarLogicalGreaterFunctor>("InplaceScalarLogicalGreater");
   m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
       "ScalarLogicalGreaterEqual");
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
@@ -3942,6 +4128,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
+  m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<StftFunctor>("Stft");

@@ -17,8 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/util.h"
 
@@ -30,6 +29,7 @@ class Stride final : public DimVector {
  public:
   Stride() = default;
   using DimVector::DimVector;
+  explicit Stride(const ShapeView& shape);
   explicit Stride(const Shape& shape);
   explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(const Int64ListProto& stride_proto);
@@ -39,6 +39,8 @@ class Stride final : public DimVector {
   std::string ToString() const;
   void ToProto(Int64ListProto*) const;
 };
+
+std::ostream& operator<<(std::ostream& out, const Stride& stride);
 
 }  // namespace oneflow
 
