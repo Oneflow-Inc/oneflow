@@ -978,10 +978,12 @@ class Graph(object):
 
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
+
         def gen_index_in_tuple(eager_out):
             nonlocal tuple_idx
             tuple_idx += 1
             return "_OFTPI" + str(tuple_idx)
+
         _eager_outputs, _ = self.__map_io(
             "output", gen_index_in_tuple, *self._eager_outputs
         )
@@ -1036,12 +1038,14 @@ class Graph(object):
             state_dict["outputs"]
         )
         _eager_outputs_index = state_dict["outputs_original"]
+
         def get_tensor_in_tuple(map_item):
             if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
                 of_idx = int(map_item[6:])
                 return self._outputs_tensor_tuple[of_idx]
             else:
                 return map_item
+
         _eager_outputs, _ = self.__map_io_lite(
             get_tensor_in_tuple, *_eager_outputs_index
         )
@@ -1053,7 +1057,7 @@ class Graph(object):
             self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
                 state_dict["states"]
             )
-            if (type(self) != Graph):
+            if type(self) != Graph:
                 # Graph init with eager module, try to share mem with eager module
                 states_from_eager = dict()
                 for state_block in self._state():
