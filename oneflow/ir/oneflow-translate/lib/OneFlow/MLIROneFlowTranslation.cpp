@@ -829,7 +829,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createFuseNormalizationOps());
   }
   if (job_wrapper.IsLastIRPass()
-      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_KERNEL_LAUNCH", false)) {
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
 
     auto wrap_pass = createWrapOpsToKernelLaunchPass();

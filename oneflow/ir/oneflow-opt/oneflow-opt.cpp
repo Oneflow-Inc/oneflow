@@ -35,6 +35,7 @@ limitations under the License.
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/passes.h"
+#include "OneFlow/OKM/OKMDialect.h"
 
 namespace mlir {
 struct TestOneFlowTraitFolder
@@ -66,6 +67,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::okl::registerOneFlowPasses();
+  mlir::okm::registerAllPasses();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::oneflow::registerCSEPasses(global_cse_state);
   mlir::registerFuseForwardOpsPass();
