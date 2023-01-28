@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+r"""
+This test module references to pytorch.
+https://github.com/pytorch/pytorch/blob/master/test/test_optim.py.
+"""
 import math
 import unittest
 import itertools

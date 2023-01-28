@@ -13,6 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+r"""
+Swa_utils Methods are consistent with PyTorch.
+The documentation is referenced from:
+https://pytorch.org/docs/stable/optim.html#stochastic-weight-averaging.
+"""
 import itertools
 import math
 from copy import deepcopy
@@ -52,38 +57,47 @@ class AveragedModel(Module):
         use_buffers (bool): if ``True``, it will compute running averages for
             both the parameters and the buffers of the model. (default: ``False``)
 
-    Example:
-        >>> # xdoctest: +SKIP("undefined variables")
-        >>> loader, optimizer, model, loss_fn = ...
-        >>> swa_model = oneflow.optim.swa_utils.AveragedModel(model)
-        >>> scheduler = oneflow.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-        >>>                                     T_max=300)
-        >>> swa_start = 160
-        >>> swa_scheduler = SWALR(optimizer, swa_lr=0.05)
-        >>> for i in range(300):
-        >>>      for input, target in loader:
-        >>>          optimizer.zero_grad()
-        >>>          loss_fn(model(input), target).backward()
-        >>>          optimizer.step()
-        >>>      if i > swa_start:
-        >>>          swa_model.update_parameters(model)
-        >>>          swa_scheduler.step()
-        >>>      else:
-        >>>          scheduler.step()
-        >>>
-        >>> # Update bn statistics for the swa_model at the end
-        >>> oneflow.optim.swa_utils.update_bn(loader, swa_model)
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+
+        ...
+        loader, optimizer, model, loss_fn = ...
+        swa_model = flow.optim.swa_utils.AveragedModel(model)
+        scheduler = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                             T_max=300)
+        swa_start = 160
+        swa_scheduler = SWALR(optimizer, swa_lr=0.05)
+        for i in range(300):
+            for input, target in loader:
+                optimizer.zero_grad()
+                loss_fn(model(input), target).backward()
+                optimizer.step()
+            if i > swa_start:
+                swa_model.update_parameters(model)
+                swa_scheduler.step()
+            else:
+                scheduler.step()
+
+        # Update bn statistics for the swa_model at the end
+        flow.optim.swa_utils.update_bn(loader, swa_model)
 
     You can also use custom averaging functions with `avg_fn` parameter.
     If no averaging function is provided, the default is to compute
     equally-weighted average of the weights.
 
-    Example:
-        >>> # xdoctest: +SKIP("undefined variables")
-        >>> # Compute exponential moving averages of the weights and buffers
-        >>> ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (
-        ...                 0.1 * averaged_model_parameter + 0.9 * model_parameter)
-        >>> swa_model = oneflow.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg, use_buffers=True)
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+
+
+        ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (
+                         0.1 * averaged_model_parameter + 0.9 * model_parameter)
+        swa_model = flow.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg, use_buffers=True)
 
     .. note::
         When using SWA with models containing Batch Normalization you may
@@ -185,10 +199,14 @@ def update_bn(loader, model, device=None):
         device (oneflow.device, optional): If set, data will be transferred to
             :attr:`device` before being passed into :attr:`model`.
 
-    Example:
-        >>> # xdoctest: +SKIP("Undefined variables")
-        >>> loader, model = ...
-        >>> oneflow.optim.swa_utils.update_bn(loader, model)
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+
+        loader, model = ...
+        flow.optim.swa_utils.update_bn(loader, model)
 
     .. note::
         The `update_bn` utility assumes that each data batch in :attr:`loader`
@@ -250,24 +268,28 @@ class SWALR(LRScheduler):
     schedulers to switch to a constant learning rate late in the training
     as in the example below.
 
-    Example:
-        >>> # xdoctest: +SKIP("Undefined variables")
-        >>> loader, optimizer, model = ...
-        >>> lr_lambda = lambda epoch: 0.9
-        >>> scheduler = flow.optim.lr_scheduler.MultiplicativeLR(optimizer,
-        >>>        lr_lambda=lr_lambda)
-        >>> swa_scheduler = flow.optim.swa_utils.SWALR(optimizer,
-        >>>        anneal_strategy="linear", anneal_epochs=20, swa_lr=0.05)
-        >>> swa_start = 160
-        >>> for i in range(300):
-        >>>      for input, target in loader:
-        >>>          optimizer.zero_grad()
-        >>>          loss_fn(model(input), target).backward()
-        >>>          optimizer.step()
-        >>>      if i > swa_start:
-        >>>          swa_scheduler.step()
-        >>>      else:
-        >>>          scheduler.step()
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+
+        loader, optimizer, model = ...
+        lr_lambda = lambda epoch: 0.9
+        scheduler = flow.optim.lr_scheduler.MultiplicativeLR(optimizer,
+                lr_lambda=lr_lambda)
+        swa_scheduler = flow.optim.swa_utils.SWALR(optimizer,
+                anneal_strategy="linear", anneal_epochs=20, swa_lr=0.05)
+        swa_start = 160
+        for i in range(300):
+            for input, target in loader:
+                optimizer.zero_grad()
+                loss_fn(model(input), target).backward()
+                optimizer.step()
+            if i > swa_start:
+                swa_scheduler.step()
+            else:
+                scheduler.step()
 
     .. _Averaging Weights Leads to Wider Optima and Better Generalization:
         https://arxiv.org/abs/1803.05407
