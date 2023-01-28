@@ -47,8 +47,6 @@ class RunTimeWrapperContext : public CompileTimeWrapperContext {
         kernel_state_(GetRegContext()->GetKernel()->CreateOpKernelState(init_ctx_.get())),
         kernel_cache_(GetRegContext()->GetKernel()->InitOpKernelCache(init_ctx_.get())) {}
 
-  InitContext* GetInitContext() { return init_ctx_.get(); }
-
   void Run() {
     GetRegContext()->GetKernel()->Compute(compute_ctx_.get(), kernel_state_.get(),
                                           kernel_cache_.get());
