@@ -3211,9 +3211,12 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$model_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "2.">:$max_norm,

@@ -43,16 +43,30 @@ Maybe<void> InputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModi
 
 /* static */ Maybe<void> FusedClipGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
+  const auto& in_0 = ctx->InputTensorDesc("in", 0);
+  auto* out = ctx->MutOutputTensorDesc("out", 0);
+  for (int64_t i = 1; i < ctx->input_size("in"); ++i) {
+    const auto& cur_in = ctx->InputTensorDesc("in", i);
+    CHECK_EQ_OR_RETURN(in_0.shape(), cur_in.shape())
+        << Error::RuntimeError()
+        << "inconsistent tensor size, expected all tensor to have the same shape, "
+        << "but got " << in_0.shape().DebugStr() << " and " << cur_in.shape().DebugStr();
+  }
+  out->set_shape(in_0.shape());
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> FusedClipGradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
+  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedClipGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(ctx->inputs()).Build();
+  const int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+  for (int64_t i = 0; i < num_axes; ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
 
@@ -62,6 +76,17 @@ Maybe<void> InputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModi
 }
 
 /* static */ Maybe<void> FusedClipGradOp::InferDataType(user_op::InferContext* ctx) {
+  const auto& in_0 = ctx->InputTensorDesc("in", 0);
+  auto* out = ctx->MutOutputTensorDesc("out", 0);
+  const DataType data_type = in_0.data_type();
+  for (int64_t i = 1; i < ctx->input_size("in"); ++i) {
+    const auto& cur_in = ctx->InputTensorDesc("in", i);
+    CHECK_EQ_OR_RETURN(cur_in.data_type(), data_type)
+        << Error::RuntimeError() << ctx->op_name()
+        << " expected all tenser to have same type, but found " << DataType_Name(cur_in.data_type())
+        << " and " << DataType_Name(data_type);
+  }
+  out->set_data_type(data_type);
   return Maybe<void>::Ok();
 }
 

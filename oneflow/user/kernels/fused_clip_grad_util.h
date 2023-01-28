@@ -40,7 +40,6 @@ struct MultiScaleMulParamsPack {
 template<DeviceType device_type, typename T>
 struct MultiScaleMul {
   void operator()(ep::Stream* stream, std::vector<MultiScaleMulParam<T>>& params, T* scale);
-  //static void update(ep::Stream* stream, std::vector<MultiScaleMulParam<T>>& params, T* scale);
 };
 
 }  // namespace oneflow

@@ -157,6 +157,7 @@ class TestClipGrad(flow.unittest.TestCase):
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["fused"] = [False, True]
         for arg in GenArgList(arg_dict):
+            print(arg)
             _test_clip_grad_norm_impl(test_case, *arg)
 
     def test_clip_value(test_case):
