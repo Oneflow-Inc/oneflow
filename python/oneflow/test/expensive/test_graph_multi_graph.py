@@ -215,7 +215,9 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
 
 
 @_with_new_session
-def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_list, load_with_eager):
+def _test_linear_multi_graph_load(
+    test_case, device, with_reshape, state_dict_list, load_with_eager
+):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -240,6 +242,7 @@ def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_li
     if not load_with_eager:
         linear_g = flow.nn.Graph()
     else:
+
         class LinearGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -247,7 +250,6 @@ def _test_linear_multi_graph_load(test_case, device, with_reshape, state_dict_li
 
             def build(self, x):
                 return self.my_linear(x)
-    
 
         linear_g = LinearGraph()
     linear_g.enable_shared()

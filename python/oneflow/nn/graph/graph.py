@@ -978,10 +978,12 @@ class Graph(object):
 
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
+
         def gen_index_tensor_in_tuple(eager_out):
             nonlocal tuple_idx
             tuple_idx += 1
             return oneflow.tensor(tuple_idx)
+
         _eager_outputs, _ = self.__map_io(
             "output", gen_index_tensor_in_tuple, *self._eager_outputs
         )
@@ -1036,8 +1038,10 @@ class Graph(object):
             state_dict["outputs"]
         )
         _eager_outputs_index = state_dict["outputs_original"]
+
         def get_tensor_in_tuple(index_tensor):
             return self._outputs_tensor_tuple[index_tensor.item()]
+
         _eager_outputs, _ = self.__map_io(
             "output", get_tensor_in_tuple, *_eager_outputs_index
         )
@@ -1049,7 +1053,7 @@ class Graph(object):
             self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
                 state_dict["states"]
             )
-            if (type(self) != Graph):
+            if type(self) != Graph:
                 # Graph init with eager module, try to share mem with eager module
                 states_from_eager = dict()
                 for state_block in self._state():
@@ -1063,7 +1067,9 @@ class Graph(object):
                     if s_name in states_from_eager:
                         state_tensor_from_eager = states_from_eager[s_name]
                         # Note: compare value has extra cost.
-                        assert oneflow.allclose(state_tensor_from_eager, self._state_tensor_tuple[s_idx])
+                        assert oneflow.allclose(
+                            state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                        )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()
