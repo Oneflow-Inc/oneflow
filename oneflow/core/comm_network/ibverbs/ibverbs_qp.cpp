@@ -170,9 +170,9 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
   }
 }
 
-void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
+void IBVerbsQP::PostSendRequest(const IBVerbsActorMsgWrapper& msg_wrapper) {
   ActorMsgMR* msg_mr = GetOneSendMsgMRFromBuf();
-  msg_mr->set_msg(msg);
+  msg_mr->set_msg(msg_wrapper);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
