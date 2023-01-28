@@ -1005,6 +1005,8 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
 
+  // if the pre-packed ops is continuous with the current op, this current op will be packed with
+  // pre-packed ops together.
   virtual bool IsContinuous(std::vector<Operation*>&, mlir::Operation*) const { return true; };
 
   virtual bool IsPackagable(mlir::Operation* op) const {
