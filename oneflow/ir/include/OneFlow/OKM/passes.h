@@ -26,7 +26,7 @@ namespace okm {
 std::unique_ptr<mlir::Pass> createExtractOKMTensorPass();
 std::unique_ptr<mlir::Pass> createWrapOKMKernelPass();
 std::unique_ptr<mlir::Pass> createOptOKMMemrefPass();
-std::unique_ptr<mlir::Pass> createConvertOKMToOKLPass();
+std::unique_ptr<mlir::Pass> createBuildOKLFromOKMPass();
 
 
 #define GEN_PASS_CLASSES

@@ -25,7 +25,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/EnumAttr.td"
 
 
-def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
+def ArgToTensorOp : OKL_Op<"arg_to_tensor"> {
   let summary = "get tensor as arguments from operands of context";
   let description = [{
     get tensor value from launcher context as arguments.
@@ -38,7 +38,7 @@ def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
   let results = (outs AnyTensor);
 }
 
-def GetTensorFromRetOp : OKL_Op<"get_tensor_from_ret"> {
+def RetToTensorOp : OKL_Op<"ret_to_tensor"> {
   let summary = "get tensor as arguments from results of context";
   let description = [{
     get tensor value from launcher context as arguments.
@@ -51,7 +51,7 @@ def GetTensorFromRetOp : OKL_Op<"get_tensor_from_ret"> {
   let results = (outs AnyTensor);
 }
 
-def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
+def TensorToRetOp : OKL_Op<"tensor_to_ret"> {
   let summary = "get tensor as outcomes from results of context";
   let description = [{
     get tensor value from launcher context as outcomes.
@@ -61,6 +61,23 @@ def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
     LauncherContextType:$launcher_ctx,
     AnyTensor:$tensor,
     I32Attr:$index
+  );
+  let results = (outs AnyTensor);
+}
+
+def PoolToTensorOp : OKL_Op<"pool_to_tensor"> {
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    I32Attr:$offset
+  );
+  let results = (outs AnyTensor);
+}
+
+def TensorToPoolOp : OKL_Op<"tensor_to_pool"> {
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    AnyTensor:$tensor,
+    I32Attr:$offset
   );
   let results = (outs AnyTensor);
 }

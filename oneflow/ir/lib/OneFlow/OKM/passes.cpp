@@ -1,3 +1,5 @@
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKM/OKMDialect.h"
 #include "OneFlow/OKM/OKMOps.h"
 #include "OneFlow/OKM/passes.h"
@@ -31,6 +33,9 @@ const auto* TAG_NAME = "compiled";
 const auto* GRAPH_NAME = "subgraph";
 const auto* MEM_GRAPH_NAME = "mem_subgraph";
 const auto* WRAP_GRAPH_NAME = "mem_wrap_subgraph";
+const auto* OKL_GRAPH_NAME = "okl_subgraph";
+const auto* OKL_POOL_SIZE_TAG = "pool_size";
+
 }  // namespace func_name
 struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static void ExtractArgTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
@@ -261,10 +266,26 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
         rewriter.replaceOpWithNewOp<memref::ViewOp>(op, type, global_buffer, off_set, ValueRange{});
         FreshSize(size, type.dyn_cast<MemRefType>());
       }
+
+      if (auto wrap_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
+        auto& wrap_ops = wrap_op.body().front();
+        for (auto& it : wrap_ops) {
+          if (oneflow::OneFlowDialect::getDialectNamespace().equals(
+                  it.getDialect()->getNamespace())) {
+            auto ins_num = it.getNumOperands();
+            auto outs_num = it.getNumResults() + ins_num;
+            SmallVector<Value> outs_map;
+            for (int idx = ins_num; idx < outs_num; ++idx) {
+              outs_map.push_back(wrap_op->getOperand(idx).getDefiningOp()->getResult(0));
+            }
+            wrap_op->replaceAllUsesWith(outs_map);
+          }
+        }
+      }
     }
     mem_type = MemRefType::get({size}, rewriter.getI8Type());
     rewriter.setInsertionPoint(global_buffer);
-    rewriter.replaceOpWithNewOp<memref::AllocOp>(global_buffer, mem_type);
+    rewriter.replaceOpWithNewOp<AllocMemrefOp>(global_buffer, mem_type);
   }
 
   explicit OptOKMMemrefPattern(mlir::MLIRContext* context)
@@ -300,6 +321,139 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 };
 
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
+
+struct BuildOKLFromOKPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static func::FuncOp BuildOKLGraph(func::FuncOp func, mlir::PatternRewriter& rewriter,
+                                    const std::string& func_name) {
+    OpBuilder::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPoint(func);
+
+    auto func_type = rewriter.getFunctionType(
+        {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
+    auto wrap_func = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), func_name, func_type);
+    auto& block = wrap_func.getBody().emplaceBlock();
+    wrap_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
+                                     rewriter.getUnknownLoc());
+    rewriter.setInsertionPointToStart(&block);
+
+    llvm::SmallVector<Operation*> raw_ops;
+    for (auto& op : func.getBody().front()) { raw_ops.push_back(&op); }
+    auto index = 0;
+    for (auto op : raw_ops) {
+      if (auto alloc_op = llvm::dyn_cast_or_null<AllocMemrefOp>(op)) {
+        if (auto mem_type = alloc_op->getResult(0).getType().dyn_cast_or_null<MemRefType>()) {
+          wrap_func->setAttr(func_name::OKL_POOL_SIZE_TAG,
+                             rewriter.getI32IntegerAttr(mem_type.getShape().front()));
+        }
+      }
+      if (auto wrap_mem_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
+        auto& wrap_ops = wrap_mem_op.body().front();
+        for (auto& it : wrap_ops) {
+          if (oneflow::OneFlowDialect::getDialectNamespace().equals(
+                  it.getDialect()->getNamespace())) {
+            auto wrap_okl_op =
+                rewriter.create<okl::WrapperKernelOp>(rewriter.getUnknownLoc(), index++);
+            wrap_okl_op.body().emplaceBlock();
+            OpBuilder::InsertionGuard insertGuard(rewriter);
+            rewriter.setInsertionPointToStart(&wrap_okl_op.body().front());
+
+            BlockAndValueMapping mapper;
+            auto ins_num = it.getNumOperands();
+            auto outs_num = it.getNumResults() + ins_num;
+            for (int idx = 0; idx < ins_num; ++idx) {
+              auto val =
+                  llvm::TypeSwitch<Operation*, Value>(wrap_mem_op->getOperand(idx).getDefiningOp())
+                      .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
+                        return rewriter.create<okl::ArgToTensorOp>(
+                            rewriter.getUnknownLoc(),
+                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                            wrap_func.getArgument(0), op.index());
+                      })
+                      .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
+                        return rewriter.create<okl::RetToTensorOp>(
+                            rewriter.getUnknownLoc(),
+                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                            wrap_func.getArgument(0), op.index());
+                      })
+                      .Case<memref::ViewOp>([&](memref::ViewOp op) {
+                        auto offset = rewriter.getI32IntegerAttr(
+                            llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp())
+                                .value());
+                        return rewriter.create<okl::PoolToTensorOp>(
+                            rewriter.getUnknownLoc(),
+                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                            wrap_func.getArgument(0), offset);
+                      })
+                      .Default([&](Operation*) { return Value{}; });
+              mapper.map(it.getOperand(idx), val);
+            }
+            ImplicitLocOpBuilder new_block(rewriter.getUnknownLoc(), rewriter);
+            auto new_op = new_block.clone(it, mapper);
+            for (int idx = ins_num; idx < outs_num; ++idx) {
+              llvm::TypeSwitch<Operation*>(wrap_mem_op->getOperand(idx).getDefiningOp())
+                  .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
+                    return rewriter.create<okl::TensorToRetOp>(
+                        rewriter.getUnknownLoc(),
+                        memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                        wrap_func.getArgument(0), new_op->getResult(idx - ins_num), op.index());
+                  })
+                  .Case<memref::ViewOp>([&](memref::ViewOp op) {
+                    auto offset = rewriter.getI32IntegerAttr(
+                        llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp())
+                            .value());
+                    return rewriter.create<okl::TensorToPoolOp>(
+                        rewriter.getUnknownLoc(),
+                        memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                        wrap_func.getArgument(0), new_op->getResult(idx - ins_num), offset);
+                  })
+                  .Default([&](Operation*) { return Value{}; });
+            }
+
+            rewriter.create<okl::ReturnOp>(rewriter.getUnknownLoc());
+          }
+        }
+      }
+    }
+    rewriter.setInsertionPointToEnd(&block);
+    rewriter.create<func::ReturnOp>(rewriter.getUnknownLoc());
+    return wrap_func;
+  }
+
+  explicit BuildOKLFromOKPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    const auto sym_name = op.getSymName();
+    if (sym_name.startswith(func_name::WRAP_GRAPH_NAME) && op->getAttr(func_name::TAG_NAME)) {
+      const auto index = sym_name.substr(strlen(func_name::WRAP_GRAPH_NAME)).str();
+      const auto rename = func_name::OKL_GRAPH_NAME + index;
+      if (op->getParentOfType<ModuleOp>().lookupSymbol(rename)) { return success(); }
+      BuildOKLGraph(op, rewriter, rename);
+      return success();
+    }
+    return failure();
+  }
+};
+class BuildOKLFromOKMPass : public BuildOKLFromOKMPassBase<BuildOKLFromOKMPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+    registry.insert<OKMDialect>();
+    registry.insert<bufferization::BufferizationDialect>();
+    registry.insert<arith::ArithmeticDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    patterns.add<BuildOKLFromOKPattern>(patterns.getContext());
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+std::unique_ptr<Pass> createBuildOKLFromOKMPass() {
+  return std::make_unique<BuildOKLFromOKMPass>();
+}
 
 }  // namespace okm
 

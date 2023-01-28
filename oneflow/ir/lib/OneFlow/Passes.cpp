@@ -755,15 +755,15 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     ImplicitLocOpBuilder new_block(loc, rewriter);
     for (auto arg : op->getOperands()) {
       auto define_op = arg.getDefiningOp();
-      if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
+      if (define_op->getName().getStringRef() == okl::ArgToTensorOp::getOperationName()) {
         new_block.clone(*define_op, mapping);
       } else {
         auto find = false;
         for (auto use : arg.getUsers()) {
-          if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+          if (use->getName().getStringRef() == okl::TensorToRetOp::getOperationName()) {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
-            auto source = rewriter.create<okl::GetTensorFromRetOp>(op->getLoc(), arg.getType(),
+            auto source = rewriter.create<okl::RetToTensorOp>(op->getLoc(), arg.getType(),
                                                                    okl_func.getArgument(0), index);
             mapping.map(arg, source->getResult(0));
             break;
@@ -776,7 +776,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (auto ret : op->getResults()) {
       auto find = false;
       for (auto use : ret.getUsers()) {
-        if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+        if (use->getName().getStringRef() == okl::TensorToRetOp::getOperationName()) {
           find = true;
           new_block.clone(*use, mapping);
           break;
@@ -961,7 +961,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
 
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
+      auto tensor = rewriter.create<okl::ArgToTensorOp>(func->getLoc(), arg.value().getType(),
                                                              launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
@@ -982,7 +982,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
 
     std::vector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
-      auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
+      auto new_ret = rewriter.create<okl::TensorToRetOp>(
           op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }

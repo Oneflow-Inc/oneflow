@@ -31,7 +31,7 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
     if (op->getNumResults() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getResult(index + source.offset);
     for (auto use : val.getUsers()) {
-      if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
+      if (llvm::isa<mlir::okl::TensorToRetOp>(use)) {
         auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
       }
@@ -45,11 +45,11 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
     mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
-        .Case([&](mlir::okl::GetTensorFromArgOp elem) {
+        .Case([&](mlir::okl::ArgToTensorOp elem) {
           auto index = elem.index();
           return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
         })
-        .Case([&](mlir::okl::GetTensorFromRetOp elem) {
+        .Case([&](mlir::okl::RetToTensorOp elem) {
           auto index = elem.index();
           return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
         })

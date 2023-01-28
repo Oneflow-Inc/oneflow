@@ -18,9 +18,9 @@ def OptOKMMemrefPass : Pass<"opt-okm-memref", "ModuleOp"> {
   let constructor = "mlir::okm::createOptOKMMemrefPass()";
 }
 
-def ConvertOKMToOKLPass : Pass<"convert-okm-to-okl", "ModuleOp"> {
+def BuildOKLFromOKMPass : Pass<"build-okl-from-okm", "ModuleOp"> {
   let summary = "convert okm to okl";
-  let constructor = "mlir::okm::createConvertOKMToOKLPass()";
+  let constructor = "mlir::okm::createBuildOKLFromOKMPass()";
 }
 #endif // ONEFLOW_OKM_PASSES
 
