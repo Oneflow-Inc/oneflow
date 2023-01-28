@@ -1049,6 +1049,22 @@ class Graph(object):
             self._state_op_names, self._state_tensor_tuple = _load_list_from_state_dict(
                 state_dict["states"]
             )
+            if (type(self) != Graph):
+                # Graph init with eager module, try to share mem with eager module
+                states_from_eager = dict()
+                for state_block in self._state():
+                    state_tensor = state_block.to(Tensor)
+                    state_op_name = (
+                        state_block.to(GraphTensor).name_prefix
+                        + state_block.to(GraphTensor).name
+                    )
+                    states_from_eager[state_op_name] = state_tensor
+                for s_idx, s_name in enumerate(self._state_op_names):
+                    if s_name in states_from_eager:
+                        state_tensor_from_eager = states_from_eager[s_name]
+                        # Note: compare value has extra cost.
+                        assert oneflow.allclose(state_tensor_from_eager, self._state_tensor_tuple[s_idx])
+                        self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()
 
