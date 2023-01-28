@@ -34,7 +34,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   ~IBVerbsCommNet();
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void RecvActorMsg(const IBVerbsActorMsgWrapper& msg);
+  void RecvActorMsg(const IBVerbsActorMsgWrapper& msg_wrapper);
 
  private:
   friend class Singleton<IBVerbsCommNet>;

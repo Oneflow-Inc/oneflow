@@ -75,7 +75,7 @@ class IBVerbsQP final {
 
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
-  void PostSendRequest(const IBVerbsActorMsgWrapper& msg);
+  void PostSendRequest(const IBVerbsActorMsgWrapper& msg_wrapper);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
