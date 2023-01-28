@@ -150,7 +150,7 @@ module attributes {llvm.data_layout = ""} {
 
 OKLDialect IR不仅作为编译期最后一阶段的输出，同时作为运行时初始化时期资源的输入来初始化运行时的各种ctx，从而为计算期的计算做准备。
 
-一个OKL的kernel包含了一整个子图。因此OKL的kernel需要管理若干有序子op的ctx资源。这些通过LauncherState来初始化创建，LauncherState中含有LauncherContext用来统一管理所有子Op的资源。
+一个 OKL 的 kernel 包含了一整个子图。因此 OKL 的 kernel 需要管理子图的若干有序子 op 的 ctx 资源。这些通过 LauncherState 来初始化创建，LauncherState 中含有 LauncherContext 用来统一管理子图的所有子 Op 的资源。
 
 LauncherContext含有若干有序的CompileTimeWrapperContext一一对应其子Op未Infer前的ctx，以及若干RunTimeWrapperContext一一对应其子Op在Infer后的ctx。
 
