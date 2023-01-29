@@ -89,7 +89,7 @@ Maybe<void> Device::Init() {
     std::string type;
     int device_id = -1;
     bool with_remat = false;
-    JUST(ParsingDeviceTag(str, &type, &device_id, &with_remat));
+    JUST(ParseDeviceTag(str, &type, &device_id, &with_remat));
     CheckDeviceType(type);
     if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
     Device device(type, device_id, with_remat);
@@ -116,6 +116,11 @@ std::string Device::ToRepr() const {
   if (with_remat_) { ss << ", with_remat=True"; }
   ss << ")";
   return ss.str();
+}
+
+std::ostream &operator<<(std::ostream &os, Symbol<Device> device) {
+  os << device->ToRepr();
+  return os;
 }
 
 std::string Device::ToString() const {

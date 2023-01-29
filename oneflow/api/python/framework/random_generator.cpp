@@ -27,7 +27,7 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
   std::string device_name = "";
   int device_index = -1;
   bool with_remat = false;
-  JUST(ParsingDeviceTag(device_tag, &device_name, &device_index, &with_remat));
+  JUST(ParseDeviceTag(device_tag, &device_name, &device_index, &with_remat));
   return one::MakeGenerator(device_name, device_index);
 }
 
