@@ -1008,7 +1008,7 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
 
   // if the pre-packed ops is continuous with the current op, this current op will be packed with
   // pre-packed ops together.
-  virtual bool IsContinuous(std::vector<Operation*>&, mlir::Operation*) const { return true; };
+  virtual bool IsConsecutive(std::vector<Operation*>&, mlir::Operation*) const { return true; };
 
   virtual bool IsPackagable(mlir::Operation* op) const {
     return GetModuleOpFromJobBodyOp<Job>(&(*op)) && op->getAttr("op_name")
@@ -1030,7 +1030,7 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
         continue;
       }
 
-      if (!IsContinuous(current_wrap_ops, current_op)) {
+      if (!IsConsecutive(current_wrap_ops, current_op)) {
         ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
       }
       current_wrap_ops.push_back(current_op);
@@ -1066,7 +1066,7 @@ struct KernelLaunchSimplePattern : public KernelLaunchPattern {
     return same_device_tag && same_device_name;
   }
 
-  bool IsContinuous(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
     if (ops.empty()) { return true; }
     return IsSameDevice(ops, op);
   }
@@ -1088,7 +1088,7 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
     return cuda_support == IsOpCudaGraphSupport(ops.front());
   }
 
-  bool IsContinuous(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
     if (ops.empty()) { return true; }
     return IsSameDevice(ops, op) && IsSameCudaGraphSupport(ops, op);
   }
