@@ -22,125 +22,146 @@ namespace oneflow {
 
 namespace {
 
-enum class EncodingLayout {
-    kPlanarSinCos,
-    kPlanarCosSin,
-    kInterleavedSinCos,
-    kInterleavedCosSin
-};
+enum class EncodingLayout { kPlanarSinCos, kPlanarCosSin, kInterleavedSinCos, kInterleavedCosSin };
 
 struct FusedSinusoidalPositionalEncodeParam {
-    EncodingLayout layout;
-    const void*  in_ptr;
-    float* out_ptr;
-    int num_row;
-    int half_dim;
-    int next_stride;  // stride of next element
-    int init_offset;  // offset of the first element
-    int stride;       // offset of next row
-    float downscale_freq_shift;
-    float scale;
-    int max_period;
+  ep::Stream* stream;
+  const void* in_ptr;
+  float* out_ptr;
+  int num_row;
+  int half_dim;
+  int next_stride;  // stride of next element
+  int init_offset;  // offset of the first element
+  int stride;       // offset of next row
+  float downscale_freq_shift;
+  float scale;
+  int max_period;
 };
 
-template<typename Src>
+template<typename Src, EncodingLayout layout>
 __global__ void ComputeKernel(struct FusedSinusoidalPositionalEncodeParam param) {
-    const Src* in_ptr = reinterpret_cast<const Src*>(param.in_ptr);
-    float* out_ptr = param.out_ptr;
-    int num_col = param.half_dim * 2;
+  const Src* in_ptr = reinterpret_cast<const Src*>(param.in_ptr);
+  float* out_ptr = param.out_ptr;
+  int num_col = param.half_dim * 2;
 
-    if (param.layout == EncodingLayout::kPlanarSinCos) {
-        for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col; offset += blockDim.x * gridDim.x) {
-            float position = in_ptr[offset / num_col];
-            int dim = (offset % param.half_dim);
-            float exponent = -logf(param.max_period) * dim;
-            exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-            float emb = expf(exponent) * position * param.scale;
+  if (layout == EncodingLayout::kPlanarSinCos) {
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
+         offset += blockDim.x * gridDim.x) {
+      float position = in_ptr[offset / num_col];
+      int dim = (offset % param.half_dim);
+      float exponent = -logf(param.max_period) * dim;
+      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
+      float emb = expf(exponent) * position * param.scale;
 
-            if ((offset % num_col) < param.half_dim) {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = sinf(emb);
-            } else {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = cosf(emb);
-            }
-        }
-
-    } else if (param.layout == EncodingLayout::kPlanarCosSin) {
-        for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col; offset += blockDim.x * gridDim.x) {
-            float position = in_ptr[offset / num_col];
-            int dim = (offset % param.half_dim);
-            float exponent = -logf(param.max_period) * dim;
-            exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-            float emb = expf(exponent) * position * param.scale;
-
-            if ((offset % num_col) < param.half_dim) {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = cosf(emb);
-            } else {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = sinf(emb);
-            }
-        }
-    } else if (param.layout == EncodingLayout::kInterleavedSinCos) {
-        for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col; offset += blockDim.x * gridDim.x) {
-            float position = in_ptr[offset / num_col];
-            int dim = (offset % num_col) / 2;
-            float exponent = -logf(param.max_period) * dim;
-            exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-            float emb = expf(exponent) * position * param.scale;
-
-            if ((offset % 2) == 0) {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = sinf(emb);
-            } else {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = cosf(emb);
-            }
-        }
-    } else if (param.layout == EncodingLayout::kInterleavedCosSin) {
-        for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col; offset += blockDim.x * gridDim.x) {
-            float position = in_ptr[offset / num_col];
-            int dim = (offset % num_col) / 2;
-            float exponent = -logf(param.max_period) * dim;
-            exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-            float emb = expf(exponent) * position * param.scale;
-
-            if ((offset % 2) == 0) {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = cosf(emb);
-            } else {
-                out_ptr[(offset % num_col) * param.next_stride + 
-                    (offset / num_col) * param.stride] = sinf(emb);
-            }
-        }
+      if ((offset % num_col) < param.half_dim) {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            sinf(emb);
+      } else {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            cosf(emb);
+      }
     }
 
-    if (num_col != param.stride) {
-        for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row; offset += blockDim.x * gridDim.x) {
-            out_ptr[param.stride * offset + param.stride - 1] = 0.0;
-        }
+  } else if (layout == EncodingLayout::kPlanarCosSin) {
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
+         offset += blockDim.x * gridDim.x) {
+      float position = in_ptr[offset / num_col];
+      int dim = (offset % param.half_dim);
+      float exponent = -logf(param.max_period) * dim;
+      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
+      float emb = expf(exponent) * position * param.scale;
+
+      if ((offset % num_col) < param.half_dim) {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            cosf(emb);
+      } else {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            sinf(emb);
+      }
     }
+  } else if (layout == EncodingLayout::kInterleavedSinCos) {
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
+         offset += blockDim.x * gridDim.x) {
+      float position = in_ptr[offset / num_col];
+      int dim = (offset % num_col) / 2;
+      float exponent = -logf(param.max_period) * dim;
+      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
+      float emb = expf(exponent) * position * param.scale;
+
+      if ((offset % 2) == 0) {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            sinf(emb);
+      } else {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            cosf(emb);
+      }
+    }
+  } else if (layout == EncodingLayout::kInterleavedCosSin) {
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
+         offset += blockDim.x * gridDim.x) {
+      float position = in_ptr[offset / num_col];
+      int dim = (offset % num_col) / 2;
+      float exponent = -logf(param.max_period) * dim;
+      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
+      float emb = expf(exponent) * position * param.scale;
+
+      if ((offset % 2) == 0) {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            cosf(emb);
+      } else {
+        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
+            sinf(emb);
+      }
+    }
+  }
+
+  if (param.stride % 2 != 0) {
+    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row;
+         offset += blockDim.x * gridDim.x) {
+      out_ptr[param.stride * offset + param.stride - 1] = 0.0;
+    }
+  }
 }
 
-void DispatchSrcType(DataType src, struct FusedSinusoidalPositionalEncodeParam& param) {
-    if (src == DataType::kInt32) {
-        ComputeKernel<int><<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock>>>(param);
-    } else if (src == DataType::kFloat) {
-        ComputeKernel<float><<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock>>>(param);
-    }
+template<typename Src>
+void DispatchLayout(EncodingLayout layout, struct FusedSinusoidalPositionalEncodeParam& param) {
+  if (layout == EncodingLayout::kPlanarSinCos) {
+    ComputeKernel<Src, EncodingLayout::kPlanarSinCos>
+        <<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock, 0,
+           param.stream->As<ep::CudaStream>()->cuda_stream()>>>(param);
+  } else if (layout == EncodingLayout::kPlanarCosSin) {
+    ComputeKernel<Src, EncodingLayout::kPlanarCosSin>
+        <<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock, 0,
+           param.stream->As<ep::CudaStream>()->cuda_stream()>>>(param);
+  } else if (layout == EncodingLayout::kInterleavedSinCos) {
+    ComputeKernel<Src, EncodingLayout::kInterleavedSinCos>
+        <<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock, 0,
+           param.stream->As<ep::CudaStream>()->cuda_stream()>>>(param);
+  } else if (layout == EncodingLayout::kInterleavedCosSin) {
+    ComputeKernel<Src, EncodingLayout::kInterleavedCosSin>
+        <<<BlocksNum4ThreadsNum(param.num_row * param.half_dim * 2), kCudaThreadsNumPerBlock, 0,
+           param.stream->As<ep::CudaStream>()->cuda_stream()>>>(param);
+  }
 }
 
-class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+void DispatchSrcType(DataType src, EncodingLayout layout,
+                     struct FusedSinusoidalPositionalEncodeParam& param) {
+  if (src == DataType::kInt32) {
+    DispatchLayout<int>(layout, param);
+  } else if (src == DataType::kFloat) {
+    DispatchLayout<float>(layout, param);
+  }
+}
+
+class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel,
+                                                    public user_op::CudaGraphSupport {
  public:
   FusedSinusoidalPositionalEncodeKernel() = default;
   ~FusedSinusoidalPositionalEncodeKernel() override = default;
 
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     const user_op::Tensor* positions = ctx->Tensor4ArgNameAndIndex("positions", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("encoded_positions", 0);
 
@@ -152,19 +173,27 @@ class FusedSinusoidalPositionalEncodeKernel final : public user_op::OpKernel, pu
     const float scale = ctx->Attr<float>("scale");
     const int max_period = ctx->Attr<int>("max_period");
 
-    struct FusedSinusoidalPositionalEncodeParam param = {layout, positions->dptr(), 
-        reinterpret_cast<float*>(out->mut_dptr()), num_row, half_dim, 1, 0,
-        embedding_dim, downscale_freq_shift, scale, max_period};
+    struct FusedSinusoidalPositionalEncodeParam param = {ctx->stream(),
+                                                         positions->dptr(),
+                                                         reinterpret_cast<float*>(out->mut_dptr()),
+                                                         num_row,
+                                                         half_dim,
+                                                         1,
+                                                         0,
+                                                         embedding_dim,
+                                                         downscale_freq_shift,
+                                                         scale,
+                                                         max_period};
 
-    DispatchSrcType(positions->data_type(), param);
+    DispatchSrcType(positions->data_type(), layout, param);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_SINUSOIDAL_POSITIONAL_ENCODE_KERNEL(data_type)               \
-  REGISTER_USER_KERNEL("fused_sinusoidal_positional_encode")                            \
-      .SetCreateFn<FusedSinusoidalPositionalEncodeKernel>()                            \
+#define REGISTER_FUSED_SINUSOIDAL_POSITIONAL_ENCODE_KERNEL(data_type)  \
+  REGISTER_USER_KERNEL("fused_sinusoidal_positional_encode")           \
+      .SetCreateFn<FusedSinusoidalPositionalEncodeKernel>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("positions", 0) == data_type));
 

@@ -22,37 +22,39 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const Shape& positions_shape = ctx->InputShape("positions", 0);
   CHECK_GE_OR_RETURN(positions_shape.NumAxes(), 1)
-      << "number of axes of \'positions\' should be greater than or equal to 1, yet get " << positions_shape.NumAxes();
-  
+      << "number of axes of \'positions\' should be greater than or equal to 1, yet get "
+      << positions_shape.NumAxes();
+
   const int embedding_dim = ctx->Attr<int>("embedding_dim");
   CHECK_GT_OR_RETURN(embedding_dim, 0)
       << "embedding_dim should be greater than 0, yet get " << embedding_dim;
 
-  Shape out_shape(positions_shape.NumAxes()+1);
-  for (int i = 0; i < positions_shape.NumAxes(); i++) {
-    out_shape[i] = positions_shape.At(i);
-  }
+  Shape out_shape(positions_shape.NumAxes() + 1);
+  for (int i = 0; i < positions_shape.NumAxes(); i++) { out_shape[i] = positions_shape.At(i); }
   out_shape[positions_shape.NumAxes()] = embedding_dim;
-  
+
   ctx->SetOutputShape("encoded_positions", 0, out_shape);
 
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::GetSbp(user_op::SbpContext* ctx) {
-  //TODO: I dont think it is necessary to do SBP...
+  // TODO: I dont think it is necessary to do SBP...
 
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedSinusoidalPositionalEncodeOp::InferDataType(
+    user_op::InferContext* ctx) {
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("encoded_positions", 0);
   out_desc->set_data_type(DataType::kFloat);
 
