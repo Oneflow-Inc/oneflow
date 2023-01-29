@@ -104,6 +104,7 @@ limitations under the License.
 #include "llvm/ADT/SetOperations.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
+#include "OneFlow/OKM/Conversion/Conversion.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 #include <algorithm>
@@ -764,7 +765,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
             auto source = rewriter.create<okl::RetToTensorOp>(op->getLoc(), arg.getType(),
-                                                                   okl_func.getArgument(0), index);
+                                                              okl_func.getArgument(0), index);
             mapping.map(arg, source->getResult(0));
             break;
           }
@@ -871,7 +872,7 @@ CreateWrapFuncAndReturnWithIns(mlir::Location loc, std::vector<Operation*>& wrap
   auto [ins, outs, map] = getProto();
   auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(ins))),
                                             TypeRange(ValueRange(ArrayRef<Value>(outs))));
-  auto func_name = "wrap" + std::to_string(name_index++);
+  auto func_name = "_mlir_oneflow_subgraph" + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) { LOG(FATAL) << "Fail to find parent ModuleOp"; }
   OpBuilder::InsertionGuard guard(rewriter);
@@ -906,6 +907,11 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
 
   auto [wrap_func, wrap_ins, map] =
       CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
+  wrap_func->dump();
+wrap_func->getParentOfType<mlir::ModuleOp>()->dump();
+  if (failed(okm::LowerWrapOpsToOKMAndOKL(wrap_func->getParentOfType<mlir::ModuleOp>()))) {
+    LOG(FATAL) << "Fail to lower wrap ops to okl";
+  }
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -915,6 +921,7 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
       attrs.push_back(attr);
     }
   }
+
   attrs.emplace_back(rewriter.getStringAttr("op_name"), func_name);
 
   rewriter.setInsertionPointAfter(wrap_ops.back());
@@ -958,7 +965,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
       auto tensor = rewriter.create<okl::ArgToTensorOp>(func->getLoc(), arg.value().getType(),
-                                                             launcher_ctx, arg.index());
+                                                        launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
 
@@ -1061,16 +1068,13 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
       }
       current_wrap_ops.push_back(current_op);
     }
-    if (!current_wrap_ops.empty()) {
-      ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
-    }
+    if (!current_wrap_ops.empty()) { ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index); }
     return success();
   }
 };
 
 struct KernelLaunchSimplePattern : public KernelLaunchPattern {
-  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context)
-      : KernelLaunchPattern(context) {}
+  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context) : KernelLaunchPattern(context) {}
 
   bool IsSameDevice(std::vector<Operation*>& ops, mlir::Operation* op) const {
     if (ops.empty()) { return true; }

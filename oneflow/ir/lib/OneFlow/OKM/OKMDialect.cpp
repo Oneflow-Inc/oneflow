@@ -56,7 +56,7 @@ void registerAllPasses() {
   registerExtractOKMTensorPassPass();
   registerWrapOKMKernelPassPass();
   registerOptOKMMemrefPassPass();
-  registerBuildOKLFromOKMPassPass();
+  registerConvertOKMToOKLPassPass();
 }
 
 }  // namespace okm

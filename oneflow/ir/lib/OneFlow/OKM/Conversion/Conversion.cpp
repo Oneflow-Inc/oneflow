@@ -25,9 +25,8 @@ LogicalResult LowerWrapOpsToOKMAndOKL(ModuleOp module) {
   pm.addPass(createExtractOKMTensorPass());
   pm.addPass(createWrapOKMKernelPass());
   pm.addPass(createOptOKMMemrefPass());
-  pm.addPass(createBuildOKLFromOKMPass());
+  pm.addPass(createConvertOKMToOKLPass());
   pm.addPass(okl::createTagCudaGraphSupportPass());
-  oneflow::CheckEnableIRPrinting(pm);
   return pm.run(module);
 }
 

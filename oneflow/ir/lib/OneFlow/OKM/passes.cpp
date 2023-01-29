@@ -29,10 +29,10 @@ namespace mlir {
 namespace okm {
 namespace func_name {
 
-const auto* TAG_NAME = "compiled";
-const auto* GRAPH_NAME = "wrap";
-const auto* MEM_GRAPH_NAME = "mem_subgraph";
-const auto* WRAP_GRAPH_NAME = "mem_wrap_subgraph";
+const auto* GRAPH_NAME = "_mlir_oneflow_subgraph";
+const auto* MEM_GRAPH_NAME = "_mlir_okm_subgraph";
+const auto* WRAP_GRAPH_NAME = "_mlir_okm_wrapped_subgraph";
+const auto* OPT_GRAPH_NAME = "_mlir_okm_opted_subgraph";
 const auto* OKL_GRAPH_NAME = "okl_func";
 const auto* OKL_POOL_SIZE_TAG = "pool_size";
 
@@ -212,16 +212,14 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::MEM_GRAPH_NAME)) {
-      if (op->getAttr(func_name::TAG_NAME)) { return success(); }
       // rename function
       const auto index = sym_name.substr(strlen(func_name::MEM_GRAPH_NAME)).str();
       const std::string rename = func_name::WRAP_GRAPH_NAME + index;
       // wrap kernels
       WrapOps(op, rewriter, rename);
-      op->setAttr(func_name::TAG_NAME, rewriter.getBoolAttr(true));
-      return success();
+      rewriter.eraseOp(op);
     }
-    return failure();
+    return success();
   }
 };
 
@@ -294,13 +292,12 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::WRAP_GRAPH_NAME)) {
-      if (op->getAttr(func_name::TAG_NAME)) { return success(); }
-      // opt alloc
+      const auto index = sym_name.substr(strlen(func_name::WRAP_GRAPH_NAME)).str();
+      const std::string rename = func_name::OPT_GRAPH_NAME + index;
+      op.setSymNameAttr(rewriter.getStringAttr(rename));
       SimpleMerge(op, rewriter);
-      op->setAttr(func_name::TAG_NAME, rewriter.getBoolAttr(true));
-      return success();
     }
-    return failure();
+    return success();
   }
 };
 
@@ -322,7 +319,7 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
-struct BuildOKLFromOKPattern : public mlir::OpRewritePattern<func::FuncOp> {
+struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static func::FuncOp BuildOKLGraph(func::FuncOp func, mlir::PatternRewriter& rewriter,
                                     const std::string& func_name) {
     OpBuilder::InsertionGuard insertGuard(rewriter);
@@ -419,21 +416,21 @@ struct BuildOKLFromOKPattern : public mlir::OpRewritePattern<func::FuncOp> {
     return wrap_func;
   }
 
-  explicit BuildOKLFromOKPattern(mlir::MLIRContext* context)
+  explicit ConvertOKMToOKLPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
-    if (sym_name.startswith(func_name::WRAP_GRAPH_NAME) && op->getAttr(func_name::TAG_NAME)) {
-      const auto rename = func_name::OKL_GRAPH_NAME;
-      if (op->getParentOfType<ModuleOp>().lookupSymbol(rename)) { return success(); }
+    if (sym_name.startswith(func_name::OPT_GRAPH_NAME)) {
+      const auto index = sym_name.substr(strlen(func_name::OPT_GRAPH_NAME)).str();
+      const std::string rename = func_name::OKL_GRAPH_NAME + index;
       BuildOKLGraph(op, rewriter, rename);
-      return success();
+      rewriter.eraseOp(op);
     }
-    return failure();
+    return success();
   }
 };
-class BuildOKLFromOKMPass : public BuildOKLFromOKMPassBase<BuildOKLFromOKMPass> {
+class ConvertOKMToOKLPass : public ConvertOKMToOKLPassBase<ConvertOKMToOKLPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
     registry.insert<OKMDialect>();
@@ -445,13 +442,13 @@ class BuildOKLFromOKMPass : public BuildOKLFromOKMPassBase<BuildOKLFromOKMPass> 
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    patterns.add<BuildOKLFromOKPattern>(patterns.getContext());
+    patterns.add<ConvertOKMToOKLPattern>(patterns.getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
-std::unique_ptr<Pass> createBuildOKLFromOKMPass() {
-  return std::make_unique<BuildOKLFromOKMPass>();
+std::unique_ptr<Pass> createConvertOKMToOKLPass() {
+  return std::make_unique<ConvertOKMToOKLPass>();
 }
 
 }  // namespace okm
