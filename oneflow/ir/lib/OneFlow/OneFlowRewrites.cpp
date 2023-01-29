@@ -341,8 +341,8 @@ static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Oper
     exit(1);
   }
   auto cast_op = llvm::dyn_cast<CastOp>(cast);
-      // TODO: extract a function to generate op name for jit op from ops being fused
-      SmallString<64> op_name_storage;
+  // TODO: extract a function to generate op name for jit op from ops being fused
+  SmallString<64> op_name_storage;
   auto op_name =
       (cast_op.op_name() + "__FUSE__"
        + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
