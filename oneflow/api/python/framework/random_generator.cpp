@@ -26,7 +26,7 @@ namespace oneflow {
 Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
   std::string device_name = "";
   int device_index = -1;
-  JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
+  JUST(ParseDeviceTag(device_tag, &device_name, &device_index));
   return one::MakeGenerator(device_name, device_index);
 }
 
@@ -61,7 +61,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("default_generator", [](const std::string& device_tag) -> Maybe<one::Generator> {
     std::string device_name = "";
     int device_index = -1;
-    JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
+    JUST(ParseDeviceTag(device_tag, &device_name, &device_index));
     return one::DefaultGenerator(device_name, device_index);
   });
   m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) -> Maybe<void> {
