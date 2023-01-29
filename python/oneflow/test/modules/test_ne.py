@@ -36,6 +36,8 @@ def _test_ne(test_case, shape, device):
     np_out = np.not_equal(arr1, arr2)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
     test_case.assertTrue(np.array_equal(of_out2.numpy(), np_out))
+    test_case.assertTrue(input != None)
+    test_case.assertTrue(None != input)
 
 
 def _test_tensor_ne_operator(test_case, shape, device):
