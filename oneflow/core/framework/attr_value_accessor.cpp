@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
@@ -65,6 +67,20 @@ Stride AttrValueAccessor<Stride>::Attr(const AttrValue& val) {
 template<>
 void AttrValueAccessor<Stride>::Attr(const Stride& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_stride());
+}
+
+template<>
+Symbol<Device> AttrValueAccessor<Symbol<Device>>::Attr(const AttrValue& val) {
+  auto pb_device = val.at_device();
+  return CHECK_JUST(Device::New(*CHECK_JUST(DeviceTag4DeviceType(pb_device.device_type())),
+                                pb_device.device_id(), pb_device.with_remat()));
+}
+
+template<>
+void AttrValueAccessor<Symbol<Device>>::Attr(const Symbol<Device>& cpp_val, AttrValue* attr_val) {
+  attr_val->mutable_at_device()->set_device_type(cpp_val->enum_type());
+  attr_val->mutable_at_device()->set_device_id(cpp_val->device_id());
+  attr_val->mutable_at_device()->set_with_remat(cpp_val->with_remat());
 }
 
 // List of Basic Attr

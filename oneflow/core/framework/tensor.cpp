@@ -118,11 +118,9 @@ std::shared_ptr<Tensor> LocalTensor::pin_memory() const {
 }
 
 Maybe<Tensor> LocalTensor::clone() const {
-  const auto& device_type = JUST(this->device())->type();
-  int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
-  return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
+  return JUST(functional::Copy(input, JUST(this->device()), /*pin_memory=*/pin_memory));
 }
 
 Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {

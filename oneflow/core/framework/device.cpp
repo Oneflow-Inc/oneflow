@@ -30,10 +30,6 @@ namespace oneflow {
 
 namespace {
 
-inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return Hash(type, device_id);
-}
-
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
     std::string error_msg = "Expected one of " + PrintAvailableDevices()
@@ -44,11 +40,12 @@ void CheckDeviceType(const std::string& type) {
 
 }  // namespace
 
-Device::Device(const std::string& type, int64_t device_id)
+Device::Device(const std::string& type, int64_t device_id, bool with_remat)
     : type_(type),
       enum_type_(kInvalidDevice),
       device_id_(device_id),
-      hash_value_(HashDevice(type, device_id)) {}
+      with_remat_(with_remat),
+      hash_value_(Hash(type, device_id, with_remat)) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -61,38 +58,43 @@ Maybe<void> Device::Init() {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  return ThreadLocalGetOrNew(type, device_id);
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id,
+                                               bool with_remat) {
+  return ThreadLocalGetOrCreate(type, device_id, with_remat);
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                               int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
+  return ThreadLocalGetOrCreate(type, device_id, false);
+}
+
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& type,
+                                                               int64_t device_id, bool with_remat) {
   CHECK_GE_OR_RETURN(device_id, 0)
       << Error::InvalidValueError() << "Device ID should be non-negative";
-  static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
-  auto* device_id2symbol = &map[type];
-  auto iter = device_id2symbol->find(device_id);
-  if (iter == device_id2symbol->end()) {
-    Device device(type, device_id);
+  static thread_local HashMap<std::tuple<std::string, int, bool>, Symbol<Device>> map;
+  auto key = std::make_tuple(type, device_id, with_remat);
+  auto iter = map.find(key);
+  if (iter == map.end()) {
+    Device device(type, device_id, with_remat);
     JUST(device.Init());
-    iter = device_id2symbol->emplace(device_id, SymbolOf(device)).first;
+    iter = map.emplace(key, SymbolOf(device)).first;
   }
   return iter->second;
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(
-    const std::string& type_or_type_with_device_id) {
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& str) {
   static thread_local HashMap<std::string, Symbol<Device>> map;
-  auto iter = map.find(type_or_type_with_device_id);
+  auto iter = map.find(str);
   if (iter == map.end()) {
     std::string type;
     int device_id = -1;
-    JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+    bool with_remat = false;
+    JUST(ParsingDeviceTag(str, &type, &device_id, &with_remat));
     CheckDeviceType(type);
     if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-    Device device(type, device_id);
+    Device device(type, device_id, with_remat);
     JUST(device.Init());
-    iter = map.emplace(type_or_type_with_device_id, SymbolOf(device)).first;
+    iter = map.emplace(str, SymbolOf(device)).first;
   }
   return iter->second;
 }
@@ -101,9 +103,8 @@ Maybe<void> Device::Init() {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
-    const std::string& type_or_type_with_device_id) {
-  return ThreadLocalGetOrNew(type_or_type_with_device_id);
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& str) {
+  return ThreadLocalGetOrCreate(str);
 }
 
 std::string Device::ToRepr() const {
@@ -112,6 +113,7 @@ std::string Device::ToRepr() const {
   ss << type_;
   ss << "', index=";
   ss << device_id_;
+  if (with_remat_) { ss << ", with_remat=True"; }
   ss << ")";
   return ss.str();
 }
@@ -120,6 +122,7 @@ std::string Device::ToString() const {
   std::stringstream ss;
   ss << type_;
   ss << ":" << device_id_;
+  if (with_remat_) { ss << "+remat"; }
   return ss.str();
 }
 
@@ -165,8 +168,14 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
-                             int* device_index) {
+Maybe<void> ParsingDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
+                             bool* with_remat) {
+  if (device_tag.size() > 6 && device_tag.substr(device_tag.size() - 6, 6) == "+remat") {
+    *with_remat = true;
+    device_tag = device_tag.substr(0, device_tag.size() - 6);
+  } else {
+    *with_remat = false;
+  }
   std::string::size_type pos = device_tag.find(':');
   if (pos == std::string::npos) {
     *device_name = device_tag;
