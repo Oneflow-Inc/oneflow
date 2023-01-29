@@ -621,7 +621,7 @@ static int PyTensorObject_set_ref_tensor(PyObject* self, PyObject* ref, void* un
   const auto& t = PyTensor_Unpack(self);
   if (self == ref) { PyErr_Format(PyExc_RuntimeError, "can't assign Tensor as its own reference"); }
   if (ref && ref != Py_None) {
-    ASSERT(t->set_ref_tensor(ASSERT_PTR(PyTensor_Unpack(ref)->detach())));
+    ASSERT(t->set_ref_tensor(PyTensor_Unpack(ref)));
   } else {
     ASSERT(t->set_ref_tensor(NULL));
   }
