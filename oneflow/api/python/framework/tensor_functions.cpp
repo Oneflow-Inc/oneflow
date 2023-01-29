@@ -1097,7 +1097,7 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LT: return functional::less(NULL, tuple.get(), NULL);
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
-      if (self == Py_None || other == Py_None) return Py_False;
+      if (self == Py_None || other == Py_None) Py_RETURN_FALSE;
       return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
     case Py_NE: {
