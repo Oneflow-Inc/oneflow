@@ -2508,6 +2508,7 @@ add_docstr(
 
     .. code-block:: python
 
+        >>> import oneflow as flow
         >>> x = flow.tensor([1, 2, 3])
         >>> x.clone()
         tensor([1, 2, 3], dtype=oneflow.int64)
