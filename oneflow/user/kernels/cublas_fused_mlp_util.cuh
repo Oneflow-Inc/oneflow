@@ -242,10 +242,12 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                                                        CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
                                                        &workspace_size, sizeof(workspace_size)));
 
+#if CUDA_VERSION < 12000
   uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
   OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(matmul_grad_cache->cublas_preference,
                                                        CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK,
                                                        &pointer_mode, sizeof(pointer_mode)));
+#endif  // CUDA_VERSION < 12000
 
   // transpose_a = False, transpose_b = True. But in cublas is reversed.
   const cublasOperation_t cublas_trans_a =
