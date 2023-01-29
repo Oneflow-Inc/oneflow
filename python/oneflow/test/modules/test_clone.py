@@ -29,5 +29,6 @@ class TestClone(flow.unittest.TestCase):
         y = torch.clone(x)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()
