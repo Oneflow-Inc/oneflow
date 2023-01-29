@@ -110,6 +110,11 @@ std::string Device::ToRepr() const {
   return ss.str();
 }
 
+std::ostream &operator<<(std::ostream &os, Symbol<Device> device) {
+  os << device->ToRepr();
+  return os;
+}
+
 std::string Device::ToString() const {
   std::stringstream ss;
   ss << type_;

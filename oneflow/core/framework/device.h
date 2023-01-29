@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
 #include <fmt/core.h>
-#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -74,18 +74,15 @@ class Device final {
   std::shared_ptr<MemoryCase> mem_case_;
 };
 
+std::ostream &operator<<(std::ostream &os, Symbol<Device> device);
+
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
 Maybe<void> ParseDeviceTag(const std::string& device_tag, std::string* device_name, int* device_index);
 
 }  // namespace oneflow
 
-template <> struct fmt::formatter<oneflow::Symbol<oneflow::Device>>: formatter<std::string> {
-  template <typename FormatContext>
-  auto format(oneflow::Symbol<oneflow::Device> device, FormatContext& ctx) const {
-    return formatter<std::string>::format(device->ToRepr(), ctx);
-  }
-};
+template <> struct fmt::formatter<oneflow::Symbol<oneflow::Device>> : ostream_formatter {};
 
 namespace std {
 template<>
