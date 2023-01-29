@@ -64,9 +64,6 @@ class Device final {
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
 
  private:
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type, int64_t device_id,
-                                                   bool with_remat);
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type_or_type_with_device_id);
   Device(const std::string& type, int64_t device_id, bool with_remat);
   Maybe<void> Init();
 
@@ -78,16 +75,17 @@ class Device final {
   std::shared_ptr<MemoryCase> mem_case_;
 };
 
-std::ostream &operator<<(std::ostream &os, Symbol<Device> device);
+std::ostream& operator<<(std::ostream& os, Symbol<Device> device);
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
-Maybe<void> ParseDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
+Maybe<void> ParseDeviceString(std::string device_tag, std::string* device_name, int* device_index,
                              bool* with_remat);
 
 }  // namespace oneflow
 
-template <> struct fmt::formatter<oneflow::Symbol<oneflow::Device>> : ostream_formatter {};
+template<>
+struct fmt::formatter<oneflow::Symbol<oneflow::Device>> : ostream_formatter {};
 
 namespace std {
 template<>

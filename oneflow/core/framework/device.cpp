@@ -60,15 +60,6 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id,
                                                bool with_remat) {
-  return ThreadLocalGetOrCreate(type, device_id, with_remat);
-}
-
-/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  return ThreadLocalGetOrCreate(type, device_id, false);
-}
-
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& type,
-                                                               int64_t device_id, bool with_remat) {
   CHECK_GE_OR_RETURN(device_id, 0)
       << Error::InvalidValueError() << "Device ID should be non-negative";
   static thread_local HashMap<std::tuple<std::string, int, bool>, Symbol<Device>> map;
@@ -82,29 +73,29 @@ Maybe<void> Device::Init() {
   return iter->second;
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& str) {
-  static thread_local HashMap<std::string, Symbol<Device>> map;
-  auto iter = map.find(str);
-  if (iter == map.end()) {
-    std::string type;
-    int device_id = -1;
-    bool with_remat = false;
-    JUST(ParseDeviceTag(str, &type, &device_id, &with_remat));
-    CheckDeviceType(type);
-    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-    Device device(type, device_id, with_remat);
-    JUST(device.Init());
-    iter = map.emplace(str, SymbolOf(device)).first;
-  }
-  return iter->second;
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
+  return New(type, device_id, false);
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& str) {
-  return ThreadLocalGetOrCreate(str);
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& device_str) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(device_str);
+  if (iter == map.end()) {
+    std::string type;
+    int device_id = -1;
+    bool with_remat = false;
+    JUST(ParseDeviceString(device_str, &type, &device_id, &with_remat));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id, with_remat);
+    JUST(device.Init());
+    iter = map.emplace(device_str, SymbolOf(device)).first;
+  }
+  return iter->second;
 }
 
 std::string Device::ToRepr() const {
@@ -118,7 +109,7 @@ std::string Device::ToRepr() const {
   return ss.str();
 }
 
-std::ostream &operator<<(std::ostream &os, Symbol<Device> device) {
+std::ostream& operator<<(std::ostream& os, Symbol<Device> device) {
   os << device->ToRepr();
   return os;
 }
@@ -173,23 +164,23 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParseDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
+Maybe<void> ParseDeviceString(std::string device_str, std::string* device_name, int* device_index,
                              bool* with_remat) {
-  if (device_tag.size() > 6 && device_tag.substr(device_tag.size() - 6, 6) == "+remat") {
+  if (device_str.size() > 6 && device_str.substr(device_str.size() - 6, 6) == "+remat") {
     *with_remat = true;
-    device_tag = device_tag.substr(0, device_tag.size() - 6);
+    device_str = device_str.substr(0, device_str.size() - 6);
   } else {
     *with_remat = false;
   }
-  std::string::size_type pos = device_tag.find(':');
+  std::string::size_type pos = device_str.find(':');
   if (pos == std::string::npos) {
-    *device_name = device_tag;
+    *device_name = device_str;
     *device_index = -1;
   } else {
-    std::string index_str = device_tag.substr(pos + 1);
+    std::string index_str = device_str.substr(pos + 1);
     CHECK_OR_RETURN(IsStrInt(index_str))
-        << Error::InvalidValueError() << "Invalid device tag " << device_tag;
-    *device_name = device_tag.substr(0, pos);
+        << Error::InvalidValueError() << "Invalid device tag " << device_str;
+    *device_name = device_str.substr(0, pos);
     *device_index = std::stoi(index_str);
   }
   return Maybe<void>::Ok();

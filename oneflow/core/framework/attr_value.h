@@ -62,8 +62,7 @@ namespace user_op {
 #define LIST_STRING_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_string, std::vector<std::string>, AttrType::kAtListString)
 
-#define DEVICE_ATTR_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(at_device, Symbol<Device>, AttrType::kAtDevice)
+#define DEVICE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_device, Symbol<Device>, AttrType::kAtDevice)
 
 #define ATTR_SEQ        \
   BASIC_ATTR_SEQ        \
