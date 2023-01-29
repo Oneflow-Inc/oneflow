@@ -1,0 +1,18 @@
+#include "OneFlowPDLLUtils.pdll"
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+
+  let x = op<oneflow.system>();
+  let scalar = op<oneflow.system>();
+  let cast = op<oneflow.cast>(x.0){device_name = device_name, device_tag = device_tag};
+  let mul = op<oneflow.scalar_mul_by_tensor>(cast.0, scalar.0) {device_name = device_name, device_tag = device_tag} -> (y: Type);
+
+  IsNotNestedInJit(mul);
+
+  rewrite mul with{
+    let mulcast = OutlineMulCast(mul, cast);
+    replace mul with CopyUserOpAttrs(mul, mulcast);
+  };
+}
