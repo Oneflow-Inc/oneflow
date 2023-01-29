@@ -28,6 +28,9 @@ from oneflow.test_utils.automated_test_util import *
 
 def do_test_rrelu_same_bound(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
+    seed = np.random.randint(0, 1000)
+    flow.manual_seed(seed)
+    torch.manual_seed(seed)
     flow_tensor = flow.tensor(np_x, requires_grad=True, device=device)
     torch_tensor = torch.tensor(np_x, requires_grad=True, device=device)
     rate = np.random.randn()
@@ -59,6 +62,9 @@ def do_test_rrelu_same_bound(test_case, shape, device, dtype):
 
 def do_test_rrelu_different_bound(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
+    seed = np.random.randint(0, 1000)
+    flow.manual_seed(seed)
+    torch.manual_seed(seed)
     flow_tensor = flow.tensor(np_x, requires_grad=True, device=device)
     rate = np.random.randn()
     flow_rrelu = flow.nn.RReLU(lower=rate, upper=rate + 0.5)
@@ -123,11 +129,13 @@ class TestModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(n=5)
-    def autotest_functional_rrelu(test_case):
+    def test_functional_rrelu(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        lower = np.random.randn()
-        return torch.nn.functional.RReLU(
+        lower = np.abs(
+            (np.random.randn())
+        )  # when the argement inpalce is set to True, the scope must not be negative
+        return torch.nn.functional.rrelu(
             x,
             lower=lower,
             upper=lower + 0.5,
@@ -135,19 +143,19 @@ class TestModule(flow.unittest.TestCase):
             training=random_bool(),
         )
 
-    @autotest(n=5)
-    def autotest_rrelu_eval(test_case):
+    @autotest()
+    def test_rrelu_train(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         lower = np.random.randn()
-        m = torch.nn.RReLU(lower=lower, upper=lower + 0.5, inplace=random_bool())
-        m.eval()
-        return m(x)
+        m = torch.nn.RReLU(lower=lower, upper=lower, inplace=random_bool())
+        result = m(x)
+        return result
 
     @profile(torch.nn.functional.rrelu)
     def profile_dropout(test_case):
-        lower = np.random.randn()
-        torch.nn.functional.rreLU(
+        lower = np.random.randn() + 1
+        torch.nn.functional.rrelu(
             torch.ones(1, 128, 28, 28),
             lower=lower,
             upper=lower + 0.5,

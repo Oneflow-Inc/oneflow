@@ -67,7 +67,7 @@ Maybe<void> RRelu::Apply(const RReluCaptureState* ctx, const TensorTuple& out_gr
 
   } else {
     const auto& noise_data = saved_tensors.at(ctx->noise_data_index);
-    in_grads->at(0) = JUST(functional::RReluGrad(out_grads.at(0), noise_data));
+    in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), noise_data));
     return Maybe<void>::Ok();
   }
 }

@@ -437,7 +437,7 @@ add_docstr(
 add_docstr(
     oneflow._C.rrelu,
     """
-    rrelu(x: Tensor, lower: Float, upper: Float) -> Tensor
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False, inplace: bool = False) -> Tensor
 
     Applies the randomized leaky rectified liner unit function, element-wise
     :math:`\text{RReLU}(x) = \max(0, x) + a * \min(0, x)`

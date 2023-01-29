@@ -15,42 +15,56 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/user/kernels/distributions/normal_distribution.h"
 #include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 #include "oneflow/user/kernels/distributions/common.h"
+
 namespace oneflow {
+
 namespace {
 
-template<typename T, int unroll_factor, typename F>
-__global__ void compute_rrelu(const T* in, T* out, T* noise_data, int64_t elem_cnt, const T lower,
-                              const T upper, uint64_t seed, uint64_t offset, const F& random_func) {
-  const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, id, offset, &state);
-  int grid_stride = blockDim.x * gridDim.x * unroll_factor;
-  int rounded_size = ((elem_cnt - 1) / grid_stride + 1) * grid_stride;
-  T range = upper - lower;
-  for (int linear_index = id; linear_index < rounded_size; linear_index += grid_stride) {
-    auto rand = random_func(&state);
+template<typename T, typename ComputeType>
+struct UniformTransformFunctor {
+  UniformTransformFunctor(ComputeType range, ComputeType lower) : range(range), lower(lower) {}
+  __device__ T operator()(ComputeType random_val) const {
+    return static_cast<T>(random_val * range + lower);
+  }
+  ComputeType range;
+  ComputeType lower;
+};
 
-    // ensure that (&rand.x)[ii] is safe
-    static_assert(sizeof(rand) / sizeof(rand.x) == unroll_factor, "");
+template<typename T, typename ComputeType, int unroll_factor, typename Distribution,
+         typename Transform>
+OF_LAUNCH_BOUNDS_2(block_size_bound, grid_size_bound)
+__global__
+    void RReluKernel(int64_t numel, uint64_t seed, uint64_t offset, const T* in_ptr, T* out_ptr,
+                     T* noise_data_ptr, Distribution dist_func, Transform transform_func) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, idx, offset, &state);
+
+  int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
+                     * gridDim.x * unroll_factor;
+  for (int32_t linear_index = idx; linear_index < rounded_size;
+       linear_index += blockDim.x * gridDim.x * unroll_factor) {
+    auto rand = dist_func(&state);
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
       int li = linear_index + blockDim.x * gridDim.x * ii;
-      if (li >= elem_cnt) { continue; }
-      T r = static_cast<T>((&rand.x)[ii]);
-      r = r * range + lower;
-      if (in[li] <= static_cast<T>(0)) {
-        out[li] = in[li] * r;
-        noise_data[li] = r;
-      } else {
-        out[li] = in[li];
-        noise_data[li] = static_cast<T>(1);
+      if (li < numel) {
+        T r = transform_func(static_cast<ComputeType>((&rand.x)[ii]));
+        if (in_ptr[li] <= static_cast<T>(0)) {
+          out_ptr[li] = in_ptr[li] * r;
+          noise_data_ptr[li] = r;
+        } else {
+          out_ptr[li] = in_ptr[li];
+          noise_data_ptr[li] = static_cast<T>(1);
+        }
       }
     }
-    __syncthreads();
   }
 }
+
 }  // namespace
 
 template<typename T>
@@ -98,18 +112,23 @@ class CudaRReluKernel final : public user_op::OpKernel {
     auto grid = std::get<1>(execution_policy);
     auto block = std::get<2>(execution_policy);
 
+    using ComputeType = typename distribution::DefaultComputeType<T>::type;
+    UniformTransformFunctor<T, ComputeType> transform_functor(
+        static_cast<ComputeType>(upper - lower), static_cast<ComputeType>(lower));
     if (std::is_same<T, double>::value) {
       DistributionFunctor<DistributionOp::kUniform2Double> dist_functor;
-      compute_rrelu<T, 2, decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
-          in_ptr, out_ptr, noise_ptr, size, lower, upper, seed, offset, dist_functor);
-
+      RReluKernel<T, ComputeType, 2, decltype(dist_functor), decltype(transform_functor)>
+          <<<grid, block, 0, cuda_stream->cuda_stream()>>>(
+              size, seed, offset, in_ptr, out_ptr, noise_ptr, dist_functor, transform_functor);
     } else {
       // float
       DistributionFunctor<DistributionOp::kUniform4> dist_functor;
-      compute_rrelu<T, 4, decltype(dist_functor)><<<grid, block, 0, cuda_stream->cuda_stream()>>>(
-          in_ptr, out_ptr, noise_ptr, size, lower, upper, seed, offset, dist_functor);
+      RReluKernel<T, ComputeType, 4, decltype(dist_functor), decltype(transform_functor)>
+          <<<grid, block, 0, cuda_stream->cuda_stream()>>>(
+              size, seed, offset, in_ptr, out_ptr, noise_ptr, dist_functor, transform_functor);
     }
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 #define REGISTER_CUDA_RRELU_KERNEL(dtype)                                              \
@@ -119,4 +138,5 @@ class CudaRReluKernel final : public user_op::OpKernel {
 
 REGISTER_CUDA_RRELU_KERNEL(float)
 REGISTER_CUDA_RRELU_KERNEL(double)
+
 }  // namespace oneflow
