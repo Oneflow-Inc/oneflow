@@ -122,7 +122,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 // enable with_cuda_graphs
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
 
 #include "llvm/ADT/STLExtras.h"
 
