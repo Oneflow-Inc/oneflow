@@ -62,6 +62,10 @@ class FunctionNode {
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
 
+  using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
+                                                                            const TensorTuple&)>;
+  void add_post_hook(const Hook& hook) { hooks_.push_back(hook); }
+
  protected:
   friend class GraphTask;
   explicit FunctionNode(const std::string& name,
@@ -80,6 +84,8 @@ class FunctionNode {
 
   // The execution scope
   std::shared_ptr<Scope> scope_;
+
+  std::vector<Hook> hooks_;
 };
 
 class AutogradEngine {

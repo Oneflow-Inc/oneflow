@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
 
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
 
@@ -31,6 +32,8 @@ enum StraightenOrder : int {
   kLayerAscend = 2,              // first in first out
   kMemoryIncrementAscend = 3,    // small memory increment go first
   kExceedTimeAscend = 4,         // small exceed time go first
+  kMemoryVolumeAscend = 5,       // small memory volume go first
+  kMaxLayerAscend = 6,           // the urgent one go first
 
   kTributaryLayerDescend =
       kDiff4AscendDescend + kTributaryLayerAscend,  // large tributary layers go first
@@ -40,6 +43,8 @@ enum StraightenOrder : int {
   kMemoryIncrementDescend =
       kDiff4AscendDescend + kMemoryIncrementAscend,              // large memory increment go first
   kExceedTimeDescend = kDiff4AscendDescend + kExceedTimeAscend,  // large exceed time go first
+  kMemoryVolumeDescend = kDiff4AscendDescend + kMemoryVolumeAscend,  // large memory volume go first
+  kMaxLayerDescent = kDiff4AscendDescend + kMaxLayerAscend,          // the non-urgent one go first
 };
 
 // Some operators have longer time in cpu and less time in gpu.
@@ -52,6 +57,10 @@ bool ShortGpuTime(const OperatorConf& op_conf);
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat,
                           std::vector<StraightenOrder>* decide_parameters);
+
+// Maximum overlap number
+// While running an overlap operator, we would run some other operators simultaneously.
+int32_t MaximumOverlapNum(StraightenAlgorithmTag sat);
 
 template<class HashMapType>
 void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat) {
