@@ -23,6 +23,17 @@ limitations under the License.
 
 namespace oneflow {
 
+struct IBVerbsCommNetRMADesc {
+  uint64_t mem_ptr;
+  uint64_t mem_size;
+  uint32_t mr_rkey;
+};
+
+struct IBVerbsActorMsgWrapper final {
+  ActorMsg msg;
+  IBVerbsCommNetRMADesc rma_desc;
+};
+
 class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
@@ -30,12 +41,12 @@ class ActorMsgMR final {
   ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
-  const ActorMsg& msg() const { return msg_; }
-  void set_msg(const ActorMsg& val) { msg_ = val; }
+  const IBVerbsActorMsgWrapper& msg() const { return msg_; }
+  void set_msg(const IBVerbsActorMsgWrapper& val) { msg_ = val; }
   const IBVerbsMemDesc& mem_desc() const { return *mem_desc_; }
 
  private:
-  ActorMsg msg_;
+  IBVerbsActorMsgWrapper msg_;
   std::unique_ptr<IBVerbsMemDesc> mem_desc_;
 };
 
@@ -64,7 +75,7 @@ class IBVerbsQP final {
 
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
-  void PostSendRequest(const ActorMsg& msg);
+  void PostSendRequest(const IBVerbsActorMsgWrapper& msg_wrapper);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
