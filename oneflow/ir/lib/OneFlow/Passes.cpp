@@ -796,8 +796,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    ModuleOp module;
-    if (!op->getParentOfType<ModuleOp>()) { LOG(FATAL) << "Not found module"; }
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    if (!module) { LOG(FATAL) << "Not found module"; }
     if (module.lookupSymbol(okl_func::OKL_FUNC)) { return success(); }
 
     OpBuilder::InsertionGuard guard(rewriter);
