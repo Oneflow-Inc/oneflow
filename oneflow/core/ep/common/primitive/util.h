@@ -101,12 +101,11 @@ inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
       prev_broadcast_src = broadcast_src;
     }
   }
-
-  if (*simplified_num_dims == 0 && num_dst_dims > 0) {
-    simplified_src_dims[*simplified_num_dims] = 1;
-    simplified_dst_dims[*simplified_num_dims] = 1;
-    simplified_src_strides[*simplified_num_dims] = 0;
-    simplified_dst_strides[*simplified_num_dims] = 0;
+  if (*simplified_num_dims == 0) {
+    simplified_src_dims[0] = 1;
+    simplified_dst_dims[0] = 1;
+    simplified_src_strides[0] = 1;
+    simplified_dst_strides[0] = 1;
     *simplified_num_dims = 1;
   }
 }
@@ -161,6 +160,12 @@ inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size
       prev_broadcast_b = broadcast_b;
       prev_broadcast_c = broadcast_c;
     }
+  }
+  if (*simplified_num_dims == 0) {
+    simplified_a_dims[0] = 1;
+    simplified_b_dims[0] = 1;
+    simplified_c_dims[0] = 1;
+    *simplified_num_dims = 1;
   }
 }
 
