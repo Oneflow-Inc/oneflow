@@ -30,10 +30,10 @@ namespace okm {
 namespace func_name {
 
 const auto* TAG_NAME = "compiled";
-const auto* GRAPH_NAME = "subgraph";
+const auto* GRAPH_NAME = "wrap";
 const auto* MEM_GRAPH_NAME = "mem_subgraph";
 const auto* WRAP_GRAPH_NAME = "mem_wrap_subgraph";
-const auto* OKL_GRAPH_NAME = "okl_subgraph";
+const auto* OKL_GRAPH_NAME = "okl_func";
 const auto* OKL_POOL_SIZE_TAG = "pool_size";
 
 }  // namespace func_name
@@ -425,8 +425,7 @@ struct BuildOKLFromOKPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::WRAP_GRAPH_NAME) && op->getAttr(func_name::TAG_NAME)) {
-      const auto index = sym_name.substr(strlen(func_name::WRAP_GRAPH_NAME)).str();
-      const auto rename = func_name::OKL_GRAPH_NAME + index;
+      const auto rename = func_name::OKL_GRAPH_NAME;
       if (op->getParentOfType<ModuleOp>().lookupSymbol(rename)) { return success(); }
       BuildOKLGraph(op, rewriter, rename);
       return success();

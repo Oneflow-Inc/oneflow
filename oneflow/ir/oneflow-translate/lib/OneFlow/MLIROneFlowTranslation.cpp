@@ -839,11 +839,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
                ? wrap_options::mode::CUDA_GRAPH
                : wrap_options::mode::SIMPLE);
 
-    options += " tensor="
-               + (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_KERNEL_ENABLE_MEMREF", false)
-                      ? wrap_options::tensor::TRIM
-                      : wrap_options::tensor::NORMAL);
-
     (void)wrap_pass->initializeOptions(options);
     pm.addPass(std::move(wrap_pass));
   }

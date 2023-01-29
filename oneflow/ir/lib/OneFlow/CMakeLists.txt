@@ -21,6 +21,7 @@ oneflow_add_mlir_dialect_library(
   MLIROneFlow
   OKM/OKMDialect.cpp
   OKM/passes.cpp
+  OKM/Conversion/Conversion.cpp
   OKL/OKLDialect.cpp
   OKL/OKLOps.cpp
   OKL/OKLTypes.cpp

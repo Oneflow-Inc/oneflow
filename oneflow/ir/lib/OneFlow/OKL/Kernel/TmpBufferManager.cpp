@@ -25,6 +25,7 @@ namespace oneflow {
 namespace okl {
 
 size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
+  return 0;
   using namespace user_op;
   mlir::MLIRContext mlir_ctx(GetRegistry());
 

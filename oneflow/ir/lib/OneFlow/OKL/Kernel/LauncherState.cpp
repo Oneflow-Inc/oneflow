@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OKL/Conversion/Conversion.h"
+#include "OneFlow/OKM/Conversion/Conversion.h"
 #include "OneFlow/Passes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -40,8 +41,8 @@ mlir::OwningOpRef<mlir::ModuleOp> GetModule(user_op::KernelInitContext* ctx,
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
-  if (failed(mlir::okl::LowerWrapOpsToOKL(*module))) {
-    LOG(FATAL) << "Fail lowering kernel launch Module to okl ir";
+  if (failed(mlir::okm::LowerWrapOpsToOKMAndOKL(*module))) {
+    LOG(FATAL) << "Fail lowering kernel launch Module to okm and okl ir";
   }
   return module;
 }

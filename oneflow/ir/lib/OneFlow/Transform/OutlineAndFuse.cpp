@@ -74,7 +74,7 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateWrapOpsToKernelLaunchPasses(patterns, wrap_ops_mode_.c_str(), wrap_ops_tensor_.c_str());
+    populateWrapOpsToKernelLaunchPasses(patterns, wrap_ops_mode_.c_str());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 
@@ -82,10 +82,6 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   Option<std::string> wrap_ops_mode_{*this, "mode",
                                      llvm::cl::desc("the mode of this pass to wrap ops"),
                                      llvm::cl::init(wrap_options::mode::SIMPLE)};
-
-  Option<std::string> wrap_ops_tensor_{*this, "tensor",
-                                       llvm::cl::desc("the tensor trait of this pass to wrap ops"),
-                                       llvm::cl::init(wrap_options::tensor::NORMAL)};
 };
 
 class ExtractKernelLaunchTensorPass

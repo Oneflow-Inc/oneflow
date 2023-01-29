@@ -28,15 +28,6 @@ const std::string SIMPLE = "simple";
 const std::string CUDA_GRAPH = "cuda_graph";
 }  // namespace mode
 
-namespace tensor {
-// the option : tensor=normal will map all resources to wrap_func operands and results, 
-// it will use large memory space in runtime, and it is security in any case.
-const std::string NORMAL = "normal";
-// the option : tensor=trim will only map the necessary resources in use-def flow among
-// wrap_funcs and no-wrap-ops, it will infer memory reuse in order to smaller memory space.
-const std::string TRIM = "trim";
-}  // namespace mode
-
 }  // namespace wrap_options
 
 std::unique_ptr<mlir::Pass> createLowerToOKLPass();
