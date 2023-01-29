@@ -243,6 +243,7 @@ from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
+from oneflow._C import clone
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
