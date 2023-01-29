@@ -172,6 +172,7 @@ class OffsetToIndexWithStrideCalculator {
 };
 
 #define UNARY_BROADCAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
+#define BROADCAST_ELEMENTWISE_CAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCast)
 
 }  // namespace broadcast_elementwise_unary
 }  // namespace primitive

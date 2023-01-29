@@ -213,10 +213,52 @@ class ScalarDivFunctor : public ScalarMathBaseFunctor {
   }
 };
 
+class ScalarDivModeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(x, scalar));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
+  }
+};
+
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return functional::ScalarMul(JUST(functional::Reciprocal(x)), scalar, /*inplace=*/false);
+  }
+};
+
+class ScalarDivMode2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(scalar, x));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
   }
 };
 
@@ -744,8 +786,7 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
-                    || x->dtype()->data_type() == DataType::kFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
@@ -763,8 +804,7 @@ class ReduceMeanFunctor {
     // ReduceMean only calculate floating values.
     // NOTE: Should use original reduce_mean op/kernel rather than current way(ReduceSum /
     // reduce_count) because it could encounter precision problem(like overflow) in float16 case.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
-                    || x->dtype()->data_type() == DataType::kFloat16)
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
 
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
@@ -1357,8 +1397,7 @@ class ClampBaseFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
-    if (IsFloatingDataType(x->dtype()->data_type())
-        || x->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());
@@ -2208,6 +2247,54 @@ class ScalarLogicalGreater2Functor {
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return ScalarLogicalLess(x, scalar);
   }
+};
+
+class InplaceScalarLogicalGreaterFunctor {
+ public:
+  InplaceScalarLogicalGreaterFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scalar_logical_inplace_greater").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (scalar.IsFloatingPoint()) {
+      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = x->dtype();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
@@ -3935,6 +4022,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AddCDivFunctor>("AddCDiv");
   m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<ScalarDivModeFunctor, ScalarDivMode2Functor>("ScalarDivMode");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarReversePowFunctor>("ScalarReversePow");
@@ -4012,6 +4100,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");
   m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<InplaceScalarLogicalGreaterFunctor>("InplaceScalarLogicalGreater");
   m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
       "ScalarLogicalGreaterEqual");
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
