@@ -2996,9 +2996,7 @@ namespace {
 Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, Symbol<Device> device,
                             const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor = x;
-  if (device != JUST(x->device())) {
-    tensor = JUST(Copy(tensor, device, /*pin_memory=*/false));
-  }
+  if (device != JUST(x->device())) { tensor = JUST(Copy(tensor, device, /*pin_memory=*/false)); }
   if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype, /*pin_memory=*/false)); }
   if (copy && tensor == x) { tensor = JUST(Copy(tensor, device, /*pin_memory=*/false)); }
   return tensor;

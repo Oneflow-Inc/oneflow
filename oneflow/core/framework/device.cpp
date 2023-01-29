@@ -101,7 +101,7 @@ std::string Device::ToRepr() const {
   return ss.str();
 }
 
-std::ostream &operator<<(std::ostream &os, Symbol<Device> device) {
+std::ostream& operator<<(std::ostream& os, Symbol<Device> device) {
   os << device->ToRepr();
   return os;
 }
@@ -155,7 +155,8 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParseDeviceString(const std::string &device_tag, std::string* device_name, int* device_index) {
+Maybe<void> ParseDeviceString(const std::string& device_tag, std::string* device_name,
+                              int* device_index) {
   std::string::size_type pos = device_tag.find(':');
   if (pos == std::string::npos) {
     *device_name = device_tag;

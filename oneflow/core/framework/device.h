@@ -71,15 +71,17 @@ class Device final {
   std::shared_ptr<MemoryCase> mem_case_;
 };
 
-std::ostream &operator<<(std::ostream &os, Symbol<Device> device);
+std::ostream& operator<<(std::ostream& os, Symbol<Device> device);
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
-Maybe<void> ParseDeviceString(const std::string& device_tag, std::string* device_name, int* device_index);
+Maybe<void> ParseDeviceString(const std::string& device_tag, std::string* device_name,
+                              int* device_index);
 
 }  // namespace oneflow
 
-template <> struct fmt::formatter<oneflow::Symbol<oneflow::Device>> : ostream_formatter {};
+template<>
+struct fmt::formatter<oneflow::Symbol<oneflow::Device>> : ostream_formatter {};
 
 namespace std {
 template<>
