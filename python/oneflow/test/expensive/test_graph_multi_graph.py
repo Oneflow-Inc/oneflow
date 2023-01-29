@@ -313,9 +313,9 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
         )
 
         # print("runtime state dict list", state_dict_list)
-        with tempfile.TemporaryDirectory() as save_dir:
-            flow.save(state_dict_list, save_dir)
-            state_dict_list_loaded = flow.load(save_dir)
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(state_dict_list, f.name)
+            state_dict_list_loaded = flow.load(f.name)
 
         # Resume a graph from a graph runtime state dict
         _test_linear_multi_graph_load(
