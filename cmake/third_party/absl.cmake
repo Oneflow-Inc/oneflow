@@ -35,7 +35,39 @@ else()
       libabsl_str_format_internal.a
       libabsl_time.a
       libabsl_bad_optional_access.a
-      libabsl_base.a)
+      libabsl_base.a
+      libabsl_status.a
+      libabsl_synchronization.a
+      libabsl_cord.a
+      libabsl_cord_internal.a
+      libabsl_cordz_handle.a
+      libabsl_cordz_functions.a
+      libabsl_cordz_info.a
+      libabsl_raw_logging_internal.a
+      libabsl_strings_internal.a
+      libabsl_crc32c.a
+      libabsl_crc_cord_state.a
+      libabsl_crc_internal.a
+      libabsl_random_internal_pool_urbg.a
+      libabsl_random_internal_seed_material.a
+      libabsl_random_internal_platform.a
+      libabsl_random_internal_randen.a
+      libabsl_random_internal_randen_hwaes.a
+      libabsl_random_internal_randen_hwaes_impl.a
+      libabsl_random_internal_randen_slow.a
+      libabsl_random_seed_gen_exception.a
+      libabsl_bad_variant_access.a
+      libabsl_time_zone.a
+      libabsl_exponential_biased.a
+      libabsl_statusor.a
+      libabsl_strerror.a
+      libabsl_hash.a
+      libabsl_low_level_hash.a
+      libabsl_city.a
+      libabsl_symbolize.a
+      libabsl_debugging_internal.a
+      libabsl_demangle_internal.a
+      libabsl_stacktrace.a)
 endif()
 
 foreach(LIBRARY_NAME ${ABSL_LIBRARY_NAMES})

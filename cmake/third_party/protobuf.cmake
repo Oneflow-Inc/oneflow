@@ -9,8 +9,8 @@ set(PROTOBUF_LIBRARY_DIR ${PROTOBUF_INSTALL_DIR}/${PROTOBUF_INSTALL_LIBDIR})
 set(PROTOBUF_BINARY_DIR ${PROTOBUF_INSTALL_DIR}/${PROTOBUF_INSTALL_BINDIR})
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
-set(PROTOBUF_MD5 cf02c32870a1f78c860039e0f63a6343)
+set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/b8c2488f480bbe3d66b9874c2fcd434201caa48a.zip")
+set(PROTOBUF_MD5 bc42b422d81781dc047b24622f7cca56)
 
 use_mirror(VARIABLE PROTOBUF_URL URL ${PROTOBUF_URL})
 
