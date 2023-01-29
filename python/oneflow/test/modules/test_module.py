@@ -256,6 +256,51 @@ class TestModule(flow.unittest.TestCase):
         m = ConvBNModule()
         delattr(m, "bn")
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_full_backward_hook(test_case):
+        hook_triggered = False
+
+        def hook(_, grad_input, grad_output):
+            nonlocal hook_triggered
+            hook_triggered = True
+            test_case.assertEqual(len(grad_input), 1)
+            test_case.assertEqual(len(grad_output), 1)
+            test_case.assertTrue(np.array_equal(grad_input[0].numpy(), [1, 0]))
+            test_case.assertTrue(np.array_equal(grad_output[0].numpy(), [1, 1]))
+
+        m = flow.nn.ReLU()
+        m.register_full_backward_hook(hook)
+
+        x0 = flow.tensor([1.0, -1], requires_grad=True)
+        x = x0 + 1
+        y = m(x)
+        y.sum().backward()
+        test_case.assertTrue(hook_triggered)
+        test_case.assertTrue(np.array_equal(x0.grad, [1, 0]))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_full_backward_hook_with_return_value(test_case):
+        hook_triggered = False
+
+        def hook(_, grad_input, grad_output):
+            nonlocal hook_triggered
+            hook_triggered = True
+            test_case.assertEqual(len(grad_input), 1)
+            test_case.assertEqual(len(grad_output), 1)
+            test_case.assertTrue(np.array_equal(grad_input[0].numpy(), [1, 0]))
+            test_case.assertTrue(np.array_equal(grad_output[0].numpy(), [1, 1]))
+            return (flow.tensor([1, 1]),)
+
+        m = flow.nn.ReLU()
+        m.register_full_backward_hook(hook)
+
+        x0 = flow.tensor([1.0, -1], requires_grad=True)
+        x = x0 + 1
+        y = m(x)
+        y.sum().backward()
+        test_case.assertTrue(hook_triggered)
+        test_case.assertTrue(np.array_equal(x0.grad, [1, 1]))
+
 
 if __name__ == "__main__":
     unittest.main()
