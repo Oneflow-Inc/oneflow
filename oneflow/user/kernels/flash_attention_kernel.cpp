@@ -295,7 +295,7 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     const size_t row_stride =
         num_head * head_size;  // if qkv packed, row_stride should be 3 * num_head * head_size
     const size_t head_stride = head_size;
-    CHECK((head_size % 8 == 0) && (head_size <= 128))
+    CHECK((head_size % 8 == 0) && (head_size <= 160))
         << "flash-attention only support head_size: (head_size % 8 == 0) && (head_size <= 128).";
     int blocksize_c = head_size > 64 ? 128 : 256;
     // Need to round max_seqlen_k to multiples of blocksize_c

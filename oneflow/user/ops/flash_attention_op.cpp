@@ -37,7 +37,7 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   const int64_t head_size = q_shape.At(q_axes - 1);
   // CHECK_OR_RETURN(head_size == 16 || head_size == 32 || head_size == 64 || head_size == 128)
   // << "flash-attention only support head_size in (16, 32, 64, 128).";
-  CHECK_OR_RETURN((head_size % 8 == 0) && (head_size <= 128))
+  CHECK_OR_RETURN((head_size % 8 == 0) && (head_size <= 160))
       << "flash-attention only support head_size: (head_size % 8 == 0) && (head_size <= 128).";
   const int64_t k_axes = k_shape.NumAxes();
   CHECK_EQ_OR_RETURN(k_axes, q_axes)
@@ -127,7 +127,9 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   ctx->SetOutputShape("value_grad", 0, v_shape);
   if (ctx->has_input("bias", 0)) {
     const Shape& bias_shape = ctx->InputShape("bias", 0);
-    ctx->SetOutputShape("bias_grad", 0, bias_shape);
+    Shape bias_grad_shape(bias_shape);
+    bias_grad_shape.Set(0, q_shape.At(0));  // batch
+    ctx->SetOutputShape("bias_grad", 0, bias_grad_shape);
   }
   return Maybe<void>::Ok();
 }
