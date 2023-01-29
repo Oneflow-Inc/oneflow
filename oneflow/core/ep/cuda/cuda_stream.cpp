@@ -111,10 +111,16 @@ void CudaGraphExecutable::Update(cudaGraph_t graph) {
   if (dev != dev_) { Reset(); }
   dev_ = dev;
   if (graph_exec_ != nullptr) {
+#if CUDA_VERSION < 12000
     cudaGraphExecUpdateResult update_result{};
     cudaGraphNode_t error_node = nullptr;
     OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
     if (update_result == cudaGraphExecUpdateSuccess) { return; }
+#else
+    cudaGraphExecUpdateResultInfo update_result{};
+    OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &update_result));
+    if (update_result.result == cudaGraphExecUpdateSuccess) { return; }
+#endif  // CUDA_VERSION < 12000
   }
   Reset();
   OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
@@ -167,6 +173,11 @@ CudaStream::CudaStream(CudaDevice* device)
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
+  // cusolver_dn_handle
+#if CUDA_VERSION >= 11000
+  OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
+  OF_CUSOLVER_CHECK(cusolverDnSetStream(cusolver_dn_handle_, cuda_stream_));
+#endif
   workspace_size_ =
       ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
       * 1024 * 1024;
@@ -185,6 +196,9 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#if CUDA_VERSION >= 11000
+  OF_CUSOLVER_CHECK(cusolverDnDestroy(cusolver_dn_handle_));
+#endif
 #if CUDA_VERSION >= 10010
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
 #endif
@@ -230,6 +244,10 @@ Maybe<void> CudaStream::GetAsyncError() {
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
+
+#if CUDA_VERSION >= 11000
+cusolverDnHandle_t CudaStream::cusolver_dn_handle() const { return cusolver_dn_handle_; }
+#endif
 
 #if CUDA_VERSION >= 10010
 cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }

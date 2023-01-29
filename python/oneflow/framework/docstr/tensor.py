@@ -586,7 +586,16 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze,
     """
+    Tensor.squeeze(dim=None) -> Tensor
     See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze_,
+    """
+    Tensor.squeeze_(dim=None) -> Tensor
+    In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
 
@@ -666,7 +675,36 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze,
     """
+    Tensor.unsqueeze(dim) -> Tensor
+
     See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze_,
+    """
+    Tensor.unsqueeze_(dim) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided,
+    """
+    Tensor.as_strided(size, stride, storage_offset=None) -> Tensor
+
+    See :func:`oneflow.as_strided`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided_,
+    """
+    Tensor.as_strided_(size, stride, storage_offset=None) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.as_strided`
     """,
 )
 
@@ -1046,6 +1084,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.lt,
     """
     See :func:`oneflow.lt`
@@ -1111,6 +1156,13 @@ add_docstr(
     oneflow.Tensor.gt,
     """
     See :func:`oneflow.gt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gt_,
+    """Tensor.gt_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.gt`.
     """,
 )
 
@@ -1862,6 +1914,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mode,
+    """
+    See :func:`oneflow.mode`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sum,
     """
     input.sum(dim=None, keepdim=False) -> Tensor
@@ -2415,5 +2474,27 @@ add_docstr(
     oneflow.Tensor.broadcast_to,
     """
     See :func:`oneflow.broadcast_to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unique,
+    """
+    See :func:`oneflow.unique`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> x.unique()
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
+        >>> x, indices = x.unique(return_inverse=True)
+        >>> indices
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
+        >>> x, counts = x.unique(return_counts=True)
+        >>> counts
+        tensor([1, 1, 1, 1], dtype=oneflow.int32)
     """,
 )
