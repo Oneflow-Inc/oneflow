@@ -117,9 +117,12 @@ limitations under the License.
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 
+#endif  // WITH_MLIR_CUDA_CODEGEN
+
+#ifdef WITH_CUDA
 // enable with_cuda_graphs
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#endif  // WITH_MLIR_CUDA_CODEGEN
+#endif // WITH_CUDA
 
 #include "llvm/ADT/STLExtras.h"
 
