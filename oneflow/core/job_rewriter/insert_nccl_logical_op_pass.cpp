@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -71,6 +72,10 @@ bool IsBreakpointOpNode(const OpNode* node) {
     if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
         || user_type_name == "identity_buffer") {
       return true;
+    }
+    if (!EnableLogicalChain()) {
+      // NOTE(chengcheng): in old task graph chain version, acc as breakpoint node
+      if (user_type_name == "acc") { return true; }
     }
   }
   return false;
