@@ -1731,7 +1731,7 @@ class CopyToDeviceFunctor {
     attrs.SetAllAttrs(device, pin_memory);
 
 #ifdef WITH_CUDA
-    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+    if (device->enum_type() == DeviceType::kCUDA) { InitCudaContextOnce(device->device_id()); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1742,20 +1742,10 @@ class CopyToDeviceFunctor {
 
 class CopyFunctor {
  public:
-  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id, const bool pin_memory) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
-    attrs.SetAllAttrs(JUST(Device::New(device_type, device_id)), pin_memory);
-
-#ifdef WITH_CUDA
-    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
-#endif
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return functional::Copy(x, JUST(Device::New(device_type, device_id)), pin_memory);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class FlipFunctor {

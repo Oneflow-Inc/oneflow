@@ -58,11 +58,6 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  return ThreadLocalGetOrCreate(type, device_id);
-}
-
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& type,
-                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0)
       << Error::InvalidValueError() << "Device ID should be non-negative";
   static thread_local HashMap<std::tuple<std::string, int>, Symbol<Device>> map;
@@ -76,28 +71,24 @@ Maybe<void> Device::Init() {
   return iter->second;
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrCreate(const std::string& str) {
-  static thread_local HashMap<std::string, Symbol<Device>> map;
-  auto iter = map.find(str);
-  if (iter == map.end()) {
-    std::string type;
-    int device_id = -1;
-    JUST(ParseDeviceTag(str, &type, &device_id));
-    CheckDeviceType(type);
-    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-    Device device(type, device_id);
-    JUST(device.Init());
-    iter = map.emplace(str, SymbolOf(device)).first;
-  }
-  return iter->second;
-}
-
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& str) {
-  return ThreadLocalGetOrCreate(str);
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& device_str) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(device_str);
+  if (iter == map.end()) {
+    std::string type;
+    int device_id = -1;
+    JUST(ParseDeviceString(device_str, &type, &device_id));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = map.emplace(device_str, SymbolOf(device)).first;
+  }
+  return iter->second;
 }
 
 std::string Device::ToRepr() const {
@@ -164,7 +155,7 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParseDeviceTag(const std::string &device_tag, std::string* device_name, int* device_index) {
+Maybe<void> ParseDeviceString(const std::string &device_tag, std::string* device_name, int* device_index) {
   std::string::size_type pos = device_tag.find(':');
   if (pos == std::string::npos) {
     *device_name = device_tag;
