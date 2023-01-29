@@ -2498,3 +2498,18 @@ add_docstr(
         tensor([1, 1, 1, 1], dtype=oneflow.int32)
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.clone,
+    """
+    See :func:`oneflow.clone`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.clone()
+        tensor([1, 2, 3], dtype=oneflow.int64)
+    """,
+)
