@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/common/device_type.proto";
+import "oneflow/core/common/device.proto";
 
 enum AttrType {
   kAtInt32 = 1;
@@ -49,11 +49,6 @@ message AttrValue {
   message ListString {
     repeated string val = 1;
   }
-  message Device {
-    required DeviceType device_type = 1;
-    required int64 device_id = 2;
-    required bool with_remat = 3;
-  }
   oneof value {
     int32 at_int32 = 1;
     int64 at_int64 = 2;
@@ -71,7 +66,7 @@ message AttrValue {
     ListString at_list_string = 14;
     Int64ListProto at_stride = 15;
     ListStride at_list_stride = 16;
-    Device at_device = 17;
+    DeviceProto at_device = 17;
   }
 }
 

@@ -395,14 +395,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   std::lock_guard<std::mutex> lock(mutex_);
 
   for (int i = 0; i < splits.size(); ++i) {
-    std::string device_name;
-    int device_index = -1;
-    bool with_remat = false;
-    JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index, &with_remat));
+    const auto& device = JUST(Device::ParseAndNew(splits.at(i)));
     detail::DeviceKey device_key;
-    const auto& device = JUST(Device::New(device_name, device_index));
     device_key.device_type = JUST(DeviceType4DeviceTag(device->type()));
-    device_key.device_index = device_index;
+    device_key.device_index = device->device_id();
     auto it = generators_.find(device_key);
     if (it == generators_.end()) {
       it = generators_

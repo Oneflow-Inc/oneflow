@@ -63,7 +63,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     std::string device_name = "";
     int device_index = -1;
     bool with_remat = false;
-    JUST(ParsingDeviceTag(device_tag, &device_name, &device_index, &with_remat));
+    JUST(ParseDeviceTag(device_tag, &device_name, &device_index, &with_remat));
     return one::DefaultGenerator(device_name, device_index);
   });
   m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) -> Maybe<void> {

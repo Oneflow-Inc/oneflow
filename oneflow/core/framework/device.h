@@ -54,9 +54,6 @@ class Device final {
   bool operator!=(const Device& device) const { return !operator==(device); }
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type, int64_t device_id,
-                                                   bool with_remat);
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type_or_type_with_device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id, bool with_remat);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type);
@@ -67,6 +64,9 @@ class Device final {
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
 
  private:
+  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type, int64_t device_id,
+                                                   bool with_remat);
+  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type_or_type_with_device_id);
   Device(const std::string& type, int64_t device_id, bool with_remat);
   Maybe<void> Init();
 
@@ -80,7 +80,7 @@ class Device final {
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
-Maybe<void> ParsingDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
+Maybe<void> ParseDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
                              bool* with_remat);
 
 }  // namespace oneflow

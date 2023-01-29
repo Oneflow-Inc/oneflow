@@ -168,7 +168,7 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParsingDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
+Maybe<void> ParseDeviceTag(std::string device_tag, std::string* device_name, int* device_index,
                              bool* with_remat) {
   if (device_tag.size() > 6 && device_tag.substr(device_tag.size() - 6, 6) == "+remat") {
     *with_remat = true;
