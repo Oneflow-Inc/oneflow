@@ -52,8 +52,6 @@ class Device final {
   bool operator!=(const Device& device) const { return !operator==(device); }
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type, int64_t device_id);
-  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type_or_type_with_device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type);
   static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
@@ -63,6 +61,9 @@ class Device final {
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
 
  private:
+  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type, int64_t device_id);
+  static Maybe<Symbol<Device>> ThreadLocalGetOrCreate(const std::string& type_or_type_with_device_id);
+
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();
 
