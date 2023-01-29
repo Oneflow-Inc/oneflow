@@ -395,90 +395,129 @@ class WhereFunctor {
 
 class WhereScalarXFunctor {
  public:
-  WhereScalarXFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("where_scalar_x").Input("condition").Input("y").Output("out").Build());
-  }
+  WhereScalarXFunctor() = default;
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
                            const std::shared_ptr<one::Tensor>& y) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
-                                       "has_float_operand", "int_operand", "has_int_operand");
-    auto input = y;
-    if (scalar.IsBool()) {
-      attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
-    } else if (scalar.IsFloatingPoint()) {
-      input = JUST(functional::Cast(y, DType::Double(), /*pin_memory=*/false));
-      attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
-    } else if (scalar.IsIntegral()) {
-      attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
+    std::shared_ptr<one::Tensor> x;
+    if (y->is_local()) {
+      x = JUST(functional::Constant(Shape({}), scalar, y->dtype(), JUST(y->device())));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+      const size_t sbp_ndim = JUST(y->nd_sbp())->sbp_parallel_size();
+      std::vector<Symbol<SbpParallel>> nd_sbp_vec;
+      nd_sbp_vec.reserve(sbp_ndim);
+      for (int i = 0; i < sbp_ndim; ++i) {
+        SbpParallel sbp;
+        sbp.mutable_broadcast_parallel();
+        nd_sbp_vec.push_back(SymbolOf(sbp));
+      }
+      const auto& parallel_desc = JUST(y->parallel_desc());
+      x = JUST(
+          functional::GlobalConstant(Shape({}), scalar, y->dtype(), parallel_desc, nd_sbp_vec));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
+    return functional::Where(condition, x, y);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class WhereScalarYFunctor {
  public:
-  WhereScalarYFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("where_scalar_y").Input("condition").Input("x").Output("out").Build());
-  }
+  WhereScalarYFunctor() = default;
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
-                                       "has_float_operand", "int_operand", "has_int_operand");
-    auto input = x;
-    if (scalar.IsBool()) {
-      attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
-    } else if (scalar.IsFloatingPoint()) {
-      input = JUST(functional::Cast(x, DType::Double(), /*pin_memory=*/false));
-      attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
-    } else if (scalar.IsIntegral()) {
-      attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
+    std::shared_ptr<one::Tensor> y;
+    if (x->is_local()) {
+      y = JUST(functional::Constant(Shape({}), scalar, x->dtype(), JUST(x->device())));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
+      const size_t sbp_ndim = JUST(x->nd_sbp())->sbp_parallel_size();
+      std::vector<Symbol<SbpParallel>> nd_sbp_vec;
+      nd_sbp_vec.reserve(sbp_ndim);
+      for (int i = 0; i < sbp_ndim; ++i) {
+        SbpParallel sbp;
+        sbp.mutable_broadcast_parallel();
+        nd_sbp_vec.push_back(SymbolOf(sbp));
+      }
+      const auto& parallel_desc = JUST(x->parallel_desc());
+      y = JUST(
+          functional::GlobalConstant(Shape({}), scalar, x->dtype(), parallel_desc, nd_sbp_vec));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
+    return functional::Where(condition, x, y);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class WhereScalarXYFunctor {
  public:
-  WhereScalarXYFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("where_scalar_xy").Input("condition").Output("out").Build());
-  }
+  WhereScalarXYFunctor() = default;
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        "x_bool_operand", "y_bool_operand", "has_x_bool_operand", "has_y_bool_operand",
-        "x_float_operand", "y_float_operand", "has_x_float_operand", "has_y_float_operand",
-        "x_int_operand", "y_int_operand", "has_x_int_operand", "has_y_int_operand");
-    if (x_scalar.IsBool() && y_scalar.IsBool()) {
-      attrs.SetAllAttrs(x_scalar.As<bool>(), y_scalar.As<bool>(), true, true, NullOpt, NullOpt,
-                        false, false, NullOpt, NullOpt, false, false);
-    } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      attrs.SetAllAttrs(NullOpt, NullOpt, false, false, x_scalar.As<double>(),
-                        y_scalar.As<double>(), true, true, NullOpt, NullOpt, false, false);
-    } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
-      attrs.SetAllAttrs(NullOpt, NullOpt, false, false, NullOpt, NullOpt, false, false,
-                        x_scalar.As<int64_t>(), y_scalar.As<int64_t>(), true, true);
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition}, attrs);
-  }
+    std::shared_ptr<one::Tensor> x;
+    std::shared_ptr<one::Tensor> y;
+    DataType dtype = DataType::kInvalidDataType;
 
- private:
-  std::shared_ptr<OpExpr> op_;
+    if (x_scalar.IsBool() && y_scalar.IsBool()) {
+      dtype = DataType::kBool;
+    } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
+      double x_val = x_scalar.As<double>();
+      double y_val = y_scalar.As<double>();
+      if (x_val >= GetMinVal<DataTypeToType<DataType::kFloat>>()
+          && x_val <= GetMaxVal<DataTypeToType<DataType::kFloat>>()
+          && y_val >= GetMinVal<DataTypeToType<DataType::kFloat>>()
+          && y_val <= GetMaxVal<DataTypeToType<DataType::kFloat>>()) {
+        dtype = DataType::kFloat;
+      } else {
+        dtype = DataType::kDouble;
+      }
+    } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
+      if (x_scalar.IsUnsigned() && y_scalar.IsUnsigned()) {
+        uint64_t x_val = x_scalar.As<uint64_t>();
+        uint64_t y_val = y_scalar.As<uint64_t>();
+        if (x_val <= GetMaxVal<DataTypeToType<DataType::kUInt32>>()
+            && y_val <= GetMaxVal<DataTypeToType<DataType::kUInt32>>()) {
+          dtype = DataType::kUInt32;
+        } else {
+          dtype = DataType::kUInt64;
+        }
+      } else if (x_scalar.IsSigned() && y_scalar.IsSigned()) {
+        int64_t x_val = x_scalar.As<int64_t>();
+        int64_t y_val = y_scalar.As<int64_t>();
+        if (x_val >= GetMinVal<DataTypeToType<DataType::kInt32>>()
+            && x_val <= GetMaxVal<DataTypeToType<DataType::kInt32>>()
+            && y_val >= GetMinVal<DataTypeToType<DataType::kInt32>>()
+            && y_val <= GetMaxVal<DataTypeToType<DataType::kInt32>>()) {
+          dtype = DataType::kInt32;
+        } else {
+          dtype = DataType::kInt64;
+        }
+      } else {
+        UNIMPLEMENTED_THEN_RETURN()
+            << "The x scalar and y scalar in Where shoule be signed or unsigned at the same time.";
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "The x scalar and y in Where shoule be bool, float or int at the same time.";
+    }
+
+    if (condition->is_local()) {
+      x = JUST(functional::Constant(Shape({}), x_scalar, DType(dtype), JUST(condition->device())));
+      y = JUST(functional::Constant(Shape({}), y_scalar, DType(dtype), JUST(condition->device())));
+    } else {
+      const size_t sbp_ndim = JUST(condition->nd_sbp())->sbp_parallel_size();
+      std::vector<Symbol<SbpParallel>> nd_sbp_vec;
+      nd_sbp_vec.reserve(sbp_ndim);
+      for (int i = 0; i < sbp_ndim; ++i) {
+        SbpParallel sbp;
+        sbp.mutable_broadcast_parallel();
+        nd_sbp_vec.push_back(SymbolOf(sbp));
+      }
+      const auto& parallel_desc = JUST(condition->parallel_desc());
+      x = JUST(
+          functional::GlobalConstant(Shape({}), x_scalar, DType(dtype), parallel_desc, nd_sbp_vec));
+      y = JUST(
+          functional::GlobalConstant(Shape({}), y_scalar, DType(dtype), parallel_desc, nd_sbp_vec));
+    }
+    return functional::Where(condition, x, y);
+  }
 };
 
 class ArgWhereFunctor {
