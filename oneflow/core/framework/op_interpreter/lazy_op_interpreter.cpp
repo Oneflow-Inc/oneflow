@@ -720,11 +720,11 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
   if (input_tensor->is_local()) {
-    (*outputs)[0] = JUST(LocalTensor::MakeTensor(
-        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
-        device,
-        /* is_lazy= */ true,
-        /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] =
+        JUST(LocalTensor::MakeTensor(input_tensor->shape(), JUST(input_tensor->stride()),
+                                     input_tensor->dtype()->data_type(), device,
+                                     /* is_lazy= */ true,
+                                     /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(device->type());
