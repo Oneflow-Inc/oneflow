@@ -222,6 +222,9 @@ inline bool InferPermutable(size_t simplified_num_dims, const int64_t* simplifie
   }
 
   // src has to be filled with numbers without strides
+  if (sorted_src_strides[simplified_num_dims - 1].first != 1) {
+    return false;
+  }
   for (size_t i = simplified_num_dims - 1; i > 0; i--) {
     if (sorted_src_strides[i-1].first != sorted_src_strides[i].first * simplified_src_dims[sorted_src_strides[i].second]) {
       return false;
