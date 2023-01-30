@@ -109,7 +109,7 @@ Pattern {
 
   let broadcast_mul = op<oneflow.broadcast_mul>(x: Value, y: Value){device_name = device_name, device_tag = device_tag}-> (out: Type);
   
-  // IsScalarTensor(y);
+  IsScalarTensor(y);
 
   rewrite broadcast_mul with{
     let scalar_mul = op<oneflow.scalar_mul_by_tensor>(x, y) {device_name = device_name, device_tag = device_tag} -> (out);
