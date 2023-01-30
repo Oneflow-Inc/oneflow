@@ -208,22 +208,22 @@ inline bool InferPermutable(size_t simplified_num_dims, const int64_t* simplifie
   if (unary_op != UnaryOp::kIdentity) {
     return false;
   }
-  std::pair<int64_t, size_t> sorted_src_dims[max_num_dims];
-  std::pair<int64_t, size_t> sorted_dst_dims[max_num_dims];
+
   std::pair<int64_t, size_t> sorted_src_strides[max_num_dims];
-  for (size_t i = 0; i < simplified_num_dims; i++) { sorted_src_dims[i] = {simplified_src_dims[i], i}; }
-  for (size_t i = 0; i < simplified_num_dims; i++) { sorted_dst_dims[i] = {simplified_dst_dims[i], i}; }
   for (size_t i = 0; i < simplified_num_dims; i++) { sorted_src_strides[i] = {simplified_src_strides[i], i}; }
-  std::sort(sorted_src_dims, sorted_src_dims + simplified_num_dims,
-            [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
-  std::sort(sorted_dst_dims, sorted_dst_dims + simplified_num_dims,
-            [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
   std::sort(sorted_src_strides, sorted_src_strides + simplified_num_dims,
             [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
 
   // all dims of src & dst should be the same
   for (size_t i = 0; i < simplified_num_dims; i++) {
-    if (sorted_src_dims[i].first != sorted_dst_dims[i].first) {
+    if (simplified_src_dims[i] != simplified_dst_dims[i]) {
+      return false;
+    }
+  }
+
+  // src has to be filled with numbers without strides
+  for (size_t i = simplified_num_dims - 1; i > 0; i--) {
+    if (sorted_src_strides[i-1].first != sorted_src_strides[i].first * simplified_src_dims[sorted_src_strides[i].second]) {
       return false;
     }
   }
