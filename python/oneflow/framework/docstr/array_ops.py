@@ -759,3 +759,30 @@ add_docstr(
         tensor([0.0000, 0.2500, 0.2000, 0.0000], dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow.clone,
+    r"""oneflow.clone(input) → Tensor
+
+    Returns a copy of input.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.clone.html
+
+    .. note::
+        This function is differentiable, so gradients will flow back from the result
+        of this operation to ``input``. To create a tensor without an autograd relationship
+        to ``input`` see :meth:`detach`.
+
+    Args:
+        input (oneflow.Tensor): input Tensor to be cloned
+
+    For example:
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 2, 3])
+        >>> y = flow.clone(x)
+        >>> y
+        tensor([1., 2., 3.], dtype=oneflow.float32)
+    """,
+)
