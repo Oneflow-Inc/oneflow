@@ -236,7 +236,7 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(True, "skip test")
+@unittest.skipIf(True, "skip test") # skip test for passing CI under cuda 10
 class TestFusedGlu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
