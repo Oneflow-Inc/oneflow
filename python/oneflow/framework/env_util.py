@@ -167,7 +167,6 @@ def CheckAndWarnAbnormalEnvVars():
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
-
     def str2int(env_config):
         return int(env_config)
 
