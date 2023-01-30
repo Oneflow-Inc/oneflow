@@ -715,20 +715,19 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
   CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
-  std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
-  int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
+  auto device = JUST(ctx.attrs.GetAttr<Symbol<Device>>("device"));
 
   CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
   if (input_tensor->is_local()) {
     (*outputs)[0] = JUST(LocalTensor::MakeTensor(
         input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
-        JUST(Device::New(device_type, device_id)),
+        device,
         /* is_lazy= */ true,
         /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
-    parallel_conf.set_device_tag(device_type);
+    parallel_conf.set_device_tag(device->type());
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] =
         JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
