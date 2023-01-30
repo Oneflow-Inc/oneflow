@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKM/passes.h"
 #include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/UserOpReflection.h"

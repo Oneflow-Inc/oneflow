@@ -27,16 +27,18 @@
 
 namespace mlir {
 namespace okm {
+
 namespace func_name {
 
-const auto* GRAPH_NAME = "_mlir_oneflow_subgraph";
-const auto* MEM_GRAPH_NAME = "_mlir_okm_subgraph";
-const auto* WRAP_GRAPH_NAME = "_mlir_okm_wrapped_subgraph";
-const auto* OPT_GRAPH_NAME = "_mlir_okm_opted_subgraph";
-const auto* OKL_GRAPH_NAME = "okl_func";
-const auto* OKL_POOL_SIZE_TAG = "pool_size";
+const std::string GRAPH_NAME = "_mlir_oneflow_subgraph";
+const std::string MEM_GRAPH_NAME = "okm_subgraph";
+const std::string WRAP_GRAPH_NAME = "okm_wrap_subgraph";
+const std::string OPT_GRAPH_NAME = "okm_alloc_subgraph";
+const std::string OKL_GRAPH_NAME = "okl_subgraph";
+const std::string OKL_POOL_SIZE_TAG = "pool_size";
 
 }  // namespace func_name
+
 struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static void ExtractArgTensors(func::FuncOp op, mlir::PatternRewriter& rewriter) {
     auto& body = op.getBody();
@@ -72,7 +74,7 @@ struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::GRAPH_NAME)) {
       // rename function
-      const auto index = sym_name.substr(strlen(func_name::GRAPH_NAME));
+      const auto index = sym_name.substr(func_name::GRAPH_NAME.size());
       const auto rename = func_name::MEM_GRAPH_NAME + index;
       op.setSymNameAttr(rewriter.getStringAttr(rename));
       // extract tensors
@@ -213,7 +215,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::MEM_GRAPH_NAME)) {
       // rename function
-      const auto index = sym_name.substr(strlen(func_name::MEM_GRAPH_NAME)).str();
+      const auto index = sym_name.substr(func_name::MEM_GRAPH_NAME.size()).str();
       const std::string rename = func_name::WRAP_GRAPH_NAME + index;
       // wrap kernels
       WrapOps(op, rewriter, rename);
@@ -292,7 +294,7 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::WRAP_GRAPH_NAME)) {
-      const auto index = sym_name.substr(strlen(func_name::WRAP_GRAPH_NAME)).str();
+      const auto index = sym_name.substr(func_name::WRAP_GRAPH_NAME.size()).str();
       const std::string rename = func_name::OPT_GRAPH_NAME + index;
       op.setSymNameAttr(rewriter.getStringAttr(rename));
       SimpleMerge(op, rewriter);
@@ -422,7 +424,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::OPT_GRAPH_NAME)) {
-      const auto index = sym_name.substr(strlen(func_name::OPT_GRAPH_NAME)).str();
+      const auto index = sym_name.substr(func_name::OPT_GRAPH_NAME.size()).str();
       const std::string rename = func_name::OKL_GRAPH_NAME + index;
       BuildOKLGraph(op, rewriter, rename);
       rewriter.eraseOp(op);

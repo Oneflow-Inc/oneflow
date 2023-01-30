@@ -23,18 +23,27 @@ namespace mlir {
 
 namespace okm {
 
+namespace func_name {
+
+extern const std::string GRAPH_NAME;
+extern const std::string MEM_GRAPH_NAME;
+extern const std::string WRAP_GRAPH_NAME;
+extern const std::string OPT_GRAPH_NAME;
+extern const std::string OKL_GRAPH_NAME;
+extern const std::string OKL_POOL_SIZE_TAG;
+
+}  // namespace func_name
+
 std::unique_ptr<mlir::Pass> createExtractOKMTensorPass();
 std::unique_ptr<mlir::Pass> createWrapOKMKernelPass();
 std::unique_ptr<mlir::Pass> createOptOKMMemrefPass();
 std::unique_ptr<mlir::Pass> createConvertOKMToOKLPass();
 
-
 #define GEN_PASS_CLASSES
 #define GEN_PASS_REGISTRATION
 #include "OneFlow/OKMPasses.h.inc"
 
-
-}  // namespace okl
+}  // namespace okm
 
 }  // namespace mlir
 

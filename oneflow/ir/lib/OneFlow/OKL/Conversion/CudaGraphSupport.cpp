@@ -86,7 +86,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
                                       mlir::PatternRewriter& rewriter) const override {
     const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
     // check whether this op is okl init context function  op
-    if (op.getSymName().str() != oneflow::okl_func::OKL_FUNC) { return failure(); }
+    if (!op.getSymName().startswith(oneflow::okl_func::OKL_FUNC)) { return failure(); }
     // check whether this op has been taged before
     if (op->getAttr(tag_name).dyn_cast_or_null<BoolAttr>() != nullptr) { return success(); }
     // check whether its childern is all cuda graph supported

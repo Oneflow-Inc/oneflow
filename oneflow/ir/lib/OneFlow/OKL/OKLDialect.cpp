@@ -56,6 +56,7 @@ void registerOneFlowPasses() {
   mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerExtractKernelLaunchTensorPassPass();
   mlir::registerTrimReturnAsVoidPassPass();
+  mlir::registerUpdateOKLAssemblyPassPass();
   mlir::registerLowerToOKLPassPass();
 }
 

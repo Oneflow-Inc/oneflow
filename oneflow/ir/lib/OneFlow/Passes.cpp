@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
+#include "OneFlow/OKM/passes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
@@ -834,7 +835,6 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 std::tuple<func::FuncOp, std::vector<Value>, std::vector<std::vector<int>>>
 CreateWrapFuncAndReturnWithIns(mlir::Location loc, std::vector<Operation*>& wrap_ops,
                                mlir::PatternRewriter& rewriter, int& name_index) {
-  auto context = rewriter.getContext();
   auto getProto =
       [&]() -> std::tuple<std::vector<Value>, std::vector<Value>, std::vector<std::vector<int>>> {
     std::vector<Value> whole_ins, whole_outs, ins, outs;
@@ -907,11 +907,6 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
 
   auto [wrap_func, wrap_ins, map] =
       CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
-  wrap_func->dump();
-wrap_func->getParentOfType<mlir::ModuleOp>()->dump();
-  if (failed(okm::LowerWrapOpsToOKMAndOKL(wrap_func->getParentOfType<mlir::ModuleOp>()))) {
-    LOG(FATAL) << "Fail to lower wrap ops to okl";
-  }
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -1029,6 +1024,33 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.replaceOpWithNewOp<func::ReturnOp>(&old_ret);
     rewriter.eraseOp(op);
     return success();
+  }
+};
+
+struct UpdateOKLAssemblyPattern : public mlir::OpRewritePattern<oneflow::KernelLaunchOp> {
+  explicit UpdateOKLAssemblyPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::KernelLaunchOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::KernelLaunchOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto sym_name = op.callee();
+    auto job = op->getParentOp();
+    auto module = job->getParentOfType<ModuleOp>();
+    if (!module) { LOG(FATAL) << "Fail to fetching module op from kernel launch op"; }
+    if (sym_name.startswith(okm::func_name::GRAPH_NAME)) {
+      // rename function
+      const auto index = sym_name.substr(okm::func_name::GRAPH_NAME.size()).str();
+      const std::string rename = okm::func_name::OKL_GRAPH_NAME + index;
+      if (auto asm_func = module.lookupSymbol(rename)) {
+        op.calleeAttr(SymbolRefAttr::get(job));
+        op->setAttr("op_name", rewriter.getStringAttr(rename));
+        if (failed(DumpAssembly(rewriter, op, rename))) { LOG(FATAL) << "Fail to dump asm"; }
+        rewriter.eraseOp(asm_func);
+        return success();
+      }
+      LOG(FATAL) << "Fail to finding " << rename << " in module";
+      return success();
+    }
+    return failure();
   }
 };
 
@@ -1201,6 +1223,10 @@ void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns
 
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
+}
+
+void populateUpdateOKLAssemblyPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<UpdateOKLAssemblyPattern>(patterns.getContext());
 }
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
