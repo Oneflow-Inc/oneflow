@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdint>
 #include <memory>
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/of_collective_boxing/collective_manager.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/of_collective_boxing_actor_context.h"
 #include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/lazy/actor/actor_message_bus.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -43,8 +45,10 @@ class OfCollectiveBoxingKernelState final : public KernelState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveBoxingKernelState);
   explicit OfCollectiveBoxingKernelState(const RankDesc& rank_desc)
-      : coll_id_(Singleton<CollectiveMgr>::Get()->KernelGetCollId(rank_desc)),
-        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(rank_desc.rank())) {}
+      : coll_id_(Singleton<CollectiveMgr>::Get()->KernelGetCollId(rank_desc)), // GlobalProcessCtx::Rank()
+        ofccl_rank_ctx_(Singleton<CollectiveMgr>::Get()->KernelGetOfcclRankCtx(GlobalProcessCtx::Rank())) {
+          VLOG(2) << "coll_id " << coll_id_ << " make_shared<OfCollectiveBoxingKernelState> with rank = " << GlobalProcessCtx::Rank() << " ofccl_rank_ctx_ @ " << ofccl_rank_ctx_;
+        }
   ~OfCollectiveBoxingKernelState() = default;
 
   int coll_id() { return coll_id_; }
@@ -85,49 +89,53 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
   const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
   
-  // TODO(Panlichen): 目前只实现了AllReduce  
+  const void* send_buff = nullptr;
+  void* recv_buff = nullptr;
+  const DataType data_type = rank_desc.op_desc().data_type();
+  if (GenericOpHasInput(rank_desc)) {
+    const Blob* in = ctx->BnInOp2Blob("in");
+    CHECK_EQ(in->data_type(), data_type);
+    CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
+    send_buff = in->dptr();
+  }
+  if (GenericOpHasOutput(rank_desc)) {
+    Blob* out = ctx->BnInOp2Blob("out");
+    CHECK_EQ(out->data_type(), data_type);
+    CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
+    recv_buff = out->mut_dptr();
+  }
+
+  int coll_id = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->coll_id();
+
+  ofcclRankCtx_t ofccl_rank_ctx = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->ofccl_rank_ctx();
+
+  CallBackArgs *args = new CallBackArgs();
+  // static成员可以在const函数中修改。
+  args->actor_id = actor_id;
+  args->coll_id = coll_id;
+  args->ctx = GetOfCollectiveBoxingActorContext(ctx);
+  args->rank = rank_desc.rank();
+
+  auto cb_lambda = [](int collIdFromCqe, void *args) {
+    int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
+    VLOG(2) << "actor " << actor_id << " Rank<" << (static_cast<CallBackArgs *>(args))->rank << "> callback args @ " << args << " get cqe for coll_id = " << collIdFromCqe << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++ << " args->coll_id = " << (static_cast<CallBackArgs *>(args))->coll_id;
+    Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
+    delete static_cast<CallBackArgs *>(args);
+    return 0;
+  };
+
+  CallbackFunc cb_func = cb_lambda;
+  
+  VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
+
   if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
-    const void* send_buff = nullptr;
-    void* recv_buff = nullptr;
-    const DataType data_type = rank_desc.op_desc().data_type();
-    if (GenericOpHasInput(rank_desc)) {
-      const Blob* in = ctx->BnInOp2Blob("in");
-      CHECK_EQ(in->data_type(), data_type);
-      CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
-      send_buff = in->dptr();
-    }
-    if (GenericOpHasOutput(rank_desc)) {
-      Blob* out = ctx->BnInOp2Blob("out");
-      CHECK_EQ(out->data_type(), data_type);
-      CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
-      recv_buff = out->mut_dptr();
-    }
-
-    int coll_id = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->coll_id();
-
-    ofcclRankCtx_t ofccl_rank_ctx = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->ofccl_rank_ctx();
-
-    CallBackArgs *args = new CallBackArgs();
-    // static成员可以在const函数中修改。
-    args->actor_id = actor_id;
-    args->coll_id = coll_id;
-    args->ctx = GetOfCollectiveBoxingActorContext(ctx);
-    args->rank = rank_desc.rank();
-
-    // TODO(Panlichen): debug目的捕获this
-    auto cb_lambda = [](int collIdFromCqe, void *args) {
-      int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
-      VLOG(2) << "actor " << actor_id << " Rank<" << (static_cast<CallBackArgs *>(args))->rank << "> callback args @ " << args << " get cqe for coll_id = " << collIdFromCqe << " actor_ctx->coll_done_cnt_ = " << (static_cast<CallBackArgs *>(args))->ctx->coll_done_cnt_++ << " args->coll_id = " << (static_cast<CallBackArgs *>(args))->coll_id;
-      Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
-      delete static_cast<CallBackArgs *>(args);
-      return 0;
-    };
-
-    CallbackFunc cb_func = cb_lambda;
-    
-    VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id;
-
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
+  } else if (rank_desc.op_desc().op_type() == kOpTypeAllGather) {
+    OF_NCCL_CHECK(ofcclRunAllGather(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
+  } else if (rank_desc.op_desc().op_type() == kOpTypeReduceScatter) {
+    OF_NCCL_CHECK(ofcclRunReduceScatter(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
+  } else {
+    UNIMPLEMENTED();
   }
 }
 

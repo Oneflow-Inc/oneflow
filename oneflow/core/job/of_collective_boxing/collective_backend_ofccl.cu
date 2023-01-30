@@ -187,7 +187,8 @@ struct CollectiveBackendOfccl::Impl {
         ); // 准备好了comm，接下来还需要count和datatype、op、rankCtx才可以进行prepare
         // 创建rankCtx之前，要set好device
 
-        for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) {
+        // VLOG(2) << "coll_id = " << coll_id << " local_rank_count = " << coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count();
+        for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) { // 其实是预期这里只有一个
           // 准备rank_ctx
           int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).device_id();
           OF_CUDA_CHECK(cudaSetDevice(curr_device_id));
@@ -195,6 +196,7 @@ struct CollectiveBackendOfccl::Impl {
           if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
             device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
             ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], curr_device_id);
+            VLOG(2) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
           }
 
           // 获取count和datatype、op信息。
@@ -207,16 +209,20 @@ struct CollectiveBackendOfccl::Impl {
           CHECK_GT(count, 0);
           // oneflow/oneflow/core/common/data_type.proto enum DataType
           ncclDataType_t nccl_data_type = GetNcclDataType(request.op_desc().data_type());
-          // oneflow/oneflow/core/graph/boxing/of_collective_boxing.proto enum ReduceMethod
-          ncclRedOp_t nccl_reduce_op = OfcclGetReduceOp(request.op_desc().reduce_method());
           ncclComm_t comm = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).nccl_comm();
           
-          // TODO: 目前只实现了AllReduce
           if (request.op_desc().op_type() == kOpTypeAllReduce) {
-            VLOG(2) << "Prepare coll_id = " << coll_id << " count = " << count << " nccl_data_type = " << nccl_data_type;
+            // oneflow/oneflow/core/graph/boxing/of_collective_boxing.proto enum ReduceMethod
+            ncclRedOp_t nccl_reduce_op = OfcclGetReduceOp(request.op_desc().reduce_method());
             OF_NCCL_CHECK(ofcclPrepareAllReduce(count, nccl_data_type, nccl_reduce_op, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
+          } else if (request.op_desc().op_type() == kOpTypeAllGather) {
+            OF_NCCL_CHECK(ofcclPrepareAllGather(count, nccl_data_type, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
+          } else if (request.op_desc().op_type() == kOpTypeReduceScatter) {
+            // oneflow/oneflow/core/graph/boxing/of_collective_boxing.proto enum ReduceMethod
+            ncclRedOp_t nccl_reduce_op = OfcclGetReduceOp(request.op_desc().reduce_method());
+            OF_NCCL_CHECK(ofcclPrepareReduceScatter(count, nccl_data_type, nccl_reduce_op, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
           } else {
-            UNIMPLEMENTED();
+            UNIMPLEMENTED() << " request.op_desc().op_type() = " << request.op_desc().op_type();
           }
           
           // 只要没有一个rank被多个线程管理的情况，就不会发生同一个rank的信息会分裂到不同的rank_ctx实例中。
@@ -239,7 +245,7 @@ struct CollectiveBackendOfccl::Impl {
   }
 
   ofcclRankCtx_t RetrieveOfcclRankCtx(int rank) {
-    CHECK(device_id2ofccl_rank_ctx.find(rank) != device_id2ofccl_rank_ctx.end());
+    CHECK(device_id2ofccl_rank_ctx.find(rank) != device_id2ofccl_rank_ctx.end()) << " rank = " << rank;
     return device_id2ofccl_rank_ctx[rank];
   }
 

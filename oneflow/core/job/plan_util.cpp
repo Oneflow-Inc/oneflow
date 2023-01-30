@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
@@ -1021,6 +1022,7 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
 }  // namespace
 
 void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
+  VLOG(1) << "Enter GenCollectiveBoxingPlan";
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -1124,9 +1126,11 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
+  VLOG(1) << "NCCL dependency_depth = " << dependency_depth << " order = " << order;
 }
 
 void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
+  VLOG(1) << "Enter GenOfCollectiveBoxingPlan";
   using namespace boxing::of_collective;
 
   RequestSet* request_set = &(*plan->mutable_of_collective_boxing_plan()
@@ -1246,7 +1250,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
-  VLOG(2) << "dependency_depth = " << dependency_depth << " order = " << order;
+  VLOG(1) << "OCCL dependency_depth = " << dependency_depth << " order = " << order;
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {

@@ -143,9 +143,6 @@ class OfRequestStore {
  private:
   HashMap<int64_t, std::vector<std::unique_ptr<OfRequestEntry>>> job_id2request_entry_vec_;
   HashMap<std::string, OfRequestId> name2request_id_;
-
-  // 在RequestStore里维护跨越job边界的coll_id
-  int coll_id_counter_;
 };
 
 }  // namespace of_collective

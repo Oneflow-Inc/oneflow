@@ -59,7 +59,6 @@ void OfcclInitCollectiveNode(OfCollectiveBoxingGenericTaskNode* node,
   } else {
     CHECK_EQ(root, -1);
   }
-  // TODO(Panlichen):  may need a new backend defination
   op_desc->set_backend(Backend::kBackendOFCCL);
   rank_desc->set_rank(parallel_id);
 

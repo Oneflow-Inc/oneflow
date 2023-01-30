@@ -137,10 +137,11 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
   for (const auto& job_id7request_set : plan.of_collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.emplace_back(job_id);
-    // VLOG(1) << "CollectiveMgr::AddPlan before impl_->request_store->InitJob job_id = " << job_id;
+    // VLOG(2) << "CollectiveMgr::AddPlan before impl_->request_store->InitJob job_id = " << job_id;
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
     impl_->collective_builder->InitJob(job_id);
   }
+  VLOG(2) << "CollectiveMgr::AddPlan success";
   return new CollectiveMgrPlanToken(job_ids);
 }
 
