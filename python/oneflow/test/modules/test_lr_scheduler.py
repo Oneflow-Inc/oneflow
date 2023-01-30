@@ -290,9 +290,9 @@ class TestLrScheduler(flow.unittest.TestCase):
         for _ in range(random.randint(1, 10)):
             lr_scheduler.step()
         # save
-        with tempfile.TemporaryDirectory() as save_dir:
-            flow.save(lr_scheduler.state_dict(), save_dir)
-            state_dict = flow.load(save_dir)
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(lr_scheduler.state_dict(), f.name)
+            state_dict = flow.load(f.name)
 
         # load
         param2 = flow.nn.Parameter(flow.ones(3, 4))

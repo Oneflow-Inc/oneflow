@@ -112,6 +112,7 @@ class ConvBaseFunctor {
     std::shared_ptr<one::Tensor> squeezed_conv_output = conv_out;
     if (!is_batched) {
       squeezed_conv_output = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
     }
     if (bias) {
       return functional::BiasAdd(squeezed_conv_output, JUST(bias), channel_idx);
@@ -171,6 +172,18 @@ class DeConvBaseFunctor {
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "deconv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "deconv2d";
+    } else {
+      func_name = "deconv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
+    int32_t channel_idx = 1;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
@@ -184,13 +197,19 @@ class DeConvBaseFunctor {
     deconv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(1) * groups), kernel_size_vec,
                              padding, output_padding, stride, dilation, groups, data_format);
     std::shared_ptr<one::Tensor> deconv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {input, weight}, deconv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {unsqueezed_input, weight}, deconv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_deconv_output = deconv_out;
+    if (!is_batched) {
+      squeezed_deconv_output = JUST(functional::Squeeze(deconv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
-      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(channel_idx));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {squeezed_deconv_output, JUST(bias)},
+                                            bias_attrs);
     } else {
-      return deconv_out;
+      return squeezed_deconv_output;
     }
   }
 
@@ -2529,8 +2548,7 @@ class ConstantPadFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("padding", "floating_constant_value",
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
-    if (IsFloatingDataType(input->dtype()->data_type())
-        || input->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
