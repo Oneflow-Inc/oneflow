@@ -3148,3 +3148,7 @@
 - name: "mode"
   signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
   bind_python: True
+
+- name: "clone"
+  signature: "Tensor (Tensor input) => Clone"
+  bind_python: True
