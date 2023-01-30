@@ -18,10 +18,7 @@ from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
 
-def depend(
-        input: Tensor,
-        depend_tesor: Tensor,
-) -> Tensor:
+def depend(input: Tensor, depend_tesor: Tensor,) -> Tensor:
     r"""
     Add control dependency to guarantee OP A is executed before OP B.
     Used to prevent OPs from being rearranged or eliminated during graph compilation.
@@ -67,6 +64,6 @@ def depend(
 
     # avoid self-loop
     if input is depend_tesor:
-        raise RuntimeError("\"input\" and \"depend_tesor\" can NOT be the same tensor.")
+        raise RuntimeError('"input" and "depend_tesor" can NOT be the same tensor.')
 
     return flow._C.depend(input, depend_tesor)
