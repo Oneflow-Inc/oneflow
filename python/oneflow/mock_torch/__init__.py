@@ -157,10 +157,10 @@ class enable:
         forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
         )
-        if self.was_enabled or forcedly_disabled_by_env_var:
-            return
         globals = currentframe().f_back.f_globals
         self.globals = globals
+        if self.was_enabled or forcedly_disabled_by_env_var:
+            return
         _importer._enable(globals)
 
     def __enter__(self):
