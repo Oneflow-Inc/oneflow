@@ -114,8 +114,6 @@ static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unuse
 
 static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   HANDLE_ERRORS
-  CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
-      << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
   PyObjectPtr tuple(PyTuple_Pack(1, self));
   PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
