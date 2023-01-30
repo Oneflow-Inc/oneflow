@@ -2860,6 +2860,8 @@ class Dropout1dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
+        << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
     CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, false)
         << "dropout1d: Expected 2D or 3D input, but received a " << input_dim
@@ -2880,6 +2882,8 @@ class Dropout2dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
+        << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
     if (input_dim != 3 && input_dim != 4) {
       LOG(WARNING)
@@ -2906,6 +2910,8 @@ class Dropout3dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
+        << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
     if (input_dim != 4 && input_dim != 5) {
       LOG(WARNING)
