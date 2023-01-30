@@ -112,14 +112,14 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertEqual(f(), "oneflow")
 
     def test_env_var(test_case):
-        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = '1'
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "1"
 
         with mock.enable():
             import torch
 
             test_case.assertEqual(torch.__package__, "torch")
 
-        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = '0'
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "0"
 
 
 if __name__ == "__main__":
