@@ -14,4 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from onefx import *
+try:
+    from onefx import *
+except:
+    class Proxy:
+        def __init__(self):
+            raise NotImplementedError(
+                "oneflow.fx.Proxy is only for compatibility with PyTorch and is not actually implemented."
+            )    

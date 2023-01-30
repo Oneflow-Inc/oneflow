@@ -20,6 +20,8 @@ env:
   ONEFLOW_FACE_COMMIT: 110a97e8d5737a1f1856281a7df556a5ac8f06de
   ONEFLOW_IREE_SRC: oneflow_iree
   ONEFLOW_IREE_COMMIT: 30e7dec07ca11287d1317296e08b12d815a013fe
+  ONE_FX_SRC: onefx
+  ONE_FX_COMMIT: da4051c7f1ace7a20b3f54395b580cd102fc99da
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
@@ -474,6 +476,14 @@ jobs:
           # please use a commit here
           ref: ${{ env.FLOW_VISION_COMMIT}}
           path: ${{ env.FLOW_VISION_SRC}}
+      - name: Checkout Oneflow-Inc/one-fx
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/one-fx
+          # please use a commit here
+          ref: ${{ env.ONE_FX_COMMIT}}
+          path: ${{ env.ONE_FX_SRC}}
       - name: Checkout Oneflow-Inc/libai
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
@@ -595,6 +605,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONE_FX_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -702,6 +713,14 @@ jobs:
           # please use a commit here
           ref: ${{ env.ONEFLOW_IREE_COMMIT}}
           path: ${{ env.ONEFLOW_IREE_SRC}}
+      - name: Checkout Oneflow-Inc/one-fx
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/one-fx
+          # please use a commit here
+          ref: ${{ env.ONE_FX_COMMIT}}
+          path: ${{ env.ONE_FX_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -899,6 +918,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_FACE_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONE_FX_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |

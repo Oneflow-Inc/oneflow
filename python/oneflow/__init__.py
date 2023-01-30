@@ -472,5 +472,3 @@ if oneflow._oneflow_internal.flags.with_mlir():
     ):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
-
-import oneflow.fx
