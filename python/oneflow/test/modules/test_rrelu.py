@@ -134,7 +134,7 @@ class TestModule(flow.unittest.TestCase):
         return torch.nn.functional.rrelu(
             x, lower=lower, upper=lower + 0.5, inplace=random_bool(), training=False,
         )
-    
+
     @autotest(n=5)
     def test_functional_rrelu_inplace(test_case):
         device = random_device()
@@ -152,6 +152,15 @@ class TestModule(flow.unittest.TestCase):
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         lower = np.random.randn()
         m = torch.nn.RReLU(lower=lower, upper=lower, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5, check_graph=False)
+    def test_rrelu_eval(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        lower = np.abs(np.random.randn())
+        m = torch.nn.RReLU(lower=lower, upper=lower, inplace=random_bool())
+        m.eval()
         return m(x)
 
     @profile(torch.nn.functional.rrelu)
