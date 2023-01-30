@@ -77,7 +77,7 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
   cub::TransformInputIterator<bool, IsTrue<IN_T>, const IN_T*> flag_iter(input, is_true);
   cub::CountingInputIterator<OUT_T> offset_counter(0);
   return cub::DeviceSelect::Flagged(temp_storage, temp_storage_bytes, offset_counter, flag_iter,
-                                    output_iter, num_selected, num_items, stream, false);
+                                    output_iter, num_selected, num_items, stream);
 }
 
 template<typename IN_T, typename OUT_T>

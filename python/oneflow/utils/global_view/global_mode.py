@@ -33,9 +33,9 @@ class global_mode(internal_global_view.global_mode):
         placement (oneflow.placement, optional): the desired placement of the input. Default: None
         sbp (oneflow.sbp.sbp, list/tuple of oneflow.sbp.sbp, optional): the desired sbp of the input or self-defined functions in order to specify SBP. Default: None
 
-    Example::
+    For example:
 
-        .. code-block:: python
+    .. code-block:: python
 
         class LinearEvalGraphWithDDP(flow.nn.Graph):
             def __init__(self):
@@ -56,8 +56,8 @@ class global_mode(internal_global_view.global_mode):
                     out = out - sample * 100
 
                 return out
-                
-        .. code-block:: python
+         
+    .. code-block:: python       
 
         with global_mode(False):
             # The tensor will be keeped as local.
@@ -84,11 +84,12 @@ class current_global_mode(internal_global_view.current_global_mode):
     
     Use the current_global_mode to get the information of global mode, including enabled, placement and sbp.
 
-    Note: the sbp property is supposed to return a list/tuple of oneflow.sbp.sbp.
+    Note: 
+        The sbp property is supposed to return a list/tuple of `oneflow.sbp.sbp`.
 
-    Example::
+    For example:
 
-        .. code-block:: python
+    .. code-block:: python
 
         with global_mode(True, placement=P, sbp=B):
             # Get the global mode info.
