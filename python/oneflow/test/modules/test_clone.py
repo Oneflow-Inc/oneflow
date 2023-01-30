@@ -13,14 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.adam import Adam
-from oneflow.nn.optimizer.adamw import AdamW
-from oneflow.optim.optimizer import Optimizer
-from oneflow.nn.optimizer.rmsprop import RMSprop
-from oneflow.nn.optimizer.sgd import SGD
-from oneflow.nn.optimizer.adagrad import Adagrad
-from oneflow.nn.optimizer.lamb import LAMB
-from oneflow.nn.optimizer.adadelta import Adadelta
-from oneflow.nn.optimizer import swa_utils
+import unittest
 
-from . import lr_scheduler
+import oneflow as flow
+import oneflow.unittest
+
+from oneflow.test_utils.automated_test_util import *
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestClone(flow.unittest.TestCase):
+    @autotest(n=3)
+    def test_clone_with_random_data(test_case):
+        x = random_tensor()
+        y = torch.clone(x)
+        return y
+
+
+if __name__ == "__main__":
+    unittest.main()

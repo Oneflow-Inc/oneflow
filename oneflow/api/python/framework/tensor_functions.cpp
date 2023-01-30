@@ -114,8 +114,6 @@ static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unuse
 
 static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   HANDLE_ERRORS
-  CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
-      << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
   PyObjectPtr tuple(PyTuple_Pack(1, self));
   PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -1097,10 +1095,13 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LT: return functional::less(NULL, tuple.get(), NULL);
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
-      if (self == Py_None || other == Py_None) return Py_False;
+      if (self == Py_None || other == Py_None) Py_RETURN_FALSE;
       return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
-    case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
+    case Py_NE: {
+      if (self == Py_None || other == Py_None) Py_RETURN_TRUE;
+      return functional::not_equal(NULL, tuple.get(), NULL);
+    }
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
     case Py_GE: return functional::greater_equal(NULL, tuple.get(), NULL);
   }
