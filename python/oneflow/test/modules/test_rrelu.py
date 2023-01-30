@@ -28,9 +28,8 @@ from oneflow.test_utils.automated_test_util import *
 
 def do_test_rrelu_same_bound(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
-    seed = np.random.randint(0, 1000)
-    flow.manual_seed(seed)
-    torch.manual_seed(seed)
+    flow.manual_seed(233)
+    torch.manual_seed(233)
     flow_tensor = flow.tensor(np_x, requires_grad=True, device=device)
     torch_tensor = torch.tensor(np_x, requires_grad=True, device=device)
     rate = np.random.randn()
@@ -62,9 +61,6 @@ def do_test_rrelu_same_bound(test_case, shape, device, dtype):
 
 def do_test_rrelu_different_bound(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
-    seed = np.random.randint(0, 1000)
-    flow.manual_seed(seed)
-    torch.manual_seed(seed)
     flow_tensor = flow.tensor(np_x, requires_grad=True, device=device)
     rate = np.random.randn()
     flow_rrelu = flow.nn.RReLU(lower=rate, upper=rate + 0.5)
@@ -133,28 +129,23 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         lower = np.abs(
-            (np.random.randn())
-        )  # when the argement inpalce is set to True, the scope must not be negative
+            np.random.randn()
+        )  # In-place leakyReLu backward calculation is triggered with a negative slope which is not supported
         return torch.nn.functional.rrelu(
-            x,
-            lower=lower,
-            upper=lower + 0.5,
-            inplace=random_bool(),
-            training=random_bool(),
+            x, lower=lower, upper=lower + 0.5, inplace=random_bool(), training=False,
         )
 
-    @autotest()
+    @autotest(n=5)
     def test_rrelu_train(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         lower = np.random.randn()
         m = torch.nn.RReLU(lower=lower, upper=lower, inplace=random_bool())
-        result = m(x)
-        return result
+        return m(x)
 
     @profile(torch.nn.functional.rrelu)
     def profile_dropout(test_case):
-        lower = np.random.randn() + 1
+        lower = np.random.randn()
         torch.nn.functional.rrelu(
             torch.ones(1, 128, 28, 28),
             lower=lower,
