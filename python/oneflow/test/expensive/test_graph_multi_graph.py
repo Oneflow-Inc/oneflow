@@ -19,6 +19,7 @@ import unittest
 import numpy as np
 import time
 import tempfile
+import multiprocessing
 
 import oneflow as flow
 import oneflow.unittest
@@ -48,7 +49,6 @@ def _with_new_session(fn):
     return new_fn
 
 
-@_with_new_session
 def _test_linear_multi_graph_share(test_case, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -98,7 +98,6 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     of_lazy_out = linear_g(x)
     of_eager_out = linear_reshape(x)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
-    print("graph 0 out ", of_lazy_out)
 
     linear_g1 = LinearGraph()
     linear_g1.share_from(linear_g)
@@ -113,7 +112,6 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     )
     x1 = flow.tensor(input_arr1, device=device)
     of_lazy_out1 = linear_g1(x1)
-    print("graph 1 out ", of_lazy_out1)
     of_eager_out1 = linear_reshape(x1)
     test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
 
@@ -128,13 +126,12 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     )
     x2 = flow.tensor(input_arr2, device=device)
     of_lazy_out2 = linear_g2(x2)
-    print(" graph 2 out ", of_lazy_out2)
     of_eager_out2 = linear_reshape(x2)
     test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(test_case, device, with_reshape):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -184,8 +181,8 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
     x = flow.tensor(input_arr, device=device)
     of_lazy_out = linear_g(x)
     of_eager_out = linear_reshape(x)
-    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
-    print("graph 0 out ", of_lazy_out)
+    test_case0 = np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy())
+    return_dict["save0"] = test_case0
 
     linear_g1 = LinearGraph()
     linear_g1.enable_save_runtime_state_dict()
@@ -201,9 +198,9 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
     )
     x1 = flow.tensor(input_arr1, device=device)
     of_lazy_out1 = linear_g1(x1)
-    print("graph 1 out ", of_lazy_out1)
     of_eager_out1 = linear_reshape(x1)
-    test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+    test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
+    return_dict["save1"] = test_case1
 
     state_dict_list = []
     state_dict0 = linear_g.runtime_state_dict()
@@ -216,7 +213,7 @@ def _test_linear_multi_graph_save(test_case, device, with_reshape):
 
 @_with_new_session
 def _test_linear_multi_graph_load(
-    test_case, device, with_reshape, state_dict_list, load_with_eager
+    return_dict, device, with_reshape, state_dict_list, load_with_eager
 ):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -271,8 +268,8 @@ def _test_linear_multi_graph_load(
     x = flow.tensor(input_arr, device=device)
     of_lazy_out = linear_g(x)
     of_eager_out = linear_reshape(x)
-    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
-    print("graph 0 out ", of_lazy_out)
+    test_case0 = np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy())
+    return_dict["load0" + str(load_with_eager)] = test_case0
 
     if not load_with_eager:
         linear_g1 = flow.nn.Graph()
@@ -292,9 +289,28 @@ def _test_linear_multi_graph_load(
     )
     x1 = flow.tensor(input_arr1, device=device)
     of_lazy_out1 = linear_g1(x1)
-    print("graph 1 out ", of_lazy_out1)
     of_eager_out1 = linear_reshape(x1)
-    test_case.assertTrue(np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy()))
+    test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
+    return_dict["load1" + str(load_with_eager)] = test_case1
+
+
+def _graph_save(return_dict, filename):
+    state_dict_list = _test_linear_multi_graph_save(
+        return_dict, flow.device("cuda"), True
+    )
+    flow.save(state_dict_list, filename)
+
+
+def _graph_load(return_dict, filename):
+    state_dict_list_loaded = flow.load(filename)
+    # load with nn.Graph
+    _test_linear_multi_graph_load(
+        return_dict, flow.device("cuda"), True, state_dict_list_loaded, False
+    )
+    # load with nn.Graph subinstance which has eager module
+    _test_linear_multi_graph_load(
+        return_dict, flow.device("cuda"), True, state_dict_list_loaded, True
+    )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -308,23 +324,27 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
 
     def test_linear_multi_graph_save_load_gpu(test_case):
         # A graph runtime state dict
-        state_dict_list = _test_linear_multi_graph_save(
-            test_case, flow.device("cuda"), True
-        )
-
-        # print("runtime state dict list", state_dict_list)
         with tempfile.NamedTemporaryFile() as f:
-            flow.save(state_dict_list, f.name)
-            state_dict_list_loaded = flow.load(f.name)
+            # Save a graph
+            manager = multiprocessing.Manager()
+            return_dict = manager.dict()
+            save_p = multiprocessing.get_context("spawn").Process(
+                target=_graph_save, args=(return_dict, f.name)
+            )
+            save_p.start()
+            save_p.join()
 
-        # Resume a graph from a graph runtime state dict
-        _test_linear_multi_graph_load(
-            test_case, flow.device("cuda"), True, state_dict_list_loaded, False
-        )
+            # Resume a graph from a graph runtime state dict
+            load_p = multiprocessing.get_context("spawn").Process(
+                target=_graph_load, args=(return_dict, f.name)
+            )
+            load_p.start()
+            load_p.join()
 
-        _test_linear_multi_graph_load(
-            test_case, flow.device("cuda"), True, state_dict_list_loaded, True
-        )
+            # test_case can't be passed into sub process, so we check with return_dict.
+            # Reference: https://stackoverflow.com/questions/52225003/writing-to-multiple-files-using-multiprocessing-error-typeerror-cannot-seria
+            for (key, check_value) in return_dict.items():
+                test_case.assertTrue(check_value, key + " failed.")
 
 
 if __name__ == "__main__":

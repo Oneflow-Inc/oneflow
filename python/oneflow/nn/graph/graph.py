@@ -1071,7 +1071,9 @@ class Graph(object):
                     if s_name in states_from_eager:
                         state_tensor_from_eager = states_from_eager[s_name]
                         # Note: compare value has extra cost.
-                        # assert oneflow.allclose(state_tensor_from_eager, self._state_tensor_tuple[s_idx])
+                        assert oneflow.allclose(
+                            state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                        )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()
