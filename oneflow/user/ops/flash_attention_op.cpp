@@ -30,8 +30,8 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   bool has_mask = ctx->has_input("mask", 0);
   bool has_bias = ctx->has_input("bias", 0);
   CHECK_OR_RETURN((q_axes == 3) || (q_axes == 4))
-      << "query shape num_axes should be 3[total_q x num_heads x head_size] or 4[batch_size x "
-         "seqlen_q x num_heads x head_size], but got "
+      << "query shape num_axes should be 3[total_q x num_heads x head_size] or "
+         "4[batch_size x seqlen_q x num_heads x head_size], but got "
       << q_axes;
   const int64_t num_head = q_shape.At(q_axes - 2);
   const int64_t head_size = q_shape.At(q_axes - 1);
@@ -76,12 +76,15 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
     const int64_t seq_len_q = q_shape.At(1);
     const int64_t num_head = q_shape.At(2);
     ctx->SetOutputShape("out", 0, q_shape);
-    ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_head, seq_len_q}));
+    int max_seqlen_q = ((seq_len_q + 16 - 1) / 16) * 16;
+    ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_head, max_seqlen_q}));
   } else {
-    const int64_t total_q = q_shape.At(0);
+    const int64_t batch_size = ctx->InputShape("cu_seqlens_q", 0).At(0) - 1;
     const int64_t num_head = q_shape.At(1);
     ctx->SetOutputShape("out", 0, q_shape);
-    ctx->SetOutputShape("softmax_lse", 0, Shape({total_q, num_head}));
+    const int max_seqlen_q_ = ctx->Attr<int>("max_seqlen_q");
+    int max_seqlen_q = ((max_seqlen_q_ + 16 - 1) / 16) * 16;
+    ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_head, max_seqlen_q}));
   }
 
   return Maybe<void>::Ok();
