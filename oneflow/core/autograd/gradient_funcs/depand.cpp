@@ -20,8 +20,8 @@ namespace oneflow {
 namespace one {
 
 struct DependCaptureState : public AutoGradCaptureState {
-  bool in_requires_grad;
-  bool depend_tensor_requires_grad;
+  bool in_requires_grad = false;
+  bool depend_tensor_requires_grad = false;
   Shape depend_tensor_shape;
 };
 
