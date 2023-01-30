@@ -20,15 +20,17 @@ limitations under the License.
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
 namespace {
 
 struct RelativeNodes {
-  const OpNode* input = nullptr;
-  const OpNode* output = nullptr;
-  std::vector<const OpNode*> depends = {};
+  const OpNode* input_node = nullptr;
+  const OpNode* output_node = nullptr;
+  const OpNode* nearest_del_node = nullptr;
+  std::vector<const OpNode*> in_ctrl_nodes = {};
 };
 
 bool IsDependyOp(const OperatorConf& op) {
@@ -40,7 +42,7 @@ bool NeedDoPass(const Job& job) {
 }
 
 const OpNode* GetNodeFromEdgeByTensorName(const OpNode* op_node,
-                                          const std::string target_tensor_name) {
+                                          const std::string& target_tensor_name) {
   CHECK(IsDependyOp(op_node->op().op_conf()));
   for (const OpEdge* in_edge : op_node->in_edges()) {
     const OpNode* in_op_node = in_edge->src_node();
@@ -63,19 +65,24 @@ const OpNode* GetNodeFromInputEdge(const OpNode* op_node) {
   return GetNodeFromEdgeByTensorName(op_node, "in_0");
 }
 
-const OpNode* GetNodeFromDependEdge(const OpNode* op_node) {
+const OpNode* GetNodeFromInCtrlEdge(const OpNode* op_node) {
   return GetNodeFromEdgeByTensorName(op_node, "depend_tensor_0");
 }
 
-const OpNode* GetValidInputNode(const OpNode* op_node, HashSet<const OpNode*>& del_nodes) {
+bool IsDependOPNodeAtTop(const OpNode* op_node, HashSet<const OpNode*>& del_nodes) {
   CHECK(IsDependyOp(op_node->op().op_conf()));
   const OpNode* input_op_node = GetNodeFromInputEdge(op_node);
-  if (del_nodes.find(input_op_node) == del_nodes.end()) { return input_op_node; }
-  return nullptr;
+  const OpNode* in_ctrl_op_node = GetNodeFromInCtrlEdge(op_node);
+  if (del_nodes.find(input_op_node) == del_nodes.end()
+      && del_nodes.find(in_ctrl_op_node) == del_nodes.end()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>& del_nodes,
-                            const OpNode* input_node, std::vector<const OpNode*> depend_nodes,
+                            const OpNode* input_node, std::vector<const OpNode*> in_ctrl_nodes,
                             std::vector<RelativeNodes>& ret) {
   CHECK(IsDependyOp(op_node->op().op_conf()));
   for (const OpEdge* out_edge : op_node->out_edges()) {
@@ -84,39 +91,56 @@ void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>&
       // "out_op_node" is one of valid output nodes
 
       // in this case, record the nodes as result
-      const OpNode* depend_node = GetNodeFromDependEdge(op_node);
-      depend_nodes.emplace_back(depend_node);
-      ret.push_back({input_node, out_op_node, depend_nodes});
-    } else if (op_node == GetNodeFromDependEdge(out_op_node)) {
-      // "out_op_node" is ALSO a depend OP Node, and "op_node" is an in-control OP
+      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
+      if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
+        in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
+      }
 
-      // in this case, two precursor node of op_node be interpreted as in-control OP
-      // the input_node should not NOT be the precursor of the target output node
-      // thus, put input_node into "depend_nodes", and set "input_node" as NULL in
-      // subsequent processing
-      if (input_node) depend_nodes.push_back(input_node);
+      const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
+      if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
+        // should not have two input nodes for a depend OP Chain
+        CHECK(input_node == nullptr);
+        input_node = input_node_to_check;
+      }
+      ret.push_back({input_node, out_op_node, op_node, in_ctrl_nodes});
+    } else if (op_node == GetNodeFromInCtrlEdge(out_op_node)) {
+      // "out_op_node" is ALSO a depend OP Node, and "op_node" is an in-control OP Node
+
+      // in this case, two precursor node of "op_node" should be interpreted as in-control OP Node
+      // the "input_node" should not NOT be the precursor of the target output node
+      // thus, put "input_node into" "depend_nodes", and set "input_node" as NULL in subsequent
+      // processing
+      if (input_node) in_ctrl_nodes.push_back(input_node);
       input_node = nullptr;
       // continue recursion until the target output node is found
-      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, depend_nodes, ret);
+      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, in_ctrl_nodes, ret);
     } else {
-      // "out_op_node" is ALSO a depend OP Node, and "op_node" is an input OP
+      // "out_op_node" is ALSO a depend OP Node, and "op_node" is an input OP Node
 
       // in this case, "input_node" should be the real precursor of the target output node
-      // thus, append in-ctrl op-node conneted to "op_node" input_node into "depend_nodes",
-      // and remain "input_node as" in subsequent processing
-      const OpNode* depend_node = GetNodeFromDependEdge(op_node);
-      depend_nodes.emplace_back(depend_node);
+      // thus, append in-ctrl OP Node into "in_ctrl_nodes", and update or remain "input_node"
+      // in subsequent processing
+      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
+      if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
+        in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
+      }
+
+      const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
+      if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
+        // should not have two input nodes for a depend OP Chain
+        CHECK(input_node == nullptr);
+        input_node = input_node_to_check;
+      }
       // continue recursion until the target output node is found
-      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, depend_nodes, ret);
+      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, in_ctrl_nodes, ret);
     }
   }
 }
 
 const std::vector<RelativeNodes> GetRelativeNodes(const OpNode* op_node,
-                                                  const HashSet<const OpNode*>& del_nodes,
-                                                  const OpNode* input_node) {
+                                                  const HashSet<const OpNode*>& del_nodes) {
   std::vector<RelativeNodes> ret;
-  GetRelativeNodesHelper(op_node, del_nodes, input_node, {}, ret);
+  GetRelativeNodesHelper(op_node, del_nodes, nullptr, {}, ret);
   return ret;
 }
 
@@ -159,31 +183,29 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
   del_op_names.reserve(del_nodes.size());
   for (const OpNode* op_node : del_nodes) {
     del_op_names.emplace_back(op_node->op().op_name());
-    // valid input node is node which is bind to 'in' edger of depend OP, and not in del_nodes
-    const OpNode* valid_input_node = GetValidInputNode(op_node, del_nodes);
     // GetRelativeNodes() considers the chain of multiple depend OP Nodes and processes them
-    // from the beginning, so skip the intermediate nodes whose valid_input_node is NULL
-    if (valid_input_node == nullptr) { continue; }
-    const std::vector<RelativeNodes> relatives =
-        GetRelativeNodes(op_node, del_nodes, valid_input_node);
-    const auto& old_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleObn());
+    // from top to down, so skip the intermediate nodes
+    if (!IsDependOPNodeAtTop(op_node, del_nodes)) { continue; }
+    const std::vector<RelativeNodes> relatives = GetRelativeNodes(op_node, del_nodes);
 
     // adjust op_conf of nodes connected to depend OP Nodes
     for (const RelativeNodes& item : relatives) {
-      const OpNode* input_node = item.input;
-      const OpNode* output_node = item.output;
-      const std::vector<const OpNode*>& depend_nodes = item.depends;
-      // in some cases (e.g. the second branch in GetRelativeNodesHelper()), input nodes should
-      // be interpreted as control nodes for those case, accordingly their input_node is NULL
-      // and the ibn modifications should be skip
+      const OpNode* input_node = item.input_node;
+      const OpNode* output_node = item.output_node;
+      const OpNode* nearest_del_node = item.nearest_del_node;
+      const std::vector<const OpNode*>& depend_nodes = item.in_ctrl_nodes;
+      // in some cases (e.g. the second branch in GetRelativeNodesHelper()), input nodes could
+      // be interpreted as in-ctrl node, accordingly their input_node will be NULL and the ibn 
+      // modifications should be skip
       if (input_node) {
+        const auto& old_lbi = nearest_del_node->op().BnInOp2Lbi(nearest_del_node->op().SoleObn());
         const auto& new_lbi = input_node->op().BnInOp2Lbi(input_node->op().SoleObn());
-        const Operator& op = output_node->op();
-        for (const std::string& ibn : op.input_bns()) {
-          if (op.BnInOp2Lbi(ibn) == old_lbi) {
-            auto iter = to_update_op_confs.find(op.op_name());
+        const Operator& out_op = output_node->op();
+        for (const std::string& ibn : out_op.input_bns()) {
+          if (out_op.BnInOp2Lbi(ibn) == old_lbi) {
+            auto iter = to_update_op_confs.find(out_op.op_name());
             if (iter == to_update_op_confs.end()) {
-              iter = to_update_op_confs.emplace(op.op_name(), op.op_conf()).first;
+              iter = to_update_op_confs.emplace(out_op.op_name(), out_op.op_conf()).first;
             }
             OperatorConf& op_conf = iter->second;
             const auto& old_val =
@@ -205,7 +227,8 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
         const std::string& new_ctrl_in_op_name = node->op().op_name();
         auto existed_it = std::find(existed_ctrl_in_op_names.begin(),
                                     existed_ctrl_in_op_names.end(), new_ctrl_in_op_name);
-        if (existed_it == existed_ctrl_in_op_names.end()) {  // avoid adding duplicate control nodes
+        // avoid adding input node or duplicate control nodes
+        if (node != input_node && existed_it == existed_ctrl_in_op_names.end()) {
           out_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
         }
       }
