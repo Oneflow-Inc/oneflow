@@ -63,9 +63,11 @@ class IsFiniteFunctor final : public UtilOpsFunctor {
 class DependFunctor {
  public:
   DependFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("depend").Input("in").Input("depend_tensor").Output("out").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("depend").Input("in").Input("depend_tensor").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const std::shared_ptr<one::Tensor>& depend_tensor) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& depend_tensor) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, depend_tensor});
   }
 

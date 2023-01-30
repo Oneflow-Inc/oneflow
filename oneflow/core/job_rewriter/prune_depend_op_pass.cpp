@@ -195,7 +195,7 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       const OpNode* nearest_del_node = item.nearest_del_node;
       const std::vector<const OpNode*>& depend_nodes = item.in_ctrl_nodes;
       // in some cases (e.g. the second branch in GetRelativeNodesHelper()), input nodes could
-      // be interpreted as in-ctrl node, accordingly their input_node will be NULL and the ibn 
+      // be interpreted as in-ctrl node, accordingly their input_node will be NULL and the ibn
       // modifications should be skip
       if (input_node) {
         const auto& old_lbi = nearest_del_node->op().BnInOp2Lbi(nearest_del_node->op().SoleObn());
