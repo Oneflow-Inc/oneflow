@@ -1179,7 +1179,7 @@ def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
 
 def autotest(
     n=20,
-    auto_backward: Union[bool, str]=True,
+    auto_backward: Union[bool, str] = True,
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
