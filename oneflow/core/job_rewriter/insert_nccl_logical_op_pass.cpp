@@ -56,17 +56,30 @@ class InsertNcclLogicalOpPass final : public JobPass {
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
 
+bool IsTickOpConf(const OperatorConf& op_conf) {
+  if (IsClassRegistered<int32_t, IsTickTockOpTypeCase>(op_conf.op_type_case())) { return true; }
+  if (op_conf.has_user_conf()) {
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
+    if (user_type_name == "cast_to_tick" || user_type_name == "acc_ctrl_tick") { return true; }
+  }
+  return false;
+}
+
 bool IsBreakpointOpNode(const OpNode* node) {
   // NOTE(chengcheng): breakpoint op is special which CANNOT through subgraph such as:
   //   variable, tick, repeat/acc/pack/unpack change timeshape
   const Operator& op = node->op();
   const OperatorConf& op_conf = op.op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
-      || op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf()
-      || op_conf.has_source_tick_conf() || op_conf.has_sink_tick_conf()
-      || op_conf.has_acc_tick_conf()) {
+  // TODO(chengcheng): filter ops which has special type
+  // TODO(chengcheng): get stream by op type
+  if (op_conf.has_variable_conf()                                                   /* varialbe */
+      || IsTickOpConf(op_conf)                                                      /* tick */
+      || op_conf.has_input_conf() || op_conf.has_output_conf()                      /* io */
+      || op_conf.has_wait_and_send_ids_conf() || op_conf.has_callback_notify_conf() /* ctrl */
+      || op_conf.has_image_decoder_random_crop_resize_conf() /* gpu decode */) {
     return true;
   }
+
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
