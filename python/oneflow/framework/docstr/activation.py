@@ -450,6 +450,14 @@ add_docstr(
     """,
 )
 add_docstr(
+    oneflow._C.rrelu_,
+    """
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False) -> Tensor
+
+    In-place version of rrelu().
+    """,
+)
+add_docstr(
     oneflow._C.elu,
     """
     elu(x: Tensor, alpha :Float) -> Tensor

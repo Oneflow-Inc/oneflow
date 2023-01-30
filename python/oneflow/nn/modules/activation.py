@@ -951,7 +951,7 @@ class RReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        return flow._C.rrelu(x, self.lower, self.upper, self.inplace, self.training)
+        return flow._C.rrelu(x, self.lower, self.upper, self.training, self.inplace)
 
     def extra_repr(self):
         param_str = f"lower={self.lower}"

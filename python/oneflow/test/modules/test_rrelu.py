@@ -134,6 +134,17 @@ class TestModule(flow.unittest.TestCase):
         return torch.nn.functional.rrelu(
             x, lower=lower, upper=lower + 0.5, inplace=random_bool(), training=False,
         )
+    
+    @autotest(n=5)
+    def test_functional_rrelu_inplace(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        lower = np.abs(
+            np.random.randn()
+        )  # In-place leakyReLu backward calculation is triggered with a negative slope which is not supported
+        return torch.nn.functional.rrelu_(
+            x, lower=lower, upper=lower + 0.5, training=False,
+        )
 
     @autotest(n=5)
     def test_rrelu_train(test_case):
