@@ -30,14 +30,14 @@ struct Prod {
   }
 };
 struct Any {
-  template<typename T>
-  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+  template<typename T, typename U>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const U& b) const {
     return a || b;
   }
 };
 struct All {
-  template<typename T>
-  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+  template<typename T, typename U>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const U& b) const {
     return a && b;
   }
 };
