@@ -188,48 +188,40 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
     if (!IsDependOPNodeAtTop(op_node, del_nodes)) { continue; }
     const std::vector<RelativeNodes> relatives = GetRelativeNodes(op_node, del_nodes);
 
-    // adjust op_conf of nodes connected to depend OP Nodes
+    // adjust op_conf of those nodes connected to depend OP Nodes
     for (const RelativeNodes& item : relatives) {
       const OpNode* input_node = item.input_node;
       const OpNode* output_node = item.output_node;
       const OpNode* nearest_del_node = item.nearest_del_node;
       const std::vector<const OpNode*>& depend_nodes = item.in_ctrl_nodes;
-      // in some cases (e.g. the second branch in GetRelativeNodesHelper()), input nodes could
-      // be interpreted as in-ctrl node, accordingly their input_node will be NULL and the ibn
-      // modifications should be skip
-      if (input_node) {
-        const auto& old_lbi = nearest_del_node->op().BnInOp2Lbi(nearest_del_node->op().SoleObn());
-        const auto& new_lbi = input_node->op().BnInOp2Lbi(input_node->op().SoleObn());
-        const Operator& out_op = output_node->op();
-        for (const std::string& ibn : out_op.input_bns()) {
-          if (out_op.BnInOp2Lbi(ibn) == old_lbi) {
-            auto iter = to_update_op_confs.find(out_op.op_name());
-            if (iter == to_update_op_confs.end()) {
-              iter = to_update_op_confs.emplace(out_op.op_name(), out_op.op_conf()).first;
-            }
-            OperatorConf& op_conf = iter->second;
-            const auto& old_val =
-                ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, GenLogicalBlobName(new_lbi));
-            CHECK_EQ_OR_RETURN(GenLogicalBlobName(old_lbi), old_val);
-          }
-        }
-      }
-      // add ctrl_in_op
+
+      const auto& old_lbi = nearest_del_node->op().BnInOp2Lbi(nearest_del_node->op().SoleObn());
+      const auto& new_lbi = input_node->op().BnInOp2Lbi(input_node->op().SoleObn());
       const Operator& out_op = output_node->op();
-      auto out_iter = to_update_op_confs.find(out_op.op_name());
-      if (out_iter == to_update_op_confs.end()) {
-        out_iter = to_update_op_confs.emplace(out_op.op_name(), out_op.op_conf()).first;
-      }
-      OperatorConf& out_op_conf = out_iter->second;
-      for (const OpNode* node : depend_nodes) {
-        CHECK(output_node != node);  // self-loop found
-        const auto& existed_ctrl_in_op_names = op_node->op().op_conf().ctrl_in_op_name();
-        const std::string& new_ctrl_in_op_name = node->op().op_name();
-        auto existed_it = std::find(existed_ctrl_in_op_names.begin(),
-                                    existed_ctrl_in_op_names.end(), new_ctrl_in_op_name);
-        // avoid adding input node or duplicate control nodes
-        if (node != input_node && existed_it == existed_ctrl_in_op_names.end()) {
-          out_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
+      for (const std::string& ibn : out_op.input_bns()) {
+        if (out_op.BnInOp2Lbi(ibn) != old_lbi) { continue; }
+
+        auto iter = to_update_op_confs.find(out_op.op_name());
+        if (iter == to_update_op_confs.end()) {
+          iter = to_update_op_confs.emplace(out_op.op_name(), out_op.op_conf()).first;
+        }
+        OperatorConf& out_op_conf = iter->second;
+        // connect input_node and output_node
+        const auto& old_val =
+            ReplaceInputLbnInOpCustomizedConf(&out_op_conf, ibn, GenLogicalBlobName(new_lbi));
+        CHECK_EQ_OR_RETURN(GenLogicalBlobName(old_lbi), old_val);
+
+        // add ctrl-in OPs
+        for (const OpNode* node : depend_nodes) {
+          CHECK(output_node != node);  // self-loop found
+          const auto& existed_ctrl_in_op_names = op_node->op().op_conf().ctrl_in_op_name();
+          const std::string& new_ctrl_in_op_name = node->op().op_name();
+          auto existed_it = std::find(existed_ctrl_in_op_names.begin(),
+                                      existed_ctrl_in_op_names.end(), new_ctrl_in_op_name);
+          // avoid adding input node or duplicate control nodes
+          if (node != input_node && existed_it == existed_ctrl_in_op_names.end()) {
+            out_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
+          }
         }
       }
     }
