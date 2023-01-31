@@ -1,7 +1,8 @@
 include(ExternalProject)
 
-set_mirror_url_with_hash(glog_URL https://github.com/google/glog/archive/8f9ccfe770add9e4c64e9b25c102658e3c763b73.tar.gz
-                         b2d2becff6d7d5577a771180ab7da617)
+set_mirror_url_with_hash(
+  glog_URL https://github.com/google/glog/archive/8f9ccfe770add9e4c64e9b25c102658e3c763b73.tar.gz
+  b2d2becff6d7d5577a771180ab7da617)
 
 include(FetchContent)
 
