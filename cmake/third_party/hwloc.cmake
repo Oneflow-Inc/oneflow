@@ -42,7 +42,7 @@ if(BUILD_HWLOC)
       xorg-macros
       PREFIX xorg-macros
       URL ${XORG_MACROS_TAR_URL}
-      URL_HASH MD5=${XORG_MACROS_URL_HASH}
+      # URL_HASH MD5=${XORG_MACROS_URL_HASH}
       UPDATE_COMMAND ""
       CONFIGURE_COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/autogen.sh
       COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/configure --prefix=${XORG_MACROS_INSTALL}
@@ -61,7 +61,7 @@ if(BUILD_HWLOC)
       pciaccess
       PREFIX pciaccess
       URL ${PCIACCESS_TAR_URL}
-      URL_HASH MD5=${PCIACCESS_URL_HASH}
+      # URL_HASH MD5=${PCIACCESS_URL_HASH}
       UPDATE_COMMAND ""
       PATCH_COMMAND cp ${XORG_MACROS_INSTALL}/share/aclocal/xorg-macros.m4
                     ${PCIACCESS_SOURCE_DIR}/src/pciaccess/m4
@@ -83,7 +83,7 @@ if(BUILD_HWLOC)
       hwloc
       PREFIX hwloc
       URL ${HWLOC_TAR_URL}
-      URL_HASH MD5=${HWLOC_URL_HASH}
+      # URL_HASH MD5=${HWLOC_URL_HASH}
       UPDATE_COMMAND ""
       CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh
       COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL}

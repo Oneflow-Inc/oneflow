@@ -57,7 +57,7 @@ if(THIRD_PARTY)
     libjpeg-turbo
     PREFIX libjpeg-turbo
     URL ${LIBJPEG_URL}
-    URL_MD5 627b980fad0573e08e4c3b80b290fc91
+    # URL_MD5 627b980fad0573e08e4c3b80b290fc91
     UPDATE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1

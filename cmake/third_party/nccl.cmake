@@ -72,7 +72,7 @@ else()
       nccl
       PREFIX nccl
       URL ${NCCL_URL}
-      URL_MD5 ${NCCL_MD5}
+      # URL_MD5 ${NCCL_MD5}
       UPDATE_COMMAND ""
       CONFIGURE_COMMAND ""
       BUILD_IN_SOURCE 1

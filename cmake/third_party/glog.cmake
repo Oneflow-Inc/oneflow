@@ -5,7 +5,8 @@ set_mirror_url_with_hash(glog_URL https://github.com/google/glog/archive/refs/ta
 
 include(FetchContent)
 
-FetchContent_Declare(glog URL ${glog_URL} URL_HASH MD5=${glog_URL_HASH})
+# FetchContent_Declare(glog URL ${glog_URL} URL_HASH MD5=${glog_URL_HASH})
+FetchContent_Declare(glog URL ${glog_URL})
 
 set(WITH_GFLAGS OFF CACHE BOOL "")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")

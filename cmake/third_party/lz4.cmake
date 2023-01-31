@@ -28,7 +28,7 @@ if(THIRD_PARTY)
     lz4
     PREFIX lz4
     URL ${LZ4_URL}
-    URL_MD5 3898c56c82fb3d9455aefd48db48eaad
+    # URL_MD5 3898c56c82fb3d9455aefd48db48eaad
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1

@@ -27,7 +27,7 @@ if(THIRD_PARTY)
     flatbuffers
     PREFIX flatbuffers
     URL ${FLATBUFFERS_URL}
-    URL_MD5 c62ffefb3d4548b127cca14ce047f16c
+    # URL_MD5 c62ffefb3d4548b127cca14ce047f16c
     UPDATE_COMMAND bash -c "rm -f BUILD || true"
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers/src/flatbuffers

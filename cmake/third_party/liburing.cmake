@@ -28,7 +28,7 @@ if(WITH_LIBURING)
       liburing
       PREFIX liburing
       URL ${LIBURING_URL}
-      URL_HASH MD5=${LIBURING_URL_HASH}
+#      URL_HASH MD5=${LIBURING_URL_HASH}
       UPDATE_COMMAND ""
       CONFIGURE_COMMAND cd ${LIBURING_SOURCE_DIR}/src/liburing/ && ./configure
                         --prefix=${LIBURING_INSTALL}

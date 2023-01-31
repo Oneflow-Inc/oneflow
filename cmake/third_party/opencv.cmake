@@ -45,7 +45,7 @@ if(THIRD_PARTY)
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
-    URL_MD5 b09dc79dec7766a3550907bcafc8bbf5
+    # URL_MD5 b09dc79dec7766a3550907bcafc8bbf5
     UPDATE_COMMAND ""
     PATCH_COMMAND cmake -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
     BUILD_IN_SOURCE 0

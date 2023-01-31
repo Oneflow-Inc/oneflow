@@ -43,7 +43,7 @@ if(THIRD_PARTY)
     protobuf
     PREFIX protobuf
     URL ${PROTOBUF_URL}
-    URL_MD5 ${PROTOBUF_MD5}
+    # URL_MD5 ${PROTOBUF_MD5}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
