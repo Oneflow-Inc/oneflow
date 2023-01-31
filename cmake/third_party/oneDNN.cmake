@@ -5,7 +5,8 @@ set(ONEDNN_INSTALL_DIR ${THIRD_PARTY_DIR}/onednn)
 set(ONEDNN_INCLUDE_DIR ${ONEDNN_INSTALL_DIR}/include)
 set(ONEDNN_LIBRARY_DIR ${ONEDNN_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
 
-set(ONEDNN_URL https://github.com/oneapi-src/oneDNN/archive/8488d014aefcbe82e61c2bc494b94e593fe0b669.tar.gz)
+set(ONEDNN_URL
+    https://github.com/oneapi-src/oneDNN/archive/8488d014aefcbe82e61c2bc494b94e593fe0b669.tar.gz)
 use_mirror(VARIABLE ONEDNN_URL URL ${ONEDNN_URL})
 
 if(WIN32)
