@@ -61,7 +61,7 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
 
   if (source.type == Source::BUFFER) {
     auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-    return tmp_buffer_.GetBufferTensor();
+    // return tmp_buffer_.GetBufferTensor();
   }
 
   op->emitError("Failed to check source type");

@@ -21,6 +21,19 @@ limitations under the License.
 
 namespace oneflow {
 namespace okl {
+class ComputeContext;
+
+class TensorInfo {
+ public:
+  enum Source { arguments, results, tmp_buffer };
+  TensorInfo(Source source, int offset) : source_(source), offset_(offset){};
+  user_op::Tensor* FetchTensor(ComputeContext& ctx);
+
+ private:
+  const Source source_;
+  const int offset_;
+};
+
 // this context should support querying information about the kernel from representation in MLIR
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class RegContext final : public user_op::KernelRegContext {

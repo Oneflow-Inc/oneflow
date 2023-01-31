@@ -15,39 +15,48 @@ limitations under the License.
 */
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
+#include <unordered_map>
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 namespace okl {
 
-class TmpBufferManager {
-  class TmpBufferTensor final : public oneflow::user_op::Tensor {
+class MemoryPool {
+  class MemoryPoolTensor final : public oneflow::user_op::Tensor {
    public:
-    explicit TmpBufferTensor(user_op::Tensor* tensor) : tensor_(tensor) {}
-    ShapeView shape_view() const override { return tensor_->shape_view(); }
+    explicit MemoryPoolTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
+        : tensor_(tensor),
+          raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
+          tensor_desc_(tensor_desc) {}
+
+    ShapeView shape_view() const override { return tensor_desc_->shape(); }
+    const Stride& stride() const override { return tensor_desc_->stride(); }
+    DataType data_type() const override { return tensor_desc_->data_type(); }
     MutShapeView mut_shape_view() override { return tensor_->mut_shape_view(); }
-    const Stride& stride() const override { return tensor_->stride(); }
-    DataType data_type() const override { return tensor_->data_type(); }
     const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
 
-    const void* raw_dptr() const override {
-      return (reinterpret_cast<const char*>(tensor_->raw_dptr()));
-    }
-    void* mut_raw_dptr() override { return (reinterpret_cast<char*>(tensor_->mut_raw_dptr())); }
+    const void* raw_dptr() const override { return raw_dptr_; }
+    void* mut_raw_dptr() override { return raw_dptr_; }
 
    private:
     user_op::Tensor* tensor_;
+    void* raw_dptr_;
+    user_op::TensorDesc* tensor_desc_;
   };
 
  public:
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
-  explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
-  user_op::Tensor* GetBufferTensor() { return &tensor_; }
+  explicit MemoryPool(user_op::Tensor* tensor) : tensor_(tensor) {}
+  user_op::Tensor* GetBufferTensor(user_op::TensorDesc* tensor_desc, int offset = 0) {
+    auto res = map_.insert({tensor_desc, MemoryPoolTensor(tensor_, tensor_desc, offset)}).first;
+    return &res->second;
+  }
 
  private:
-  TmpBufferTensor tensor_;
+  std::unordered_map<user_op::TensorDesc*, MemoryPoolTensor> map_{};
+  user_op::Tensor* tensor_;
 };
 
 }  // namespace okl

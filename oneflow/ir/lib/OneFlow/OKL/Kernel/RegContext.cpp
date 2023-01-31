@@ -33,6 +33,56 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
+user_op::Tensor* TensorInfo::FetchTensor(ComputeContext& ctx) {
+  switch(source_){
+    case Source::arguments:
+    break;
+    case Source::results:
+    break;
+    case Source::tmp_buffer:
+      // return tmp_buffer_.GetBufferTensor();
+    break;
+    default:;
+  }
+
+  // if (source.type == Source::OUTPUT) {
+  //   if (op->getNumResults() <= index + source.offset) { return nullptr; }
+  //   mlir::Value val = op->getResult(index + source.offset);
+  //   for (auto use : val.getUsers()) {
+  //     if (llvm::isa<mlir::okl::TensorToRetOp>(use)) {
+  //       auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
+  //       return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+  //     }
+  //   }
+  //   op->emitError("Failed to find " + std::to_string(index) + "in outputs");
+  //   exit(1);
+  // }
+
+  // if (source.type == Source::INPUT) {
+  //   if (op->getNumOperands() <= index + source.offset) { return nullptr; }
+  //   mlir::Value val = op->getOperand(index + source.offset);
+  //   auto define_op = val.getDefiningOp();
+  //   return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
+  //       .Case([&](mlir::okl::ArgToTensorOp elem) {
+  //         auto index = elem.index();
+  //         return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
+  //       })
+  //       .Case([&](mlir::okl::RetToTensorOp elem) {
+  //         auto index = elem.index();
+  //         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+  //       })
+  //       .Default([&](::mlir::Operation* op) {
+  //         LOG(FATAL) << "Signature: " << arg_name << " Not supported";
+  //         return nullptr;
+  //       });
+  // }
+
+  // if (source.type == Source::BUFFER) {
+  //   auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
+  //   return tmp_buffer_.GetBufferTensor();
+  // }
+}
+
 static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
                                                  bool is_mapping_size = false) {
   OperatorConf op_conf;

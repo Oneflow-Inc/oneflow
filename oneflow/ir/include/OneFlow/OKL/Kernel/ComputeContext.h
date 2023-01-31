@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKL/Kernel/RegContext.h"
-#include "OneFlow/OKL/Kernel/TmpBufferManager.h"
+#include "OneFlow/OKL/Kernel/MemoryPool.h"
 
 namespace oneflow {
 namespace okl {
@@ -49,10 +49,12 @@ class ComputeContext final : public user_op::KernelComputeContext {
   }
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override;
 
+  MemoryPool& GetMemoryPool(){return tmp_buffer_;}
+
  private:
   RegContext const* reg_ctx_;
   KernelComputeContext* comp_ctx_;
-  TmpBufferManager tmp_buffer_;
+  MemoryPool tmp_buffer_;
 
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 
