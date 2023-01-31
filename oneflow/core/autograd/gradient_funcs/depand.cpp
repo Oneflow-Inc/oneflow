@@ -23,6 +23,8 @@ struct DependCaptureState : public AutoGradCaptureState {
   bool in_requires_grad = false;
   bool depend_tensor_requires_grad = false;
   Shape depend_tensor_shape;
+  Symbol<DType> depend_tensor_dtype;
+  Maybe<Symbol<Device>> depend_tensor_device;
 };
 
 class Depend : public OpExprGradFunction<DependCaptureState> {
@@ -35,7 +37,11 @@ class Depend : public OpExprGradFunction<DependCaptureState> {
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->in_requires_grad = inputs.at(0)->requires_grad();
     ctx->depend_tensor_requires_grad = inputs.at(1)->requires_grad();
-    if (ctx->depend_tensor_requires_grad) { ctx->depend_tensor_shape = *(inputs.at(1)->shape()); }
+    if (ctx->depend_tensor_requires_grad) {
+      ctx->depend_tensor_shape = *(inputs.at(1)->shape());
+      ctx->depend_tensor_dtype = inputs.at(1)->dtype();
+      ctx->depend_tensor_device = inputs.at(1)->device();
+    }
     return Maybe<void>::Ok();
   }
 
@@ -46,8 +52,8 @@ class Depend : public OpExprGradFunction<DependCaptureState> {
     if (ctx->in_requires_grad) { in_grads->at(0) = out_grads.at(0); }
     if (ctx->depend_tensor_requires_grad) {
       in_grads->at(1) =
-          JUST(functional::Constant(ctx->depend_tensor_shape, Scalar(0), out_grads.at(0)->dtype(),
-                                    JUST(out_grads.at(0)->device())));
+          JUST(functional::Constant(ctx->depend_tensor_shape, Scalar(0), ctx->depend_tensor_dtype,
+                                    JUST(ctx->depend_tensor_device)));
     }
     return Maybe<void>::Ok();
   }
