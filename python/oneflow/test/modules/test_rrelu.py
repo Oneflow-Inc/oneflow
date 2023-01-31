@@ -150,7 +150,7 @@ class TestModule(flow.unittest.TestCase):
     def test_rrelu_train(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        lower = np.random.randn()
+        lower = np.abs(np.random.randn())
         m = torch.nn.RReLU(lower=lower, upper=lower, inplace=random_bool())
         return m(x)
 
