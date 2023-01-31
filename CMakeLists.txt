@@ -289,9 +289,9 @@ if(CPU_THREADING_RUNTIME STREQUAL "TBB")
 endif()
 
 set(ROBIN_HOOD_HASHING_URL
-    https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
+    https://github.com/martinus/robin-hood-hashing/archive/9145f963d80d6a02f0f96a47758050a89184a3ed.tar.gz)
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
-set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
+set(ROBIN_HOOD_HASHING_MD5 f72f9a77d23fc634b265e399ec3a03e9)
 
 set(FMT_URL https://github.com/fmtlib/fmt/archive/fc07217d85e6dcec52878807d6bbd89a9d9156a5.zip)
 use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
