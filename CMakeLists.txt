@@ -289,7 +289,8 @@ if(CPU_THREADING_RUNTIME STREQUAL "TBB")
 endif()
 
 set(ROBIN_HOOD_HASHING_URL
-    https://github.com/martinus/robin-hood-hashing/archive/9145f963d80d6a02f0f96a47758050a89184a3ed.tar.gz)
+    https://github.com/martinus/robin-hood-hashing/archive/9145f963d80d6a02f0f96a47758050a89184a3ed.tar.gz
+)
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 f72f9a77d23fc634b265e399ec3a03e9)
 
