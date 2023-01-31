@@ -5,7 +5,7 @@ set(ONEDNN_INSTALL_DIR ${THIRD_PARTY_DIR}/onednn)
 set(ONEDNN_INCLUDE_DIR ${ONEDNN_INSTALL_DIR}/include)
 set(ONEDNN_LIBRARY_DIR ${ONEDNN_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
 
-set(ONEDNN_URL https://github.com/oneapi-src/oneDNN/archive/refs/tags/v2.4.3.tar.gz)
+set(ONEDNN_URL https://github.com/oneapi-src/oneDNN/archive/8488d014aefcbe82e61c2bc494b94e593fe0b669.tar.gz)
 use_mirror(VARIABLE ONEDNN_URL URL ${ONEDNN_URL})
 
 if(WIN32)
@@ -53,7 +53,7 @@ if(THIRD_PARTY)
     PREFIX onednn
     DEPENDS ${ONEDNN_DEPENDS}
     URL ${ONEDNN_URL}
-    URL_MD5 c60ea96acbaccec053be7e3fa81c6184
+    URL_MD5 52b6b3befb2e3d863f1a59f8d83dd9f0
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     BUILD_BYPRODUCTS ${ONEDNN_STATIC_LIBRARIES}
