@@ -34,8 +34,9 @@ if(WITH_ONEDNN)
   include(oneDNN)
 endif()
 
-set_mirror_url_with_hash(INJA_URL https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
-                         611e6b7206d0fb89728a3879f78b4775)
+# v3.3.0
+set_mirror_url_with_hash(INJA_URL https://github.com/pantor/inja/archive/2d515078c647457436556763aca8d4bf7d11d5e8.zip
+                         a935842a8eb49fad9086330736f062ec)
 
 if(NOT WIN32)
   set(BLA_STATIC ON)

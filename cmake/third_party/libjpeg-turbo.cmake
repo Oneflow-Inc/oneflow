@@ -3,7 +3,8 @@ include(ExternalProject)
 set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
-set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo/archive/refs/tags/2.1.3.tar.gz)
+# 2.1.3
+set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo/archive/c5f269eb9665435271c05fbcaf8721fa58e9eafa.tar.gz)
 use_mirror(VARIABLE LIBJPEG_URL URL ${LIBJPEG_URL})
 
 if(WIN32)
@@ -57,7 +58,7 @@ if(THIRD_PARTY)
     libjpeg-turbo
     PREFIX libjpeg-turbo
     URL ${LIBJPEG_URL}
-    URL_MD5 627b980fad0573e08e4c3b80b290fc91
+    URL_MD5 425ef067cec13af6f4edea5890bf80a9
     UPDATE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1
