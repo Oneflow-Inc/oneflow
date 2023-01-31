@@ -305,6 +305,7 @@ class TestModule(flow.unittest.TestCase):
         m = torch.nn.Dropout(p=0, inplace=False)
         return m(x)
 
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
     @autotest(n=5)
     def test_dropout1d_p0(test_case):
         device = random_device()
@@ -333,6 +334,7 @@ class TestModule(flow.unittest.TestCase):
         m = torch.nn.Dropout(p=1.0, inplace=False)
         return m(x)
 
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
     @autotest(n=5)
     def test_dropout1d_p1(test_case):
         device = random_device()
@@ -380,6 +382,7 @@ class TestModule(flow.unittest.TestCase):
         m.eval()
         return m(x)
 
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
     @autotest(n=5, check_graph=False)
     def test_dropout1d_eval(test_case):
         device = random_device()
