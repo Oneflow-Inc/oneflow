@@ -304,11 +304,11 @@ class TestSaveLoad(flow.unittest.TestCase):
 
     def test_pytorch_non_tensor(test_case):
         with tempfile.NamedTemporaryFile() as f:
-            torch.save({'a': 2}, f.name)
-            res = flow.load(f.name, map_location='cpu')
+            torch.save({"a": 2}, f.name)
+            res = flow.load(f.name, map_location="cpu")
         test_case.assertTrue(isinstance(res, dict))
         test_case.assertEqual(len(res), 1)
-        test_case.assertEqual(res['a'], 2)
+        test_case.assertEqual(res["a"], 2)
 
 
 if __name__ == "__main__":
