@@ -4,7 +4,9 @@ set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
 # 2.1.3
-set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo/archive/c5f269eb9665435271c05fbcaf8721fa58e9eafa.tar.gz)
+set(LIBJPEG_URL
+    https://github.com/libjpeg-turbo/libjpeg-turbo/archive/c5f269eb9665435271c05fbcaf8721fa58e9eafa.tar.gz
+)
 use_mirror(VARIABLE LIBJPEG_URL URL ${LIBJPEG_URL})
 
 if(WIN32)
