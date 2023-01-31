@@ -3,7 +3,7 @@ include(ExternalProject)
 set(ZLIB_INSTALL ${THIRD_PARTY_DIR}/zlib)
 set(ZLIB_INCLUDE_DIR ${ZLIB_INSTALL}/include)
 set(ZLIB_LIBRARY_DIR ${ZLIB_INSTALL}/lib)
-set(ZLIB_URL https://github.com/madler/zlib/archive/v1.2.8.tar.gz)
+set(ZLIB_URL https://github.com/madler/zlib/archive/50893291621658f355bc5b4d450a8d06a563053d.tar.gz)
 use_mirror(VARIABLE ZLIB_URL URL ${ZLIB_URL})
 
 # only use zlib shared lib to prevent using zlib in the system
@@ -31,7 +31,7 @@ if(THIRD_PARTY)
     zlib
     PREFIX zlib
     URL ${ZLIB_URL}
-    URL_MD5 1eabf2698dc49f925ce0ffb81397098f
+    URL_MD5 92d8854b3f0de1f66c276076c6ea695f
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     BUILD_BYPRODUCTS ${ZLIB_STATIC_LIBRARIES}
