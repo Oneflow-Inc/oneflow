@@ -181,62 +181,66 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
   const std::vector<int64_t>& c_dims = {5, 2};
   Eigen::Tensor<Src, 2, Eigen::RowMajor> a(5, 4);
 
-  const std::vector<int64_t>& a_strides = {4, 1};
-  const std::vector<int64_t>& c_strides = {1, 5};
+  const std::vector<std::vector<int64_t>>& a_strides = {{4, 1}, {2, 1}};
+  const std::vector<std::vector<int64_t>>& c_strides = {{1, 5}, {1, 10}};
 
   a.setRandom();
 
   const int64_t a_size = a.size() * sizeof(Src);
   const int64_t c_count =
       std::accumulate(c_dims.begin(), c_dims.end(), 1, std::multiplies<int64_t>());
-  const int64_t c_size = c_count * sizeof(Dst);
+  const int64_t c_size = MAX(c_count, a.size()) * sizeof(Dst);
 
-  for (const auto& device_type : device_types) {
-    // broadcast a with non-broadcast elementwise unary primitive
-    auto device = registry->GetDevice(device_type, 0);
-    ep::test::StreamGuard stream(device.get());
+  for (int i = 0; i < a_strides.size(); i++) {
+    auto& a_stride = a_strides[i];
+    auto& c_stride = c_strides[i];
+    for (const auto& device_type : device_types) {
+      // broadcast a with non-broadcast elementwise unary primitive
+      auto device = registry->GetDevice(device_type, 0);
+      ep::test::StreamGuard stream(device.get());
 
-    ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
-    std::memcpy(input_a.ptr(), a.data(), a_size);
+      ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
+      std::memcpy(input_a.ptr(), a.data(), a_size);
 
-    ep::test::PinnedMemoryGuard output(device.get(), c_size);
-    ep::test::DeviceMemoryGuard device_a(device.get(), a_size);
-    ep::test::DeviceMemoryGuard device_c(device.get(), c_size);
-    std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
-    std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
-    std::unique_ptr<BroadcastElementwiseUnary> broadcast_unary =
-        NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, UnaryOp::kIdentity, src_data_type,
-                                                        dst_data_type, 2);
-    ASSERT_TRUE(broadcast_unary.operator bool());
-    ASSERT_TRUE(d2h.operator bool());
-    ASSERT_TRUE(h2d.operator bool());
-    h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
+      ep::test::PinnedMemoryGuard output(device.get(), c_size);
+      ep::test::DeviceMemoryGuard device_a(device.get(), a_size);
+      ep::test::DeviceMemoryGuard device_c(device.get(), c_size);
+      std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
+      std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
+      std::unique_ptr<BroadcastElementwiseUnary> broadcast_unary =
+          NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, UnaryOp::kIdentity, src_data_type,
+                                                          dst_data_type, 2);
+      ASSERT_TRUE(broadcast_unary.operator bool());
+      ASSERT_TRUE(d2h.operator bool());
+      ASSERT_TRUE(h2d.operator bool());
+      h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
 
-    broadcast_unary->Launch(stream.stream(), 2, a_dims.data(), a_strides.data(),
-                            device_a.ptr(), 2, c_dims.data(), c_strides.data(),
-                            device_c.ptr());
+      broadcast_unary->Launch(stream.stream(), 2, a_dims.data(), a_stride.data(),
+                              device_a.ptr(), 2, c_dims.data(), c_stride.data(),
+                              device_c.ptr());
 
-    d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
-    CHECK_JUST(stream.stream()->Sync());
+      d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
+      CHECK_JUST(stream.stream()->Sync());
 
-    Dst thresh = 1e-4;
-    bool res = true;
+      Dst thresh = 1e-4;
+      bool res = true;
 
-    for (int i0 = 0; i0 < c_dims[0]; i0++) {
-      for (int i1 = 0; i1 < c_dims[1]; i1++) {
-#define ABS(x) ((x > 0) ? (x) : (-x))
-            const size_t src_index = a_strides[0] * i0 + a_strides[1] * i1;
-            const size_t dst_index =
-                c_strides[0] * i0 + c_strides[1] * i1;
-            if (ABS(reinterpret_cast<Dst*>(input_a.ptr())[src_index]
-                    - reinterpret_cast<Dst*>(output.ptr())[dst_index])
-                > thresh) {
-              res = false;
-            }
-#undef ABS
+      for (int i0 = 0; i0 < c_dims[0]; i0++) {
+        for (int i1 = 0; i1 < c_dims[1]; i1++) {
+  #define ABS(x) ((x > 0) ? (x) : (-x))
+              const size_t src_index = a_stride[0] * i0 + a_stride[1] * i1;
+              const size_t dst_index =
+                  c_stride[0] * i0 + c_stride[1] * i1;
+              if (ABS(reinterpret_cast<Dst*>(input_a.ptr())[src_index]
+                      - reinterpret_cast<Dst*>(output.ptr())[dst_index])
+                  > thresh) {
+                res = false;
+              }
+  #undef ABS
+        }
       }
+      ASSERT_TRUE(res);
     }
-    ASSERT_TRUE(res);
   }
 }
 
