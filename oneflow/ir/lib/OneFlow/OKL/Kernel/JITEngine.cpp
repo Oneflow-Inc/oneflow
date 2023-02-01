@@ -19,35 +19,24 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
-#include "OneFlow/kernel_launch/JITEngine.h"
-#include "OneFlow/kernel_launch/RunContext.h"
+#include "OneFlow/OKL/Kernel/JITEngine.h"
+#include "OneFlow/OKL/Kernel/ComputeContext.h"
+#include "oneflow/core/device/cuda_util.h"
 
 extern "C" {
-void* oneflow_okl_fetch_run_ctx(void* launcher, int64_t index) {
-  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
-      ->FetchRunCtx(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
-}
-
-void* oneflow_okl_fetch_kernel(void* launcher, int64_t index) {
-  return static_cast<typename std::tuple_element_t<0, oneflow::okl::FetchArgs>>(launcher)
-      ->FetchKernel(static_cast<typename std::tuple_element_t<1, oneflow::okl::FetchArgs>>(index));
-}
-
-void oneflow_okl_launch(void* run_ctx, void* kernel) {
-  const oneflow::user_op::OpKernel* engine =
-      static_cast<typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>>(kernel);
-
-  oneflow::okl::RunContext* compute_ctx_ =
-      static_cast<typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>>(run_ctx);
-  engine->Compute(compute_ctx_, compute_ctx_->FetchState(), compute_ctx_->FetchCache());
+void okl_llvm_func(void* launcher, int64_t index) {
+  static_cast<typename std::tuple_element_t<0, oneflow::okl::LLVMLaunchArgs>>(launcher)->Launch(
+      index);
 }
 }  // extern "C"
 
 namespace oneflow {
+
 SharedLibs* MutSharedLibPaths() {
   static SharedLibs libs = {};
   return &libs;
 }
+
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 

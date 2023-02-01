@@ -18,9 +18,6 @@ limitations under the License.
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
-#include "OneFlow/OKL/Conversion/FetchFromLauncher.h"
-#include "OneFlow/OKL/Conversion/OnlyKeepComputeOps.h"
 #include "OneFlow/OKL/Conversion/OKLToLLVM.h"
 
 namespace mlir {
