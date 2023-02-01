@@ -921,10 +921,13 @@ class Graph(object):
             self._shared_graph._state_op_names, self._state_tensor_tuple
         )
 
-        if self._enable_save_runtime_state_dict:
-            self._input_op_names = input_op_names
-            self._inputs_tensor_tuple = inputs_tensor_tuple
-            self._output_op_names = output_op_names
+        self.__prepare_for_share_or_runtime_save(
+            input_op_names,
+            inputs_tensor_tuple,
+            output_op_names,
+            build_eager_outputs,
+            out2name,
+        )
 
         # Init runtime.
         # TODO(strint): align states needs to care about free eager tensor.
@@ -1208,7 +1211,7 @@ class Graph(object):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             (
-                self._input_op_names,
+                input_op_names,
                 lazy_args,
                 lazy_kwargs,
                 self._args_repr,
@@ -1229,11 +1232,11 @@ class Graph(object):
             outputs = (outputs,)
 
             (
-                self._output_op_names,
-                self._build_eager_outputs,
+                output_op_names,
+                build_eager_outputs,
                 _,  # empty kwargs return
                 self._outs_repr,
-                self._out2name,
+                out2name,
             ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
 
             self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
@@ -1301,9 +1304,7 @@ class Graph(object):
                 self._shallow_repr()
                 + " start re-building graph outputs for optimizatioin.",
             )
-            self.__rebuild_outputs(
-                self._out2name, self._full_job_proto, self._build_eager_outputs
-            )
+            self.__rebuild_outputs(out2name, self._full_job_proto, build_eager_outputs)
             self.__print(
                 0,
                 1,
@@ -1322,12 +1323,10 @@ class Graph(object):
                 self.__flatten_io("input", *args, **kwargs)
             )
             self._c_nn_graph.register_input_op_names_and_tensors(
-                self._input_op_names, inputs_tensor_tuple
+                input_op_names, inputs_tensor_tuple
             )
-            if self._enable_save_runtime_state_dict:
-                self._inputs_tensor_tuple = inputs_tensor_tuple
             self._c_nn_graph.register_output_op_names_and_tensors(
-                self._output_op_names, self._outputs_tensor_tuple
+                output_op_names, self._outputs_tensor_tuple
             )
             (
                 self._state_op_names,
@@ -1339,6 +1338,14 @@ class Graph(object):
                 self._state_op_names, self._state_tensor_tuple
             )
 
+            self.__prepare_for_share_or_runtime_save(
+                input_op_names,
+                inputs_tensor_tuple,
+                output_op_names,
+                build_eager_outputs,
+                out2name,
+            )
+
         # Clear useless dict used in graph build.
         self._unique_global_op_dict.clear()
         self._unique_identity_op_dict.clear()
@@ -1348,6 +1355,25 @@ class Graph(object):
             self._full_job_proto,
             seq_to_func_return(self._eager_outputs_buffer[0], True),
         )
+
+    def __prepare_for_share_or_runtime_save(
+        self,
+        input_op_names,
+        inputs_tensor_tuple,
+        output_op_names,
+        build_eager_outputs,
+        out2name,
+    ):
+        if self._enable_save_runtime_state_dict or self._enable_shared_from_this:
+            self._input_op_names = input_op_names
+            self._output_op_names = output_op_names
+
+        if self._enable_shared_from_this:
+            self._build_eager_outputs = build_eager_outputs
+            self._out2name = out2name
+
+        if self._enable_save_runtime_state_dict:
+            self._inputs_tensor_tuple = inputs_tensor_tuple
 
     def __rebuild_outputs(
         self, out2name=None, compiled_graph_proto=None, build_eager_outputs=None

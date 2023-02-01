@@ -131,7 +131,7 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(return_dict, device, with_reshape):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -163,7 +163,8 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
 
     linear_g = LinearGraph()
     linear_g.enable_save_runtime_state_dict()
-    linear_g.enable_shared()
+    if with_share is True:
+        linear_g.enable_shared()
 
     input_arr = np.array(
         [
@@ -186,7 +187,8 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
 
     linear_g1 = LinearGraph()
     linear_g1.enable_save_runtime_state_dict()
-    linear_g1.share_from(linear_g)
+    if with_share is True:
+        linear_g1.share_from(linear_g)
     input_arr1 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -213,7 +215,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
 
 @_with_new_session
 def _test_linear_multi_graph_load(
-    return_dict, device, with_reshape, state_dict_list, load_with_eager
+    return_dict, device, with_reshape, state_dict_list, load_with_eager, with_share
 ):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -249,7 +251,8 @@ def _test_linear_multi_graph_load(
                 return self.my_linear(x)
 
         linear_g = LinearGraph()
-    linear_g.enable_shared()
+    if with_share is True:
+        linear_g.enable_shared()
     linear_g.load_runtime_state_dict(state_dict_list[0])
 
     input_arr = np.array(
@@ -276,7 +279,8 @@ def _test_linear_multi_graph_load(
     else:
         linear_g1 = LinearGraph()
 
-    linear_g1.share_from(linear_g)
+    if with_share is True:
+        linear_g1.share_from(linear_g)
     linear_g1.load_runtime_state_dict(state_dict_list[1])
     input_arr1 = np.array(
         [
@@ -294,23 +298,53 @@ def _test_linear_multi_graph_load(
     return_dict["load1" + str(load_with_eager)] = test_case1
 
 
-def _graph_save(return_dict, filename):
+def _graph_save(return_dict, filename, with_share):
     state_dict_list = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True
+        return_dict, flow.device("cuda"), True, with_share
     )
     flow.save(state_dict_list, filename)
 
 
-def _graph_load(return_dict, filename):
+def _graph_load(return_dict, filename, with_share):
     state_dict_list_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda"), True, state_dict_list_loaded, False
+        return_dict,
+        flow.device("cuda"),
+        True,
+        state_dict_list_loaded,
+        False,
+        with_share,
     )
     # load with nn.Graph subinstance which has eager module
     _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda"), True, state_dict_list_loaded, True
+        return_dict, flow.device("cuda"), True, state_dict_list_loaded, True, with_share
     )
+
+
+def _test_linear_multi_graph_save_load_gpu(test_case, with_share):
+    # A graph runtime state dict
+    with tempfile.NamedTemporaryFile() as f:
+        # Save a graph
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+        save_p = multiprocessing.get_context("spawn").Process(
+            target=_graph_save, args=(return_dict, f.name, with_share)
+        )
+        save_p.start()
+        save_p.join()
+
+        # Resume a graph from a graph runtime state dict
+        load_p = multiprocessing.get_context("spawn").Process(
+            target=_graph_load, args=(return_dict, f.name, with_share)
+        )
+        load_p.start()
+        load_p.join()
+
+        # test_case can't be passed into sub process, so we check with return_dict.
+        # Reference: https://stackoverflow.com/questions/52225003/writing-to-multiple-files-using-multiprocessing-error-typeerror-cannot-seria
+        for (key, check_value) in return_dict.items():
+            test_case.assertTrue(check_value, key + " failed.")
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -323,28 +357,10 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
 
     def test_linear_multi_graph_save_load_gpu(test_case):
-        # A graph runtime state dict
-        with tempfile.NamedTemporaryFile() as f:
-            # Save a graph
-            manager = multiprocessing.Manager()
-            return_dict = manager.dict()
-            save_p = multiprocessing.get_context("spawn").Process(
-                target=_graph_save, args=(return_dict, f.name)
-            )
-            save_p.start()
-            save_p.join()
+        _test_linear_multi_graph_save_load_gpu(test_case, False)
 
-            # Resume a graph from a graph runtime state dict
-            load_p = multiprocessing.get_context("spawn").Process(
-                target=_graph_load, args=(return_dict, f.name)
-            )
-            load_p.start()
-            load_p.join()
-
-            # test_case can't be passed into sub process, so we check with return_dict.
-            # Reference: https://stackoverflow.com/questions/52225003/writing-to-multiple-files-using-multiprocessing-error-typeerror-cannot-seria
-            for (key, check_value) in return_dict.items():
-                test_case.assertTrue(check_value, key + " failed.")
+    def test_linear_multi_graph_save_load_gpu_with_share(test_case):
+        _test_linear_multi_graph_save_load_gpu(test_case, True)
 
 
 if __name__ == "__main__":
