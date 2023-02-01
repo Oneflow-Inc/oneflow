@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "OneFlow/JITOpInfer.h"
+#include "OneFlow/OKL/Kernel/JITOpInfer.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"

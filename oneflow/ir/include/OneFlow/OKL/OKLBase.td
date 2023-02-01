@@ -30,9 +30,4 @@ class OKL_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
-class OKL_Attr<string name, string attrMnemonic, list<Trait> traits = []>
-    : AttrDef<OKL_Dialect, name, traits> {
-  let mnemonic = attrMnemonic;
-}
-
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE
