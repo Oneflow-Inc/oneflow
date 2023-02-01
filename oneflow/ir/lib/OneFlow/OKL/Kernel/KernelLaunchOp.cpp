@@ -26,13 +26,14 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "OneFlow/JITOpInfer.h"
-#include "OneFlow/kernel_launch/JITEngine.h"
-#include "OneFlow/kernel_launch/KernelLaunchState.h"
-#include "OneFlow/kernel_launch/TmpBufferManager.h"
+#include "OneFlow/OKL/Kernel/JITOpInfer.h"
+#include "OneFlow/OKL/Kernel/JITEngine.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
+#include "OneFlow/OKL/Kernel/TmpBufferManager.h"
 
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
@@ -74,7 +75,7 @@ namespace {
 using namespace oneflow::okl;
 
 template<typename T>
-class KernelLaunchKernel final : public user_op::OpKernel {
+class KernelLaunchKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   KernelLaunchKernel() = default;
   ~KernelLaunchKernel() = default;
@@ -82,14 +83,19 @@ class KernelLaunchKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     // use ctx to create module, reg_ctx and fn;
-    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
+    std::shared_ptr<user_op::OpKernelState> res(new LauncherState(ctx));
     return res;
+  }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
+    return dynamic_cast<LauncherState*>(state)->IsCudaGraphSupported(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
+    auto* okl_state = dynamic_cast<LauncherState*>(state);
     okl_state->DoCompute(ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -129,8 +135,13 @@ REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
 
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(float)
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(double)
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int8_t)
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int32_t)
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int64_t)
+
+#if CUDA_VERSION >= 11000
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(nv_bfloat16)
+#endif
 
 #undef REGISTER_KERNEL_LAUNCH_GPU_KERNEL
 
