@@ -16,14 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_OP_KERNEL_STATE_H_
 
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/Kernel/JITEngine.h"
+#include "OneFlow/OKL/Kernel/LauncherContext.h"
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OKL/OKLDialect.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "OneFlow/OKL/Kernel/JITEngine.h"
-#include "OneFlow/OKL/Kernel/LauncherContext.h"
 
 namespace oneflow {
 namespace okl {

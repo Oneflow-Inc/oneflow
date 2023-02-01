@@ -74,7 +74,7 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateWrapOpsToKernelLaunchPasses(patterns, wrap_ops_mode_.c_str());
+    populateWrapOpsToKernelLaunchPatterns(patterns, wrap_ops_mode_.c_str());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 

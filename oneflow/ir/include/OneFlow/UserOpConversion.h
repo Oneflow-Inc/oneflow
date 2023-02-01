@@ -34,7 +34,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
 LogicalResult ConvertUserOpAttributes(
     Operation* op, ::oneflow::OperatorConf& op_conf,
     bool is_mapping_size /* the input and output size should be mapped after building kernel and
-                            offer information for the next query*/
+                            provide information for the next query*/
     = false);
 LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands,
                                   DictionaryAttr attributes, ::oneflow::UserOpConf* user_conf);

@@ -91,7 +91,7 @@ struct WrapperKernelOpLowering final : public OpConversionPattern<WrapperKernelO
   }
 };
 
-// change func.func(!okl.launcher_ctx) -> func.func(!llvm.ptr<i8>) { unrealized_conversion_cast():
+// erase type of okl.launcher_ctx and get opaque ptr
 // llvm.ptr<i8> -> okl.launcher_ctx }
 struct RewriteFunctionArgsPattern final : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult ConvertLauncherToLLVMPtr(func::FuncOp op, mlir::PatternRewriter& rewriter) {

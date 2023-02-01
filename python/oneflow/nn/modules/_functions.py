@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.adam import Adam
-from oneflow.nn.optimizer.adamw import AdamW
-from oneflow.optim.optimizer import Optimizer
-from oneflow.nn.optimizer.rmsprop import RMSprop
-from oneflow.nn.optimizer.sgd import SGD
-from oneflow.nn.optimizer.adagrad import Adagrad
-from oneflow.nn.optimizer.lamb import LAMB
-from oneflow.nn.optimizer.adadelta import Adadelta
-from oneflow.nn.optimizer import swa_utils
+import oneflow as flow
 
-from . import lr_scheduler
+
+class BackwardHookFunction(flow.autograd.Function):
+    @staticmethod
+    def forward(ctx, *args):
+        ctx.mark_non_differentiable(*[arg for arg in args if not arg.requires_grad])
+        return args
+
+    @staticmethod
+    def backward(ctx, *args):
+        return args

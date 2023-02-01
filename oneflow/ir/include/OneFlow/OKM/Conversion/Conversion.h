@@ -23,8 +23,6 @@ namespace okm {
 
 LogicalResult LowerWrapOpsToOKMAndOKL(ModuleOp module);
 
-
-}  // namespace okl
-}  // namespace mlir
-
+}
+}
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_CONVERSION_CONVERSION_H_

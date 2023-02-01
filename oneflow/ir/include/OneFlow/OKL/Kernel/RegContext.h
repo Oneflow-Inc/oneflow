@@ -16,10 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/UserOpReflection.h"
 #include "mlir/IR/Operation.h"
-#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <memory>
 

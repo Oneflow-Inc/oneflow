@@ -52,8 +52,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns);
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
-                                         const std::string& mode);
+void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
+                                           const std::string& mode);
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns);
 void populateUpdateOKLAssemblyPasses(::mlir::RewritePatternSet& patterns);
