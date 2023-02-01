@@ -91,13 +91,13 @@ void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>&
       // "out_op_node" is one of valid output nodes
       // in this case, record the nodes as result and finish the recursion
 
-      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP 
+      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
       const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
       }
 
-      // set node connected to input edge as "in_node" if not depend OP 
+      // set node connected to input edge as "in_node" if not depend OP
       // otherwise remain the value of "in_node"
       const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
       if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
@@ -110,17 +110,17 @@ void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>&
     } else if (op_node == GetNodeFromInCtrlEdge(out_op_node)) {
       // "out_op_node" is ALSO a depend OP Node, and "op_node" connect to its in-ctrl edge
       // in this case, all precursor nodes of "op_node" should be seen as in-ctrl OP Node
-      
-      // put "input_node" into "in_ctrl_nodes" if not NULL 
+
+      // put "input_node" into "in_ctrl_nodes" if not NULL
       if (input_node) in_ctrl_nodes.push_back(input_node);
 
-      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP 
+      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
       const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
       }
 
-      // put node connected to input edge into "in_ctrl_nodes" if not depend OP 
+      // put node connected to input edge into "in_ctrl_nodes" if not depend OP
       const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
       if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.push_back(input_node_to_check);
@@ -138,7 +138,7 @@ void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>&
       // thus, remain or update(if NULL) "input_node", then pass it to subsequent processing
       // and append new in-ctrl OP into in_ctrl_nodes
 
-      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP 
+      // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
       const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
