@@ -196,12 +196,6 @@ struct PlacementLogicalChainsInfo {
   PlacementLogicalChainsInfo() : seed_parallel_desc(nullptr) {}
 };
 
-std::string GenParallelConfKey(const ParallelConf& conf) {
-  std::string ret = conf.device_tag();
-  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
-  return ret;
-}
-
 void InitPlacementLogicalChainsInfoFromSet(
     const std::shared_ptr<LogicalChain>& logical_chain,
     const HashSet<const OpNode*>& origin_logical_chain,

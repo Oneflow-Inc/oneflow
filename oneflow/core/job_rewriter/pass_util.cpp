@@ -81,44 +81,58 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 }
 
+std::string GenParallelConfKey(const ParallelConf& conf) {
+  std::string ret = conf.device_tag();
+  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
+  return ret;
+}
+
 void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
                            std::function<bool(const std::string&, const std::string&)>& IsReachable,
                            HashMap<std::string, OperatorConf>* mut_op_name2conf) {
   // TODO: Remove debug code
-  if (GlobalProcessCtx::Rank() == 0) {
-    // op_graph.ForEachNode([&](OpNode* in) {
-    //   op_graph.ForEachNode([&](OpNode* out) {
-    //     std::cout << "asking " << in->op().op_name() << " to " << out->op().op_name() << ",
-    //     reach? "
-    //               << IsReachable(in->op().op_name(), out->op().op_name()) << std::endl;
-    //   });
-    // });
-    for (int32_t i = 0; i < ordered_op_nodes.size() - 1; i++) {
-      const auto& in = ordered_op_nodes.at(i);
-      const auto& out = ordered_op_nodes.at(i + 1);
-      std::cout << "asking2 " << in->op().op_name() << " to " << out->op().op_name() << ", reach? "
-                << IsReachable(in->op().op_name(), out->op().op_name()) << ", reverse? "
-                << IsReachable(out->op().op_name(), in->op().op_name()) << std::endl;
-    }
-  }
+  // if (GlobalProcessCtx::Rank() == 0) {
+  //   // op_graph.ForEachNode([&](OpNode* in) {
+  //   //   op_graph.ForEachNode([&](OpNode* out) {
+  //   //     std::cout << "asking " << in->op().op_name() << " to " << out->op().op_name() << ",
+  //   //     reach? "
+  //   //               << IsReachable(in->op().op_name(), out->op().op_name()) << std::endl;
+  //   //   });
+  //   // });
+  //   for (int32_t i = 0; i < ordered_op_nodes.size() - 1; i++) {
+  //     const auto& in = ordered_op_nodes.at(i);
+  //     const auto& out = ordered_op_nodes.at(i + 1);
+  //     std::cout << "asking2 " << in->op().op_name() << " to " << out->op().op_name() << ", reach?
+  //     "
+  //               << IsReachable(in->op().op_name(), out->op().op_name()) << ", reverse? "
+  //               << IsReachable(out->op().op_name(), in->op().op_name()) << std::endl;
+  //   }
+  // }
 
-  HashMap<ParallelDesc, const OpNode*> placement2op_node;
+  HashMap<std::string, const OpNode*> placement2op_node;
 
   for (int64_t i = 0; i < ordered_op_nodes.size(); ++i) {
     const OpNode* this_node = CHECK_JUST(VectorAt(ordered_op_nodes, i));
-    auto it_placement7op_node = placement2op_node.find(this_node->parallel_desc());
+    const auto& this_op_conf = this_node->op().op_conf();
+    if (this_op_conf.has_src_subset_tick_conf() || this_op_conf.has_dst_subset_tick_conf()) {
+      continue;
+    }
+    auto key = GenParallelConfKey(this_node->parallel_desc().parallel_conf());
+    auto it_placement7op_node = placement2op_node.find(key);
     if (it_placement7op_node == placement2op_node.end()) {
       // Update previous op
-      placement2op_node[this_node->parallel_desc()] = this_node;
+      placement2op_node[key] = this_node;
+      if (GlobalProcessCtx::Rank() == 0)
+        std::cout << "Placement size: " << placement2op_node.size() << ", key: " << key
+                  << std::endl;
     } else {
       // const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
       auto& prev_node = it_placement7op_node->second;
       const std::string& this_op_name = this_node->op().op_name();
       const std::string& prev_op_name = prev_node->op().op_name();
       if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Try ctrl edges from " << prev_op_name << " to " << this_op_name
-                  << " but fail, size: ";
-        std::cout << this_node->op().op_conf().ctrl_in_op_name_size() << ", a reach b? "
+        std::cout << "Try ctrl edges from " << prev_op_name << " to " << this_op_name << ", size: ";
+        std::cout << this_op_conf.ctrl_in_op_name_size() << ", a reach b? "
                   << IsReachable(prev_op_name, this_op_name) << ", b reach a? "
                   << IsReachable(this_op_name, prev_op_name) << std::endl;
       }
@@ -137,7 +151,7 @@ void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
         auto it = mut_op_name2conf->find(this_op_name);
         // If this op have not been modified, put it in the map.
         if (it == mut_op_name2conf->end()) {
-          it = mut_op_name2conf->emplace(this_op_name, this_node->op().op_conf()).first;
+          it = mut_op_name2conf->emplace(this_op_name, this_op_conf).first;
         }
         it->second.add_ctrl_in_op_name(prev_op_name);
       }

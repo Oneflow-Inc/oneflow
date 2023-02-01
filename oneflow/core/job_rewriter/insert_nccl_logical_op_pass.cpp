@@ -748,12 +748,6 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   }
 }
 
-std::string GenParallelConfKey(const ParallelConf& conf) {
-  std::string ret = conf.device_tag();
-  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
-  return ret;
-}
-
 struct InsertNcclSubGraph {
   std::vector<const OpNode*> ordered_op_nodes;
   int64_t begin_op_global_order;
