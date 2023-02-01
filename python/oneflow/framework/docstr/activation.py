@@ -454,7 +454,7 @@ add_docstr(
     """
     rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False) -> Tensor
 
-    In-place version of rrelu().
+    In-place version of :func:`rrelu`.
     """,
 )
 add_docstr(

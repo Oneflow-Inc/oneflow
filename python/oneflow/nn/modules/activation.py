@@ -938,8 +938,10 @@ class RReLU(Module):
         >>> m = flow.nn.RReLU(0.1, 0.3)
         >>> arr = np.array([0.2, -0.3, -3.0, 4.0, 0.5, -2.2])
         >>> x = flow.Tensor(arr)
-        >>> out = m(x)
-       
+        >>> out = m(x) 
+        >>> print(out) # doctest: +SKIP
+        
+            
     """
 
     def __init__(
