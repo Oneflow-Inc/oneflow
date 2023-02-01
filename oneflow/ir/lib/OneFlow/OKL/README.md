@@ -30,11 +30,11 @@ oneflow kernel launch dialect
 ``` mlir
 module {
   func.func @wrap0(%arg0: !okl.launcher_ctx) -> (tensor<2xf32>, tensor<2xf32>) {
-    %0 = "okl.arg_to_tensor"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+    %0 = "okl.get_tensor_from_arg"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
     %1 = "oneflow.relu"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-0", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
     %2 = "oneflow.tanh"(%1) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "tanh-1", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-    %3 = "okl.tensor_to_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
-    %4 = "okl.tensor_to_ret"(%arg0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+    %3 = "okl.get_tensor_as_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+    %4 = "okl.get_tensor_as_ret"(%arg0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
     return %3, %4 : tensor<2xf32>, tensor<2xf32>
   }
 }
@@ -46,11 +46,11 @@ module {
 ```mlir
 module {
   func.func @wrap0(%arg0: !okl.launcher_ctx) {
-    %0 = "okl.arg_to_tensor"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+    %0 = "okl.get_tensor_from_arg"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
     %1 = "oneflow.relu"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-0", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
     %2 = "oneflow.tanh"(%1) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "tanh-1", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-    %3 = "okl.tensor_to_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
-    %4 = "okl.tensor_to_ret"(%arg0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+    %3 = "okl.get_tensor_as_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+    %4 = "okl.get_tensor_as_ret"(%arg0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
     return
   }
 }
@@ -62,15 +62,15 @@ module {
 module {
   func.func @okl_func(%arg0: !okl.launcher_ctx) {
     "okl.wrapper_kernel"() ({
-      %0 = "okl.arg_to_tensor"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+      %0 = "okl.get_tensor_from_arg"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
       %1 = "oneflow.relu"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-0", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-      %2 = "okl.tensor_to_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+      %2 = "okl.get_tensor_as_ret"(%arg0, %1) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
       okl.return
     }) {index = 0 : i32} : () -> ()
     "okl.wrapper_kernel"() ({
-      %0 = "okl.ret_to_tensor"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+      %0 = "okl.get_tensor_from_ret"(%arg0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
       %1 = "oneflow.tanh"(%0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "tanh-1", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-      %2 = "okl.tensor_to_ret"(%arg0, %1) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+      %2 = "okl.get_tensor_as_ret"(%arg0, %1) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
       okl.return
     }) {index = 1 : i32} : () -> ()
     return
@@ -92,15 +92,15 @@ module {
   func.func @okl_func(%arg0: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
     %0 = builtin.unrealized_conversion_cast %arg0 : !llvm.ptr<i8> to !okl.launcher_ctx
     "okl.wrapper_kernel"() ({
-      %1 = "okl.arg_to_tensor"(%0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+      %1 = "okl.get_tensor_from_arg"(%0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
       %2 = "oneflow.relu"(%1) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-0", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-      %3 = "okl.tensor_to_ret"(%0, %2) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+      %3 = "okl.get_tensor_as_ret"(%0, %2) {index = 0 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
       okl.return
     }) {index = 0 : i32} : () -> ()
     "okl.wrapper_kernel"() ({
-      %1 = "okl.ret_to_tensor"(%0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
+      %1 = "okl.get_tensor_from_ret"(%0) {index = 0 : i32} : (!okl.launcher_ctx) -> tensor<2xf32>
       %2 = "oneflow.tanh"(%1) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "tanh-1", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
-      %3 = "okl.tensor_to_ret"(%0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
+      %3 = "okl.get_tensor_as_ret"(%0, %2) {index = 1 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
       okl.return
     }) {index = 1 : i32} : () -> ()
     return
