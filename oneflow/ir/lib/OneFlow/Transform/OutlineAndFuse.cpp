@@ -81,7 +81,7 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
  private:
   Option<std::string> wrap_ops_mode_{*this, "mode",
                                      llvm::cl::desc("the mode of this pass to wrap ops"),
-                                     llvm::cl::init(wrap_options::mode::SIMPLE)};
+                                     llvm::cl::init(wrap_mode::SIMPLE)};
 };
 
 class ExtractKernelLaunchTensorPass

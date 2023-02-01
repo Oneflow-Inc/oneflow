@@ -22,13 +22,11 @@ namespace mlir {
 
 namespace oneflow {
 
-namespace wrap_options {
-namespace mode {
+namespace wrap_mode {
 const std::string SIMPLE = "simple";
 const std::string CUDA_GRAPH = "cuda_graph";
-}  // namespace mode
+}  // namespace wrap_mode
 
-}  // namespace wrap_options
 
 std::unique_ptr<mlir::Pass> createLowerToOKLPass();
 std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchPass();

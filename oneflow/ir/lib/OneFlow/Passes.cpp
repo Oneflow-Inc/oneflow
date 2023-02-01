@@ -1117,9 +1117,9 @@ void populateUpdateOKLAssemblyPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns,
                                          const std::string& mode) {
-  if (mode == wrap_options::mode::SIMPLE) {
+  if (mode == wrap_mode::SIMPLE) {
     patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
-  } else if (mode == wrap_options::mode::CUDA_GRAPH) {
+  } else if (mode == wrap_mode::CUDA_GRAPH) {
 #ifdef WITH_CUDA_GRAPHS
     patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
 #else
