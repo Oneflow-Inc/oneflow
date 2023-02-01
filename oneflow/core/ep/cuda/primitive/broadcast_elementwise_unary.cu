@@ -354,34 +354,27 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     bool permutable = InferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_dst_strides, 
                                                     simplified_src_dims, simplified_dst_dims, 
                                                     permutation_list, permutation_src_dims, unary_op);
+    std::unique_ptr<Permute> permute = NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
       LaunchFill<unary_op, Src, Dst>(cuda_stream, dst, src, elem_cnt, attr0, attr1);
-      return;
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
-      return;
-    } else if (permutable && src_type == dst_type) {
-      std::unique_ptr<Permute> permute =
-        NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
-
-      if (permute != nullptr) {
-        permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
-                      permutation_list, dst_ptr);
-        return;
-      }
+    } else if (permutable && src_type == dst_type && permute != nullptr) {
+      permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
+                    permutation_list, dst_ptr);
+    } else {
+      // fall back to normal cases
+      LaunchWithSimplified<unary_op, Src, Dst>(
+          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
+          simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
     }
-
-    // fall back to normal cases
-    LaunchWithSimplified<unary_op, Src, Dst>(
-        cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
-        simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
   }
 
  protected:
