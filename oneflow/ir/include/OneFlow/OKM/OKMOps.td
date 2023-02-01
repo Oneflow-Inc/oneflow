@@ -20,7 +20,7 @@ include "OneFlow/OKM/OKMAttributes.td"
 include "OneFlow/OKM/OKMPasses.td"
 include "mlir/IR/OpBase.td"
 
-def ArgToTensorOp : OKM_Op<"get_tensor_from_arg"> {
+def GetTensorFromArgOp : OKM_Op<"get_tensor_from_arg"> {
   let arguments = (ins
     I32Attr:$index
   );
@@ -45,7 +45,7 @@ def AllocMemrefOp : OKM_Op<"alloc_memref"> {
   let results = (outs AnyMemRef);
 }
 
-def TensorToRetOp : OKM_Op<"get_tensor_as_ret"> {
+def GetTensorAsRetOp : OKM_Op<"get_tensor_as_ret"> {
   let arguments = (ins
     AnyTensor:$tensor,
     I32Attr:$index

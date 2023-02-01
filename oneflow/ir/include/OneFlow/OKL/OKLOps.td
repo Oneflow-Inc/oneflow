@@ -25,7 +25,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/EnumAttr.td"
 
 
-def ArgToTensorOp : OKL_Op<"get_tensor_from_arg"> {
+def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
   let summary = "get tensor as arguments from operands of context";
   let description = [{
     get tensor value from launcher context as arguments.
@@ -38,7 +38,7 @@ def ArgToTensorOp : OKL_Op<"get_tensor_from_arg"> {
   let results = (outs AnyTensor);
 }
 
-def RetToTensorOp : OKL_Op<"get_tensor_from_ret"> {
+def GetTensorFromRetOp : OKL_Op<"get_tensor_from_ret"> {
   let summary = "get tensor as arguments from results of context";
   let description = [{
     get tensor value from launcher context as arguments.
@@ -51,7 +51,7 @@ def RetToTensorOp : OKL_Op<"get_tensor_from_ret"> {
   let results = (outs AnyTensor);
 }
 
-def TensorToRetOp : OKL_Op<"get_tensor_as_ret"> {
+def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
   let summary = "get tensor as outcomes from results of context";
   let description = [{
     get tensor value from launcher context as outcomes.

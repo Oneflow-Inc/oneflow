@@ -37,10 +37,10 @@ class TensorInfo {
 
     for (auto elem : op->getOperands()) {
       llvm::TypeSwitch<::mlir::Operation*>(elem.getDefiningOp())
-          .Case<::mlir::okl::ArgToTensorOp>([&](::mlir::okl::ArgToTensorOp in) {
+          .Case<::mlir::okl::GetTensorFromArgOp>([&](::mlir::okl::GetTensorFromArgOp in) {
             ins_.push_back({arguments, in.index()});
           })
-          .Case<::mlir::okl::RetToTensorOp>([&](::mlir::okl::RetToTensorOp in) {
+          .Case<::mlir::okl::GetTensorFromRetOp>([&](::mlir::okl::GetTensorFromRetOp in) {
             ins_.push_back({results, in.index()});
           })
           .Case<::mlir::okl::PoolToTensorOp>([&](::mlir::okl::PoolToTensorOp in) {
@@ -52,7 +52,7 @@ class TensorInfo {
     for (auto elem : op->getResults()) {
       auto res_use = *elem.getUsers().begin();
       llvm::TypeSwitch<::mlir::Operation*>(res_use)
-          .Case<::mlir::okl::TensorToRetOp>([&](::mlir::okl::TensorToRetOp in) {
+          .Case<::mlir::okl::GetTensorAsRetOp>([&](::mlir::okl::GetTensorAsRetOp in) {
             outs_.push_back({results, in.index()});
           })
           .Case<::mlir::okl::TensorToPoolOp>([&](::mlir::okl::TensorToPoolOp in) {
