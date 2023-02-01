@@ -871,13 +871,15 @@ class Graph(object):
         assert len(self._forward_job_proto.net.op) == len(
             self._shared_graph._forward_job_proto.net.op
         )
-        shared_op_names = []
+        # This graph and the shared graph's original graph have same operators and operator order.
+        # We use this to find the corresponding operator in shared graph.
+        shared_op_names_from_ordered_original_graph = []
         for op_idx in range(len(self._forward_job_proto.net.op)):
-            shared_op_names.append(
+            shared_op_names_from_ordered_original_graph.append(
                 self._shared_graph._forward_job_proto.net.op[op_idx].name
             )
 
-        # Copy the completed graph from the shared graph and reuse it.
+        # Copy the completed graph from the shared graphwo and reuse it.
         self._compiled_job_proto = deepcopy(self._shared_graph._compiled_graph_proto)
         self._compiled_job_proto.job_conf.job_name = self._name
         # Create a c nn graph to run with lazy runtime.
@@ -896,7 +898,7 @@ class Graph(object):
         self._c_nn_graph.build_with_new_input_from_shared_graph(
             input_op_names,
             inputs_tensor_tuple,
-            shared_op_names,
+            shared_op_names_from_ordered_original_graph,
             self._forward_job_proto.SerializeToString(),
         )
         # Get new compiled job proto
@@ -1330,9 +1332,9 @@ class Graph(object):
             )
             (
                 self._state_op_names,
-                self._state_tensors,
+                state_tensors,
             ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
-            self._state_tensor_tuple = convert_to_tensor_tuple(self._state_tensors)
+            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
 
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 self._state_op_names, self._state_tensor_tuple

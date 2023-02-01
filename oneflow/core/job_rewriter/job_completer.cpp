@@ -171,7 +171,7 @@ Maybe<void> JobCompleter::Complete(Job* job) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobCompleter::CompleteSharedGraphForNewInput(
+Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
     Job* job,
     const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>& InputTensor4Name,
     const std::function<Maybe<const OperatorConf*>(const std::string& shared_op_name)>&

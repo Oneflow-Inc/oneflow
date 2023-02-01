@@ -352,7 +352,8 @@ Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
 Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
     const std::vector<std::string>& shared_inputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
-    const std::vector<std::string>& shared_op_names, const std::string& new_serialized_job) {
+    const std::vector<std::string>& shared_op_names_from_ordered_original_graph,
+    const std::string& new_serialized_original_job) {
   CHECK_EQ_OR_RETURN(shared_inputs_op_names.size(), new_input_tensors.size());  // NOLINE
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   // Register inputs.
@@ -372,16 +373,20 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
   };
 
   // Generate new OperatorConf getter.
-  Job new_build_job;
-  CHECK_OR_RETURN(new_build_job.ParseFromString(new_serialized_job))
+  Job new_build_original_job;
+  CHECK_OR_RETURN(new_build_original_job.ParseFromString(new_serialized_original_job))
       << "nn.Graph " << name_ << " parse job proto of new build graph failed.";
-  CHECK_EQ_OR_RETURN(new_build_job.net().op_size(), shared_op_names.size())
-      << "nn.Graph " << name_ << " new_build_job op size and shared_op_names size are not equal.";
+  CHECK_EQ_OR_RETURN(new_build_original_job.net().op_size(),
+                     shared_op_names_from_ordered_original_graph.size())
+      << "nn.Graph " << name_
+      << " new_build_original_job op size and shared_op_names_from_ordered_original_graph size are "
+         "not "
+         "equal.";
   HashMap<std::string, const OperatorConf*> shared_op_name2_new_op;
-  for (int64_t op_idx = 0; op_idx < shared_op_names.size(); ++op_idx) {
+  for (int64_t op_idx = 0; op_idx < shared_op_names_from_ordered_original_graph.size(); ++op_idx) {
     // Assume that the new graph and the shared graph from nn.Graph.build have the same op order.
-    const auto& op = new_build_job.mutable_net()->mutable_op()->at(op_idx);
-    shared_op_name2_new_op.emplace(shared_op_names[op_idx], &op);
+    const auto& op = new_build_original_job.mutable_net()->mutable_op()->at(op_idx);
+    shared_op_name2_new_op.emplace(shared_op_names_from_ordered_original_graph[op_idx], &op);
   }
   const auto& NewOp4SharedOpName =
       [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
@@ -394,7 +399,7 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
   // A global variable to get graph configurations.
   auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter::CompleteSharedGraphForNewInput(&job_, InputTensor4Name, NewOp4SharedOpName));
+  JUST(JobCompleter::UpdateSharedGraphForNewInput(&job_, InputTensor4Name, NewOp4SharedOpName));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
   return Maybe<void>::Ok();
 }

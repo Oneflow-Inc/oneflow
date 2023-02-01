@@ -32,7 +32,7 @@ class JobCompleter final {
   static Maybe<void> Complete(Job* job);
   // The job is copied from a shared graph, it needs to be modified
   // for a new graph with different input.
-  static Maybe<void> CompleteSharedGraphForNewInput(
+  static Maybe<void> UpdateSharedGraphForNewInput(
       Job* job,
       const std::function<Maybe<std::shared_ptr<one::Tensor>>(const std::string&)>&
           InputTensor4Name,

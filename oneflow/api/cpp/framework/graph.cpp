@@ -286,9 +286,9 @@ of::Maybe<void> Graph::GraphImpl::RegisterJobPass(
 of::Maybe<of::Job> Graph::GraphImpl::ApplyJobPasses(const of::Job& job) {
   auto current_job = std::make_shared<of::Job>(job);
   for (const auto& pass_fn : registered_job_passes_) {
-    std::string new_serialized_job = pass_fn(current_job->SerializeAsString());
+    std::string new_serialized_original_job = pass_fn(current_job->SerializeAsString());
     of::Job new_job;
-    if (!new_job.ParseFromString(new_serialized_job)) {
+    if (!new_job.ParseFromString(new_serialized_original_job)) {
       return of::Error::RuntimeError() << "invalid serialized job after pass applied";
     }
     current_job->Swap(&new_job);

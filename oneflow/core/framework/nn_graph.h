@@ -90,7 +90,8 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> BuildWithNewInputFromSharedGraph(
       const std::vector<std::string>& shared_inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
-      const std::vector<std::string>& shared_op_names, const std::string& new_serialized_job);
+      const std::vector<std::string>& shared_op_names_from_ordered_original_graph,
+      const std::string& new_serialized_original_job);
   // Generate execution plan for lazy runtime. Oneflow lazy runtime is an actor based runtime.
   Maybe<void> CompilePlanForRuntime();
   // Initialize lazy runtime.
