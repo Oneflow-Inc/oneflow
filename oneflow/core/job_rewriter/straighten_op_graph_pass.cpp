@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
@@ -21,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 namespace oneflow {
 
 namespace {
@@ -42,9 +45,18 @@ class StraightenOpGraphPass final : public JobPass {
 };
 
 Maybe<void> StraightenOpGraphPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  // TODO: use VLOG(3) here
   std::cout << "Straighten op graph is working!" << std::endl;
   std::vector<const OpNode*> ordered_op_nodes;
   auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+
+  // Insert control edges for different placement
+  HashMap<std::string, OperatorConf> mut_op_name2conf;
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+  InsertCtrlEdgeInChain(ordered_op_nodes, IsReachable, &mut_op_name2conf);
+
+  // TODO: Find the key point which screw up the DAG
+  for (const auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
   return Maybe<void>::Ok();
 }
 

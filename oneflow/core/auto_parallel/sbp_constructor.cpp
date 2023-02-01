@@ -86,6 +86,9 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
   // LoadLbi2SbpEdge(op_graph).
   InitAvailableMemory();
+
+  // StraightenOpGraph(op_graph);
+  // std::cout << "============================================" << std::endl;
   InitMemory(op_graph, &sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
@@ -133,9 +136,9 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
     sbp_graph_.GreedyStrategy(/*nbh_num=*/4);
     double curr_memory = sbp_graph_.GetMemory();
     double total_weighted_cost = sbp_graph_.ComputeWeightedCost();
-    LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
+    std::cout << "The " << step << "-th try, memory ratio: " << kMemoryRatio
               << ", memory: " << curr_memory << ", total cost: " << total_weighted_cost
-              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory);
+              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory) << std::endl;
     if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     if (curr_memory > available_memory_ * kImpossibleRatio) {
@@ -345,7 +348,9 @@ Maybe<void> SbpConstructor::InitCopyAndMemoryCost(const OpGraph& op_graph) {
 }
 
 Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
+  // TODO: Remove this
   auto OpNode2MutableOpCtrlDeps = JUST(GetMutableOpCtrlDeps(*op_graph_));
+  std::cout << "ctrl size: " << OpNode2MutableOpCtrlDeps->size() << std::endl;
   // Compute layer number for each node
   int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *OpNode2MutableOpCtrlDeps);
   // Accumulate cost on the trunk after initializing computation cost
