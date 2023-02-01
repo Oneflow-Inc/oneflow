@@ -33,7 +33,7 @@ limitations under the License.
 #include "OneFlow/OKL/Kernel/JITOpInfer.h"
 #include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "OneFlow/OKL/Kernel/LauncherState.h"
-#include "OneFlow/OKL/Kernel/MemoryPool.h"
+#include "OneFlow/OKL/Kernel/TmpBufferManager.h"
 
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
@@ -107,7 +107,7 @@ class KernelLaunchKernel final : public user_op::OpKernel, public user_op::CudaG
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        return oneflow::okl::MemoryPool::InferTmpSize(ctx);                               \
+        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                               \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -126,7 +126,7 @@ REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        return oneflow::okl::MemoryPool::InferTmpSize(ctx);                               \
+        return oneflow::okl::TmpBufferManager::InferTmpSize(ctx);                               \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
