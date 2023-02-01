@@ -34,23 +34,21 @@ namespace gather {
 namespace internal {
 
 template<typename PackedType, typename IndicesType, typename IDX>
-__global__ void GatherForwardGpu(const IDX elem_cnt,
-                                 NdIndexOffsetHelper<IDX, 3> per_batch_in_helper,
-                                 NdIndexOffsetHelper<IDX, 3> per_batch_out_helper,
-                                 const IDX batch_dim_size, const IDX per_batch_out_size,
-                                 const IDX per_batch_in_size, const IDX per_batch_indices_size,
-                                 const IDX gather_dim_size, const PackedType* in, const IDX in_size,
-                                 PackedType* out, const IDX out_size, const IndicesType* indices,
-                                 const IDX indices_size, const IDX offset) {
-  IDX batch_index[3];
+__global__ void GatherForwardGpu(IDX elem_cnt, NdIndexOffsetHelper<IDX, 4> in_helper,
+                                 NdIndexOffsetHelper<IDX, 4> out_helper,
+                                 NdIndexOffsetHelper<IDX, 2> indices_helper, IDX gather_dim_size,
+                                 const PackedType* in, PackedType* out, const IndicesType* indices,
+                                 IDX indices_size, IDX offset) {
+  IDX nd_index[4];
+  IDX indices_nd_index[2];
   CUDA_1D_KERNEL_LOOP_T(IDX, out_offset, elem_cnt) {
-    const IDX batch_id = out_offset / per_batch_out_size;
-    const IDX batch_offset = out_offset % per_batch_out_size;
-    per_batch_out_helper.OffsetToNdIndex(batch_offset, batch_index);
-    batch_index[1] = indices[per_batch_indices_size * batch_id + batch_index[1]] - offset;
+    out_helper.OffsetToNdIndex(out_offset, nd_index);
+    indices_nd_index[0] = nd_index[0];
+    indices_nd_index[1] = nd_index[2];
+    nd_index[2] = indices[indices_helper.NdIndexToOffset(indices_nd_index)] - offset;
     PackedType v{};
-    if (batch_index[1] >= 0 && batch_index[1] < gather_dim_size) {
-      v = in[per_batch_in_size * batch_id + per_batch_in_helper.NdIndexToOffset(batch_index)];
+    if (nd_index[2] >= 0 && nd_index[2] < gather_dim_size) {
+      v = in[in_helper.NdIndexToOffset(nd_index)];
     }
     out[out_offset] = v;
   }
@@ -61,56 +59,57 @@ bool IsSafeUseIndex32(const size_t batch_dim_size, const size_t outer_dim_size,
                       const size_t indices_size) {
   const int64_t in_elem_cnt = batch_dim_size * outer_dim_size * gather_dim_size * inner_dim_size;
   const int64_t out_elem_cnt = outer_dim_size * indices_size * inner_dim_size;
-  // out_elem_cnt = batch_dim_size * outer_dim_size * indices_size/batch_dim_size * inner_dim_size
   return std::max(out_elem_cnt, in_elem_cnt) < GetMaxVal<int32_t>() / 2;
 }
 
-template<typename PackedType, typename IndicesType>
-void DispatchIndexSize(cudaStream_t cuda_stream, const size_t batch_dim_size,
-                       const size_t outer_dim_size, const size_t gather_dim_size,
-                       const size_t inner_dim_size, const PackedType* in, const size_t in_size,
-                       PackedType* out, const size_t out_size, const IndicesType* indices,
-                       const size_t indices_size, const int64_t offset) {
-  const int64_t out_elem_cnt = outer_dim_size * indices_size * inner_dim_size;
+template<typename PackedType, typename IndicesType, typename IDX>
+void LaunchGatherKernel(cudaStream_t cuda_stream, IDX batch_dim_size, IDX outer_dim_size,
+                        IDX gather_dim_size, IDX inner_dim_size, const PackedType* in,
+                        PackedType* out, const IndicesType* indices, IDX indices_size, IDX offset) {
   // out_elem_cnt = batch_dim_size * outer_dim_size * indices_size/batch_dim_size * inner_dim_size
-  const int64_t per_batch_out_size = out_size / batch_dim_size;
-  const int64_t per_batch_in_size = in_size / batch_dim_size;
-  const int64_t per_batch_indices_size = indices_size / batch_dim_size;
+  IDX out_elem_cnt = outer_dim_size * indices_size * inner_dim_size;
+  IDX out_gather_dim_size = indices_size / batch_dim_size;
+  IDX per_batch_indices_size = indices_size / batch_dim_size;
+  NdIndexOffsetHelper<IDX, 4> in_helper(batch_dim_size, outer_dim_size, gather_dim_size,
+                                        inner_dim_size);
+  NdIndexOffsetHelper<IDX, 4> out_helper(batch_dim_size, outer_dim_size, out_gather_dim_size,
+                                         inner_dim_size);
+  NdIndexOffsetHelper<IDX, 2> indices_helper(batch_dim_size, per_batch_indices_size);
+  GatherForwardGpu<PackedType, IndicesType, IDX>
+      <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+          out_elem_cnt, in_helper, out_helper, indices_helper, gather_dim_size, in, out, indices,
+          indices_size, offset);
+}
 
-#define LAUNCH_GATHER_KERNEL(IDX)                                                                 \
-  NdIndexOffsetHelper<IDX, 3> per_batch_in_helper(outer_dim_size, gather_dim_size,                \
-                                                  inner_dim_size);                                \
-  NdIndexOffsetHelper<IDX, 3> per_batch_out_helper(outer_dim_size, indices_size / batch_dim_size, \
-                                                   inner_dim_size);                               \
-  GatherForwardGpu<PackedType, IndicesType, IDX>                                                  \
-      <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(          \
-          out_elem_cnt, per_batch_in_helper, per_batch_out_helper, batch_dim_size,                \
-          per_batch_out_size, per_batch_in_size, per_batch_indices_size, gather_dim_size, in,     \
-          in_size, out, out_size, indices, indices_size, offset);
-
+template<typename PackedType, typename IndicesType>
+void DispatchIndexSize(cudaStream_t cuda_stream, size_t batch_dim_size, size_t outer_dim_size,
+                       size_t gather_dim_size, size_t inner_dim_size, const PackedType* in,
+                       PackedType* out, const IndicesType* indices, size_t indices_size,
+                       int64_t offset) {
   if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
                        indices_size)) {
-    LAUNCH_GATHER_KERNEL(int32_t)
+    LaunchGatherKernel<PackedType, IndicesType, int32_t>(
+        cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size, in, out,
+        indices, indices_size, offset);
   } else {
-    LAUNCH_GATHER_KERNEL(int64_t)
+    LaunchGatherKernel<PackedType, IndicesType, int64_t>(
+        cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size, in, out,
+        indices, indices_size, offset);
   }
-
-#undef LAUNCH_GATHER_KERNEL
 }
 
 template<typename IndicesType, typename PackedType>
-bool TryDispatchPackedType(cudaStream_t cuda_stream, const size_t batch_dim_size,
-                           const size_t outer_dim_size, const size_t gather_dim_size,
-                           const size_t inner_dim_byte_size, const void* in, const size_t in_size,
-                           void* out, const size_t out_size, const IndicesType* indices,
-                           const size_t indices_size, const int64_t offset) {
+bool TryDispatchPackedType(cudaStream_t cuda_stream, size_t batch_dim_size, size_t outer_dim_size,
+                           size_t gather_dim_size, size_t inner_dim_byte_size, const void* in,
+                           void* out, const IndicesType* indices, size_t indices_size,
+                           int64_t offset) {
 #define isAligned(src, alignment) reinterpret_cast<uintptr_t>(src) % sizeof(alignment) == 0
   if (isAligned(in, PackedType) && isAligned(out, PackedType)
       && inner_dim_byte_size % sizeof(PackedType) == 0) {
     DispatchIndexSize<PackedType, IndicesType>(
         cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size,
-        inner_dim_byte_size / sizeof(PackedType), static_cast<const PackedType*>(in), in_size,
-        static_cast<PackedType*>(out), out_size, indices, indices_size, offset);
+        inner_dim_byte_size / sizeof(PackedType), static_cast<const PackedType*>(in),
+        static_cast<PackedType*>(out), indices, indices_size, offset);
     return true;
   } else {
     return false;
@@ -119,17 +118,13 @@ bool TryDispatchPackedType(cudaStream_t cuda_stream, const size_t batch_dim_size
 }
 
 template<typename IndicesType>
-void DispatchPackedSize(cudaStream_t cuda_stream, const size_t batch_dim_size,
-                        const size_t outer_dim_size, const size_t gather_dim_size,
-                        const unsigned long inner_dim_byte_size, const void* in,
-                        const size_t in_size, void* out, const size_t out_size,
-                        const IndicesType* indices, const size_t indices_size,
-                        const int64_t offset) {
-  using Func =
-      bool (*)(cudaStream_t cuda_stream, const size_t batch_dim_size, const size_t outer_dim_size,
-               const size_t gather_dim_size, const size_t inner_dim_byte_size, const void* in,
-               const size_t in_size, void* out, const size_t out_size, const IndicesType* indices,
-               const size_t indices_size, const int64_t offset);
+void DispatchPackedSize(cudaStream_t cuda_stream, size_t batch_dim_size, size_t outer_dim_size,
+                        size_t gather_dim_size, unsigned long inner_dim_byte_size, const void* in,
+                        void* out, const IndicesType* indices, size_t indices_size,
+                        int64_t offset) {
+  using Func = bool (*)(cudaStream_t cuda_stream, size_t batch_dim_size, size_t outer_dim_size,
+                        size_t gather_dim_size, size_t inner_dim_byte_size, const void* in,
+                        void* out, const IndicesType* indices, size_t indices_size, int64_t offset);
 
   Func func[] = {
       TryDispatchPackedType<IndicesType, ulonglong2>,  // 16-Bytes
@@ -141,7 +136,7 @@ void DispatchPackedSize(cudaStream_t cuda_stream, const size_t batch_dim_size,
 
   for (size_t i = 0; i < sizeof(func) / sizeof(func[0]); i++) {
     if (func[i](cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_byte_size,
-                in, in_size, out, out_size, indices, indices_size, offset)) {
+                in, out, indices, indices_size, offset)) {
       break;
     }
   }
@@ -154,16 +149,16 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() override = default;
 
+  // TODO: batch_dim_size=1， outer_dim_size=1 优化
+  // TODO: 测试的时候记得测试 非 pack 情况
   using Gather::Launch;
-  void Launch(Stream* stream, const size_t batch_dim_size, const size_t outer_dim_size,
-              const size_t gather_dim_size, const size_t inner_dim_size, const void* in,
-              const size_t in_size, void* out, const size_t out_size, const void* indices,
-              const size_t indices_size, const int64_t offset) override {
+  void Launch(Stream* stream, int64_t offset, size_t batch_dim_size, size_t outer_dim_size,
+              size_t gather_dim_size, size_t inner_dim_size, const void* in, void* out,
+              const void* indices, size_t indices_size) override {
     cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
-    DispatchPackedSize<IndicesType>(cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                                    inner_dim_size * sizeof(T), in, in_size, out, out_size,
-                                    reinterpret_cast<IndicesType*>(const_cast<void*>(indices)),
-                                    indices_size, offset);
+    DispatchPackedSize<IndicesType>(
+        cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size * sizeof(T),
+        in, out, reinterpret_cast<IndicesType*>(const_cast<void*>(indices)), indices_size, offset);
   }
 };
 
