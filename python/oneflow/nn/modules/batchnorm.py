@@ -123,9 +123,12 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
+        exponential_average_factor = self.momentum
         if self.training and self.track_running_stats:
             if self.num_batches_tracked is not None:
                 self.num_batches_tracked.add_(1)
+                if self.momentum is None:
+                    exponential_average_factor = 1.0 / float(self.num_batches_tracked)
         if self.training:
             is_training = True
         else:
@@ -139,7 +142,7 @@ class _BatchNorm(_NormBase):
             self.bias,
             axis=self.channel_axis,
             epsilon=self.eps,
-            momentum=self.momentum,
+            momentum=exponential_average_factor,
             is_training=is_training,
         )
 

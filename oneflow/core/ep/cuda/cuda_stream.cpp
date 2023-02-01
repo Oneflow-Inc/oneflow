@@ -111,10 +111,16 @@ void CudaGraphExecutable::Update(cudaGraph_t graph) {
   if (dev != dev_) { Reset(); }
   dev_ = dev;
   if (graph_exec_ != nullptr) {
+#if CUDA_VERSION < 12000
     cudaGraphExecUpdateResult update_result{};
     cudaGraphNode_t error_node = nullptr;
     OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
     if (update_result == cudaGraphExecUpdateSuccess) { return; }
+#else
+    cudaGraphExecUpdateResultInfo update_result{};
+    OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &update_result));
+    if (update_result.result == cudaGraphExecUpdateSuccess) { return; }
+#endif  // CUDA_VERSION < 12000
   }
   Reset();
   OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));

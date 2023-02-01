@@ -16,6 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
 #include <type_traits>
+#if defined(WITH_CUDA)
+#include <cuda_fp16.h>
+#include <cuda.h>
+#endif
+#if defined(WITH_ROCM)
+#include <hip/hip_fp16.h>
+#include "hip/hip_runtime.h"
+#endif
+#include "oneflow/core/common/bfloat16.h"
+#include <half.hpp>
 
 namespace std {
 
@@ -99,9 +109,24 @@ class is_trivially_copyable<T*> : public true_type {};
 
 namespace oneflow {
 
-template<typename T>
+// Type Trait: IsScalarType
+
+template<typename T, typename Enable = void>
 struct IsScalarType final {
   static const bool value = std::is_scalar<T>::value;
+};
+
+template<typename T>
+struct IsScalarType<T,
+                    typename std::enable_if<
+                        std::is_same<bfloat16, typename std::remove_cv<T>::type>::value
+                        || std::is_same<half_float::half, typename std::remove_cv<T>::type>::value
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
+                        || std::is_same<half, typename std::remove_cv<T>::type>::value
+#endif  // WITH_CUDA
+                        >::type>
+    final {
+  static const bool value = true;
 };
 
 namespace detail {

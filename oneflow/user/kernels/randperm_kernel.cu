@@ -35,17 +35,18 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 
 namespace oneflow {
-__global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
-                                  GPURAND(State)* state) {
+__global__ void GeneKeysAndValues(const int32_t n, uint64_t seed, uint64_t offset, int32_t* values,
+                                  int32_t* keys) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  GPURAND(State) local_state = state[id];
+  GPURAND(StatePhilox4_32_10_t) state;
+  GPURAND(_init)(seed, id, offset, &state);
   CUDA_1D_KERNEL_LOOP(i, n) {
-    keys[i] = GPURAND()(&local_state);
+    keys[i] = GPURAND()(&state);
     values[i] = i;
   }
-  state[id] = local_state;
 }
 
 __global__ void tempcopy2output(const int32_t n, const int32_t offset, int32_t* temp,
@@ -128,14 +129,20 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
+    CHECK_NOTNULL(generator);
     auto* stream = ctx->stream();
     const auto device_index = stream->device()->device_index();
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-    CHECK_NOTNULL(generator);
 
-    int32_t block_num = gpu_generator->max_block_num();
-    int32_t thread_num = gpu_generator->max_thread_num();
-    GPURAND(State)* curand_states = gpu_generator->curand_states();
+    ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+    auto execution_policy = gpu_generator->CalcExecutionPolicy(n, cuda_stream);
+
+    auto counter_offset = std::get<0>(execution_policy);
+    auto grid = std::get<1>(execution_policy);
+    auto block = std::get<2>(execution_policy);
+
+    uint64_t seed = gpu_generator->current_seed();
+    uint64_t offset = gpu_generator->get_philox_offset(counter_offset);
 
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.
@@ -153,8 +160,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     void* tmp_base = reinterpret_cast<void*>(reinterpret_cast<char*>(temp_buffer_base)
                                              + temp_buffer_aligned_bytes);
     size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
-    GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        n, value_base, key_base, curand_states);
+    GeneKeysAndValues<<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        n, seed, offset, value_base, key_base);
     if (cache == nullptr) {
 #ifdef WITH_ROCM
       auto err = hipcub::DeviceRadixSort::SortPairs(
@@ -214,6 +221,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       const auto* randperm_cache = dynamic_cast<const GpuRandPermKernelCache*>(cache);
       auto len = randperm_cache->upper() - randperm_cache->lower();
       const int64_t offset = randperm_cache->lower();
+      int32_t block_num = gpu_generator->max_block_num();
       tempcopy2output<<<block_num, kCudaThreadsNumPerBlock, 0,
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           len, offset, temp_buffer_base, output);

@@ -137,14 +137,8 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     // distribution concurrently.
     int grid_y = std::min<int>(numDist, stream->device_properties().maxGridSize[1]);
     dim3 grid((n_sample - 1) / block.x + 1, grid_y);
-    uint64_t offset = 0;
     uint64_t seed = gpu_gen->current_seed();
-    {
-      std::lock_guard<std::mutex> lock(gpu_gen->mutex_);
-      // each thread generates a single sample for (numdist/numblocks.y) distributions, however,
-      // since we have to use curand_uniform4 offset is 4 times that.
-      offset = gpu_gen->get_philox_offset(((numDist - 1) / grid.y + 1) * 4);
-    }
+    uint64_t offset = gpu_gen->get_philox_offset(((numDist - 1) / grid.y + 1) * 4);
 
     // Sample with replacement
     sampleMultinomialWithReplacement<<<grid, block, 0, stream->cuda_stream()>>>(

@@ -22,8 +22,8 @@ limitations under the License.
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "fmha.h"
-#include "fmha_flash_attention.h"
+#include "trt_flash_attention/fmha.h"
+#include "trt_flash_attention/fmha_flash_attention.h"
 
 namespace oneflow {
 
@@ -255,8 +255,11 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
+    // Compatible with typo `KERENL`
     const bool enable_trt_flash_attn =
-        ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", false)
+        ParseBooleanFromEnv(
+            "ONEFLOW_KERNEL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL",
+            ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", true))
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
     const bool inputs_contiguous =
@@ -288,8 +291,19 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           reinterpret_cast<const PackType*>(value->dptr()), reinterpret_cast<PackType*>(packed_qkv),
           cu_seqlens_d);
 
+#ifdef WITH_CUDA_GRAPHS
+      cudaStreamCaptureMode mode = cudaStreamCaptureModeRelaxed;
+      if (cuda_stream->IsGraphCapturing()) {
+        OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+      }
+#endif  // WITH_CUDA_GRAPHS
       nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
           nvinfer1::plugin::getFMHAFlashCubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
+#ifdef WITH_CUDA_GRAPHS
+      if (cuda_stream->IsGraphCapturing()) {
+        OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+      }
+#endif  // WITH_CUDA_GRAPHS
       nvinfer1::plugin::runFMHFAKernel(
           packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch, kernels,
           batch_size, num_heads, query_head_size, query_seq_len, cuda_stream->cuda_stream());
