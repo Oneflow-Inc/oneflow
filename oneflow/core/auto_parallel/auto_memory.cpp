@@ -355,22 +355,20 @@ void StraightenOpNodes(const OpGraph& op_graph,
   std::set<TopoStruct*, comp> waiting_list;
 
   // Wait in the list
-  auto wait = [&](const OpNode* op_node) { waiting_list.insert(&op_node2topo_struct.at(op_node)); };
+  auto wait = [&](TopoStruct* topo_struct) { waiting_list.insert(topo_struct); };
 
-  // TODO: Deal with the ctrl edges
   // Initialization
   for (auto& topo_struct : *topo_structs) {
-    topo_struct->counter = topo_struct->op_node->in_edges().size();
-    if (topo_struct->counter == 0) { wait(topo_struct->op_node); }
+    topo_struct->counter = topo_struct->in_topo_structs.size();
+    if (topo_struct->counter == 0) { wait(topo_struct); }
   }
 
   // Finish execution
-  auto finish_execution = [&](const OpNode* op_node) {
-    op_node->ForEachNodeOnOutEdge([&](OpNode* out) {
-      int32_t& out_node_counter = op_node2topo_struct.at(out).counter;
-      out_node_counter--;
-      if (out_node_counter == 0) { wait(out); }
-    });
+  auto finish_execution = [&](TopoStruct* topo_struct) {
+    for (auto& out : topo_struct->out_topo_structs) {
+      out->counter--;
+      if (out->counter == 0) { wait(out); }
+    }
   };
 
   // Execute the first node in the waiting list
@@ -380,7 +378,7 @@ void StraightenOpNodes(const OpGraph& op_graph,
     // Set the order of execution for sbp nodes
     ordered_topo_structs->push_back(first_topo_struct);
     waiting_list.erase(waiting_list.begin());
-    finish_execution(first_topo_struct->op_node);
+    finish_execution(first_topo_struct);
   };
 
   // straightening
