@@ -231,6 +231,7 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
         const auto& old_val =
             ReplaceInputLbnInOpCustomizedConf(&out_op_conf, ibn, GenLogicalBlobName(new_lbi));
         CHECK_EQ_OR_RETURN(GenLogicalBlobName(old_lbi), old_val);
+        VLOG(3) << "Update input edge, Src Node: " << input_node->op().op_name() << "\t->\tDst Node: " << output_node->op().op_name();
 
         // add in-ctrl OPs
         for (const OpNode* node : depend_nodes) {
@@ -242,6 +243,7 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
           // avoid adding input node or duplicate control nodes
           if (node != input_node && existed_it == existed_ctrl_in_op_names.end()) {
             out_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
+            VLOG(3) << "Add in-ctrl edge, Src Node: " << new_ctrl_in_op_name << "\t->\tDst Node: " << output_node->op().op_name();
           }
         }
       }
