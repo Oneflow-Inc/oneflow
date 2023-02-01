@@ -27,8 +27,8 @@ namespace oneflow {
 namespace {
 
 struct RelativeNodes {
-  const OpNode* input_node = nullptr;
-  const OpNode* output_node = nullptr;
+  const OpNode* src_node = nullptr;
+  const OpNode* dst_node = nullptr;
   const OpNode* nearest_del_node = nullptr;
   std::vector<const OpNode*> in_ctrl_nodes = {};
 };
@@ -81,56 +81,60 @@ bool IsDependOPNodeAtTop(const OpNode* op_node, HashSet<const OpNode*>& del_node
   }
 }
 
-void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>& del_nodes,
-                            const OpNode* input_node, std::vector<const OpNode*> in_ctrl_nodes,
+void GetRelativeNodesHelper(const OpNode* cur_op_node, const HashSet<const OpNode*>& del_nodes,
+                            const OpNode* src_node_from_precursor,
+                            std::vector<const OpNode*> in_ctrl_nodes,
                             std::vector<RelativeNodes>& ret) {
-  CHECK(IsDependyOp(op_node->op().op_conf()));
-  for (const OpEdge* out_edge : op_node->out_edges()) {
-    const OpNode* out_op_node = out_edge->dst_node();
-    if (del_nodes.find(out_op_node) == del_nodes.end()) {
+  CHECK(IsDependyOp(cur_op_node->op().op_conf()));
+  for (const OpEdge* out_edge : cur_op_node->out_edges()) {
+    const OpNode* dst_op_node = out_edge->dst_node();
+    if (del_nodes.find(dst_op_node) == del_nodes.end()) {
       // "out_op_node" is one of valid output nodes
       // in this case, record the nodes as result and finish the recursion
 
       // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
-      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
+      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(cur_op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
       }
 
-      // set node connected to input edge as "in_node" if not depend OP
-      // otherwise remain the value of "in_node"
-      const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
-      if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
-        // should not have two input nodes for a depend OP Chain
-        CHECK(input_node == nullptr);
-        input_node = input_node_to_check;
+      // keep the value of src_node_from_precursor if not NULL
+      // otherwise set node connected to input edge as "in_node" if not depend OP
+      const OpNode* src_node = nullptr;
+      if (src_node_from_precursor) {
+        src_node = src_node_from_precursor;
+      } else {
+        const OpNode* input_node_to_check = GetNodeFromInputEdge(cur_op_node);
+        if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
+          src_node = input_node_to_check;
+        }
       }
 
-      ret.push_back({input_node, out_op_node, op_node, in_ctrl_nodes});
-    } else if (op_node == GetNodeFromInCtrlEdge(out_op_node)) {
+      ret.push_back({src_node, dst_op_node, cur_op_node, in_ctrl_nodes});
+    } else if (cur_op_node == GetNodeFromInCtrlEdge(dst_op_node)) {
       // "out_op_node" is ALSO a depend OP Node, and "op_node" connect to its in-ctrl edge
       // in this case, all precursor nodes of "op_node" should be seen as in-ctrl OP Node
 
-      // put "input_node" into "in_ctrl_nodes" if not NULL
-      if (input_node) in_ctrl_nodes.push_back(input_node);
+      // put "input_node" into "src_node_from_precursor" if not NULL
+      if (src_node_from_precursor) in_ctrl_nodes.push_back(src_node_from_precursor);
 
       // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
-      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
+      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(cur_op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
       }
 
       // put node connected to input edge into "in_ctrl_nodes" if not depend OP
-      const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
+      const OpNode* input_node_to_check = GetNodeFromInputEdge(cur_op_node);
       if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.push_back(input_node_to_check);
       }
 
-      // set "input_node" as NULL in subsequent recursion
+      // set "src_node" as NULL in subsequent recursion
       // indicate that real precursor of the target output node has not been found yet
-      input_node = nullptr;
+      const OpNode* src_node = nullptr;
       // continue recursion until the target output node is found
-      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, in_ctrl_nodes, ret);
+      GetRelativeNodesHelper(dst_op_node, del_nodes, src_node, in_ctrl_nodes, ret);
     } else {
       // "out_op_node" is ALSO a depend OP Node, and "op_node" connect to its in-ctrl edge
 
@@ -139,21 +143,25 @@ void GetRelativeNodesHelper(const OpNode* op_node, const HashSet<const OpNode*>&
       // and append new in-ctrl OP into in_ctrl_nodes
 
       // put node connected to in-ctrl edge into "in_ctrl_nodes" if not depend OP
-      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(op_node);
+      const OpNode* in_ctrl_node_to_check = GetNodeFromInCtrlEdge(cur_op_node);
       if (del_nodes.find(in_ctrl_node_to_check) == del_nodes.end()) {
         in_ctrl_nodes.emplace_back(in_ctrl_node_to_check);
       }
 
-      // set node connected to input edge as "in_node" if not depend OP
-      // otherwise remain the value of "in_node"
-      const OpNode* input_node_to_check = GetNodeFromInputEdge(op_node);
-      if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
-        // should not have two input nodes for a depend OP Chain
-        CHECK(input_node == nullptr);
-        input_node = input_node_to_check;
+      // keep the value of src_node_from_precursor if not NULL
+      // otherwise set node connected to input edge as "in_node" if not depend OP
+      const OpNode* src_node = nullptr;
+      if (src_node_from_precursor) {
+        src_node = src_node_from_precursor;
+      } else {
+        const OpNode* input_node_to_check = GetNodeFromInputEdge(cur_op_node);
+        if (del_nodes.find(input_node_to_check) == del_nodes.end()) {
+          src_node = input_node_to_check;
+        }
       }
+
       // continue recursion until the target output node is found
-      GetRelativeNodesHelper(out_op_node, del_nodes, input_node, in_ctrl_nodes, ret);
+      GetRelativeNodesHelper(dst_op_node, del_nodes, src_node, in_ctrl_nodes, ret);
     }
   }
 }
@@ -202,57 +210,57 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
   HashMap<std::string, OperatorConf> to_update_op_confs;
   std::vector<std::string> del_op_names;
   del_op_names.reserve(del_nodes.size());
-  for (const OpNode* op_node : del_nodes) {
-    del_op_names.emplace_back(op_node->op().op_name());
+  for (const OpNode* depend_node : del_nodes) {
+    del_op_names.emplace_back(depend_node->op().op_name());
     // GetRelativeNodes() has considered the chain of multiple depend OP Nodes and processes them
     // from top to down, so skip the intermediate nodes
-    if (!IsDependOPNodeAtTop(op_node, del_nodes)) { continue; }
-    const std::vector<RelativeNodes> relatives = GetRelativeNodes(op_node, del_nodes);
+    if (!IsDependOPNodeAtTop(depend_node, del_nodes)) { continue; }
+    const std::vector<RelativeNodes> relatives = GetRelativeNodes(depend_node, del_nodes);
 
     // adjust op_conf of those nodes related to depend OP nodes
     for (const RelativeNodes& item : relatives) {
-      const OpNode* input_node = item.input_node;
-      const OpNode* output_node = item.output_node;
+      const OpNode* src_node = item.src_node;
+      const OpNode* dst_node = item.dst_node;
       const OpNode* nearest_del_node = item.nearest_del_node;
-      const std::vector<const OpNode*>& depend_nodes = item.in_ctrl_nodes;
+      const std::vector<const OpNode*>& in_ctrl_nodes = item.in_ctrl_nodes;
 
-      const Operator& out_op = output_node->op();
-      auto iter = to_update_op_confs.find(out_op.op_name());
+      const Operator& dst_op = dst_node->op();
+      auto iter = to_update_op_confs.find(dst_op.op_name());
       if (iter == to_update_op_confs.end()) {
-        iter = to_update_op_confs.emplace(out_op.op_name(), out_op.op_conf()).first;
+        iter = to_update_op_confs.emplace(dst_op.op_name(), dst_op.op_conf()).first;
       }
-      OperatorConf& out_op_conf = iter->second;
+      OperatorConf& dst_op_conf = iter->second;
 
       // add in-ctrl OPs
-      for (const OpNode* node : depend_nodes) {
-        CHECK(output_node != node);  // self-loop found
-        const auto& existed_ctrl_in_op_names = op_node->op().op_conf().ctrl_in_op_name();
-        const std::string& new_ctrl_in_op_name = node->op().op_name();
+      for (const OpNode* in_ctrl_node : in_ctrl_nodes) {
+        CHECK(dst_node != in_ctrl_node);  // self-loop found
+        const auto& existed_ctrl_in_op_names = depend_node->op().op_conf().ctrl_in_op_name();
+        const std::string& new_ctrl_in_op_name = in_ctrl_node->op().op_name();
         auto existed_it = std::find(existed_ctrl_in_op_names.begin(),
                                     existed_ctrl_in_op_names.end(), new_ctrl_in_op_name);
         // avoid adding input node or duplicate control nodes
-        if (node != input_node && existed_it == existed_ctrl_in_op_names.end()) {
-          out_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
+        if (in_ctrl_node != src_node && existed_it == existed_ctrl_in_op_names.end()) {
+          dst_op_conf.add_ctrl_in_op_name(new_ctrl_in_op_name);
           VLOG(3) << "Add in-ctrl edge, Src Node: " << new_ctrl_in_op_name
-                  << "\t->\tDst Node: " << output_node->op().op_name();
+                  << "\t->\tDst Node: " << dst_node->op().op_name();
         }
       }
 
       // in some case there is no input_node, e.g. UnitTest Case3(test_depend_graph_case3)
       // not need to update lbi for those case
-      if (!input_node) { continue; }
+      if (!src_node) { continue; }
       const auto& old_lbi = nearest_del_node->op().BnInOp2Lbi(nearest_del_node->op().SoleObn());
-      const auto& new_lbi = input_node->op().BnInOp2Lbi(input_node->op().SoleObn());
+      const auto& new_lbi = src_node->op().BnInOp2Lbi(src_node->op().SoleObn());
 
-      for (const std::string& ibn : out_op.input_bns()) {
-        if (out_op.BnInOp2Lbi(ibn) != old_lbi) { continue; }
+      for (const std::string& ibn : dst_op.input_bns()) {
+        if (dst_op.BnInOp2Lbi(ibn) != old_lbi) { continue; }
 
         // connect input_node and output_node
         const auto& old_val =
-            ReplaceInputLbnInOpCustomizedConf(&out_op_conf, ibn, GenLogicalBlobName(new_lbi));
+            ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, ibn, GenLogicalBlobName(new_lbi));
         CHECK_EQ_OR_RETURN(GenLogicalBlobName(old_lbi), old_val);
-        VLOG(3) << "Update input edge, Src Node: " << input_node->op().op_name()
-                << "\t->\tDst Node: " << output_node->op().op_name();
+        VLOG(3) << "Update input edge, Src Node: " << src_node->op().op_name()
+                << "\t->\tDst Node: " << dst_node->op().op_name();
       }
     }
   }
