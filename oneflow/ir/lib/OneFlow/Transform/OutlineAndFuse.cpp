@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/Transform/OutlineAndFuse.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -60,6 +62,11 @@ class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
 };
 
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
+ public:
+  WrapOpsToKernelLaunchPass() = default;
+  WrapOpsToKernelLaunchPass(const WrapOpsToKernelLaunchPass& other)
+      : WrapOpsToKernelLaunchPassBase(other) {}
+
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
   }
@@ -67,9 +74,14 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateWrapOpsToKernelLaunchPasses(patterns);
+    populateWrapOpsToKernelLaunchPatterns(patterns, wrap_ops_mode_.c_str());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
+
+ private:
+  Option<std::string> wrap_ops_mode_{*this, "mode",
+                                     llvm::cl::desc("the mode of this pass to wrap ops"),
+                                     llvm::cl::init(wrap_mode::SIMPLE)};
 };
 
 class ExtractKernelLaunchTensorPass
