@@ -940,7 +940,7 @@ class RReLU(Module):
         >>> x = flow.Tensor(arr)
         >>> out = m(x) 
         >>> print(out) # doctest: +SKIP
-        
+        tensor([ 0.2000, -0.0824, -0.5418,  4.0000,  0.5000, -0.4213], dtype=oneflow.float32) # doctest: +SKIP
             
     """
 
