@@ -19,17 +19,21 @@ limitations under the License.
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/op_kernel.h"
-#include "OneFlow/kernel_launch/LauncherContext.h"
+#include "OneFlow/OKL/Kernel/LauncherContext.h"
+
+extern "C" {
+void okl_llvm_func(void* launcher, int64_t index);
+}  // extern "C"
 
 namespace oneflow {
 namespace okl {
 
-using FetchArgs = std::tuple<LauncherContext*, int>;
-using LaunchArgs = std::tuple<RunContext*, const oneflow::user_op::OpKernel*>;
+using LLVMLaunchArgs = std::tuple<LauncherContext*, int>;
 
 class JITEngine {
  public:
   explicit JITEngine(mlir::ModuleOp module);
+
   void Run(const std::string& name, LauncherContext* launcher) const {
     auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
@@ -38,6 +42,14 @@ class JITEngine {
  private:
   std::unique_ptr<mlir::ExecutionEngine> engine_;
 };
+
+namespace llvm_func {
+#define C_FUNC_NAME(func) #func
+
+const auto LLVM_FUNC = C_FUNC_NAME(okl_llvm_func);
+
+#undef C_FUNC_NAME
+}  // namespace llvm_func
 
 }  // namespace okl
 }  // namespace oneflow

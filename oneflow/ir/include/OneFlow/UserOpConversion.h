@@ -31,6 +31,11 @@ LogicalResult saveAttrDictionaryToOpConf(DictionaryAttr attributes,
 LogicalResult ConvertUserOpAttributes(llvm::StringRef op_type_name, ValueRange operands,
                                       DictionaryAttr attributes, ::oneflow::OperatorConf& op_conf);
 LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
+LogicalResult ConvertUserOpAttributes(
+    Operation* op, ::oneflow::OperatorConf& op_conf,
+    bool is_mapping_size /* the input and output size should be mapped after building kernel and
+                            provide information for the next query*/
+    = false);
 LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange operands,
                                   DictionaryAttr attributes, ::oneflow::UserOpConf* user_conf);
 ::oneflow::ParallelConf getParallelConfFromAttrDictionary(DictionaryAttr attributes);

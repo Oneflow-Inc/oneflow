@@ -20,8 +20,5 @@ include "OneFlow/OKL/OKLBase.td"
 include "mlir/IR/AttrTypeBase.td"
 
 def LauncherContextType : OKL_Type<"LauncherContext", "launcher_ctx">;
-def RegContextType : OKL_Type<"RegContext", "reg_ctx">;
-def RunContextType : OKL_Type<"RunContext", "run_ctx">;
-def KernelType : OKL_Type<"Kernel", "kernel">;
 
 #endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES
