@@ -1,16 +1,9 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-launcher-to-llvm-ptr \
-// RUN: -lower-okl-to-llvm-call \
-// RUN: -reconcile-unrealized-casts \
-// RUN: -convert-func-to-llvm \
+// RUN: -tag-cuda-graph-support \
 // RUN: | FileCheck %s
 
 
-// CHECK: module attributes {llvm.data_layout = ""}
-// CHECK: llvm.func @_mlir_ciface_okl_func(%arg0: !llvm.ptr<i8>) attributes {llvm.emit_c_interface}
-// CHECK: llvm.call @okl_func(%arg0) : (!llvm.ptr<i8>) -> ()
-// CHECK: llvm.return
-
+// CHECK:  attributes {cuda_graph_support = true}
 module {
   func.func @okl_func(%arg0: !okl.launcher_ctx) {
     "okl.wrapper_kernel"() ({
