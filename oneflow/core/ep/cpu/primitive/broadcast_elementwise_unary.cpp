@@ -163,23 +163,29 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       const int64_t dst_stride = simplified_dst_strides[0];
       LaunchScalarFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, attr0,
                                            attr1);
+      return;
     } else if (simplified_num_dims == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       const int64_t src_stride = simplified_src_strides[0];
       const int64_t dst_stride = simplified_dst_strides[0];
       LaunchTensorFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, src_stride,
                                            attr0, attr1);
+      return;
     } else if (permutable && src_type == dst_type) {
       std::unique_ptr<Permute> permute =
         NewPrimitive<PermuteFactory>(DeviceType::kCPU, simplified_num_dims);
 
-      permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
-                    permutation_list, dst_ptr);
-    } else {
-      LaunchGeneral<unary_op, Src, Dst>(
-          cpu_stream, dst, src, simplified_num_dims, simplified_dst_dims, simplified_src_dims,
-          simplified_dst_strides, simplified_src_strides, attr0, attr1);
+      if (permute != nullptr) {
+        permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
+                      permutation_list, dst_ptr);
+        return;
+      }
     }
+
+    // fall back to normal cases
+    LaunchGeneral<unary_op, Src, Dst>(
+        cpu_stream, dst, src, simplified_num_dims, simplified_dst_dims, simplified_src_dims,
+        simplified_dst_strides, simplified_src_strides, attr0, attr1);
   }
 
  protected:

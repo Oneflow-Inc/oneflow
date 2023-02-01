@@ -359,23 +359,29 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
       LaunchFill<unary_op, Src, Dst>(cuda_stream, dst, src, elem_cnt, attr0, attr1);
+      return;
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
+      return;
     } else if (permutable && src_type == dst_type) {
       std::unique_ptr<Permute> permute =
         NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
 
-      permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
-                    permutation_list, dst_ptr);
-    } else {
-      LaunchWithSimplified<unary_op, Src, Dst>(
-          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
-          simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
+      if (permute != nullptr) {
+        permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
+                      permutation_list, dst_ptr);
+        return;
+      }
     }
+
+    // fall back to normal cases
+    LaunchWithSimplified<unary_op, Src, Dst>(
+        cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
+        simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
   }
 
  protected:
