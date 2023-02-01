@@ -23,9 +23,9 @@ namespace oneflow {
 namespace okl {
 
 class TensorManger {
-  class TmpBufferManagerTensor final : public oneflow::user_op::Tensor {
+  class TmpBufferTensor final : public oneflow::user_op::Tensor {
    public:
-    explicit TmpBufferManagerTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
+    explicit TmpBufferTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
           tensor_desc_(tensor_desc) {}
@@ -50,12 +50,12 @@ class TensorManger {
 
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
   user_op::Tensor* GetBufferTensor(user_op::TensorDesc* tensor_desc, int offset = 0) {
-    auto res = map_.insert({tensor_desc, TmpBufferManagerTensor(tensor_, tensor_desc, offset)}).first;
+    auto res = map_.insert({tensor_desc, TmpBufferTensor(tensor_, tensor_desc, offset)}).first;
     return &res->second;
   }
 
  private:
-  std::unordered_map<user_op::TensorDesc*, TmpBufferManagerTensor> map_{};
+  std::unordered_map<user_op::TensorDesc*, TmpBufferTensor> map_{};
   user_op::Tensor* tensor_;
 };
 
