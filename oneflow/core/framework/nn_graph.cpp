@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/cost_util.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -305,7 +307,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+  const auto& var_get_func = [&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
     OpGraph op_graph(job_);
     JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -314,8 +316,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
       return Maybe<void>::Ok();
     }));
     return variable_names_;
-  }()
-                                                      .GetOrThrow();
+  };
+  std::set<std::string> variable_names = *JUST(var_get_func());
 
   auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
@@ -324,28 +326,88 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
+Maybe<void> NNGraph::AlignStatesAfterLogicalGraphCompile() {
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
-  CHECK_OR_RETURN(!runtime_inited_)
-      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
-
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
   // Clear all backward pass scope
   ClearAllBackwardPassScope();
+  compile_tc->Count("[GraphCompile]" + name_ + " AlignStates", 0);
+  return Maybe<void>::Ok();
+}
 
-  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
-
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-
+Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter().Complete(&job_));
+  JUST(JobCompleter::Complete(&job_));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
+    const std::vector<std::string>& shared_inputs_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
+    const std::vector<std::string>& shared_op_names_from_ordered_original_graph,
+    const std::string& new_serialized_original_job) {
+  CHECK_EQ_OR_RETURN(shared_inputs_op_names.size(), new_input_tensors.size());  // NOLINE
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // Register inputs.
+  JUST(RegisterInputOpNamesAndTensors(shared_inputs_op_names, new_input_tensors));
+
+  // Generate new input tensor getter.
+  HashMap<std::string, std::shared_ptr<one::Tensor>> input_name2tensor;
+  for (int64_t idx = 0; idx < shared_inputs_op_names.size(); ++idx) {
+    input_name2tensor.emplace(shared_inputs_op_names[idx], new_input_tensors[idx]);
+  }
+  const auto& InputTensor4Name =
+      [&input_name2tensor](const std::string& op_name) -> Maybe<std::shared_ptr<one::Tensor>> {
+    auto iter = input_name2tensor.find(op_name);
+    CHECK_OR_RETURN(iter != input_name2tensor.end())
+        << "Can't find input tensor of " << op_name << ".";
+    return iter->second;
+  };
+
+  // Generate new OperatorConf getter.
+  Job new_build_original_job;
+  CHECK_OR_RETURN(new_build_original_job.ParseFromString(new_serialized_original_job))
+      << "nn.Graph " << name_ << " parse job proto of new build graph failed.";
+  CHECK_EQ_OR_RETURN(new_build_original_job.net().op_size(),
+                     shared_op_names_from_ordered_original_graph.size())
+      << "nn.Graph " << name_
+      << " new_build_original_job op size and shared_op_names_from_ordered_original_graph size are "
+         "not "
+         "equal.";
+  HashMap<std::string, const OperatorConf*> shared_op_name2_new_op;
+  for (int64_t op_idx = 0; op_idx < shared_op_names_from_ordered_original_graph.size(); ++op_idx) {
+    // Assume that the new graph and the shared graph from nn.Graph.build have the same op order.
+    const auto& op = new_build_original_job.mutable_net()->mutable_op()->at(op_idx);
+    shared_op_name2_new_op.emplace(shared_op_names_from_ordered_original_graph[op_idx], &op);
+  }
+  const auto& NewOp4SharedOpName =
+      [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
+    auto iter = shared_op_name2_new_op.find(shared_op_name);
+    CHECK_OR_RETURN(iter != shared_op_name2_new_op.end())
+        << "Can't find new operator conf of " << shared_op_name << ".";
+    return iter->second;
+  };
+
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter::UpdateSharedGraphForNewInput(&job_, InputTensor4Name, NewOp4SharedOpName));
+  compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompilePlanForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
@@ -389,7 +451,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0, true);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::InitRuntime() {
+  CHECK_OR_RETURN(!runtime_inited_)
+      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
@@ -402,7 +471,16 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0, true);
   JUST(LogProgress("[GraphCompile]" + name_ + " Done", true));
+
   runtime_inited_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(AlignStatesAfterLogicalGraphCompile());
+  JUST(CompleteLogicalGraphForRuntime());
+  JUST(CompilePlanForRuntime());
+  JUST(InitRuntime());
   return Maybe<void>::Ok();
 }
 
@@ -611,7 +689,8 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
         << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
         << "tensor meta each step is the same as the input of first call graph.\nThe excepted "
         << "tensor meta is: " << static_meta_str
-        << ", but the actual tensor meta is: " << tensor_meta_str;
+        << ", but the actual tensor meta is: " << tensor_meta_str << ". The input index is " << i
+        << ".";
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
