@@ -983,7 +983,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // the autograd engine for those tensors that have no gradients
     JUST(DoPass("EliminateDeadNodesPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     JUST(DoPass("AutoMixedPrecision"));
 #endif
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
