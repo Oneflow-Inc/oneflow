@@ -3667,6 +3667,17 @@ class FlashAttentionFunctor {
                                    .Output("out")
                                    .Output("softmax_lse")
                                    .Build());
+    op_with_indices_bias_ = CHECK_JUST(one::OpBuilder("flash_attention")
+                                           .Input("query")
+                                           .Input("key")
+                                           .Input("value")
+                                           .Input("cu_seqlens_q")
+                                           .Input("cu_seqlens_k")
+                                           .Input("indices")
+                                           .Input("bias")
+                                           .Output("out")
+                                           .Output("softmax_lse")
+                                           .Build());
     op_with_mask_and_bias_ = CHECK_JUST(one::OpBuilder("flash_attention")
                                             .Input("query")
                                             .Input("key")
@@ -3682,17 +3693,18 @@ class FlashAttentionFunctor {
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
       const std::shared_ptr<one::Tensor>& value, const std::shared_ptr<one::Tensor>& cu_seqlens_q,
-      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const Optional<one::Tensor>& mask,
-      const Optional<one::Tensor>& bias, const int32_t max_seqlen_q, const int32_t max_seqlen_k,
-      const float softmax_scale, const bool causal, const float dropout_rate,
-      const int32_t num_splits) const {
+      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const Optional<one::Tensor>& indices,
+      const Optional<one::Tensor>& mask, const Optional<one::Tensor>& bias,
+      const int32_t max_seqlen_q, const int32_t max_seqlen_k, const float softmax_scale,
+      const bool causal, const float dropout_rate, const int32_t num_splits) const {
+    const bool has_indices = indices.has_value();
     const bool has_mask = mask.has_value();
     const bool has_bias = bias.has_value();
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale", "causal",
-                                       "dropout_rate", "num_splits", "has_mask", "has_bias");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale",
+                                                 "causal", "dropout_rate", "num_splits",
+                                                 "has_indices", "has_mask", "has_bias");
     attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate, num_splits,
-                      has_mask, has_bias);
+                      has_indices, has_mask, has_bias);
     if (mask) {
       if (bias) {
         return OpInterpUtil::Dispatch<TensorTuple>(
@@ -3703,6 +3715,10 @@ class FlashAttentionFunctor {
           *op_with_mask_, {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(mask)}, attrs);
     }
     if (bias) {
+      if (indices)
+        return OpInterpUtil::Dispatch<TensorTuple>(
+            *op_with_indices_bias_,
+            {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(indices), JUST(bias)}, attrs);
       return OpInterpUtil::Dispatch<TensorTuple>(
           *op_with_bias_, {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(bias)}, attrs);
     }
@@ -3714,6 +3730,7 @@ class FlashAttentionFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_with_mask_;
   std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_with_indices_bias_;
   std::shared_ptr<OpExpr> op_with_mask_and_bias_;
 };
 
