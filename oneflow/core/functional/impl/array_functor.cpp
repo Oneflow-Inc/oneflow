@@ -1720,22 +1720,32 @@ class UpsampleGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CopyFunctor {
+class CopyToDeviceFunctor {
  public:
-  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
-                           const int64_t& device_id, const bool pin_memory) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory");
-    attrs.SetAllAttrs(device_type, device_id, pin_memory);
+  CopyToDeviceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
+                           const bool pin_memory) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
+    attrs.SetAllAttrs(device, pin_memory);
 
 #ifdef WITH_CUDA
-    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+    if (device->enum_type() == DeviceType::kCUDA) { InitCudaContextOnce(device->device_id()); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class CopyFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
+                           const int64_t& device_id, const bool pin_memory) const {
+    return functional::Copy(x, JUST(Device::New(device_type, device_id)), pin_memory);
+  }
 };
 
 class FlipFunctor {
@@ -2982,21 +2992,13 @@ class IndexSelectFunctor {
 };
 
 namespace {
-inline Maybe<bool> device_equal(const std::string& device_name, const int device_id,
-                                Symbol<Device> device) {
-  return (device_name == device->type() && device_id == device->device_id());
-}
 
-Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_name,
-                            const int device_id, const Symbol<DType>& dtype, const bool& copy) {
+Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, Symbol<Device> device,
+                            const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor = x;
-  if (!JUST(device_equal(device_name, device_id, JUST(x->device())))) {
-    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
-  }
+  if (device != JUST(x->device())) { tensor = JUST(Copy(tensor, device, /*pin_memory=*/false)); }
   if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype, /*pin_memory=*/false)); }
-  if (copy && tensor == x) {
-    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
-  }
+  if (copy && tensor == x) { tensor = JUST(Copy(tensor, device, /*pin_memory=*/false)); }
   return tensor;
 }
 
@@ -3027,7 +3029,7 @@ Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     tensor = JUST(GlobalToLocal(x, /*copy=*/false));
     Symbol<Device> device = JUST(Device::New(device_type));
-    tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
+    tensor = JUST(LocalTensorTo(tensor, device, dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
                               /* sync_data */ true, /*copy=*/false));
@@ -3051,17 +3053,13 @@ class ToFunctor {
           << "for global tensor, but got " << device_.value_or("");
       return JUST(GlobalTensorTo(input, device_type, dtype, copy));
     } else {
-      std::string device_name = "";
-      int device_id = 0;
-      if (device_.has_value()) {
-        JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
-        if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-      } else {
-        Symbol<Device> device = JUST(input->device());
-        device_name = device->type();
-        device_id = device->device_id();
-      }
-      return JUST(LocalTensorTo(input, device_name, device_id, dtype, copy));
+      Symbol<Device> device =
+          device_
+              .map([](const std::shared_ptr<std::string>& str) -> Symbol<Device> {
+                return CHECK_JUST(Device::ParseAndNew(*str));
+              })
+              .value_or(JUST(input->device()));
+      return JUST(LocalTensorTo(input, device, dtype, copy));
     }
   }
 };
@@ -3087,9 +3085,8 @@ class To2Functor {
       }
     } else {
       auto dtype = dtype_.value_or(input->dtype());
-      auto device =
-          device_.has_value() ? device_.value_or(Symbol<Device>()) : JUST(input->device());
-      return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
+      auto device = device_.value_or(JUST(input->device()));
+      return JUST(LocalTensorTo(input, device, dtype, copy));
     }
   }
 };
@@ -3103,7 +3100,7 @@ class To3Functor {
       return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
     } else {
       auto device = JUST(input->device());
-      return LocalTensorTo(input, device->type(), device->device_id(), dtype, copy);
+      return LocalTensorTo(input, device, dtype, copy);
     }
   }
 };
@@ -3117,9 +3114,7 @@ class To4Functor {
         << "tensor.to(other) can only be called when tensor and other are local tensors";
     Symbol<DType> dtype = other->dtype();
     Symbol<Device> device = JUST(other->device());
-    std::string device_name = device->type();
-    int device_id = device->device_id();
-    return LocalTensorTo(input, device_name, device_id, dtype, copy);
+    return LocalTensorTo(input, device, dtype, copy);
   }
 };
 
@@ -3138,17 +3133,13 @@ class ToDeviceFunctor {
           << "for global tensor, but got " << device_.value_or("");
       return JUST(GlobalTensorTo(input, device_type, dtype, copy));
     } else {
-      std::string device_name = "";
-      int device_id = 0;
-      if (device_.has_value()) {
-        JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
-        if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-      } else {
-        Symbol<Device> device = JUST(input->device());
-        device_name = device->type();
-        device_id = device->device_id();
-      }
-      return JUST(LocalTensorTo(input, device_name, device_id, dtype, copy));
+      Symbol<Device> device =
+          device_
+              .map([](const std::shared_ptr<std::string>& str) -> Symbol<Device> {
+                return CHECK_JUST(Device::ParseAndNew(*str));
+              })
+              .value_or(JUST(input->device()));
+      return JUST(LocalTensorTo(input, device, dtype, copy));
     }
   }
 };
@@ -3987,7 +3978,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
-  m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::CopyFunctor, impl::CopyToDeviceFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
