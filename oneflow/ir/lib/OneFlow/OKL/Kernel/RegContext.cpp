@@ -33,147 +33,147 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-user_op::Tensor* TensorInfo::FetchTensor(ComputeContext& ctx) {
-  switch(source_){
-    case Source::arguments:
-    break;
-    case Source::results:
-    break;
-    case Source::tmp_buffer:
-      // return tmp_buffer_.GetBufferTensor();
-    break;
-    default:;
-  }
+// user_op::Tensor* TensorInfo::FetchTensor(ComputeContext& ctx) {
+//   switch(source_){
+//     case Source::arguments:
+//     break;
+//     case Source::results:
+//     break;
+//     case Source::tmp_buffer:
+//       // return tmp_buffer_.GetBufferTensor();
+//     break;
+//     default:;
+//   }
 
-  // if (source.type == Source::OUTPUT) {
-  //   if (op->getNumResults() <= index + source.offset) { return nullptr; }
-  //   mlir::Value val = op->getResult(index + source.offset);
-  //   for (auto use : val.getUsers()) {
-  //     if (llvm::isa<mlir::okl::TensorToRetOp>(use)) {
-  //       auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-  //       return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-  //     }
-  //   }
-  //   op->emitError("Failed to find " + std::to_string(index) + "in outputs");
-  //   exit(1);
-  // }
+//   // if (source.type == Source::OUTPUT) {
+//   //   if (op->getNumResults() <= index + source.offset) { return nullptr; }
+//   //   mlir::Value val = op->getResult(index + source.offset);
+//   //   for (auto use : val.getUsers()) {
+//   //     if (llvm::isa<mlir::okl::TensorToRetOp>(use)) {
+//   //       auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
+//   //       return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+//   //     }
+//   //   }
+//   //   op->emitError("Failed to find " + std::to_string(index) + "in outputs");
+//   //   exit(1);
+//   // }
 
-  // if (source.type == Source::INPUT) {
-  //   if (op->getNumOperands() <= index + source.offset) { return nullptr; }
-  //   mlir::Value val = op->getOperand(index + source.offset);
-  //   auto define_op = val.getDefiningOp();
-  //   return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
-  //       .Case([&](mlir::okl::ArgToTensorOp elem) {
-  //         auto index = elem.index();
-  //         return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
-  //       })
-  //       .Case([&](mlir::okl::RetToTensorOp elem) {
-  //         auto index = elem.index();
-  //         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-  //       })
-  //       .Default([&](::mlir::Operation* op) {
-  //         LOG(FATAL) << "Signature: " << arg_name << " Not supported";
-  //         return nullptr;
-  //       });
-  // }
+//   // if (source.type == Source::INPUT) {
+//   //   if (op->getNumOperands() <= index + source.offset) { return nullptr; }
+//   //   mlir::Value val = op->getOperand(index + source.offset);
+//   //   auto define_op = val.getDefiningOp();
+//   //   return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
+//   //       .Case([&](mlir::okl::ArgToTensorOp elem) {
+//   //         auto index = elem.index();
+//   //         return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
+//   //       })
+//   //       .Case([&](mlir::okl::RetToTensorOp elem) {
+//   //         auto index = elem.index();
+//   //         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+//   //       })
+//   //       .Default([&](::mlir::Operation* op) {
+//   //         LOG(FATAL) << "Signature: " << arg_name << " Not supported";
+//   //         return nullptr;
+//   //       });
+//   // }
 
-  // if (source.type == Source::BUFFER) {
-  //   auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-  //   return tmp_buffer_.GetBufferTensor();
-  // }
-}
+//   // if (source.type == Source::BUFFER) {
+//   //   auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
+//   //   return tmp_buffer_.GetBufferTensor();
+//   // }
+// }
 
-static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
-                                                 bool is_mapping_size = false) {
-  OperatorConf op_conf;
-  if (mlir::failed(mlir::oneflow::user_op::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
-    op->emitError("fail to convert user op attributes");
-    exit(1);
-  }
-  auto conf_wrapper_ = user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
-  return conf_wrapper_;
-}
+// static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
+//                                                  bool is_mapping_size = false) {
+//   OperatorConf op_conf;
+//   if (mlir::failed(mlir::oneflow::user_op::ConvertUserOpAttributes(op, op_conf, is_mapping_size))) {
+//     op->emitError("fail to convert user op attributes");
+//     exit(1);
+//   }
+//   auto conf_wrapper_ = user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
+//   return conf_wrapper_;
+// }
 
-RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op, true)) {
-  const auto handle_operands_or_results =
-      [&op, this](const auto& arg_ids, const auto& get_operand_or_result, ArgVec& arg_vec) {
-        for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {
-          user_op::NaiveTensorDesc tensor_desc{};
-          auto obj = get_operand_or_result(op, obj_id.index());
-          if (auto rankedTensorType = obj.getType().template dyn_cast<mlir::RankedTensorType>()) {
-            tensor_desc.set_shape(
-                Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-            const auto data_type =
-                mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
-            if (mlir::failed(data_type)) { exit(1); }
-            tensor_desc.set_data_type(data_type.getValue());
-            // TODO: set stride
-            // TODO: set is_dynamic
-          } else {
-            LOG(FATAL) << "Unranked tensor type not supported";
-          }
-          CHECK(arg2tensor_desc_.emplace(obj_id.value(), tensor_desc).second) << "duplicate key";
-          arg_vec.push_back(obj_id.value());
-        }
-      };
-  handle_operands_or_results(
-      ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op),
-      [](auto& x, size_t index) { return x->getOperand(index); }, inputs_);
-  handle_operands_or_results(
-      ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op),
-      [](auto& x, size_t index) { return x->getResult(index); }, outputs_);
+// RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op, true)), tensor_info_(op) {
+//   const auto handle_operands_or_results =
+//       [&op, this](const auto& arg_ids, const auto& get_operand_or_result, ArgVec& arg_vec) {
+//         for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {
+//           user_op::NaiveTensorDesc tensor_desc{};
+//           auto obj = get_operand_or_result(op, obj_id.index());
+//           if (auto rankedTensorType = obj.getType().template dyn_cast<mlir::RankedTensorType>()) {
+//             tensor_desc.set_shape(
+//                 Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+//             const auto data_type =
+//                 mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+//             if (mlir::failed(data_type)) { exit(1); }
+//             tensor_desc.set_data_type(data_type.getValue());
+//             // TODO: set stride
+//             // TODO: set is_dynamic
+//           } else {
+//             LOG(FATAL) << "Unranked tensor type not supported";
+//           }
+//           CHECK(arg2tensor_desc_.emplace(obj_id.value(), tensor_desc).second) << "duplicate key";
+//           arg_vec.push_back(obj_id.value());
+//         }
+//       };
+//   handle_operands_or_results(
+//       ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op),
+//       [](auto& x, size_t index) { return x->getOperand(index); }, inputs_);
+//   handle_operands_or_results(
+//       ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op),
+//       [](auto& x, size_t index) { return x->getResult(index); }, outputs_);
 
-  auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(op);
-  if (dev_tag == "cpu") {
-    device_type_ = DeviceType::kCPU;
-  } else if (dev_tag == "cuda") {
-    device_type_ = DeviceType::kCUDA;
-  } else {
-    LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
-  }
-  auto op_name = GetOp()->getName().stripDialect().str();
-  if (const auto op_type_name =
-          GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
-    op_name = op_type_name.str();
-  }
+//   auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(op);
+//   if (dev_tag == "cpu") {
+//     device_type_ = DeviceType::kCPU;
+//   } else if (dev_tag == "cuda") {
+//     device_type_ = DeviceType::kCUDA;
+//   } else {
+//     LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
+//   }
+//   auto op_name = GetOp()->getName().stripDialect().str();
+//   if (const auto op_type_name =
+//           GetOp()->getAttr("op_type_name").dyn_cast_or_null<mlir::StringAttr>()) {
+//     op_name = op_type_name.str();
+//   }
 
-  reg_res_ =
-      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_name, *this));
-  kernel_ = reg_res_->create_fn();
+//   reg_res_ =
+//       CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_name, *this));
+//   kernel_ = reg_res_->create_fn();
 
-  conf_wrapper_ = GetConfWrapper(op_, true);
-}
+//   conf_wrapper_ = GetConfWrapper(op_, true);
+// }
 
-DeviceType RegContext::device_type() const { return device_type_; }
-const ParallelContext& RegContext::parallel_ctx() const {
-  TODO() << "create parallel_ctx from op in mlir";
-  ParallelContext* parallel_ctx = nullptr;
-  return *parallel_ctx;
-}
-const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                                  int32_t index) const {
-  auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-  if (it == arg2tensor_desc_.end()) { return nullptr; }
-  return &(it->second);
-}
-const ArgVec& RegContext::inputs() const { return inputs_; }
-const ArgVec& RegContext::outputs() const { return outputs_; }
+// DeviceType RegContext::device_type() const { return device_type_; }
+// const ParallelContext& RegContext::parallel_ctx() const {
+//   TODO() << "create parallel_ctx from op in mlir";
+//   ParallelContext* parallel_ctx = nullptr;
+//   return *parallel_ctx;
+// }
+// const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+//                                                                   int32_t index) const {
+//   auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+//   if (it == arg2tensor_desc_.end()) { return nullptr; }
+//   return &(it->second);
+// }
+// const ArgVec& RegContext::inputs() const { return inputs_; }
+// const ArgVec& RegContext::outputs() const { return outputs_; }
 
-// TODO: more information is needed
-const user_op::UserOpConfWrapper& RegContext::user_op_conf() const { return conf_wrapper_; }
+// // TODO: more information is needed
+// const user_op::UserOpConfWrapper& RegContext::user_op_conf() const { return conf_wrapper_; }
 
-const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
-    const std::string& attr_name) const {
-  return user_op_conf().Attr4Name(attr_name);
-}
+// const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
+//     const std::string& attr_name) const {
+//   return user_op_conf().Attr4Name(attr_name);
+// }
 
-const size_t RegContext::GetTmpBufferSize() const {
-  if (reg_res_->need_temp_storage) {
-    InferContext infer_ctx(this);
-    return reg_res_->infer_tmp_size_fn(&infer_ctx);
-  }
-  return 0;
-}
+// const size_t RegContext::GetTmpBufferSize() const {
+//   if (reg_res_->need_temp_storage) {
+//     InferContext infer_ctx(this);
+//     return reg_res_->infer_tmp_size_fn(&infer_ctx);
+//   }
+//   return 0;
+// }
 
 }  // namespace okl
 }  // namespace oneflow

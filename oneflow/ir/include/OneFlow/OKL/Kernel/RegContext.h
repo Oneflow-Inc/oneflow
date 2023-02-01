@@ -16,22 +16,54 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 
+#include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/UserOpReflection.h"
+#include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include <memory>
 
 namespace oneflow {
 namespace okl {
 class ComputeContext;
 
+enum Source { arguments, results, tmp_buffer };
+using ArgInfo = std::pair<Source, int>;
 class TensorInfo {
  public:
-  enum Source { arguments, results, tmp_buffer };
-  TensorInfo(Source source, int offset) : source_(source), offset_(offset){};
-  user_op::Tensor* FetchTensor(ComputeContext& ctx);
+  TensorInfo(::mlir::Operation* op) {
+    ins_.reserve(op->getNumOperands());
+    outs_.reserve(op->getNumResults());
+
+    for (auto elem : op->getOperands()) {
+      llvm::TypeSwitch<::mlir::Operation*>(elem.getDefiningOp())
+          .Case<::mlir::okl::ArgToTensorOp>([&](::mlir::okl::ArgToTensorOp in) {
+            ins_.push_back({arguments, in.index()});
+          })
+          .Case<::mlir::okl::RetToTensorOp>([&](::mlir::okl::RetToTensorOp in) {
+            ins_.push_back({results, in.index()});
+          })
+          .Case<::mlir::okl::PoolToTensorOp>([&](::mlir::okl::PoolToTensorOp in) {
+            ins_.push_back({tmp_buffer, in.offset()});
+          })
+          .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse op is source"; });
+    }
+
+    for (auto elem : op->getResults()) {
+      auto res_use = *elem.getUsers().begin();
+      llvm::TypeSwitch<::mlir::Operation*>(res_use)
+          .Case<::mlir::okl::TensorToRetOp>([&](::mlir::okl::TensorToRetOp in) {
+            outs_.push_back({results, in.index()});
+          })
+          .Case<::mlir::okl::TensorToPoolOp>([&](::mlir::okl::TensorToPoolOp in) {
+            outs_.push_back({tmp_buffer, in.offset()});
+          })
+          .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse source of tensor"; });
+    }
+  };
 
  private:
-  const Source source_;
-  const int offset_;
+  llvm::SmallVector<ArgInfo> ins_, outs_;
 };
 
 // this context should support querying information about the kernel from representation in MLIR
@@ -64,6 +96,7 @@ class RegContext final : public user_op::KernelRegContext {
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
 
+  TensorInfo tensor_info_;
   const user_op::OpKernelRegistryResult* reg_res_ = nullptr;
   const user_op::OpKernel* kernel_ = nullptr;
 };

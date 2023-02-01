@@ -1,3 +1,4 @@
+
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -13,16 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_MEMORY_POOL_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_MEMORY_POOL_H_
-#include <unordered_map>
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TENSOR_MANAGER_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TENSOR_MANAGER_H_
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 namespace okl {
 
-class MemoryPool {
+class TensorManger {
   class MemoryPoolTensor final : public oneflow::user_op::Tensor {
    public:
     explicit MemoryPoolTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
@@ -62,4 +62,4 @@ class MemoryPool {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_MEMORY_POOL_H_
+#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TENSOR_MANAGER_H_
