@@ -254,21 +254,6 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
         && IsOpEdge121Connected(cur_node, next_node, edge)) {
       CHECK(visited.insert(next_node).second);
       queued_nodes.push(next_node);
-      LOG(INFO) << "ccdebuglog: GOOD! Find acc chain op : " << next_node->op().op_name();
-    } else {
-      if (visited.find(next_node) == visited.end()
-          && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)) {
-        LOG(INFO) << "ccdebuglog: Bad! Skip acc chain op : " << next_node->op().op_name()
-                  << " , 1) breakpoint: " << IsBreakpointOpNode(next_node)
-                  << " , 2) parallel equal: "
-                  << next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-                  << " , 3) need insert boxing: " << IsOpEdge121Connected(cur_node, next_node, edge)
-                  << " detail: lbn = " << GenLogicalBlobName(edge->lbis().front())
-                  << " and cur_node nd_sbp = "
-                  << NdSbpToString(cur_node->NdSbp4Lbi(edge->lbis().front()))
-                  << " next_node nd_sbp = "
-                  << NdSbpToString(next_node->NdSbp4Lbi(edge->lbis().front()));
-      }
     }
   };
 
@@ -605,32 +590,6 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     }
   };
 
-  /*
-  auto FixLogicalChainOpStreamHint = [&](const std::vector<const OpNode*>& ordered_op_nodes) {
-    std::string stream_index_name = "";
-    for (const OpNode* op_node : ordered_op_nodes) {
-      const OperatorConf& op_conf = op_node->op().op_conf();
-      if (op_conf.has_stream_name_hint() && !op_conf.stream_name_hint().empty()) {
-        if (stream_index_name.empty()) {
-          stream_index_name = op_conf.stream_name_hint();
-        } else {
-          CHECK_EQ(stream_index_name, op_conf.stream_name_hint());
-        }
-      }
-    }
-
-    if (!stream_index_name.empty()) {
-      for (const OpNode* op_node : ordered_op_nodes) {
-        OperatorConf& op_conf = CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()));
-        if (!op_conf.has_stream_name_hint()) {
-          op_conf.set_stream_name_hint(stream_index_name);
-          VLOG(3) << " Op: " << op_conf.name() << " fix stream name hint : " << stream_index_name;
-        }
-      }
-    }
-  };
-  */
-
   for (auto& pair : placement2logical_chains) {
     const auto& placement = pair.first;
     auto& info = pair.second;
@@ -641,8 +600,6 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     for (auto& logical_chain : info.ordered_logical_chains) {
       logical_chain->logical_chain_id = logical_chain_id++;
       InsertLogicalChainId(logical_chain->ordered_op_nodes, logical_chain->logical_chain_id);
-      // TODO(chengcheng): rm fix hint and use thrd id in logical op node.
-      // FixLogicalChainOpStreamHint(logical_chain->ordered_op_nodes);
       InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
 

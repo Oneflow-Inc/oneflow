@@ -678,15 +678,6 @@ void GenAfterAccSubgraph(std::vector<const OpNode*>* ordered_after_acc_subgraph,
         && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)) {
       CHECK(visited.insert(next_node).second);
       queued_nodes.push(next_node);
-      LOG(INFO) << "ccdebuglog: GOOD! Find acc chain op : " << next_node->op().op_name();
-    } else {
-      if (visited.find(next_node) == visited.end()
-          && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)) {
-        LOG(INFO) << "ccdebuglog: Bad! Skip acc chain op : " << next_node->op().op_name()
-                  << " , 1) breakpoint: " << IsBreakpointOpNode(next_node)
-                  << " , 2) parallel equal: "
-                  << next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc);
-      }
     }
   };
 
