@@ -37,11 +37,8 @@ def empty_op(
     shape = _single(_handle_size_arg(size))
 
     if dtype is None:
-        dtype = flow.float32
-    if placement is None:
-        if device is None:
-            device = flow.device("cpu")
-    else:
+        dtype = flow.get_default_dtype()
+    if placement is not None:
         assert (
             device is None
         ), "argument 'device' must be None when argument 'placement' exist"

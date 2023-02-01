@@ -69,22 +69,22 @@ def _compare_torch_and_oneflow(
 
     log_probs_flow = (
         flow.tensor(log_probs, dtype=flow.float32, requires_grad=True)
-        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
         .to_global(placement=placement, sbp=in_sbp)
     )
     targets_flow = (
         flow.tensor(targets, dtype=flow.int32)
-        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
         .to_global(placement=placement, sbp=in_sbp)
     )
     input_lengths_flow = (
         flow.tensor(input_lengths, dtype=flow.int32)
-        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
         .to_global(placement=placement, sbp=in_sbp)
     )
     target_lengths_flow = (
         flow.tensor(target_lengths, dtype=flow.int32)
-        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
         .to_global(placement=placement, sbp=in_sbp)
     )
 

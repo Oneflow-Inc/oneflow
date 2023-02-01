@@ -65,6 +65,7 @@ Configuration API for auto parallelism
     enable_auto_parallel_ignore_user_sbp_config
     set_auto_parallel_computation_cost_ratio
     set_auto_parallel_wait_time
-    enable_auto_parallel_mainstem_algo
+    enable_auto_parallel_trunk_algo
     enable_auto_parallel_sbp_collector
+    enable_auto_memory
 

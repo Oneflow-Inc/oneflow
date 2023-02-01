@@ -25,6 +25,10 @@ message JobHelperConf {
   map<string, ArgSignature> op_name2arg_signature = 9;
 }
 
+message MergedLogicalChainIdGroup {
+  repeated int64 logical_chain_id_list = 1;
+}
+
 message Job {
   optional DLNetConf net = 1;
   optional Placement placement = 2;
@@ -32,4 +36,5 @@ message Job {
   optional JobParallelViewConf job_parallel_view_conf = 4;
   optional JobHelperConf helper = 5;
   map<string, ModuleConf> module_name2module_conf = 6;
+  repeated MergedLogicalChainIdGroup logical_chain_groups = 7;
 }

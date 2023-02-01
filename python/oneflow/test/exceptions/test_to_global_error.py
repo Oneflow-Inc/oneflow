@@ -32,7 +32,7 @@ class TestToGlobalError(flow.unittest.TestCase):
     def test_tensor_to_consistent(self):
         with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
-            placement = flow.env.all_device_placement("cuda")
+            placement = flow.placement.all("cuda")
             sbp = flow.sbp.split(0)
             global_data = data.to_consistent(placement=placement, sbp=sbp)
 
@@ -56,7 +56,7 @@ class TestToGlobalError(flow.unittest.TestCase):
     def test_module_to_consistent(self):
         with self.assertRaises(Exception) as context:
             m = flow.nn.Conv2d(1, 1, 1)
-            placement = flow.env.all_device_placement("cuda")
+            placement = flow.placement.all("cuda")
             sbp = flow.sbp.split(0)
             m.to_consistent(placement=placement, sbp=sbp)
 

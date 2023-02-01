@@ -50,6 +50,8 @@ class VirtualMachine final {
   Maybe<void> ShrinkAllMem();
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
+  size_t flying_instruction_cnt() const { return engine().flying_instruction_cnt(); }
+
  private:
   friend class InstructionsBuilder;
 
@@ -76,7 +78,10 @@ class VirtualMachine final {
 
   Maybe<void> NotifyOrRunScheduler();
 
-  bool disable_vm_threads_;
+  Maybe<void> CloseWorkerThreads();
+
+  bool multi_thread_;
+  bool threads_closed_;
   bool scheduler_stopped_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> engine_;
 

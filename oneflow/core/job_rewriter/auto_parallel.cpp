@@ -51,7 +51,7 @@ class AutoParallelPass final : public JobPass {
 
 Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   // auto-parallel
-  VLOG(2) << "Start Auto Parallel" << std::endl;
+  LOG(INFO) << "Start Auto Parallel";
   auto time_begin = std::chrono::high_resolution_clock::now();
 
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job);

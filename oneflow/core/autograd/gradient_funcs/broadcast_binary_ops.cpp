@@ -346,5 +346,80 @@ class BroadcastMaximum : public BroadcastMinMax {
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_maximum", BroadcastMaximum);
 
+class BroadcastFMod : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& out_shape = *(JUST(VectorAt(out_grads, 0))->shape());
+    in_grads->resize(2);
+    if (ctx->x_requires_grad || ctx->y_requires_grad) {
+      const auto& x = JUST(VectorAt(ctx->SavedTensors(), ctx->x_index));
+      const auto& y = JUST(VectorAt(ctx->SavedTensors(), ctx->y_index));
+      auto broad_x_ = x;
+      auto broad_y_ = y;
+      if (ctx->broadcast_x) {
+        const auto& x_shape = *(x->shape());
+        const Shape& left_extended_x_shape =
+            CreateLeftExtendedShape(ShapeView(x_shape), out_shape.NumAxes());
+        if (left_extended_x_shape == out_shape) {
+          broad_x_ = JUST(functional::ReshapeLike(x, JUST(VectorAt(out_grads, 0))));
+        } else {
+          const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
+          const std::vector<int32_t> x_axis =
+              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+          broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), x_axis));
+        }
+      }
+      if (ctx->broadcast_y) {
+        const auto& y_shape = *(y->shape());
+        const Shape& left_extended_y_shape =
+            CreateLeftExtendedShape(ShapeView(y_shape), out_shape.NumAxes());
+        if (left_extended_y_shape == out_shape) {
+          broad_y_ = JUST(functional::ReshapeLike(y, JUST(VectorAt(out_grads, 0))));
+        } else {
+          const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
+          const std::vector<int32_t> y_axis =
+              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+          broad_y_ = JUST(functional::BroadcastLike(y, JUST(VectorAt(out_grads, 0)), y_axis));
+        }
+      }
+      if (ctx->x_requires_grad) {
+        if (ctx->broadcast_x) {
+          JUST(VectorAt(*in_grads, 0)) =
+              JUST(functional::BroadcastReduceSumLike(JUST(VectorAt(out_grads, 0)), x));
+        } else {
+          JUST(VectorAt(*in_grads, 0)) = JUST(VectorAt(out_grads, 0));
+        }
+      }
+      if (ctx->y_requires_grad) {
+        auto result = JUST(functional::TruncDiv(broad_x_, broad_y_));
+        result = JUST(functional::Mul(JUST(VectorAt(out_grads, 0)), result));
+        JUST(functional::ScalarMul(result, Scalar(-1.f), true));
+        if (ctx->broadcast_y) {
+          in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(result, y));
+        } else {
+          in_grads->at(1) = result;
+        }
+      }
+    }
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad && ctx->broadcast_x) {
+      ctx->x_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+    }
+    if (ctx->y_requires_grad) {
+      ctx->x_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+      ctx->y_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_fmod", BroadcastFMod);
+
 }  // namespace one
 }  // namespace oneflow

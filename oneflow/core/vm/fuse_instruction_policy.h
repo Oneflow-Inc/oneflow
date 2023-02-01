@@ -62,7 +62,6 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   InstructionList* mut_instruction_list() { return &instruction_list_; }
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  private:
   Maybe<void> Prepare(Instruction* instruction) override {

@@ -52,8 +52,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("square_x_sum", 0, ctx->InputDType("x", 0));
-  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  DataType x_dtype = ctx->InputDType("x", 0);
+  DataType square_x_sum_dtype = x_dtype;
+  if (x_dtype == DataType::kFloat16 || x_dtype == DataType::kBFloat16) {
+    square_x_sum_dtype = DataType::kFloat;
+  }
+  ctx->SetOutputDType("square_x_sum", 0, square_x_sum_dtype);
+  ctx->SetOutputDType("y", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 
@@ -99,8 +104,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("y", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("square_x_sum", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("y", 0));
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }

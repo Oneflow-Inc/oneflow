@@ -100,7 +100,10 @@ def _test_linear_train_graph(test_case, device):
         def one_iter():
             of_graph_out = linear_t_g(x)
             print(linear_t_g.linear)
-            return of_graph_out.numpy(), linear_t_g.linear.weight.origin.numpy()
+            return (
+                of_graph_out.numpy(),
+                linear_t_g.linear.weight.to(flow.Tensor).numpy(),
+            )
 
         check_list = []
         for i in range(iter_num):

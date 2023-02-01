@@ -66,9 +66,13 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   DataType dtype = ctx->InputDType("a", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
+      << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+      << DataType_Name(ctx->InputDType("b", 0));
   if (ctx->has_input("_add_to_output", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
+    CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype)
+        << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+        << DataType_Name(ctx->InputDType("_add_to_output", 0));
   }
   ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
@@ -282,7 +286,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
     const int64_t a_batch_dim = GetABatchDim(i);
     const int64_t b_batch_dim = GetBBatchDim(i);
     CHECK(((a_batch_dim != 1 && b_batch_dim == 1) || (a_batch_dim == 1 && b_batch_dim != 1)
-           || (a_batch_dim == 1 && b_batch_dim == 1)))
+           || (a_batch_dim == b_batch_dim)))
         << "Batch Dims could not broadcast, please check. ";
     out_dim_vec[i] = std::max(a_batch_dim, b_batch_dim);
   }

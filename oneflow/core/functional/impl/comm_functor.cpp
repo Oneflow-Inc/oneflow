@@ -170,13 +170,43 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
 auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
     DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
 
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllGatherOpExpr(Symbol<RankGroup> rank_group,
+                                                              DeviceType device_type) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_all_gather", device_type)))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllGather", device_type);
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_ccl_all_gather")
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2AllGatherOpExpr =
+    DECORATE(&RankGroupAndDeviceType2AllGatherOpExpr, ThreadLocal);
+
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2ReduceScatterOpExpr(Symbol<RankGroup> rank_group,
+                                                                  DeviceType device_type) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_reduce_scatter", device_type)))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("ReduceScatter", device_type);
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_ccl_reduce_scatter", *JUST(UniqueStr("eager_ccl_reduce_scatter")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2ReduceScatterOpExpr =
+    DECORATE(&RankGroupAndDeviceType2ReduceScatterOpExpr, ThreadLocal);
+
 #undef OF_KERNEL_NOT_SUPPORT_ERROR
 
 }  // namespace
 
-class BroadcastFunctor {
+class CommBroadcastFunctor {
  public:
-  BroadcastFunctor() = default;
+  CommBroadcastFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
                            bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
@@ -188,9 +218,9 @@ class BroadcastFunctor {
   }
 };
 
-class BroadcastTensorsFunctor {
+class CommBroadcastTensorsFunctor {
  public:
-  BroadcastTensorsFunctor() = default;
+  CommBroadcastTensorsFunctor() = default;
   Maybe<one::TensorTuple> operator()(const one::TensorTuple& inputs, int64_t src_rank,
                                      bool inplace) const {
     if (inputs.empty()) { return inputs; }
@@ -291,6 +321,38 @@ class GlobalReduceScatterFunctor {
   }
 };
 
+class LocalReduceScatterFunctor {
+ public:
+  LocalReduceScatterFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    DataType dtype_val = input->dtype()->data_type();
+    CHECK_EQ_OR_RETURN(input->shape()->elem_cnt(),
+                       output->nelement() * GlobalProcessCtx::WorldSize())
+        << Error::RuntimeError()
+        << "output tensor size must be equal to world_size times input tensor size";
+    CHECK_EQ_OR_RETURN(dtype_val, output->dtype()->data_type())
+        << Error::RuntimeError() << Error::RuntimeError()
+        << "output tensor must have the same type as input tensor";
+    const Shape& shape = *output->shape();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_shape", "output_dtype");
+    attrs.SetAllAttrs(shape, dtype_val);
+    const auto& device = JUST(input->device());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    DeviceType device_type = device->enum_type();
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedRankGroupAndDeviceType2ReduceScatterOpExpr(rank_group, device_type));
+    auto op_input = input;
+    if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(input)) {
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
+    }
+    TensorTuple outputs{output};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs, attrs));
+    return outputs[0];
+  }
+};
+
 class GlobalAllGatherFunctor {
  public:
   GlobalAllGatherFunctor() = default;
@@ -302,6 +364,38 @@ class GlobalAllGatherFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclAllGatherOpExpr(JUST(x->parallel_desc())));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
+class LocalAllGatherFunctor {
+ public:
+  LocalAllGatherFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    DataType dtype_val = input->dtype()->data_type();
+    CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * GlobalProcessCtx::WorldSize(),
+                       output->nelement())
+        << Error::RuntimeError()
+        << "output tensor size must be equal to world_size times input tensor size";
+    CHECK_EQ_OR_RETURN(dtype_val, output->dtype()->data_type())
+        << Error::RuntimeError() << Error::RuntimeError()
+        << "output tensor must have the same type as input tensor";
+    const Shape& shape = *output->shape();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_shape", "output_dtype");
+    attrs.SetAllAttrs(shape, dtype_val);
+    const auto& device = JUST(input->device());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    DeviceType device_type = device->enum_type();
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedRankGroupAndDeviceType2AllGatherOpExpr(rank_group, device_type));
+    auto op_input = input;
+    if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(input)) {
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
+    }
+    TensorTuple outputs{output};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs, attrs));
+    return outputs[0];
   }
 };
 
@@ -442,9 +536,11 @@ class LocalReduceFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
-  m.add_functor<impl::BroadcastFunctor>("Broadcast");
-  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+  m.add_functor<impl::CommBroadcastFunctor>("CommBroadcast");
+  m.add_functor<impl::CommBroadcastTensorsFunctor>("CommBroadcastTensors");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
+  m.add_functor<impl::LocalAllGatherFunctor>("LocalAllGather");
+  m.add_functor<impl::LocalReduceScatterFunctor>("LocalReduceScatter");
   m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
   m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
   m.add_functor<impl::GlobalAllGatherFunctor>("GlobalAllGather");

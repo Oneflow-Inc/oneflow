@@ -20,8 +20,14 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+import torch as torch_original
+from packaging import version
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+# other.grad in torch.fmod(input, other) was not implemented before pytorch 1.11.0
+grad_implemented = version.parse(torch_original.__version__) >= version.parse("1.11.0")
+
+
+@autotest(n=1, auto_backward=grad_implemented, check_graph=False)
 def do_test_fmod_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)

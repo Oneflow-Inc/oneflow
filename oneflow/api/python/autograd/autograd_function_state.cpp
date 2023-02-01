@@ -23,6 +23,16 @@ limitations under the License.
 namespace py = pybind11;
 namespace oneflow {
 namespace one {
+namespace {
+inline FunctionAutoGradCaptureState* CheckAndGetStateData(PyAutogradFunctionState* state) {
+  if (!state->data.lock()) {
+    PyErr_Format(PyExc_RuntimeError, "Data is deallocated. Please don't hold context outside "
+                                     "autograd.Function.forward or autograd.Function.backward");
+    return nullptr;
+  }
+  return state->data.lock().get();
+}
+}  // namespace
 
 #if PY_VERSION_HEX < 0x03070000
 #define PYGETSET_NAME(name) const_cast<char*>(name)
@@ -58,7 +68,9 @@ static PyObject* PyAutogradFunctionState_save_for_backward(PyObject* self, PyObj
   }
   const std::vector<std::shared_ptr<Tensor>>& tensor_list =
       functional::PyUnpackTensorSequence(args);
-  for (const auto& tensor : tensor_list) { _self->data->SaveTensorForBackward(tensor); }
+  for (const auto& tensor : tensor_list) {
+    CheckAndGetStateData(_self)->SaveTensorForBackward(tensor);
+  }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
@@ -71,9 +83,16 @@ static PyObject* PyAutogradFunctionState_mark_non_differentiable(PyObject* self,
   }
   const std::vector<std::shared_ptr<Tensor>>& tensor_list =
       functional::PyUnpackTensorSequence(args);
-  for (const auto& tensor : tensor_list) { _self->data->MarkNonDifferentiable(tensor); }
+  for (const auto& tensor : tensor_list) {
+    CheckAndGetStateData(_self)->MarkNonDifferentiable(tensor);
+  }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
+}
+
+static PyObject* PyAutogradFunctionState_is_data_valid(PyObject* self) {
+  auto* _self = (PyAutogradFunctionState*)self;
+  return functional::CastToPyObject(_self->data.lock() != nullptr);
 }
 
 static PyMethodDef PyAutogradFunctionState_methods[] = {
@@ -81,6 +100,7 @@ static PyMethodDef PyAutogradFunctionState_methods[] = {
      NULL},
     {"mark_non_differentiable", (PyCFunction)PyAutogradFunctionState_mark_non_differentiable,
      METH_VARARGS, NULL},
+    {"_is_data_valid", (PyCFunction)PyAutogradFunctionState_is_data_valid, METH_NOARGS, NULL},
     {NULL} /* Sentinel */
 };
 // PyMethodDef end
@@ -88,12 +108,22 @@ static PyMethodDef PyAutogradFunctionState_methods[] = {
 // PyAutogradFunctionState_getset start
 static PyObject* PyAutogradFunctionState_saved_tensors(PyObject* self, void*) {
   auto* _self = (PyAutogradFunctionState*)self;
-  return functional::CastToPyObject<Maybe<TensorTuple>>(_self->data->SavedTensors());
+  return functional::CastToPyObject<Maybe<TensorTuple>>(
+      CheckAndGetStateData(_self)->SavedTensors());
+}
+
+static PyObject* PyAutogradFunctionState_get_dict(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  auto* _self = (PyAutogradFunctionState*)self;
+  return _self->dynamic_attr_dict;
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
 }
 
 static PyGetSetDef PyAutogradFunctionState_properties[] = {
     {PYGETSET_NAME("saved_tensors"), (getter)PyAutogradFunctionState_saved_tensors, NULL, NULL,
      NULL},
+    {PYGETSET_NAME("__dict__"), (getter)PyAutogradFunctionState_get_dict, NULL, NULL, NULL},
     {NULL} /* Sentinel */
 };
 // PyAutogradFunctionState_getset end
@@ -166,7 +196,7 @@ PyObject* PyAutogradFunctionState_NewFromPtr(
   if (self) {
     PY_XINCREF(self);
     self->data = data;
-    self->data->set_pyobject_ptr(
+    CheckAndGetStateData(self)->set_pyobject_ptr(
         std::unique_ptr<void, void (*)(void*)>(self, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
   }
   return (PyObject*)self;

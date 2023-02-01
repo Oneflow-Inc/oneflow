@@ -79,12 +79,16 @@ class CudaStream : public Stream {
   CudaDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
+  Maybe<void> GetAsyncError() override;
 
   Maybe<void> OnExecutionContextSetup() override;
   Maybe<void> OnExecutionContextTeardown() override;
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
+#if CUDA_VERSION >= 11000
+  cusolverDnHandle_t cusolver_dn_handle() const;
+#endif
 
 #if CUDA_VERSION >= 10010
 
@@ -142,6 +146,9 @@ class CudaStream : public Stream {
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
+#if CUDA_VERSION >= 11000
+  cusolverDnHandle_t cusolver_dn_handle_{};
+#endif
 
 #if CUDA_VERSION >= 10010
 

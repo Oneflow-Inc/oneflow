@@ -15,6 +15,10 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/clip_by_value_kernel.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#ifdef WITH_CUDA
+#include <cuda_fp16.h>
+#endif
 
 namespace oneflow {
 
@@ -48,6 +52,22 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
   return integral;
 }
 
+#ifdef WITH_CUDA
+template<>
+half GetDtypeMatchedValue(double floating, int64_t integral) {
+#if CUDA_VERSION >= 11000
+  return __double2half(floating);
+#else
+  return __float2half(static_cast<float>(floating));
+#endif
+}
+#endif
+
+template<>
+float16 GetDtypeMatchedValue(double floating, int64_t integral) {
+  return static_cast<float16>(floating);
+}
+
 }  // namespace
 
 template<typename T>
@@ -65,7 +85,7 @@ struct ClipKernelUtil<DeviceType::kCPU, T> {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarKernel final : public user_op::OpKernel {
+class ClipByScalarKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarKernel() = default;
   ~ClipByScalarKernel() = default;
@@ -87,7 +107,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMinKernel final : public user_op::OpKernel {
+class ClipByScalarMinKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMinKernel() = default;
   ~ClipByScalarMinKernel() = default;
@@ -106,7 +126,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMaxKernel final : public user_op::OpKernel {
+class ClipByScalarMaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMaxKernel() = default;
   ~ClipByScalarMaxKernel() = default;
@@ -125,7 +145,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarGradKernel final : public user_op::OpKernel {
+class ClipByScalarGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarGradKernel() = default;
   ~ClipByScalarGradKernel() = default;
@@ -148,7 +168,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMinGradKernel final : public user_op::OpKernel {
+class ClipByScalarMinGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMinGradKernel() = default;
   ~ClipByScalarMinGradKernel() = default;
@@ -168,7 +188,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
+class ClipByScalarMaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMaxGradKernel() = default;
   ~ClipByScalarMaxGradKernel() = default;
@@ -187,27 +207,29 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \
-  REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn<kernel_name##Kernel<device_type_v, dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)          \
+  REGISTER_USER_KERNEL(#op_type_name)                                                  \
+      .SetCreateFn<kernel_name##Kernel<device_type_v, dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                     \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInplaceProposalFn(                                                           \
+          [](const user_op::InferContext&,                                             \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {   \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));             \
+            return Maybe<void>::Ok();                                                  \
+          });
 
-#define REGISTER_CLIP_GRAD_KERNEL(op_type_name, kernel_name, device_type_v, dtype)              \
-  REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn<kernel_name##GradKernel<device_type_v, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_CLIP_GRAD_KERNEL(op_type_name, kernel_name, device_type_v, dtype)      \
+  REGISTER_USER_KERNEL(#op_type_name)                                                   \
+      .SetCreateFn<kernel_name##GradKernel<device_type_v, dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                      \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+      .SetInplaceProposalFn(                                                            \
+          [](const user_op::InferContext&,                                              \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {    \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));            \
+            return Maybe<void>::Ok();                                                   \
+          });
 
 #define REGISTER_CLIP_KERNELS(device_type_v, dtype_pair)                                          \
   REGISTER_CLIP_KERNEL(clip_by_scalar, ClipByScalar, device_type_v, OF_PP_PAIR_FIRST(dtype_pair)) \
@@ -223,5 +245,9 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
                             OF_PP_PAIR_FIRST(dtype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+REGISTER_CLIP_KERNELS(DeviceType::kCPU, (float16, DataType::kFloat16))
+#ifdef WITH_CUDA
+REGISTER_CLIP_KERNELS(DeviceType::kCUDA, (half, DataType::kFloat16))
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

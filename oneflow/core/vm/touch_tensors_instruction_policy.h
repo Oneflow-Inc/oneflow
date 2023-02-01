@@ -40,9 +40,6 @@ class TouchTensorsInstructionPolicy final : public InstructionPolicy {
     return empty;
   }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : eager_blob_objects_) { DoEach(eager_blob_object.get()); }
-  }
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "TouchTensors";
   }

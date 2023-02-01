@@ -17,10 +17,19 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/env_var/stream.h"
 
 namespace oneflow {
 
 namespace {
+
+StreamType GetH2DStreamType() {
+  if (ThreadLocalEnvBool<ONEFLOW_STREAM_ENABLE_H2D_STREAM>()) {
+    return StreamType::kHost2Device;
+  } else {
+    return StreamType::kCompute;
+  }
+}
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
                                      const Symbol<Device>& out_device, const bool pin_memory) {
@@ -28,7 +37,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
     return Stream::New(in_device, StreamType::kDevice2Host);
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, StreamType::kHost2Device);
+    return Stream::New(device, GetH2DStreamType());
   } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));

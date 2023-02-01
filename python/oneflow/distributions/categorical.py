@@ -68,11 +68,30 @@ class Categorical(Distribution):
             raise ValueError(
                 "Either `probs` or `logits` must be specified, but not both."
             )
-        assert logits is None and probs is not None and validate_args is None
+        assert validate_args is None
 
-        if probs.dim() < 1:
-            raise ValueError("`probs` parameter must be at least one-dimensional.")
-        self.probs = probs / probs.sum(-1, keepdim=True)
+        if probs is not None:
+            if probs.dim() < 1:
+                raise ValueError("`probs` parameter must be at least one-dimensional.")
+            self.probs = probs / probs.sum(-1, keepdim=True)
+        else:
+            if logits.dim() < 1:
+                raise ValueError("`logits` parameter must be at least one-dimensional.")
+            self.logits = logits
+            # Normalize
+
+            import math
+
+            def logsumexp(t):
+                if t.numel() != 0:
+                    maxes = flow.max(t, dim=-1, keepdim=True)[0]
+                    maxes.masked_fill_(flow.abs(maxes) == math.inf, 0)
+                    result = flow.sum(flow.exp(t - maxes), dim=-1, keepdim=True)
+                    return flow.log(result) + maxes
+                else:
+                    return flow.log(flow.sum(t, dim=-1, keepdim=True))
+
+            self.probs = logits_to_probs(logits - logsumexp(logits))
 
         self._param = self.probs if probs is not None else self.logits
         self._num_events = self._param.size()[-1]

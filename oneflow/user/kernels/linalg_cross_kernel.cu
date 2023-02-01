@@ -48,6 +48,7 @@ class CudaLinalgCrossKernel final : public user_op::OpKernel {
 
     const int64_t n = input_tensor->shape_view().elem_cnt() / 3;
 
+    if (n == 0) { return; }
     RUN_CUDA_KERNEL((LinalgCrossForward<T>), ctx->stream(), n, n, input_tensor->dptr<T>(),
                     other_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
   }

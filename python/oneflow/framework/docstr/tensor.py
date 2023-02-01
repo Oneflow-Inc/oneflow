@@ -586,7 +586,16 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze,
     """
+    Tensor.squeeze(dim=None) -> Tensor
     See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze_,
+    """
+    Tensor.squeeze_(dim=None) -> Tensor
+    In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
 
@@ -666,7 +675,36 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze,
     """
+    Tensor.unsqueeze(dim) -> Tensor
+
     See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze_,
+    """
+    Tensor.unsqueeze_(dim) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided,
+    """
+    Tensor.as_strided(size, stride, storage_offset=None) -> Tensor
+
+    See :func:`oneflow.as_strided`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided_,
+    """
+    Tensor.as_strided_(size, stride, storage_offset=None) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.as_strided`
     """,
 )
 
@@ -1046,6 +1084,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.lt,
     """
     See :func:`oneflow.lt`
@@ -1111,6 +1156,13 @@ add_docstr(
     oneflow.Tensor.gt,
     """
     See :func:`oneflow.gt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gt_,
+    """Tensor.gt_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.gt`.
     """,
 )
 
@@ -1743,6 +1795,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logsumexp,
+    """
+    See :func:`oneflow.logsumexp`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
@@ -1851,6 +1910,13 @@ add_docstr(
     oneflow.Tensor.minimum,
     """
     See :func:`oneflow.minimum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mode,
+    """
+    See :func:`oneflow.mode`
     """,
 )
 
@@ -2287,11 +2353,31 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.scatter,
+    """
+    See :func:`oneflow.scatter`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.scatter_,
     """
-    Inplace version of :func:`oneflow.scatter`
+    Inplace version of :func:`oneflow.Tensor.scatter`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add,
+    """
+    See :func:`oneflow.scatter_add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add_,
+    """
+    Inplace version of :func:`oneflow.Tensor.scatter_add`
     """,
 )
 
@@ -2299,5 +2385,132 @@ add_docstr(
     oneflow.Tensor.cross,
     """
     See :func:`oneflow.cross`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nansum,
+    """
+    See :func:`oneflow.nansum`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> x.nansum()
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> x.nansum(dim=1, keepdim=True)
+        tensor([[1.],
+                [2.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bincount,
+    """
+    See :func:`oneflow.bincount`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([0, 2, 3]).int()
+        >>> x.bincount()
+        tensor([1, 0, 1, 1], dtype=oneflow.int64)
+        >>> weight = flow.Tensor([0.1, 0.2, 0.3])
+        >>> x.bincount(weight)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000], dtype=oneflow.float32)
+        >>> x.bincount(weight, minlength=5)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000, 0.0000], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli,
+    """
+    See :func:`oneflow.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli()
+        tensor([1., 1., 1.], dtype=oneflow.float32)
+        >>> x.bernoulli(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli_,
+    """
+    The inplace version of :func:`oneflow.Tensor.bernoulli_`.
+
+    See :func:`oneflow.Tensor.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli_(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+        >>> x
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unique,
+    """
+    See :func:`oneflow.unique`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> x.unique()
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
+        >>> x, indices = x.unique(return_inverse=True)
+        >>> indices
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
+        >>> x, counts = x.unique(return_counts=True)
+        >>> counts
+        tensor([1, 1, 1, 1], dtype=oneflow.int32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clone,
+    """
+    See :func:`oneflow.clone`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.clone()
+        tensor([1, 2, 3], dtype=oneflow.int64)
     """,
 )

@@ -168,23 +168,6 @@ oneflow.job @test_conv2d(%arg0: tensor<1x3x224x224xf32>, %arg1: tensor<5x3x1x1xf
 }
 
 
-oneflow.job @test_flatten(%arg0: tensor<4x3x2x1xf32>) -> tensor<4x6x1xf32>
-{
-    %res = "oneflow.flatten"(%arg0)
-    {
-        device_name = ["@0:0"],
-        device_tag = "cpu",
-        end_dim = 2 : si32,
-        hierarchy = [1],
-        op_name = "",
-        output_lbns = [""],
-        scope_symbol_id = 4611686018431217663 : i64,
-        start_dim = 1 : si32
-    } : (tensor<4x3x2x1xf32>) -> tensor<4x6x1xf32>
-    oneflow.return %res : tensor<4x6x1xf32>
-}
-
-
 oneflow.job @test_matmul(%arg0: tensor<1x2048xf32>, %arg1: tensor<1000x2048xf32>) ->tensor<1x1000xf32>
 {
     %res = "oneflow.matmul"(%arg0, %arg1)

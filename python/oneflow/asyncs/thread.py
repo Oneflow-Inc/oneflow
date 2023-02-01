@@ -40,6 +40,7 @@ class thread:
 
     def __init__(self, worker_thread: Thread):
         self.stream_set_ = oneflow._oneflow_internal.StreamSet(worker_thread)
+        self.worker_thread_ = worker_thread
 
     def __enter__(self):
         self.guard_ = oneflow._oneflow_internal.StreamGuard(self.stream_set_)

@@ -42,6 +42,61 @@ void SetAffinityByDevice(int dev_id) {
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
 }
 
+void CheckVersionCompatibility(int compiletime_major, int compiletime_minor, int runtime_major,
+                               int runtime_minor, const std::string& name) {
+  if (runtime_major != compiletime_major || runtime_minor < compiletime_minor) {
+    LOG(WARNING) << "Runtime version " << runtime_major << "." << runtime_minor << " of " << name
+                 << " incompatible with compiletime version " << compiletime_major << "."
+                 << compiletime_minor << ".";
+  }
+}
+
+void CheckCudaRuntimeVersion() {
+#if !defined(CUDART_VERSION)
+#error
+#endif  // !defined(CUDART_VERSION)
+  const int compiletime_major = CUDART_VERSION / 1000;
+  const int compiletime_minor = CUDART_VERSION % 1000 / 10;
+  int runtime_version = 0;
+  OF_CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
+  const int runtime_major = runtime_version / 1000;
+  const int runtime_minor = runtime_version % 1000 / 10;
+  CheckVersionCompatibility(compiletime_major, compiletime_minor, runtime_major, runtime_minor,
+                            "CUDA Runtime");
+}
+
+void CheckCublasVersion(cublasHandle_t handle) {
+#if CUDA_VERSION >= 10020
+#if (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
+#error
+#endif  // (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
+  int runtime_version = 0;
+  OF_CUBLAS_CHECK(cublasGetVersion(handle, &runtime_version));
+  int runtime_major = 0;
+  int runtime_minor = 0;
+  if (runtime_version >= 100000) {
+    runtime_major = runtime_version / 10000;
+    runtime_minor = runtime_version % 10000 / 100;
+  } else {
+    runtime_major = runtime_version / 1000;
+    runtime_minor = runtime_version % 1000 / 100;
+  }
+  CheckVersionCompatibility(CUBLAS_VER_MAJOR, CUBLAS_VER_MINOR, runtime_major, runtime_minor,
+                            "cuBLAS");
+#endif  // CUDA_VERSION >= 10020
+}
+
+void CheckCudnnVersion() {
+#if (!defined(CUDNN_MAJOR)) || (!defined(CUDNN_MINOR))
+#error
+#endif  // (!defined(CUDNN_MAJOR)) || (!defined(CUDNN_MINOR))
+  int runtime_major = 0;
+  int runtime_minor = 0;
+  OF_CUDNN_CHECK(cudnnGetProperty(libraryPropertyType::MAJOR_VERSION, &runtime_major));
+  OF_CUDNN_CHECK(cudnnGetProperty(libraryPropertyType::MINOR_VERSION, &runtime_minor));
+  CheckVersionCompatibility(CUDNN_MAJOR, CUDNN_MINOR, runtime_major, runtime_minor, "cuDNN");
+}
+
 }  // namespace
 
 #ifdef WITH_CUDA_GRAPHS
@@ -56,10 +111,16 @@ void CudaGraphExecutable::Update(cudaGraph_t graph) {
   if (dev != dev_) { Reset(); }
   dev_ = dev;
   if (graph_exec_ != nullptr) {
+#if CUDA_VERSION < 12000
     cudaGraphExecUpdateResult update_result{};
     cudaGraphNode_t error_node = nullptr;
     OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
     if (update_result == cudaGraphExecUpdateSuccess) { return; }
+#else
+    cudaGraphExecUpdateResultInfo update_result{};
+    OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &update_result));
+    if (update_result.result == cudaGraphExecUpdateSuccess) { return; }
+#endif  // CUDA_VERSION < 12000
   }
   Reset();
   OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
@@ -83,6 +144,14 @@ void CudaGraphExecutable::Reset() {
 CudaStream::CudaStream(CudaDevice* device)
     : device_index_(device->device_index()), device_(device) {
   CudaCurrentDeviceGuard guard(device_index_);
+
+  const bool need_check_version = []() {
+    static std::atomic<bool> version_checked(false);
+    return version_checked.exchange(true) == false;
+  }();
+
+  if (need_check_version) { CheckCudaRuntimeVersion(); }
+
   // cuda_stream
   const char* stream_flags_env_name = "ONEFLOW_EP_CUDA_STREAM_FLAGS";
   if (std::getenv(stream_flags_env_name) != nullptr) {
@@ -94,6 +163,7 @@ CudaStream::CudaStream(CudaDevice* device)
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
+  if (need_check_version) { CheckCublasVersion(cublas_handle_); }
 #if CUDA_VERSION >= 10010
   // cublas_lt_handle
   OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
@@ -103,6 +173,11 @@ CudaStream::CudaStream(CudaDevice* device)
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
+  // cusolver_dn_handle
+#if CUDA_VERSION >= 11000
+  OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
+  OF_CUSOLVER_CHECK(cusolverDnSetStream(cusolver_dn_handle_, cuda_stream_));
+#endif
   workspace_size_ =
       ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
       * 1024 * 1024;
@@ -113,6 +188,7 @@ CudaStream::CudaStream(CudaDevice* device)
   // cudnn_handle
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
+  if (need_check_version) { CheckCudnnVersion(); }
 }
 
 CudaStream::~CudaStream() {
@@ -120,6 +196,9 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#if CUDA_VERSION >= 11000
+  OF_CUSOLVER_CHECK(cusolverDnDestroy(cusolver_dn_handle_));
+#endif
 #if CUDA_VERSION >= 10010
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
 #endif
@@ -153,9 +232,22 @@ void CudaStream::RecordEvent(Event* event) {
   OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
 }
 
+Maybe<void> CudaStream::GetAsyncError() {
+  cudaError_t err = cudaGetLastError();
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+}
+
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
+
+#if CUDA_VERSION >= 11000
+cusolverDnHandle_t CudaStream::cusolver_dn_handle() const { return cusolver_dn_handle_; }
+#endif
 
 #if CUDA_VERSION >= 10010
 cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }

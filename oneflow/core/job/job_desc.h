@@ -53,6 +53,8 @@ class JobDesc final {
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
+  bool enable_multi_tensor_update() const { return job_conf_.enable_multi_tensor_update(); }
+  bool enable_fused_model_update_cast() const { return job_conf_.enable_fused_model_update_cast(); }
   DataType mixed_precision_data_type() const { return job_conf_.mixed_precision_data_type(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();

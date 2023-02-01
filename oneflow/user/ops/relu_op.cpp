@@ -62,7 +62,8 @@ namespace oneflow {
 /*static*/ Maybe<void> ReluGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType data_type = ctx->InputDType("y", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type)
-      << Error::TypeError() << "Tensors dy and y must have the same type";
+      << "InferDataType Failed. Expected " << DataType_Name(data_type) << ", but got "
+      << DataType_Name(ctx->InputDType("dy", 0));
   ctx->SetOutputDType("dx", 0, data_type);
   return Maybe<void>::Ok();
 }

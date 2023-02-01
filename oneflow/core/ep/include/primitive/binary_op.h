@@ -34,6 +34,7 @@ enum class BinaryOp {
   kPow,
   kFmod,
   kFloorDiv,
+  kTruncDiv,
   kFloorMod,
   kScalarBasePowerGrad,
   kScalarExpPowerGrad,
@@ -44,11 +45,14 @@ enum class BinaryOp {
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
+  kIsClose,
+  kIsCloseEqualNan,
   // Logical
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
   // Unary Backward
+  kIdentityBackwardWithDyX,
   kEluBackwardWithDyX,
   kCeluBackwardWithDyX,
   kGeluBackwardWithDyX,
@@ -59,6 +63,7 @@ enum class BinaryOp {
   kLeakyReluBackwardWithDyX,
   kMishBackwardWithDyX,
   kReluBackwardWithDyY,
+  kReluBackwardWithDyX,
   kSeluBackwardWithDyX,
   kSiluBackwardWithDyX,
   kSoftsignBackwardWithDyX,
@@ -67,6 +72,7 @@ enum class BinaryOp {
   kTanhBackwardWithDyX,
   kThresholdBackwardWithDyX,
   kSigmoidBackwardWithDyY,
+  kSigmoidBackwardWithDyX,
   kAbsBackwardWithDyX,
   kAcosBackwardWithDyX,
   kAcoshBackwardWithDyX,
@@ -94,6 +100,8 @@ enum class BinaryOp {
   kSqrtBackwardWithDyX,
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,
+  kFastGeluBackwardWithDyX,
+  kQuickGeluBackwardWithDyX,
 };
 
 }

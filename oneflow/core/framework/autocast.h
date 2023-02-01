@@ -40,13 +40,13 @@ bool is_autocast_cache_enabled();
 void set_autocast_cache_enabled(bool enabled);
 void clear_cache();
 
-enum AutoCastColor { kWhite, kGray, kClear, kBlack };
+enum AutoCastColor { kNoColor, kWhite, kGray, kClear, kBlack };
 
 class AutoCastMeta final {
  public:
   AutoCastMeta() : AutoCastMeta(0) {}
   explicit AutoCastMeta(int args_num)
-      : autocast_color_(kBlack), is_args_autocast_eligible_(args_num, false) {}
+      : autocast_color_(kNoColor), is_args_autocast_eligible_(args_num, false) {}
 
   AutoCastColor autocast_color() const;
 

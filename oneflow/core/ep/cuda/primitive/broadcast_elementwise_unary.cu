@@ -29,6 +29,10 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
+#define CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ \
+  CUDA_PRIMITIVE_UINT32_TYPE_SEQ         \
+  CUDA_PRIMITIVE_ALL_TYPE_SEQ
+
 constexpr size_t kMaxPackSize = 4;
 
 template<size_t max_pack_size, typename Src, typename Dst>
@@ -279,13 +283,13 @@ template<UnaryOp op, typename Src, typename Dst>
 void LaunchFill(CudaStream* stream, Dst* dst, const Src* src, size_t count, Scalar attr0,
                 Scalar attr1) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
-  if (uintptr % 16 == 0 && count >= (16 / sizeof(Dst))) {
+  if (uintptr % 16 == 0 && count * sizeof(Dst) >= 16) {
     LaunchPackFill<op, Src, Dst, 16 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 8 == 0 && count >= (8 / sizeof(Dst))) {
+  } else if (uintptr % 8 == 0 && count * sizeof(Dst) >= 8) {
     LaunchPackFill<op, Src, Dst, 8 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 4 == 0 && count >= (4 / sizeof(Dst))) {
+  } else if (uintptr % 4 == 0 && count * sizeof(Dst) >= 4) {
     LaunchPackFill<op, Src, Dst, 4 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 2 == 0 && count >= (2 / sizeof(Dst))) {
+  } else if (uintptr % 2 == 0 && count * sizeof(Dst) >= 2) {
     LaunchPackFill<op, Src, Dst, 2 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else {
     LaunchPackFill<op, Src, Dst, 1 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
@@ -390,13 +394,25 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
    NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
                                 OF_PP_PAIR_FIRST(dtype_pair)>},
 
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_dtype_pair, dst_dtype_pair) \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_dtype_pair),                              \
+                   OF_PP_PAIR_SECOND(dst_dtype_pair)),                                       \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_dtype_pair),                  \
+                                OF_PP_PAIR_FIRST(dst_dtype_pair)>},
+
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
 
+            // For Cast OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
+                CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ, CUDA_PRIMITIVE_CAST_ALL_TYPE_SEQ)};
+
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =

@@ -64,7 +64,6 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
       for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
     }
   }
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
 
   void InitInstructionStatus(Instruction* instruction) override {

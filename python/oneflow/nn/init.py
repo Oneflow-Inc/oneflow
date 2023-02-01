@@ -14,40 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import math
+import warnings
 
 import numpy as np
 
 import oneflow as flow
-from oneflow.ops.util.initializer_util import calc_gain as calculate_gain
+from oneflow.ops.util.initializer_util import (
+    calc_gain as calculate_gain,
+    calc_fan,
+    get_data_format,
+)
 from oneflow.framework.tensor import Tensor
 import oneflow.framework.dtype as dtype_util
-import oneflow.ops.initializer_register as initializer_register
-
-
-def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
-    # NOTE: initializing weight should not enable autograd mode
-    if random_seed is None:
-        random_seed = flow.default_generator.seed()
-    shape = tuple(tensor.shape)
-    initializer = initializer_register.get_initializer(
-        initializer_conf, random_seed, shape
-    )
-
-    np_arr = initializer_register.generate_values_by_initializer(
-        initializer, shape, tensor.dtype
-    )
-    with flow.no_grad():
-        if tensor.is_global:
-            src_tensor = flow.tensor(np_arr)
-            src_tensor = src_tensor.to_global(
-                placement=tensor.placement,
-                sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
-            )
-            tensor.copy_(src_tensor)
-        else:
-            shared_mem_tensor = flow.from_numpy(np_arr)
-            tensor[...] = shared_mem_tensor
-    return tensor
 
 
 def uniform_(tensor, a=0.0, b=1.0):
@@ -68,16 +47,9 @@ def uniform_(tensor, a=0.0, b=1.0):
         >>> w = flow.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
-    if isinstance(a, Tensor):
-        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
-        a = a.numpy().item()
-    if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
-        b = b.numpy().item()
-    initializer_conf = initializer_register.random_uniform_initializer(
-        minval=a, maxval=b, dtype=tensor.dtype
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}" % (b, a)
+    with flow.no_grad():
+        return flow._C.uniform_(tensor, a, b)
 
 
 def normal_(tensor, mean=0.0, std=1.0):
@@ -98,8 +70,18 @@ def normal_(tensor, mean=0.0, std=1.0):
         >>> w = flow.empty(3, 5)
         >>> nn.init.normal_(w)
     """
-    initializer_conf = initializer_register.random_normal_initializer(mean, std)
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    with flow.no_grad():
+        if tensor.is_local:
+            return flow.normal(mean=mean, std=std, size=tensor.shape, out=tensor)
+        else:
+            return flow.normal(
+                mean=mean,
+                std=std,
+                size=tensor.shape,
+                out=tensor,
+                placement=tensor.placement,
+                sbp=tensor.sbp,
+            )
 
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -126,10 +108,10 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_uniform"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -156,10 +138,11 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_normal_(w)
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_normal"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+        data_format = "NHWC"
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    return normal_(tensor, 0.0, std)
 
 
 def orthogonal_(tensor, gain=1.0):
@@ -220,15 +203,11 @@ def kaiming_uniform_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_uniform",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def kaiming_normal_(
@@ -266,22 +245,49 @@ def kaiming_normal_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_normal",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    assert mode in ["fan_in", "fan_out"]
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    return normal_(tensor, 0.0, std)
 
 
+# The trunc_normal_ implemention is referenced from https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py#L22
 def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
-    initializer_conf = initializer_register.truncated_normal_initializer(
-        mean=mean, std=std, a=a, b=b,
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
+    def norm_cdf(x):
+        # Computes standard normal cumulative distribution function
+        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+
+    if (mean < a - 2 * std) or (mean > b + 2 * std):
+        warnings.warn(
+            "mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
+            "The distribution of values may be incorrect.",
+            stacklevel=2,
+        )
+
+    with flow.no_grad():
+        # Values are generated by using a truncated uniform distribution and
+        # then using the inverse CDF for the normal distribution.
+        # Get upper and lower cdf values
+        l = norm_cdf((a - mean) / std)
+        u = norm_cdf((b - mean) / std)
+
+        # Uniformly fill tensor with values from [l, u], then translate to
+        # [2l-1, 2u-1].
+        tensor.uniform_(2 * l - 1, 2 * u - 1)
+
+        # Use inverse cdf transform for normal distribution to get truncated
+        # standard normal
+        tensor.erfinv_()
+
+        # Transform to proper mean, std
+        tensor.mul_(std * math.sqrt(2.0))
+        tensor.add_(mean)
+
+        # Clamp to ensure it's in the proper range
+        tensor.clamp_(min=a, max=b)
+        return tensor
 
 
 def constant_(tensor, val):
@@ -363,16 +369,7 @@ def eye_(tensor):
     if tensor.ndimension() != 2:
         raise ValueError("Only tensors with 2 dimensions are supported")
     with flow.no_grad():
-        # TODO: use flow._C.eye_ after eye_op supporting non-contiguous kernel
-        assign_tensor = flow.from_numpy(
-            np.eye(
-                tensor.shape[0],
-                tensor.shape[1],
-                dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
-            )
-        )
-        tensor[...] = assign_tensor
-        return tensor
+        return flow._C.eye_(tensor)
 
 
 def _calculate_fan_in_and_fan_out(tensor):

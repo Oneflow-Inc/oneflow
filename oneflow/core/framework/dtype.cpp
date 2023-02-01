@@ -32,8 +32,9 @@ std::size_t GetDataTypeBytes() {
 }
 
 #define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
-DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(
+    std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+    MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ));
 
 class DTypeMeta final {
  public:
@@ -247,6 +248,29 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
       /* cp16 */ {cp16,cp16,cp16,cp16,cp16,cp16,cp16,cp16,iv,  cp16,iv,  cp16,cp16,cp16,cp16,cp16,cp16, cp16,cp16, cp16, cp16, cp16}};
   // clang-format on
   return _promoteTypesLookup[static_cast<int>(a->data_type())][static_cast<int>(b->data_type())];
+}
+
+namespace {
+
+std::mutex default_dtype_mutex;
+Symbol<DType>* GetMutDefaultDTypeSymbol() {
+  static Symbol<DType> default_dtype = CHECK_JUST(DType::Get(DataType::kFloat));
+  return &default_dtype;
+}
+
+}  // namespace
+
+Maybe<void> SetDefaultDType(const Symbol<DType>& dtype) {
+  std::lock_guard<std::mutex> lock(default_dtype_mutex);
+  CHECK_OR_RETURN(dtype->is_floating_point())
+      << "only floating-point types are supported as the default type";
+  *GetMutDefaultDTypeSymbol() = dtype;
+  return Maybe<void>::Ok();
+}
+
+Symbol<DType> GetDefaultDType() {
+  std::lock_guard<std::mutex> lock(default_dtype_mutex);
+  return *GetMutDefaultDTypeSymbol();
 }
 
 }  // namespace oneflow

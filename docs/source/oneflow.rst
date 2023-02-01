@@ -37,6 +37,9 @@ Tensor
     is_nonzero
     numel
     set_printoptions
+    get_default_dtype
+    set_default_dtype
+    set_default_tensor_type
 
 .. _tensor-creation-ops:
 
@@ -63,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
@@ -103,6 +107,7 @@ Indexing, Slicing, Joining, Mutating Ops
     vsplit
     vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
@@ -261,6 +266,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 
@@ -311,10 +317,12 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
@@ -344,6 +352,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -385,6 +395,11 @@ Other Ops
     repeat_interleave
     triu
     cross
+    bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -394,7 +409,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm

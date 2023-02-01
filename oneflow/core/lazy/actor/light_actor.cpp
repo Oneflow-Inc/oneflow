@@ -191,6 +191,30 @@ size_t GetConsumerCount(const TaskProto& task) {
   return consumer_cnt;
 }
 
+bool NeedExecKernelWhenInplace(const TaskProto& task) {
+  int64_t data_regst_cnt = 0;
+  for (const auto& pair : task.produced_regst_desc()) {
+    if (pair.second.regst_desc_type().has_data_regst_desc()) {
+      if (data_regst_cnt != 0) { return true; }
+      data_regst_cnt += 1;
+      const DataRegstDesc& regst_desc = pair.second.regst_desc_type().data_regst_desc();
+      if (regst_desc.lbi2blob_desc().size() != 1) { return true; }
+      if (regst_desc.lbi2blob_desc().begin()->blob_desc().is_dynamic()) { return true; }
+    }
+  }
+  if (data_regst_cnt != 1) { return true; }
+  if (task.exec_sequence().exec_node().size() != 1) { return true; }
+  const OperatorConf& op_conf =
+      task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+  if (!op_conf.has_user_conf()) { return true; }
+  const std::string& op_type = op_conf.user_conf().op_type_name();
+  const bool is_const_inplace_op_type = (op_type == "expand_dims") || (op_type == "squeeze")
+                                        || (op_type == "reshape") || (op_type == "reshape_like")
+                                        || (op_type == "transpose");
+  if (!is_const_inplace_op_type) { return true; }
+  return false;
+}
+
 #ifdef WITH_CUDA_GRAPHS
 
 bool IsCUDAGraphSupported(const Kernel* kernel) {
@@ -412,8 +436,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       HandleRegstMsg(msg);
     } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
       HandleEordMsg(msg);
+    } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+      CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << msg.msg_type() << " " << actor_ctx_->task_proto().task_id();
     }
   }
 
@@ -551,6 +577,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    CHECK_JUST_MSG(kernel_ctx->stream()->GetAsyncError(), kernel->op_conf().name());
     Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForward(kernel_ctx, kernel);
@@ -662,7 +689,11 @@ ActorBase* DispatchNewLightActorInplace(ActorContext* actor_ctx) {
     }
   }
   if (inplace) {
-    return DispatchNewLightActorIndexType<kernel_exec, 1>(actor_ctx);
+    if (kernel_exec && NeedExecKernelWhenInplace(actor_ctx->task_proto())) {
+      return DispatchNewLightActorIndexType<1, 1>(actor_ctx);
+    } else {
+      return DispatchNewLightActorIndexType<0, 1>(actor_ctx);
+    }
   } else {
     return DispatchNewLightActorIndexType<kernel_exec, 0>(actor_ctx);
   }

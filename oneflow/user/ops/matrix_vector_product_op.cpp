@@ -33,7 +33,8 @@ Maybe<void> InferTensorDesc4MatrixVectorProduct(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4MatrixVectorProduct(user_op::InferContext* ctx) {
   DataType dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
-      << "Matrix A datatype should be equal to Vector B. ";
+      << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+      << DataType_Name(ctx->InputDType("b", 0));
   ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
 }
