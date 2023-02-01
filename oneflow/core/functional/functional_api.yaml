@@ -2494,11 +2494,11 @@
   bind_python: True
 
 - name: "flash_attention"
-  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Tensor mask=None, Tensor bias=None, Int32 max_seqlen_q, Int32 max_seqlen_k, Float softmax_scale, Bool causal, Float dropout_rate, Int32 num_splits=0) => FlashAttention"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Tensor indices=None, Tensor mask=None, Tensor bias=None, Int32 max_seqlen_q, Int32 max_seqlen_k, Float softmax_scale, Bool causal, Float dropout_rate, Int32 num_splits=0) => FlashAttention"
   bind_python: True
 
 - name: "flash_attention_grad"
-  signature: "TensorTuple (Tensor out_grad, Tensor out, Tensor softmax_lse, Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Tensor mask=None, Tensor bias=None, Int32 max_seqlen_q, Int32 max_seqlen_k, Float softmax_scale, Bool causal, Float dropout_rate, Int32 num_splits=0) => FlashAttentionGrad"
+  signature: "TensorTuple (Tensor out_grad, Tensor out, Tensor softmax_lse, Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Tensor indices=None, Tensor mask=None, Tensor bias=None, Int32 max_seqlen_q, Int32 max_seqlen_k, Float softmax_scale, Bool causal, Float dropout_rate, Int32 num_splits=0) => FlashAttentionGrad"
   bind_python: False
 
 - name: "fused_bias_add_gelu"

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
@@ -32,12 +33,13 @@ struct FlashAttentionCaptureState : public AutoGradCaptureState {
   int value_index = 2;
   int cu_seqlens_q_index = 3;
   int cu_seqlens_k_index = 4;
-  int mask_index = -5;
-  int bias_index = -6;
-  int out_index = 7;
-  int softmax_lse_index = 8;
-  int max_seqlen_q = 9;
-  int max_seqlen_k = 10;
+  int indices_index = -5;
+  int mask_index = -6;
+  int bias_index = -7;
+  int out_index = 8;
+  int softmax_lse_index = 9;
+  int max_seqlen_q = 10;
+  int max_seqlen_k = 11;
   float softmax_scale = 0.0;
   bool causal = false;
   float dropout_rate = 0.0;
@@ -54,7 +56,9 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     ctx->query_requires_grad = inputs.at(0)->requires_grad();  // query
     ctx->key_requires_grad = inputs.at(1)->requires_grad();    // key
     ctx->value_requires_grad = inputs.at(2)->requires_grad();  // value
-    int idx = 5;
+    int idx = 5;                                               // + cu_seqlens_q + cu_seqlens_k
+    bool has_indices = JUST(attrs.GetAttr<bool>("has_indices"));
+    if (has_indices) ctx->indices_index = idx++;
     bool has_mask = JUST(attrs.GetAttr<bool>("has_mask"));
     if (has_mask) ctx->mask_index = idx++;
     bool has_bias = JUST(attrs.GetAttr<bool>("has_bias"));
@@ -63,15 +67,16 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
       ctx->bias_index = idx++;
     }
     CHECK_EQ_OR_RETURN(inputs.size(), idx);
-    ctx->query_index = ctx->SaveTensorForBackward(inputs.at(0));           // query
-    ctx->key_index = ctx->SaveTensorForBackward(inputs.at(1));             // key
-    ctx->value_index = ctx->SaveTensorForBackward(inputs.at(2));           // value
-    ctx->cu_seqlens_q_index = ctx->SaveTensorForBackward(inputs.at(3));    // cu_seqlens_q_index
-    ctx->cu_seqlens_k_index = ctx->SaveTensorForBackward(inputs.at(4));    // cu_seqlens_k_index
-    if (has_mask) ctx->SaveTensorForBackward(inputs.at(ctx->mask_index));  // mask
-    if (has_bias) ctx->SaveTensorForBackward(inputs.at(ctx->bias_index));  // bias
-    ctx->out_index = ctx->SaveTensorForBackward(outputs.at(0));            // out
-    ctx->softmax_lse_index = ctx->SaveTensorForBackward(outputs.at(1));    // softmax_lse
+    ctx->query_index = ctx->SaveTensorForBackward(inputs.at(0));         // query
+    ctx->key_index = ctx->SaveTensorForBackward(inputs.at(1));           // key
+    ctx->value_index = ctx->SaveTensorForBackward(inputs.at(2));         // value
+    ctx->cu_seqlens_q_index = ctx->SaveTensorForBackward(inputs.at(3));  // cu_seqlens_q_index
+    ctx->cu_seqlens_k_index = ctx->SaveTensorForBackward(inputs.at(4));  // cu_seqlens_k_index
+    if (has_indices) ctx->SaveTensorForBackward(inputs.at(ctx->indices_index));  // indices
+    if (has_mask) ctx->SaveTensorForBackward(inputs.at(ctx->mask_index));        // mask
+    if (has_bias) ctx->SaveTensorForBackward(inputs.at(ctx->bias_index));        // bias
+    ctx->out_index = ctx->SaveTensorForBackward(outputs.at(0));                  // out
+    ctx->softmax_lse_index = ctx->SaveTensorForBackward(outputs.at(1));          // softmax_lse
     ctx->max_seqlen_q = JUST(attrs.GetAttr<int>("max_seqlen_q"));
     ctx->max_seqlen_k = JUST(attrs.GetAttr<int>("max_seqlen_k"));
     ctx->softmax_scale = JUST(attrs.GetAttr<float>("softmax_scale"));
@@ -93,6 +98,7 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
         saved_tensors.at(ctx->query_index), saved_tensors.at(ctx->key_index),
         saved_tensors.at(ctx->value_index), saved_tensors.at(ctx->cu_seqlens_q_index),
         saved_tensors.at(ctx->cu_seqlens_k_index),
+        ctx->indices_index > 0 ? saved_tensors.at(ctx->indices_index) : nullptr,
         ctx->mask_index > 0 ? saved_tensors.at(ctx->mask_index) : nullptr,
         ctx->bias_index > 0 ? saved_tensors.at(ctx->bias_index) : nullptr, ctx->max_seqlen_q,
         ctx->max_seqlen_k, ctx->softmax_scale, ctx->causal, ctx->dropout_rate, ctx->num_splits));
@@ -101,7 +107,10 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     if (ctx->key_requires_grad) { (*in_grads)[1] = results->at(1); }
     if (ctx->value_requires_grad) { (*in_grads)[2] = results->at(2); }
     if (ctx->bias_requires_grad) {
-      (*in_grads)[ctx->bias_index] = JUST(functional::ReduceSum(results->at(3), {0}, true));
+      if ((saved_tensors.at(ctx->bias_index)->shape()->At(0)) > 1)
+        (*in_grads)[ctx->bias_index] = results->at(3);
+      else
+        (*in_grads)[ctx->bias_index] = JUST(functional::ReduceSum(results->at(3), {0}, true));
     }
 
     return Maybe<void>::Ok();

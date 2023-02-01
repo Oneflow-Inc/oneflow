@@ -2697,6 +2697,7 @@ def OneFlow_FlashAttentionOp : OneFlow_BaseOp<"flash_attention", [NoSideEffect, 
     OneFlow_Tensor:$value,
     OneFlow_Tensor:$cu_seqlens_q,
     OneFlow_Tensor:$cu_seqlens_k,
+    Optional<OneFlow_Tensor>:$indices,
     Optional<OneFlow_Tensor>:$mask,
     Optional<OneFlow_Tensor>:$bias
   );
@@ -2729,6 +2730,7 @@ def OneFlow_FlashAttentionGradOp : OneFlow_BaseOp<"flash_attention_grad", [NoSid
     OneFlow_Tensor:$value,
     OneFlow_Tensor:$cu_seqlens_q,
     OneFlow_Tensor:$cu_seqlens_k,
+    Optional<OneFlow_Tensor>:$indices,
     Optional<OneFlow_Tensor>:$mask,
     Optional<OneFlow_Tensor>:$bias
   );

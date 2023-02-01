@@ -106,8 +106,8 @@ if(WITH_CUTLASS)
       set(OF_FLASH_ATTENTION_INCLUDE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include/csrc/flash_attn/src)
       FetchContent_Declare(
           flash-attention
-          URL     https://github.com/Oneflow-Inc/flash-attention/archive/185e563a23137d53860454039855c2e6a40b8e86.zip
-          URL_HASH MD5=490a556dbf813f202245d44f4c366519
+          URL     https://github.com/Oneflow-Inc/flash-attention/archive/88875b03c1d69ff408d2ddb6fb52725e38a76a8c.zip
+          URL_HASH MD5=55ad5f99494f5ef2a85934aac46892da
           SOURCE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include
       )
       FetchContent_MakeAvailable(flash-attention)

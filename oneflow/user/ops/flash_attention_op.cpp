@@ -27,8 +27,6 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   const Shape& cu_seqlens_q_shape = ctx->InputShape("cu_seqlens_q", 0);
   const Shape& cu_seqlens_k_shape = ctx->InputShape("cu_seqlens_k", 0);
   const int64_t q_axes = q_shape.NumAxes();
-  bool has_mask = ctx->has_input("mask", 0);
-  bool has_bias = ctx->has_input("bias", 0);
   CHECK_OR_RETURN((q_axes == 3) || (q_axes == 4))
       << "query shape num_axes should be 3[total_q x num_heads x head_size] or "
          "4[batch_size x seqlen_q x num_heads x head_size], but got "
