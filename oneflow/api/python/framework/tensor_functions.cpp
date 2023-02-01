@@ -222,6 +222,7 @@ UNARY_METHOD(PyTensorObject_log2, functional::Log2);
 UNARY_METHOD(PyTensorObject_log10, functional::Log10);
 UNARY_METHOD(PyTensorObject_reciprocal, functional::Reciprocal);
 UNARY_METHOD(PyTensorObject_ceil, functional::Ceil);
+UNARY_METHOD(PyTensorObject_ceil_, functional::Ceil_);
 UNARY_METHOD(PyTensorObject_erf, functional::Erf);
 UNARY_METHOD(PyTensorObject_erfc, functional::Erfc);
 UNARY_METHOD(PyTensorObject_erfinv, functional::Erfinv);
@@ -232,6 +233,7 @@ UNARY_METHOD(PyTensorObject_rsqrt, functional::Rsqrt);
 UNARY_METHOD(PyTensorObject_sqrt, functional::Sqrt);
 UNARY_METHOD(PyTensorObject_square, functional::Square);
 UNARY_METHOD(PyTensorObject_round, functional::Round);
+UNARY_METHOD(PyTensorObject_round_, functional::Round_);
 UNARY_METHOD(PyTensorObject_t, functional::TransposeAllDimFunction);
 UNARY_METHOD(PyTensorObject_isnan, functional::IsNan);
 UNARY_METHOD(PyTensorObject_isinf, functional::IsInf);
@@ -1061,6 +1063,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"atan", PyTensorObject_atan, METH_NOARGS, NULL},
     {"arctan", PyTensorObject_atan, METH_NOARGS, NULL},
     {"ceil", PyTensorObject_ceil, METH_NOARGS, NULL},
+    {"ceil_", PyTensorObject_ceil_, METH_NOARGS, NULL},
     {"cos", PyTensorObject_cos, METH_NOARGS, NULL},
     {"cosh", PyTensorObject_cosh, METH_NOARGS, NULL},
     {"erf", PyTensorObject_erf, METH_NOARGS, NULL},
@@ -1073,6 +1076,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sqrt", PyTensorObject_sqrt, METH_NOARGS, NULL},
     {"square", PyTensorObject_square, METH_NOARGS, NULL},
     {"round", PyTensorObject_round, METH_NOARGS, NULL},
+    {"round_", PyTensorObject_round_, METH_NOARGS, NULL},
     {"t", PyTensorObject_t, METH_NOARGS, NULL},
     {"sin", PyTensorObject_sin, METH_NOARGS, NULL},
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},

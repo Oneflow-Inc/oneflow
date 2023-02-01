@@ -431,9 +431,9 @@
 - name: "logaddexp"
   signature: "Tensor (Tensor x, Tensor y) => LogAddExp"
   bind_python: True
-  
+
 - name: "quantile"
-  signature: 'Tensor (Tensor x, Scalar q, Int32 dim, Bool keepdim=False, String interpolation="linear", Tensor out=None) => Quantile'
+  signature: 'Tensor (Tensor input, Tensor q, Int64 dim, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) => Quantile'
   bind_python: True
 
 - name: "transpose"
@@ -932,6 +932,10 @@
 
 - name: "ones_like"
   signature: "Tensor (Tensor x) => OnesLike"
+  bind_python: False
+
+- name: "full_like"
+  signature: "Tensor (Tensor x, Scalar fill_value) => FullLike"
   bind_python: False
 
 - name: "bernoulli"
@@ -1832,6 +1836,10 @@
   signature: "Tensor (Tensor x) => Ceil"
   bind_python: True
 
+- name: "ceil_"
+  signature: "Tensor (Tensor x) => Ceil_"
+  bind_python: True
+
 - name: "ceil_grad"
   signature: "Tensor (Tensor x, Tensor dy) => CeilGrad"
   bind_python: False
@@ -1906,6 +1914,10 @@
 
 - name: "round"
   signature: "Tensor (Tensor x) => Round"
+  bind_python: True
+
+- name: "round_"
+  signature: "Tensor (Tensor x) => Round_"
   bind_python: True
 
 - name: "round_grad"
