@@ -2686,9 +2686,9 @@ class ScalarLerpGradFunctor {
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& start,
-                           const std::shared_ptr<one::Tensor>& end,
-                           const std::shared_ptr<one::Tensor>& out_diff,
-                           const Scalar& weight) const {
+                                const std::shared_ptr<one::Tensor>& end,
+                                const std::shared_ptr<one::Tensor>& out_diff,
+                                const Scalar& weight) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
                                                  "int_operand", "has_int_operand");
     if (weight.IsFloatingPoint()) {
