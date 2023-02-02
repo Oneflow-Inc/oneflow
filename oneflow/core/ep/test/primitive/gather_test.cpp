@@ -36,26 +36,38 @@ template<typename ParamsType, typename IndicesType>
 struct TestGatherTensorPack {
     using InOutTensor = Eigen::Tensor<ParamsType, 4, Eigen::RowMajor>;
     using IndicesTensor = Eigen::Tensor<IndicesType, 2, Eigen::RowMajor>;
+    size_t batch_dim_size;
+    size_t outer_dim_size;
+    size_t gather_dim_size;
+    size_t inner_dim_size;
+    size_t per_batch_indices_size;
     InOutTensor *params;
     IndicesTensor *indices;
     InOutTensor *out;
+
     TestGatherTensorPack(
         size_t batch_dim_size, 
         size_t outer_dim_size,
         size_t gather_dim_size,
         size_t inner_dim_size,
         size_t per_batch_indices_size
-    ) : params(
-            std::unique_ptr<InOutTensor>(new InOutTensor(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size))
-        ), 
-        indices(std::unique_ptr<IndicesTensor>(new IndicesTensor(batch_dim_size, per_batch_indices_size))),
-        out(std::unique_ptr<InOutTensor>(new InOutTensor(batch_dim_size, outer_dim_size, per_batch_indices_size, inner_dim_size))){
+    ) : batch_dim_size(batch_dim_size), 
+        outer_dim_size(outer_dim_size),
+        gather_dim_size(gather_dim_size),
+        inner_dim_size(inner_dim_size),
+        per_batch_indices_size(per_batch_indices_size){
+            params = std::unique_ptr<InOutTensor>(new InOutTensor(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size));
+            indices = std::unique_ptr<IndicesTensor>(new IndicesTensor(batch_dim_size, per_batch_indices_size));
+            out = std::unique_ptr<InOutTensor>(new InOutTensor(batch_dim_size, outer_dim_size, per_batch_indices_size, inner_dim_size));
+
             params.setRandom();
             out.setZero();
             IndicesType* indices_data = indices.data();
             for(size_t i=0; i<batch_dim_size*per_batch_indices_size; i++){
                 indices_data[i] = std::rand() % gather_dim_size;
             }
+
+            
     }
 };
 
@@ -104,6 +116,7 @@ void TestGather(DeviceManagerRegistry* registry, const std::set<DeviceType>& dev
             std::cout << "per_batch_indices_size:   " << e[4] << std::endl;
             auto test_tensor_pack 
                 = NewTestGatherTensorPack<ParamsType, IndicesType>(e[0], e[1], e[2], e[3], e[4]);
+            
         }
     }
 } 

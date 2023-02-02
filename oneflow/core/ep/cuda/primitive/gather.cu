@@ -61,8 +61,8 @@ __global__ void GatherForwardGpu(IDX elem_cnt, NdIndexOffsetHelper<IDX, NumDims>
   int16_t gather_dim_index = NumDims - 2;
   CUDA_1D_KERNEL_LOOP_T(IDX, out_offset, elem_cnt) {
     out_helper.OffsetToNdIndex(out_offset, nd_index);
-    indices_nd_index[0] = nd_index[0];  // batch dim size
-    indices_nd_index[1] = nd_index[gather_dim_index];  // gather dim size
+    indices_nd_index[0] = nd_index[0];                  // batch dim size
+    indices_nd_index[1] = nd_index[gather_dim_index];   // gather dim size
     nd_index[gather_dim_index] = indices[indices_helper.NdIndexToOffset(indices_nd_index)] - offset;
     PackedType v{};
     if (nd_index[gather_dim_index] >= 0 && nd_index[gather_dim_index] < gather_dim_size) {
@@ -184,7 +184,6 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() override = default;
 
-  // TODO: batch_dim_size=1， outer_dim_size=1 优化
   // TODO: 测试的时候记得测试 非 pack 情况
   using Gather::Launch;
   void Launch(Stream* stream, size_t batch_dim_size, size_t outer_dim_size,
