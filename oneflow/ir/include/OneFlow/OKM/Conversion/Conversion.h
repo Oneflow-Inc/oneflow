@@ -21,7 +21,7 @@ limitations under the License.
 namespace mlir {
 namespace okm {
 
-LogicalResult LowerWrapOpsToOKMAndOKL(ModuleOp module);
+LogicalResult LowerWrapOpsToOKL(ModuleOp module);
 
 }
 }

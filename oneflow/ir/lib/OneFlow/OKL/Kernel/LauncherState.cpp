@@ -44,7 +44,7 @@ mlir::OwningOpRef<mlir::ModuleOp> GetModule(user_op::KernelInitContext* ctx,
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
-  if (failed(mlir::okm::LowerWrapOpsToOKMAndOKL(*module))) {
+  if (failed(mlir::okm::LowerWrapOpsToOKL(*module))) {
     LOG(FATAL) << "Fail lowering kernel launch Module to okm and okl ir";
   }
   return module;

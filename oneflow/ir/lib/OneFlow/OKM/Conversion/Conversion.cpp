@@ -20,7 +20,7 @@ limitations under the License.
 namespace mlir {
 namespace okm {
 
-LogicalResult LowerWrapOpsToOKMAndOKL(ModuleOp module) {
+LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
   PassManager pm(module->getContext());
   pm.addPass(createExtractOKMTensorPass());
   pm.addPass(createWrapOKMKernelPass());
