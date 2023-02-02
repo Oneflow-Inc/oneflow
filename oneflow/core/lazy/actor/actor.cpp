@@ -577,8 +577,8 @@ void Actor::PrepareProducedNaiveInplaceDataRegst() {
       if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
         CHECK(regst->body_mem_ptr() == nullptr);
         void* body_ptr = nullptr;
-        actor_ctx_->stream_ctx()->stream()->AllocAsync(
-            &body_ptr, regst->regst_desc()->BodyByteSize4OneRegst());
+        CHECK_JUST(actor_ctx_->stream_ctx()->stream()->AllocAsync(
+            &body_ptr, regst->regst_desc()->BodyByteSize4OneRegst()));
         regst->ResetBodyMemPtr(body_ptr);
       } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
         // do nothing
@@ -613,7 +613,7 @@ void Actor::HandleProducedNaiveDataRegstToConsumer() {
         tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
       } else {
         if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
-          actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr());
+          CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
           regst->ResetBodyMemPtr(nullptr);
         } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
           // do nothing
@@ -715,7 +715,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
     CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
   } else if (naive_produced_rs_.TryPushBackRegst(regst) == 0) {
     if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
-      actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr());
+      CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
       regst->ResetBodyMemPtr(nullptr);
     } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
       // do nothing

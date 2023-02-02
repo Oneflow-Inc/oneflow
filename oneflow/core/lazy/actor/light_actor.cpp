@@ -437,7 +437,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
             if (inplace && i == inplace_produced_index_[0]) {
               // do nothing
             } else {
-              actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr());
+              CHECK_JUST(
+                  actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr()));
             }
             state.regst->ResetBodyMemPtr(nullptr);
           } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
@@ -493,7 +494,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
           if (inplace && index == inplace_produced_index_[0]) {
             // do nothing
           } else {
-            actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr());
+            CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr()));
           }
           state.regst->ResetBodyMemPtr(nullptr);
         } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
@@ -536,8 +537,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
           if (inplace && i == inplace_produced_index_[0]) {
             body_ptr = index2state_.Get(inplace_consumed_index_[0]).regst->body_mem_ptr();
           } else {
-            actor_ctx_->stream_ctx()->stream()->AllocAsync(
-                &body_ptr, state.regst->regst_desc()->BodyByteSize4OneRegst());
+            CHECK_JUST(actor_ctx_->stream_ctx()->stream()->AllocAsync(
+                &body_ptr, state.regst->regst_desc()->BodyByteSize4OneRegst()));
           }
           state.regst->ResetBodyMemPtr(body_ptr);
         } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
