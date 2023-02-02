@@ -17,8 +17,11 @@ limitations under the License.
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "OneFlow/OKM/Conversion/Conversion.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OKM/passes.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "OneFlow/OneFlowDialect.h"
@@ -54,13 +57,26 @@ JITEngine GetEngine(mlir::ModuleOp module) {
   return JITEngine(module);
 }
 
+int GetGraphIndex(mlir::ModuleOp module) {
+  int res = -1;
+  module->walk([&](mlir::func::FuncOp op) {
+    if (auto name = op.getSymName(); name.startswith(mlir::okm::func_name::OKL_GRAPH_NAME)) {
+      const auto index = name.substr(mlir::okm::func_name::OKL_GRAPH_NAME.size()).str();
+      res = stoi(index);
+    }
+  });
+  if (res == -1) { LOG(FATAL) << "Fail to fetch graph index"; }
+  return res;
+}
+
 }  // namespace
 
 LauncherState::LauncherState(user_op::KernelInitContext* ctx)
     : mlir_ctx_(GetRegistry()),
       module_(GetModule(ctx, &mlir_ctx_)),
       launcher_context_(module_->clone()),
-      engine_(GetEngine(module_->clone())){};
+      engine_(GetEngine(module_->clone())),
+      graph_index_(GetGraphIndex(*module_)){};
 
 bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
   const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
@@ -74,7 +90,8 @@ bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
 
 void LauncherState::DoCompute(user_op::KernelComputeContext* ctx) {
   launcher_context_.Infer(ctx);
-  engine_.Run(mlir::oneflow::okl_func::OKL_FUNC, &launcher_context_);
+  engine_.Run(mlir::okm::func_name::OKL_GRAPH_NAME + std::to_string(graph_index_),
+              &launcher_context_);
 }
 
 }  // namespace okl

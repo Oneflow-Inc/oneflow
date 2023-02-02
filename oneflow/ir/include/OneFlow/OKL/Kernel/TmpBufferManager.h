@@ -25,7 +25,7 @@ namespace okl {
 class TmpBufferManager {
   class TmpBufferTensor final : public oneflow::user_op::Tensor {
    public:
-    explicit TmpBufferTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
+    explicit TmpBufferTensor(user_op::Tensor* tensor,const user_op::TensorDesc* tensor_desc, int offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
           tensor_desc_(tensor_desc) {}
@@ -42,20 +42,20 @@ class TmpBufferManager {
    private:
     user_op::Tensor* tensor_;
     void* raw_dptr_;
-    user_op::TensorDesc* tensor_desc_;
+    const user_op::TensorDesc* tensor_desc_;
   };
 
  public:
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
-  user_op::Tensor* GetBufferTensor(user_op::TensorDesc* tensor_desc, int offset = 0) {
+  user_op::Tensor* GetBufferTensor(const user_op::TensorDesc* tensor_desc, int offset = 0) {
     auto res = map_.insert({tensor_desc, TmpBufferTensor(tensor_, tensor_desc, offset)}).first;
     return &res->second;
   }
 
  private:
-  std::unordered_map<user_op::TensorDesc*, TmpBufferTensor> map_{};
+  std::unordered_map<const user_op::TensorDesc*, TmpBufferTensor> map_{};
   user_op::Tensor* tensor_;
 };
 

@@ -60,7 +60,6 @@ class TensorInfo {
           })
           .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse source of tensor"; });
     }
-    Dump();
   };
 
   void Dump() {

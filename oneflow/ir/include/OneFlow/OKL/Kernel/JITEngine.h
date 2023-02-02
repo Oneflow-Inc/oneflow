@@ -35,8 +35,7 @@ class JITEngine {
   explicit JITEngine(mlir::ModuleOp module);
 
   void Run(const std::string& name, LauncherContext* launcher) const {
-    // TODO(yuhao): Just For Test
-    auto error = engine_->invoke("okl_subgraph0", launcher);
+    auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
 
