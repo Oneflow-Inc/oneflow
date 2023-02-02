@@ -34,11 +34,11 @@ namespace oneflow {
 
 namespace {
 
-class InsertNcclLogicalOpPass final : public JobPass {
+class NcclLogicalOpFusionPass final : public JobPass {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(InsertNcclLogicalOpPass);
-  InsertNcclLogicalOpPass() = default;
-  ~InsertNcclLogicalOpPass() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalOpFusionPass);
+  NcclLogicalOpFusionPass() = default;
+  ~NcclLogicalOpFusionPass() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
@@ -775,6 +775,61 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     const HashMap<const OpNode*, int64_t>& op_node2global_order,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable,
     const OpNode* bw_sink_op) {
+  const OpNode* first_acc_op = ordered_acc_op_nodes.front();
+  std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
+  std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
+  VLOG(3) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
+          << ") in Job: " << job_builder->job().job_conf().job_name()
+          << ", we will try insert special identity and ctrl for "
+          << " UNSAFE handle ALL nccl ops between different time shape: "
+          << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
+          << "\n\n"
+          << " Debug: before acc op: " << bw_sink_op->op().op_conf().DebugString()
+          << " -> after acc op: " << first_acc_op->op().op_conf().DebugString();
+  CHECK_GE(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
+  CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
+
+  // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
+  //  after_acc_nccl_ops start.
+  const auto& obns = bw_sink_op->op().output_bns();
+  CHECK(!obns.empty());
+  const std::string bw_sink_op_out_lbn =
+      GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
+  VLOG(3) << " bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
+
+  user_op::UserOpConfWrapper cast_to_tick_op =
+      user_op::UserOpConfWrapperBuilder("System-CastToTick-" + NewUniqueId())
+          .OpTypeName("cast_to_tick")
+          .Input("in", bw_sink_op_out_lbn)
+          .Output("out")
+          .ScopeSymbolId(bw_sink_op->op().op_conf().scope_symbol_id())
+          .Build();
+
+  std::string bw_sink_tick_lbn = cast_to_tick_op.output("out", 0);
+  // NOTE(chengcheng): for acc can be merged in bw subgraph, so bw sink op maybe acc itself,
+  //   in this case, there is no need insert acc tick.
+  OperatorConf bw_sink_acc_tick_conf;
+  if (time_shape_before_acc->elem_cnt() > time_shape_after_acc->elem_cnt()) {
+    bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
+    bw_sink_acc_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
+    auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
+    acc_conf->set_one(bw_sink_tick_lbn);
+    acc_conf->set_acc("acc");
+    acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
+    bw_sink_tick_lbn = GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc");
+  } else {
+    CHECK(bw_sink_op->op().op_conf().has_user_conf());
+    CHECK_EQ(bw_sink_op->op().op_conf().user_conf().op_type_name(), "acc");
+  }
+
+  OperatorConf bw_sink_final_tick_conf;
+  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
+                                   + NewUniqueId());
+  bw_sink_final_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
+  auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
+  tick_conf->add_tick(bw_sink_tick_lbn);
+  tick_conf->set_out("out");
+
   // insert nccl ops after acc
   std::vector<const OpNode*> ordered_after_acc_subgraph;
   GenAfterAccSubgraph(&ordered_after_acc_subgraph, op_node2global_order, ordered_acc_op_nodes);
@@ -803,6 +858,37 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     CHECK(after_acc_nccl_parallel_confs.empty());
     CHECK(mut_op_names.empty());
   } else {
+    // insert bw sink acc tick ops
+    CHECK_JUST(
+        job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), cast_to_tick_op.op_conf()));
+    VLOG(3) << " Insert cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
+
+    if (time_shape_before_acc->elem_cnt() > time_shape_after_acc->elem_cnt()) {
+      CHECK_JUST(
+          job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf));
+      VLOG(3) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    }
+
+    CHECK_JUST(
+        job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_final_tick_conf));
+    VLOG(3) << " Insert bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
+
+    // add ctrl for strict order.
+    for (int64_t i = 1; i < ordered_after_acc_subgraph.size(); ++i) {
+      const OpNode* this_node = ordered_after_acc_subgraph.at(i);
+      const OpNode* pre_node = ordered_after_acc_subgraph.at(i - 1);
+      const std::string& this_op_name = this_node->op().op_name();
+      const std::string& pre_op_name = pre_node->op().op_name();
+      // build ctrl edge if need.
+      if (!IsReachable(pre_op_name, this_op_name)) {
+        acc_subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_op_name);
+        mut_op_names.insert(this_op_name);
+      }
+    }
+
+    // insert ctrl edge between bw sink -> first nccl after acc
+    after_acc_nccl_op_confs.front().add_ctrl_in_op_name(bw_sink_final_tick_conf.name());
+
     // insert nccl ops after acc
     std::vector<OperatorConf> mut_op_confs;
     mut_op_confs.reserve(mut_op_names.size());
@@ -819,7 +905,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   }
 }
 
-Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
   HashMap<const OpNode*, int64_t> op_node2global_order;
   op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
@@ -920,7 +1006,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
 }  // namespace
 
-REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
+REGISTER_JOB_PASS("NcclLogicalOpFusionPass", NcclLogicalOpFusionPass);
 
 }  // namespace oneflow
 
