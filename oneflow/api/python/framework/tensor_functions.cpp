@@ -337,6 +337,7 @@ DIRECT_PASS_FUNC(PyTensorObject_lerp, functional::lerp)
 DIRECT_PASS_FUNC(PyTensorObject_lerp_, functional::lerp_)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_quantile, functional::quantile)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1092,6 +1093,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"quantile", (PyCFunction)PyTensorObject_quantile, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 

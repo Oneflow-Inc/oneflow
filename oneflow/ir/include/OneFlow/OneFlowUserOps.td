@@ -8822,7 +8822,7 @@ def OneFlow_ScalarLerpOp : OneFlow_BaseOp<"scalar_lerp", [NoSideEffect, DeclareO
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
+ 
 def OneFlow_ScalarLerpGradOp : OneFlow_BaseOp<"scalar_lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$start,

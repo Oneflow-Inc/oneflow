@@ -226,16 +226,10 @@ class ScalarLerpGradKernel final : public user_op::OpKernel {
 
 REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCPU, float, double)
 REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCPU, double, double)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCPU, int8_t, int64_t)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCPU, int32_t, int64_t)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCPU, int64_t, int64_t)
 #ifdef WITH_CUDA
 REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, half, double)
 REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, float, double)
 REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, double, double)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, int8_t, int64_t)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, int32_t, int64_t)
-REGISTER_SCALAR_LERP_GRAD_KERNEL(DeviceType::kCUDA, int64_t, int64_t)
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

@@ -198,6 +198,7 @@ Tensor class reference
     Tensor.byte
     Tensor.cast
     Tensor.ceil
+    Tensor.ceil_
     Tensor.chunk
     Tensor.clamp
     Tensor.clamp_
@@ -263,6 +264,7 @@ Tensor class reference
     Tensor.isnan
     Tensor.item
     Tensor.le
+    Tensor.lerp
     Tensor.log
     Tensor.log1p
     Tensor.log2
@@ -316,6 +318,7 @@ Tensor class reference
     Tensor.retain_grad
     Tensor.roll
     Tensor.round
+    Tensor.round_
     Tensor.rsqrt
     Tensor.selu
     Tensor.shape

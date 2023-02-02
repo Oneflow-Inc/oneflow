@@ -261,10 +261,11 @@
   bind_python: False
 
 - name: "lerp"
-  signature: [
-    "Tensor (Tensor start, Tensor end, Tensor weight) => Lerp",
-    "Tensor (Tensor start, Tensor end, Scalar weight) => ScalarLerp"
-  ]
+  signature: 
+    [
+      "Tensor (Tensor start, Tensor end, Tensor weight) => Lerp",
+      "Tensor (Tensor start, Tensor end, Scalar weight) => ScalarLerp"
+    ]
   bind_python: True
 
 - name: "lerp_"
