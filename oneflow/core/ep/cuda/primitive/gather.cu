@@ -26,7 +26,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace ep {
-
 namespace primitive {
 
 namespace gather {
@@ -238,7 +237,6 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, GatherFactory, GatherFactoryImpl);
 }  // namespace gather
 
 }  // namespace primitive
-
 }  // namespace ep
 
 }  // namespace oneflow

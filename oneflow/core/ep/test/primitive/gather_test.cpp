@@ -26,7 +26,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace ep {
-
 namespace primitive {
 
 namespace test {
@@ -239,7 +238,7 @@ void TestGather(DeviceManagerRegistry* registry, const std::set<DeviceType>& dev
 
       delete test_tensor_pack;
 #if TEST_GATHER_LOG_OUTPUT
-      std::cout << ">>>>>>>>>>>>>>> TEST END <<<<<<<<<<<<<<<\n" << std::endl;
+      std::cout << ">>>>>>>>>>>>>>> TEST PASSED <<<<<<<<<<<<<<<\n" << std::endl;
 #endif
 #undef TEST_GATHER_LOG_OUTPUT
     }
@@ -258,7 +257,6 @@ TEST_F(PrimitiveTest, TestGather) {
 }  // namespace test
 
 }  // namespace primitive
-
 }  // namespace ep
 
 }  // namespace oneflow
