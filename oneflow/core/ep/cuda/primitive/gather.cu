@@ -31,18 +31,20 @@ namespace primitive {
 
 namespace gather {
 
-namespace internal {
+namespace {
 
-template<typename PackedType, typename IndicesType, typename IDX, int NumDims, typename std::enable_if<NumDims==3 || NumDims==2, int>::type = 0>
+template<typename PackedType, typename IndicesType, typename IDX, int NumDims,
+         typename std::enable_if<NumDims == 3 || NumDims == 2, int>::type = 0>
 __global__ void GatherForwardGpu(IDX elem_cnt, NdIndexOffsetHelper<IDX, NumDims> in_helper,
                                  NdIndexOffsetHelper<IDX, NumDims> out_helper,
                                  NdIndexOffsetHelper<IDX, 2> indices_helper, IDX gather_dim_size,
-                                 const PackedType* in, PackedType* out, const IndicesType* indices, IDX indices_size, IDX offset) {
+                                 const PackedType* in, PackedType* out, const IndicesType* indices,
+                                 IDX indices_size, IDX offset) {
   IDX nd_index[NumDims];
   int16_t gather_dim_index = NumDims - 2;
   CUDA_1D_KERNEL_LOOP_T(IDX, out_offset, elem_cnt) {
     out_helper.OffsetToNdIndex(out_offset, nd_index);
-    nd_index[gather_dim_index] = indices[ nd_index[gather_dim_index] ] - offset;
+    nd_index[gather_dim_index] = indices[nd_index[gather_dim_index]] - offset;
     PackedType v{};
     if (nd_index[gather_dim_index] >= 0 && nd_index[gather_dim_index] < gather_dim_size) {
       v = in[in_helper.NdIndexToOffset(nd_index)];
@@ -51,18 +53,20 @@ __global__ void GatherForwardGpu(IDX elem_cnt, NdIndexOffsetHelper<IDX, NumDims>
   }
 }
 
-template<typename PackedType, typename IndicesType, typename IDX, int NumDims, typename std::enable_if<NumDims == 4, int>::type = 0>
+template<typename PackedType, typename IndicesType, typename IDX, int NumDims,
+         typename std::enable_if<NumDims == 4, int>::type = 0>
 __global__ void GatherForwardGpu(IDX elem_cnt, NdIndexOffsetHelper<IDX, NumDims> in_helper,
                                  NdIndexOffsetHelper<IDX, NumDims> out_helper,
                                  NdIndexOffsetHelper<IDX, 2> indices_helper, IDX gather_dim_size,
-                                 const PackedType* in, PackedType* out, const IndicesType* indices, IDX indices_size, IDX offset) {
+                                 const PackedType* in, PackedType* out, const IndicesType* indices,
+                                 IDX indices_size, IDX offset) {
   IDX nd_index[NumDims];
   IDX indices_nd_index[2];
   int16_t gather_dim_index = NumDims - 2;
   CUDA_1D_KERNEL_LOOP_T(IDX, out_offset, elem_cnt) {
     out_helper.OffsetToNdIndex(out_offset, nd_index);
-    indices_nd_index[0] = nd_index[0];                  // batch dim size
-    indices_nd_index[1] = nd_index[gather_dim_index];   // gather dim size
+    indices_nd_index[0] = nd_index[0];                 // batch dim size
+    indices_nd_index[1] = nd_index[gather_dim_index];  // gather dim size
     nd_index[gather_dim_index] = indices[indices_helper.NdIndexToOffset(indices_nd_index)] - offset;
     PackedType v{};
     if (nd_index[gather_dim_index] >= 0 && nd_index[gather_dim_index] < gather_dim_size) {
@@ -90,14 +94,14 @@ void LaunchGatherKernel(cudaStream_t cuda_stream, IDX batch_dim_size, IDX outer_
   IDX per_batch_indices_size = indices_size / batch_dim_size;
   NdIndexOffsetHelper<IDX, 2> indices_helper(batch_dim_size, per_batch_indices_size);
 
-  if(batch_dim_size == 1 && outer_dim_size == 1){
+  if (batch_dim_size == 1 && outer_dim_size == 1) {
     NdIndexOffsetHelper<IDX, 2> in_helper(gather_dim_size, inner_dim_size);
     NdIndexOffsetHelper<IDX, 2> out_helper(out_gather_dim_size, inner_dim_size);
     GatherForwardGpu<PackedType, IndicesType, IDX, 2>
         <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
             out_elem_cnt, in_helper, out_helper, indices_helper, gather_dim_size, in, out, indices,
             indices_size, offset);
-  } else if(batch_dim_size == 1) {
+  } else if (batch_dim_size == 1) {
     NdIndexOffsetHelper<IDX, 3> in_helper(outer_dim_size, gather_dim_size, inner_dim_size);
     NdIndexOffsetHelper<IDX, 3> out_helper(outer_dim_size, out_gather_dim_size, inner_dim_size);
     GatherForwardGpu<PackedType, IndicesType, IDX, 3>
@@ -106,9 +110,9 @@ void LaunchGatherKernel(cudaStream_t cuda_stream, IDX batch_dim_size, IDX outer_
             indices_size, offset);
   } else {
     NdIndexOffsetHelper<IDX, 4> in_helper(batch_dim_size, outer_dim_size, gather_dim_size,
-                                        inner_dim_size);
-    NdIndexOffsetHelper<IDX, 4> out_helper(batch_dim_size, outer_dim_size, out_gather_dim_size,
                                           inner_dim_size);
+    NdIndexOffsetHelper<IDX, 4> out_helper(batch_dim_size, outer_dim_size, out_gather_dim_size,
+                                           inner_dim_size);
     GatherForwardGpu<PackedType, IndicesType, IDX, 4>
         <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
             out_elem_cnt, in_helper, out_helper, indices_helper, gather_dim_size, in, out, indices,
@@ -177,28 +181,28 @@ void DispatchPackedSize(cudaStream_t cuda_stream, size_t batch_dim_size, size_t 
   }
 }
 
-template<typename T, typename IndicesType>
+template<typename ParamsType, typename IndicesType>
 class GatherImpl : public Gather {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherImpl);
   GatherImpl() = default;
   ~GatherImpl() override = default;
 
-  // TODO: 测试的时候记得测试 非 pack 情况
   using Gather::Launch;
-  void Launch(Stream* stream, size_t batch_dim_size, size_t outer_dim_size,
-              size_t gather_dim_size, size_t inner_dim_size, size_t offset, const void* in, 
-              size_t indices_size, const void* indices, void* out) override {
+  void Launch(Stream* stream, size_t batch_dim_size, size_t outer_dim_size, size_t gather_dim_size,
+              size_t inner_dim_size, size_t offset, const void* in, size_t indices_size,
+              const void* indices, void* out) override {
     cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
-    DispatchPackedSize<IndicesType>(
-        cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size * sizeof(T),
-        in, out, reinterpret_cast<IndicesType*>(const_cast<void*>(indices)), indices_size, offset);
+    DispatchPackedSize<IndicesType>(cuda_stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                    inner_dim_size * sizeof(ParamsType), in, out,
+                                    reinterpret_cast<IndicesType*>(const_cast<void*>(indices)),
+                                    indices_size, offset);
   }
 };
 
-template<typename T, typename IndicesType>
+template<typename ParamsType, typename IndicesType>
 std::unique_ptr<Gather> NewGather() {
-  return std::unique_ptr<Gather>(new GatherImpl<T, IndicesType>());
+  return std::unique_ptr<Gather>(new GatherImpl<ParamsType, IndicesType>());
 }
 
 class GatherFactoryImpl : public GatherFactory {
@@ -229,7 +233,7 @@ class GatherFactoryImpl : public GatherFactory {
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, GatherFactory, GatherFactoryImpl);
 
-}  // namespace internal
+}  // namespace
 
 }  // namespace gather
 

@@ -33,8 +33,8 @@ class Gather : public Primitive {
   ~Gather() override = default;
 
   virtual void Launch(Stream* stream, size_t batch_dim_size, size_t outer_dim_size,
-              size_t gather_dim_size, size_t inner_dim_size, size_t offset, const void* in, 
-              size_t indices_size, const void* indices, void* out) = 0;
+                      size_t gather_dim_size, size_t inner_dim_size, size_t offset, const void* in,
+                      size_t indices_size, const void* indices, void* out) = 0;
 };
 
 class GatherFactory : public Factory<Gather> {
