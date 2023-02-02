@@ -60,7 +60,26 @@ class TensorInfo {
           })
           .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse source of tensor"; });
     }
+    Dump();
   };
+
+  void Dump() {
+    auto get_str = [](Source s) {
+      switch (s) {
+        case Source::arguments: return "arg";
+        case Source::results: return "ret";
+        default: return "tmp";
+      }
+    };
+    llvm::errs() << "\nins:";
+    for (auto [source, index] : ins_) {
+      llvm::errs() << "\n  " << get_str(source) << "(" << index << ")";
+    }
+    llvm::errs() << "\nouts:";
+    for (auto [source, index] : outs_) {
+      llvm::errs() << "\n  " << get_str(source) << "(" << index << ")";
+    }
+  }
 
  private:
   llvm::SmallVector<ArgInfo> ins_, outs_;

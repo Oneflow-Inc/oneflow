@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 extern "C" {
-void _mlir_okl_llvm_func(void* launcher, int64_t index) {
+void okl_llvm_func(void* launcher, int64_t index) {
   static_cast<typename std::tuple_element_t<0, oneflow::okl::LLVMLaunchArgs>>(launcher)->Launch(
       index);
 }
