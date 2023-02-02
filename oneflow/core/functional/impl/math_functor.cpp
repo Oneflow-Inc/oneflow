@@ -1037,13 +1037,13 @@ class QuantileFunctor {
  public:
   QuantileFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& q, const int64_t dim,
+                           const std::shared_ptr<one::Tensor>& q, const Optional<int64_t>& dim,
                            const bool keepdim, const std::string& interpolation,
                            const bool ignore_nan) const {
     CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
     CHECK_LE_OR_RETURN(q->ndim(), 1)
         << "oneflow.quantile only support `q` tensor is a scalar or 1D tensor.";
-    int64_t wrapped_dim = JUST(maybe_wrap_dim(dim, input->ndim()));
+    int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
 
     // NOTE(hujiakui): this check is only performed when running on the CPU to avoid
     // synchronizing an accelerator with the CPU
@@ -1071,22 +1071,19 @@ class QuantileFunctor {
     auto out_shape = quantile_output_shape(dim, input, q, keepdim, wrapped_dim);
 
     std::shared_ptr<Tensor> sorted;
-    if (!dim) {
+    if (!dim.has_value()) {
       sorted = JUST(functional::Flatten(input, 0, -1));
       sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
     } else if (wrapped_dim == input->ndim() - 1) {
       sorted = JUST(functional::Sort(input, -1, false))->at(0);
     } else {
-      sorted = JUST(functional::Unsqueeze(input, -1));
+      sorted = JUST(functional::Unsqueeze(input, input->ndim() - 1));
       std::vector<int32_t> perm(sorted->ndim());
       std::iota(perm.begin(), perm.end(), 0);
-      std::swap(perm[wrapped_dim], perm[-1]);
-      sorted = JUST(view::Transpose(sorted, perm = perm));
+      std::swap(perm[wrapped_dim], perm[perm.size() - 1]);
+      sorted = JUST(view::Transpose(sorted, perm));
       sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
     }
-
-    // q ==> 1-D Tensor
-    if (q->ndim() == 0) { out_shape.insert(out_shape.begin(), q->nelement()); }
 
     std::vector<int64_t> in_shape(out_shape.size());
     std::copy(out_shape.begin() + 1, out_shape.end(), in_shape.begin());
@@ -1102,7 +1099,6 @@ class QuantileFunctor {
     std::shared_ptr<Tensor> ranks;
 
     if (ignore_nan) {
-      // TODO(hujiakui): not for composite compliance.
       ranks = JUST(
           functional::Mul(JUST(functional::ScalarSub(
                               JUST(functional::ReduceSum(
@@ -1122,6 +1118,153 @@ class QuantileFunctor {
                std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
                /*keepdim=*/true))}));
       ranks = JUST(functional::MaskedFill(tl->at(0), tl->at(1), Scalar(last_index)));
+    }
+
+    if (interpolation == "lower") {
+      JUST(functional::Floor_(ranks));
+    } else if (interpolation == "higher") {
+      JUST(functional::Ceil_(ranks));
+    } else if (interpolation == "nearest") {
+      JUST(functional::Round_(ranks));
+    }
+
+    std::shared_ptr<Tensor> ranks_below = JUST(functional::Cast(ranks, DType::Int64(),
+                                                                /*pin_memory=*/false));
+    std::shared_ptr<Tensor> values_below =
+        JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_below, false));
+
+    if (interpolation == "linear" || interpolation == "midpoint") {
+      std::shared_ptr<Tensor> weights = interpolation == "midpoint"
+                                            ? JUST(functional::FullLike(ranks, Scalar(0.5)))
+                                            : JUST(functional::Sub(ranks, ranks_below, Scalar(1.0),
+                                                                   /*inplace=*/false));
+      JUST(functional::Ceil_(ranks));
+      std::shared_ptr<Tensor> ranks_above =
+          JUST(functional::Cast(ranks, DType::Int64(), /*pin_memory=*/false));
+      std::shared_ptr<Tensor> values_above =
+          JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_above, false));
+
+      values_below = JUST(functional::Lerp(values_below, values_above, weights));
+    }
+
+    values_below = JUST(view::Unsqueeze(values_below, 0));
+
+    int32_t ndim = values_below->ndim();
+    std::vector<int32_t> perm(ndim);
+    std::iota(perm.begin(), perm.end(), 0);
+    std::swap(perm[0], perm[perm.size() - 1]);
+    values_below = JUST(view::Transpose(values_below, perm));
+
+    values_below = JUST(view::Squeeze(
+        values_below, std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)})));
+
+    return values_below;
+  }
+
+ private:
+  static inline std::vector<int64_t> quantile_output_shape(const Optional<int64_t>& dim,
+                                                           const std::shared_ptr<Tensor>& input,
+                                                           const std::shared_ptr<Tensor>& q,
+                                                           const bool keepdim,
+                                                           int64_t wrapped_dim) {
+    // Compute output shape: q_size + reduced_size
+    std::vector<int64_t> out_shape;
+    if (dim.has_value() && input->ndim() > 0) {
+      out_shape =
+          std::vector<int64_t>(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+      if (keepdim) {
+        out_shape[wrapped_dim] = 1;
+      } else {
+        out_shape.erase(out_shape.begin() + wrapped_dim);
+      }
+    } else if (keepdim) {
+      out_shape = std::vector<int64_t>(input->ndim(), 1);
+    }
+    out_shape.insert(out_shape.begin(), q->nelement());
+
+    return out_shape;
+  }
+};
+
+class ScalarQuantileFunctor {
+ public:
+  ScalarQuantileFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& q,
+                           const Optional<int64_t>& dim, const bool& keepdim,
+                           const std::string& interpolation, const bool& ignore_nan) const {
+    CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
+    int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
+    double qf = 0;
+    if (q.IsIntegral()) {
+      qf = static_cast<double>(q.As<int64_t>());
+    } else {
+      qf = q.As<double>();
+    }
+    CHECK_OR_RETURN(qf <= 1.0 && qf >= 0.0)
+        << "oneflow.quantile q values must be in the range [0, 1]";
+
+    // calculate the shape of output
+    auto out_shape = quantile_output_shape(dim, input, q, keepdim, wrapped_dim);
+
+    std::shared_ptr<Tensor> sorted;
+    if (!dim.has_value()) {
+      sorted = JUST(functional::Flatten(input, 0, -1));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    } else if (wrapped_dim == input->ndim() - 1) {
+      sorted = JUST(functional::Sort(input, -1, false))->at(0);
+    } else {
+      sorted = JUST(functional::Unsqueeze(input, input->ndim() - 1));
+      std::vector<int32_t> perm(sorted->ndim());
+      std::iota(perm.begin(), perm.end(), 0);
+      std::swap(perm[wrapped_dim], perm[perm.size() - 1]);
+      sorted = JUST(view::Transpose(sorted, perm));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    }
+
+    // q ==> 1-D Tensor
+    out_shape.insert(out_shape.begin(), 1);
+
+    std::vector<int64_t> in_shape(out_shape.size());
+    std::copy(out_shape.begin() + 1, out_shape.end(), in_shape.begin());
+    in_shape[in_shape.size() - 1] = sorted->dim(sorted->ndim() - 1);
+    DimVector inv(in_shape.size());
+    for (int i = 0; i < in_shape.size(); ++i) { inv[i] = in_shape[i]; }
+    const Shape step_shape(inv);
+    sorted = JUST(functional::View(sorted->contiguous(), step_shape));
+
+    CHECK_LE_OR_RETURN(sorted->dim(sorted->ndim() - 1), std::pow(2, 24))
+        << "oneflow.quantile input tensor is too large";
+
+    std::shared_ptr<Tensor> ranks;
+
+    if (ignore_nan) {
+      ranks = JUST(functional::ScalarMul(
+          JUST(functional::ScalarSub(
+              JUST(functional::ReduceSum(
+                  JUST(functional::LogicalNot(JUST(functional::IsNan(sorted)))),
+                  std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+                  /*keepdim=*/true)),
+              Scalar(1), Scalar(1), /*inplace=*/false)),
+          q, /*inplace=*/false));
+      ranks = JUST(functional::MaskedFill(
+          ranks, JUST(functional::ScalarLogicalLess(ranks, Scalar(0))), Scalar(0)));
+    } else {
+      int64_t last_index = sorted->dim(sorted->ndim() - 1) - 1;
+      std::shared_ptr<Tensor> tl_index = JUST(
+          functional::ReduceAny(JUST(functional::IsNan(sorted)),
+                                std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+                                /*keepdim=*/true));
+      std::shared_ptr<Tensor> tl_value;
+      if (input->is_local()) {
+        tl_value = JUST(functional::Empty(*(tl_index->shape()), DType::Float(),
+                                          JUST(tl_index->device()), /*pin_memory=*/false));
+      } else {
+        tl_value = JUST(functional::GlobalEmpty(
+            *(tl_index->shape()), DType::Float(), JUST(tl_index->parallel_desc()),
+            *JUST(private_details::RawGetSbpList(JUST(tl_index->nd_sbp())))));
+      }
+      tl_value = JUST(functional::Fill(tl_value, Scalar(qf * last_index)));
+      ranks = JUST(functional::MaskedFill(tl_value, tl_index, Scalar(last_index)));
     }
 
     // adjust ranks based on the interpolation mode
@@ -1149,17 +1292,8 @@ class QuantileFunctor {
       std::shared_ptr<Tensor> values_above =
           JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_above, false));
 
-      // TODO(hujiakui): not for composite compliance.
       values_below = JUST(functional::Lerp(values_below, values_above, weights));
     }
-
-    values_below = JUST(view::Unsqueeze(values_below, 0));
-
-    int32_t ndim = values_below->ndim();
-    std::vector<int32_t> perm(ndim);
-    std::iota(perm.begin(), perm.end(), 0);
-    std::swap(perm[0], perm[perm.size() - 1]);
-    values_below = JUST(view::Transpose(values_below, perm));
 
     values_below = JUST(view::Squeeze(
         values_below, std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)})));
@@ -1168,14 +1302,13 @@ class QuantileFunctor {
   }
 
  private:
-  static inline std::vector<int64_t> quantile_output_shape(const int64_t dim,
+  static inline std::vector<int64_t> quantile_output_shape(const Optional<int64_t>& dim,
                                                            const std::shared_ptr<Tensor>& input,
-                                                           const std::shared_ptr<Tensor>& q,
-                                                           const bool keepdim,
+                                                           const Scalar& q, const bool keepdim,
                                                            int64_t wrapped_dim) {
     // Compute output shape: q_size + reduced_size
     std::vector<int64_t> out_shape;
-    if (dim && input->ndim() > 0) {
+    if (dim.has_value() && input->ndim() > 0) {
       out_shape =
           std::vector<int64_t>(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
       if (keepdim) {
@@ -1186,7 +1319,6 @@ class QuantileFunctor {
     } else if (keepdim) {
       out_shape = std::vector<int64_t>(input->ndim(), 1);
     }
-    if (q->ndim() > 0) { out_shape.insert(out_shape.begin(), q->nelement()); }
 
     return out_shape;
   }
@@ -4277,6 +4409,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<LogSumExpFunctor>("LogSumExp");
   m.add_functor<LogAddExpFunctor>("LogAddExp");
   m.add_functor<QuantileFunctor>("Quantile");
+  m.add_functor<ScalarQuantileFunctor>("ScalarQuantile");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");

@@ -42,7 +42,7 @@ template<>
 __global__ void ScalarLerpForwardGpu<half, int64_t>(const int n, const half* start,
                                                     const int64_t weight, const half* end,
                                                     half* out) {
-  const half weight_clac = __double2half(static_cast<double>(weight));
+  const half weight_clac = __float2half(static_cast<float>(weight));
   CUDA_1D_KERNEL_LOOP(i, n) {
     const half start_i = start[i];
     out[i] = start_i + weight_clac * (end[i] - start_i);
@@ -53,7 +53,7 @@ template<>
 __global__ void ScalarLerpForwardGpu<half, double>(const int n, const half* start,
                                                    const double weight, const half* end,
                                                    half* out) {
-  const half weight_clac = __double2half(static_cast<double>(weight));
+  const half weight_clac = __float2half(static_cast<float>(weight));
   CUDA_1D_KERNEL_LOOP(i, n) {
     const half start_i = start[i];
     out[i] = start_i + weight_clac * (end[i] - start_i);
@@ -89,7 +89,7 @@ __global__ void ScalarLerpBackwardGpu<half, int64_t>(const int n, const half* st
                                                      const int64_t weight, const half* end,
                                                      const half* out_diff, half* start_diff,
                                                      half* end_diff) {
-  const half weight_clac = __double2half(static_cast<double>(weight));
+  const half weight_clac = __float2half(static_cast<float>(weight));
   CUDA_1D_KERNEL_LOOP(i, n) {
     half out_diff_i = out_diff[i];
     const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;
@@ -103,7 +103,7 @@ __global__ void ScalarLerpBackwardGpu<half, double>(const int n, const half* sta
                                                     const double weight, const half* end,
                                                     const half* out_diff, half* start_diff,
                                                     half* end_diff) {
-  const half weight_clac = __double2half(static_cast<double>(weight));
+  const half weight_clac = __float2half(static_cast<float>(weight));
   CUDA_1D_KERNEL_LOOP(i, n) {
     half out_diff_i = out_diff[i];
     const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;

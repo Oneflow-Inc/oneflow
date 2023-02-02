@@ -433,7 +433,11 @@
   bind_python: True
 
 - name: "quantile"
-  signature: 'Tensor (Tensor input, Tensor q, Int64 dim, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) => Quantile'
+  signature: 
+    [
+      'Tensor (Tensor input, Tensor q, Int64 dim=None, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) => Quantile',
+      'Tensor (Tensor input, Scalar q, Int64 dim=None, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) ==> ScalarQuantile'
+    ]
   bind_python: True
 
 - name: "transpose"
