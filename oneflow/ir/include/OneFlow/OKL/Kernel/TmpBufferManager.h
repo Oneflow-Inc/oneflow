@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMPBUFFERMANAGER_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMPBUFFERMANAGER_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
 #include <unordered_map>
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
@@ -62,4 +62,4 @@ class TmpBufferManager {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMPBUFFERMANAGER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
