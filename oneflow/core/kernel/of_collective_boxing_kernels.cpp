@@ -126,7 +126,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
   CallbackFunc cb_func = cb_lambda;
   
-  VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before ofcclRunAllReduce coll_id = " << coll_id << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
+  VLOG(2) << "actor " << actor_id << " Rank<" << rank_desc.rank() << "> before invoke ofccl coll_id = " << coll_id;// << " ofccl_rank_ctx @ " << ofccl_rank_ctx;
 
   if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
