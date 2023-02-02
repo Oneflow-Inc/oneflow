@@ -914,33 +914,6 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
   }
 };
 
-struct UpdateOKLAssemblyPattern : public mlir::OpRewritePattern<oneflow::KernelLaunchOp> {
-  explicit UpdateOKLAssemblyPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::KernelLaunchOp>(context, /*benefit=*/0) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::KernelLaunchOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    auto sym_name = op.callee();
-    auto job = op->getParentOp();
-    auto module = job->getParentOfType<ModuleOp>();
-    if (!module) { LOG(FATAL) << "Fail to fetching module op from kernel launch op"; }
-    if (sym_name.startswith(okm::func_name::GRAPH_NAME)) {
-      // rename function
-      const auto index = sym_name.substr(okm::func_name::GRAPH_NAME.size()).str();
-      const std::string rename = okm::func_name::OKL_GRAPH_NAME + index;
-      if (auto asm_func = module.lookupSymbol(rename)) {
-        op.calleeAttr(SymbolRefAttr::get(job));
-        op->setAttr("op_name", rewriter.getStringAttr(rename));
-        if (failed(DumpAssembly(rewriter, op, rename))) { LOG(FATAL) << "Fail to dump asm"; }
-        rewriter.eraseOp(asm_func);
-        return success();
-      }
-      LOG(FATAL) << "Fail to finding " << rename << " in module";
-      return success();
-    }
-    return failure();
-  }
-};
-
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context, bool trim = false)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
@@ -1109,10 +1082,6 @@ void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns
 
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
-}
-
-void populateUpdateOKLAssemblyPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<UpdateOKLAssemblyPattern>(patterns.getContext());
 }
 
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,

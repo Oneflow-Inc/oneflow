@@ -56,7 +56,6 @@ void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                            const std::string& mode);
 void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
 void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns);
-void populateUpdateOKLAssemblyPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);

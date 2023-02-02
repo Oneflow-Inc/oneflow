@@ -51,11 +51,6 @@ def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
   let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
 }
 
-def UpdateOKLAssemblyPass : Pass<"update-okl-assembly", "ModuleOp"> {
-  let summary = "update okl assembly";
-  let constructor = "mlir::oneflow::createUpdateOKLAssemblyPass()";
-}
-
 def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
   let summary = "lower oneflow dialect ops to okl dialect";
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
