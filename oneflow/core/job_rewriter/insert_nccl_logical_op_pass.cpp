@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
@@ -715,6 +716,26 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     op2subgraph_order.emplace(ordered_after_acc_subgraph.at(i), i);
   }
 
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+    for (int64_t i = 1; i < ordered_after_acc_subgraph.size(); ++i) {
+      const OpNode* this_node = ordered_after_acc_subgraph.at(i);
+      const OpNode* pre_node = ordered_after_acc_subgraph.at(i - 1);
+      const std::string& this_op_name = this_node->op().op_name();
+      const std::string& pre_op_name = pre_node->op().op_name();
+      // build ctrl edge if need.
+      if (!IsReachable(pre_op_name, this_op_name)) {
+        auto it = mut_consumer_name2op->find(this_op_name);
+        if (it == mut_consumer_name2op->end()) {
+          auto ret_pair = mut_consumer_name2op->emplace(this_op_name, this_node->op().op_conf());
+          CHECK(ret_pair.second);
+          it = ret_pair.first;
+        }
+        OperatorConf* mut_op_conf = &(it->second);
+        mut_op_conf->add_ctrl_in_op_name(pre_op_name);
+      }
+    }
+  }
+
   for (int64_t i = 0; i < nccl_op_infos.size(); ++i) {
     auto& info = nccl_op_infos.at(i);
     if (i == 0) {
@@ -804,6 +825,7 @@ void InsertNcclLogicalOpsInSubGraph(
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
 
   // add ctrl for strict order.
+  bool disable_logical_straighten = ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false);
   for (int64_t i = 1; i < subgraph_order.size(); ++i) {
     const OpNode* this_node = subgraph_order.at(i);
     const OpNode* pre_node = subgraph_order.at(i - 1);
@@ -811,7 +833,10 @@ void InsertNcclLogicalOpsInSubGraph(
     const std::string& pre_op_name = pre_node->op().op_name();
     CHECK(subgraph_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).second);
     // build ctrl edge if need.
-    if (!IsReachable(pre_op_name, this_op_name)) { mut_op_names.insert(this_op_name); }
+    if (disable_logical_straighten && !IsReachable(pre_op_name, this_op_name)) {
+      subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_op_name);
+      mut_op_names.insert(this_op_name);
+    }
   }
 
   std::vector<OperatorConf> nccl_op_confs;
