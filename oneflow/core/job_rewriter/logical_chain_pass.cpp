@@ -525,6 +525,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   GetLogicalChainsWithTimeShape(&logical_chains, ordered_op_nodes, seed_time_shape);
   if (logical_chains.size() == 0) { return Maybe<void>::Ok(); }
 
+  // TODO(chengcheng): handle logical chain id by nccl logical
   int64_t logical_chain_id = 0;
   auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
     return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);

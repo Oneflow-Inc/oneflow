@@ -137,8 +137,6 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
 
   HashSet<const OpNode*> visited;
 
-  int64_t subgraph_order = 0;
-
   for (const OpNode* seed_node : order) {
     if (visited.find(seed_node) != visited.end()) { continue; }
     CHECK(visited.insert(seed_node).second);
@@ -162,8 +160,6 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
       const OpNode* cur_node = queued_nodes.front();
       queued_nodes.pop();
 
-      VLOG(3) << "SubGraph: " << subgraph_order << " Op: " << cur_node->op().op_name();
-
       CHECK(cur_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc));
       CHECK(this_subgraph.insert(cur_node).second);
 
@@ -176,8 +172,6 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
         }
       });
     }
-
-    subgraph_order++;
 
     if (this_subgraph.size() > 1) {
       ret->emplace_back(HashSet<const OpNode*>());
@@ -522,53 +516,6 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   return false;
 }
 
-void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
-    HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
-    std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
-    const std::vector<const OpNode*>& subgraph_order,
-    const HashMap<const OpNode*, int64_t>& node2subgraph_order) {
-  for (const OpNode* src_node : subgraph_order) {
-    const std::string& src_op_name = src_node->op().op_name();
-    for (const OpEdge* op_edge : src_node->out_edges()) {
-      const OpNode* dst_node = op_edge->dst_node();
-      const std::string& dst_op_name = dst_node->op().op_name();
-      CHECK(src_node != dst_node);
-      if (subgraph_op_name2conf->find(dst_op_name) == subgraph_op_name2conf->end()) {
-        // NOTE(chengcheng): child node is not in this subgraph.
-        continue;
-      }
-      for (const LogicalBlobId& lbi : op_edge->lbis()) {
-        OperatorConf nccl_op;
-        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
-        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
-        NdSbp src_reduced_nd_sbp;
-        NdSbp dst_reduced_nd_sbp;
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
-                                       &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
-                                       &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
-          continue;
-        }
-        mut_op_names->insert(dst_op_name);
-        // insert nccl op
-        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
-        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
-          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
-              &subgraph_op_name2conf->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
-        }
-        // NOTE(chengcheng): Do NOT add ctrl edge for nccl fusion.
-
-        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
-                  << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << "] to [" << dst_op_name
-                  << ", sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << "]\n";
-        }
-        nccl_op_confs->emplace_back(nccl_op);
-        nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
-      }
-    }
-  }
-}
-
 void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
     HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
     std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
@@ -707,7 +654,7 @@ void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable,
-    uint32_t* stream_offset) {
+    uint32_t* stream_offset, const int64_t logical_chain_id) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
   node2subgraph_order.reserve(subgraph_order.size());
   for (int64_t i = 0; i < subgraph_order.size(); ++i) {
@@ -747,12 +694,16 @@ void InsertNcclLogicalOpsInSubGraph(
     }
     std::string stream_index_name = GetStreamIndexName(nccl_compute_stream_id);
 
-    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
+    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index and logical chain id.
     for (auto& pair : subgraph_op_name2conf) {
       mut_op_names.insert(pair.first);
       pair.second.set_stream_name_hint(stream_index_name);
+      pair.second.set_logical_chain_id(logical_chain_id);
     }
-    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_name_hint(stream_index_name); }
+    for (auto& nccl_op : nccl_op_confs) {
+      nccl_op.set_stream_name_hint(stream_index_name);
+      nccl_op.set_logical_chain_id(logical_chain_id);
+    }
     (*stream_offset)++;
   } while (false);
 
@@ -774,7 +725,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     const std::vector<const OpNode*>& ordered_acc_op_nodes,
     const HashMap<const OpNode*, int64_t>& op_node2global_order,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable,
-    const OpNode* bw_sink_op) {
+    const int64_t logical_chain_id) {
   // insert nccl ops after acc
   std::vector<const OpNode*> ordered_after_acc_subgraph;
   GenAfterAccSubgraph(&ordered_after_acc_subgraph, op_node2global_order, ordered_acc_op_nodes);
@@ -803,6 +754,15 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     CHECK(after_acc_nccl_parallel_confs.empty());
     CHECK(mut_op_names.empty());
   } else {
+    // set logical chain id for ops after acc
+    for (auto& pair : acc_subgraph_op_name2conf) {
+      mut_op_names.insert(pair.first);
+      pair.second.set_logical_chain_id(logical_chain_id);
+    }
+    for (auto& nccl_op : after_acc_nccl_op_confs) {
+      nccl_op.set_logical_chain_id(logical_chain_id);
+    }
+
     // insert nccl ops after acc
     std::vector<OperatorConf> mut_op_confs;
     mut_op_confs.reserve(mut_op_names.size());
@@ -830,6 +790,9 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   std::vector<HashSet<const OpNode*>> subgraph_list;
   FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
   if (subgraph_list.size() == 0) { return Maybe<void>::Ok(); }
+
+  // sign subgraph ops ad logical chain id for merge.
+  int64_t global_logical_chain_id = 0;
 
   auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
     return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
@@ -861,6 +824,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                                       CmpOpNodeOrder);
   }
   for (auto& pair : placement2subgraphs) {
+    // TODO(chengcheng): move sort to merge nccl
     std::sort(pair.second.ordered_subgraph.begin(), pair.second.ordered_subgraph.end(),
               CmpSubGraphOrder);
   }
@@ -885,7 +849,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     for (int i = 0; i < info.ordered_subgraph.size(); i++) {
       auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
       InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable,
-                                     &stream_offset);
+                                     &stream_offset, global_logical_chain_id++);
       total_op_num += ordered_op_nodes.size();
     }
     if (stream_offset >= 2 && total_op_num >= 1000) {
@@ -901,17 +865,10 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
-    const OpNode* bw_sink_op = info.ordered_subgraph.front()->end_op;
-    for (int i = 1; i < info.ordered_subgraph.size(); i++) {
-      const OpNode* this_end_op = info.ordered_subgraph.at(i)->end_op;
-      if (CmpOpNodeOrder(bw_sink_op, this_end_op)) { bw_sink_op = this_end_op; }
-    }
-    const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
-
-    if (!ordered_acc_op_nodes.empty()) {
+    if (!info.ordered_acc_op_nodes.empty()) {
       InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
-          op_graph, job_builder, ordered_acc_op_nodes, op_node2global_order, IsReachable,
-          bw_sink_op);
+          op_graph, job_builder, info.ordered_acc_op_nodes, op_node2global_order, IsReachable,
+          global_logical_chain_id++);
     }
   }
 
