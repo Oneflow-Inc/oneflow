@@ -34,6 +34,8 @@ namespace oneflow {
 
 namespace {
 
+bool disable_logical_straighten = ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false);
+
 class InsertNcclLogicalOpPass final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InsertNcclLogicalOpPass);
@@ -529,12 +531,14 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
           }
 
           // add necessary ctrl edge for strict order
-          if (nccl_op_confs->size() >= 1) {
-            // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert
-            //  multi-nccl
-            const std::string& pre_nccl_op_name =
-                nccl_op_confs->at(nccl_op_confs->size() - 1).name();
-            nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+          if (disable_logical_straighten) {
+            if (nccl_op_confs->size() >= 1) {
+              // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert
+              //  multi-nccl
+              const std::string& pre_nccl_op_name =
+                  nccl_op_confs->at(nccl_op_confs->size() - 1).name();
+              nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+            }
           }
 
           // NOTE(chengcheng): dst_node Maybe not the first node in subgraph, try find the
@@ -551,7 +555,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
             if (src_op_name != pre_op_name) {
               // NOTE(chengcheng): MUST add ctrl edge for strict exec order
               CHECK(!pre_op_name.empty());
-              nccl_op.add_ctrl_in_op_name(pre_op_name);
+              if (disable_logical_straighten) { nccl_op.add_ctrl_in_op_name(pre_op_name); }
             }
           } else {
             pre_op_name = src_op_name;
@@ -716,7 +720,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     op2subgraph_order.emplace(ordered_after_acc_subgraph.at(i), i);
   }
 
-  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+  if (disable_logical_straighten) {
     for (int64_t i = 1; i < ordered_after_acc_subgraph.size(); ++i) {
       const OpNode* this_node = ordered_after_acc_subgraph.at(i);
       const OpNode* pre_node = ordered_after_acc_subgraph.at(i - 1);
@@ -740,7 +744,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     auto& info = nccl_op_infos.at(i);
     if (i == 0) {
       info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_tick_op_name);
-    } else {
+    } else if (disable_logical_straighten) {
       info.nccl_op_conf.add_ctrl_in_op_name(nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
 
@@ -749,20 +753,22 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     VLOG(3) << info.debug_str;
 
     // NOTE(chengcheng): Try add ctrl between nccl and src op next node for strict exec order.
-    auto src_op_it = op2subgraph_order.find(info.src_node);
-    if (src_op_it != op2subgraph_order.end()) {
-      const int64_t src_sub_order = src_op_it->second;
-      const int64_t next_sub_order = src_sub_order + 1;
-      if (next_sub_order < ordered_after_acc_subgraph.size()) {
-        const OpNode* next_op = ordered_after_acc_subgraph.at(next_sub_order);
-        const std::string& next_op_name = next_op->op().op_name();
-        const std::string& dst_op_name = info.dst_node->op().op_name();
-        if (next_op_name != dst_op_name) {
-          if (mut_consumer_name2op->find(next_op_name) == mut_consumer_name2op->end()) {
-            CHECK(mut_consumer_name2op->emplace(next_op_name, next_op->op().op_conf()).second);
+    if (disable_logical_straighten) {
+      auto src_op_it = op2subgraph_order.find(info.src_node);
+      if (src_op_it != op2subgraph_order.end()) {
+        const int64_t src_sub_order = src_op_it->second;
+        const int64_t next_sub_order = src_sub_order + 1;
+        if (next_sub_order < ordered_after_acc_subgraph.size()) {
+          const OpNode* next_op = ordered_after_acc_subgraph.at(next_sub_order);
+          const std::string& next_op_name = next_op->op().op_name();
+          const std::string& dst_op_name = info.dst_node->op().op_name();
+          if (next_op_name != dst_op_name) {
+            if (mut_consumer_name2op->find(next_op_name) == mut_consumer_name2op->end()) {
+              CHECK(mut_consumer_name2op->emplace(next_op_name, next_op->op().op_conf()).second);
+            }
+            // NOTE(chengcheng): MUST add ctrl edge for strict exec order
+            mut_consumer_name2op->at(next_op_name).add_ctrl_in_op_name(info.nccl_op_conf.name());
           }
-          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
-          mut_consumer_name2op->at(next_op_name).add_ctrl_in_op_name(info.nccl_op_conf.name());
         }
       }
     }
@@ -825,7 +831,6 @@ void InsertNcclLogicalOpsInSubGraph(
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
 
   // add ctrl for strict order.
-  bool disable_logical_straighten = ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false);
   for (int64_t i = 1; i < subgraph_order.size(); ++i) {
     const OpNode* this_node = subgraph_order.at(i);
     const OpNode* pre_node = subgraph_order.at(i - 1);
