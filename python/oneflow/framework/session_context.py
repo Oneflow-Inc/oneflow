@@ -48,7 +48,8 @@ def TryCloseDefaultSession():
     assert default_sess_id in _sess_id2sess
     if default_sess_id in _sess_id2sess:
         del _sess_id2sess[default_sess_id]
-    assert oneflow._oneflow_internal.ClearSessionId(default_sess_id)
+    # Try clear to avoid using this outdated session.
+    oneflow._oneflow_internal.ClearSessionId(default_sess_id)
 
 
 def try_init_default_session(func):

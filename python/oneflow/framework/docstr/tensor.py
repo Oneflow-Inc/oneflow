@@ -1160,6 +1160,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.gt_,
+    """Tensor.gt_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.gt`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.log1p,
     """
     See :func:`oneflow.log1p`
@@ -2489,5 +2496,21 @@ add_docstr(
         >>> x, counts = x.unique(return_counts=True)
         >>> counts
         tensor([1, 1, 1, 1], dtype=oneflow.int32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clone,
+    """
+    See :func:`oneflow.clone`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.clone()
+        tensor([1, 2, 3], dtype=oneflow.int64)
     """,
 )

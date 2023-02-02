@@ -1,8 +1,10 @@
 import os
+from pathlib import Path
+
 
 this_file = os.path.dirname(os.path.abspath(__file__))
 src_root = os.path.join(this_file, "..")
-src_root = os.path.abspath(src_root)
+src_root = Path(os.path.abspath(src_root))
 
 
 def check_unwanted_test_scripts(python_test_dir=None, allowed=None):
@@ -47,14 +49,23 @@ def check_dir_empty(path):
                 raise ValueError(dirpath, "must be empty")
 
 
+oneflow_test_dir = src_root / "python" / "oneflow" / "test"
+save_load_test_data_dirs = [
+    os.path.relpath(x[0], oneflow_test_dir)
+    for x in os.walk(oneflow_test_dir / "modules" / "save_load_test_data")
+]
+
+print(save_load_test_data_dirs)
+
 check_unwanted_test_scripts(
-    python_test_dir=os.path.join(src_root, "python/oneflow/test"),
+    python_test_dir=oneflow_test_dir,
     allowed=[
         "custom_ops",
         "dataloader",
         "graph",
         "models",
         "modules",
+        *save_load_test_data_dirs,
         "tensor",
         "exceptions",
         "expensive",
@@ -63,13 +74,3 @@ check_unwanted_test_scripts(
         "profiler",
     ],
 )
-
-check_unwanted_test_scripts(
-    python_test_dir=os.path.join(
-        src_root, "python/oneflow/compatible/single_client/test"
-    ),
-    allowed=["models", "ops", "serving",],
-)
-
-check_dir_empty(os.path.join(src_root, "oneflow/python"))
-check_dir_empty(os.path.join(src_root, "oneflow/compatible_single_client_python"))
