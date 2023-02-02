@@ -13,27 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OKL/passes.h"
-#include "OneFlow/OKL/OKLAttributes.h"
-#include "OneFlow/OKM/passes.h"
-#include "OneFlow/Transform/OutlineAndFuse.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "OneFlow/OneFlowPDLLPatterns.h"
-#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/SymbolTable.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "OneFlow/SBP/SBPImporter.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowUtils.h"
@@ -41,15 +33,26 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowPatternUtils.h"
 #include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "OneFlow/OKM/Conversion/Conversion.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/framework/variable_tensor_mgr.h"
-#include "oneflow/core/operator/variable_op.h"
-#include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
+#include "OneFlow/Transform/OutlineAndFuse.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+#include "OneFlow/OKL/passes.h"
+#include "OneFlow/OKL/OKLAttributes.h"
+#include "OneFlow/OKM/passes.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -98,19 +101,19 @@ limitations under the License.
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
-#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/OKL/Kernel/RegContext.h"
-#include "OneFlow/OKM/Conversion/Conversion.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
 #include <memory>
 #include <vector>
+#include <iostream>
+#include <string>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -126,10 +129,6 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #endif  // WITH_CUDA
 
-#include "llvm/ADT/STLExtras.h"
-
-#include <iostream>
-#include <string>
 
 namespace mlir {
 namespace oneflow {
