@@ -145,6 +145,8 @@ void set_params_fprop(FMHA_fprop_params& params, bool is_bf16,
   params.o_row_stride_in_elts = num_head * head_size;
   params.o_head_stride_in_elts = head_size;
   params.o_tmp_ptr = o_tmp_d;
+  params.o_tmp_row_stride_in_elts = num_head * head_size;
+  params.o_tmp_head_stride_in_elts = head_size;
 
   params.cu_seqlens_q = static_cast<int32_t*>(cu_seqlens_q_d);
   params.cu_seqlens_k = static_cast<int32_t*>(cu_seqlens_k_d);
