@@ -387,6 +387,12 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertIsNone(x.grad)
         test_case.assertIsNotNone(y.grad)
         w.backward(gradient=grad, retain_graph=True)
+        # autocast test for fill_
+        x = flow.tensor([2.4, 3.5], device="cuda", dtype=flow.float16)
+        with flow.amp.autocast("cuda", flow.float16):
+            y = x.clone()
+            y.fill_(2.36)
+            test_case.assertTrue(y.dtype == flow.float16)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_autograd_fill_cuda(test_case):

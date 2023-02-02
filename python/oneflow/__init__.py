@@ -90,6 +90,7 @@ from oneflow._C import sinh
 from oneflow._C import tan
 from oneflow._C import greater
 from oneflow._C import greater as gt
+from oneflow._C import greater_ as gt_
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
@@ -242,6 +243,7 @@ from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
+from oneflow._C import clone
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -261,8 +263,8 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.tensor_str import set_printoptions
 
-__oneflow_global_unique_env = env_util.GetEnv()
-session_ctx.NewDefaultSession(__oneflow_global_unique_env)
+_oneflow_global_unique_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(_oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
@@ -300,7 +302,7 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    __oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
+    _oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
     oneflow.framework.session_context.TryCloseDefaultSession()
 
 

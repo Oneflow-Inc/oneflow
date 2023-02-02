@@ -70,6 +70,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor)
 
 #define BINARY_ACTIVATION_BACKWARD_OP_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIdentityBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEluBackwardWithDyX)         \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCeluBackwardWithDyY)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGeluBackwardWithDyX)        \
@@ -80,6 +81,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLeakyReluBackwardWithDyX)   \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMishBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReluBackwardWithDyY)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReluBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSeluBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSiluBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftsignBackwardWithDyX)    \
@@ -115,6 +117,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kRsqrtBackwardWithDyX)           \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinBackwardWithDyX)             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSigmoidBackwardWithDyY)         \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSigmoidBackwardWithDyX)         \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinhBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSqrtBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSquareBackwardWithDyX)          \
