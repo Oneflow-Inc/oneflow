@@ -68,12 +68,14 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr() const {
+    CHECK_NOTNULL(dptr_);
     CheckDataType<T>(data_type());
     return reinterpret_cast<T*>(static_cast<char*>(dptr_)
                                 + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* mut_dptr() {
+    CHECK_NOTNULL(dptr_);
     this->blob_access_checker()->CheckBodyMutable();
     CheckDataType<T>(data_type());
     return reinterpret_cast<T*>(static_cast<char*>(dptr_)
@@ -81,17 +83,20 @@ class Blob final {
   }
   template<typename T = void>
   T* ForceMutDptr() {
+    CHECK_NOTNULL(dptr_);
     CheckDataType<T>(data_type());
     return reinterpret_cast<T*>(static_cast<char*>(dptr_)
                                 + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   const T* raw_dptr() const {
+    CHECK_NOTNULL(dptr_);
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
   template<typename T = void>
   T* mut_raw_dptr() {
+    CHECK_NOTNULL(dptr_);
     this->blob_access_checker()->CheckBodyMutable();
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);

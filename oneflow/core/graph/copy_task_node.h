@@ -49,6 +49,8 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   void Init(CopyHdType, const DeviceId& device_id, const LogicalBlobId& lbi);
 
+  void ProduceAllRegstsAndBindEdges() override;
+
   CopyHdType copy_type() const { return copy_type_; }
   MemZoneId MemZoneId121() const override {
     if (copy_type_ == CopyHdType::H2D) {
