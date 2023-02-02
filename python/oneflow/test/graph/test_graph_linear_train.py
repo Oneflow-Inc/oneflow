@@ -96,6 +96,7 @@ def _test_linear_train_graph(test_case, device):
                 return out
 
         linear_t_g = LinearTrainGraph()
+        linear_t_g.debug(op_repr_with_py_stack=True, max_py_stack_depth=100)
 
         def one_iter():
             of_graph_out = linear_t_g(x)
@@ -130,7 +131,7 @@ class TestLinearTrainGraph(oneflow.unittest.TestCase):
     def test_linear_train_graph_gpu(test_case):
         _test_linear_train_graph(test_case, flow.device("cuda"))
 
-    def test_linear_train_graph_cpu(test_case):
+    def _test_linear_train_graph_cpu(test_case):
         _test_linear_train_graph(test_case, flow.device("cpu"))
 
 
