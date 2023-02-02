@@ -703,6 +703,10 @@
   signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
+- name: "fused_glu_without_linear_grad"
+  signature: "TensorTuple (Tensor dy, Tensor matmul_wx, Tensor matmul_vx=None, String activation=\"none\") => FusedGluWithoutLinearGrad"
+  bind_python: False
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -1599,7 +1603,10 @@
   bind_python: False
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
+  signature: [
+      "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy",
+      "Tensor (Tensor x, Device device, Bool pin_memory=False) => Copy"
+  ]
   bind_python: True
 
 - name: "to"
