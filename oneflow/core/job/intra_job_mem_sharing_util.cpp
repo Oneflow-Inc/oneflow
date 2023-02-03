@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/plan_util.h"
@@ -556,12 +557,8 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
   if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
     CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
   }
-  if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
-    CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
-  }
-  if (mem_alloc_algo_conf.use_time_line_algo()) {
-    CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
-  }
+  if (true) { CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second); }
+  if (true) { CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second); }
 }
 
 }  // namespace
@@ -601,7 +598,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // step 2: multi-thread run several algorithm for each mem chain
   HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
   {
-    int64_t work_size = mem_chain2mem_reused_regsts.size();
+    int64_t work_size = mem_chain2mem_reused_regsts.size() * 3;
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
@@ -623,8 +620,14 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (auto& pair : mem_chain2algo2result) {
+    if (GlobalProcessCtx::Rank() == 0)
+      std::cout << "Lower bound: " << mem_chain2peak_memory[pair.first] << std::endl;
     MemBlockResultInfo* best_result = nullptr;
     for (auto& algo_result_pair : pair.second) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        std::cout << "Algorithm id: " << algo_result_pair.first
+                  << ", memory size: " << algo_result_pair.second.mem_block_size << std::endl;
+      }
       if (!best_result || algo_result_pair.second.mem_block_size < best_result->mem_block_size) {
         best_result = &algo_result_pair.second;
       }
