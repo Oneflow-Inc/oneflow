@@ -486,8 +486,20 @@ void MemReusedAlgorithmAllocateByOrder(
           }
         }
       }
-      // TODO: Deal with the max_memory_pool_size, which may be the final gap
+      // Deal with the max_memory_pool_size, which may be the final gap
+      diff_gap = (max_memory_pool_size - gap_head) - inserting_size;
+      // Compared with the previous suitable gap
+      if (SuitableThan(diff_gap, suitable_diff_gap)) {
+        suitable_diff_gap = diff_gap;
+        inserting_offset = gap_head;
+      }
       // TODO: Insert the register into the gap
+      if (suitable_diff_gap >= 0) {
+        // TODO:
+
+      } else {
+        // TODO: Prolong the maximum memory pool size
+      }
 
     } else {
       for (const auto& curr_register : sorted_registers) {
