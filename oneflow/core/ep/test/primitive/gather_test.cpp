@@ -185,12 +185,12 @@ std::vector<std::vector<T>> CartProduct(const std::vector<std::vector<T>>& v) {
 template<DataType params_type, typename ParamsType, DataType indices_type, typename IndicesType>
 void TestGather(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
   std::vector<std::vector<int>> test_set = {
-      {16},  // batch_dim_size
-      {16},  // outer_dim_size
-      {16},  // gather_dim_size
-      {16},  // inner_dim_size
-      {32},  // per_batch_indices_size
-      {0},   // offset
+      {16},          // batch_dim_size
+      {16},          // outer_dim_size
+      {16},          // gather_dim_size
+      {16, 21, 27},  // inner_dim_size
+      {32},          // per_batch_indices_size
+      {0, 4},        // offset
   };
 
   std::vector<std::vector<int>> test_shapes = CartProduct<int>(test_set);
