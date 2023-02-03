@@ -94,8 +94,8 @@ class RightActivationAndMul {
     ElementOutput convert_rhs(rhs);
     Activation<ElementOutput> act;
     cutlass::multiplies<ElementOutput> mul;
-    auto act_lhs = fast_gelu(convert_lhs);
-    return mul(act_lhs, convert_rhs);
+    auto act_rhs = act(convert_rhs);
+    return mul(act_rhs, convert_lhs);
   }
 };
 }  // namespace thread
