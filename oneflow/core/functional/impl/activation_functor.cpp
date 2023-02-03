@@ -534,6 +534,38 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RReluFunctor {
+ public:
+  RReluFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("rrelu").Input("in").Output("output").Output("noise_data").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training, bool inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("lower", "upper", "training");
+    attrs.SetAllAttrs(lower, upper, training);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
+    if (!training) { return JUST(functional::LeakyRelu(x, ((lower + upper) / 2), inplace)); }
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      outputs->at(0) = x;
+    }
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RReluInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training) const {
+    return JUST(functional::RRelu(x, lower, upper, training, true /*inplace*/));
+  }
+};
+
 class SoftplusFunctor {
  public:
   SoftplusFunctor() {
@@ -728,6 +760,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::RReluFunctor>("RRelu");
+  m.add_functor<impl::RReluInplaceFunctor>("RReluInplace");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
