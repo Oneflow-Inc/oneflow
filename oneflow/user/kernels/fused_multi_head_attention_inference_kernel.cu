@@ -186,7 +186,7 @@ void DispatchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   if (params.data_type == DataType::kFloat16) {
     DispatchArchTag<cutlass::half_t>(params, stream);
   } else if (params.data_type == DataType::kFloat) {
-    DispatchArchTag<cutlass::tfloat32_t>(params, stream);
+    DispatchArchTag<float>(params, stream);
   } else {
     UNIMPLEMENTED();
   }
@@ -255,8 +255,11 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
+    // Compatible with typo `KERENL`
     const bool enable_trt_flash_attn =
-        ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", false)
+        ParseBooleanFromEnv(
+            "ONEFLOW_KERNEL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL",
+            ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", true))
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
     const bool inputs_contiguous =

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/random_generator_impl.h"
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/str_util.h"
@@ -76,7 +77,7 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
                                  << splits.size() - 1;
   }
   for (int i = 0; i < CPUGeneratorState::state_size; ++i) {
-    state.states[i] = std::atoll(splits.at(i).data());
+    state.states[i] = std::atoll(JUST(VectorAt(splits, i)).data());
   }
   state.seed = current_seed();
 
@@ -144,7 +145,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
     : DeviceGeneratorImpl(seed, DeviceType::kCUDA, device_index), philox_offset_per_thread_(0) {
-  cudaDeviceProp prop;
+  cudaDeviceProp prop;  // NOLINT
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;
   max_thread_num_ = GetThreadNum(prop);
@@ -313,14 +314,14 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     memcpy(data, device_tags.data(), state.device_tag_length);
     data += state.device_tag_length;
     for (int i = 0; i < tensor_states.size(); ++i) {
-      const auto& tensor = tensor_states.at(i);
+      const auto& tensor = tensor_states[i];
       const auto& callback = [&data, &state_sizes, i](
                                  ep::Stream*,
                                  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
         memcpy(data, eager_blob_object->dptr(), state_sizes.at(i));
       };
       JUST(SyncAccessTensorWithTimeOut(tensor, callback, "const"));
-      data += state_sizes.at(i);
+      data += JUST(VectorAt(state_sizes, i));
     }
   }
   const auto& device = JUST(Device::New("cpu"));
@@ -370,7 +371,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   data += state.device_tag_length;
   std::vector<std::shared_ptr<Tensor>> tensor_states(state.num);
   for (int i = 0; i < state.num; ++i) {
-    int64_t state_size = state_sizes.at(i);
+    int64_t state_size = JUST(VectorAt(state_sizes, i));
     tensor_states[i] =
         JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
     const auto& callback = [&data, &state_size](
@@ -395,13 +396,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   std::lock_guard<std::mutex> lock(mutex_);
 
   for (int i = 0; i < splits.size(); ++i) {
-    std::string device_name;
-    int device_index = -1;
-    JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
+    const auto& device = JUST(Device::ParseAndNew(splits[i]));
     detail::DeviceKey device_key;
-    const auto& device = JUST(Device::New(device_name, device_index));
     device_key.device_type = JUST(DeviceType4DeviceTag(device->type()));
-    device_key.device_index = device_index;
+    device_key.device_index = device->device_id();
     auto it = generators_.find(device_key);
     if (it == generators_.end()) {
       it = generators_
@@ -409,7 +407,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
                                                                    device_key.device_index)))
                .first;
     }
-    JUST(it->second->SetState(tensor_states.at(i)));
+    JUST(it->second->SetState(JUST(VectorAt(tensor_states, i))));
   }
   return Maybe<void>::Ok();
 }

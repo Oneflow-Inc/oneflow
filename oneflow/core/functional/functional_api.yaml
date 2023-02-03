@@ -82,6 +82,9 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+      "Tensor (Tensor input, Tensor other, *, String rounding_mode=None) => DivMode",
+      "Tensor (Tensor input, Scalar other, *, String rounding_mode=None) => ScalarDivMode",
+      "Tensor (Scalar input, Tensor other, *, String rounding_mode=None) => ScalarDivMode",
     ]
   bind_python: true
 
@@ -125,6 +128,14 @@
       "Tensor (Tensor input, Tensor other) => BroadcastGreater",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater",
+    ]
+  bind_python: true
+
+- name: "greater_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceBroadcastGreater",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarLogicalGreater",
     ]
   bind_python: true
 
@@ -692,6 +703,10 @@
   signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
+- name: "fused_glu_without_linear_grad"
+  signature: "TensorTuple (Tensor dy, Tensor matmul_wx, Tensor matmul_vx=None, String activation=\"none\") => FusedGluWithoutLinearGrad"
+  bind_python: False
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -751,6 +766,14 @@
 - name: "leaky_relu_grad"
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
+
+- name: "rrelu"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False, Bool inplace=False) => RRelu"
+  bind_python: True
+
+- name: "rrelu_"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
+  bind_python: True
 
 - name: "normal"
   signature: [
@@ -1588,7 +1611,10 @@
   bind_python: False
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
+  signature: [
+      "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy",
+      "Tensor (Tensor x, Device device, Bool pin_memory=False) => Copy"
+  ]
   bind_python: True
 
 - name: "to"
@@ -3133,4 +3159,8 @@
 
 - name: "mode"
   signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
+  bind_python: True
+
+- name: "clone"
+  signature: "Tensor (Tensor input) => Clone"
   bind_python: True
