@@ -366,7 +366,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
-    } else if (permutable && src_type == dst_type && permute != nullptr) {
+    } else if (permutable && src_type == dst_type && permute) {
       permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
                     permutation_list, dst_ptr);
     } else {

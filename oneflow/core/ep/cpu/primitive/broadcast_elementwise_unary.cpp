@@ -170,7 +170,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       const int64_t dst_stride = simplified_dst_strides[0];
       LaunchTensorFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, src_stride,
                                            attr0, attr1);
-    } else if (permutable && src_type == dst_type && permute != nullptr) {
+    } else if (permutable && src_type == dst_type && permute) {
       permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
                     permutation_list, dst_ptr);
     } else {
