@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
-# CHECK: "oneflow.scalar_mul_by_tensor"
+# CHECK: jit
 
 import unittest
 import numpy as np
