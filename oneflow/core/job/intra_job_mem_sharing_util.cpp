@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/memory_share_strategy.h"
@@ -407,6 +408,27 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   CHECK(remain_regsts.empty());
 }
 
+// Judge whether a is suitable than b for a gap
+bool SuitableThan(int64_t a, int64_t b) {
+  // a is suitable than b under these cases:
+  // a >= 0, b >= 0, a < b
+  // a >= 0 > b
+  // a < 0, b < 0, a > b
+  if (a >= 0) {
+    if (b >= 0) {
+      return a < b;
+    } else {
+      return true;
+    }
+  } else {
+    if (b < 0) {
+      return a > b;
+    } else {
+      return false;
+    }
+  }
+}
+
 void MemReusedAlgorithmAllocateByOrder(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, size_t>& regst_desc2size,
@@ -432,27 +454,59 @@ void MemReusedAlgorithmAllocateByOrder(
     return a < b;
   };
   std::set<int32_t, decltype(comp)> sorted_registers(comp);
+  int64_t max_memory_pool_size = 0;
   // Decide offset following the given order
   for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
+    const auto& inserting_lifetime = order2lifetime[inserting_id];
+    // At the beginning, try to insert the offset in the front of the whole memory pool.
     int64_t inserting_offset = 0;
     int64_t inserting_end = inserting_offset + order2size[inserting_id];
-    const auto& inserting_lifetime = order2lifetime[inserting_id];
-    for (const auto& curr_register : sorted_registers) {
-      // i: inserting register, j: current register
-      // x: register offset, l: register size
-      // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
-      if (order2offset[curr_register] >= inserting_end) { break; }
-      // If i and j are excluded, and x_i + l_i > x_j,
-      // then we try to place i at x_j + l_j and check the following registers
-      if (IsLifetimeExcluded(inserting_lifetime, order2lifetime[curr_register])) {
-        int64_t curr_end = order2offset[curr_register] + order2size[curr_register];
-        // Can not set inserting offset = current end directly.
-        // We might have two excluded registers like this:
-        // register a: [100, 10000]
-        // register b: [500, 600]
-        if (inserting_offset < curr_end) {
-          inserting_offset = curr_end;
-          inserting_end = inserting_offset + order2size[inserting_id];
+    if (ParseBooleanFromEnv("Compact_Insert", false)) {
+      // Find the most suitable gap for the register
+      int64_t gap_head = 0;
+      int64_t inserting_size = order2size[inserting_id];
+      // difference = length of gap - length of the inserting register
+      int64_t diff_gap = 0, suitable_diff_gap = -1 - inserting_size;
+      for (const auto& curr_register : sorted_registers) {
+        // Ignore those non-excluded registers
+        if (IsLifetimeExcluded(inserting_lifetime, order2lifetime[curr_register])) {
+          if (gap_head < order2offset[curr_register]) {
+            // Find one gap
+            diff_gap = (order2offset[curr_register] - gap_head) - inserting_size;
+            // Compared with the previous suitable gap
+            if (SuitableThan(diff_gap, suitable_diff_gap)) {
+              suitable_diff_gap = diff_gap;
+              inserting_offset = gap_head;
+            }
+            // Update gap head
+            gap_head = order2offset[curr_register] + order2size[curr_register];
+          } else {
+            // No gap, update gap head
+            gap_head = std::max(gap_head, order2offset[curr_register] + order2size[curr_register]);
+          }
+        }
+      }
+      // TODO: Deal with the max_memory_pool_size, which may be the final gap
+      // TODO: Insert the register into the gap
+
+    } else {
+      for (const auto& curr_register : sorted_registers) {
+        // i: inserting register, j: current register
+        // x: register offset, l: register size
+        // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
+        if (order2offset[curr_register] >= inserting_end) { break; }
+        // If i and j are excluded, and x_i + l_i > x_j,
+        // then we try to place i at x_j + l_j and check the following registers
+        if (IsLifetimeExcluded(inserting_lifetime, order2lifetime[curr_register])) {
+          int64_t curr_end = order2offset[curr_register] + order2size[curr_register];
+          // Can not set inserting offset = current end directly.
+          // We might have two excluded registers like this:
+          // register a: [100, 10000]
+          // register b: [500, 600]
+          if (inserting_offset < curr_end) {
+            inserting_offset = curr_end;
+            inserting_end = inserting_offset + order2size[inserting_id];
+          }
         }
       }
     }
