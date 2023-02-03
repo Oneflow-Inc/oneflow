@@ -39,7 +39,8 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   const std::vector<int> num_src_axes = {1, 4, 1, 4, 4};
   const std::vector<int> num_dst_axes = {4, 4, 1, 4, 4};
 
-  const std::vector<std::vector<int64_t>> a_dims_vec = {{1, 1, 1, 1}, {1, 3, 2, 4}, {1, 1, 1, 1}, {1, 2, 3, 4}, {1, 2, 3, 4}};
+  const std::vector<std::vector<int64_t>> a_dims_vec = {
+      {1, 1, 1, 1}, {1, 3, 2, 4}, {1, 1, 1, 1}, {1, 2, 3, 4}, {1, 2, 3, 4}};
   const std::vector<std::vector<int64_t>> broadcast_dims_vec = {
       {2, 3, 2, 4}, {2, 3, 2, 4}, {1, 1, 1, 1}, {1, 2, 3, 4}, {1, 2, 3, 4}};
   const std::vector<std::vector<int64_t>> a_broadcasts_vec = {
@@ -61,10 +62,10 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
        broadcast_dims_vec[1][0] * broadcast_dims_vec[1][2] * broadcast_dims_vec[1][3], 1,
        broadcast_dims_vec[1][2]},
       {0, 0, 0, 0},
-      {broadcast_dims_vec[3][1]*broadcast_dims_vec[3][2] * broadcast_dims_vec[3][3],
-       broadcast_dims_vec[3][2], 1, broadcast_dims_vec[3][1]*broadcast_dims_vec[3][2]},
-      {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0]*broadcast_dims_vec[3][1],
-      broadcast_dims_vec[3][0]*broadcast_dims_vec[3][1]*broadcast_dims_vec[3][2]}};
+      {broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2] * broadcast_dims_vec[3][3],
+       broadcast_dims_vec[3][2], 1, broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]},
+      {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1],
+       broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]}};
 
   for (int i = 0; i < 5; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
@@ -173,10 +174,9 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
   }
 }
 
-template<DataType src_data_type, typename Src, DataType dst_data_type,
-         typename Dst>
+template<DataType src_data_type, typename Src, DataType dst_data_type, typename Dst>
 void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
-                                   const std::set<DeviceType>& device_types) {
+                                               const std::set<DeviceType>& device_types) {
   const std::vector<int64_t>& a_dims = {5, 2};
   const std::vector<int64_t>& c_dims = {5, 2};
   Eigen::Tensor<Src, 2, Eigen::RowMajor> a(5, 4);
@@ -208,16 +208,15 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
       std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
       std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
       std::unique_ptr<BroadcastElementwiseUnary> broadcast_unary =
-          NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, UnaryOp::kIdentity, src_data_type,
-                                                          dst_data_type, 2);
+          NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, UnaryOp::kIdentity,
+                                                         src_data_type, dst_data_type, 2);
       ASSERT_TRUE(broadcast_unary.operator bool());
       ASSERT_TRUE(d2h.operator bool());
       ASSERT_TRUE(h2d.operator bool());
       h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
 
-      broadcast_unary->Launch(stream.stream(), 2, a_dims.data(), a_stride.data(),
-                              device_a.ptr(), 2, c_dims.data(), c_stride.data(),
-                              device_c.ptr());
+      broadcast_unary->Launch(stream.stream(), 2, a_dims.data(), a_stride.data(), device_a.ptr(), 2,
+                              c_dims.data(), c_stride.data(), device_c.ptr());
 
       d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
       CHECK_JUST(stream.stream()->Sync());
@@ -227,16 +226,15 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
 
       for (int i0 = 0; i0 < c_dims[0]; i0++) {
         for (int i1 = 0; i1 < c_dims[1]; i1++) {
-  #define ABS(x) ((x > 0) ? (x) : (-x))
-              const size_t src_index = a_stride[0] * i0 + a_stride[1] * i1;
-              const size_t dst_index =
-                  c_stride[0] * i0 + c_stride[1] * i1;
-              if (ABS(reinterpret_cast<Dst*>(input_a.ptr())[src_index]
-                      - reinterpret_cast<Dst*>(output.ptr())[dst_index])
-                  > thresh) {
-                res = false;
-              }
-  #undef ABS
+#define ABS(x) ((x > 0) ? (x) : (-x))
+          const size_t src_index = a_stride[0] * i0 + a_stride[1] * i1;
+          const size_t dst_index = c_stride[0] * i0 + c_stride[1] * i1;
+          if (ABS(reinterpret_cast<Dst*>(input_a.ptr())[src_index]
+                  - reinterpret_cast<Dst*>(output.ptr())[dst_index])
+              > thresh) {
+            res = false;
+          }
+#undef ABS
         }
       }
       ASSERT_TRUE(res);
@@ -249,8 +247,8 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
 TEST_F(PrimitiveTest, TestUnary) {
   TestElementwiseBroadcastUnary<UnaryOp::kIdentity, DataType::kFloat, float, DataType::kFloat,
                                 float>(&device_manager_registry_, available_device_types_);
-  TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, 
-    DataType::kFloat, float>(&device_manager_registry_, available_device_types_);
+  TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, DataType::kFloat, float>(
+      &device_manager_registry_, available_device_types_);
 }
 
 }  // namespace test

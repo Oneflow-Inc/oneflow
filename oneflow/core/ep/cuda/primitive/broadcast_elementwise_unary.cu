@@ -84,7 +84,7 @@ template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_si
          typename IndexType>
 __global__ void BroadcastElementwiseUnaryGpu(
     BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
- using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
+  using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
   using StorePack = cuda::elementwise::Packed<Dst, pack_size>;
   const LoadPack* src = reinterpret_cast<const LoadPack*>(params.src);
   StorePack* dst = reinterpret_cast<StorePack*>(params.dst);
@@ -100,20 +100,19 @@ __global__ void BroadcastElementwiseUnaryGpu(
     IndexType remaining = offset;
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
-      if (i < num_dims - 1) { 
+      if (i < num_dims - 1) {
         IndexType dst_index = params.dst_offset_to_index_helper.divides(remaining, i);
         remaining = remaining - params.dst_offset_to_index_helper.mul(dst_index, i);
         dst_offset += dst_index * dst_strides[i];
         src_offset += params.src_index_mask[i] * dst_index * src_strides[i];
       } else if (i == num_dims - 1) {
         dst_offset += remaining * dst_strides[i];
-        src_offset += params.src_index_mask[i] * remaining * src_strides[i]; 
+        src_offset += params.src_index_mask[i] * remaining * src_strides[i];
       } else {
         break;
       }
     }
 
-    
     LoadPack src_pack = src[src_offset];
     StorePack dst_pack;
 #pragma unroll
@@ -129,11 +128,11 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
                   const int64_t* dst_strides, Dst* dst, bool continuous_output, Scalar attr0,
                   Scalar attr1, size_t count) {
   BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params;
- for (size_t i = 0; i < num_dims; ++i) { 
-    params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1; 
+  for (size_t i = 0; i < num_dims; ++i) {
+    params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1;
     params.src_strides[i] = src_strides[i];
     params.dst_strides[i] = dst_strides[i];
-    }
+  }
   params.dst_offset_to_index_helper =
       OffsetToIndexWithStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
   params.num_dims = num_dims;
@@ -351,10 +350,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
-    bool permutable = InferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_dst_strides, 
-                                                    simplified_src_dims, simplified_dst_dims, 
-                                                    permutation_list, permutation_src_dims, unary_op);
-    std::unique_ptr<Permute> permute = NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
+    bool permutable = InferPermutable<kMaxNumDims>(
+        simplified_num_dims, simplified_src_strides, simplified_dst_strides, simplified_src_dims,
+        simplified_dst_dims, permutation_list, permutation_src_dims, unary_op);
+    std::unique_ptr<Permute> permute =
+        NewPrimitive<PermuteFactory>(DeviceType::kCUDA, simplified_num_dims);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
@@ -368,7 +368,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
           functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
     } else if (permutable && src_type == dst_type && permute) {
       permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
-                    permutation_list, dst_ptr);
+                      permutation_list, dst_ptr);
     } else {
       // fall back to normal cases
       LaunchWithSimplified<unary_op, Src, Dst>(
@@ -408,16 +408,18 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
-  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair), \
-                                OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)>},
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)          \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)),  \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                      \
+                                OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair), \
+                                OF_PP_PAIR_SECOND(dtype_pair)>},
 
 #define MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_dtype_pair, dst_dtype_pair) \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_dtype_pair),                              \
                    OF_PP_PAIR_SECOND(dst_dtype_pair)),                                       \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair), \
-                                OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
+   NewBroadcastElementwiseUnary<                                                             \
+       unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair),        \
+       OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>

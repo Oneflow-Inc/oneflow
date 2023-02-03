@@ -153,10 +153,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
-    bool permutable = InferPermutable<kMaxNumDims>(simplified_num_dims, simplified_src_strides, simplified_dst_strides, 
-                                                    simplified_src_dims, simplified_dst_dims, 
-                                                    permutation_list, permutation_src_dims, unary_op);
-    std::unique_ptr<Permute> permute = NewPrimitive<PermuteFactory>(DeviceType::kCPU, simplified_num_dims);
+    bool permutable = InferPermutable<kMaxNumDims>(
+        simplified_num_dims, simplified_src_strides, simplified_dst_strides, simplified_src_dims,
+        simplified_dst_dims, permutation_list, permutation_src_dims, unary_op);
+    std::unique_ptr<Permute> permute =
+        NewPrimitive<PermuteFactory>(DeviceType::kCPU, simplified_num_dims);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
@@ -172,7 +173,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                            attr0, attr1);
     } else if (permutable && src_type == dst_type && permute) {
       permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
-                    permutation_list, dst_ptr);
+                      permutation_list, dst_ptr);
     } else {
       // fall back to normal cases
       LaunchGeneral<unary_op, Src, Dst>(
@@ -212,16 +213,18 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
-  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair), \
-                                OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)>},
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)          \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)),  \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                      \
+                                OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair), \
+                                OF_PP_PAIR_SECOND(dtype_pair)>},
 
 #define MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_dtype_pair, dst_dtype_pair) \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_dtype_pair),                              \
                    OF_PP_PAIR_SECOND(dst_dtype_pair)),                                       \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair), \
-                                OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
+   NewBroadcastElementwiseUnary<                                                             \
+       unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair),        \
+       OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>

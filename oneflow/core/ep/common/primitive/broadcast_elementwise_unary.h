@@ -158,9 +158,7 @@ class OffsetToIndexWithStrideCalculator {
     return math_helper_[i].divides(remaining);
   }
 
-  OF_DEVICE_FUNC T mul(T idx, int64_t i) const {
-    return math_helper_[i].mul(idx);
-  }
+  OF_DEVICE_FUNC T mul(T idx, int64_t i) const { return math_helper_[i].mul(idx); }
 
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
