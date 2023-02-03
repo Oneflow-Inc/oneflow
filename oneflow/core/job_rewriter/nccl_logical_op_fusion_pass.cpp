@@ -54,45 +54,162 @@ class NcclLogicalOpFusionPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
+const std::string kNcclLogicalFusionOpNamePrefix = "Sys-NCCL-Logical-Fusion";
 
-bool IsTickOpConf(const OperatorConf& op_conf) {
-  if (IsClassRegistered<int32_t, IsTickTockOpTypeCase>(op_conf.op_type_case())) { return true; }
-  if (op_conf.has_user_conf()) {
-    const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    if (user_type_name == "cast_to_tick" || user_type_name == "acc_ctrl_tick") { return true; }
-  }
-  return false;
-}
-
-bool IsBreakpointOpNode(const OpNode* node) {
-  // NOTE(chengcheng): breakpoint op is special which CANNOT through subgraph such as:
-  //   variable, tick, repeat/acc/pack/unpack change timeshape
-  const Operator& op = node->op();
-  const OperatorConf& op_conf = op.op_conf();
-  // TODO(chengcheng): filter ops which has special type
-  // TODO(chengcheng): get stream by op type
-  if (op_conf.has_variable_conf()                                                   /* varialbe */
-      || IsTickOpConf(op_conf)                                                      /* tick */
-      || op_conf.has_input_conf() || op_conf.has_output_conf()                      /* io */
-      || op_conf.has_wait_and_send_ids_conf() || op_conf.has_callback_notify_conf() /* ctrl */
-      || op_conf.has_image_decoder_random_crop_resize_conf() /* gpu decode */) {
-    return true;
-  }
-
-  if (op_conf.has_user_conf()) {
-    const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
-        || user_type_name == "identity_buffer") {
+bool IsNcclLogicalOpNode(const OpNode* node) {
+  if (node->op().op_conf().has_user_conf()) {
+    const std::string& user_type_name = node->op().op_conf().user_conf().op_type_name();
+    if (user_type_name == "_nccl_logical_all_reduce" 
+        || user_type_name == "_nccl_logical_reduce_scatter" 
+        || user_type_name == "_nccl_logical_reduce_scatter_noncontinuous"
+        || user_type_name == "_nccl_logical_all_gather"
+        || user_type_name == "_nccl_logical_all_gather_noncontinuous"
+        || user_type_name == "_nccl_logical_s2s"
+        || user_type_name == "_nccl_logical_send_recv"
+        || user_type_name == "_nccl_logical_2D_same_dim0_all_reduce"
+        || user_type_name == "_nccl_logical_2D_same_dim0_all_gather"
+        || user_type_name == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous"
+        || user_type_name == "_nccl_logical_2D_same_dim0_all2all"
+        || user_type_name == "_nccl_logical_2D_same_dim1_all_reduce") {
       return true;
     }
-    if (!EnableLogicalChain()) {
-      // NOTE(chengcheng): in old task graph chain version, acc as breakpoint node
-      if (user_type_name == "acc") { return true; }
-    }
   }
   return false;
 }
+
+std::string GenParallelConfKeyWithHierarchy(const ParallelConf& conf) {
+  std::string ret = conf.device_tag();
+  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
+  ret += Shape(conf.hierarchy()).ToString();
+  return ret;
+}
+
+Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  HashMap<const OpNode*, int64_t> op_node2nccl_depth;
+  HashMap<int64_t, std::vector<const OpNode*>> nccl_depth2nccl_ops;
+  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+      int64_t nccl_depth = 0;
+      op_graph.ForEachDataAndCtrlInNode(node, [&](const OpNode* in_node) {
+          auto it = op_node2nccl_depth.find(in_node);
+          CHECK(it != op_node2nccl_depth.end()); // topo search
+          nccl_depth = std::max(nccl_depth, it->second);
+          });
+      if (IsNcclLogicalOpNode(node)) { 
+        nccl_depth++; // ONLY nccl node update depth
+        nccl_depth2nccl_ops[nccl_depth].push_back(node);
+      } 
+      CHECK(op_node2nccl_depth.emplace(node, nccl_depth).second);
+      });
+
+
+  for (const auto& pair : nccl_depth2nccl_ops) {
+    HashMap<int64_t, HashMap<std::string, std::vector<const OpNode*>>> chain2placement2nccl_ops;
+    for ()
+    int64_t logical_chain_id;
+    std::string placement = GenParallelConfKeyWithHierarchy
+    
+  }
+  
+
+  std::vector<const OpNode*> ordered_op_nodes;
+  HashMap<const OpNode*, int64_t> op_node2global_order;
+  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+    ordered_op_nodes.emplace_back(node);
+    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+  });
+
+  std::vector<HashSet<const OpNode*>> subgraph_list;
+  FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
+  if (subgraph_list.size() == 0) { return Maybe<void>::Ok(); }
+
+  auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
+    return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
+  };
+  auto CmpSubGraphOrder = [&](const std::shared_ptr<InsertNcclSubGraph>& lhs,
+                              const std::shared_ptr<InsertNcclSubGraph>& rhs) {
+    int64_t lhs_begin_op_global_order = op_node2global_order.at(lhs->ordered_op_nodes.front());
+    int64_t rhs_begin_op_global_order = op_node2global_order.at(rhs->ordered_op_nodes.front());
+    return lhs_begin_op_global_order < rhs_begin_op_global_order;
+  };
+
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+
+  HashMap<std::string, PlacementNcclSubGraghsInfo> placement2subgraphs;
+  for (const auto& subgraph : subgraph_list) {
+    const OpNode* rand_node = *subgraph.begin();
+    const ParallelDesc& this_parallel_desc = rand_node->parallel_desc();
+    std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
+    auto it = placement2subgraphs.find(key);
+    if (it == placement2subgraphs.end()) {
+      it = placement2subgraphs.emplace(key, PlacementNcclSubGraghsInfo()).first;
+      it->second.seed_parallel_desc = &this_parallel_desc;
+    } else {
+      CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*it->second.seed_parallel_desc));
+    }
+    auto& info = it->second;
+    info.ordered_subgraph.emplace_back(std::make_shared<InsertNcclSubGraph>());
+    InitInsertNcclSubGraphInfoFromSet(info.ordered_subgraph.back(), subgraph, op_node2global_order,
+                                      CmpOpNodeOrder);
+  }
+  for (auto& pair : placement2subgraphs) {
+    std::sort(pair.second.ordered_subgraph.begin(), pair.second.ordered_subgraph.end(),
+              CmpSubGraphOrder);
+  }
+
+  for (const OpNode* this_node : ordered_op_nodes) {
+    if (IsAccOpNode(this_node)) {
+      const ParallelDesc& this_parallel_desc = this_node->parallel_desc();
+      std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
+      auto it = placement2subgraphs.find(key);
+      if (it != placement2subgraphs.end()) {
+        it->second.ordered_acc_op_nodes.emplace_back(this_node);
+      }
+    }
+  }
+
+  for (auto& pair : placement2subgraphs) {
+    PlacementNcclSubGraghsInfo& info = pair.second;
+
+    // NOTE(chengcheng): insert nccl ops for each subgraph
+    uint32_t stream_offset = 0;
+    int64_t total_op_num = 0;
+    for (int i = 0; i < info.ordered_subgraph.size(); i++) {
+      auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
+      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable,
+                                     &stream_offset);
+      total_op_num += ordered_op_nodes.size();
+    }
+    if (stream_offset >= 2 && total_op_num >= 1000) {
+      LOG(WARNING) << " In Graph: " << job_builder->job().job_conf().job_name()
+                   << " Placement: " << pair.first << " the total_op_num = " << total_op_num
+                   << " and has " << stream_offset
+                   << " different nccl stream which is possible to trigger cuda stream kernel "
+                      "launch upper limit."
+                   << " So the nccl logical kernel will from async to sync exec, which may affect "
+                      "performance.";
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+      comm_mgr->SetAsyncLaunchNcclLogicalKernel(false);
+    }
+
+    // NOTE(chengcheng): insert acc for all subgraph with same placement group
+    const OpNode* bw_sink_op = info.ordered_subgraph.front()->end_op;
+    for (int i = 1; i < info.ordered_subgraph.size(); i++) {
+      const OpNode* this_end_op = info.ordered_subgraph.at(i)->end_op;
+      if (CmpOpNodeOrder(bw_sink_op, this_end_op)) { bw_sink_op = this_end_op; }
+    }
+    const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
+
+    if (!ordered_acc_op_nodes.empty()) {
+      InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
+          op_graph, job_builder, ordered_acc_op_nodes, op_node2global_order, IsReachable,
+          bw_sink_op);
+    }
+  }
+
+  return Maybe<void>::Ok();
+}
+
+
 
 bool IsAccOpNode(const OpNode* node) {
   return node->op().op_conf().has_user_conf()
@@ -191,250 +308,6 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
             });
 }
 
-bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
-                               const SbpParallel& dst_sbp, const std::string& lbn,
-                               const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
-                               const int64_t parallel_num) {
-  auto CanSplitAtDim = [&](int64_t dim) -> bool {
-    if (logical_blob_desc.shape().NumAxes() <= dim) { return false; }
-    return logical_blob_desc.shape().At(dim) % parallel_num == 0;
-  };
-  if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
-    // P->B : AllReduce
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
-               .Op("_nccl_logical_all_reduce")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (CanSplitAtDim(0)
-             && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
-             && (dst_sbp.split_parallel().axis() == 0)) {
-    // P->S(0) : ReduceScatter
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
-               .Op("_nccl_logical_reduce_scatter")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (CanSplitAtDim(0) && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
-             && (src_sbp.split_parallel().axis() == 0)) {
-    // S(0)->B : AllGather
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
-               .Op("_nccl_logical_all_gather")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel()
-             && src_sbp.split_parallel().axis() > 0
-             && CanSplitAtDim(src_sbp.split_parallel().axis())) {
-    // S(1)->B : AllGather Noncontinuous
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
-               .Op("_nccl_logical_all_gather_noncontinuous")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (src_sbp.has_split_parallel() && dst_sbp.has_split_parallel()
-             && src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis()
-             && CanSplitAtDim(src_sbp.split_parallel().axis())
-             && CanSplitAtDim(dst_sbp.split_parallel().axis())) {
-    // S(in)->S(out) : All2All
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
-               .Op("_nccl_logical_s2s")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (CanSplitAtDim(dst_sbp.split_parallel().axis())
-             && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
-             && (dst_sbp.split_parallel().axis() > 0)) {
-    // P->S(1) : ReduceScatter Noncontinuous
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
-               .Op("_nccl_logical_reduce_scatter_noncontinuous")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  } else if (!dst_sbp.has_partial_sum_parallel()) {
-    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(Send)2(Recv)-"
-                                             + NewUniqueId())
-               .Op("_nccl_logical_send_recv")
-               .Input("in", lbn)
-               .Output("out")
-               .Attr<std::vector<std::string>>("src_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_nd_sbp", {SbpToString(dst_sbp)})
-               .ScopeSymbolId(scope_symbol_id)
-               .Build()
-               .op_conf();
-    return true;
-  }
-  return false;
-}
-
-bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sbp,
-                                       const NdSbp& dst_nd_sbp,
-                                       const std::shared_ptr<Shape>& hierarchy,
-                                       const std::string& lbn, const int64_t scope_symbol_id,
-                                       const BlobDesc& logical_blob_desc) {
-  CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
-  CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
-  CHECK(src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0));
-  const SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(1);
-  const SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(1);
-
-  // split when dim0 sbp is split parallel
-  DimVector dim_vec = logical_blob_desc.shape().dim_vec();
-  if (src_nd_sbp.sbp_parallel(0).has_split_parallel()) {
-    const int64_t axis = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
-    dim_vec.at(axis) /= hierarchy->At(0);
-  }
-  const int64_t num_ranks = hierarchy->At(1);
-
-  if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
-    // (*, P)->(*, B) : AllReduce
-    *ret =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*P)2(*B)-" + NewUniqueId())
-            .Op("_nccl_logical_2D_same_dim0_all_reduce")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
-            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-            .ScopeSymbolId(scope_symbol_id)
-            .Build()
-            .op_conf();
-    return true;
-  } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
-             && (src_dim1_sbp.split_parallel().axis() == 0) && (dim_vec.at(0) % num_ranks == 0)) {
-    // (*, S(0)) -> (*, B) : AllGather
-    *ret =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S0)2(*B)-" + NewUniqueId())
-            .Op("_nccl_logical_2D_same_dim0_all_gather")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
-            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-            .ScopeSymbolId(scope_symbol_id)
-            .Build()
-            .op_conf();
-    return true;
-  } else if (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel()
-             && (src_dim1_sbp.split_parallel().axis() > 0)
-             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
-    // (*, S(1)) -> (*, B) : AllGather Noncontinuous
-    *ret =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S1)2(*B)-" + NewUniqueId())
-            .Op("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
-            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-            .ScopeSymbolId(scope_symbol_id)
-            .Build()
-            .op_conf();
-    return true;
-  } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_split_parallel())
-             && (src_dim1_sbp.split_parallel().axis() != dst_dim1_sbp.split_parallel().axis())
-             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)
-             && (dim_vec.at(dst_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
-    // (*, S(src_split_axis)) -> (*, S(dst_split_axis)) : All2All
-    *ret =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S)2(*S)-" + NewUniqueId())
-            .Op("_nccl_logical_2D_same_dim0_all2all")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
-            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-            .ScopeSymbolId(scope_symbol_id)
-            .Build()
-            .op_conf();
-    return true;
-  }
-  return false;
-}
-
-bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const NdSbp& src_nd_sbp,
-                                       const NdSbp& dst_nd_sbp,
-                                       const std::shared_ptr<Shape>& hierarchy,
-                                       const std::string& lbn, const int64_t scope_symbol_id,
-                                       const BlobDesc& logical_blob_desc) {
-  CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
-  CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
-  CHECK(src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1));
-  const SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(0);
-  const SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(0);
-  if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
-    // (P, *) -> (B, *) : AllReduce
-    *ret =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(P*)2(B*)-" + NewUniqueId())
-            .Op("_nccl_logical_2D_same_dim1_all_reduce")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
-            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-            .ScopeSymbolId(scope_symbol_id)
-            .Build()
-            .op_conf();
-    return true;
-  }
-  return false;
-}
-
-bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
-                                     const NdSbp& dst_nd_sbp,
-                                     const std::shared_ptr<Shape>& hierarchy,
-                                     const std::string& lbn, const int64_t scope_symbol_id,
-                                     const BlobDesc& logical_blob_desc) {
-  CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
-  CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
-  // send recv is dealing with same 0-Dim
-  VLOG_IF(3, src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0))
-      << "send recv is dealing with same 0-Dim, src sbp " << NdSbpToString(src_nd_sbp)
-      << ", dst sbp " << NdSbpToString(dst_nd_sbp);
-  // send recv is dealing with same 1-Dim, such as (B, S0) -> (S0, S0)
-  VLOG_IF(3, ((src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1))
-              && !(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))))
-      << "send recv is dealing with same 1-Dim,  src sbp " << NdSbpToString(src_nd_sbp)
-      << ", dst sbp " << NdSbpToString(dst_nd_sbp);
-  // send recv can not dealing with P in dst_nd_sbp
-  if (NdSbpHasPartialParallel(dst_nd_sbp)) return false;
-  *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(Send)2(Recv)-"
-                                           + NewUniqueId())
-             .Op("_nccl_logical_send_recv")
-             .Input("in", lbn)
-             .Output("out")
-             .Attr<std::vector<std::string>>("src_nd_sbp", NdSbpToStringList(src_nd_sbp))
-             .Attr<std::vector<std::string>>("dst_nd_sbp", NdSbpToStringList(dst_nd_sbp))
-             .ScopeSymbolId(scope_symbol_id)
-             .Build()
-             .op_conf();
-  return true;
-}
 
 Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
                                                  const ParallelDesc& parallel_desc) {
@@ -664,11 +537,7 @@ void GenAfterAccSubgraph(std::vector<const OpNode*>* ordered_after_acc_subgraph,
   std::sort(ordered_after_acc_subgraph->begin(), ordered_after_acc_subgraph->end(), CmpOpNodeOrder);
 }
 
-std::string GenParallelConfKey(const ParallelConf& conf) {
-  std::string ret = conf.device_tag();
-  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
-  return ret;
-}
+
 
 struct InsertNcclSubGraph {
   std::vector<const OpNode*> ordered_op_nodes;

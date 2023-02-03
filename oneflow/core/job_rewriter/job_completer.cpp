@@ -160,7 +160,7 @@ Maybe<void> JobCompleter::Complete(Job* job) {
     compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1, true);
     // NOTE(chengcheng): must do this pass after InsertNcclLogicalOpPass for nccl op fusion and
     //    add ctrl stirct order.
-    // JUST(JobPass4Name("NcclLogicalOpFusionPass")(job, &job_pass_ctx));
+    JUST(JobPass4Name("NcclLogicalOpFusionPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " NcclLogicalOpFusionPass", 1, true);
     // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
