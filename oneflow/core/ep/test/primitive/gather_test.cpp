@@ -188,7 +188,7 @@ void TestGather(DeviceManagerRegistry* registry, const std::set<DeviceType>& dev
       {16},          // batch_dim_size
       {16},          // outer_dim_size
       {16},          // gather_dim_size
-      {16, 21, 27},  // inner_dim_size
+      {16, 32, 41, 53},  // inner_dim_size
       {32},          // per_batch_indices_size
       {0, 4},        // offset
   };
