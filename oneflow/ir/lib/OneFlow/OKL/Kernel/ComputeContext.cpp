@@ -17,6 +17,7 @@ limitations under the License.
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 namespace okl {
@@ -34,8 +35,8 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
       return comp_ctx_->Tensor4ArgNameAndIndex("out", ret_op.index());
     }
     if (auto pool_op = llvm::dyn_cast_or_null<mlir::okl::TensorToPoolOp>(use)) {
-      return tmp_buffer_.GetBufferTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
-                                         pool_op.offset());
+      return tmp_buffer_.GetPoolTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
+                                       pool_op.offset());
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
     exit(1);
@@ -53,7 +54,7 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
           return comp_ctx_->Tensor4ArgNameAndIndex("out", elem.index());
         })
         .Case([&](mlir::okl::PoolToTensorOp elem) {
-          return tmp_buffer_.GetBufferTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
+          return tmp_buffer_.GetPoolTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
                                              elem.offset());
         })
         .Default([&](::mlir::Operation* op) {
@@ -64,8 +65,13 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
   }
 
   if (source.type == mlir::oneflow::user_op::Source::BUFFER) {
-    auto op_name = op->getAttr("op_name").dyn_cast<mlir::StringAttr>().str();
-    TODO();
+    auto wrap = op->getParentOfType<mlir::okl::WrapperKernelOp>();
+    for (auto& op : wrap.body().front()) {
+      if (auto pool_to_buffer = llvm::dyn_cast_or_null<mlir::okl::PoolToBufferOp>(op)) {
+        return tmp_buffer_.GetPoolBuffer(pool_to_buffer.getType().getShape()[0],
+                                         pool_to_buffer.offset());
+      }
+    }
   }
 
   op->emitError("Failed to check source type");

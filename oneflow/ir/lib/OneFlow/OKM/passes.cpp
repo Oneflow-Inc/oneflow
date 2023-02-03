@@ -1,5 +1,6 @@
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
 #include "OneFlow/OKM/OKMDialect.h"
 #include "OneFlow/OKM/OKMOps.h"
 #include "OneFlow/OKM/passes.h"
@@ -105,7 +106,7 @@ std::unique_ptr<Pass> createExtractOKMTensorPass() {
 }
 
 struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  static Value AllocOrMapOutTensor(OpResult res, mlir::PatternRewriter& rewriter) {
+  static Value AllocOrMapOutTensor(Value res, mlir::PatternRewriter& rewriter) {
     if (auto type = res.getType().dyn_cast_or_null<TensorType>()) {
       int ret_index = -1;
       for (auto use : res.getUsers()) {
@@ -183,7 +184,13 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
         exit(1);
       }
     }
-    // TODO: append tmp buffer after outs
+    if (int64_t buffer_size = ::oneflow::okl::RegContext(op).GetTmpBufferSize()) {
+      auto type = MemRefType::get({buffer_size}, rewriter.getI8Type());
+      auto tmp_buffer =
+          rewriter.create<AllocMemrefOp>(rewriter.getUnknownLoc(), type)->getResult(0);
+      map_ins.push_back(tmp_buffer);
+    }
+
     CreateWrapOp(op, rewriter, mapper, mem_outs_types, map_ins);
   }
 
@@ -260,6 +267,10 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto base = type.getElementTypeBitWidth() / 8;
     for (auto i : type.getShape()) { base *= i; }
     size += base;
+    // force memory alignment
+    if (size % (::oneflow::kBlobBodyAlignSize)) {
+      size = (size / (::oneflow::kBlobBodyAlignSize) + 1) * ::oneflow::kBlobBodyAlignSize;
+    }
   }
   static void SimpleMerge(func::FuncOp func, mlir::PatternRewriter& rewriter) {
     OpBuilder::InsertionGuard insertGuard(rewriter);
@@ -390,6 +401,15 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
                 wrap_func.getArgument(0), new_op->getResult(idx - ins_num), offset);
           })
           .Default([&](Operation*) { return Value{}; });
+    }
+    if (outs_num + 1 == wrap_mem_op->getNumOperands()) {
+      auto op = llvm::dyn_cast<memref::ViewOp>(wrap_mem_op->getOperand(outs_num).getDefiningOp());
+
+      auto offset = rewriter.getI32IntegerAttr(
+          llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp()).value());
+      rewriter.create<okl::PoolToBufferOp>(
+          rewriter.getUnknownLoc(), memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+          wrap_func.getArgument(0), offset);
     }
 
     rewriter.create<okl::ReturnOp>(rewriter.getUnknownLoc());

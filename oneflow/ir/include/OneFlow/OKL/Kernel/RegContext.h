@@ -114,7 +114,6 @@ class RegContext final : public user_op::KernelRegContext {
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
 
-  TensorInfo tensor_info_;
   const user_op::OpKernelRegistryResult* reg_res_ = nullptr;
   const user_op::OpKernel* kernel_ = nullptr;
 };
