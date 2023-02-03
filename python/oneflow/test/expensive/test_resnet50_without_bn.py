@@ -66,7 +66,9 @@ class TestResNet50(flow.unittest.TestCase):
             replace_stride_with_dilation=[False, False, False], norm_layer=FakeBN
         )
         res50_module.train()
-        res50_module.load_state_dict(flow.load("/dataset/resnet50_wo_bn_weights_for_ci"))
+        res50_module.load_state_dict(
+            flow.load("/dataset/resnet50_wo_bn_weights_for_ci")
+        )
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
         of_corss_entropy.to("cuda")
