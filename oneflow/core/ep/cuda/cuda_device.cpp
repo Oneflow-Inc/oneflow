@@ -52,8 +52,7 @@ CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
       const_zeros_buffer_(nullptr),
       const_ones_buffer_fp32_(nullptr),
       const_ones_buffer_fp16_(nullptr),
-      const_ones_buffer_bf16_(nullptr),
-      mem_pool_{} {
+      const_ones_buffer_bf16_(nullptr) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaGetDeviceProperties(&properties_, device_index_));
   {

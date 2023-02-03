@@ -72,7 +72,7 @@ class CudaDevice : public Device {
   void* const_ones_buffer_fp16_;
   void* const_ones_buffer_bf16_;
 #if CUDA_VERSION >= 11020
-  cudaMemPool_t mem_pool_;
+  cudaMemPool_t mem_pool_{};
 #endif  // CUDA_VERSION >= 11020
 };
 
