@@ -577,6 +577,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.quantile,
+    """
+    See :func:`oneflow.quantile`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sqrt,
     """
     See :func:`oneflow.sqrt`

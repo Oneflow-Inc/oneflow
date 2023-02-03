@@ -306,6 +306,7 @@ Tensor class reference
     Tensor.permute
     Tensor.pow
     Tensor.prod
+    Tensor.quantile
     Tensor.reciprocal
     Tensor.register_hook
     Tensor.relu

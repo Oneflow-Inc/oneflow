@@ -57,10 +57,25 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> a = flow.randn(2, 4)
-        >>> out = flow.quantile(a, 0.6, dim=1, interpolation='linear')
-        >>> out
-        tensor([-1.0091,  0.3997], dtype=oneflow.float64)
+        >>> a = flow.arange(8.)
+        >>> q = flow.tensor([0.25, 0.5, 0.75])
+        >>> flow.quantile(a, q, dim=0, keepdim=True)
+        tensor([[1.7500],
+                [3.5000],
+                [5.2500]], dtype=oneflow.float32)
+        >>> a = flow.arange(4.)
+        >>> flow.quantile(a, 0.6, interpolation="linear")
+        tensor(1.8000, dtype=oneflow.float32)
+        >>> flow.quantile(a, 0.6, interpolation="lower")
+        tensor(1., dtype=oneflow.float32)
+        >>> flow.quantile(a, 0.6, interpolation="higher")
+        tensor(2., dtype=oneflow.float32)
+        >>> flow.quantile(a, 0.6, interpolation="midpoint")
+        tensor(1.5000, dtype=oneflow.float32)
+        >>> flow.quantile(a, 0.6, interpolation="nearest")
+        tensor(2., dtype=oneflow.float32)
+        >>> flow.quantile(a, 0.4, interpolation="nearest")
+        tensor(1., dtype=oneflow.float32)
  
     """,
 )
