@@ -42,8 +42,9 @@ class IndexFirstAxis(flow.autograd.Function):
         assert grad_output.ndim >= 2
         other_shape = grad_output.shape[1:]
         grad_output = rearrange(grad_output, "b ... -> b (...)")
+        first_axis_dim = ctx.first_axis_dim
         grad_input = flow.zeros(
-            [ctx.first_axis_dim, grad_output.shape[1]],
+            [first_axis_dim, grad_output.shape[1]],
             device=grad_output.device,
             dtype=grad_output.dtype,
         )
@@ -52,7 +53,7 @@ class IndexFirstAxis(flow.autograd.Function):
         grad_input.scatter_(
             0, repeat(indices, "z -> z d", d=grad_output.shape[1]), grad_output
         )
-        return grad_input.reshape(ctx.first_axis_dim, *other_shape), None
+        return grad_input.reshape(first_axis_dim, *other_shape), None
 
 
 index_first_axis = IndexFirstAxis.apply
@@ -72,9 +73,7 @@ def _unpad_input(hidden_states, attention_mask):
     """
     if len(attention_mask.shape) == 4:
         assert attention_mask.shape[1] == 1 and attention_mask.shape[2] == 1
-        attention_mask = attention_mask.reshape(
-            attention_mask.shape[0], attention_mask.shape[3]
-        )
+        attention_mask = attention_mask.squeeze(1).squeeze(1)
     seqlens_in_batch = attention_mask.sum(dim=-1)
     bias_nonzere_indices = (
         flow.nonzero(attention_mask, as_tuple=False)[..., -1].flatten().to(flow.int32)
@@ -141,17 +140,22 @@ def flash_attention(
     dtype = query.dtype
 
     # convert to half
-    query = query.half()
-    key = key.half()
-    value = value.half()
+    if query.dtype not in [flow.float16, flow.bfloat16]:
+        query = query.half()
+        key = key.half()
+        value = value.half()
     if bias is not None:
-        bias = bias.half()
+        bias = bias.to(dtype)
 
     if unpad_kv == "auto":
         assert mask is not None, "mask shoule be provided if set unpad_kv to 'auto'"
         nonzero_sum = mask.sum()
         total_n = mask.shape.numel()
-        unpad_kv = nonzero_sum < total_n * 0.4
+        unpad_kv = nonzero_sum < total_n * 0.2
+
+    # flow.gather do not support bf16 yet
+    if dtype == flow.bfloat16:
+        unpad_kv = False
 
     # [*, B, N, H, C]
     query = query.transpose(-2, -3)
@@ -168,7 +172,7 @@ def flash_attention(
             mask.shape[-2] != 1 or mask.shape[-3] == 1
         ):  # or bias.shape[-4] != 1:
             if mask.dtype in [flow.int32, flow.int64, flow.bool]:
-                mask = ((1 - mask) * -10000.0).to(flow.float16)
+                mask = ((1 - mask) * -10000.0).to(query.dtype)
             cu_seqlens_q = (
                 flow.tensor(list(range(0, (batch_size + 1) * seqlen_q, seqlen_q)))
                 .cuda()
@@ -199,7 +203,9 @@ def flash_attention(
             return out
 
     if mask is not None and mask.dtype != flow.int32:
-        mask = (mask >= -0).to(flow.int32)
+        if mask.dtype in [flow.float16, flow.bfloat16, flow.float32, flow.float64]:
+            mask = mask > -1.0
+        mask = mask.to(flow.int32)
     # Flattened batch size
     batch_size = query.shape[0]
     max_seqlen_q = seqlen_q

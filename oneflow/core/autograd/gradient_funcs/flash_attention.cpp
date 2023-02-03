@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
@@ -91,7 +90,7 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
           || ctx->bias_requires_grad)) {
       return Maybe<void>::Ok();
     }
-    in_grads->resize(5 + ((ctx->bias_index) > 0) + ((ctx->mask_index) > 0));
+    in_grads->resize(5 + (ctx->bias_index > 0) + (ctx->mask_index > 0) + (ctx->indices_index > 0));
     const auto& saved_tensors = ctx->SavedTensors();
     const auto& results = JUST(functional::FlashAttentionGrad(
         out_grads.at(0), saved_tensors.at(ctx->out_index), saved_tensors.at(ctx->softmax_lse_index),
