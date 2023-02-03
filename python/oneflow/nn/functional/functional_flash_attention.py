@@ -116,7 +116,7 @@ def flash_attention(
         key: flow.Tensor with shape [*, batch_size, num_heads, seq_length_k, head_dim].
         value: flow.Tensor with shape [*, batch_size, num_heads, seq_length_k, head_dim].
 
-        mask: Optional, default None. 
+        mask: Optional, default None, flow.bool or flow.float tensor. 
             If provided, flow.Tensor with shape [batch_size, s1, s2, seq_length_k], where (s1=1 or s1=num_heads)
             and (s2=1 or s2=seq_length_q).
         bias: Optional, default None.
@@ -124,7 +124,8 @@ def flash_attention(
             where (s0=1 or s0=batch_size).
         unpad_kv: whether unpad key and value, could be True, False, or 'auto'.
             `mask` should be provided if you set unpad_kv to 'auto'.
-        causal:  If causal=True,  default False. 
+        causal: If causal=True, that meads the tokens from earlier in the input sequence is only allowed to 
+            affect the predictions for later tokens, default False. 
         dropout_p: dropout rate, perform dropout operation when dropout_p > 0.
     
     Returns:
