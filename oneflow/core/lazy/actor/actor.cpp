@@ -422,11 +422,11 @@ void Actor::ActUntilFail() {
     PrepareProducedNaiveInplaceDataRegst();
     Act();
 
-    AsyncSendNaiveConsumedRegstMsgToProducer();
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();
     AsyncSendInplaceProducedRegstMsgToConsumer();
 
+    AsyncSendNaiveConsumedRegstMsgToProducer();
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
