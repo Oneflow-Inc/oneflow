@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import gc
 
 import numpy as np
 import oneflow as flow
@@ -67,10 +66,6 @@ def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
 
 
 class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
-    def tearDown(self):
-        # release all dual objects to avoid OOM
-        gc.collect()
-
     @globaltest
     def test_global_sin_grad_grad(test_case):
         for placement in all_placement():
