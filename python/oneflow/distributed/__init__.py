@@ -40,6 +40,11 @@ def is_initialized() -> bool:
     return True
 
 
+# PyTorch doesn't have torch.distributed.get_local_rank,
+# we add it for the consistency between flow.env and flow.distributed
+get_local_rank = flow.env.get_local_rank
+
+
 def get_rank(group=None) -> int:
     """Alias of `oneflow.env.get_rank()` for PyTorch compatibility.
 
