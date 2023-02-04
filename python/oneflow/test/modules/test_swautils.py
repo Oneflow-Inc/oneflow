@@ -33,6 +33,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestLRScheduler(flow.unittest.TestCase):
     # This class mainly used to test MultiplicativeLR and SWALR
     def setUp(self):
@@ -173,6 +174,7 @@ class TestLRScheduler(flow.unittest.TestCase):
         self._test(scheduler, targets, epochs)
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSWAUtils(flow.unittest.TestCase):
     # This class mainly used to test AveragedModel and update_bn
     def _test_averaged_model(self, net_device, swa_device):
@@ -489,19 +491,5 @@ class SchedulerTestNet(flow.nn.Module):
         return self.conv2(F.relu(self.conv1(x)))
 
 
-def suite():
-    test_classes_to_run = [TestLRScheduler, TestSWAUtils]
-    loader = unittest.TestLoader()
-
-    suites_list = []
-    for test_class in test_classes_to_run:
-        suite = loader.loadTestsFromTestCase(test_class)
-        suites_list.append(suite)
-
-    big_suite = unittest.TestSuite(suites_list)
-    return big_suite
-
-
 if __name__ == "__main__":
-    runner = unittest.TextTestRunner()
-    runner.run(suite())
+    unittest.main()
