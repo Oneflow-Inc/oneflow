@@ -20,8 +20,9 @@ from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
-import oneflow.support.env_var_util
 from contextlib import contextmanager
+
+import oneflow.support.env_var_util
 
 _first_init = True
 
@@ -56,7 +57,7 @@ class OneflowImporter(MetaPathFinder, Loader):
     def __init__(self):
         # module_from_spec will try to call the loader's create_module, resulting in infinite recursion
         self.in_create_module = False
-        self.enabled = False
+        self.enable = False
         # both __init__.py of oneflow and torch can't be executed multiple times, so we use a cache
         self.enable_mod_cache = {}
         self.disable_mod_cache = {}
@@ -64,7 +65,7 @@ class OneflowImporter(MetaPathFinder, Loader):
     def find_spec(self, fullname, path, target=None):
         if _is_torch(fullname):  # don't touch modules other than torch
             # for first import of real torch, we use default meta path finders, not our own
-            if not self.enabled and self.disable_mod_cache.get(fullname) is None:
+            if not self.enable and self.disable_mod_cache.get(fullname) is None:
                 return None
             return ModuleSpec(fullname, self)
         return None
@@ -77,7 +78,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         if self.in_create_module:
             return None
         self.in_create_module = True
-        if self.enabled:
+        if self.enable:
             oneflow_mod_fullname = "oneflow" + spec.name[len("torch") :]
             if (
                 sys.modules.get(oneflow_mod_fullname) is None
@@ -103,7 +104,7 @@ class OneflowImporter(MetaPathFinder, Loader):
 
     def exec_module(self, module):
         fullname = "torch" + module.__name__[len("oneflow") :]
-        if self.enabled:
+        if self.enable:
             module = ModuleWrapper(module)
         sys.modules[fullname] = module
         globals()[fullname] = module
@@ -112,11 +113,11 @@ class OneflowImporter(MetaPathFinder, Loader):
         global _first_init
         if _first_init:
             _first_init = False
-            self.enabled = False  # deal with previously imported torch
+            self.enable = False  # deal with previously imported torch
             sys.meta_path.insert(0, self)
             self._enable(globals)
             return
-        if self.enabled:  # already enabled
+        if self.enable:  # already enabled
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
@@ -129,10 +130,10 @@ class OneflowImporter(MetaPathFinder, Loader):
             sys.modules.update({k: v})
             for alias in aliases:
                 globals.update({alias: v})
-        self.enabled = True
+        self.enable = True
 
     def _disable(self, globals):
-        if not self.enabled:  # already disabled
+        if not self.enable:  # already disabled
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
@@ -145,7 +146,7 @@ class OneflowImporter(MetaPathFinder, Loader):
             sys.modules.update({k: v})
             for alias in aliases:
                 globals.update({alias: v})
-        self.enabled = False
+        self.enable = False
 
 
 _importer = OneflowImporter()
@@ -153,13 +154,13 @@ _importer = OneflowImporter()
 
 class enable:
     def __init__(self):
-        self.was_enabled = _importer.enabled
+        self.enable = _importer.enable
         forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
         )
         globals = currentframe().f_back.f_globals
         self.globals = globals
-        if self.was_enabled or forcedly_disabled_by_env_var:
+        if self.enable or forcedly_disabled_by_env_var:
             return
         _importer._enable(globals)
 
@@ -167,14 +168,14 @@ class enable:
         pass
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if not self.was_enabled:
+        if not self.enable:
             _importer._disable(self.globals)
 
 
 class disable:
     def __init__(self):
-        self.was_enabled = _importer.enabled
-        if not self.was_enabled:
+        self.enable = _importer.enable
+        if not self.enable:
             return
         globals = currentframe().f_back.f_globals
         self.globals = globals
@@ -184,5 +185,5 @@ class disable:
         pass
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if self.was_enabled:
+        if self.enable:
             _importer._enable(self.globals)
