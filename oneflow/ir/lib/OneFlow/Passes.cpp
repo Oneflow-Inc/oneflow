@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -102,6 +103,8 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 #include <algorithm>
 #include <memory>
@@ -113,7 +116,13 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+
 #endif  // WITH_MLIR_CUDA_CODEGEN
+
+#ifdef WITH_CUDA
+// enable with_cuda_graphs
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif  // WITH_CUDA
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -610,7 +619,7 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-                                    func::FuncOp okl_func) {
+                                    func::FuncOp okl_func, int index) {
     auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
     auto raw_func = op->getParentOfType<func::FuncOp>();
     if (!op_type_name) { return failure(); }
@@ -619,10 +628,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto loc = op->getLoc();
 
-    auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-        loc, okl::RegContextType::get(rewriter.getContext()));
-    reg_ctx.body().emplaceBlock();
-    rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
+    auto wrap_kernel = rewriter.create<okl::WrapperKernelOp>(loc, index);
+    wrap_kernel.body().emplaceBlock();
+    rewriter.setInsertionPointToEnd(&wrap_kernel.body().back());
 
     BlockAndValueMapping mapping;
 
@@ -640,9 +648,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
           if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
-            auto source = rewriter.create<okl::GetTensorFromRetOp>(
-                op->getLoc(), arg.getType(), okl_func.getArgument(0), okl::TensorType::TT_Argument,
-                index);
+            auto source = rewriter.create<okl::GetTensorFromRetOp>(op->getLoc(), arg.getType(),
+                                                                   okl_func.getArgument(0), index);
             mapping.map(arg, source->getResult(0));
             break;
           }
@@ -664,14 +671,6 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     }
     rewriter.create<okl::ReturnOp>(loc);
 
-    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-    auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
-        loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
-    auto kernel = rewriter.create<okl::BuildKernelOp>(
-        loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
-    rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
-    rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
-    rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
     return success();
   }
 
@@ -679,10 +678,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttr("compiled")) { return success(); }
-    op->setAttr("compiled", rewriter.getStringAttr("true"));
-
-    auto func_name = "okl_func";
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    if (!module) { LOG(FATAL) << "Not found module"; }
+    if (module.lookupSymbol(okl_func::OKL_FUNC)) { return success(); }
 
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
@@ -691,22 +689,23 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto func_type = rewriter.getFunctionType(
         {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
-    auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-    okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
+    auto okl_func = rewriter.create<func::FuncOp>(loc, okl_func::OKL_FUNC, func_type);
     okl_func.getBody().emplaceBlock();
     okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
                                     loc);
 
+    auto index = 0;
     for (auto& op : block) {
       if (!op.hasAttr("op_name")) {
         if (op.getDialect()->getNamespace() == "okl") { continue; }
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(LowerToOKLOp(rewriter, &op, okl_func))) {
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index))) {
         op.emitError("Failed to lowering OneFlow op to okl dialect.");
         return failure();
       }
+      index += 1;
     }
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
@@ -764,14 +763,16 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   return {function, proto.first};
 };
 
-KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
-                                      mlir::PatternRewriter& rewriter, int& name_index) {
-  if (!wrap_ops.size()) return nullptr;
+KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
+                                int& name_index) {
+  if (wrap_ops.size() < 2) {
+    wrap_ops.clear();
+    return nullptr;
+  }
+  auto loc = wrap_ops.front()->getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
 
-  auto wrap_res = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
-  auto wrap_func = wrap_res.first;
-  auto wrap_ins = wrap_res.second;
+  auto [wrap_func, wrap_ins] = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -817,9 +818,8 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
 
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(
-          func->getLoc(), arg.value().getType(), launcher_ctx, okl::TensorType::TT_Argument,
-          arg.index());
+      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
+                                                             launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
 
@@ -840,8 +840,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     std::vector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
       auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
-          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(),
-          okl::TensorType::TT_Return, ret_val.index());
+          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }
 
@@ -853,7 +852,12 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
+    if (op.getBody().getNumArguments()) {
+      // skip if already converted
+      if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) {
+        return success();
+      }
+    }
     op = ExtractArgTensors(op, rewriter);
     op = ExtractRetTensors(op, rewriter);
     return success();
@@ -886,28 +890,92 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+
+  // if the pre-packed ops is continuous with the current op, this current op will be packed with
+  // pre-packed ops together.
+  virtual bool IsConsecutive(std::vector<Operation*>&, mlir::Operation*) const { return true; };
+
+  virtual bool IsPackagable(mlir::Operation* op) const {
+    return GetModuleOpFromJobBodyOp<Job>(&(*op)) && op->getAttr("op_name")
+           && dyn_cast<UserOpCompatible>(op)
+           && op->getName().getStringRef() != KernelLaunchOp::getOperationName();
+  }
+
   mlir::LogicalResult matchAndRewrite(oneflow::Job op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto& ops = op->getRegion(0).front();
     if (ops.empty()) { return success(); }
-    std::vector<StringRef> white_list{
-        KernelLaunchOp::getOperationName(),
-        OutputOp::getOperationName(),
-        InputOp::getOperationName(),
-        VariableOp::getOperationName(),
-    };
+
     int name_index = 0;
-    std::vector<Operation*> wrap_ops;
+    std::vector<Operation*> current_wrap_ops;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
-      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
-          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
-        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+      auto current_op = &(*op_it);
+      if (!IsPackagable(current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
         continue;
       }
-      wrap_ops.push_back(&(*op_it));
+
+      if (!IsConsecutive(current_wrap_ops, current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
+      }
+      current_wrap_ops.push_back(current_op);
     }
-    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
+    if (!current_wrap_ops.empty()) { ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index); }
     return success();
+  }
+};
+
+struct KernelLaunchSimplePattern : public KernelLaunchPattern {
+  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context) : KernelLaunchPattern(context) {}
+
+  bool IsSameDevice(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+
+    auto device_tag = op->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto device_name = op->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+    auto cmp_device_tag = ops.front()->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto cmp_device_name = ops.front()->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+
+    if (!device_tag || !device_name || !cmp_device_tag || !cmp_device_name) { return false; }
+
+    auto same_device_tag = device_tag.str() == cmp_device_tag.str();
+    auto same_device_name =
+        std::equal(device_name.begin(), device_name.end(), cmp_device_name.begin(),
+                   [](const Attribute a, const Attribute b) {
+                     auto a_str = a.dyn_cast_or_null<StringAttr>();
+                     auto b_str = b.dyn_cast_or_null<StringAttr>();
+                     if (!a_str || !b_str) { return false; }
+                     return a_str.str() == b_str.str();
+                   });
+
+    return same_device_tag && same_device_name;
+  }
+
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op);
+  }
+};
+
+struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
+  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
+      : KernelLaunchSimplePattern(context) {}
+
+  bool IsOpCudaGraphSupport(mlir::Operation* op) const {
+    ::oneflow::okl::RegContext reg_ctx(op);
+    auto* kernel = const_cast<::oneflow::user_op::OpKernel*>(reg_ctx.GetKernel());
+    return dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel);
+  }
+
+  bool IsSameCudaGraphSupport(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+    auto cuda_support = IsOpCudaGraphSupport(op);
+    return cuda_support == IsOpCudaGraphSupport(ops.front());
+  }
+
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op) && IsSameCudaGraphSupport(ops, op);
   }
 };
 
@@ -989,9 +1057,21 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
 }
 
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<KernelLaunchPattern>(patterns.getContext());
+void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
+                                           const std::string& mode) {
+  if (mode == wrap_mode::SIMPLE) {
+    patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
+  } else if (mode == wrap_mode::CUDA_GRAPH) {
+#ifdef WITH_CUDA_GRAPHS
+    patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
+#else
+    patterns.add<KernelLaunchPattern>(patterns.getContext());
+#endif
+  } else {
+    LOG(FATAL) << "Found an unsupported mode in wrap-ops-to-kernel-launch pass";
+  }
 }
+
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);

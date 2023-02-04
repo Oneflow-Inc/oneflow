@@ -186,7 +186,7 @@ void DispatchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   if (params.data_type == DataType::kFloat16) {
     DispatchArchTag<cutlass::half_t>(params, stream);
   } else if (params.data_type == DataType::kFloat) {
-    DispatchArchTag<cutlass::tfloat32_t>(params, stream);
+    DispatchArchTag<float>(params, stream);
   } else {
     UNIMPLEMENTED();
   }

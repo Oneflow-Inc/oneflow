@@ -41,7 +41,7 @@ class ModuleWrapper(ModuleType):
                 return None
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
-            raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
+            raise ModuleNotFoundError(self.module.__name__ + "." + name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
             return ModuleWrapper(attr)
@@ -87,7 +87,7 @@ class OneflowImporter(MetaPathFinder, Loader):
                 # get actual oneflow module
                 real_spec = find_spec(oneflow_mod_fullname)
                 if real_spec is None:
-                    raise NotImplementedError(oneflow_mod_fullname + error_msg)
+                    raise ModuleNotFoundError(oneflow_mod_fullname + error_msg)
                 real_mod = module_from_spec(real_spec)
                 real_spec.loader.exec_module(real_mod)
             else:
