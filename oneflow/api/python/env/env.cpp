@@ -95,6 +95,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+  m.def("GetCUDADeviceStatus", &GetCUDADeviceStatus);
   m.def("GetCPUMemoryUsed", &GetCPUMemoryUsed);
   m.def(
       "_get_device_properties",

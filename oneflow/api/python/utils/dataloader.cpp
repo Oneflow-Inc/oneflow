@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/api/python/utils/tensor_utils.h"
 #ifndef _WIN32
 
 #include <atomic>
@@ -152,15 +153,6 @@ static void error_if_any_worker_fails() {
   }
 }
 
-inline int64_t utils_unpackLong(PyObject* obj) {
-  // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-  int overflow;
-  long long value = PyLong_AsLongLongAndOverflow(obj, &overflow);
-  if (value == -1 && PyErr_Occurred()) { throw py::value_error(); }
-  if (overflow != 0) { throw std::runtime_error("Overflow when unpacking long"); }
-  return (int64_t)value;
-}
-
 // We don't want to exit on any SIGCHLD from any child. child_pids is a tuple
 // of pids we are interested in.
 static void set_worker_pids(py::args py_args) {
@@ -168,7 +160,7 @@ static void set_worker_pids(py::args py_args) {
   if (PyTuple_GET_SIZE(args) != 2) {
     throw py::type_error("_set_worker_pids expects exactly 2 arguments.");
   }
-  int64_t key = utils_unpackLong(PyTuple_GET_ITEM(args, 0));
+  int64_t key = one::utils_unpackLong(PyTuple_GET_ITEM(args, 0));
   if (worker_pids.find(key) != worker_pids.end()) {
     throw py::value_error(
         "_set_worker_pids should be called only once for each _BaseDataLoaderIter.");
@@ -184,7 +176,7 @@ static void set_worker_pids(py::args py_args) {
   auto size = PyTuple_GET_SIZE(child_pids);
   for (int idx = 0; idx < size; idx++) {
     PyObject* obj = PyTuple_GET_ITEM(child_pids, idx);
-    pids_set.insert(static_cast<pid_t>(utils_unpackLong(obj)));
+    pids_set.insert(static_cast<pid_t>(one::utils_unpackLong(obj)));
   }
 
   worker_pids[key] = pids_set;
@@ -192,7 +184,7 @@ static void set_worker_pids(py::args py_args) {
 
 static void remove_worker_pids(py::args py_args) {
   PyObject* args = py_args.ptr();
-  int64_t key = utils_unpackLong(PyTuple_GET_ITEM(args, 0));
+  int64_t key = one::utils_unpackLong(PyTuple_GET_ITEM(args, 0));
   auto it = worker_pids.find(key);
   if (it == worker_pids.end()) {
     py::print("Cannot find worker information for _BaseDataLoaderIter with id :", key);
