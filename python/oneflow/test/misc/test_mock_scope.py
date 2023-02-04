@@ -74,7 +74,7 @@ class TestMock(flow.unittest.TestCase):
 
     def test_error(test_case):
         mock.enable()
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(ModuleNotFoundError) as context:
             from torch import noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)

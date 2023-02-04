@@ -159,7 +159,7 @@ Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
+  const auto& device = JUST(Device::New(device_tag(), device_id));
   int64_t parallel_id_val = -1;
   if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
     *parallel_id = parallel_id_val;
@@ -474,7 +474,7 @@ Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
   const auto& type = parallel_desc->device_tag();
-  return JUST(Device::ThreadLocalGetOrNew(type, device_id));
+  return JUST(Device::New(type, device_id));
 }
 
 Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {
