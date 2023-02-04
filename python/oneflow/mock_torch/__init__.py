@@ -22,6 +22,8 @@ from importlib.util import find_spec, module_from_spec
 import sys
 from contextlib import contextmanager
 
+import oneflow.support.env_var_util
+
 _first_init = True
 
 error_msg = """ is not implemented, please submit an issue at  
@@ -153,10 +155,13 @@ _importer = OneflowImporter()
 class enable:
     def __init__(self):
         self.enable = _importer.enable
-        if self.enable:
-            return
+        forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
+            "ONEFLOW_DISABLE_MOCK_TORCH", False
+        )
         globals = currentframe().f_back.f_globals
         self.globals = globals
+        if self.enable or forcedly_disabled_by_env_var:
+            return
         _importer._enable(globals)
 
     def __enter__(self):
