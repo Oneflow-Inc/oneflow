@@ -80,8 +80,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<Symbol<Stream>> CopyOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  Symbol<Device> out_device =
-      JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
+  Symbol<Device> out_device = ctx->Attr<Symbol<Device>>("device");
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
