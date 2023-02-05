@@ -27,6 +27,7 @@ from oneflow.nn.modules.activation import (
     Hardswish,
     Hardtanh,
     LeakyReLU,
+    RReLU,
     LogSigmoid,
     LogSoftmax,
     Mish,
