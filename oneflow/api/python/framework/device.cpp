@@ -57,14 +57,12 @@ static PyObject* Device_memoryStats(PyObject* arg) {
   };
 
   const auto statArrayToDict = [=](const StatArray& statArray) {
-    const std::array<const char*, static_cast<size_t>(StatType::NUM_TYPES)>
-        statTypeNames = {"all", "small_pool", "large_pool"};
+    const std::array<const char*, static_cast<size_t>(StatType::NUM_TYPES)> statTypeNames = {
+        "all", "small_pool", "large_pool"};
     py::dict dict;
     std::vector<int32_t> stat_len(statTypeNames.size());
     std::iota(stat_len.begin(), stat_len.end(), 0);
-    for (const auto i : stat_len) {
-      dict[statTypeNames[i]] = statToDict(statArray[i]);
-    }
+    for (const auto i : stat_len) { dict[statTypeNames[i]] = statToDict(statArray[i]); }
     return dict;
   };
 
@@ -105,7 +103,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
       .def(py::self == py::self)
       .def(py::hash(py::self));
- 
+
   m.def(
       "max_alignment_size", []() { return ep::kMaxAlignmentRequirement; },
       py::return_value_policy::copy);

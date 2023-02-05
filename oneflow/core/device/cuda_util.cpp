@@ -309,18 +309,13 @@ DeviceStats GetCUDADeviceStatus(int device_id) {
   OF_CUDA_CHECK(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrUsedMemHigh, &used_mem_peak));
 
   DeviceStats device_stats;
-  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].current =
-      used_mem_current;
-  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak =
-      used_mem_peak;
-  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].current =
-      used_mem_current;
-  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak =
-      used_mem_peak;
+  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].current = used_mem_current;
+  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = used_mem_peak;
+  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].current = used_mem_current;
+  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = used_mem_peak;
   device_stats.reserved_bytes[static_cast<size_t>(StatType::AGGREGATE)].current =
       reserved_mem_current;
-  device_stats.reserved_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak =
-      reserved_mem_peak;
+  device_stats.reserved_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = reserved_mem_peak;
   return device_stats;
 }
 
