@@ -1126,7 +1126,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
-  VLOG(1) << "NCCL dependency_depth = " << dependency_depth << " order = " << order;
+  VLOG(1) << "NCCL total_dependency_depth = " << dependency_depth << " order = " << order;
 }
 
 void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
@@ -1250,7 +1250,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
-  VLOG(1) << "OCCL dependency_depth = " << dependency_depth << " order = " << order;
+  VLOG(1) << "OCCL total_dependency_depth = " << dependency_depth << " order = " << order;
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
