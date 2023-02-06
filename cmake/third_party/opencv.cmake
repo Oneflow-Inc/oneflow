@@ -13,7 +13,7 @@ set(OPENCV_URL
     https://github.com/opencv/opencv/archive/83391ac59d270f2148fc99a62ae279b04d37f5d0.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
-set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
+set(OPENCV_LIBRARY_NAMES libopencv_imgcodecs.a libopencv_imgproc.a libopencv_core.a)
 set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})

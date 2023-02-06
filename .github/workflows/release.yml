@@ -48,7 +48,6 @@ jobs:
             cu118
             cu117
             cu116
-            cu102
             cpu
 
   staging_release:
