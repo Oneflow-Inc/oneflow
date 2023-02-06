@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -23,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
@@ -477,15 +480,37 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   HashMap<std::string, OperatorConf> mut_op_name2conf;
   // TODO(chengcheng) : better order for memory.
   std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-    ordered_op_nodes.emplace_back(node);
-    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-    std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
-    if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
-      seed_time_shape = this_time_shape;
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+    op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+      ordered_op_nodes.emplace_back(node);
+      // TODO: remove this and head file
+      if (GlobalProcessCtx::Rank() == 0) {
+        std::cout << "Executing " << node->op().op_name() << std::endl;
+      }
+      op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+      std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
+      if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
+        seed_time_shape = this_time_shape;
+      }
+      mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
+    });
+  } else {
+    auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+    int32_t global_order = 0;
+    for (auto& node : ordered_op_nodes) {
+      // TODO: remove this and head file
+      if (GlobalProcessCtx::Rank() == 0) {
+        std::cout << "Executing " << node->op().op_name() << std::endl;
+      }
+      op_node2global_order.emplace(node, global_order);
+      global_order++;
+      std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
+      if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
+        seed_time_shape = this_time_shape;
+      }
+      mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
     }
-    mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
-  });
+  }
 
   VLOG(2) << " seed time shape = " << seed_time_shape->ToString();
 

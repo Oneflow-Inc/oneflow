@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -45,6 +46,9 @@ class StraightenOpGraphPass final : public JobPass {
 };
 
 Maybe<void> StraightenOpGraphPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  // Have some conflict with grad acc, move the straighten into the logical chain pass.
+  // But if the logical chain pass is not executed, we need to do the straighten here.
+  if (EnableLogicalChain()) { return Maybe<void>::Ok(); }
   // TODO: use VLOG(3) here
   std::cout << "Straighten op graph is working!" << std::endl;
   std::vector<const OpNode*> ordered_op_nodes;
