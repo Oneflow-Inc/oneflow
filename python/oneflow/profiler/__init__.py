@@ -25,6 +25,7 @@ __all__ = [
     "profile",
     "record_function",
     "ProfilerActivity",
+    "kineto_available",
 ]
 
 
@@ -42,3 +43,7 @@ def profiler_start():
 
 def profiler_stop():
     oneflow._oneflow_internal.profiler.ProfilerStop()
+
+
+def kineto_available():
+    return True

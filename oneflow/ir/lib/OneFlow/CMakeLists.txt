@@ -23,10 +23,17 @@ oneflow_add_mlir_dialect_library(
   OKL/OKLOps.cpp
   OKL/OKLTypes.cpp
   OKL/Conversion/OKLToLLVM.cpp
-  OKL/Conversion/SplitIntoFuncs.cpp
-  OKL/Conversion/FetchFromLauncher.cpp
-  OKL/Conversion/OnlyKeepComputeOps.cpp
+  OKL/Conversion/CudaGraphSupport.cpp
   OKL/Conversion/Conversion.cpp
+  OKL/Kernel/InferContext.cpp
+  OKL/Kernel/KernelLaunchOp.cpp
+  OKL/Kernel/LauncherState.cpp
+  OKL/Kernel/LauncherContext.cpp
+  OKL/Kernel/ComputeContext.cpp
+  OKL/Kernel/RegContext.cpp
+  OKL/Kernel/TmpBufferManager.cpp
+  OKL/Kernel/JITOpInfer.cpp
+  OKL/Kernel/JITEngine.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
@@ -47,7 +54,7 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
-  Transform/AggregateComputeOps.cpp
+  Transform/AggregateOps.cpp
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp
@@ -72,6 +79,7 @@ oneflow_add_mlir_dialect_library(
   ${MLIR_GPU_LIBS}
   MLIRIR
   MLIROneFlowPDLLPatterns
+  MLIRExecutionEngine
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)
