@@ -195,7 +195,8 @@ class TestDependGraph(oneflow.unittest.TestCase):
                 # to test the case that OPs have mutiple outputs connect to depend OP
                 x1 = x + 2
                 mp_values, mp_indices = nn.functional.max_pool1d(
-                    x, kernel_size=2, return_indices=True)
+                    x, kernel_size=2, return_indices=True
+                )
                 mp_values = nn.functional.depend(mp_values, x1)
                 mp_values = mp_values * 2
                 return mp_values + mp_indices.to(flow.float32)
