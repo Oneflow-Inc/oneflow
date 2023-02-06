@@ -185,6 +185,24 @@ class TestDependGraph(oneflow.unittest.TestCase):
         x = flow.randn([1, 128], dtype=flow.float32)
         _build_graph_and_test(TestModel_6, x, test_case)
 
+    def test_depend_graph_case7(test_case):
+        class TestModel_7(nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                # to ensure "mp_values * 2" be executed before "max_pool1d" in graph mode
+                # to test the case that OPs have mutiple outputs connect to depend OP
+                x1 = x + 2
+                mp_values, mp_indices = nn.functional.max_pool1d(
+                    x, kernel_size=2, return_indices=True)
+                mp_values = nn.functional.depend(mp_values, x1)
+                mp_values = mp_values * 2
+                return mp_values + mp_indices.to(flow.float32)
+
+        x = flow.randn([1, 2, 3], dtype=flow.float32)
+        _build_graph_and_test(TestModel_7, x, test_case)
+
 
 if __name__ == "__main__":
     unittest.main()
