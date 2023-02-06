@@ -198,6 +198,11 @@ class Module(object):
                 self._shallow_repr()
                 + " is called in a nn.Graph, but not registered into a nn.Graph."
             )
+
+        full_backward_hooks, non_full_backward_hooks = [], []
+        if self._backward_hooks:
+            full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
+
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
@@ -206,9 +211,7 @@ class Module(object):
                 args = result
 
         bw_hook = None
-        full_backward_hooks, non_full_backward_hooks = [], []
-        if len(self._backward_hooks) > 0:
-            full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
+        if full_backward_hooks:
             bw_hook = flow.utils.hooks.BackwardHook(self, full_backward_hooks, [])
             args = bw_hook.setup_input_hook(args)
 
@@ -218,10 +221,10 @@ class Module(object):
             if result is not None:
                 res = result
 
-        if bw_hook:
+        if bw_hook is not None:
             res = bw_hook.setup_output_hook(res)
 
-        if len(non_full_backward_hooks) > 0:
+        if non_full_backward_hooks:
             var = res
             while not isinstance(var, Tensor):
                 if isinstance(var, dict):
@@ -1065,11 +1068,11 @@ class Module(object):
     ):
         r"""Registers a backward hook on the module.
 
-        This function is deprecated in favor of :meth:`~torch.nn.Module.register_full_backward_hook` and
+        This function is deprecated in favor of :meth:`~oneflow.nn.Module.register_full_backward_hook` and
         the behavior of this function will change in future versions.
 
         Returns:
-            :class:`oneflow.utils.hooks.flow.utils.hooks.RemovableHandle`:
+            :class:`oneflow.utils.hooks.RemovableHandle`:
                 a handle that can be used to remove the added hook by calling
                 ``handle.remove()``
 
@@ -1087,7 +1090,7 @@ class Module(object):
         return handle
 
     def register_full_backward_hook(
-        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, _grad_t]],
+        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, Tensor]],
     ):
         if self._is_full_backward_hook is False:
             raise RuntimeError(
@@ -1132,7 +1135,7 @@ class Module(object):
 
         if not isinstance(args, Tensor):
             if not (
-                isinstance(args, tuple) and all([isinstance(i, Tensor) for i in inputs])
+                isinstance(args, tuple) and all([isinstance(i, Tensor) for i in args])
             ):
                 warnings.warn(
                     "Using non-full backward hooks on a Module that does not take as input a "
@@ -1161,10 +1164,10 @@ class Module(object):
                 "some grad_output. Please use register_full_backward_hook to get the documented behavior."
             )
         else:
-            # At this point the grad_ouput part of the hook will most likely be correct
+            # At this point the grad_output part of the hook will most likely be correct
             inputs_grad_fn = {i.grad_fn for i in args if i.grad_fn is not None}
 
-            next_functions = {n[0] for n in grad_fn.next_functions}
+            next_functions = {grad_fn.next_functions[0]}
 
             if inputs_grad_fn != next_functions:
                 warnings.warn(

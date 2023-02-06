@@ -95,12 +95,18 @@ class BackwardHook(object):
         return tuple(res)
 
     def _set_user_hook(self, grad_fn):
-        def hook(grad_input, _):
+        def fn(grad_input, _):
             if self.grad_outputs is None:
-                # This happens because the gradient in your nn.Module flows to
-                # the Module's input without " passing through the Module's
-                # output, e.g. when you're doing double backward.
+                warnings.warn(
+                    "Module backward hook for grad_input is called before "
+                    "the grad_output one. This happens because the gradient "
+                    "in your nn.Module flows to the Module's input without "
+                    "passing through the Module's output. Make sure that the "
+                    "output depends on the input and that the loss is computed "
+                    "based on the output."
+                )
                 return
+
             res = self._pack_with_none(
                 self.input_tensors_index, grad_input, self.n_inputs
             )
@@ -119,11 +125,18 @@ class BackwardHook(object):
 
                 res = out
 
-            self.grad_outputs = None
+            if res is None:
+                return res
 
+            if len(res) != len(grad_input):
+                raise RuntimeError(
+                    "Backward hook returned an invalid number of grad_input, "
+                    "got {}, but expected {}".format(len(res), len(grad_input))
+                )
+            self.grad_outputs = None
             return self._unpack_none(self.input_tensors_index, res)
 
-        grad_fn.register_hook(hook)
+        grad_fn.register_hook(fn)
 
     def _apply_on_tensors(self, fn, args):
         # Can be used to apply the given function to the tensors contained in the
@@ -229,6 +242,7 @@ class BackwardHook(object):
             is_tuple = False
 
         res, output_idx = self._apply_on_tensors(fn, args)
+
         self.n_outputs = len(args)
         self.output_tensors_index = output_idx
 

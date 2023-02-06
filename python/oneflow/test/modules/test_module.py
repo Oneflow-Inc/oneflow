@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import os
+import math
 import warnings
 import tempfile
 import unittest
@@ -28,10 +29,90 @@ import torch
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+from oneflow._oneflow_internal import TensorTuple
+from oneflow.test_utils.test_util import GenArgList
 
 
 def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
+
+
+def _test_hooks(test_case, backward_register_fn):
+    module = nn.Sigmoid()
+    input = flow.ones(5, 5, requires_grad=True)
+
+    counter = {"forwards": 0, "backwards": 0}
+
+    if backward_register_fn == "register_backward_hook":
+        bw_type = TensorTuple
+    elif backward_register_fn == "register_full_backward_hook":
+        bw_type = tuple
+
+    def fw_hook(inc, h_module, input, output):
+        test_case.assertTrue(isinstance(input, tuple))
+        test_case.assertTrue(isinstance(output, flow.Tensor))
+        test_case.assertTrue(h_module is module)
+        test_case.assertTrue(flow.equal(input[0], flow.ones(5, 5)))
+        test_case.assertTrue(
+            flow.equal(output, flow.empty(5, 5).fill_(1 / (1 + 1 / math.e)))
+        )
+        counter["forwards"] += inc
+
+    def bw_hook(inc, h_module, grad_input, grad_output):
+        # TODO(hujiakui): why TensorTuple in register_backward_hook, not tuple(Tensor)?
+        # maybe because it's register_hook directly.
+        test_case.assertTrue(isinstance(grad_input, bw_type))
+        test_case.assertTrue(isinstance(grad_output, bw_type))
+        test_case.assertTrue(h_module is module)
+        test_case.assertTrue(flow.equal(grad_output[0], flow.ones(5, 5) * 2))
+        counter["backwards"] += inc
+
+    test_fwd = module.register_forward_hook(lambda *args: fw_hook(1, *args))
+
+    module(input)
+    module(input)
+    test_case.assertEqual(counter["forwards"], 2)
+    test_case.assertEqual(counter["backwards"], 0)
+
+    test_bwd = getattr(module, backward_register_fn)(lambda *args: bw_hook(1, *args))
+
+    output = module(input)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 0)
+
+    output.backward(flow.ones(5, 5) * 2, retain_graph=True)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 1)
+
+    output.backward(flow.ones(5, 5) * 2, retain_graph=True)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 2)
+
+    test2_fwd = module.register_forward_hook(lambda *args: fw_hook(2, *args))
+
+    output = module(input)
+    test_case.assertEqual(counter["forwards"], 6)
+    test_case.assertEqual(counter["backwards"], 2)
+
+    test2_bwd = getattr(module, backward_register_fn)(lambda *args: bw_hook(2, *args))
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 9)
+    test_case.assertEqual(counter["backwards"], 5)
+
+    test2_bwd.remove()
+
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 12)
+    test_case.assertEqual(counter["backwards"], 6)
+
+    test2_fwd.remove()
+
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 13)
+    test_case.assertEqual(counter["backwards"], 7)
+
+    test_fwd.remove()
+    test_bwd.remove()
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -255,6 +336,17 @@ class TestModule(flow.unittest.TestCase):
 
         m = ConvBNModule()
         delattr(m, "bn")
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_all_hooks(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_hooks]
+        arg_dict["backward_register_fn"] = [
+            "register_backward_hook",
+            "register_full_backward_hook",
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook(test_case):
