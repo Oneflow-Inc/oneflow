@@ -146,6 +146,45 @@ class TestDependGraph(oneflow.unittest.TestCase):
         x = flow.randn([1, 128], dtype=flow.float32)
         _build_graph_and_test(TestModel_4, x, test_case)
 
+    def test_depend_graph_case5(test_case):
+        class TestModel_5(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear0 = nn.Linear(128, 128)
+                self.linear1 = nn.Linear(128, 128)
+
+            def forward(self, x):
+                # to ensure "x * 2" be executed before "self.linear0(x)" and
+                # "self.linear1(x)" in graph mode
+                # to test the case that depend OP connect to more than one OPs
+                x1 = x * 2
+                x = nn.functional.depend(x, x1)
+                x2 = self.linear0(x)
+                x3 = self.linear1(x)
+                return x2 + x3
+
+        x = flow.randn([1, 128], dtype=flow.float32)
+        _build_graph_and_test(TestModel_5, x, test_case)
+
+    def test_depend_graph_case6(test_case):
+        class TestModel_6(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(128, 128)
+
+            def forward(self, x):
+                # to ensure "x - 2" be executed before "self.linear(x)" in graph mode
+                # to test the case that the OP connects to Depend OP also connects to other OPs
+                x1 = x * 2
+                x2 = x1 - 2
+                x3 = nn.functional.depend(x2, x1)
+                x4 = self.linear(x3)
+                x5 = x2 + x4
+                return x5
+
+        x = flow.randn([1, 128], dtype=flow.float32)
+        _build_graph_and_test(TestModel_6, x, test_case)
+
 
 if __name__ == "__main__":
     unittest.main()
