@@ -37,11 +37,10 @@ import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
-from oneflow.utils.hooks import RemovableHandle, BackwardHook
 from contextlib import contextmanager
 
 
-class _WrappedHook:
+class _WrappedHook(object):
     def __init__(self, hook: Callable, module: Optional["Module"] = None):
         self.hook: Callable = hook
         functools.update_wrapper(self, hook)
@@ -73,7 +72,9 @@ class _WrappedHook:
 
         if self.with_module:
             if state["module"] is None:
-                raise RuntimeError("You are trying to revive the hook of a dead Module!")
+                raise RuntimeError(
+                    "You are trying to revive the hook of a dead Module!"
+                )
             self.module = weakref.ref(state["module"])
 
 
@@ -208,9 +209,7 @@ class Module(object):
         full_backward_hooks, non_full_backward_hooks = [], []
         if len(self._backward_hooks) > 0:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
-            bw_hook = BackwardHook(
-                self, full_backward_hooks.values(), []
-            )
+            bw_hook = flow.utils.hooks.BackwardHook(self, full_backward_hooks, [])
             args = bw_hook.setup_input_hook(args)
 
         res = self.forward(*args, **kwargs)
@@ -359,19 +358,21 @@ class Module(object):
             )
         else:
             self._parameters[name] = param
-    
-    def _register_state_dict_hook(self, hook) -> RemovableHandle:
+
+    def _register_state_dict_hook(self, hook):
         r"""These hooks will be called with arguments: `self`, `state_dict`,
         `prefix`, `local_metadata`, after the `state_dict` of `self` is set.
         Note that only parameters and buffers of `self` or its children are
         guaranteed to exist in `state_dict`. The hooks may modify `state_dict`
         inplace or return a new one.
         """
-        handle = RemovableHandle(self._state_dict_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._state_dict_hooks)
         self._state_dict_hooks[handle.id] = hook
         return handle
 
-    def _register_load_state_dict_pre_hook(self, hook: Callable[..., None], with_module=False):
+    def _register_load_state_dict_pre_hook(
+        self, hook: Callable[..., None], with_module=False
+    ):
         r"""These hooks will be called with arguments: `state_dict`, `prefix`,
         `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
         `error_msgs`, before loading `state_dict` into `self`. These arguments
@@ -386,17 +387,19 @@ class Module(object):
             with_module (bool, optional): Whether or not to pass the module
                 instance to the hook as the first parameter.
         """
-        handle = hooks.RemovableHandle(self._load_state_dict_pre_hooks)
-        self._load_state_dict_pre_hooks[handle.id] = _WrappedHook(hook, self if with_module else None)
+        handle = flow.utils.hooks.RemovableHandle(self._load_state_dict_pre_hooks)
+        self._load_state_dict_pre_hooks[handle.id] = _WrappedHook(
+            hook, self if with_module else None
+        )
         return handle
 
-    def register_state_dict_pre_hook(self, hook) -> RemovableHandle:
+    def register_state_dict_pre_hook(self, hook):
         r"""These hooks will be called with arguments: ``self``, ``prefix``,
         and ``keep_vars`` before calling ``state_dict`` on ``self``. The registered
         hooks can be used to perform pre-processing before the ``state_dict``
         call is made.
         """
-        handle = RemovableHandle(self._state_dict_pre_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._state_dict_pre_hooks)
         self._state_dict_pre_hooks[handle.id] = hook
         return handle
 
@@ -1058,88 +1061,105 @@ class Module(object):
     _grad_t = Union[Tuple[Tensor, ...], Tensor]
 
     def register_backward_hook(
-        self, hook: Callable[['Module', _grad_t, _grad_t], Union[None, Tensor]]
-    ) -> RemovableHandle:
+        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, Tensor]]
+    ):
         r"""Registers a backward hook on the module.
 
         This function is deprecated in favor of :meth:`~torch.nn.Module.register_full_backward_hook` and
         the behavior of this function will change in future versions.
 
         Returns:
-            :class:`torch.utils.hooks.RemovableHandle`:
+            :class:`oneflow.utils.hooks.flow.utils.hooks.RemovableHandle`:
                 a handle that can be used to remove the added hook by calling
                 ``handle.remove()``
 
         """
         if self._is_full_backward_hook is True:
-            raise RuntimeError("Cannot use both regular backward hooks and full backward hooks on a "
-                               "single Module. Please use only one of them.")
+            raise RuntimeError(
+                "Cannot use both regular backward hooks and full backward hooks on a "
+                "single Module. Please use only one of them."
+            )
 
         self._is_full_backward_hook = False
 
-        handle = RemovableHandle(self._backward_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._backward_hooks)
         self._backward_hooks[handle.id] = hook
         return handle
 
     def register_full_backward_hook(
-        self,
-        hook: Callable[["Module", _grad_t, _grad_t], Union[None, _grad_t]],
-    ) -> RemovableHandle:
+        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, _grad_t]],
+    ):
         if self._is_full_backward_hook is False:
-            raise RuntimeError("Cannot use both regular backward hooks and full backward hooks on a "
-                               "single Module. Please use only one of them.")
+            raise RuntimeError(
+                "Cannot use both regular backward hooks and full backward hooks on a "
+                "single Module. Please use only one of them."
+            )
         self._is_full_backward_hook = True
 
-        handle = RemovableHandle(self._backward_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._backward_hooks)
         self._backward_hooks[handle.id] = hook
         return handle
-    
+
     def _get_backward_hooks(self):
         r"""Returns the backward hooks for use in the call function.
         It returns two lists, one with the full backward hooks and one with the non-full
         backward hooks.
         """
         full_backward_hooks: List[Callable] = []
-        if (self._is_full_backward_hook is True):
+        if self._is_full_backward_hook is True:
             full_backward_hooks += self._backward_hooks.values()
 
         non_full_backward_hooks: List[Callable] = []
-        if (self._is_full_backward_hook is False):
+        if self._is_full_backward_hook is False:
             non_full_backward_hooks += self._backward_hooks.values()
 
         return full_backward_hooks, non_full_backward_hooks
-    
+
     def _maybe_warn_non_full_backward_hook(self, args, res, grad_fn):
         if not isinstance(res, Tensor):
-            if not (isinstance(res, tuple) and all([isinstance(r, Tensor) for r in result])):
-                warnings.warn("Using non-full backward hooks on a Module that does not return a "
-                              "single Tensor or a tuple of Tensors is deprecated and will be removed "
-                              "in future versions. This hook will be missing some of the grad_output. "
-                              "Please use register_full_backward_hook to get the documented behavior.")
+            if not (
+                isinstance(res, tuple) and all([isinstance(r, Tensor) for r in result])
+            ):
+                warnings.warn(
+                    "Using non-full backward hooks on a Module that does not return a "
+                    "single Tensor or a tuple of Tensors is deprecated and will be removed "
+                    "in future versions. This hook will be missing some of the grad_output. "
+                    "Please use register_full_backward_hook to get the documented behavior."
+                )
                 return
         else:
             res = (res,)
 
         if not isinstance(args, Tensor):
-            if not (isinstance(args, tuple) and all([isinstance(i, Tensor) for i in inputs])):
-                warnings.warn("Using non-full backward hooks on a Module that does not take as input a "
-                              "single Tensor or a tuple of Tensors is deprecated and will be removed "
-                              "in future versions. This hook will be missing some of the grad_input. "
-                              "Please use register_full_backward_hook to get the documented behavior.")
+            if not (
+                isinstance(args, tuple) and all([isinstance(i, Tensor) for i in inputs])
+            ):
+                warnings.warn(
+                    "Using non-full backward hooks on a Module that does not take as input a "
+                    "single Tensor or a tuple of Tensors is deprecated and will be removed "
+                    "in future versions. This hook will be missing some of the grad_input. "
+                    "Please use register_full_backward_hook to get the documented behavior."
+                )
                 return
         else:
             args = (args,)
 
         # At this point we are sure that inputs and result are tuple of Tensors
         out_grad_fn = {r.grad_fn for r in res if r.grad_fn is not None}
-        if len(out_grad_fn) == 0 or (len(out_grad_fn) == 1 and grad_fn not in out_grad_fn):
-            warnings.warn("Using a non-full backward hook when outputs are nested in python data structure "
-                          "is deprecated and will be removed in future versions. This hook will be missing "
-                          "some grad_output.")
+        if len(out_grad_fn) == 0 or (
+            len(out_grad_fn) == 1 and grad_fn not in out_grad_fn
+        ):
+            warnings.warn(
+                "Using a non-full backward hook when outputs are nested in python data structure "
+                "is deprecated and will be removed in future versions. This hook will be missing "
+                "some grad_output."
+            )
         elif len(out_grad_fn) > 1:
-            warnings.warn("Using a non-full backward hook when outputs are generated by different autograd Nodes "
-                          "is deprecated and will be removed in future versions. This hook will be missing "
-                          "some grad_output. Please use register_full_backward_hook to get the documented behavior.")
+            warnings.warn(
+                "Using a non-full backward hook when outputs are generated by different autograd Nodes "
+                "is deprecated and will be removed in future versions. This hook will be missing "
+                "some grad_output. Please use register_full_backward_hook to get the documented behavior."
+            )
         else:
             # At this point the grad_ouput part of the hook will most likely be correct
             inputs_grad_fn = {i.grad_fn for i in args if i.grad_fn is not None}
@@ -1147,12 +1167,14 @@ class Module(object):
             next_functions = {n[0] for n in grad_fn.next_functions}
 
             if inputs_grad_fn != next_functions:
-                warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
-                              "is deprecated and will be removed in future versions. This hook will be missing "
-                              "some grad_input. Please use register_full_backward_hook to get the documented "
-                              "behavior.")
+                warnings.warn(
+                    "Using a non-full backward hook when the forward contains multiple autograd Nodes "
+                    "is deprecated and will be removed in future versions. This hook will be missing "
+                    "some grad_input. Please use register_full_backward_hook to get the documented "
+                    "behavior."
+                )
 
-    def register_forward_pre_hook(self, hook: Callable[..., None]) -> RemovableHandle:
+    def register_forward_pre_hook(self, hook: Callable[..., None]):
         r"""
         register_forward_pre_hook(hook)
         
@@ -1170,11 +1192,11 @@ class Module(object):
         if a single value is returned(unless that value is already a tuple).
 
         """
-        handle = RemovableHandle(self._forward_pre_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._forward_pre_hooks)
         self._forward_pre_hooks[handle.id] = hook
         return handle
 
-    def register_forward_hook(self, hook: Callable[..., None]) -> RemovableHandle:
+    def register_forward_hook(self, hook: Callable[..., None]):
         r"""
         register_forward_hook(hook)
 
@@ -1192,7 +1214,7 @@ class Module(object):
         :func:`forward` is called.
 
         """
-        handle = hooks.RemovableHandle(self._forward_hooks)
+        handle = flow.utils.hooks.RemovableHandle(self._forward_hooks)
         self._forward_hooks[handle.id] = hook
         return handle
 

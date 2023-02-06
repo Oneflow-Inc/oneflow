@@ -21,7 +21,7 @@ import weakref
 import warnings
 from typing import Any
 
-__all__ = ["RemovableHandle", "BackwardHook"]
+__all__ = ["BackwardHook", "RemovableHandle"]
 
 
 class RemovableHandle(object):
@@ -52,8 +52,11 @@ class RemovableHandle(object):
         self.id = state[1]
         RemovableHandle.next_id = max(RemovableHandle.next_id, self.id + 1)
 
-    def __enter__(self) -> 'RemovableHandle':
+    def __enter__(self) -> "RemovableHandle":
         return self
+
+    def __exit__(self, type: Any, value: Any, tb: Any) -> None:
+        self.remove()
 
 
 class BackwardHook(object):

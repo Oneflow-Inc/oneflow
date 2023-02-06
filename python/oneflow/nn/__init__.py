@@ -15,7 +15,6 @@ limitations under the License.
 """
 from .modules import *
 from oneflow.nn.graph import Graph
-from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     CELU,
