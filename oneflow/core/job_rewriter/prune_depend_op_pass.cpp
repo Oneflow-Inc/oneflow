@@ -30,7 +30,8 @@ namespace {
 struct UpdatedNodeInfo {
   const OpNode* node = nullptr;
   const OpNode* new_src_node = nullptr;
-  const OpNode* nearest_depend_node = nullptr;
+  const OpNode* depend_node_nearest_src = nullptr;
+  const OpNode* depend_node_nearest_dst = nullptr;
   std::vector<const OpNode*> new_in_ctrl_nodes;
   bool updated = false;
 };
@@ -69,6 +70,20 @@ const OpNode* GetNodeFromInputEdge(const OpNode* op_node) {
 
 const OpNode* GetNodeFromInCtrlEdge(const OpNode* op_node) {
   return GetNodeFromEdgeByTensorName(op_node, "depend_tensor_0");
+}
+
+LogicalBlobId GetNewLbi(const OpNode* src_node, const OpNode* depend_node_nearest_src) {
+  CHECK(IsDependyOp(depend_node_nearest_src->op().op_conf()));
+  for (const OpEdge* out_edge : src_node->out_edges()) {
+    const OpNode* dst_node = out_edge->dst_node();
+    if (dst_node != depend_node_nearest_src) { continue; }
+
+    CHECK(out_edge->lbis().size() == 1);
+    return out_edge->lbis()[0];
+  }
+  // should not reach here
+  CHECK(false);
+  return {};
 }
 
 class PruneDependOpPass final : public JobPass {
@@ -110,7 +125,7 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       UpdatedNodeInfo& updated_dst_node_info = node_info_with_update.find(dst_op.op_name())->second;
       UpdatedNodeInfo& updated_cur_node_info = node_info_with_update.find(cur_op_name)->second;
       updated_dst_node_info.updated = true;
-      updated_dst_node_info.nearest_depend_node = cur_node;
+      updated_dst_node_info.depend_node_nearest_dst = cur_node;
 
       // Step 1.1: record a new in-ctrl node
       const OpNode* cur_in_ctrl_node = GetNodeFromInCtrlEdge(cur_node);
@@ -144,8 +159,11 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       } else {
         if (!IsDependyOp(cur_src_node->op().op_conf())) {
           updated_dst_node_info.new_src_node = cur_src_node;
+          updated_dst_node_info.depend_node_nearest_src = cur_node;
         } else if (updated_cur_node_info.updated && updated_cur_node_info.new_src_node) {
           updated_dst_node_info.new_src_node = updated_cur_node_info.new_src_node;
+          updated_dst_node_info.depend_node_nearest_src =
+              updated_cur_node_info.depend_node_nearest_src;
         }
       }
     }
@@ -175,10 +193,12 @@ Maybe<void> PruneDependOpPass::Apply(Job* job, JobPassCtx* ctx) const {
 
     // Step 2.1: connect updated src_node with cur_node (dst_node of Depned OP)
     const OpNode* src_node = node_info.second.new_src_node;
-    CHECK(src_node);
-    const OpNode* nearest_depend_node = node_info.second.nearest_depend_node;
-    const auto& old_lbi = nearest_depend_node->op().BnInOp2Lbi(nearest_depend_node->op().SoleObn());
-    const auto& new_lbi = src_node->op().BnInOp2Lbi(src_node->op().SoleObn());
+    const OpNode* depend_node_nearest_dst = node_info.second.depend_node_nearest_dst;
+    const OpNode* depend_node_nearest_src = node_info.second.depend_node_nearest_src;
+    CHECK(src_node && depend_node_nearest_dst && depend_node_nearest_src);
+    const auto& old_lbi =
+        depend_node_nearest_dst->op().BnInOp2Lbi(depend_node_nearest_dst->op().SoleObn());
+    const auto new_lbi = GetNewLbi(src_node, depend_node_nearest_src);
     for (const std::string& ibn : cur_node->op().input_bns()) {
       if (cur_op.BnInOp2Lbi(ibn) == old_lbi) {
         const auto& old_val =
