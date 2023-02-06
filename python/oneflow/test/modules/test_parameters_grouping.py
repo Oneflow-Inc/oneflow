@@ -44,7 +44,14 @@ def test_cpg_grouping(test_case, device):
 
         loss = a.sum() + b.sum() + c.sum() + d.sum() + e.sum() + g.sum()
         loss.backward()
-        return [a.grad.numpy(), b.grad.numpy(), c.grad.numpy(), d.grad.numpy(), e.grad.numpy(), g.grad.numpy()]
+        return [
+            a.grad.numpy(),
+            b.grad.numpy(),
+            c.grad.numpy(),
+            d.grad.numpy(),
+            e.grad.numpy(),
+            g.grad.numpy(),
+        ]
 
     def _test_cpg_regrouping():
         # groups0 = [[a, b], [c, d, e, f]]
@@ -77,7 +84,14 @@ def test_cpg_grouping(test_case, device):
         loss = a.sum() + b.sum() + c.sum() + d.sum() + e.sum() + g.sum()
         loss.backward()
 
-        return [a.grad.numpy(), b.grad.numpy(), c.grad.numpy(), d.grad.numpy(), e.grad.numpy(), g.grad.numpy()]
+        return [
+            a.grad.numpy(),
+            b.grad.numpy(),
+            c.grad.numpy(),
+            d.grad.numpy(),
+            e.grad.numpy(),
+            g.grad.numpy(),
+        ]
 
     grouped_grad = _test_cpg_regrouping()
     grad = _test_cpg_grad_helper()

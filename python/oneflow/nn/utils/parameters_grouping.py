@@ -54,7 +54,7 @@ class ContiguousParamsGroup(object):
 
         self.params_group_list = params_group_list
         self.grouped_tensors = []
-        self.grouped_tensors_offset = {} 
+        self.grouped_tensors_offset = {}
         self.modified_buf = set()
         last_extra_params = self._remapping_groups()
         self._parameters_grouping(last_extra_params)
@@ -77,7 +77,7 @@ class ContiguousParamsGroup(object):
 
                     if p._ref_tensor is not None:
                         self.modified_buf.add(p._ref_tensor)
-                        
+
             params_requires_grad_group_list.append(params_set)
 
             # handling parameters used last time but not this time
@@ -104,7 +104,9 @@ class ContiguousParamsGroup(object):
                 actual_tensors_group = collections.defaultdict(list)
                 for tensor in tensors_intersection:
                     tensor_key = (tensor.dtype, tensor.device)
-                    actual_tensors_group[tensor_key].append((tensor, tensor.detach().clone()))
+                    actual_tensors_group[tensor_key].append(
+                        (tensor, tensor.detach().clone())
+                    )
 
                 for actual_tensors in actual_tensors_group.values():
                     if len(actual_tensors) > 0:
@@ -141,8 +143,12 @@ class ContiguousParamsGroup(object):
                 dtype = params[0][0].dtype
                 device = params[0][0].device
 
-                physical_param_buf = flow.zeros(logical_bufsize, dtype=dtype, device=device)
-                physical_param_grad_buf = flow.zeros(logical_bufsize, dtype=dtype, device=device)
+                physical_param_buf = flow.zeros(
+                    logical_bufsize, dtype=dtype, device=device
+                )
+                physical_param_grad_buf = flow.zeros(
+                    logical_bufsize, dtype=dtype, device=device
+                )
                 physical_param_buf.grad = physical_param_grad_buf
 
                 self.grouped_tensors_offset[physical_param_buf] = 0
@@ -156,7 +162,7 @@ class ContiguousParamsGroup(object):
             for (p, p_data) in params:
                 size = p.numel()
                 shape = p.data.shape
-                
+
                 physical_param_buf[index : index + size] = p_data.data.view(-1)
                 p.data = physical_param_buf[index : index + size].view(shape)
                 p._ref_tensor = physical_param_buf
@@ -190,12 +196,12 @@ class ContiguousParamsGroup(object):
             self.grouped_tensors_offset[physical_param_buf] = index
 
             # construct the logical param_buf for new usage
-            logical_param_buf = (
-                physical_param_buf[physical_index_start : index].view(logical_bufsize)
+            logical_param_buf = physical_param_buf[physical_index_start:index].view(
+                logical_bufsize
             )
-            logical_param_grad_buf = (
-                physical_param_grad_buf[physical_index_start : index].view(logical_bufsize)
-            )
+            logical_param_grad_buf = physical_param_grad_buf[
+                physical_index_start:index
+            ].view(logical_bufsize)
             logical_param_buf.grad = logical_param_grad_buf
             self.grouped_tensors.append(logical_param_buf)
 
