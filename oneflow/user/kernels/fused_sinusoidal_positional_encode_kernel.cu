@@ -38,81 +38,56 @@ struct FusedSinusoidalPositionalEncodeParam {
   int max_period;
 };
 
+template<EncodingLayout layout>
+__device__ auto InferFunc(int offset, int num_col, int half_dim) {
+  bool callSin;
+
+  if (layout == EncodingLayout::kPlanarSinCos) {
+    callSin = ((offset % num_col) < half_dim);
+  } else if (layout == EncodingLayout::kPlanarCosSin) {
+    callSin = ((offset % num_col) >= half_dim);
+  } else if (layout == EncodingLayout::kInterleavedSinCos) {
+    callSin = ((offset % 2) == 0);
+  } else if (layout == EncodingLayout::kInterleavedCosSin) {
+    callSin = ((offset % 2) == 1);
+  }
+
+  if (callSin) {
+    return sinf;
+  } else {
+    return cosf;
+  }
+}
+
+template<EncodingLayout layout>
+__device__ int InferDim(int offset, int num_col, int half_dim) {
+  int dim;
+
+  if (layout == EncodingLayout::kPlanarSinCos || layout == EncodingLayout::kPlanarCosSin) {
+    dim = (offset % half_dim);
+  } else if (layout == EncodingLayout::kInterleavedSinCos || layout == EncodingLayout::kInterleavedCosSin) {
+    dim = ((offset % num_col) / 2);
+  }
+
+  return dim;
+}
+
 template<typename Src, EncodingLayout layout>
 __global__ void ComputeKernel(struct FusedSinusoidalPositionalEncodeParam param) {
   const Src* in_ptr = reinterpret_cast<const Src*>(param.in_ptr);
   float* out_ptr = param.out_ptr;
   int num_col = param.half_dim * 2;
 
-  if (layout == EncodingLayout::kPlanarSinCos) {
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
-         offset += blockDim.x * gridDim.x) {
-      float position = in_ptr[offset / num_col];
-      int dim = (offset % param.half_dim);
-      float exponent = -logf(param.max_period) * dim;
-      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-      float emb = expf(exponent) * position * param.scale;
+  for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
+        offset += blockDim.x * gridDim.x) {
+    float position = in_ptr[offset / num_col];
+    int dim = InferDim<layout>(offset, num_col, param.half_dim);
+    float exponent = -logf(param.max_period) * dim;
+    exponent = exponent / (param.half_dim - param.downscale_freq_shift);
+    float emb = expf(exponent) * position * param.scale;
 
-      if ((offset % num_col) < param.half_dim) {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            sinf(emb);
-      } else {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            cosf(emb);
-      }
-    }
-
-  } else if (layout == EncodingLayout::kPlanarCosSin) {
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
-         offset += blockDim.x * gridDim.x) {
-      float position = in_ptr[offset / num_col];
-      int dim = (offset % param.half_dim);
-      float exponent = -logf(param.max_period) * dim;
-      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-      float emb = expf(exponent) * position * param.scale;
-
-      if ((offset % num_col) < param.half_dim) {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            cosf(emb);
-      } else {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            sinf(emb);
-      }
-    }
-  } else if (layout == EncodingLayout::kInterleavedSinCos) {
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
-         offset += blockDim.x * gridDim.x) {
-      float position = in_ptr[offset / num_col];
-      int dim = (offset % num_col) / 2;
-      float exponent = -logf(param.max_period) * dim;
-      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-      float emb = expf(exponent) * position * param.scale;
-
-      if ((offset % 2) == 0) {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            sinf(emb);
-      } else {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            cosf(emb);
-      }
-    }
-  } else if (layout == EncodingLayout::kInterleavedCosSin) {
-    for (int offset = threadIdx.x + blockDim.x * blockIdx.x; offset < param.num_row * num_col;
-         offset += blockDim.x * gridDim.x) {
-      float position = in_ptr[offset / num_col];
-      int dim = (offset % num_col) / 2;
-      float exponent = -logf(param.max_period) * dim;
-      exponent = exponent / (param.half_dim - param.downscale_freq_shift);
-      float emb = expf(exponent) * position * param.scale;
-
-      if ((offset % 2) == 0) {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            cosf(emb);
-      } else {
-        out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] =
-            sinf(emb);
-      }
-    }
+    auto func = InferFunc<layout>(offset, num_col, param.half_dim);
+    out_ptr[(offset % num_col) * param.next_stride + (offset / num_col) * param.stride] = func(emb);
   }
 
   if (param.stride % 2 != 0) {
