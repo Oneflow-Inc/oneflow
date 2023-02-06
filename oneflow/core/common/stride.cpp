@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <numeric>
+
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/cplusplus_17.h"
 
 namespace oneflow {
 

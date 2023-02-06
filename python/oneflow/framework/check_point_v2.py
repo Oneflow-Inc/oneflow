@@ -128,8 +128,11 @@ ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
 def smart_to(
-    tensor: "oneflow.Tensor", dest: Optional[Union[str, flow.device, flow.placement]]
+    obj: Any, dest: Optional[Union[str, flow.device, flow.placement]]
 ) -> "oneflow.Tensor":
+    if not isinstance(obj, flow.Tensor):
+        return obj
+    tensor = obj
     if dest is None:
         return tensor
     if isinstance(dest, (str, flow.device)):
