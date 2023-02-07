@@ -169,6 +169,10 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
           }
         }
       }
+      if (res == false) {
+        printf("TestElementwiseBroadcastUnary Failed\n");
+        printf("i-th %d\n", i);
+      }
       ASSERT_TRUE(res);
     }
   }
@@ -236,6 +240,10 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
           }
 #undef ABS
         }
+      }
+      if (res == false) {
+        printf("TestElementwiseBroadcastUnaryBatchPermute Failed\n");
+        printf("i-th %d\n", i);
       }
       ASSERT_TRUE(res);
     }
