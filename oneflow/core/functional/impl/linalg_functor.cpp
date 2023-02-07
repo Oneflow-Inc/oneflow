@@ -80,14 +80,18 @@ class CrossFunctor {
     };
 
     Shape shape_to_broadcast;
-    std::pair<bool, bool> need_broadcast;
+    std::deque<bool> need_to_broadcast;
 
-    std::tie(shape_to_broadcast, need_broadcast.first, need_broadcast.second) =
-        *JUST(InferUnifiedShapeForBroadcasting(*input->shape(), *other->shape()));
+    std::tie(shape_to_broadcast, need_to_broadcast) =
+        *JUST(InferUnifiedShapeForBroadcastingWithInfo({*input->shape(), *other->shape()}));
+    CHECK_EQ_OR_RETURN(need_to_broadcast.size(), 2)
+        << fmt::format("The number of boolean values to determine if the tensor is to be broadcast "
+                       "should be 2 (which is {})",
+                       need_to_broadcast.size());
     const auto new_input =
-        need_broadcast.first ? JUST(functional::Expand(input, shape_to_broadcast)) : input;
+        need_to_broadcast[0] ? JUST(functional::Expand(input, shape_to_broadcast)) : input;
     const auto new_other =
-        need_broadcast.second ? JUST(functional::Expand(other, shape_to_broadcast)) : other;
+        need_to_broadcast[1] ? JUST(functional::Expand(other, shape_to_broadcast)) : other;
 
     if (!dim.has_value()) {
       return do_dispatch_base_on_device(new_input, new_other,

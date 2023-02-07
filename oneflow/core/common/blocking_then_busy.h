@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_BLOCKING_THEN_BUSY_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/notifier.h"
 #include "oneflow/core/common/spin_counter.h"
 
 namespace oneflow {
@@ -26,20 +26,22 @@ class BlockingThenBusy final {
  public:
   BlockingThenBusy(const BlockingThenBusy&) = delete;
   BlockingThenBusy(BlockingThenBusy&&) = delete;
-  BlockingThenBusy() = delete;
-  explicit BlockingThenBusy(int cnt) : blocking_counter_(cnt), spin_counter_(cnt) {}
+  constexpr static int kCnt = 1;
+  BlockingThenBusy() : notifier_(), spin_counter_(kCnt) {}
 
-  BlockingCounter* mut_blocking_counter() { return &blocking_counter_; }
+  Notifier* mut_notifier() { return &notifier_; }
   SpinCounter* mut_spin_counter() { return &spin_counter_; }
 
+  void Reset() { mut_spin_counter()->Reset(kCnt); }
+
   Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopAfterTimeout) {
-    JUST(blocking_counter_.WaitUntilCntEqualZero(StopAfterTimeout));
+    JUST(notifier_.TimedWaitAndClearNotifiedCnt(StopAfterTimeout));
     JUST(spin_counter_.WaitUntilCntEqualZero());
     return Maybe<void>::Ok();
   }
 
  private:
-  BlockingCounter blocking_counter_;
+  Notifier notifier_;
   SpinCounter spin_counter_;
 };
 

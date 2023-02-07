@@ -654,6 +654,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   auto infer_ctx = JUST(GetCurInferCtx());
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
+  const std::string graph_name = infer_ctx->job().job_conf().job_name();
 
   // NOTE(chengcheng): for UserOp, NOT only reset op_name, but also the output values.
   op_conf->set_name(new_op_name);
@@ -685,10 +686,16 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());  // NOLINT(maybe-need-error-msg)
   for (int i = 0; i < op_expr.output_size(); ++i) {
-    CHECK_OR_RETURN(!(*outputs)[i]);  // NOLINT(maybe-need-error-msg)
     const std::string& obn = op_expr.indexed_obns().at(i);
-    (*outputs)[i] =
-        JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+    if (!(*outputs)[i]) {
+      (*outputs)[i] =
+          JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+    } else {
+      VLOG(2) << "Lazy nn.Graph name " << graph_name << " source op name " << new_op_name
+              << " run with inplace.";
+      const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
+    }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }
   return Maybe<void>::Ok();
@@ -708,20 +715,19 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
   CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
-  std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
-  int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
+  auto device = JUST(ctx.attrs.GetAttr<Symbol<Device>>("device"));
 
   CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
   if (input_tensor->is_local()) {
-    (*outputs)[0] = JUST(LocalTensor::MakeTensor(
-        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
-        JUST(Device::New(device_type, device_id)),
-        /* is_lazy= */ true,
-        /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] =
+        JUST(LocalTensor::MakeTensor(input_tensor->shape(), JUST(input_tensor->stride()),
+                                     input_tensor->dtype()->data_type(), device,
+                                     /* is_lazy= */ true,
+                                     /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
-    parallel_conf.set_device_tag(device_type);
+    parallel_conf.set_device_tag(device->type());
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] =
         JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),

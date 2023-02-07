@@ -115,6 +115,28 @@ add_docstr(
 
 
 add_docstr(
+    oneflow._C.quick_gelu,
+    r"""
+    quick_gelu(x: Tensor) -> Tensor 
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    See    
+    :class:`~oneflow.nn.QuickGELU` for more details.
+ 
+    """,
+)
+
+add_docstr(
     oneflow._C.softmax,
     r"""
     softmax(x: Tensor, dim: int) -> Tensor 
@@ -410,6 +432,29 @@ add_docstr(
 
     See :class:`~oneflow.nn.LeakyReLU` for more details.
 
+    """,
+)
+add_docstr(
+    oneflow._C.rrelu,
+    """
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False, inplace: bool = False) -> Tensor
+
+    Applies the randomized leaky rectified liner unit function, element-wise
+    :math:`\text{RReLU}(x) = \max(0, x) + a * \min(0, x)`
+
+    where :math:`a` is randomly sampled from uniform distribution
+    :math:`\mathcal{U}(\text{lower}, \text{upper})`.
+    
+    See :class:`~oneflow.nn.RReLU` for more details.
+
+    """,
+)
+add_docstr(
+    oneflow._C.rrelu_,
+    """
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False) -> Tensor
+
+    In-place version of :func:`rrelu`.
     """,
 )
 add_docstr(

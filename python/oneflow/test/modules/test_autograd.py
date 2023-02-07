@@ -182,6 +182,25 @@ class TestAutograd(flow.unittest.TestCase):
         return y
 
     @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_run_backward_and_grad_for_same_tensor(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=True)
+        y = x ** 2
+        y.sum().backward()
+        test_case.assertTrue(
+            np.allclose(x.grad.oneflow.numpy(), x.grad.pytorch.numpy())
+        )
+
+        y = x ** 2
+        x_grad = torch.autograd.grad(y.sum(), x)[0]
+        test_case.assertTrue(
+            np.allclose(x_grad.oneflow.numpy(), x_grad.pytorch.numpy())
+        )
+        test_case.assertTrue(
+            np.allclose(x.grad.oneflow.numpy(), x_grad.oneflow.numpy())
+        )
+
+    @autotest(n=1, auto_backward=False, check_graph=False)
     def test_no_grad_domain_call_backward(test_case):
         random_shape = [random(1, 10).to(int).value() for _ in range(4)]
         with flow.no_grad():
@@ -190,6 +209,22 @@ class TestAutograd(flow.unittest.TestCase):
                 y = x * 2
             flow.autograd.backward(y, flow.ones_like(y))
         test_case.assertTrue(np.array_equal(x.grad.numpy(), np.full(random_shape, 2.0)))
+
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_acc_grad_inplace_update(test_case):
+        random_shape = [random(1, 5).to(int).value() for _ in range(4)]
+        x = flow.rand(*random_shape).requires_grad_()
+        y = flow.rand(*random_shape).requires_grad_()
+
+        z = x / (x + y)
+        z.sum().backward()
+        id_x_grad = id(x.grad)
+        id_y_grad = id(y.grad)
+
+        z = x / (x + y)
+        z.sum().backward()
+        test_case.assertEqual(id_x_grad, id(x.grad))
+        test_case.assertEqual(id_y_grad, id(y.grad))
 
 
 if __name__ == "__main__":

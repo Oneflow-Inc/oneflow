@@ -176,8 +176,8 @@ class TestClipGradGlobal(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
         arg_dict["sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
         arg_dict["placement"] = [
-            flow.env.all_device_placement("cpu"),
-            flow.env.all_device_placement("cuda"),
+            flow.placement.all("cpu"),
+            flow.placement.all("cuda"),
         ]
         arg_dict["max_norm"] = [0, 0.5, 1.0]
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]

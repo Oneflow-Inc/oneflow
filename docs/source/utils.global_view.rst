@@ -7,7 +7,10 @@ Some global view Ops
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     to_global
     to_local
+    global_mode
+    current_global_mode
 

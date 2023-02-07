@@ -199,6 +199,31 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.full(shape, 2.0, requires_grad=True)
         return y
 
+    @autotest(n=5)
+    def test_full_with_random_data_numpy_scalar(test_case):
+        device = random_device()
+        shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
+        y = torch.full(shape, np.array([2.0])[0], device=device, requires_grad=True)
+        return y
+
+    @autotest(n=5)
+    def test_full_with_scalar_tensor(test_case):
+        device = random_device()
+        shape = random_tensor(low=0, high=6, requires_grad=False).pytorch.shape
+        y = torch.full(
+            shape,
+            torch.tensor(2.0, requires_grad=random().to(bool)),
+            device=device,
+            requires_grad=True,
+        )
+        return y
+
+    @profile(torch.full)
+    def profile_full_with_scalar_tensor(test_case):
+        torch.full((2, 3), torch.tensor(3.141592))
+        torch.full((64, 3, 128, 128), torch.tensor(3.141592))
+        torch.full((1000, 1000), torch.tensor(3.141592))
+
     @profile(torch.full)
     def profile_full(test_case):
         torch.full((2, 3), 3.141592)

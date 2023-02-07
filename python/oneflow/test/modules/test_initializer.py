@@ -29,7 +29,7 @@ class DataChecker:
         "min",
         "max",
         "value",
-        "lambda",
+        "lambda_func",
     ]
 
     def __init__(self, **kwargs):
@@ -57,11 +57,11 @@ class DataChecker:
         if "value" in self.checkers:
             test_case.assertTrue(np.all(tensor.numpy() == self.checkers["value"]))
 
-        if "lambda" in self.checkers:
+        if "lambda_func" in self.checkers:
             test_case.assertTrue(
                 np.allclose(
                     tensor.numpy(),
-                    self.checkers["lambda"](tensor.shape),
+                    self.checkers["lambda_func"](tensor.shape),
                     rtol=1e-4,
                     atol=1e-4,
                 )
@@ -109,7 +109,58 @@ check_func_list = [
         "params": {"mean": 0.0, "std": 1.0, "a": -5.0, "b": 5.0},
         "checker": DataChecker(min=-5.0, max=5.0),
     },
-    # TODO: test more initializer
+    # oneflow.nn.init.uniform_
+    {
+        "func": flow.nn.init.uniform_,
+        "params": {"a": 0.0, "b": 1.0},
+        "checker": DataChecker(min=0.0, max=1.0, mean=0.5, std=0.28849875926971436),
+    },
+    # oneflow.nn.init.xavier_uniform_
+    {
+        "func": flow.nn.init.xavier_uniform_,
+        "params": {"gain": 1.0},
+        "checker": DataChecker(
+            min=-0.10825317547305482, max=0.10825317547305482, mean=0.0, std=0.0625
+        ),
+    },
+    # oneflow.nn.init.kaiming_uniform_
+    {
+        "func": flow.nn.init.kaiming_uniform_,
+        "params": {"mode": "fan_in"},
+        "checker": DataChecker(
+            min=-0.15309310892394865, max=15309310892394865, mean=0.0, std=0.0883883476
+        ),
+    },
+    {
+        "func": flow.nn.init.kaiming_uniform_,
+        "params": {"mode": "fan_out"},
+        "checker": DataChecker(
+            min=-0.15309310892394865, max=15309310892394865, mean=0.0, std=0.0883883476
+        ),
+    },
+    {
+        "func": flow.nn.init.kaiming_uniform_,
+        "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "leaky_relu"},
+        "checker": DataChecker(
+            min=-0.06846531968814576,
+            max=0.06846531968814576,
+            mean=0.0,
+            std=0.0395284708,
+        ),
+    },
+    {
+        "func": flow.nn.init.kaiming_uniform_,
+        "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
+        "checker": DataChecker(
+            min=-0.10825317547305482, max=0.10825317547305482, mean=0.0, std=0.0625
+        ),
+    },
+    # oneflow.nn.init.eye_
+    {
+        "func": flow.nn.init.eye_,
+        "params": {},
+        "checker": DataChecker(lambda_func=lambda size: np.eye(*size)),
+    },
 ]
 
 

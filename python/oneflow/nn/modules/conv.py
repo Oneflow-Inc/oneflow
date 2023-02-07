@@ -19,7 +19,7 @@ import os
 import oneflow as flow
 from oneflow.nn import init
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _single, _triple
 
 from typing import Union
@@ -433,14 +433,6 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def _conv_forward(self, x, weight, bias):
-        if self.channel_pos == "channels_first":
-            in_channel_axis = 1
-        else:
-            in_channel_axis = 3
-        if x.shape[in_channel_axis] != self.in_channels:
-            raise ValueError(
-                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
-            )
         return flow._C.conv2d(
             x,
             weight,
@@ -612,8 +604,6 @@ class Conv3d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def _conv_forward(self, x, weight, bias):
-        if x.shape[1] != self.in_channels:
-            raise ValueError("The input channels should be equal to self.in_channels")
         return flow._C.conv3d(
             x,
             weight,

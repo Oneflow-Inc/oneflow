@@ -16,7 +16,7 @@ limitations under the License.
 import sys
 from string import Template
 from collections import OrderedDict
-from typing import Callable, Dict, Union, List, Tuple
+from typing import Callable, Dict, Union, List, Tuple, Optional
 
 import google.protobuf as protobuf
 from google.protobuf import text_format
@@ -183,86 +183,106 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     return input_sig_str, output_sig_str
 
 
+class GraphIR(object):
+    def __init__(self, g_proto: job_pb.Job):
+        assert g_proto is not None and isinstance(g_proto, job_pb.Job)
+        self._graph_proto = g_proto
+        self._op2conf = None
+        self._op2placement = None
+
+    def get_op_conf(self, op_name: str) -> Optional[op_conf_util.OperatorConf]:
+        if self._op2conf is None:
+            self._op2conf = dict()
+            for op_conf in self._graph_proto.net.op:
+                self._op2conf[op_conf.name] = op_conf
+        if op_name not in self._op2conf:
+            return None
+        return self._op2conf[op_name]
+
+    def get_op_placement(self, op_name: str) -> Optional[oneflow.placement]:
+        if self._op2placement is None:
+            self._op2placement = dict()
+            for group in self._graph_proto.placement.placement_group:
+                parallel_conf = group.parallel_conf
+                for this_op_name in group.op_set.op_name:
+                    self._op2placement[this_op_name] = oneflow.placement(
+                        proto_str=text_format.MessageToString(parallel_conf)
+                    )
+        if op_name not in self._op2placement:
+            return None
+        return self._op2placement[op_name]
+
+
+def _op_signature(
+    op: op_conf_util.OperatorConf,
+    graph_proto: job_pb.Job,
+    graph_ir: GraphIR,
+    show_op_loc: bool,
+) -> Tuple[bool, str]:
+    bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
+        op.name
+    ].bn_in_op2nd_sbp
+    lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
+    signature_template = Template(
+        op.name
+        + "($input) -> ($output)"
+        + ", placement=("
+        + str(graph_ir.get_op_placement(op.name))
+        + ")"
+    )
+    input_sig_str = "..."
+    output_sig_str = "..."
+
+    # Only deal with UserOpConf and VariableOpConf for now.
+    if op.HasField("user_conf"):
+        input_sig_str, output_sig_str = _get_user_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("variable_conf"):
+        input_sig_str, output_sig_str = _get_var_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("identity_conf"):
+        input_sig_str, output_sig_str = _get_iden_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("input_conf"):
+        input_sig_str, output_sig_str = _get_input_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.HasField("output_conf"):
+        input_sig_str, output_sig_str = _get_output_op_io_repr(
+            op, bn2nd_sbp, lbn2blob_desc
+        )
+    elif op.name.startswith("System-"):
+        return False, ""
+
+    op_str = "(OPERATOR: "
+    op_str += signature_template.substitute(input=input_sig_str, output=output_sig_str)
+
+    if show_op_loc and op.loc:
+        op_str += ", location=(" + op.loc + ")"
+
+    op_str += ")"
+
+    return True, op_str
+
+
 def operators_repr(
     ops: protobuf.pyext._message.RepeatedCompositeContainer,
-    graph_proto: job_pb.Job,
+    graph_ir: GraphIR,
     show_op_loc: bool,
 ) -> List[str]:
     r"""Generate operators' string representation of this module
     """
-    if len(ops) > 0:
-        op_confs = dict()
-        for op_conf in graph_proto.net.op:
-            op_confs[op_conf.name] = op_conf
-
-        op2placement = dict()
-        for group in graph_proto.placement.placement_group:
-            parallel_conf = group.parallel_conf
-            for op_name in group.op_set.op_name:
-                op2placement[op_name] = str(
-                    oneflow.placement(
-                        proto_str=text_format.MessageToString(parallel_conf)
-                    )
-                )
-
-    def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
-        bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
-            op.name
-        ].bn_in_op2nd_sbp
-        lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
-        signature_template = Template(
-            op.name
-            + "($input) -> ($output)"
-            + ", placement=("
-            + op2placement[op.name]
-            + ")"
-        )
-        input_sig_str = "..."
-        output_sig_str = "..."
-
-        # Only deal with UserOpConf and VariableOpConf for now.
-        if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("identity_conf"):
-            input_sig_str, output_sig_str = _get_iden_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("input_conf"):
-            input_sig_str, output_sig_str = _get_input_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.HasField("output_conf"):
-            input_sig_str, output_sig_str = _get_output_op_io_repr(
-                op, bn2nd_sbp, lbn2blob_desc
-            )
-        elif op.name.startswith("System-"):
-            return False, ""
-
-        op_str = "(OPERATOR: "
-        op_str += signature_template.substitute(
-            input=input_sig_str, output=output_sig_str
-        )
-
-        if show_op_loc and op.loc:
-            op_str += ", location=(" + op.loc + ")"
-
-        op_str += ")"
-
-        return True, op_str
-
+    graph_proto = graph_ir._graph_proto
     ops_strs = []
     for op in ops:
-        if op not in op_confs:
+        op_conf = graph_ir.get_op_conf(op)
+        if op_conf is None:
             continue
-        op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
-        got_repr, op_str = _op_signature(op_conf)
+        got_repr, op_str = _op_signature(op_conf, graph_proto, graph_ir, show_op_loc)
         if got_repr:
             ops_strs.append(op_str)
     return ops_strs
@@ -296,6 +316,14 @@ def seq_to_func_return(seq, need_unpack=False):
 
 
 def _is_raw_type(value, raw_type):
+    # Special case for namedtuple return types
+    # For example, max(x, dim=1) return oneflow.return_types.max(values=..., indices=...)
+    if (
+        raw_type == tuple
+        and isinstance(value, tuple)
+        and type(value).__module__ == "oneflow.return_types"
+    ):
+        return True
     return type(value) is raw_type
 
 
@@ -384,12 +412,6 @@ class ArgsTree(object):
         root_prefix: str = "",
         root_name: str = None,
     ) -> None:
-        assert (
-            _is_raw_type(io_args, dict)
-            or _is_raw_type(io_args, OrderedDict)
-            or _is_raw_type(io_args, tuple)
-            or _is_raw_type(io_args, list)
-        ), "input/output arguments must be one of those types(typle/list/dict/OrderedDict)"
 
         self._io_args = io_args
         self._gen_name = gen_name

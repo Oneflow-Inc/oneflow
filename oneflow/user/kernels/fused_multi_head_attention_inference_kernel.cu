@@ -14,18 +14,49 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if !defined(__clang__)
+#ifdef WITH_CUTLASS
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "trt_flash_attention/fmha.h"
+#include "trt_flash_attention/fmha_flash_attention.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
+
+template<typename T, int pack_size>
+struct alignas(pack_size * sizeof(T)) Pack {
+  T elem[pack_size];
+};
+
+template<typename T>
+__global__ void PackQkv(int b, int s, int nh, int d, const T* q, const T* k, const T* v, T* o,
+                        int32_t* seq_len) {
+  int count = b * s * nh * d * 3;
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < count; i += blockDim.x * gridDim.x) {
+    int row = i / (d * 3);
+    int out_col = i - row * (d * 3);
+    T out;
+    if (out_col < d) {
+      out = q[row * d + out_col];
+    } else if (out_col < 2 * d) {
+      out = k[row * d + out_col - d];
+    } else {
+      out = v[row * d + out_col - d * 2];
+    }
+    o[i] = out;
+  }
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < b + 1; i += blockDim.x * gridDim.x) {
+    seq_len[i] = i * s;
+  }
+}
 
 struct Params {
   DataType data_type;
@@ -72,20 +103,20 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.head_dim_value = params.value_head_size;
   p.num_queries = params.query_seq_len;
   p.num_keys = params.kv_seq_len;
-  p.causal = false;
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
+  p.o_strideM = p.num_heads * params.value_head_size;
 
   p.q_strideH = params.head_size;
   p.k_strideH = params.head_size;
   p.v_strideH = params.value_head_size;
-  p.o_strideH = params.query_seq_len * params.value_head_size;
+  p.o_strideH = params.value_head_size;
 
   p.q_strideB = params.query_seq_len * p.q_strideM;
   p.k_strideB = params.kv_seq_len * p.k_strideM;
   p.v_strideB = params.kv_seq_len * p.v_strideM;
-  p.o_strideB = p.o_strideH * p.num_heads;
+  p.o_strideB = params.query_seq_len * p.o_strideM;
 
   p.causal = params.causal;
 
@@ -155,13 +186,14 @@ void DispatchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   if (params.data_type == DataType::kFloat16) {
     DispatchArchTag<cutlass::half_t>(params, stream);
   } else if (params.data_type == DataType::kFloat) {
-    DispatchArchTag<cutlass::tfloat32_t>(params, stream);
+    DispatchArchTag<float>(params, stream);
   } else {
     UNIMPLEMENTED();
   }
 }
 
-class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
+class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
+                                                     public user_op::CudaGraphSupport {
  public:
   FusedMultiHeadAttentionInferenceKernel() = default;
   ~FusedMultiHeadAttentionInferenceKernel() override = default;
@@ -191,6 +223,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
     const int64_t kv_seq_len = key->shape_view().At(1);
     CHECK_EQ(value->shape_view().At(1), kv_seq_len);
     const int64_t num_heads = ctx->Attr<int64_t>("num_heads");
+    const bool causal = ctx->Attr<bool>("causal");
 
     const auto ParseHiddenDim = [&](const std::string& tag, const ShapeView& shape,
                                     int64_t* hidden_slice_start, int64_t* hidden_size) {
@@ -220,6 +253,63 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
 
     CHECK_EQ(out->shape_view().At(2), value_hidden_size);
 
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+
+    // Compatible with typo `KERENL`
+    const bool enable_trt_flash_attn =
+        ParseBooleanFromEnv(
+            "ONEFLOW_KERNEL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL",
+            ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", true))
+        && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
+    const int arch = cuda_stream->cuda_arch() / 10;
+    const bool inputs_contiguous =
+        query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
+        && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
+        && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
+    const bool is_trt_supported_arch = (arch == 75 || arch == 80 || arch == 86 || arch == 89);
+    const int64_t query_head_size = query_hidden_size / num_heads;
+    const bool is_trt_supported_head_size = ((query_head_size == 40) || (query_head_size == 64));
+    // Avoid PackQKV overhead when seq_len is small.
+    const bool is_long_seq_len = query_seq_len >= 512;
+    if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
+        && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
+        && is_trt_supported_head_size && is_long_seq_len && is_trt_supported_arch && (!causal)) {
+      // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
+      // implementation at:
+      // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
+      int32_t cu_seqlens_d_size = (batch_size + 1) * sizeof(int32_t);
+      int32_t* cu_seqlens_d = reinterpret_cast<int32_t*>(tmp->mut_dptr());
+      half* packed_qkv =
+          reinterpret_cast<half*>(tmp->mut_dptr<char>() + GetCudaAlignedSize(cu_seqlens_d_size));
+      constexpr int pack_size = 4;
+      using PackType = Pack<half, pack_size>;
+      int count = batch_size * query_seq_len * query_hidden_size * 3 / pack_size;
+      PackQkv<PackType><<<(count - 1 + 256) / 256, 256, 0, cuda_stream->cuda_stream()>>>(
+          batch_size, query_seq_len, num_heads, query_head_size / pack_size,
+          reinterpret_cast<const PackType*>(query->dptr()),
+          reinterpret_cast<const PackType*>(key->dptr()),
+          reinterpret_cast<const PackType*>(value->dptr()), reinterpret_cast<PackType*>(packed_qkv),
+          cu_seqlens_d);
+
+#ifdef WITH_CUDA_GRAPHS
+      cudaStreamCaptureMode mode = cudaStreamCaptureModeRelaxed;
+      if (cuda_stream->IsGraphCapturing()) {
+        OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+      }
+#endif  // WITH_CUDA_GRAPHS
+      nvinfer1::plugin::FusedMultiHeadFlashAttentionKernel const* kernels =
+          nvinfer1::plugin::getFMHAFlashCubinKernels(nvinfer1::plugin::DATA_TYPE_FP16, arch);
+#ifdef WITH_CUDA_GRAPHS
+      if (cuda_stream->IsGraphCapturing()) {
+        OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
+      }
+#endif  // WITH_CUDA_GRAPHS
+      nvinfer1::plugin::runFMHFAKernel(
+          packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch, kernels,
+          batch_size, num_heads, query_head_size, query_seq_len, cuda_stream->cuda_stream());
+      return;
+    }
+
     Params params{};
     params.data_type = data_type;
     params.num_batches = batch_size;
@@ -234,25 +324,12 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
     params.query_ptr = query->dptr<char>() + query_hidden_offset;
     params.key_ptr = key->dptr<char>() + key_hidden_offset;
     params.value_ptr = value->dptr<char>() + value_hidden_offset;
-    params.out_ptr = tmp->mut_dptr();
-    const int64_t out_buffer_size =
-        GetCudaAlignedSize(out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
+    params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
-    CHECK_GE(tmp_buffer_size, out_buffer_size);
-    params.workspace = tmp->mut_dptr<char>() + out_buffer_size;
-    params.workspace_size = tmp_buffer_size - out_buffer_size;
-    params.causal = ctx->Attr<bool>("causal");
-
-    DispatchCutlassFmha(params, ctx->stream()->As<ep::CudaStream>());
-
-    auto permute =
-        ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), 4);
-    CHECK(permute);
-    const int64_t src_dims[4] = {batch_size, num_heads, query_seq_len,
-                                 value_hidden_size / num_heads};
-    const int permutation[4] = {0, 2, 1, 3};
-    permute->Launch(ctx->stream(), data_type, 4, src_dims, tmp->dptr(), permutation,
-                    out->mut_dptr());
+    params.workspace = tmp->mut_dptr<char>();
+    params.workspace_size = tmp_buffer_size;
+    params.causal = causal;
+    DispatchCutlassFmha(params, cuda_stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -261,9 +338,11 @@ size_t InferTmpBufferSize(InferContext* ctx) {
   const auto& out_desc = ctx->OutputTensorDesc("out", 0);
   size_t buffer_size = 0;
   buffer_size +=
-      GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(out_desc.data_type()));
-  buffer_size +=
       GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat));
+  buffer_size +=
+      GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(out_desc.data_type())) * 3;
+  buffer_size +=
+      GetCudaAlignedSize((out_desc.shape().At(0) + 1) * GetSizeOfDataType(DataType::kInt32));
   return buffer_size;
 }
 
@@ -283,4 +362,4 @@ REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
 
 }  // namespace oneflow
 
-#endif  // !defined(__clang__)
+#endif  // WITH_CUTLASS
