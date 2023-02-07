@@ -33,8 +33,7 @@ class ResourceDesc;
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
-Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_id_str);
+Maybe<std::pair<int64_t, std::string>> ParseDeviceNameConf(const std::string& device_name);
 
 class ParallelContext;
 class Device;
