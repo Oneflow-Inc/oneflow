@@ -30,22 +30,6 @@ int64_t* MutThreadLocalUniqueGlobalId() {
 
 }  // namespace
 
-Maybe<void> CheckWorkerThreadThreadGlobalId(int64_t thread_global_id) {
-  CHECK_GE_OR_RETURN(thread_global_id, 0) << "thread_global_id should be non negative";
-  CHECK_LT_OR_RETURN(thread_global_id, TransportToken::MaxNumberOfThreadGlobalUId())
-      << "thread_global_id should be less than " << TransportToken::MaxNumberOfThreadGlobalUId();
-  CHECK_NE_OR_RETURN(thread_global_id, kThreadGlobalIdMain)
-      << "thread_global_id " << thread_global_id << " has been used by main thread.";
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InitThisThreadUniqueGlobalId(int64_t id) {
-  auto* ptr = MutThreadLocalUniqueGlobalId();
-  CHECK_EQ_OR_RETURN(*ptr, kThreadGlobalIdMain) << "thread_global_id has been initialized";
-  *ptr = id;
-  return Maybe<void>::Ok();
-}
-
 int64_t GetThisThreadGlobalId() { return *MutThreadLocalUniqueGlobalId(); }
 
 ThreadGlobalIdGuard::ThreadGlobalIdGuard(int64_t thread_global_id)
