@@ -103,13 +103,14 @@ class TestComm(flow.unittest.TestCase):
             rev = flow.framework.check_point_v2._broadcast_py_object(rank, 0)
             test_case.assertEqual(rev, 0)
 
-            x = flow.tensor([rank, rank + 1]).to_global(placement=flow.placement.all('cpu'), sbp=flow.sbp.split(0))
+            x = flow.tensor([rank, rank + 1]).to_global(
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0)
+            )
             test_case.assertTrue(np.array_equal(x.numpy(), np.array([0, 1, 1, 2])))
             x = flow.tensor([rank, rank + 1])
             flow.comm.all_reduce(x)
             test_case.assertTrue(np.array_equal(x.numpy(), np.array([1, 3])))
-         
-         
+
         thread = Thread(target=threaded_function)
         thread.start()
         thread.join()
