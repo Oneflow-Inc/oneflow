@@ -3,6 +3,7 @@
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/dtr_disjoint_set.h"
 #include "oneflow/core/vm/dtr_env.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 namespace vm {
@@ -28,26 +29,55 @@ TensorStorage::TensorStorage()
 }
 
 TensorStorage::~TensorStorage() {
-  for (const auto& hook : storage_delete_hooks_) { hook(); }
   if (compute_op_) { Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get()); }
   VLOG(1) << "delete storage " << id_;
 }
 
-void TensorStorage::Evict(bool eager_eviction) {
+Symbol<Device> TensorStorage::device() const { return device_; }
+
+void TensorStorage::LogEviction(bool eager_eviction) const {
   Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
-  CHECK_JUST(dtr::DisjointSet::update_after_evict(this));
   VLOG(1) << "evict storage " << id_
-          << ", compute op type: " << compute_op_->opkernel().op_type_name()
+          << ", compute op type: " << compute_op_type_name()
           << ", eager_eviction: " << eager_eviction;
-  ;
-  return Release();
+}
+
+void TensorStorage::Remat() {
+  if (is_in_memory()) { return; }
+  auto stream = CHECK_JUST(GetDefaultStreamByDevice(device_));
+  auto* vm_stream = CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+  auto op = compute_op();
+  CHECK_JUST(Recompute(&op, vm_stream));
+}
+
+void TensorStorage::Evict(bool eager_eviction) {
+  CHECK(!is_eviction_disabled());
+  LogEviction(eager_eviction);
+  return _Release();
+}
+
+void TensorStorage::_Release() {
+  for (const auto& hook : storage_delete_hooks_) { hook(); }
+  non_pod_allocator_.reset();
+  blob_dptr_.reset();
+}
+
+void TensorStorage::Release() {
+  if (device_->with_remat()) {
+    if (is_eviction_disabled()) {
+      return;
+    }
+    return Evict(true);
+  } else {
+    return _Release();
+  }
 }
 
 std::vector<std::string> random_ops{"uniform", "uniform_int", "normal", "randperm"};
 
 bool TensorStorage::is_evictable() const {
   return compute_op_ != nullptr
-         && std::find(random_ops.begin(), random_ops.end(), compute_op_->opkernel().op_type_name())
+         && std::find(random_ops.begin(), random_ops.end(), compute_op_type_name())
                 == random_ops.end()
          && !eviction_disabled_;
 }
@@ -79,7 +109,8 @@ void TensorStorage::clear_compute_op() {
   compute_time_ = -1;
 }
 
-void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time) {
+void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op,
+                                   double compute_time) {
   if (compute_op_) {
     CHECK(false);
     // Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
@@ -90,11 +121,11 @@ void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPol
 }
 
 std::string TensorStorage::compute_op_type_name() const {
+  if (is_eviction_disabled()) { return "eviction_disabled"; }
   if (compute_op_) {
     return compute_op_->opkernel().op_type_name();
-  } else {
-    return "None";
   }
+  return "None";
 }
 
 void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->time_now(); }

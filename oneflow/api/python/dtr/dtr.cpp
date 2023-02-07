@@ -78,7 +78,13 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   //      << ", id: " << dtr_ebo->id();
   //   return ss.str();
   // });
+  m.def("remat", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
+    // FIXME: an instruction
+    JUST(t->eager_blob_object())->tensor_storage()->Remat();
+    return Maybe<void>::Ok();
+  });
   m.def("evict", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
+    // FIXME: an instruction
     JUST(t->eager_blob_object())->tensor_storage()->Evict(false);
     return Maybe<void>::Ok();
   });

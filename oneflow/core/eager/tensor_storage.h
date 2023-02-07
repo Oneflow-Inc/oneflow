@@ -41,6 +41,7 @@ class TensorStorage {
   Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     CHECK_OR_RETURN(!producer_stream_.has_value());
     producer_stream_ = producer_stream;
+    device_ = producer_stream->device();
     return Maybe<void>::Ok();
   }
 
@@ -49,19 +50,19 @@ class TensorStorage {
     last_used_stream_ = last_used_stream;
   }
 
-  void Release() {
-    non_pod_allocator_.reset();
-    blob_dptr_.reset();
-  }
+  void _Release();
+  void Release();
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
   }
+  Symbol<Device> device() const;
 
   void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time);
   void clear_compute_op();
   OpCallInstructionPolicy compute_op() const;
   std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op() const;
+  void Remat();
   void Evict(bool eager_eviction);
   void Pin();
   void Unpin();
@@ -99,6 +100,9 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
+  Symbol<Device> device_;
+
+  void LogEviction(bool eager_eviction) const;
 };
 
 class InsideVmTensorStorage : public TensorStorage {

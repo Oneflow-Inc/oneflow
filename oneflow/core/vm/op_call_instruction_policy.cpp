@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include <fmt/format.h>
 #include <algorithm>
+#include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/vm/dtr_disjoint_set.h"
@@ -41,8 +42,7 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
   for (int i = 0; i < op_call_instruction_policy.inputs().size(); i++) {
     const auto& input = op_call_instruction_policy.inputs().at(i);
     input->tensor_storage()->Pin();
-    VLOG(1) << "No." << i << " input is in memory? " << input->tensor_storage()->is_in_memory()
-            << ". opkernel is " << &input->tensor_storage()->dtr_compute_op()->opkernel();
+    VLOG(1) << "No." << i << " input is in memory? " << input->tensor_storage()->is_in_memory();
     if (!input->tensor_storage()->is_in_memory()) {
       OpCallInstructionPolicy tmp_op = input->tensor_storage()->compute_op();
       if (!input->tensor_storage()->is_needed_by_backward()) {
@@ -80,23 +80,17 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
-                                    vm::Stream* vm_stream, bool first, bool recompute) {
+  static inline Maybe<void> RematInputs(OpCallInstructionPolicy* op_call_instruction_policy,
+                                        vm::Stream* vm_stream, bool first, bool recompute) {
+    CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
     Singleton<dtr::Env>::Get()->current_op_type_name =
         op_call_instruction_policy->opkernel().op_type_name();
     VLOG(2) << "set current op type name to " << Singleton<dtr::Env>::Get()->current_op_type_name
             << std::endl;
     if (first) { JUST(IncReferenceNumOfRecomputedTensor(*op_call_instruction_policy)); }
-    if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
     VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input num " << op_call_instruction_policy->inputs().size() << std::endl;
-    Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
 
-    std::vector<bool> storage_is_initialized;
-    storage_is_initialized.reserve(op_call_instruction_policy->outputs().size());
-    for (const auto& y : op_call_instruction_policy->outputs()) {
-      storage_is_initialized.push_back(y->tensor_storage()->is_initialized());
-    }
     for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
       const auto& x = op_call_instruction_policy->inputs().at(i);
       if (!x->tensor_storage()->is_in_memory()) {
@@ -109,7 +103,36 @@ struct OpCallInstructionUtil final {
         // CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
     }
-    {
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> EagerEvictRemattedTensors(
+      OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream, bool first,
+      bool recompute) {
+    auto& need_eager_eviction_storages = Singleton<dtr::Env>::Get()->need_eager_eviction_storages;
+    for (const auto& x : op_call_instruction_policy->inputs()) {
+      x->tensor_storage()->Unpin();
+      if (x->tensor_storage()->num_pinned() == 0
+          && need_eager_eviction_storages.count(x->tensor_storage().get()) > 0) {
+        need_eager_eviction_storages.erase(x->tensor_storage().get());
+        x->tensor_storage()->Evict(true);
+      }
+    }
+    if (first) {
+      if (!need_eager_eviction_storages.empty()) {
+        for (const auto& storage : need_eager_eviction_storages) {
+          VLOG(1) << "not empty, storage id: " << storage->id();
+        }
+      }
+      CHECK_OR_RETURN(need_eager_eviction_storages.empty());
+    }
+    return Maybe<void>::Ok();
+  }
+  static inline Maybe<void> UpdateRematInfo(OpCallInstructionPolicy* op_call_instruction_policy,
+                                            vm::Stream* vm_stream, bool first, bool recompute,
+                                            bool include_input, bool include_output,
+                                            const std::vector<bool>& storage_is_initialized) {
+    if (include_output) {
       const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
         auto compute_op = std::make_unique<OpCallInstructionPolicy>(*op_call_instruction_policy);
         for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
@@ -134,6 +157,48 @@ struct OpCallInstructionUtil final {
         if (!recompute && !y->tensor_storage()->is_eviction_disabled()) {
           y->tensor_storage()->set_compute_op(dtr_compute_op, compute_time);
         }
+        y->tensor_storage()->Unpin();
+        y->tensor_storage()->Access();
+        dtr::DisjointSet::update_after_compute(y->tensor_storage().get());
+      }
+    }
+    if (include_input) {
+      for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
+        const auto& x = op_call_instruction_policy->inputs().at(i);
+        x->tensor_storage()->set_eviction_disabled(true);
+      }
+
+      for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
+        const auto& x = op_call_instruction_policy->inputs().at(i);
+        x->tensor_storage()->Access();
+      }
+    }
+
+    if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
+    Singleton<dtr::Env>::Get()->add_time(JUST(dtr::GetComputeTime(*op_call_instruction_policy)));
+    VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    Singleton<dtr::Env>::Get()->current_op_type_name = "None";
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
+                                    vm::Stream* vm_stream, bool first, bool recompute) {
+    Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
+    bool remat_input = vm_stream->device()->with_remat();
+    bool remat_output = vm_stream->device()->with_remat();
+    if (!remat_input && remat_output) {
+      for (const auto& y : op_call_instruction_policy->outputs()) {
+        y->tensor_storage()->set_eviction_disabled(true);
+      }
+    }
+    std::cout << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    std::cout << "remat_input: " << remat_input << ", remat_output: " << remat_output << std::endl;
+    if (remat_input) { JUST(RematInputs(op_call_instruction_policy, vm_stream, first, recompute)); }
+    std::vector<bool> storage_is_initialized;
+    if (remat_output) {
+      storage_is_initialized.reserve(op_call_instruction_policy->outputs().size());
+      for (const auto& y : op_call_instruction_policy->outputs()) {
+        storage_is_initialized.push_back(y->tensor_storage()->is_initialized());
       }
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
@@ -150,44 +215,11 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    for (const auto& y : op_call_instruction_policy->outputs()) {
-      y->tensor_storage()->Unpin();
-      dtr::DisjointSet::update_after_compute(y->tensor_storage().get());
+    if (remat_input) {
+      JUST(EagerEvictRemattedTensors(op_call_instruction_policy, vm_stream, first, recompute));
     }
-    auto& need_eager_eviction_storages = Singleton<dtr::Env>::Get()->need_eager_eviction_storages;
-    for (const auto& x : op_call_instruction_policy->inputs()) {
-      x->tensor_storage()->Unpin();
-      if (x->tensor_storage()->num_pinned() == 0
-          && need_eager_eviction_storages.count(x->tensor_storage().get()) > 0) {
-        need_eager_eviction_storages.erase(x->tensor_storage().get());
-        x->tensor_storage()->Evict(true);
-      }
-    }
-    for (int i : op_call_instruction_policy->opkernel().input_tuple_indexes4mut_ibns()) {
-      const auto& x = op_call_instruction_policy->inputs().at(i);
-      x->tensor_storage()->set_eviction_disabled(true);
-    }
-
-    for (int i = 0; i < op_call_instruction_policy->inputs().size(); i++) {
-      const auto& x = op_call_instruction_policy->inputs().at(i);
-      x->tensor_storage()->Access();
-    }
-    for (int i = 0; i < op_call_instruction_policy->outputs().size(); i++) {
-      const auto& y = op_call_instruction_policy->outputs().at(i);
-      y->tensor_storage()->Access();
-    }
-
-    Singleton<dtr::Env>::Get()->add_time(JUST(dtr::GetComputeTime(*op_call_instruction_policy)));
-    VLOG(1) << "end compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
-    Singleton<dtr::Env>::Get()->current_op_type_name = "None";
-    if (first) {
-      if (!need_eager_eviction_storages.empty()) {
-        for (const auto& storage : need_eager_eviction_storages) {
-          VLOG(1) << "not empty, storage id: " << storage->id();
-        }
-      }
-      CHECK_OR_RETURN(need_eager_eviction_storages.empty());
-    }
+    JUST(UpdateRematInfo(op_call_instruction_policy, vm_stream, first, recompute, remat_input,
+                         remat_output, storage_is_initialized));
     return Maybe<void>::Ok();
   }
 

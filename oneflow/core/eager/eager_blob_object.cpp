@@ -125,7 +125,6 @@ const void* EagerBlobObject::raw_dptr() const {
 
 Maybe<void> EagerBlobObject::DeallocateBlobDataPtr() {
   tensor_storage_->Release();
-  tensor_storage_.reset(new InsideVmTensorStorage());
   return Maybe<void>::Ok();
 }
 void EagerBlobObject::RegisterStorageDeleteHook(const std::function<void()>& hook) {

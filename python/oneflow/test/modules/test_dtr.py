@@ -91,8 +91,9 @@ def memory_budget(budget_mb, device):
         def new_f(*args, **kwargs):
             total_budget = int(os.environ['ONEFLOW_DTR_BUDGET_MB'])
             assert total_budget >= budget_mb, "Not enough memory budget"
-            with generate_placeholder(total_budget - budget_mb, device):
-                return f(*args, device, **kwargs)
+            remat_device = device + "+remat"
+            with generate_placeholder(total_budget - budget_mb, remat_device):
+                return f(*args, remat_device, **kwargs)
         return new_f
     return deco
 
@@ -270,9 +271,10 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
-    @memory_budget(12, 'cpu')
+    @memory_budget(16, 'cpu')
     def test_dtr_init_constant_and_scalar(self, device):
-        x1 = flow.ones(1024, 1024).to(device)
+        x0 = flow.ones(1024, 1024).to(device)
+        x1 = x0 + 0
         x2 = x1 + 1
         flow.nn.init.constant_(x1, 5.)  # type: ignore[arg-type]
 

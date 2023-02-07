@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
+#include "oneflow/core/vm/dtr_disjoint_set.h"
 #include <iostream>
 
 namespace oneflow {
@@ -700,6 +701,8 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK_NOTNULL(piece);
   CHECK_EQ(piece->ptr, mem_ptr);
   CHECK(!piece->is_free);
+  
+  CHECK_JUST(dtr::DisjointSet::update_after_evict(piece->tensor));
 
   piece->is_free = true;
   piece->tensor = nullptr;
