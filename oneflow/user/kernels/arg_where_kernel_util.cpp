@@ -52,6 +52,13 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)
 
+#define INSTANTIATE_CPU_FLOAT16_ARG_WHERE_KERNEL_UTIL                                              \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARG_WHERE_KERNEL_UTIL_WITH_DTYPE_PAIR,              \
+                                   (DeviceType::kCPU), FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, \
+                                   DIM_SEQ)
+
+INSTANTIATE_CPU_FLOAT16_ARG_WHERE_KERNEL_UTIL
+
 template<DeviceType device_type, typename IN_T, typename OUT_T>
 void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size_ptr) {
   if (*input_ptr == GetZeroVal<IN_T>()) {
@@ -62,5 +69,11 @@ void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size
 }
 
 INSTANTIATE_SET_OUTPUT_SIZE_FOR_DEVICE(DeviceType::kCPU)
+
+#define INSTANTIATE_CPU_FLOAT16_SET_OUTPUT_SIZE                                 \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SET_OUTPUT_SIZE_WITH_DTYPE_PAIR, \
+                                   (DeviceType::kCPU), FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+INSTANTIATE_CPU_FLOAT16_SET_OUTPUT_SIZE
 
 }  // namespace oneflow
