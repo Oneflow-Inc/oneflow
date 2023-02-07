@@ -255,7 +255,7 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
 TEST_F(PrimitiveTest, TestUnary) {
   TestElementwiseBroadcastUnary<UnaryOp::kIdentity, DataType::kFloat, float, DataType::kFloat,
                                 float>(&device_manager_registry_, available_device_types_);
-  //TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, DataType::kFloat, float>(
+  // TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, DataType::kFloat, float>(
   //    &device_manager_registry_, available_device_types_);
 }
 
