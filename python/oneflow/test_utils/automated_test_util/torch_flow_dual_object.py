@@ -1403,7 +1403,6 @@ def choice_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
-    extra_input_tensor.append(pytorch_tensor)
     if is_global():
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
