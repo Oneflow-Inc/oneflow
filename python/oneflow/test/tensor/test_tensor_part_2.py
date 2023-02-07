@@ -450,7 +450,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @unittest.skip(
-        "PyTorch 1.13 var op backward exist bug, please refer: https://github.com/Oneflow-Inc/oneflow/pull/9653"
+        "PyTorch 1.13 var op backward exist bug, please refer: https://github.com/pytorch/pytorch/issues/94184"
     )
     @autotest(n=5)
     def test_tensor_var_all_dim_with_random_data(test_case):
