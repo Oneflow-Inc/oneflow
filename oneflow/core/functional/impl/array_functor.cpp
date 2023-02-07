@@ -3909,6 +3909,11 @@ class SortFunctor {
   }
 };
 
+class CloneFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input) const { return input->clone(); }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4064,6 +4069,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UniqueWithCountsFunctor>("UniqueWithCounts");
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
   m.add_functor<impl::SortFunctor>("Sort");
+  m.add_functor<impl::CloneFunctor>("Clone");
 };
 
 }  // namespace functional
