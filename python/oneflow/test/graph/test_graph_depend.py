@@ -204,6 +204,24 @@ class TestDependGraph(oneflow.unittest.TestCase):
         x = flow.randn([1, 2, 3], dtype=flow.float32)
         _build_graph_and_test(TestModel_7, x, test_case)
 
+    def test_depend_graph_case8(test_case):
+        class TestModel_1(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(128, 128)
+
+            def forward(self, x):
+                # to ensure "x * 2" and "x + 2" be executed before "self.linear(x)" in graph mode
+                # to test the case that inputting mutiple depend tensors at a time
+                x1 = x * 2
+                x2 = x + 2
+                x = nn.functional.depend(x, [x1, x2])
+                x3 = self.linear(x)
+                return x3
+
+        x = flow.randn([1, 128], dtype=flow.float32)
+        _build_graph_and_test(TestModel_1, x, test_case)
+
 
 if __name__ == "__main__":
     unittest.main()

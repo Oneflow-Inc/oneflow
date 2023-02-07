@@ -23,7 +23,7 @@ add_docstr(
     Used to prevent OPs from being rearranged or eliminated during graph compilation.
     Args:
         input (Tensor): a tensor intended to input OP B
-        depend_tesor (Tensor): one of the output tensors of OP A
+        depend (Tensor or List[Tensor]): one of the output tensors of OP A (support passing in multiple tensors form different OP)
     Returns:
         Tensor: the identity of "input" tensor
     Examples:

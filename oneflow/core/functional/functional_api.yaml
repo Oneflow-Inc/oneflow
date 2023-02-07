@@ -2765,7 +2765,11 @@
   bind_python: True
 
 - name: "depend"
-  signature: "Tensor (Tensor input, Tensor depend) => Depend"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor depend) => Depend",
+      "Tensor (Tensor input, TensorTuple depends) => DependTuple",
+    ]
   bind_python: True
 
 - name: "roc_auc_score"

@@ -16,16 +16,17 @@ limitations under the License.
 
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
+from typing import Union, List
 
 
-def depend(input: Tensor, depend_tesor: Tensor,) -> Tensor:
+def depend(input: Tensor, depend: Union[Tensor, List[Tensor]]) -> Tensor:
     r"""
     Add control dependency to guarantee OP A is executed before OP B.
     Used to prevent OPs from being rearranged or eliminated during graph compilation.
 
     Args:
         input (Tensor): a tensor intended to input OP B
-        depend_tesor (Tensor): one of the output tensors of OP A
+        depend (Tensor or List[Tensor]): one of the output tensors of OP A (support passing in multiple tensors form different OP)
 
     Returns:
         Tensor: the identity of "input" tensor
@@ -63,7 +64,15 @@ def depend(input: Tensor, depend_tesor: Tensor,) -> Tensor:
         return input
 
     # avoid self-loop
-    if input is depend_tesor:
-        raise RuntimeError('"input" and "depend_tesor" can NOT be the same tensor.')
+    if isinstance(depend, Tensor) and input is depend:
+        raise RuntimeError('"input" and "depend" can NOT be the same tensor.')
 
-    return flow._C.depend(input, depend_tesor)
+    if isinstance(depend, List):
+        for idx, t_depend in enumerate(depend):
+            if input is t_depend:
+                raise RuntimeError(
+                    '"input" and "depend[%d]" are the same tensor, which is not allowed.'
+                    % idx
+                )
+
+    return flow._C.depend(input, depend)
