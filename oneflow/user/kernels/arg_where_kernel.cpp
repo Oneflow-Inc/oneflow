@@ -83,7 +83,7 @@ struct SwitchUtil<DeviceType::kCPU> {
 #undef SWITCH_ENTRY
 };
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 template<>
 struct SwitchUtil<DeviceType::kCUDA> {
@@ -131,7 +131,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, (DeviceType::kCPU),
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, (DeviceType::kCUDA),
                                  HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
