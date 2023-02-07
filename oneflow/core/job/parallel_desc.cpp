@@ -54,13 +54,12 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
 
 }  // namespace
 
-Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_id_str) {
+Maybe<std::pair<int64_t, std::string>> ParseDeviceNameConf(const std::string& device_name) {
   size_t delimiter_pos = device_name.rfind(":");
   CHECK_NE_OR_RETURN(delimiter_pos, std::string::npos);
-  *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
-  *device_id_str = device_name.substr(delimiter_pos + 1);
-  return Maybe<void>::Ok();
+  int64_t mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
+  std::string device_id_str = device_name.substr(delimiter_pos + 1);
+  return std::make_pair(mchn_id, device_id_str);
 }
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
@@ -124,9 +123,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
 
 Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
     const std::string& device_name, size_t cols) {
-  int64_t node_id = -1;
-  std::string device_id_str;
-  JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
+  auto [node_id, device_id_str] = *JUST(ParseDeviceNameConf(device_name));
   int64_t minus_pos = device_id_str.find("-");
   if (minus_pos == std::string::npos) {
     device_id_str = device_id_str + "-" + device_id_str;
