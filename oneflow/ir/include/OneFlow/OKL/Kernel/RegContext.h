@@ -28,7 +28,7 @@ namespace okl {
 class ComputeContext;
 
 enum Source { arguments, results, tmp_buffer };
-using ArgInfo = std::pair<Source, int>;
+using ArgInfo = std::pair<Source, int64_t>;
 class TensorInfo {
  public:
   TensorInfo(::mlir::Operation* op) {

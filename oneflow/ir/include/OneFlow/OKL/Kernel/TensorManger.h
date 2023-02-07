@@ -25,7 +25,8 @@ namespace okl {
 class TensorManger {
   class TmpBufferTensor final : public oneflow::user_op::Tensor {
    public:
-    explicit TmpBufferTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc, int offset)
+    explicit TmpBufferTensor(user_op::Tensor* tensor, user_op::TensorDesc* tensor_desc,
+                             int64_t offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
           tensor_desc_(tensor_desc) {}
@@ -49,7 +50,7 @@ class TensorManger {
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
-  user_op::Tensor* GetBufferTensor(user_op::TensorDesc* tensor_desc, int offset = 0) {
+  user_op::Tensor* GetBufferTensor(user_op::TensorDesc* tensor_desc, int64_t offset = 0) {
     auto res = map_.insert({tensor_desc, TmpBufferTensor(tensor_, tensor_desc, offset)}).first;
     return &res->second;
   }
@@ -62,4 +63,4 @@ class TensorManger {
 }  // namespace okl
 }  // namespace oneflow
 
-#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TENSOR_MANAGER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TENSOR_MANAGER_H_

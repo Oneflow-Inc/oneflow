@@ -39,7 +39,7 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
     exit(1);
   }
 
-  int pool_size = 0;
+  size_t pool_size = 0;
   module->walk([&](mlir::func::FuncOp op) {
     if (op.getSymName().startswith(mlir::okm::func_name::OKL_GRAPH_NAME)) {
       if (auto pool_size_attr =

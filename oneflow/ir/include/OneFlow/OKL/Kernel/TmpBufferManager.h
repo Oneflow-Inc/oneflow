@@ -27,7 +27,7 @@ class TmpBufferManager {
   class PoolToTensor final : public oneflow::user_op::Tensor {
    public:
     explicit PoolToTensor(user_op::Tensor* tensor, const user_op::TensorDesc* tensor_desc,
-                          int offset)
+                          int64_t offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
           tensor_desc_(tensor_desc) {}
@@ -49,7 +49,7 @@ class TmpBufferManager {
 
   class PoolToBuffer final : public oneflow::user_op::Tensor {
    public:
-    explicit PoolToBuffer(user_op::Tensor* tensor, int size, int offset)
+    explicit PoolToBuffer(user_op::Tensor* tensor, int64_t size, int64_t offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
           shape_({size}) {}
@@ -73,19 +73,19 @@ class TmpBufferManager {
   static size_t InferTmpSize(user_op::InferContext* ctx);
 
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
-  user_op::Tensor* GetPoolTensor(const user_op::TensorDesc* tensor_desc, int offset) {
+  user_op::Tensor* GetPoolTensor(const user_op::TensorDesc* tensor_desc, int64_t offset) {
     auto res = tensor_map_.insert({tensor_desc, PoolToTensor(tensor_, tensor_desc, offset)}).first;
     return &res->second;
   }
 
-  user_op::Tensor* GetPoolBuffer(int size, int offset) {
+  user_op::Tensor* GetPoolBuffer(int64_t size, int64_t offset) {
     auto res = buffer_map_.insert({{size, offset}, PoolToBuffer(tensor_, size, offset)}).first;
     return &res->second;
   }
 
  private:
   std::unordered_map<const user_op::TensorDesc*, PoolToTensor> tensor_map_{};
-  std::unordered_map<std::pair<int, int>, PoolToBuffer> buffer_map_{};
+  std::unordered_map<std::pair<int64_t, int64_t>, PoolToBuffer> buffer_map_{};
   user_op::Tensor* tensor_;
 };
 
