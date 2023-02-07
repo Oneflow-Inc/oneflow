@@ -76,6 +76,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerGroupMatMulPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::okl::OKLDialect>();
+  registry.insert<mlir::okm::OKMDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::func::FuncDialect>();

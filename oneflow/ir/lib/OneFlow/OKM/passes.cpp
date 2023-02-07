@@ -118,7 +118,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
       auto mem_type = MemRefType::get(type.getShape(), type.getElementType());
       auto out =
           (ret_index == -1)
-              ? rewriter.create<AllocMemrefOp>(rewriter.getUnknownLoc(), mem_type)
+              ? rewriter.create<PlanMemrefOp>(rewriter.getUnknownLoc(), mem_type)
               : rewriter.create<RetToMemrefOp>(rewriter.getUnknownLoc(), mem_type, ret_index);
       return out->getResult(0);
     }
@@ -187,7 +187,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     if (int64_t buffer_size = ::oneflow::okl::RegContext(op).GetTmpBufferSize()) {
       auto type = MemRefType::get({buffer_size}, rewriter.getI8Type());
       auto tmp_buffer =
-          rewriter.create<AllocMemrefOp>(rewriter.getUnknownLoc(), type)->getResult(0);
+          rewriter.create<PlanMemrefOp>(rewriter.getUnknownLoc(), type)->getResult(0);
       map_ins.push_back(tmp_buffer);
     }
 
@@ -283,7 +283,7 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
     SmallVector<Operation*> raw_ops;
     for (auto& op : ops) { raw_ops.push_back(&op); }
     for (auto op : raw_ops) {
-      if (auto alloc_op = llvm::dyn_cast_or_null<AllocMemrefOp>(op)) {
+      if (auto alloc_op = llvm::dyn_cast_or_null<PlanMemrefOp>(op)) {
         rewriter.setInsertionPoint(op);
         auto off_set = rewriter.create<arith::ConstantIndexOp>(rewriter.getUnknownLoc(), size);
         auto type = op->getResult(0).getType();

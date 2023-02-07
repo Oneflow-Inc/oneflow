@@ -45,6 +45,10 @@ def AllocMemrefOp : OKM_Op<"alloc_memref"> {
   let results = (outs AnyMemRef);
 }
 
+def PlanMemrefOp : OKM_Op<"plan_memref"> {
+  let results = (outs AnyMemRef);
+}
+
 def GetTensorAsRetOp : OKM_Op<"get_tensor_as_ret"> {
   let arguments = (ins
     AnyTensor:$tensor,
