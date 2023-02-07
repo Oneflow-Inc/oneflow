@@ -767,6 +767,14 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "rrelu"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False, Bool inplace=False) => RRelu"
+  bind_python: True
+
+- name: "rrelu_"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
+  bind_python: True
+
 - name: "normal"
   signature: [
       "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None,
