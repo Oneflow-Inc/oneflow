@@ -26,6 +26,7 @@ import oneflow.unittest
 import torch as torch_origin
 from oneflow.test_utils.automated_test_util import *
 
+
 def _test_concat_origin(test_case, device):
     input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
@@ -49,11 +50,15 @@ def _test_concat_with_empty_input(test_case, device):
 
     torch_input1 = torch_origin.Tensor().to(torch_origin.device(device))
     torch_input2 = torch_origin.tensor(
-        np.ones((2, 6, 5, 3)), dtype=torch_origin.float32, device=torch_origin.device(device)
+        np.ones((2, 6, 5, 3)),
+        dtype=torch_origin.float32,
+        device=torch_origin.device(device),
     )
     torch_out1 = torch_origin.cat((torch_input1, torch_input2), 0)
     torch_out2 = torch_origin.cat((torch_input2, torch_input1), 0)
-    torch_out3 = torch_origin.cat((torch_input1, torch_input2, torch_input1, torch_input1), 0)
+    torch_out3 = torch_origin.cat(
+        (torch_input1, torch_input2, torch_input1, torch_input1), 0
+    )
 
     test_case.assertTrue(
         np.array_equal(of_out1.numpy(), torch_out1.detach().cpu().numpy())
