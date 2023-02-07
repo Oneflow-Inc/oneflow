@@ -25,12 +25,9 @@ namespace oneflow {
 const static int kThreadGlobalIdDefaultWorker = 0;
 const static int kThreadGlobalIdMain = 7;
 
-size_t GetThreadGlobalIdCount();
-
-Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id, const std::string& debug_string);
+Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id);
 Maybe<void> CheckWorkerThreadThreadGlobalId(int64_t thread_global_id);
-const Optional<int64_t>& GetThisThreadGlobalId();
-Maybe<void> ResetThisThreadUniqueGlobalId();
+int64_t GetThisThreadGlobalId();
 
 class ThreadGlobalIdGuard final {
  public:
@@ -38,7 +35,7 @@ class ThreadGlobalIdGuard final {
   ~ThreadGlobalIdGuard();
 
  private:
-  Optional<int64_t> old_thread_global_id_;
+  int64_t old_thread_global_id_;
 };
 
 }  // namespace oneflow
