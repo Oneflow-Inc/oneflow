@@ -27,7 +27,7 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import profiler as auto_profiler
 from oneflow.test_utils.test_util import type_name_to_flow_type
 
-os.environ["export NVIDIA_TF32_OVERRIDE"] = "0"
+os.environ["NVIDIA_TF32_OVERRIDE"] = "0"
 flow.backends.cudnn.deterministic = True
 
 try:
