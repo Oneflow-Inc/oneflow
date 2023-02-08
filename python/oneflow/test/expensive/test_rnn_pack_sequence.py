@@ -105,9 +105,7 @@ def _test_rnn_pack_sequence(test_case, device):
 
     test_case.assertTrue(
         np.allclose(
-            hid_torch.cpu().detach().numpy(),
-            hid_flow.cpu().detach().numpy(),
-            atol=0.1,
+            hid_torch.cpu().detach().numpy(), hid_flow.cpu().detach().numpy(), atol=0.1,
         )
     )
 
@@ -307,9 +305,7 @@ def _test_gru_pack_sequence(test_case, device):
 
     test_case.assertTrue(
         np.allclose(
-            hid_torch.cpu().detach().numpy(),
-            hid_flow.cpu().detach().numpy(),
-            atol=0.1,
+            hid_torch.cpu().detach().numpy(), hid_flow.cpu().detach().numpy(), atol=0.1,
         )
     )
 
