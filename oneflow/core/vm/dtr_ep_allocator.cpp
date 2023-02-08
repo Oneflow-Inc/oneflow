@@ -702,7 +702,9 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK_EQ(piece->ptr, mem_ptr);
   CHECK(!piece->is_free);
   
-  CHECK_JUST(dtr::DisjointSet::update_after_evict(piece->tensor));
+  if (auto* tensor = piece->tensor) {
+    CHECK_JUST(dtr::DisjointSet::update_after_release(tensor));
+  }
 
   piece->is_free = true;
   piece->tensor = nullptr;

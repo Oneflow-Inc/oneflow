@@ -446,8 +446,6 @@ def _numpy(self):
         )
     assert self.is_local
     if self.device != flow.device("cpu"):
-        # TODO: move this line to cpu() method
-        flow._oneflow_internal.dtr.remat(self)
         self = self.cpu()
     return self.to_numpy()
 

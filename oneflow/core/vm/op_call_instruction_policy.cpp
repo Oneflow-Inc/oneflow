@@ -184,8 +184,18 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first, bool recompute) {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
-    bool remat_input = vm_stream->device()->with_remat();
-    bool remat_output = vm_stream->device()->with_remat();
+    bool remat_input = false;
+    bool remat_output = false;
+    if (op_call_instruction_policy->opkernel().op_type_name() == "copy") {
+      remat_input =
+          op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->with_remat();
+      remat_output =
+          op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->with_remat();
+    } else {
+      remat_input = vm_stream->device()->with_remat();
+      remat_output = vm_stream->device()->with_remat();
+    }
+    // TODO: get std::vector<DtrTensorStorage> inputs_storage, outputs_storage
     if (!remat_input && remat_output) {
       for (const auto& y : op_call_instruction_policy->outputs()) {
         y->tensor_storage()->set_eviction_disabled(true);
@@ -258,6 +268,7 @@ struct OpCallInstructionUtil final {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
         if (auto* dtr_allocator = dynamic_cast<vm::DtrEpAllocatorProxy*>(allocator)) {
+          // TODO: Allocate(void** ptr, size_t size, TensorStorage storage)
           dtr_allocator->allocator->Mark(blob_object.get(),
                                          static_cast<const char*>(blob_object->dptr()));
         }

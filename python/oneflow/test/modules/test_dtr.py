@@ -128,7 +128,7 @@ class TestDTR(flow.unittest.TestCase):
     @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_1(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         x2 = x1 * -2 # 8MB
         x3 = x2 - 2 # 12MB
         x2.relu_() # 12MB
@@ -145,7 +145,7 @@ class TestDTR(flow.unittest.TestCase):
     @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_2(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         x2 = x1[0]
         x3 = x2 + 2
         evict(x3)
@@ -162,7 +162,7 @@ class TestDTR(flow.unittest.TestCase):
     @only_fbip()
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_fbip_3(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         x2 = x1 * -2 # 8MB
         x1.zero_()
         evict(x2)
@@ -174,7 +174,7 @@ class TestDTR(flow.unittest.TestCase):
     @only_fbip()
     @memory_budget(12, 'cuda')
     def test_dtr_work_on_fbip_4(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         x2 = x1 + 1
         x2 += x1
         x3 = x2.relu()
@@ -189,7 +189,7 @@ class TestDTR(flow.unittest.TestCase):
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_1(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         self.assertTrue(is_in_memory(x1))
         self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
         x2 = x1 + 2
@@ -214,7 +214,7 @@ class TestDTR(flow.unittest.TestCase):
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_work_on_simple_case_2(self, device):
-        x1 = flow.ones(1024 * 1024).to(device) # 4MB
+        x1 = flow.ones(1024 * 1024, device=device) # 4MB
         self.assertTrue(is_in_memory(x1))
         self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
         x2 = x1 + 2
@@ -239,11 +239,11 @@ class TestDTR(flow.unittest.TestCase):
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_full_and_init_constant(self, device):
-        x1 = flow.eye(1024, 1024).to(device) # 4MB
+        x1 = flow.eye(1024, 1024, device=device)
         self.assertTrue(is_in_memory(x1))
         self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
 
-        x2 = flow.full(x1.shape, 3.).to(device)
+        x2 = flow.full(x1.shape, 3., device=device)
         flow.nn.init.constant_(x1, x2)  # type: ignore[arg-type]
         del x2
         self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
@@ -256,10 +256,10 @@ class TestDTR(flow.unittest.TestCase):
     @assert_no_small_piece_optimization
     @memory_budget(12, 'cpu')
     def test_dtr_lifecycle_of_view_tensor(self, device):
-        x1 = flow.eye(2, 3).to(device)
+        x1 = flow.eye(2, 3, device=device)
         self.assertTrue(is_in_memory(x1))
 
-        x2 = flow.ones(3).to(device)
+        x2 = flow.ones(3, device=device)
         x3 = flow.expand(x2, (2, 3))
         x1[:] = x3
         del x3

@@ -44,7 +44,7 @@ class DisjointSet {
   static void merge(std::shared_ptr<DisjNode>& x, std::shared_ptr<DisjNode>& y);
   static std::shared_ptr<DisjNode> find_father(std::shared_ptr<DisjNode>& x);
   static void update_after_compute(vm::TensorStorage* obj);
-  static Maybe<void> update_after_evict(vm::TensorStorage* obj);
+  static Maybe<void> update_after_release(vm::TensorStorage* obj);
 };
 
 }  // namespace dtr

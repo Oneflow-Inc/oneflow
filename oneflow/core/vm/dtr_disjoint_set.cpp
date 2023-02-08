@@ -50,7 +50,11 @@ void DisjointSet::update_after_compute(vm::TensorStorage* obj) {
   obj->node->reset(obj->compute_time());
 }
 
-Maybe<void> DisjointSet::update_after_evict(vm::TensorStorage* obj) {
+Maybe<void> DisjointSet::update_after_release(vm::TensorStorage* obj) {
+  CHECK_NOTNULL_OR_RETURN(obj);
+  if (obj->is_eviction_disabled()) {
+    return Maybe<void>::Ok();
+  }
   auto operand = obj->compute_op();
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
