@@ -83,7 +83,7 @@ template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, i
 void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   using Attention = AttentionKernel<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
                                     single_value_iteration>;
-  typename Attention::Params p;
+  typename Attention::Params p{};
   p.query_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.query_ptr));
   p.key_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.key_ptr));
   p.value_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.value_ptr));
@@ -106,19 +106,19 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
-  p.o_strideM = p.num_heads * params.value_head_size;
 
   p.q_strideH = params.head_size;
   p.k_strideH = params.head_size;
   p.v_strideH = params.value_head_size;
-  p.o_strideH = params.value_head_size;
 
   p.q_strideB = params.query_seq_len * p.q_strideM;
   p.k_strideB = params.kv_seq_len * p.k_strideM;
   p.v_strideB = params.kv_seq_len * p.v_strideM;
-  p.o_strideB = params.query_seq_len * p.o_strideM;
+
+  p.scale = 1.0 / std::sqrt(float(p.head_dim));
 
   p.causal = params.causal;
+  p.use_dropout = false;
 
   constexpr auto kernel_fn = attention_kernel_batched_impl<Attention>;
   int smem_bytes = sizeof(typename Attention::SharedStorage);
