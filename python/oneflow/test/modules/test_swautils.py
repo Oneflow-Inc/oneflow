@@ -69,10 +69,7 @@ class TestLRScheduler(flow.unittest.TestCase):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
                     np.allclose(
-                        target[epoch],
-                        param_group["lr"],
-                        atol=1e-6,
-                        rtol=1e-5,
+                        target[epoch], param_group["lr"], atol=1e-6, rtol=1e-5,
                     ),
                     msg="LR is wrong in epoch {}: expected {}, got {}".format(
                         epoch, target[epoch], param_group["lr"]
@@ -143,10 +140,7 @@ class TestLRScheduler(flow.unittest.TestCase):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
                     np.allclose(
-                        target[epoch],
-                        param_group["lr"],
-                        atol=1e-6,
-                        rtol=1e-5,
+                        target[epoch], param_group["lr"], atol=1e-6, rtol=1e-5,
                     ),
                     msg="LR is wrong in epoch {}: expected {}, got {}".format(
                         epoch, target[epoch], param_group["lr"]
