@@ -77,7 +77,7 @@ bool IsNcclLogicalOpNode(const OpNode* node) {
 }
 
 Maybe<void> ReplaceNcclOpsWithFusionOp(JobBuilder* job_builder,
-                                       const std::vector<const OpNode*>& nccl_ops) const {
+                                       const std::vector<const OpNode*>& nccl_ops) {
   if (nccl_ops.size() <= 1) { return Maybe<void>::Ok(); }
   const int32_t nccl_size = nccl_ops.size();
   const OpNode* first_nccl = nccl_ops.front();
@@ -99,9 +99,19 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(JobBuilder* job_builder,
 Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   HashMap<const OpNode*, int64_t> op_node2nccl_depth;
   HashMap<int64_t, std::vector<const OpNode*>> nccl_depth2nccl_ops;
+  auto ConstForEachDataAndCtrlInNode = [&](const OpNode* node,
+                                           const std::function<void(const OpNode*)>& Handler) {
+    node->ForEachNodeOnInEdge(Handler);
+    for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+      const OpNode* in_node = op_graph.OpNode4OpName(ctrl_in_op_name);
+      CHECK(in_node) << " cannot find ctrl_in_op_name: [" << ctrl_in_op_name << "] of op: ["
+                     << node->op().op_name() << "] in OpGraph. ";
+      Handler(in_node);
+    }
+  };
   op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
     int64_t nccl_depth = 0;
-    op_graph.ForEachDataAndCtrlInNode(node, [&](const OpNode* in_node) {
+    ConstForEachDataAndCtrlInNode(node, [&](const OpNode* in_node) {
       auto it = op_node2nccl_depth.find(in_node);
       CHECK(it != op_node2nccl_depth.end());  // topo search
       nccl_depth = std::max(nccl_depth, it->second);
@@ -120,7 +130,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
     for (const OpNode* nccl_op : pair.second) {
       int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
       const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
-      chain2hierarchy2nccl_ops[logical_chain_id][hierarchy].push_back(nccl_op);
+      chain2hierarchy2nccl_ops[logical_chain_id][*hierarchy].push_back(nccl_op);
     }
     for (const auto& chain_pair : chain2hierarchy2nccl_ops) {
       for (const auto& hierarchy_pair : chain_pair.second) {

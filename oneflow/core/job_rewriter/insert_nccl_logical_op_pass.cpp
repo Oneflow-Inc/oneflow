@@ -660,9 +660,8 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   VLOG(3) << " ======================================================================== \n"
-      << " Try insert nccl logical ops into Graph: "
-                  << job_builder->job().job_conf().job_name()
-                  << " , logical_chain: " << logical_chain_id << ". Begin...\n";
+          << " Try insert nccl logical ops into Graph: " << job_builder->job().job_conf().job_name()
+          << " , logical_chain: " << logical_chain_id << ". Begin...\n";
 
   HashSet<std::string> mut_op_names;
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
@@ -680,9 +679,8 @@ void InsertNcclLogicalOpsInSubGraph(
                                                  subgraph_order, node2subgraph_order);
 
   VLOG(3) << " ======================================================================== \n"
-      << " Try insert nccl logical ops into Graph: "
-                  << job_builder->job().job_conf().job_name()
-                  << " , logical_chain: " << logical_chain_id << ". End.\n";
+          << " Try insert nccl logical ops into Graph: " << job_builder->job().job_conf().job_name()
+          << " , logical_chain: " << logical_chain_id << ". End.\n";
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
