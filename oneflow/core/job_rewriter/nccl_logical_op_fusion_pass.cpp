@@ -89,11 +89,12 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
   const int64_t scope_symbol_id = first_nccl->op().op_conf().scope_symbol_id();
   std::vector<std::string> src_nd_sbp_str_list;
   std::vector<std::string> dst_nd_sbp_str_list;
-  auto& fusion_builder = user_op::UserOpConfWrapperBuilder("Sys-NCCL-fusion-" + NewUniqueId())
-                             .Op("_nccl_logical_fusion");
+  user_op::UserOpConfWrapperBuilder fusion_builder =
+      user_op::UserOpConfWrapperBuilder("Sys-NCCL-fusion-" + NewUniqueId());
+  fusion_builder.OpTypeName("_nccl_logical_fusion");
   for (const OpNode* nccl_op : nccl_ops) {
-    fusion_builder = fusion_builder.Input(
-        "in", GenLogicalBlobName(nccl_op->op().BnInOp2Lbi(nccl_op->op().SoleIbn())));
+    fusion_builder.Input("in",
+                         GenLogicalBlobName(nccl_op->op().BnInOp2Lbi(nccl_op->op().SoleIbn())));
     src_nd_sbp_str_list.push_back(
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleIbn())));
     dst_nd_sbp_str_list.push_back(
@@ -119,21 +120,29 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
   for (int32_t i = 0; i < nccl_size; ++i) {
     std::string output_lbn = fusion_nccl_op.output("out", i);
     std::string input_lbn = fusion_nccl_op.input("in", i);
-    const OpEdge* origin_edge = nccl_ops.at(i)->SoleOutEdge();
+    const OpNode* origin_nccl = nccl_ops.at(i);
+    const OpEdge* origin_edge = origin_nccl->SoleOutEdge();
+    std::string origin_nccl_input_lbn =
+        GenLogicalBlobName(origin_nccl->op().BnInOp2Lbi(origin_nccl->op().SoleIbn()));
+    std::string origin_nccl_output_lbn =
+        GenLogicalBlobName(origin_nccl->op().BnInOp2Lbi(origin_nccl->op().SoleObn()));
+    CHECK_EQ_OR_RETURN(input_lbn, origin_nccl_input_lbn);
     const OpNode* origin_consumer = origin_edge->dst_node();
     const std::string& consumer_op_name = origin_consumer->op().op_name();
     if (mut_op_name2conf->find(consumer_op_name) == mut_op_name2conf->end()) {
       mut_op_name2conf->emplace(consumer_op_name, origin_consumer->op().op_conf());
     }
-    CHECK_EQ(origin_edge->lbis().size(), 1);
+    CHECK_EQ_OR_RETURN(origin_edge->lbis().size(), 1);
     const LogicalBlobId& lbi = origin_edge->lbis().front();
-    CHECK(input_lbn == GenLogicalBlobName(lbi));
+    VLOG(3) << " input_lbn: " << input_lbn;
+    VLOG(3) << " lbi: " << GenLogicalBlobName(lbi);
+    CHECK_EQ_OR_RETURN(origin_nccl_output_lbn, GenLogicalBlobName(lbi));
 
     // 3. update consumer op
     for (const std::string& ibn : origin_edge->lbi2ibns().at(lbi)) {
       std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
           &mut_op_name2conf->at(consumer_op_name), ibn, output_lbn);
-      CHECK(old_lbn == input_lbn);
+      CHECK_EQ_OR_RETURN(old_lbn, origin_nccl_output_lbn);
     }
 
     VLOG(3) << " Update origin consumer op from: \n [ "
