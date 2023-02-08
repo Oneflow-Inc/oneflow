@@ -6332,8 +6332,9 @@ def OneFlow__ncclLogicalFusionOp : OneFlow_BaseOp<"_nccl_logical_fusion", [NoSid
     Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
+    ShapeAttr:$hierarchy,
     StrArrayAttr:$src_nd_sbp_str_list,
-    StrArrayAttr:$dst_nd_sbp_str_list,
+    StrArrayAttr:$dst_nd_sbp_str_list
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

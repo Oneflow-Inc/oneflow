@@ -558,7 +558,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
           //   failed in complier, so need use dst_node reduced_parallel_conf.
           nccl_op_parallel_confs->emplace_back(dst_reduced_parallel_desc.parallel_conf());
           VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name << "] to ["
-                    << dst_op_name << "]\n";
+                  << dst_op_name << "]\n";
         }
       }
     }
@@ -659,14 +659,15 @@ void InsertNcclLogicalOpsInSubGraph(
     CHECK(node2subgraph_order.emplace(subgraph_order.at(i), i).second);
   }
 
-  VLOG(3) << " ======================================================================== \n" <<
-            << " Try insert nccl logical ops into Graph: " << job_builder->job().job_conf().job_name()
-            << " , logical_chain: " << logical_chain_id << ". Begin...\n";
+  VLOG(3) << " ======================================================================== \n"
+      < < < < " Try insert nccl logical ops into Graph: "
+                  << job_builder->job().job_conf().job_name()
+                  << " , logical_chain: " << logical_chain_id << ". Begin...\n";
 
   HashSet<std::string> mut_op_names;
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   for (const OpNode* this_node : subgraph_order) {
-    VLOG(3) << "logical_chain: " << logical_chain_id << " , op: " <<  this_node->op().op_name();
+    VLOG(3) << "logical_chain: " << logical_chain_id << " , op: " << this_node->op().op_name();
     CHECK(
         subgraph_op_name2conf.emplace(this_node->op().op_name(), this_node->op().op_conf()).second);
   }
@@ -678,10 +679,11 @@ void InsertNcclLogicalOpsInSubGraph(
                                                  &nccl_op_confs, &nccl_op_parallel_confs,
                                                  subgraph_order, node2subgraph_order);
 
-  VLOG(3) << " ======================================================================== \n" <<
-          << " Try insert nccl logical ops into Graph: " << job_builder->job().job_conf().job_name()
-          << " , logical_chain: " << logical_chain_id << ". End.\n";
- 
+  VLOG(3) << " ======================================================================== \n"
+      < < < < " Try insert nccl logical ops into Graph: "
+                  << job_builder->job().job_conf().job_name()
+                  << " , logical_chain: " << logical_chain_id << ". End.\n";
+
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
     if (nccl_op_confs.empty()) { break; }
@@ -741,7 +743,8 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   for (const OpNode* this_node : ordered_after_acc_subgraph) {
     CHECK(acc_subgraph_op_name2conf.emplace(this_node->op().op_name(), this_node->op().op_conf())
               .second);
-    VLOG(3) << "After Acc logical_chain: " << logical_chain_id << " , op: " <<  this_node->op().op_name();
+    VLOG(3) << "After Acc logical_chain: " << logical_chain_id
+            << " , op: " << this_node->op().op_name();
   }
 
   InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(

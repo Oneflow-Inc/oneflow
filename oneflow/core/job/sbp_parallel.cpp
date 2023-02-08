@@ -193,6 +193,10 @@ bool IsValidSbpParallelString(const std::string& sbp_str) {
   return ParseSbpParallelFromString(sbp_str, &sbp_parallel);
 }
 
+bool ParseNdSbpFromLongString(const std::string& nd_sbp_str, NdSbp* nd_sbp) { return false; }
+
+std::string NdSbpToLongString(const NdSbp& nd_sbp) { return ""; }
+
 bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel) {
   bool success = false;
   if (sbp_str.length() >= 1) {
