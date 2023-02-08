@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include <fmha.h>
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -474,8 +475,12 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
       mask_seq_mod_size = mask_shape.At(2);
     }
 
-    user_op::Tensor* bias_grad = nullptr;
-    if (ctx->has_input("bias", 0)) { bias_grad = ctx->Tensor4ArgNameAndIndex("bias_grad", 0); }
+    if (ctx->has_input("bias", 0)) {
+      auto biad_grad = ctx->Tensor4ArgNameAndIndex("bias_grad", 0);
+      OF_CUDA_CHECK(cudaMemset(
+          biad_grad->mut_dptr<void>(), 0,
+          biad_grad->shape_view().elem_cnt() * GetSizeOfDataType(biad_grad->data_type())));
+    }
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
     set_params_dgrad(params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k, num_head, head_size,
                      row_stride, row_stride, row_stride, head_stride, head_stride, head_stride,
@@ -495,8 +500,10 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                      ctx->has_input("bias", 0)
                          ? const_cast<void*>(ctx->Tensor4ArgNameAndIndex("bias", 0)->dptr())
                          : nullptr,
-                     ctx->has_input("bias", 0) ? bias_grad->mut_dptr() : nullptr, bias_mod_size,
-                     mask_head_mod_size, mask_seq_mod_size);
+                     ctx->has_input("bias", 0) ? const_cast<void*>(
+                         ctx->Tensor4ArgNameAndIndex("bias_grad", 0)->mut_dptr())
+                                               : nullptr,
+                     bias_mod_size, mask_head_mod_size, mask_seq_mod_size);
 
     // NOTE: set num_splits=1 here to avoid query_grad copy in the final stage
     // run_fmha_bwd(params, stream, /*configure=*/true);
