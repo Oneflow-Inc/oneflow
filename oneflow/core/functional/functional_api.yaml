@@ -206,6 +206,15 @@
     ]
   bind_python: true
 
+- name: "bitwise_not"
+  signature:
+    [
+      "Tensor (Tensor input) => BitwiseNot",
+      # "Tensor (Tensor input, Scalar other) => ScalarLogicalAnd",
+      # "Tensor (Scalar input, Tensor other) => ScalarLogicalAnd",
+    ]
+  bind_python: true
+
 - name: "less"
   signature:
     [
