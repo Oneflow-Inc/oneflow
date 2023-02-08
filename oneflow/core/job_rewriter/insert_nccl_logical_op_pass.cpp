@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/nd_sbp_util.h"
-#if defined(WITH_CUDA) || defined(ROCM)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
