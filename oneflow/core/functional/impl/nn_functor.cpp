@@ -2126,14 +2126,33 @@ class CtcLossFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
+    DeviceType log_probs_device_type;
+    if (log_probs->is_local()) {
+      log_probs_device_type = JUST(log_probs->device())->enum_type();
+    } else {
+      log_probs_device_type = JUST(log_probs->parallel_desc())->device_type();
+    }
+    const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+          *op_,
+          {
+              log_probs,
+              JUST(functional::To(targets, log_probs_device_str)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              JUST(functional::To(target_lengths, log_probs_device_str)),
+          },
+          attrs));
     } else {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
-          {log_probs, JUST(functional::Cast(targets, DType::Int64(), false)), input_lengths,
-           target_lengths},
+          {
+              log_probs,
+              JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
+                                  DType::Int64(), false)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              JUST(functional::To(target_lengths, log_probs_device_str)),
+          },
           attrs));
     }
     if (zero_infinity) {
