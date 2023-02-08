@@ -454,7 +454,6 @@ void MemReusedAlgorithmAllocateByOrder(
     return a < b;
   };
   std::set<int32_t, decltype(comp)> sorted_registers(comp);
-  int64_t max_memory_pool_size = 0;
   // Decide offset following the given order
   for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
     const auto& inserting_lifetime = order2lifetime[inserting_id];
@@ -476,6 +475,7 @@ void MemReusedAlgorithmAllocateByOrder(
             // Compared with the previous suitable gap
             if (SuitableThan(diff_gap, suitable_diff_gap)) {
               suitable_diff_gap = diff_gap;
+              // We may insert the register into the gap
               inserting_offset = gap_head;
             }
             // Update gap head
@@ -486,19 +486,26 @@ void MemReusedAlgorithmAllocateByOrder(
           }
         }
       }
-      // Deal with the max_memory_pool_size, which may be the final gap
-      diff_gap = (max_memory_pool_size - gap_head) - inserting_size;
+      // Deal with the buffer_size, which may be the final gap
+      diff_gap = (buffer_size - gap_head) - inserting_size;
       // Compared with the previous suitable gap
       if (SuitableThan(diff_gap, suitable_diff_gap)) {
         suitable_diff_gap = diff_gap;
+        // We may insert the register into the gap
         inserting_offset = gap_head;
       }
-      // TODO: Insert the register into the gap
-      if (suitable_diff_gap >= 0) {
-        // TODO:
-
-      } else {
-        // TODO: Prolong the maximum memory pool size
+      // If no gap large enough to contain the current register
+      if (suitable_diff_gap < 0) {
+        // Prolong the maximum memory pool size by (-suitable_diff_gap)
+        buffer_size -= suitable_diff_gap;
+        int64_t gap_end = suitable_diff_gap + inserting_size + gap_head;
+        for (auto reverse_it = sorted_registers.rbegin(); reverse_it != sorted_registers.rend();
+             reverse_it++) {
+          // All the registers with offset < gap_end maintain their position
+          if (order2offset[*reverse_it] < gap_end) { break; }
+          // All the registers with offset >= gap_end move backward
+          order2offset[*reverse_it] -= suitable_diff_gap;
+        }
       }
 
     } else {
@@ -521,12 +528,12 @@ void MemReusedAlgorithmAllocateByOrder(
           }
         }
       }
+      // Update total size
+      if (inserting_end > buffer_size) { buffer_size = inserting_end; }
     }
     // Either we break the loop or the loop terminated naturally, we can place i at inserting_offset
     order2offset[inserting_id] = inserting_offset;
     sorted_registers.insert(inserting_id);
-    // Update total size
-    if (inserting_end > buffer_size) { buffer_size = inserting_end; }
   }
 
   result->mem_block_size = buffer_size;
