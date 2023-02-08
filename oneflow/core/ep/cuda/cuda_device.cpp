@@ -79,25 +79,28 @@ CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
 #endif  // CUDA_VERSION >= 11000
   }
 #if CUDA_VERSION >= 11020
-  int memory_pools_supported = 0;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&memory_pools_supported, cudaDevAttrMemoryPoolsSupported,
-                                       device_index_));
-  if (memory_pools_supported) {
-    cudaMemPoolProps mem_pool_props = {};
-    mem_pool_props.allocType = cudaMemAllocationTypePinned;
-    mem_pool_props.handleTypes = cudaMemHandleTypePosixFileDescriptor;
-    mem_pool_props.location.type = cudaMemLocationTypeDevice;
-    mem_pool_props.location.id = device_index_;
-    OF_CUDA_CHECK(cudaMemPoolCreate(&mem_pool_, &mem_pool_props));
-    uint64_t threshold = UINT64_MAX;
-    OF_CUDA_CHECK(cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold));
-    int disabled = 0;
-    OF_CUDA_CHECK(
-        cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseFollowEventDependencies, &disabled));
-    OF_CUDA_CHECK(
-        cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowOpportunistic, &disabled));
-    OF_CUDA_CHECK(
-        cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowInternalDependencies, &disabled));
+  {
+    int memory_pools_supported = 0;
+    cudaError_t err = cudaDeviceGetAttribute(&memory_pools_supported,
+                                             cudaDevAttrMemoryPoolsSupported, device_index_);
+    if (err == cudaSuccess && memory_pools_supported) {
+      cudaMemPoolProps mem_pool_props = {};
+      mem_pool_props.allocType = cudaMemAllocationTypePinned;
+      mem_pool_props.handleTypes = cudaMemHandleTypePosixFileDescriptor;
+      mem_pool_props.location.type = cudaMemLocationTypeDevice;
+      mem_pool_props.location.id = device_index_;
+      OF_CUDA_CHECK(cudaMemPoolCreate(&mem_pool_, &mem_pool_props));
+      uint64_t threshold = UINT64_MAX;
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold));
+      int disabled = 0;
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseFollowEventDependencies, &disabled));
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowOpportunistic, &disabled));
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowInternalDependencies, &disabled));
+    }
   }
 #endif  // CUDA_VERSION >= 11020
 }
