@@ -84,9 +84,7 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
-    thread_executor_.Visit([=](const auto& x) {
-      x->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
-    });
+    thread_executor_->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
   }
 
 #ifdef WITH_ONEDNN
@@ -96,7 +94,7 @@ class CpuStream : public Stream {
  private:
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
-  thread::ExecutorFactory::ProductType thread_executor_;
+  std::shared_ptr<thread::ExecutorBase> thread_executor_;
 
   Maybe<void> AdjustThreadExecutor();
 
@@ -139,4 +137,4 @@ class OneDnnExecutor {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_

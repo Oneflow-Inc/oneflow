@@ -10,15 +10,14 @@ namespace thread {
 namespace {
 
 template<typename T>
-ExecutorFactory::ProductType CreateExecutor() {
-  return ExecutorFactory::ProductType(std::make_shared<thread::ExecutorBase<T>>(T()));
+std::shared_ptr<thread::ExecutorBase> CreateExecutor() {
+  return std::shared_ptr<thread::ExecutorBase>(std::make_shared<T>());
 }
 
 }  // namespace
 
-Maybe<ExecutorFactory::ProductType> ExecutorFactory::Create(ExecutorType type) {
+Maybe<thread::ExecutorBase> ExecutorFactory::Create(ExecutorType type) {
   if (type == ExecutorType::kOf) { return CreateExecutor<thread::OfExecutor>(); }
-
   const auto format_error_msg = [](const auto& name, const auto& option) {
     return fmt::format("{} is not enabled, you should compile oneflow with "
                        "`-DCPU_THREADING_RUNTIMES={}`",
@@ -36,12 +35,12 @@ Maybe<ExecutorFactory::ProductType> ExecutorFactory::Create(ExecutorType type) {
   return CreateExecutor<thread::SeqExecutor>();
 }
 
-Maybe<ExecutorFactory::ProductType> ExecutorFactory::Create(const std::string& type) {
+Maybe<thread::ExecutorBase> ExecutorFactory::Create(const std::string& type) {
   std::unordered_map<std::string, ExecutorType> types = {
       {"SEQ", ExecutorType::kSeq},
       {"OF", ExecutorType::kOf},
       {"TBB", ExecutorType::kTbb},
-      {"SEQ", ExecutorType::kOmp},
+      {"OMP", ExecutorType::kOmp},
   };
   if (types.find(type) == types.end()) {
     return Error::RuntimeError() << fmt::format("Not supportted cpu threading runtime: {}", type);
