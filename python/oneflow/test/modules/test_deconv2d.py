@@ -894,10 +894,6 @@ class TestDeconv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @unittest.skipIf(
-        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
-        "deconv module don't support unbatched input in PyTorch before '1.13.0'",
-    )
     @autotest(n=5)
     def test_deconv2d_auto_squeeze_with_random_data(test_case):
         channels = random(1, 6)
@@ -915,7 +911,7 @@ class TestDeconv2d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=3, dim0=channels).to(device)
+        x = random_tensor(ndim=3, dim0=channels, dim1=random(5, 10), dim2=random(5, 10)).to(device)
         y = m(x)
         return y
 

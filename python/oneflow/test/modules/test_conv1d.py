@@ -445,10 +445,6 @@ class TestConv1d(flow.unittest.TestCase):
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
 
-    @unittest.skipIf(
-        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
-        "conv module don't support unbatched input in PyTorch before '1.13.0'",
-    )
     @autotest(n=3)
     def test_nn_functional_conv1d_2dinput(test_case):
         device = random_device()
