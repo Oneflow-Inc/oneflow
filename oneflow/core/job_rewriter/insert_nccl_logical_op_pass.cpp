@@ -660,7 +660,7 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   VLOG(3) << " ======================================================================== \n"
-      < < < < " Try insert nccl logical ops into Graph: "
+      << " Try insert nccl logical ops into Graph: "
                   << job_builder->job().job_conf().job_name()
                   << " , logical_chain: " << logical_chain_id << ". Begin...\n";
 
@@ -680,7 +680,7 @@ void InsertNcclLogicalOpsInSubGraph(
                                                  subgraph_order, node2subgraph_order);
 
   VLOG(3) << " ======================================================================== \n"
-      < < < < " Try insert nccl logical ops into Graph: "
+      << " Try insert nccl logical ops into Graph: "
                   << job_builder->job().job_conf().job_name()
                   << " , logical_chain: " << logical_chain_id << ". End.\n";
 
