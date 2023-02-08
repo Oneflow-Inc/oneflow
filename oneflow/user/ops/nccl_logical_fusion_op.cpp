@@ -43,6 +43,8 @@ namespace oneflow {
   const std::vector<std::string>& dst_nd_sbp_str_list =
       ctx->user_op_conf().attr<std::vector<std::string>>("dst_nd_sbp_str_list");
   const Shape& hierarchy = ctx->user_op_conf().attr<Shape>("hierarchy");
+  CHECK_EQ_OR_RETURN(nccl_size, src_nd_sbp_str_list.size());
+  CHECK_EQ_OR_RETURN(nccl_size, dst_nd_sbp_str_list.size());
   for (int32_t i = 0; i < nccl_size; ++i) {
     NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", i);
     NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", i);

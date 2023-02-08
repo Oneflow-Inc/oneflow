@@ -64,19 +64,23 @@ bool IsNcclLogicalOpNode(const OpNode* node) {
         || user_type_name == "_nccl_logical_reduce_scatter_noncontinuous"
         || user_type_name == "_nccl_logical_all_gather"
         || user_type_name == "_nccl_logical_all_gather_noncontinuous"
-        || user_type_name == "_nccl_logical_s2s" || user_type_name == "_nccl_logical_send_recv"
+        || user_type_name == "_nccl_logical_s2s"
         || user_type_name == "_nccl_logical_2D_same_dim0_all_reduce"
         || user_type_name == "_nccl_logical_2D_same_dim0_all_gather"
         || user_type_name == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous"
         || user_type_name == "_nccl_logical_2D_same_dim0_all2all"
-        || user_type_name == "_nccl_logical_2D_same_dim1_all_reduce") {
+        || user_type_name == "_nccl_logical_2D_same_dim1_all_reduce"
+        || user_type_name == "_nccl_logical_send_recv") {
       return true;
     }
   }
   return false;
 }
 
-Maybe<void> ReplaceNcclOpsWithFusionOp(JobBuilder* job_builder,
+Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_ops,
+                                       std::vector<ParallelConf>* nccl_fusion_op_parallel_confs,
+                                       std::unordered_set<std::string>* del_ops,
+                                       HashMap<std::string, OperatorConf>* mut_op_name2conf,
                                        const std::vector<const OpNode*>& nccl_ops) {
   if (nccl_ops.size() <= 1) { return Maybe<void>::Ok(); }
   const int32_t nccl_size = nccl_ops.size();
@@ -90,9 +94,52 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(JobBuilder* job_builder,
   for (const OpNode* nccl_op : nccl_ops) {
     fusion_builder = fusion_builder.Input(
         "in", GenLogicalBlobName(nccl_op->op().BnInOp2Lbi(nccl_op->op().SoleIbn())));
-    // TODO
+    src_nd_sbp_str_list.push_back(
+        NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleIbn())));
+    dst_nd_sbp_str_list.push_back(
+        NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleObn())));
+    // 1. update del op
+    VLOG(3) << " Del op: " << nccl_op->op().op_name();
+    del_ops->insert(nccl_op->op().op_name());
   }
 
+  auto fusion_nccl_op =
+      fusion_builder.Output("out", nccl_size)
+          .Attr<std::vector<std::string>>("src_nd_sbp_str_list", src_nd_sbp_str_list)
+          .Attr<std::vector<std::string>>("dst_nd_sbp_str_list", dst_nd_sbp_str_list)
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+
+  // 2. update fusion op
+  VLOG(3) << " Add fusion op : " << fusion_nccl_op.op_conf().DebugString()
+          << " \n with placement: " << seed_placement.parallel_conf().DebugString();
+  nccl_fusion_ops->push_back(fusion_nccl_op.op_conf());
+  nccl_fusion_op_parallel_confs->push_back(seed_placement.parallel_conf());
+
+  for (int32_t i = 0; i < nccl_size; ++i) {
+    std::string output_lbn = fusion_nccl_op.output("out", i);
+    std::string input_lbn = fusion_nccl_op.input("in", i);
+    const OpEdge* origin_edge = nccl_ops.at(i)->SoleOutEdge();
+    const OpNode* origin_consumer = origin_edge->dst_node();
+    const std::string& consumer_op_name = origin_consumer->op().op_name();
+    if (mut_op_name2conf->find(consumer_op_name) == mut_op_name2conf->end()) {
+      mut_op_name2conf->emplace(consumer_op_name, origin_consumer->op().op_conf());
+    }
+    CHECK_EQ(origin_edge->lbis().size(), 1);
+    const LogicalBlobId& lbi = origin_edge->lbis().front();
+    CHECK(input_lbn == GenLogicalBlobName(lbi));
+
+    // 3. update consumer op
+    for (const std::string& ibn : origin_edge->lbi2ibns().at(lbi)) {
+      std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+          &mut_op_name2conf->at(consumer_op_name), ibn, output_lbn);
+      CHECK(old_lbn == input_lbn);
+    }
+
+    VLOG(3) << " Update origin consumer op from: \n [ "
+            << origin_consumer->op().op_conf().DebugString() << " ] \n to \n [ "
+            << mut_op_name2conf->at(consumer_op_name).DebugString() << " ] \n";
+  }
   return Maybe<void>::Ok();
 }
 
@@ -125,6 +172,12 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   if (nccl_depth2nccl_ops.empty()) { return Maybe<void>::Ok(); }
 
+  std::vector<OperatorConf> nccl_fusion_ops;
+  std::vector<ParallelConf> nccl_fusion_op_parallel_confs;
+
+  std::unordered_set<std::string> del_ops;
+  HashMap<std::string, OperatorConf> mut_op_name2conf;
+
   for (const auto& pair : nccl_depth2nccl_ops) {
     HashMap<int64_t, HashMap<Shape, std::vector<const OpNode*>>> chain2hierarchy2nccl_ops;
     for (const OpNode* nccl_op : pair.second) {
@@ -134,11 +187,18 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
     for (const auto& chain_pair : chain2hierarchy2nccl_ops) {
       for (const auto& hierarchy_pair : chain_pair.second) {
-        JUST(ReplaceNcclOpsWithFusionOp(job_builder, hierarchy_pair.second));
+        JUST(ReplaceNcclOpsWithFusionOp(&nccl_fusion_ops, &nccl_fusion_op_parallel_confs, &del_ops,
+                                        &mut_op_name2conf, hierarchy_pair.second));
       }
     }
   }
 
+  job_builder->RemoveOpByName(del_ops);
+  for (const auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
+  CHECK_EQ_OR_RETURN(nccl_fusion_ops.size(), nccl_fusion_op_parallel_confs.size());
+  for (int32_t i = 0; i < nccl_fusion_ops.size(); ++i) {
+    JUST(job_builder->AddOp(nccl_fusion_op_parallel_confs.at(i), nccl_fusion_ops.at(i)););
+  }
   return Maybe<void>::Ok();
 }
 
