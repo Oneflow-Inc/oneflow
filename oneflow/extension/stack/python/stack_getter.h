@@ -13,6 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_EXTENSION_STACK_PYTHON_STACK_GETTER
+#define ONEFLOW_EXTENSION_STACK_PYTHON_STACK_GETTER
+
+#include <string>
 namespace oneflow {
 void RegisterPyStackGetter();
-}
+
+class PythonFrameGuard {
+ public:
+  PythonFrameGuard();
+  ~PythonFrameGuard();
+
+ private:
+  std::string prev_frame_str_;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_EXTENSION_STACK_PYTHON_STACK_GETTER
