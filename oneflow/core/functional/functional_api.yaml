@@ -2764,6 +2764,14 @@
   signature: "Tensor (Tensor input) => IsFinite"
   bind_python: True
 
+- name: "depend"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor depend) => Depend",
+      "Tensor (Tensor input, TensorTuple depends) => DependTuple",
+    ]
+  bind_python: True
+
 - name: "roc_auc_score"
   signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
   bind_python: True

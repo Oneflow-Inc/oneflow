@@ -986,6 +986,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
+    // prune depend OP and and add ctrl_in_op to op_conf accordingly
+    // to express the same semantics and avoid performance loss
+    JUST(DoPass("PruneDependOpPass"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     // run FuseAddToOutputPass before IRRoundTripBeforeAD since add_2 maybe
