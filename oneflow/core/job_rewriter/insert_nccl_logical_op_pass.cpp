@@ -281,8 +281,8 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Op("_nccl_logical_send_recv")
                .Input("in", lbn)
                .Output("out")
-               .Attr<std::vector<std::string>>("src_nd_sbp", {SbpToString(src_sbp)})
-               .Attr<std::vector<std::string>>("dst_nd_sbp", {SbpToString(dst_sbp)})
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
@@ -422,8 +422,8 @@ bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
              .Op("_nccl_logical_send_recv")
              .Input("in", lbn)
              .Output("out")
-             .Attr<std::vector<std::string>>("src_nd_sbp", NdSbpToStringList(src_nd_sbp))
-             .Attr<std::vector<std::string>>("dst_nd_sbp", NdSbpToStringList(dst_nd_sbp))
+             .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+             .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
              .ScopeSymbolId(scope_symbol_id)
              .Build()
              .op_conf();
