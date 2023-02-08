@@ -20,6 +20,7 @@ https://github.com/pytorch/pytorch/blob/master/test/test_optim.py.
 import math
 import unittest
 import itertools
+import numpy as np
 
 import oneflow as flow
 import oneflow.optim as optim
@@ -67,9 +68,9 @@ class TestLRScheduler(flow.unittest.TestCase):
         for epoch in range(epochs):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
-                    flow.allclose(
-                        flow.tensor(target[epoch]),
-                        flow.tensor(param_group["lr"]),
+                    np.allclose(
+                        target[epoch],
+                        param_group["lr"],
                         atol=1e-6,
                         rtol=1e-5,
                     ),
@@ -141,9 +142,9 @@ class TestLRScheduler(flow.unittest.TestCase):
         for epoch in range(epochs):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
-                    flow.allclose(
-                        flow.tensor(target[epoch]),
-                        flow.tensor(param_group["lr"]),
+                    np.allclose(
+                        target[epoch],
+                        param_group["lr"],
                         atol=1e-6,
                         rtol=1e-5,
                     ),
