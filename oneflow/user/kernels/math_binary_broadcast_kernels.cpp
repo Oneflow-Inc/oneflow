@@ -129,6 +129,8 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_and", ep::primitive::Bina
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_and", ep::primitive::BinaryOp::kBitwiseAnd)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_or", ep::primitive::BinaryOp::kBitwiseOr)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_xor", ep::primitive::BinaryOp::kBitwiseXor)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_floor_mod", ep::primitive::BinaryOp::kFloorMod)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_fmod", ep::primitive::BinaryOp::kFmod)
 

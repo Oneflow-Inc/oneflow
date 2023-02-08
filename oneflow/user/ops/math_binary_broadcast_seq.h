@@ -27,7 +27,9 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)                \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min)            \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max)            \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_and", BitwiseAND) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_and", BitwiseAnd) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_or", BitwiseOr)   \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_xor", BitwiseXor) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)     \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)              \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", Pow)
@@ -52,7 +54,9 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)               \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)           \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseAndOp, BitwiseAND) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseAndOp, BitwiseAnd) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseOrOp, BitwiseOr)   \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseXorOp, BitwiseXor) \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod)     \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)             \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)
