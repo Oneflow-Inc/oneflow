@@ -323,9 +323,6 @@ def _test_gru_pack_sequence(test_case, device):
     for i in range(len(flow_params)):
         torch_np = torch_params[i].grad.cpu().numpy()
         flow_np = flow_params[i].grad.cpu().numpy()
-        print(torch_np.flatten()[:20])
-        print(flow_np.flatten()[:20])
-        print(grad_tol)
         test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
 
 
