@@ -36,13 +36,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalFusionOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  int32_t nccl_size = ctx->input_size("in");
-  CHECK_EQ_OR_RETURN(nccl_size, ctx->output_size("out"));
+  int32_t nccl_size = ctx->inputs().size();
+  CHECK_EQ_OR_RETURN(nccl_size, ctx->outputs().size());
   const std::vector<std::string>& src_nd_sbp_str_list =
-      ctx->Attr<std::vector<std::string>>("src_nd_sbp_str_list");
+      ctx->user_op_conf().attr<std::vector<std::string>>("src_nd_sbp_str_list");
   const std::vector<std::string>& dst_nd_sbp_str_list =
-      ctx->Attr<std::vector<std::string>>("dst_nd_sbp_str_list");
-  const Shape& hierarchy = ctx->Attr<Shape>("hierarchy");
+      ctx->user_op_conf().attr<std::vector<std::string>>("dst_nd_sbp_str_list");
+  const Shape& hierarchy = ctx->user_op_conf().attr<Shape>("hierarchy");
   for (int32_t i = 0; i < nccl_size; ++i) {
     NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", i);
     NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", i);
@@ -50,11 +50,11 @@ namespace oneflow {
     output_nd_sbp->clear_sbp_parallel();
     CHECK_OR_RETURN(ParseNdSbpFromLongString(src_nd_sbp_str_list.at(i), input_nd_sbp))
         << Error::RuntimeError() << " Cannot parse str: " << src_nd_sbp_str_list.at(i)
-        << " to input nd_sbp attr of op : " << ctx->op_name();
+        << " to input nd_sbp attr of op : " << ctx->user_op_conf().op_name();
     CHECK_OR_RETURN(ParseNdSbpFromLongString(dst_nd_sbp_str_list.at(i), output_nd_sbp))
         << Error::RuntimeError() << " Cannot parse str: " << dst_nd_sbp_str_list.at(i)
-        << " to output nd_sbp attr of op : " << ctx->op_name();
-    CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), hierarchy->NumAxes());
+        << " to output nd_sbp attr of op : " << ctx->user_op_conf().op_name();
+    CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), hierarchy.NumAxes());
   }
 
   return Maybe<void>::Ok();
