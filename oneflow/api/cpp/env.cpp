@@ -29,7 +29,6 @@ void initialize() {
 void release() {
   if (of::Singleton<OneFlowEnv>::Get() != nullptr) { of::Singleton<OneFlowEnv>::Delete(); }
   of::SetShuttingDown();
-  of::ResetThisThreadUniqueGlobalId().GetOrThrow();
 }
 
 }  // namespace oneflow_api
