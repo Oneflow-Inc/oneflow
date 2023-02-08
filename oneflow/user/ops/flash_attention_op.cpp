@@ -129,7 +129,7 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   if (ctx->has_input("bias", 0)) {
     const Shape& bias_shape = ctx->InputShape("bias", 0);
     Shape bias_grad_shape(bias_shape);
-    bias_grad_shape.Set(0, q_shape.At(0));  // batch
+    bias_grad_shape.Set(0, ctx->InputShape("cu_seqlens_q", 0).At(0) - 1);  // batch
     ctx->SetOutputShape("bias_grad", 0, bias_grad_shape);
   }
   return Maybe<void>::Ok();
