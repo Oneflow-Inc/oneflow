@@ -4829,7 +4829,7 @@ class FusedMultiHeadAttentionInferenceFunctor {
     const int64_t kv_seq_len = key->shape()->At(1);
     CHECK_EQ_OR_RETURN(value->shape()->At(1), kv_seq_len)
         << "The size of the second dimension of the value tensor should be the same as that of the "
-           "query tensor.";
+           "key tensor.";
 
     auto CheckHiddenSize = [num_heads](const std::string& tensor_name, int64_t slice_start,
                                        int64_t slice_end, int64_t dim_size) -> Maybe<int64_t> {
