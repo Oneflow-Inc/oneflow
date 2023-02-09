@@ -133,6 +133,14 @@ class TestCast(flow.unittest.TestCase):
         c = b.to(dtype=torch.double, device=device)
         return c
     
+    @autotest(n=5)
+    def test_cast_with_squeezed_input(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.squeeze(x, random(1, 3).to(int))
+        z = y.to(dtype=torch.double, device=device)
+        return z
+    
     @autotest(n=5, auto_backward=False)
     def test_cast_with_sliced_input(test_case):
         device = random_device()
