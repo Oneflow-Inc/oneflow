@@ -8195,6 +8195,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
+  let has_enumerate_nd_sbp_signatures_fn = 1;
   let has_data_type_infer_fn = 1;
   let hasFolder = 1;
 }

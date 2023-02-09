@@ -30,6 +30,11 @@ namespace oneflow {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->hierarchy_value(), &builder);
 }
 
+/*static*/ Maybe<void> ReshapeOp::EnumerateNdSbpSignatures(
+    user_op::GetNdSbpSignatureListContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
 /*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
