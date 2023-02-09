@@ -2126,7 +2126,7 @@ class CtcLossFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
-    DeviceType log_probs_device_type;
+    DeviceType log_probs_device_type;  // NOLINT
     if (log_probs->is_local()) {
       log_probs_device_type = JUST(log_probs->device())->enum_type();
     } else {
