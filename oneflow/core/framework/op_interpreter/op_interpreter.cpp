@@ -133,10 +133,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   if (EnvBool<ONEFLOW_DTR_COPY_ON_WRITE>()) {
     for (int i = 0; i < outputs->size(); ++i) {
       if (tensor_to_be_mutated.at(i)) {
-        bool is_eviction_disabled = JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->is_eviction_disabled();
-        JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->set_eviction_disabled(false);
+        auto storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(JUST(tensor_to_be_mutated[i]->tensor_storage())->storage());
+        bool is_eviction_disabled = storage->is_eviction_disabled();
+        storage->set_eviction_disabled(false);
         JUST(tensor_to_be_mutated.at(i)->set_data(outputs->at(i)));
-        JUST(tensor_to_be_mutated[i]->tensor_storage())->storage()->set_eviction_disabled(is_eviction_disabled);
+        storage->set_eviction_disabled(is_eviction_disabled);
         if (requires_grad) {
           tensor_to_be_mutated.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
         }

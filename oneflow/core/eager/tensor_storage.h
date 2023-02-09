@@ -21,7 +21,7 @@ class TensorStorage {
   explicit TensorStorage(bool is_allocated_in_vm);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage();
+  virtual ~TensorStorage() = default;
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -51,18 +51,39 @@ class TensorStorage {
   }
 
   void _Release();
-  void Release();
+  virtual void Release();
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
   }
   Symbol<Device> device() const;
 
+ protected:
+  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  size_t blob_bytes_;
+  bool is_initialized_ = false;
+  Symbol<Device> device_;
+ private:
+  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
+  Optional<Symbol<::oneflow::Stream>> producer_stream_;
+  Optional<Symbol<::oneflow::Stream>> last_used_stream_;
+  std::vector<std::function<void()>> storage_delete_hooks_;
+  bool is_allocated_in_vm_;
+
+};
+
+class RematableTensorStorage final : public TensorStorage {
+ public:
+  RematableTensorStorage();
+  OF_DISALLOW_COPY_AND_MOVE(RematableTensorStorage);
+  ~RematableTensorStorage() override;
+
   void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op,
                       double compute_time);
   void clear_compute_op();
   OpCallInstructionPolicy compute_op() const;
   std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op() const;
+  void Release() override;
   void Remat();
   void Evict(bool eager_eviction);
   void Pin();
@@ -86,23 +107,13 @@ class TensorStorage {
   std::shared_ptr<dtr::DisjNode> node;
 
  private:
-  bool is_initialized_ = false;
   int64_t id_{};
   size_t num_pinned_{};
-  size_t blob_bytes_{};
   bool eviction_disabled_ = false;
   double last_access_time_{};
   double compute_time_{};
   std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
   bool is_needed_by_backward_ = false;
-
-  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
-  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
-  Optional<Symbol<::oneflow::Stream>> producer_stream_;
-  Optional<Symbol<::oneflow::Stream>> last_used_stream_;
-  std::vector<std::function<void()>> storage_delete_hooks_;
-  bool is_allocated_in_vm_;
-  Symbol<Device> device_;
 
   void LogEviction(bool eager_eviction) const;
 };

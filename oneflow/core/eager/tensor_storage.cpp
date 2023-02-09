@@ -16,33 +16,36 @@ int64_t unique_id_2() {
 }  // namespace
 
 TensorStorage::TensorStorage(bool is_allocated_in_vm)
-    : node(std::make_shared<dtr::DisjNode>(0)),
-      id_(unique_id_2()),
-      num_pinned_(0),
-      blob_bytes_(0),
-      last_access_time_(0),
-      compute_time_(0),
+    : blob_bytes_(0),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
       producer_stream_(NullOpt),
       last_used_stream_(NullOpt),
-      is_allocated_in_vm_(is_allocated_in_vm) {
-  VLOG(1) << "create storage " << id_;
+      is_allocated_in_vm_(is_allocated_in_vm) {}
+
+RematableTensorStorage::RematableTensorStorage()
+    : TensorStorage(true),
+      node(std::make_shared<dtr::DisjNode>(0)),
+      id_(unique_id_2()),
+      num_pinned_(0),
+      last_access_time_(0),
+      compute_time_(0) {
+  VLOG(1) << "create rematable storage " << id_;
 }
 
-TensorStorage::~TensorStorage() {
+RematableTensorStorage::~RematableTensorStorage() {
   if (compute_op_) { Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get()); }
   VLOG(1) << "delete storage " << id_;
 }
 
 Symbol<Device> TensorStorage::device() const { return device_; }
 
-void TensorStorage::LogEviction(bool eager_eviction) const {
+void RematableTensorStorage::LogEviction(bool eager_eviction) const {
   Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
   VLOG(1) << "evict storage " << id_ << ", compute op type: " << compute_op_type_name()
           << ", eager_eviction: " << eager_eviction;
 }
 
-void TensorStorage::Remat() {
+void RematableTensorStorage::Remat() {
   if (is_in_memory()) { return; }
   auto stream = CHECK_JUST(GetDefaultStreamByDevice(device_));
   auto* vm_stream = CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
@@ -50,7 +53,7 @@ void TensorStorage::Remat() {
   CHECK_JUST(Recompute(&op, vm_stream));
 }
 
-void TensorStorage::Evict(bool eager_eviction) {
+void RematableTensorStorage::Evict(bool eager_eviction) {
   CHECK(!is_eviction_disabled());
   LogEviction(eager_eviction);
   return _Release();
@@ -62,71 +65,74 @@ void TensorStorage::_Release() {
   blob_dptr_.reset();
 }
 
-void TensorStorage::Release() {
-  if (device_->with_remat()) {
-    if (is_eviction_disabled()) { return; }
-    return Evict(true);
-  } else {
-    return _Release();
-  }
+void TensorStorage::Release() { return _Release(); }
+
+void RematableTensorStorage::Release() {
+  CHECK(device_->with_remat());
+  if (is_eviction_disabled()) { return; }
+  return Evict(true);
 }
 
 std::vector<std::string> random_ops{"uniform", "uniform_int", "normal", "randperm"};
 
-bool TensorStorage::is_evictable() const {
+bool RematableTensorStorage::is_evictable() const {
   return compute_op_ != nullptr
          && std::find(random_ops.begin(), random_ops.end(), compute_op_type_name())
                 == random_ops.end()
          && !eviction_disabled_;
 }
 
-OpCallInstructionPolicy TensorStorage::compute_op() const {
+OpCallInstructionPolicy RematableTensorStorage::compute_op() const {
   CHECK_NOTNULL(compute_op_);
   return OpCallInstructionPolicy(*compute_op_);
 }
 
-std::shared_ptr<DtrOpCallInstructionPolicy> TensorStorage::dtr_compute_op() const {
+std::shared_ptr<DtrOpCallInstructionPolicy> RematableTensorStorage::dtr_compute_op() const {
   return compute_op_;
 }
 
-void TensorStorage::Pin() {
+void RematableTensorStorage::Pin() {
   ++num_pinned_;
   VLOG(3) << "pin storage " << id_ << ", num_pinned: " << num_pinned_;
 }
 
-void TensorStorage::Unpin() {
+void RematableTensorStorage::Unpin() {
   CHECK_GT(num_pinned_, 0);
   --num_pinned_;
   VLOG(3) << "unpin storage " << id_ << ", num_pinned: " << num_pinned_;
 }
 
-void TensorStorage::clear_compute_op() {
+void RematableTensorStorage::clear_compute_op() {
   if (compute_op_ == nullptr) { return; }
+  VLOG(1) << "clear_compute_op: " << id_;
   Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
   compute_op_ = nullptr;
   compute_time_ = -1;
 }
 
-void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op,
-                                   double compute_time) {
+void RematableTensorStorage::set_compute_op(
+    const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time) {
   if (compute_op_) {
     CHECK(false);
     // Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
   }
   compute_op_ = compute_op;
-  Singleton<dtr::Env>::Get()->ops.push_back(compute_op_.get());
+  VLOG(1) << "set_compute_op: " << id_ << ", compute op: " << compute_op.get();
+  Singleton<dtr::Env>::Get()->ops.push_back(CHECK_NOTNULL(compute_op_.get()));
   compute_time_ = compute_time;
 }
 
-std::string TensorStorage::compute_op_type_name() const {
+std::string RematableTensorStorage::compute_op_type_name() const {
   if (is_eviction_disabled()) { return "eviction_disabled"; }
   if (compute_op_) { return compute_op_->opkernel().op_type_name(); }
   return "None";
 }
 
-void TensorStorage::Access() { last_access_time_ = Singleton<dtr::Env>::Get()->time_now(); }
+void RematableTensorStorage::Access() {
+  last_access_time_ = Singleton<dtr::Env>::Get()->time_now();
+}
 
-Maybe<double> TensorStorage::cost(size_t override_size) const {
+Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
   const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
   if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTE>() || EnvBool<ONEFLOW_DTR_HEURISTIC_DTR>()) {
@@ -136,17 +142,16 @@ Maybe<double> TensorStorage::cost(size_t override_size) const {
          / time_since_last_access / static_cast<double>(size);
 }
 
-double TensorStorage::approx_neighbor_cost() const {
+double RematableTensorStorage::approx_neighbor_cost() const {
   double cost = 0;
   auto compute_op = this->compute_op();
   const auto& inputs = compute_op.inputs();
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& tmp = inputs[i];
-    if (!tmp->tensor_storage()->is_in_memory()) {
-      double p_cost = dtr::DisjointSet::find_father(tmp->tensor_storage()->node)->compute_time();
-      if (p_cost < tmp->tensor_storage()->compute_time()) {
-        p_cost = tmp->tensor_storage()->compute_time();
-      }
+    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
+        !storage->is_in_memory()) {
+      double p_cost = dtr::DisjointSet::find_father(storage->node)->compute_time();
+      if (p_cost < storage->compute_time()) { p_cost = storage->compute_time(); }
       cost += p_cost;
     }
   }
@@ -154,11 +159,10 @@ double TensorStorage::approx_neighbor_cost() const {
   const auto& outputs = compute_op.outputs();
   for (int i = 0; i < outputs.size(); ++i) {
     const auto& tmp = outputs[i];
-    if (!tmp->tensor_storage()->is_in_memory()) {
-      double c_cost = dtr::DisjointSet::find_father(tmp->tensor_storage()->node)->compute_time();
-      if (c_cost < tmp->tensor_storage()->compute_time()) {
-        c_cost = tmp->tensor_storage()->compute_time();
-      }
+    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
+        !storage->is_in_memory()) {
+      double c_cost = dtr::DisjointSet::find_father(storage->node)->compute_time();
+      if (c_cost < storage->compute_time()) { c_cost = storage->compute_time(); }
       cost += c_cost;
     }
   }

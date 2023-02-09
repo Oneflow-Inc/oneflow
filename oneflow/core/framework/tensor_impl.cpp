@@ -128,9 +128,12 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
         tensor_storage, dep_object);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(true), dep_object);
+    auto storage = local_tensor_meta->device()->with_remat()
+                       ? std::make_shared<vm::RematableTensorStorage>()
+                       : std::make_shared<vm::TensorStorage>(true);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
+                                              local_tensor_meta->dtype(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();

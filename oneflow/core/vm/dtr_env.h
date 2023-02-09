@@ -4,7 +4,7 @@
 namespace oneflow {
 
 namespace vm {
-class TensorStorage;
+class RematableTensorStorage;
 }
 
 namespace dtr {
@@ -18,7 +18,7 @@ class Env {
   void remove_compute_op(vm::DtrOpCallInstructionPolicy* op) {
     ops.erase(std::remove(ops.begin(), ops.end(), op), ops.end());
   }
-  vm::OpCallInstructionPolicy update_tensor_with_storage(vm::TensorStorage* storage, vm::OpCallInstructionPolicy* current_compute_op);
+  vm::OpCallInstructionPolicy update_tensor_with_storage(vm::RematableTensorStorage* storage, const vm::OpCallInstructionPolicy& current_compute_op);
 
   std::vector<vm::DtrOpCallInstructionPolicy*> ops;
 
@@ -32,7 +32,7 @@ class Env {
 
   void clear_time() { time_now_ = 0; }
 
-  std::set<vm::TensorStorage*> need_eager_eviction_storages;
+  std::set<vm::RematableTensorStorage*> need_eager_eviction_storages;
 
   std::string current_op_type_name;
 

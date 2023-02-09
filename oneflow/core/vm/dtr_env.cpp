@@ -7,9 +7,9 @@ namespace oneflow {
 namespace dtr {
 
 vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
-    vm::TensorStorage* storage, vm::OpCallInstructionPolicy* current_compute_op) {
+    vm::RematableTensorStorage* storage, const vm::OpCallInstructionPolicy& current_compute_op) {
   // FIXME: set disjnode properly
-  auto new_storage = std::make_shared<vm::TensorStorage>(true);
+  auto new_storage = std::make_shared<vm::RematableTensorStorage>();
   std::unordered_map<vm::EagerBlobObject*, std::shared_ptr<vm::EagerBlobObject>> old2new;
   auto update = [&new_storage, &old2new](std::shared_ptr<vm::EagerBlobObject>& old) {
     auto it = old2new.find(old.get());
@@ -73,7 +73,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
       }
     }
   }
-  vm::OpCallInstructionPolicy new_compute_op = *current_compute_op;
+  vm::OpCallInstructionPolicy new_compute_op = current_compute_op;
   // only update inputs
   for (auto& x : new_compute_op.mut_inputs()) {
     if (x->tensor_storage().get() == storage) {
@@ -83,6 +83,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
               << old_ptr << " to " << x.get() << std::endl;
     }
   }
+  VLOG(1) << "update_tensor_with_storage: storage " << storage->id();
   // set compute_op_ and compute_time_
   new_storage->set_compute_op(storage->dtr_compute_op(), storage->compute_time());
   // set blob_bytes_

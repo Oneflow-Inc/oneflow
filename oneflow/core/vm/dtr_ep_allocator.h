@@ -29,7 +29,7 @@ namespace oneflow {
 namespace vm {
 
 class EagerBlobObject;
-class TensorStorage;
+class RematableTensorStorage;
 
 class DtrEpAllocator final : public Allocator {
  public:
@@ -71,7 +71,7 @@ class DtrEpAllocator final : public Allocator {
     bool is_free = true;
     Piece* prev = nullptr;
     Piece* next = nullptr;
-    vm::TensorStorage* tensor = nullptr;
+    vm::RematableTensorStorage* tensor = nullptr;
     bool is_left = true;
   };
 

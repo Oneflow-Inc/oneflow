@@ -27,10 +27,19 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+Maybe<vm::RematableTensorStorage> storage(const std::shared_ptr<one::Tensor>& tensor) {
+  auto ret = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(tensor->eager_blob_object())->tensor_storage());
+  CHECK_NOTNULL_OR_RETURN(ret);
+  return ret;
+}
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("is_enabled", &dtr::is_enabled);
   m.def("is_in_memory", [](const std::shared_ptr<one::Tensor>& tensor) -> Maybe<bool> {
-    return JUST(tensor->eager_blob_object())->tensor_storage()->is_in_memory();
+    return JUST(storage(tensor))->is_in_memory();
   });
   m.def("allocated_memory", [](const std::string& device_str) -> Maybe<size_t> {
     auto device = JUST(Device::ParseAndNew(device_str));
@@ -80,23 +89,23 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   // });
   m.def("remat", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     // FIXME: an instruction
-    JUST(t->eager_blob_object())->tensor_storage()->Remat();
+    JUST(storage(t))->Remat();
     return Maybe<void>::Ok();
   });
   m.def("evict", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     // FIXME: an instruction
-    JUST(t->eager_blob_object())->tensor_storage()->Evict(false);
+    JUST(storage(t))->Evict(false);
     return Maybe<void>::Ok();
   });
   m.def("is_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<bool> {
-    return JUST(t->eager_blob_object())->tensor_storage()->is_evictable();
+    return JUST(storage(t))->is_evictable();
   });
   m.def("disable_eviction", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
-    JUST(t->eager_blob_object())->tensor_storage()->set_eviction_disabled(true);
+    JUST(storage(t))->set_eviction_disabled(true);
     return Maybe<void>::Ok();
   });
   m.def("clear_compute_op", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
-    JUST(t->eager_blob_object())->tensor_storage()->clear_compute_op();
+    JUST(storage(t))->clear_compute_op();
     return Maybe<void>::Ok();
   });
   m.def("clear_time", []() { Singleton<dtr::Env>::Get()->clear_time(); });

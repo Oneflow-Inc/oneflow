@@ -44,28 +44,32 @@ std::shared_ptr<DisjNode> DisjointSet::find_father(std::shared_ptr<DisjNode>& x)
   }
 }
 
-void DisjointSet::update_after_compute(vm::TensorStorage* obj) {
+void DisjointSet::update_after_compute(vm::RematableTensorStorage* obj) {
   auto&& fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->node->reset(obj->compute_time());
 }
 
-Maybe<void> DisjointSet::update_after_release(vm::TensorStorage* obj) {
+Maybe<void> DisjointSet::update_after_release(vm::RematableTensorStorage* obj) {
   CHECK_NOTNULL_OR_RETURN(obj);
-  if (obj->is_eviction_disabled()) {
-    return Maybe<void>::Ok();
-  }
+  if (obj->is_eviction_disabled()) { return Maybe<void>::Ok(); }
   auto operand = obj->compute_op();
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
   for (int i = 0; i < inputs.size(); ++i) {
-    auto storage = inputs[i]->tensor_storage();
-    if (!storage->is_in_memory()) { merge(storage->node, obj->node); }
+    if (auto storage =
+            std::dynamic_pointer_cast<vm::RematableTensorStorage>(inputs[i]->tensor_storage());
+        storage && !storage->is_in_memory()) {
+      merge(storage->node, obj->node);
+    }
   }
 
   for (int i = 0; i < outputs.size(); ++i) {
-    auto storage = outputs[i]->tensor_storage();
-    if (!storage->is_in_memory()) { merge(obj->node, storage->node); }
+    if (auto storage =
+            std::dynamic_pointer_cast<vm::RematableTensorStorage>(outputs[i]->tensor_storage());
+        storage && !storage->is_in_memory()) {
+      merge(obj->node, storage->node);
+    }
   }
   return Maybe<void>::Ok();
 }

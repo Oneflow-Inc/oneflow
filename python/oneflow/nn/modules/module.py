@@ -258,9 +258,6 @@ class Module(object):
             else:
                 self._non_persistent_buffers_set.add(name)
 
-        if tensor is not None:
-            flow._oneflow_internal.dtr.disable_eviction(tensor)
-
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         r"""
         register_parameter(name, param)
@@ -1072,7 +1069,6 @@ class Module(object):
             if buf is not None:
                 if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
-                    flow._oneflow_internal.dtr.disable_eviction(buf_applied)
                     self._buffers[key] = buf_applied
                     self._oneflow_internal_module_tensor_applied_dict__[
                         buf

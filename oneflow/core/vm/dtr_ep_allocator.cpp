@@ -83,11 +83,11 @@ DtrEpAllocator::offset_t DtrEpAllocator::get_offset(const char* mem_ptr) const {
 
 void DtrEpAllocator::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
-  piece->tensor = ebo->tensor_storage().get();
+  piece->tensor = dynamic_cast<RematableTensorStorage*>(ebo->tensor_storage().get());
   CHECK_NOTNULL(piece->tensor);
   if (dtr::debug_level() >= 1) {
-    LOG(INFO) << "tensor " << ebo->tensor_storage()->id() << " is allocated at "
-              << get_offset(mem_ptr) << ", left: " << piece->is_left;
+    LOG(INFO) << "tensor " << piece->tensor->id() << " is allocated at " << get_offset(mem_ptr)
+              << ", left: " << piece->is_left;
   }
 }
 
@@ -134,7 +134,7 @@ void DtrEpAllocator::ErasePieceFromPtrMap(Piece* piece) {
   ptr2piece_.erase(it);
 }
 
-double get_cost(const vm::TensorStorage* storage) {
+double get_cost(const vm::RematableTensorStorage* storage) {
   if (storage == nullptr) { return 0.; }
   double cost = CHECK_JUST(storage->cost(0));
 
@@ -142,7 +142,7 @@ double get_cost(const vm::TensorStorage* storage) {
   return cost;
 }
 
-double get_cost(const vm::TensorStorage* storage, size_t size) {
+double get_cost(const vm::RematableTensorStorage* storage, size_t size) {
   if (storage == nullptr) { return 0.; }
   double cost = CHECK_JUST(storage->cost(size));
 
@@ -154,12 +154,8 @@ void DtrEpAllocator::CheckPieces() {
   auto it = ptr2piece_.cbegin();
   for (int i = 0; i < ptr2piece_.size(); ++i) {
     Piece* piece = it->second;
-    if (piece->tensor == nullptr) {
-      CHECK(piece->is_free);
-    }
-    if (piece->is_free) {
-      CHECK_ISNULL(piece->tensor);
-    }
+    if (piece->tensor == nullptr) { CHECK(piece->is_free); }
+    if (piece->is_free) { CHECK_ISNULL(piece->tensor); }
     if (i != 0) {
       CHECK_EQ(piece->prev->next, piece);
       CHECK_EQ(piece->prev->ptr + piece->prev->size, piece->ptr);
@@ -259,7 +255,7 @@ void DtrEpAllocator::InsertToFreeList(Piece* piece) {
   VLOG(3) << "piece_left: " << piece_left << ", right: " << piece_right << std::endl;
   for (size_t i = 0; i < group_boundaries_.size(); i++) {
     VLOG(3) << "g left: " << group_boundaries_[i].first
-              << ", right: " << group_boundaries_[i].second << std::endl;
+            << ", right: " << group_boundaries_[i].second << std::endl;
     if ((piece_left >= group_boundaries_[i].first && piece_left < group_boundaries_[i].second)
         || (piece_right > group_boundaries_[i].first
             && piece_right <= group_boundaries_[i].second)) {
@@ -501,7 +497,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t requi
 
   while (true) {
     double min_cost = std::numeric_limits<double>::max();
-    vm::TensorStorage* min_tensor = nullptr;
+    vm::RematableTensorStorage* min_tensor = nullptr;
     for (auto it = ptr2piece_.begin();
          it != ptr2piece_.end() && !JUST(InSmallMemoryArea(it->second->ptr)); it++) {
       auto* tensor = it->second->tensor;
@@ -701,10 +697,8 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK_NOTNULL(piece);
   CHECK_EQ(piece->ptr, mem_ptr);
   CHECK(!piece->is_free);
-  
-  if (auto* tensor = piece->tensor) {
-    CHECK_JUST(dtr::DisjointSet::update_after_release(tensor));
-  }
+
+  if (auto* tensor = piece->tensor) { CHECK_JUST(dtr::DisjointSet::update_after_release(tensor)); }
 
   piece->is_free = true;
   piece->tensor = nullptr;
@@ -715,7 +709,7 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   Piece* prev_p = piece->prev;
 
   VLOG(2) << "deallocate offset: " << get_offset(piece->ptr) << ", size: " << piece->size
-    << ", prev: " << prev_p << ", next: " << next_p;
+          << ", prev: " << prev_p << ", next: " << next_p;
 
   if (next_p != nullptr && next_p->is_free) {
     CHECK_EQ(next_p->ptr, piece->ptr + piece->size);
