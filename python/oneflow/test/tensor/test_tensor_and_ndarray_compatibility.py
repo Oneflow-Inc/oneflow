@@ -46,8 +46,8 @@ test_compare_op_list = [
 ]
 
 
-def _test_compute_operator(test_case, shape):
-    random_tensor = np.random.randn(*shape)
+def _test_compute_operator(test_case, shape, dtype):
+    random_tensor = np.random.randn(*shape).astype(dtype)
     x_flow = flow.tensor(random_tensor)
     x_torch = torch.tensor(random_tensor)
     random_numpy = np.random.randn(*shape)
@@ -107,6 +107,7 @@ class TestTensorAndNdarrayCompatibility(flow.unittest.TestCase):
     def test_op_compatibility(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["dtype"] = [np.float32, np.float64]
 
         for arg in GenArgDict(arg_dict):
             _test_compute_operator(test_case, **arg)
