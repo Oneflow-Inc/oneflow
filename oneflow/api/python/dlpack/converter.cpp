@@ -106,7 +106,7 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   };
 
   size_t array_size_in_bytes = shape.elem_cnt() * GetSizeOfDataType(dtype);
-  auto tensor_data = std::make_shared<vm::OutsideVmTensorStorage>();
+  auto tensor_data = std::make_shared<vm::TensorStorage>(false);
   tensor_data->set_blob_dptr(
       std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(dl_tensor.data), Free),
       array_size_in_bytes);

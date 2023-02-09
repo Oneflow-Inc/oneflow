@@ -294,6 +294,7 @@ struct OpCallInstructionUtil final {
                                            Allocator* allocator) {
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
+    tmp_tensor->set_tmp_buffer_ptr(nullptr);
   }
 
   static inline void OpKernelCompute(OpCallInstructionPolicy* op_call_instruction_policy,

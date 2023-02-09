@@ -18,12 +18,12 @@ class DtrOpCallInstructionPolicy;
 
 class TensorStorage {
  public:
-  TensorStorage();
+  explicit TensorStorage(bool is_allocated_in_vm);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
   virtual ~TensorStorage();
 
-  virtual bool is_allocated_in_vm() const = 0;
+  bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
   size_t blob_bytes() const { return blob_bytes_; }
 
@@ -58,7 +58,8 @@ class TensorStorage {
   }
   Symbol<Device> device() const;
 
-  void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op, double compute_time);
+  void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op,
+                      double compute_time);
   void clear_compute_op();
   OpCallInstructionPolicy compute_op() const;
   std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op() const;
@@ -86,12 +87,12 @@ class TensorStorage {
 
  private:
   bool is_initialized_ = false;
-  int64_t id_;
-  size_t num_pinned_;
-  size_t blob_bytes_;
+  int64_t id_{};
+  size_t num_pinned_{};
+  size_t blob_bytes_{};
   bool eviction_disabled_ = false;
-  double last_access_time_;
-  double compute_time_;
+  double last_access_time_{};
+  double compute_time_{};
   std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
   bool is_needed_by_backward_ = false;
 
@@ -100,25 +101,10 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
+  bool is_allocated_in_vm_;
   Symbol<Device> device_;
 
   void LogEviction(bool eager_eviction) const;
-};
-
-class InsideVmTensorStorage : public TensorStorage {
- public:
-  InsideVmTensorStorage() = default;
-  ~InsideVmTensorStorage() = default;
-
-  bool is_allocated_in_vm() const override { return true; }
-};
-
-class OutsideVmTensorStorage : public TensorStorage {
- public:
-  OutsideVmTensorStorage() = default;
-  ~OutsideVmTensorStorage() = default;
-
-  bool is_allocated_in_vm() const override { return false; }
 };
 
 }  // namespace vm

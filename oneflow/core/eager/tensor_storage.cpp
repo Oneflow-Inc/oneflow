@@ -15,7 +15,7 @@ int64_t unique_id_2() {
 
 }  // namespace
 
-TensorStorage::TensorStorage()
+TensorStorage::TensorStorage(bool is_allocated_in_vm)
     : node(std::make_shared<dtr::DisjNode>(0)),
       id_(unique_id_2()),
       num_pinned_(0),
@@ -24,7 +24,8 @@ TensorStorage::TensorStorage()
       compute_time_(0),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
       producer_stream_(NullOpt),
-      last_used_stream_(NullOpt) {
+      last_used_stream_(NullOpt),
+      is_allocated_in_vm_(is_allocated_in_vm) {
   VLOG(1) << "create storage " << id_;
 }
 
@@ -37,8 +38,7 @@ Symbol<Device> TensorStorage::device() const { return device_; }
 
 void TensorStorage::LogEviction(bool eager_eviction) const {
   Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
-  VLOG(1) << "evict storage " << id_
-          << ", compute op type: " << compute_op_type_name()
+  VLOG(1) << "evict storage " << id_ << ", compute op type: " << compute_op_type_name()
           << ", eager_eviction: " << eager_eviction;
 }
 
@@ -64,9 +64,7 @@ void TensorStorage::_Release() {
 
 void TensorStorage::Release() {
   if (device_->with_remat()) {
-    if (is_eviction_disabled()) {
-      return;
-    }
+    if (is_eviction_disabled()) { return; }
     return Evict(true);
   } else {
     return _Release();
@@ -122,9 +120,7 @@ void TensorStorage::set_compute_op(const std::shared_ptr<DtrOpCallInstructionPol
 
 std::string TensorStorage::compute_op_type_name() const {
   if (is_eviction_disabled()) { return "eviction_disabled"; }
-  if (compute_op_) {
-    return compute_op_->opkernel().op_type_name();
-  }
+  if (compute_op_) { return compute_op_->opkernel().op_type_name(); }
   return "None";
 }
 

@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 
 TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : storage_(std::make_shared<vm::InsideVmTensorStorage>()) {}
+    : storage_(std::make_shared<vm::TensorStorage>(true)) {}
 
 TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_storage)
     : storage_(tensor_storage) {}
