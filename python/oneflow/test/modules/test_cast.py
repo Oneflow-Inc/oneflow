@@ -110,7 +110,7 @@ class TestCast(flow.unittest.TestCase):
         x = x.permute(perm_list)
         y = x.to(dtype=torch.float64, device=device)
         return y
-    
+
     @autotest(n=5)
     def test_cast_with_expanded_input(test_case):
         device = random_device()
@@ -123,7 +123,7 @@ class TestCast(flow.unittest.TestCase):
         y = random_expand(x, ndim=5, expand_size=random_expand_size)
         z = y.to(dtype=torch.float64, device=device)
         return z
-    
+
     @autotest(n=5)
     def test_cast_with_expanded_input_2(test_case):
         device = random_device()
@@ -141,6 +141,7 @@ class TestCast(flow.unittest.TestCase):
         z = y.to(dtype=torch.double, device=device)
         return z
     
+
     @autotest(n=5, auto_backward=False)
     def test_cast_with_sliced_input(test_case):
         device = random_device()
