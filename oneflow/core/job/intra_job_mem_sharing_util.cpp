@@ -590,6 +590,27 @@ void MemReusedTimeLineAlgo(
   MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
 }
 
+void MemReusedMemVolumeFirstAlgo(
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
+  std::vector<RegstDescProto*> order;
+  order.reserve(regst2lifetime.size());
+  auto ComputeMemoryVolume = [&](RegstDescProto* key) {
+    return mem_reused_regst2size.at(key)
+           * (regst2lifetime.at(key).second - regst2lifetime.at(key).first) / 1000;
+  };
+  for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
+  std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
+    size_t l_value = ComputeMemoryVolume(lhs);
+    size_t r_value = ComputeMemoryVolume(rhs);
+    if (l_value == r_value) {
+      return mem_reused_regst2size.at(lhs) > mem_reused_regst2size.at(rhs);
+    }
+    return l_value > r_value;
+  });
+  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
+}
+
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
