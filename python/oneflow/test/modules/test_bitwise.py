@@ -173,6 +173,7 @@ class TestBitwiseOrModule(flow.unittest.TestCase):
             np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
         )
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseXorModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
