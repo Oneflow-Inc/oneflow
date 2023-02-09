@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 #define ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 
-#include <cstdint>
 #include <functional>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"

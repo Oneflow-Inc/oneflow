@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
