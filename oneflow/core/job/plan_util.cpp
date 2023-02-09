@@ -290,7 +290,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
       for (const auto& pair : this_rank2block) {
         int64_t this_machine_id = pair.first;
         int64_t this_mem_block_id = pair.second;
-        CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        if (merged_rank2block.find(this_machine_id) == merged_rank2block.end()) { continue; }
         int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
         CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
                   .second);

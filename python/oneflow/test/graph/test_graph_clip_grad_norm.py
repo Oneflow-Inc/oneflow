@@ -280,7 +280,7 @@ def _compare_with_eager(
     )
     test_case.assertTrue(
         np.allclose(grad1_a, grad1_b, rtol=rtol, atol=atol),
-        f"\n{grad1_a}\nvs.\n{grad1_b}",
+        f"\n{grad1_a}\nvs.\n{grad1_b}, \ndiff:\n{grad1_a-grad1_b}",
     )
     test_case.assertTrue(
         np.allclose(grad2_a, grad2_b, rtol=rtol, atol=atol),
@@ -307,11 +307,11 @@ class TestGraphClipGradNorm(flow.unittest.TestCase):
         _compare_with_eager(test_case, parallel_mode="MP")
 
     @flow.unittest.skip_unless_1n2d()
-    def _test_pp(test_case):
+    def test_pp(test_case):
         _compare_with_eager(test_case, parallel_mode="PP")
 
     @flow.unittest.skip_unless_1n2d()
-    def _test_pp_acc(test_case):
+    def test_pp_acc(test_case):
         _compare_with_eager(test_case, batch_size=8, acc=8, parallel_mode="PP")
 
     @flow.unittest.skip_unless_1n4d()
@@ -320,18 +320,20 @@ class TestGraphClipGradNorm(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n4d()
     def _test_mp_pp(test_case):
+        # Can not pass value check
         _compare_with_eager(test_case, parallel_mode=["MP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_dp_pp(test_case):
+    def test_dp_pp(test_case):
         _compare_with_eager(test_case, parallel_mode=["DP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
     def _test_mp_pp_acc(test_case):
+        # Can not pass value check
         _compare_with_eager(test_case, batch_size=8, acc=8, parallel_mode=["MP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_dp_pp_acc(test_case):
+    def test_dp_pp_acc(test_case):
         _compare_with_eager(test_case, batch_size=8, acc=4, parallel_mode=["DP", "PP"])
 
 
@@ -368,7 +370,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n2d()
-    def _test_pp(test_case):
+    def test_pp(test_case):
         _compare_with_eager(
             test_case,
             norm_type=float("inf"),
@@ -378,7 +380,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n2d()
-    def _test_pp_acc(test_case):
+    def test_pp_acc(test_case):
         _compare_with_eager(
             test_case,
             batch_size=8,
@@ -401,6 +403,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n4d()
     def _test_mp_pp(test_case):
+        # value check error 
         _compare_with_eager(
             test_case,
             norm_type=-float("inf"),
@@ -410,7 +413,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_dp_pp(test_case):
+    def test_dp_pp(test_case):
         _compare_with_eager(
             test_case,
             norm_type=float("inf"),
@@ -421,6 +424,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n4d()
     def _test_mp_pp_acc(test_case):
+        # Can not pass value check
         _compare_with_eager(
             test_case,
             batch_size=8,
@@ -432,7 +436,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_dp_pp_acc(test_case):
+    def test_dp_pp_acc(test_case):
         _compare_with_eager(
             test_case,
             batch_size=8,
@@ -446,4 +450,5 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     # flow.manual_seed(0)
+    #unittest.main(defaultTest="TestGraphClipGradNorm.test_dp_pp_acc")
     unittest.main()
