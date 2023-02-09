@@ -236,4 +236,3 @@ class ArgsTree(object):
             mapped_value = map_function(value)
 
         return mapped_value
-
