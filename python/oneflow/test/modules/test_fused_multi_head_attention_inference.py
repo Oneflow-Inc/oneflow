@@ -49,6 +49,9 @@ def _ref(query, key, value, num_heads, causal=False, attn_bias=None):
 
 
 def _fused_mha(query, key, value, num_heads, causal=False, attn_bias=None):
+    if attn_bias is not None and attn_bias.shape[-1] % 8 != 0:
+        pad = 8 - attn_bias.shape[-1] % 8
+        attn_bias = flow.pad(attn_bias, (0, pad), "constant", 0)
     return flow._C.fused_multi_head_attention_inference(
         query, key, value, num_heads, causal=causal, attn_bias=attn_bias
     )
@@ -219,6 +222,9 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
         )
         _test_fused_multi_head_attention_inference_with_attn_bias(
             test_case, 2, 8, 4096, 80, 40, 40, flow.float, True
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float, True
         )
 
 

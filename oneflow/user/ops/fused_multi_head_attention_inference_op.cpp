@@ -104,8 +104,8 @@ namespace oneflow {
                     || padded_attn_bias_shape.at(0) == batch_size);
     CHECK_OR_RETURN(padded_attn_bias_shape.at(1) == 1 || padded_attn_bias_shape.at(1) == num_heads);
     CHECK_OR_RETURN(padded_attn_bias_shape.at(2) == 1
-                    || padded_attn_bias_shape.at(2) == query_seq_len);
-    CHECK_OR_RETURN(padded_attn_bias_shape.at(3) == kv_seq_len);
+                    || padded_attn_bias_shape.at(2) >= query_seq_len);
+    CHECK_OR_RETURN(padded_attn_bias_shape.at(3) >= kv_seq_len);
   }
 
   ctx->SetOutputShape("out", 0, Shape({batch_size, query_seq_len, value_hidden_size}));
@@ -117,7 +117,24 @@ namespace oneflow {
 }
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
-  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  bool broadcast_attn_bias = false;
+  if (ctx->user_op_conf().has_input("attn_bias", 0)) {
+    const user_op::TensorDesc& attn_bias =
+        ctx->LogicalTensorDesc4InputArgNameAndIndex("attn_bias", 0);
+    if (attn_bias.shape().NumAxes() < 4 || attn_bias.shape().At(0) == 1) {
+      broadcast_attn_bias = true;
+    }
+  }
+  if (broadcast_attn_bias) {
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), 0)
+        .Broadcast(user_op::OpArg("attn_bias", 0))
+        .Split(ctx->outputs(), 0)
+        .Build();
+
+  } else {
+    ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  }
   return Maybe<void>::Ok();
 }
 

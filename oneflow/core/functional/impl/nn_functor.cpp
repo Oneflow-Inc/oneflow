@@ -4881,17 +4881,16 @@ class FusedMultiHeadAttentionInferenceFunctor {
       CHECK_LE_OR_RETURN(num_attn_bias_axes, 4)
           << "The number of dimensions of attn_bias should be greater than 0 and less than or "
              "equal to 4.";
-      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
-          << "The size of the -1 dimension of attn_bias should be equal to the second dimension of "
-             "the key tensor.";
-      CHECK_EQ_OR_RETURN(kv_seq_len % 8, 0)
-          << "When using attn_bias, the size of the second dimension of the key tensor is "
-             "restricted to be a multiple of 8.";
+      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
+          << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
+             "second dimension of the key tensor";
+      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
+          << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
       if (num_attn_bias_axes >= 2) {
         CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 2) == query_seq_len)
-            << "The size of the -2 dimension of attn_bias should be equal to the second dimension "
-               "of the query tensor or equal to 1.";
+                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= query_seq_len)
+            << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
+               "second dimension of the query tensor or equal to 1.";
       }
       if (num_attn_bias_axes >= 3) {
         CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1

@@ -362,14 +362,14 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
       for (int i = 0; i < num_attn_bias_axes; ++i) {
         padded_attn_bias_shape.push_back(attn_bias->shape_view().At(i));
       }
-      int64_t bias_stride = kv_seq_len;
-      CHECK_EQ(padded_attn_bias_shape.at(3), kv_seq_len);
+      CHECK_GE(padded_attn_bias_shape.at(3), kv_seq_len);
+      int64_t bias_stride = padded_attn_bias_shape.at(3);
       if (padded_attn_bias_shape.at(2) == 1) {
         params.attn_bias_stride_m = 0;
       } else {
-        CHECK_EQ(padded_attn_bias_shape.at(2), query_seq_len);
+        CHECK_GE(padded_attn_bias_shape.at(2), query_seq_len);
         params.attn_bias_stride_m = bias_stride;
-        bias_stride *= query_seq_len;
+        bias_stride *= padded_attn_bias_shape.at(2);
       }
       if (padded_attn_bias_shape.at(1) == 1) {
         params.attn_bias_stride_h = 0;
