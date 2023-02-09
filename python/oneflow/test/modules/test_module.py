@@ -102,7 +102,7 @@ def _test_hooks(test_case, backward_register_fn):
 
     module(input).backward(flow.ones(5, 5) * 2)
     test_case.assertEqual(counter["forwards"], 13)
-    test_case.assertEqual(counter["backwards"], 7) # 7
+    test_case.assertEqual(counter["backwards"], 7)  # 7
 
     test_fwd.remove()
     test_bwd.remove()
