@@ -232,12 +232,13 @@ class Module(object):
                 else:
                     var = var[0]
             grad_fn = var.grad_fn
+
             if grad_fn is not None:
+                self._maybe_warn_non_full_backward_hook(args, res, grad_fn)
                 for hook in non_full_backward_hooks:
                     wrapper = functools.partial(hook, self)
                     functools.update_wrapper(wrapper, hook)
                     grad_fn.register_hook(wrapper)
-                self._maybe_warn_non_full_backward_hook(args, res, grad_fn)
 
         return res
 

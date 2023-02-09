@@ -16,6 +16,7 @@ limitations under the License.
 # This file is mostly copied from PyTorch's torch/utils/hooks.py
 import oneflow as flow
 import oneflow.nn.modules._functions
+from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from collections import OrderedDict
 import weakref
 import warnings
@@ -85,17 +86,18 @@ class BackwardHook(object):
         for idx, val in zip(indices, values):
             res[idx] = val
 
-        return tuple(res)
+        return convert_to_tensor_tuple(res)
 
     def _unpack_none(self, indices, values):
         res = []
         for idx in indices:
             res.append(values[idx])
 
-        return tuple(res)
+        return convert_to_tensor_tuple(res)
 
     def _set_user_hook(self, grad_fn):
         def fn(grad_input, _):
+            # TODO(hujiakui): in pytorch, it should raise Error.
             if self.grad_outputs is None:
                 warnings.warn(
                     "Module backward hook for grad_input is called before "

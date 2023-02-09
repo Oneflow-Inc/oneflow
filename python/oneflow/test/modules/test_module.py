@@ -43,11 +43,6 @@ def _test_hooks(test_case, backward_register_fn):
 
     counter = {"forwards": 0, "backwards": 0}
 
-    if backward_register_fn == "register_backward_hook":
-        bw_type = TensorTuple
-    elif backward_register_fn == "register_full_backward_hook":
-        bw_type = tuple
-
     def fw_hook(inc, h_module, input, output):
         test_case.assertTrue(isinstance(input, tuple))
         test_case.assertTrue(isinstance(output, flow.Tensor))
@@ -59,10 +54,8 @@ def _test_hooks(test_case, backward_register_fn):
         counter["forwards"] += inc
 
     def bw_hook(inc, h_module, grad_input, grad_output):
-        # TODO(hujiakui): why TensorTuple in register_backward_hook, not tuple(Tensor)?
-        # maybe because it's register_hook directly.
-        test_case.assertTrue(isinstance(grad_input, bw_type))
-        test_case.assertTrue(isinstance(grad_output, bw_type))
+        test_case.assertTrue(isinstance(grad_input, TensorTuple))
+        test_case.assertTrue(isinstance(grad_output, TensorTuple))
         test_case.assertTrue(h_module is module)
         test_case.assertTrue(flow.equal(grad_output[0], flow.ones(5, 5) * 2))
         counter["backwards"] += inc
@@ -109,7 +102,7 @@ def _test_hooks(test_case, backward_register_fn):
 
     module(input).backward(flow.ones(5, 5) * 2)
     test_case.assertEqual(counter["forwards"], 13)
-    test_case.assertEqual(counter["backwards"], 7)
+    test_case.assertEqual(counter["backwards"], 7) # 7
 
     test_fwd.remove()
     test_bwd.remove()
