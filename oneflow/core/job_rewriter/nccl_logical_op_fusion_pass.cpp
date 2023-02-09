@@ -85,10 +85,14 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
   if (nccl_ops.size() <= 1) { return Maybe<void>::Ok(); }
   const int32_t nccl_size = nccl_ops.size();
   const OpNode* first_nccl = nccl_ops.front();
+  const OperatorConf& first_nccl_conf = first_nccl->op().op_conf();
   const ParallelDesc& seed_placement = first_nccl->parallel_desc();
-  const int64_t scope_symbol_id = first_nccl->op().op_conf().scope_symbol_id();
+  const int64_t scope_symbol_id = first_nccl_conf.scope_symbol_id();
   std::vector<std::string> src_nd_sbp_str_list;
   std::vector<std::string> dst_nd_sbp_str_list;
+  int64_t logical_chain_id = first_nccl_conf.logical_chain_id();
+  bool has_stream_name_hint = first_nccl_conf.has_stream_name_hint();
+  std::string stream_name_hint = first_nccl_conf.stream_name_hint();
   user_op::UserOpConfWrapperBuilder fusion_builder =
       user_op::UserOpConfWrapperBuilder("Sys-NCCL-fusion-" + NewUniqueId());
   fusion_builder.OpTypeName("_nccl_logical_fusion");
@@ -99,8 +103,11 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleIbn())));
     dst_nd_sbp_str_list.push_back(
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleObn())));
+    CHECK_OR_RETURN(seed_placement == nccl_op->parallel_desc());
+    CHECK_EQ_OR_RETURN(has_stream_name_hint, nccl_op->op().op_conf().has_stream_name_hint());
+    CHECK_EQ_OR_RETURN(stream_name_hint, nccl_op->op().op_conf().stream_name_hint());
     // 1. update del op
-    VLOG(3) << " Del op: " << nccl_op->op().op_name();
+    VLOG(3) << " Del op: " << nccl_op->op().op_conf().DebugString();
     del_ops->insert(nccl_op->op().op_name());
   }
 
@@ -108,13 +115,17 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
       fusion_builder.Output("out", nccl_size)
           .Attr<std::vector<std::string>>("src_nd_sbp_str_list", src_nd_sbp_str_list)
           .Attr<std::vector<std::string>>("dst_nd_sbp_str_list", dst_nd_sbp_str_list)
+          .Attr<Shape>("hierarchy", *seed_placement.hierarchy())
           .ScopeSymbolId(scope_symbol_id)
           .Build();
+  OperatorConf fusion_nccl_op_conf = fusion_nccl_op.op_conf();
+  fusion_nccl_op_conf.set_logical_chain_id(logical_chain_id);
+  if (has_stream_name_hint) { fusion_nccl_op_conf.set_stream_name_hint(stream_name_hint); }
 
   // 2. update fusion op
-  VLOG(3) << " Add fusion op : " << fusion_nccl_op.op_conf().DebugString()
+  VLOG(3) << " Add fusion op : " << fusion_nccl_op_conf.DebugString()
           << " \n with placement: " << seed_placement.parallel_conf().DebugString();
-  nccl_fusion_ops->push_back(fusion_nccl_op.op_conf());
+  nccl_fusion_ops->push_back(fusion_nccl_op_conf);
   nccl_fusion_op_parallel_confs->push_back(seed_placement.parallel_conf());
 
   for (int32_t i = 0; i < nccl_size; ++i) {
@@ -190,6 +201,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   for (const auto& pair : nccl_depth2nccl_ops) {
     HashMap<int64_t, HashMap<Shape, std::vector<const OpNode*>>> chain2hierarchy2nccl_ops;
     for (const OpNode* nccl_op : pair.second) {
+      CHECK_OR_RETURN(nccl_op->op().op_conf().has_logical_chain_id());
       int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
       const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
       chain2hierarchy2nccl_ops[logical_chain_id][*hierarchy].push_back(nccl_op);
