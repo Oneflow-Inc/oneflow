@@ -40,8 +40,8 @@ add_docstr(
     equal to the size of :attr:`q`, the remaining dimensions are what remains from the reduction.
 
     .. note::
-    By default :attr:`dim` is ``None`` resulting in the :attr:`input` tensor being flattened before computation.
-
+        By default :attr:`dim` is ``None`` resulting in the :attr:`input` tensor being flattened before computation.
+ 
     Args:
         input (oneflow.Tensor): the input Tensor.
         q (float or oneflow.Tensor): a scalar or 1D tensor of values in the range [0, 1].
@@ -76,6 +76,6 @@ add_docstr(
         tensor(2., dtype=oneflow.float32)
         >>> flow.quantile(a, 0.4, interpolation="nearest")
         tensor(1., dtype=oneflow.float32)
- 
+
     """,
 )
