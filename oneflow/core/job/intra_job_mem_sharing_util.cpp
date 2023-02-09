@@ -498,7 +498,7 @@ void MemReusedAlgorithmAllocateByOrder(
       if (suitable_diff_gap < 0) {
         // Prolong the maximum memory pool size by (-suitable_diff_gap)
         buffer_size -= suitable_diff_gap;
-        int64_t gap_end = suitable_diff_gap + inserting_size + gap_head;
+        int64_t gap_end = suitable_diff_gap + inserting_size + inserting_offset;
         for (auto reverse_it = sorted_registers.rbegin(); reverse_it != sorted_registers.rend();
              reverse_it++) {
           // All the registers with offset < gap_end maintain their position
