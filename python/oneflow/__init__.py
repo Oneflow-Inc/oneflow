@@ -269,7 +269,6 @@ session_ctx.NewDefaultSession(_oneflow_global_unique_env)
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.RegisterStackGetter()
-oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
 class ExitHook:

@@ -1,4 +1,4 @@
-source scl_source enable devtoolset-7
+source scl_source enable devtoolset-9
 set -ex
 ONEFLOW_CI_BUILD_PARALLEL=${ONEFLOW_CI_BUILD_PARALLEL:-$(nproc)}
 gcc --version
