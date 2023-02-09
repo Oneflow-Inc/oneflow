@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
@@ -239,7 +240,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
-void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
+void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job, int64_t limited_rank) {
   if (job.logical_chain_groups_size() == 0) { return; }
   HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
 
@@ -273,10 +274,15 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   for (const auto& logical_chain_group : job.logical_chain_groups()) {
     CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
     int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
-    if (logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
-        == logical_chain_id2machine_id2mem_block_id.end()) {
-      // Skip when do rank compile and this logical chain group is not related with this rank.
-      continue;
+    if (limited_rank == -1) {
+      CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+            != logical_chain_id2machine_id2mem_block_id.end());
+    } else {
+      if (logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+          == logical_chain_id2machine_id2mem_block_id.end()) {
+        // Skip when do rank compile and this logical chain group is not related with this rank.
+        continue;
+      }
     }
     const auto& merged_rank2block =
         logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
@@ -290,7 +296,12 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
       for (const auto& pair : this_rank2block) {
         int64_t this_machine_id = pair.first;
         int64_t this_mem_block_id = pair.second;
-        if (merged_rank2block.find(this_machine_id) == merged_rank2block.end()) { continue; }
+        if (limited_rank == -1) {
+          CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        } else {
+          if (merged_rank2block.find(this_machine_id) == merged_rank2block.end()) { continue; }
+        }
+
         int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
         CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
                   .second);

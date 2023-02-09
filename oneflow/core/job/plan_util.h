@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 #define ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 
+#include <cstdint>
 #include <functional>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
@@ -29,7 +30,10 @@ namespace oneflow {
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
-  static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job);
+  // limited_rank equals -1 means taking care of all ranks. Otherwise, only task care about rank
+  // liimited_rank.
+  static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job,
+                                              int64_t limited_rank = -1);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunk4Plan(Plan* plan);
   static void GenMemBlockAndChunkWithVariableOpNames4Plan(
