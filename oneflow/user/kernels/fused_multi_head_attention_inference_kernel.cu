@@ -177,7 +177,8 @@ void DispatchIsAligned(const Params& params, ep::CudaStream* stream) {
   if (reinterpret_cast<uintptr_t>(params.query_ptr) % 16 == 0
       && reinterpret_cast<uintptr_t>(params.key_ptr) % 16 == 0
       && params.query_hidden_stride % (16 / sizeof(T)) == 0
-      && params.key_hidden_stride % (16 / sizeof(T)) == 0) {
+      && params.key_hidden_stride % (16 / sizeof(T)) == 0
+      && params.attn_bias_stride_m % (16 / sizeof(T)) == 0) {
     DispatchKeysPerBlock<T, ArchTag, true>(params, stream);
   } else {
     DispatchKeysPerBlock<T, ArchTag, false>(params, stream);
@@ -353,7 +354,6 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     params.workspace_size = tmp_buffer_size;
     params.causal = causal;
     if (attn_bias != nullptr) {
-      CHECK(!causal);
       const int64_t num_attn_bias_axes = attn_bias->shape_view().NumAxes();
       CHECK_GE(num_attn_bias_axes, 1);
       CHECK_LE(num_attn_bias_axes, 4);
@@ -387,6 +387,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
       params.attn_bias_ptr = attn_bias->dptr();
     } else {
       params.attn_bias_ptr = nullptr;
+      params.attn_bias_stride_m = 0;
+      params.attn_bias_stride_h = 0;
+      params.attn_bias_stride_b = 0;
     }
     DispatchCutlassFmha(params, cuda_stream);
   }

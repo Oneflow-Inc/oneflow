@@ -82,8 +82,8 @@ def _test_fused_multi_head_attention_inference(
         dtype=flow.float,
     ).to(dtype)
 
-    ref_out = _ref(query, key, value, num_heads, causal).numpy()
     fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
+    ref_out = _ref(query, key, value, num_heads, causal).numpy()
 
     test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
 
@@ -198,6 +198,27 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
         # test_case,batch_size, num_heads,query_seq_len, kv_seq_len,query_head_size,value_head_size,dtype
         _test_fused_multi_head_attention_inference_with_attn_bias(
             test_case, 2, 8, 4096, 4096, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16, True
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float, True
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 80, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 80, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 80, 40, 40, flow.float16, True
+        )
+        _test_fused_multi_head_attention_inference_with_attn_bias(
+            test_case, 2, 8, 4096, 80, 40, 40, flow.float, True
         )
 
 
