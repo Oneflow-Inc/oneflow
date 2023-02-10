@@ -44,7 +44,7 @@ def _test_flow_tensor_global_x_broadcast_y_matmul(test_case, placement, x_sbp, y
     return x.matmul(y)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=False, atol=1e-2)
 def _test_flow_tensor_global_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):

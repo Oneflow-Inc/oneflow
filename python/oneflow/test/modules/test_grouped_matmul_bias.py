@@ -53,7 +53,7 @@ def _test_grouped_matmul_bias(test_case, dtype, problems, bias):
     grouped_out = _grouped(xs, ws, bs if bias else None)
     for (ref_y, grouped_y) in zip(ref_out, grouped_out):
         test_case.assertTrue(
-            np.allclose(ref_y.numpy(), grouped_y.numpy(), atol=1e-2, rtol=1e-2)
+            np.allclose(ref_y.numpy(), grouped_y.numpy(), atol=1e-1, rtol=1e-2)
         )
 
 

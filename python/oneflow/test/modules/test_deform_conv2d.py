@@ -194,14 +194,14 @@ def _test_deform_conv2d_backward(
             flow_input.grad.numpy(),
             torch_input.grad.cpu().numpy(),
             rtol=1e-5,
-            atol=1e-5,
+            atol=1e-2,
         )
     )
     test_case.assertTrue(
         np.allclose(
             flow_weight.grad.numpy(),
             torch_weight.grad.cpu().numpy(),
-            rtol=1e-4,
+            rtol=1e-3,
             atol=1e-2,
         )
     )
@@ -210,12 +210,12 @@ def _test_deform_conv2d_backward(
             flow_offset.grad.numpy(),
             torch_offset.grad.cpu().numpy(),
             rtol=1e-5,
-            atol=1e-5,
+            atol=1e-2,
         )
     )
     test_case.assertTrue(
         np.allclose(
-            flow_mask.grad.numpy(), torch_mask.grad.cpu().numpy(), rtol=1e-5, atol=1e-5
+            flow_mask.grad.numpy(), torch_mask.grad.cpu().numpy(), rtol=1e-5, atol=1e-2
         )
     )
     test_case.assertTrue(

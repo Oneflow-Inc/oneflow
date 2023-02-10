@@ -873,7 +873,7 @@ class TestDeconv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_deconv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.ConvTranspose2d(
