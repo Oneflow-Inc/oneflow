@@ -93,7 +93,7 @@ class CpuStream : public Stream {
  private:
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
-  std::shared_ptr<thread::ExecutorBase> thread_runtime_;
+  std::shared_ptr<thread::RuntimeBase> thread_runtime_;
 
   Maybe<void> InitThreadRuntime();
 

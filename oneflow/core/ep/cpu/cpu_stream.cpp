@@ -34,7 +34,7 @@ Maybe<void> CpuStream::InitThreadRuntime() {
     if (thread::IsOmpEnabled()) { return "OMP"; }
     return "SEQ";
   }());
-  thread_runtime_ = JUST(thread::ExecutorFactory::Create(thread_runtime_type));
+  thread_runtime_ = JUST(thread::RuntimeFactory::Create(thread_runtime_type));
   return Maybe<void>::Ok();
 }
 
