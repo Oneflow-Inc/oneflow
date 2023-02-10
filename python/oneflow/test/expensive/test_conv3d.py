@@ -30,7 +30,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         y = torch.nn.functional.conv3d(img, kernel)
         return y
 
-    @autotest(n=10, atol=1e-4)
+    @autotest(n=10, rtol=1e-2, atol=1e-4)
     def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv3d(

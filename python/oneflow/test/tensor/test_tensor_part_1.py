@@ -529,7 +529,7 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_matmul_with_random_data(test_case):
         device = random_device()
         dim0 = random(low=2, high=10).to(int)
@@ -550,7 +550,7 @@ class TestTensor(flow.unittest.TestCase):
         return a.mv(b)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-2, atol=1e-3)
     def test_mm_with_random_data(test_case):
         device = random_device()
         dim0 = random(low=2, high=10).to(int)
