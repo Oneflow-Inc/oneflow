@@ -28,9 +28,12 @@ Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 
 void CpuStream::RecordEvent(Event* /*event*/) {}
 
-Maybe<void> CpuStream::AdjustThreadExecutor() {
-  const auto thread_executor_type =
-      GetStringFromEnv("OF_THREADING_RUNTIME", thread::IsTbbEnabled() ? "TBB" : "SEQ");
+Maybe<void> CpuStream::InitThreadExecutor() {
+  const auto thread_executor_type = GetStringFromEnv("OF_THREADING_RUNTIME", [] {
+    if (thread::IsTbbEnabled()) { return "TBB"; }
+    if (thread::IsOmpEnabled()) { return "OMP"; }
+    return "SEQ";
+  }());
   thread_executor_ = JUST(thread::ExecutorFactory::Create(thread_executor_type));
   return Maybe<void>::Ok();
 }

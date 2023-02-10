@@ -185,19 +185,7 @@ set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
 
 set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
-include(windows)
-if(NOT WIN32)
-  set(EXTRA_CXX_FLAGS "-Wall -Wno-sign-compare -Wno-unused-function -fPIC")
-
-  if(APPLE)
-    set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations")
-  endif()
-
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
-endif()
+include(platform)
 
 if((ENABLE_ASAN OR ENABLE_UBSAN) AND ENABLE_TSAN)
   message(FATAL_ERROR "Only ASAN and UBSAN can be enabled at the same time.")
@@ -218,30 +206,6 @@ endif()
 if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
-
-set(ONETBB_URL
-    https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
-use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
-set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
-
-set(ROBIN_HOOD_HASHING_URL
-    https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
-use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
-set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
-
-set(FMT_URL https://github.com/fmtlib/fmt/archive/fc07217d85e6dcec52878807d6bbd89a9d9156a5.zip)
-use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
-set(FMT_MD5 7d9bb2ececc9ede29cd35bdc42a7e22c)
-
-set(KINETO_URL
-    https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
-use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
-set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
-
-set(CUTLASS_URL
-    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
-use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
 
 include(cuda)
 add_subdirectory(external)

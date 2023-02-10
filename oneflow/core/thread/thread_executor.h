@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_H_
 #define ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_H_
 
@@ -33,28 +48,24 @@ size_t DivUp(size_t x, size_t y) { return (x + y - 1) / y; }
 
 class ExecutorBase {
  public:
-  virtual void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
-                           size_t grain_size) {
-    MayRunSeq(begin, end, func, num_threads);
+  void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
+                   size_t grain_size) {
+    if (begin >= end) { return; }
+    if (num_threads == 1) { SeqFor(begin, end, func); }
+    ParallelForImpl(begin, end, func, num_threads, grain_size);
   }
 
-  bool MayRunSeq(int64_t begin, int64_t end, const CallableT& func, size_t num_threads) {
-    if (begin >= end) { return true; }
-    if (num_threads == 1) {
-      SeqFor(begin, end, func);
-      return true;
-    }
-    return false;
-  }
+ private:
+  virtual void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func,
+                               size_t num_threads, size_t grain_size) {}
 };
 
 class SeqExecutor final : public ExecutorBase {};
 
 class OfExecutor final : public ExecutorBase {
- public:
-  void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
-                   size_t grain_size) override {
-    if (MayRunSeq(begin, end, func, num_threads)) { return; }
+ private:
+  void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
+                       size_t grain_size) override {
     if (unlikely(pthread_fork::IsForkedSubProcess()) || Singleton<ThreadPool>::Get() == nullptr) {
       return SeqFor(begin, end, func);
     }
@@ -78,10 +89,9 @@ class OfExecutor final : public ExecutorBase {
 
 #if WITH_TBB
 class TbbExecutor final : public ExecutorBase {
- public:
-  void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
-                   size_t grain_size) override {
-    if (MayRunSeq(begin, end, func, num_threads)) { return; }
+ private:
+  void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
+                       size_t grain_size) override {
     tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
                                             num_threads);
     const size_t chunk_size = std::max(DivUp((end - begin), num_threads), grain_size);
@@ -96,10 +106,9 @@ class TbbExecutor final : public ExecutorBase {
 
 #if WITH_OMP
 class OmpExecutor final : public ExecutorBase {
- public:
-  void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
-                   size_t grain_size) override {
-    if (MayRunSeq(begin, end, func, num_threads)) { return; }
+ private:
+  void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
+                       size_t grain_size) override {
     num_threads = std::min(DivUp((end - begin), grain_size), num_threads);
 #pragma omp parallel num_threads(num_threads)
     {

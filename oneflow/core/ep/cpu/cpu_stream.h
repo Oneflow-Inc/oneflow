@@ -64,7 +64,7 @@ class CpuStream : public Stream {
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
 
   explicit CpuStream(CpuDevice* device) : device_(device) {
-    CHECK_JUST(AdjustThreadExecutor());
+    CHECK_JUST(InitThreadExecutor());
 #ifdef WITH_ONEDNN
     onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
@@ -96,7 +96,7 @@ class CpuStream : public Stream {
   static constexpr size_t kParallelForDefaultGrain = 32768;
   std::shared_ptr<thread::ExecutorBase> thread_executor_;
 
-  Maybe<void> AdjustThreadExecutor();
+  Maybe<void> InitThreadExecutor();
 
 #ifdef WITH_ONEDNN
   std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;

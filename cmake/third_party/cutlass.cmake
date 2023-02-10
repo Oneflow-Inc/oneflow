@@ -8,6 +8,11 @@ endif()
 
 set(WITH_CUTLASS ${WITH_CUTLASS_INIT} CACHE BOOL "")
 
+set(CUTLASS_URL
+    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
+use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
+set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
+
 if(WITH_CUTLASS)
 
   add_definitions(-DWITH_CUTLASS)
