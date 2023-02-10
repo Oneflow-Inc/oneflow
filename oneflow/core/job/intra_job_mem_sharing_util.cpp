@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include <vector>
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -32,8 +34,9 @@ namespace oneflow {
 
 enum MemAllocAlgoType {
   kMemSizeFirstAlgo = 0,
-  kMutualExclusionFirstAlgo = 1,
+  kLifetimeFirstAlgo = 1,
   kTimeLineAlgo = 2,
+  kMemVolumeFirstAlgo = 3,
 };
 
 }  // namespace oneflow
@@ -430,7 +433,7 @@ bool SuitableThan(int64_t a, int64_t b) {
 }
 
 void MemReusedAlgorithmAllocateByOrder(
-    const std::vector<RegstDescProto*>& order,
+    const bool compact_insert, const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, size_t>& regst_desc2size,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     MemBlockResultInfo* result) {
@@ -460,7 +463,7 @@ void MemReusedAlgorithmAllocateByOrder(
     // At the beginning, try to insert the offset in the front of the whole memory pool.
     int64_t inserting_offset = 0;
     int64_t inserting_end = inserting_offset + order2size[inserting_id];
-    if (ParseBooleanFromEnv("Compact_Insert", false)) {
+    if (compact_insert) {
       // Find the most suitable gap for the register
       int64_t gap_head = 0;
       int64_t inserting_size = order2size[inserting_id];
@@ -544,6 +547,7 @@ void MemReusedAlgorithmAllocateByOrder(
 }
 
 void MemReusedMemSizeFirstAlgo(
+    const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -555,10 +559,12 @@ void MemReusedMemSizeFirstAlgo(
     if (l_value == r_value) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_value > r_value;
   });
-  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
+  MemReusedAlgorithmAllocateByOrder(compact_insert, order, mem_reused_regst2size, regst2lifetime,
+                                    result);
 }
 
 void MemReusedMutualExclusionFirstAlgo(
+    const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -570,10 +576,12 @@ void MemReusedMutualExclusionFirstAlgo(
     if (l_value == r_value) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_value > r_value;
   });
-  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
+  MemReusedAlgorithmAllocateByOrder(compact_insert, order, mem_reused_regst2size, regst2lifetime,
+                                    result);
 }
 
 void MemReusedTimeLineAlgo(
+    const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -587,10 +595,12 @@ void MemReusedTimeLineAlgo(
     }
     return l_value > r_value;
   });
-  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
+  MemReusedAlgorithmAllocateByOrder(compact_insert, order, mem_reused_regst2size, regst2lifetime,
+                                    result);
 }
 
 void MemReusedMemVolumeFirstAlgo(
+    const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -608,11 +618,12 @@ void MemReusedMemVolumeFirstAlgo(
     }
     return l_value > r_value;
   });
-  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
+  MemReusedAlgorithmAllocateByOrder(compact_insert, order, mem_reused_regst2size, regst2lifetime,
+                                    result);
 }
 
 void SelectAlgorithmGenMemBlockOffset4Regsts(
-    MemAllocAlgoType algo_id,
+    MemAllocAlgoType algo_id, const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   CHECK_EQ(result->mem_block_size, 0);
@@ -620,12 +631,18 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 
   switch (algo_id) {
     case kMemSizeFirstAlgo:
-      MemReusedMemSizeFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
+      MemReusedMemSizeFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
       break;
-    case kMutualExclusionFirstAlgo:
-      MemReusedMutualExclusionFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
+    case kLifetimeFirstAlgo:
+      MemReusedMutualExclusionFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size,
+                                        result);
       break;
-    case kTimeLineAlgo: MemReusedTimeLineAlgo(regst2lifetime, mem_reused_regst2size, result); break;
+    case kTimeLineAlgo:
+      MemReusedTimeLineAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
+      break;
+    case kMemVolumeFirstAlgo:
+      MemReusedMemVolumeFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
+      break;
     default: UNIMPLEMENTED();
   }
   CHECK_GT(result->mem_block_size, 0);
@@ -635,24 +652,51 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 int64_t CountMemAllocAlgoNum() {
   const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
       GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
-  int64_t ret = 0;
-  if (mem_alloc_algo_conf.use_mem_size_first_algo()) { ++ret; }
-  if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) { ++ret; }
-  if (mem_alloc_algo_conf.use_time_line_algo()) { ++ret; }
-  CHECK_GE(ret, 0);
-  return ret;
+  int64_t alloc_algo_num = 0;
+  if (mem_alloc_algo_conf.use_mem_size_first_algo()) { ++alloc_algo_num; }
+  if (mem_alloc_algo_conf.use_lifetime_first_algo()) { ++alloc_algo_num; }
+  if (mem_alloc_algo_conf.use_time_line_algo()) { ++alloc_algo_num; }
+  if (mem_alloc_algo_conf.use_mem_volume_first_algo()) { ++alloc_algo_num; }
+  CHECK_GE(alloc_algo_num, 0) << "At least choose one type of memory allocation algorithm. We "
+                                 "recommend use_mem_size_first_algo()";
+  const MemoryCompactInsertConf& mem_compact_insert_conf =
+      GlobalJobDesc().job_conf().memory_compact_insert_conf();
+  int64_t compact_insert_num = 0;
+  if (mem_compact_insert_conf.use_compact_insert()) { ++compact_insert_num; }
+  if (mem_compact_insert_conf.use_non_compact_insert()) { ++compact_insert_num; }
+  CHECK_GE(compact_insert_num, 0) << "At least choose one type of memory arrangement algorithm "
+                                     "during memory allocation. We recommend use_compact_insert()";
+
+  return alloc_algo_num * compact_insert_num;
 }
 
-void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result) {
+void InitAlgo2Result(HashMap<std::pair<MemAllocAlgoType, bool>, MemBlockResultInfo>* algo2result) {
   CHECK(algo2result->empty());
+  std::vector<bool> compact_insert_algorithms;
+  const MemoryCompactInsertConf& mem_compact_insert_conf =
+      GlobalJobDesc().job_conf().memory_compact_insert_conf();
+  if (mem_compact_insert_conf.use_compact_insert()) { compact_insert_algorithms.push_back(true); }
+  if (mem_compact_insert_conf.use_non_compact_insert()) {
+    compact_insert_algorithms.push_back(false);
+  }
+
   const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
       GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
   // NOTE: Experiments show that memory first might be good enough for some cases.
-  if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
-    CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
+  for (auto compact_insert : compact_insert_algorithms) {
+    if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
+      (*algo2result)[{kMemSizeFirstAlgo, compact_insert}] = MemBlockResultInfo();
+    }
+    if (mem_alloc_algo_conf.use_lifetime_first_algo()) {
+      (*algo2result)[{kLifetimeFirstAlgo, compact_insert}] = MemBlockResultInfo();
+    }
+    if (mem_alloc_algo_conf.use_time_line_algo()) {
+      (*algo2result)[{kTimeLineAlgo, compact_insert}] = MemBlockResultInfo();
+    }
+    if (mem_alloc_algo_conf.use_mem_volume_first_algo()) {
+      (*algo2result)[{kMemVolumeFirstAlgo, compact_insert}] = MemBlockResultInfo();
+    }
   }
-  if (true) { CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second); }
-  if (true) { CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second); }
 }
 
 }  // namespace
@@ -690,7 +734,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   }
 
   // step 2: multi-thread run several algorithm for each mem chain
-  HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
+  HashMap<int64_t, HashMap<std::pair<MemAllocAlgoType, bool>, MemBlockResultInfo>>
+      mem_chain2algo2result;
   {
     int64_t work_size = mem_chain2mem_reused_regsts.size() * 3;
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
@@ -699,12 +744,14 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     for (int64_t mem_chain_id : mem_chains) {
       InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
       for (auto& pair : mem_chain2algo2result.at(mem_chain_id)) {
-        MemAllocAlgoType algo_id = pair.first;
+        MemAllocAlgoType algo_id = pair.first.first;
+        bool compact_insert = pair.first.second;
         MemBlockResultInfo* result = &pair.second;
-        thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2regst2lifetime,
+        thread_pool.AddWork([algo_id, compact_insert, mem_chain_id, &mem_chain2regst2lifetime,
                              &mem_reused_regst2size, result, &counter]() {
-          SelectAlgorithmGenMemBlockOffset4Regsts(
-              algo_id, mem_chain2regst2lifetime.at(mem_chain_id), mem_reused_regst2size, result);
+          SelectAlgorithmGenMemBlockOffset4Regsts(algo_id, compact_insert,
+                                                  mem_chain2regst2lifetime.at(mem_chain_id),
+                                                  mem_reused_regst2size, result);
           counter.Decrease();
         });
       }
@@ -719,7 +766,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     MemBlockResultInfo* best_result = nullptr;
     for (auto& algo_result_pair : pair.second) {
       if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Algorithm id: " << algo_result_pair.first
+        std::cout << "Algorithm id: " << algo_result_pair.first.first << ", use compact insert? "
+                  << algo_result_pair.first.second
                   << ", memory size: " << algo_result_pair.second.mem_block_size << std::endl;
       }
       if (!best_result || algo_result_pair.second.mem_block_size < best_result->mem_block_size) {
