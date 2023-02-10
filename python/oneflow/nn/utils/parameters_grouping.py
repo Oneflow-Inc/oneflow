@@ -57,12 +57,17 @@ class ContiguousParamsGroup(object):
 
         # making params_group_list 2D List of Tensors
         self.params_group_list = params_group_list.copy()
-        if all([all([isinstance(p, Tensor) for p in params]) for params in self.params_group_list]):
+        if all(
+            [
+                all([isinstance(p, Tensor) for p in params])
+                for params in self.params_group_list
+            ]
+        ):
             pass
         elif all([isinstance(p, Tensor) for p in self.params_group_list]):
             self.params_group_list = [self.params_group_list]
         elif isinstance(self.params_group_list, Tensor):
-            warnings.warn('Single tensor is best not do grouping.')
+            warnings.warn("Single tensor is best not do grouping.")
             self.params_group_list = [[self.params_group_list]]
         else:
             raise ValueError("The shape of params_group_list is illegal!")
