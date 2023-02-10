@@ -51,7 +51,7 @@ Maybe<thread::RuntimeBase> RuntimeFactory::Create(RuntimeType type) {
 }
 
 Maybe<thread::RuntimeBase> RuntimeFactory::Create(const std::string& type) {
-  std::unordered_map<std::string, RuntimeType> types = {
+  std::unordered_map<std::string, RuntimeType> types{
       {"SEQ", RuntimeType::kSeq},
       {"OF", RuntimeType::kOf},
       {"TBB", RuntimeType::kTbb},
