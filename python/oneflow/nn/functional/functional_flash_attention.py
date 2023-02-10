@@ -21,6 +21,7 @@ from oneflow.framework.tensor import Tensor
 from einops import rearrange, repeat
 
 # from https://github.com/HazyResearch/flash-attention/blob/main/flash_attn/bert_padding.py
+# invalid pointer error: https://github.com/Oneflow-Inc/OneTeam/issues/1905
 class IndexFirstAxis(flow.autograd.Function):
     @staticmethod
     def forward(ctx, input, indices):
@@ -58,6 +59,14 @@ class IndexFirstAxis(flow.autograd.Function):
 
 index_first_axis = IndexFirstAxis.apply
 
+def index_first_axis_fn(x, indices):
+    other_shape = x.shape[1:]
+    second_dim = other_shape.numel()
+    return flow.gather(
+        rearrange(x, "b ... -> b (...)"),
+        0,
+        repeat(indices, "z -> z d", d=second_dim),
+    ).reshape(-1, *other_shape)
 
 def _unpad_input(hidden_states, attention_mask):
     """
@@ -75,7 +84,7 @@ def _unpad_input(hidden_states, attention_mask):
         assert attention_mask.shape[1] == 1 and attention_mask.shape[2] == 1
         attention_mask = attention_mask.squeeze(1).squeeze(1)
     seqlens_in_batch = attention_mask.sum(dim=-1)
-    bias_nonzere_indices = (
+    bias_nonzero_indices = (
         flow.nonzero(attention_mask, as_tuple=False)[..., -1].flatten().to(flow.int32)
     )
     indices = flow.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
@@ -90,8 +99,8 @@ def _unpad_input(hidden_states, attention_mask):
     # so we write custom forward and backward to make it a bit faster.
 
     return (
-        index_first_axis(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
-        bias_nonzere_indices,
+        index_first_axis_fn(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
+        bias_nonzero_indices,
         cu_seqlens,
         max_seqlen_in_batch,
     )
@@ -107,6 +116,7 @@ def flash_attention(
     unpad_kv=False,
     causal: bool = False,
     dropout_p: float = 0.0,
+    inf=1e5,
 ) -> Tensor:
     r""" flash attention
     Adapted from https://github.com/HazyResearch/flash-attention
@@ -116,22 +126,25 @@ def flash_attention(
         key: flow.Tensor with shape [*, batch_size, num_heads, seq_length_k, head_dim].
         value: flow.Tensor with shape [*, batch_size, num_heads, seq_length_k, head_dim].
 
-        mask: Optional, default None, flow.bool or flow.float tensor. 
+        mask: Optional, default None, flow.bool tensor. 
+            1 or True means the token is valid otherwise 0/False.
             If provided, flow.Tensor with shape [batch_size, s1, s2, seq_length_k], where (s1=1 or s1=num_heads)
             and (s2=1 or s2=seq_length_q).
         bias: Optional, default None.
             If provided, flow.Tensor with shape [s0, num_heads, seq_length_q, seq_length_k],
             where (s0=1 or s0=batch_size).
-        unpad_kv: whether unpad key and value, could be True, False, or 'auto'.
+        unpad_kv: whether unpad key and value, could be True, False, 'bert' or 'auto'.
             `mask` should be provided if you set unpad_kv to 'auto'.
         causal: If causal=True, that meads the tokens from earlier in the input sequence is only allowed to 
             affect the predictions for later tokens, default False. 
         dropout_p: dropout rate, perform dropout operation when dropout_p > 0.
+        inf: a positive infinite number. A very small negative number(-1. * inf) should be added at the invalid position 
+            before computing softmax to reduce the impact of invalid tokens(typically the padding tokens, where mask=0).
     
     Returns:
         flow.Tensor with shape [*, batch_size, num_heads, seq_length_q, head_dim].
         
-    This function provides a faster way **with the loss of numerical precision** to compute:
+    This function provides a faster way **at the cost of numerical precision** to compute:
         `flow.matmul(flow.softmax(flow.matmul(q, k.transpose(-1,-2))/flow.sqrt(head_dim) + mask + bias, dim=-1), value)`
     """
 
@@ -139,24 +152,27 @@ def flash_attention(
     batch_size, no_heads, seqlen_q, c = query.shape[-4:]
     seqlen_k = key.shape[-2]
     dtype = query.dtype
+    assert mask is None or mask.dtype in [
+        flow.bool,
+        flow.int32,
+        flow.int64,
+    ], f"mask's data type should be bool or int, but got {mask.dtype}."
 
     # convert to half
     if query.dtype not in [flow.float16, flow.bfloat16]:
         query = query.half()
         key = key.half()
         value = value.half()
+        dtype = flow.float16
     if bias is not None:
         bias = bias.to(dtype)
 
     if unpad_kv == "auto":
         assert mask is not None, "mask shoule be provided if set unpad_kv to 'auto'"
-        nonzero_sum = mask.sum()
+        nonzero_sum = mask.sum(dim=-1)
+        unpad_kv = nonzero_sum.min().item() > 0
         total_n = mask.shape.numel()
-        unpad_kv = nonzero_sum < total_n * 0.2
-
-    # flow.gather do not support bf16 yet
-    if dtype == flow.bfloat16:
-        unpad_kv = False
+        unpad_kv = unpad_kv and nonzero_sum.sum().item() < total_n * 0.2
 
     # [*, B, N, H, C]
     query = query.transpose(-2, -3)
@@ -169,44 +185,38 @@ def flash_attention(
     value = value.reshape(-1, *value.shape[-3:])
 
     if unpad_kv == False:
-        if mask is not None and (
-            mask.shape[-2] != 1 or mask.shape[-3] == 1
-        ):  # or bias.shape[-4] != 1:
-            if mask.dtype in [flow.int32, flow.int64, flow.bool]:
-                mask = ((1 - mask) * -10000.0).to(query.dtype)
-            cu_seqlens_q = (
-                flow.tensor(list(range(0, (batch_size + 1) * seqlen_q, seqlen_q)))
-                .cuda()
-                .to(flow.int32)
-            )
-            cu_seqlens_k = (
-                flow.tensor(list(range(0, (batch_size + 1) * seqlen_k, seqlen_k)))
-                .cuda()
-                .to(flow.int32)
-            )
+        if mask is not None:
+            mask = ((mask - 1) * inf).to(query.dtype)
+        cu_seqlens_q = (
+            flow.tensor(list(range(0, (batch_size + 1) * seqlen_q, seqlen_q)))
+            .cuda()
+            .to(flow.int32)
+        )
+        cu_seqlens_k = (
+            flow.tensor(list(range(0, (batch_size + 1) * seqlen_k, seqlen_k)))
+            .cuda()
+            .to(flow.int32)
+        )
 
-            out, lse = flow._C.flash_attention(
-                query,
-                key,
-                value,
-                cu_seqlens_q,
-                cu_seqlens_k,
-                max_seqlen_q=seqlen_q,
-                max_seqlen_k=seqlen_k,
-                mask=mask,
-                bias=bias,
-                softmax_scale=1 / (c ** 0.5),
-                causal=causal,
-                dropout_rate=0,
-            )
-            out = out.to(dtype)
-            out = out.reshape(*batch_dims, seqlen_q, no_heads, c).transpose(-2, -3)
-            return out
+        out, lse = flow._C.flash_attention(
+            query,
+            key,
+            value,
+            cu_seqlens_q,
+            cu_seqlens_k,
+            max_seqlen_q=seqlen_q,
+            max_seqlen_k=seqlen_k,
+            mask=mask,
+            bias=bias,
+            softmax_scale=1 / (c ** 0.5),
+            causal=causal,
+            dropout_rate=0,
+        )
+        out = out.to(dtype)
+        out = out.reshape(*batch_dims, seqlen_q, no_heads, c).transpose(-2, -3)
+        return out
 
-    if mask is not None and mask.dtype != flow.int32:
-        if mask.dtype in [flow.float16, flow.bfloat16, flow.float32, flow.float64]:
-            mask = mask > -1.0
-        mask = mask.to(flow.int32)
+    assert mask is not None, "mask shoule be provided if set unpad_kv to True"
     # Flattened batch size
     batch_size = query.shape[0]
     max_seqlen_q = seqlen_q
@@ -229,7 +239,6 @@ def flash_attention(
 
     kv_unpad, bias_nonzero_indices, kv_cu_seqlens, kv_max_s = _unpad_input(kv, mask)
     kv_cu_seqlens = kv_cu_seqlens.to(flow.int32)
-    kv_max_s = int(kv_max_s)
     kv_unpad = kv_unpad.reshape(-1, *kv_shape[-3:])  # [nonzeros, 2, H, C]
 
     # we need pass the origin seqlens `seqlen_k`, for convenient we store it at
@@ -251,7 +260,7 @@ def flash_attention(
         kv_cu_seqlens,
         max_seqlen_q=max_seqlen_q,
         max_seqlen_k=kv_max_s,
-        indices=bias_nonzero_indices,
+        indices=(None if unpad_kv=="bert" else bias_nonzero_indices),
         mask=None,
         bias=bias,
         softmax_scale=1 / (c ** 0.5),
