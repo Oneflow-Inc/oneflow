@@ -51,10 +51,6 @@ namespace oneflow {
 
 namespace {
 
-struct MemBlockResultInfo {
-  size_t mem_block_size;
-  HashMap<RegstDescProto*, int64_t> regst_desc2offset;
-};
 
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
@@ -406,87 +402,10 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   CHECK(remain_regsts.empty());
 }
 
-void MemReusedAlgorithmAllocateByOrder(
-    const std::vector<RegstDescProto*>& order,
-    const HashMap<RegstDescProto*, size_t>& regst_desc2size,
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    MemBlockResultInfo* result) {
-  HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
-  // NOTE: It is important to make the variables local.
-  // It took me several days to find out that using passed-in vector for size, order, and lifetime
-  // would double the running time. Switch HashMap to vector
-  int32_t total_register_num = order.size();
-  std::vector<int64_t> order2size(total_register_num);
-  std::vector<std::pair<int32_t, int32_t>> order2lifetime(total_register_num);
-  std::vector<int64_t> order2offset(total_register_num);
-  for (int32_t i = 0; i < total_register_num; i++) {
-    order2size[i] = regst_desc2size.at(order[i]);
-    order2lifetime[i] = regst2lifetime.at(order[i]);
-  }
-  size_t buffer_size = 1;
-  // Sort by offset
-  auto comp = [&order2offset](const auto& a, const auto& b) {
-    if (order2offset[a] != order2offset[b]) { return order2offset[a] < order2offset[b]; }
-    // Make sure we have a stable order even if we have the same offset for different registers
-    return a < b;
-  };
-  std::set<int32_t, decltype(comp)> sorted_registers(comp);
-  // Decide offset following the given order
-  for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
-    int64_t inserting_offset = 0;
-    int64_t inserting_end = inserting_offset + order2size[inserting_id];
-    const auto& inserting_lifetime = order2lifetime[inserting_id];
-    for (const auto& curr_register : sorted_registers) {
-      // i: inserting register, j: current register
-      // x: register offset, l: register size
-      // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
-      if (order2offset[curr_register] >= inserting_end) { break; }
-      // If i and j are excluded, and x_i + l_i > x_j,
-      // then we try to place i at x_j + l_j and check the following registers
-      if (IsLifetimeExcluded(inserting_lifetime, order2lifetime[curr_register])) {
-        int64_t curr_end = order2offset[curr_register] + order2size[curr_register];
-        // Can not set inserting offset = current end directly.
-        // We might have two excluded registers like this:
-        // register a: [100, 10000]
-        // register b: [500, 600]
-        if (inserting_offset < curr_end) {
-          inserting_offset = curr_end;
-          inserting_end = inserting_offset + order2size[inserting_id];
-        }
-      }
-    }
-    // Either we break the loop or the loop terminated naturally, we can place i at inserting_offset
-    order2offset[inserting_id] = inserting_offset;
-    sorted_registers.insert(inserting_id);
-    // Update total size
-    if (inserting_end > buffer_size) { buffer_size = inserting_end; }
-  }
-
-  result->mem_block_size = buffer_size;
-  // Switch vector to HashMap
-  for (int32_t i = 0; i < total_register_num; i++) {
-    (*regst_desc2offset)[order[i]] = order2offset[i];
-  }
-}
-
-void MemReusedMemSizeFirstAlgo(
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
-  std::vector<RegstDescProto*> order;
-  order.reserve(regst2lifetime.size());
-  for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
-  std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
-    size_t l_value = mem_reused_regst2size.at(lhs);
-    size_t r_value = mem_reused_regst2size.at(rhs);
-    if (l_value == r_value) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
-    return l_value > r_value;
-  });
-  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
-}
 
 void MemReusedMutualExclusionFirstAlgo(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2lifetime.size());
   for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
@@ -501,7 +420,7 @@ void MemReusedMutualExclusionFirstAlgo(
 
 void MemReusedTimeLineAlgo(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2lifetime.size());
   for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
@@ -519,7 +438,7 @@ void MemReusedTimeLineAlgo(
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
 
@@ -548,19 +467,19 @@ int64_t CountMemAllocAlgoNum() {
   return ret;
 }
 
-void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result) {
+void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo<RegstDescProto*>>* algo2result) {
   CHECK(algo2result->empty());
   const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
       GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
   // NOTE: Experiments show that memory first might be good enough for some cases.
   if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
-    CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
+    CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo<RegstDescProto*>()).second);
   }
   if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
-    CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
+    CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo<RegstDescProto*>()).second);
   }
   if (mem_alloc_algo_conf.use_time_line_algo()) {
-    CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
+    CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo<RegstDescProto*>()).second);
   }
 }
 
@@ -599,7 +518,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   }
 
   // step 2: multi-thread run several algorithm for each mem chain
-  HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
+  HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo<RegstDescProto*>>> mem_chain2algo2result;
   {
     int64_t work_size = mem_chain2mem_reused_regsts.size();
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
@@ -609,7 +528,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
       for (auto& pair : mem_chain2algo2result.at(mem_chain_id)) {
         MemAllocAlgoType algo_id = pair.first;
-        MemBlockResultInfo* result = &pair.second;
+        MemBlockResultInfo<RegstDescProto*>* result = &pair.second;
         thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2regst2lifetime,
                              &mem_reused_regst2size, result, &counter]() {
           SelectAlgorithmGenMemBlockOffset4Regsts(
@@ -623,7 +542,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (auto& pair : mem_chain2algo2result) {
-    MemBlockResultInfo* best_result = nullptr;
+    MemBlockResultInfo<RegstDescProto*>* best_result = nullptr;
     for (auto& algo_result_pair : pair.second) {
       if (!best_result || algo_result_pair.second.mem_block_size < best_result->mem_block_size) {
         best_result = &algo_result_pair.second;
