@@ -4905,8 +4905,7 @@ class FusedMultiHeadAttentionInferenceFunctor {
       if (num_attn_bias_axes == 4) {
         CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == batch_size)
             << "The size of the -4 dimension of attn_bias should be equal to the first dimension "
-               "of the query tensor or equal to "
-               "1.";
+               "of the query tensor or equal to 1.";
       }
     }
 
