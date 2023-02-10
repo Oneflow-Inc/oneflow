@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_H_
-#define ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_H_
+#ifndef ONEFLOW_CORE_THREAD_THREAD_RUNTIME_H_
+#define ONEFLOW_CORE_THREAD_THREAD_RUNTIME_H_
 
 #include <functional>
 #include "oneflow/core/common/blocking_counter.h"
@@ -46,7 +46,7 @@ size_t DivUp(size_t x, size_t y) { return (x + y - 1) / y; }
 
 }  // namespace
 
-class ExecutorBase {
+class RuntimeBase {
  public:
   void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
                    size_t grain_size) {
@@ -60,9 +60,9 @@ class ExecutorBase {
                                size_t num_threads, size_t grain_size) {}
 };
 
-class SeqExecutor final : public ExecutorBase {};
+class SeqRuntime final : public RuntimeBase {};
 
-class OfExecutor final : public ExecutorBase {
+class OfRuntime final : public RuntimeBase {
  private:
   void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
                        size_t grain_size) override {
@@ -88,7 +88,7 @@ class OfExecutor final : public ExecutorBase {
 };
 
 #if WITH_TBB
-class TbbExecutor final : public ExecutorBase {
+class TbbRuntime final : public RuntimeBase {
  private:
   void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
                        size_t grain_size) override {
@@ -105,7 +105,7 @@ class TbbExecutor final : public ExecutorBase {
 #endif
 
 #if WITH_OMP
-class OmpExecutor final : public ExecutorBase {
+class OmpRuntime final : public RuntimeBase {
  private:
   void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
                        size_t grain_size) override {
@@ -127,4 +127,4 @@ class OmpExecutor final : public ExecutorBase {
 }  // namespace thread
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_H_
+#endif // ONEFLOW_CORE_THREAD_THREAD_RUNTIME_H_

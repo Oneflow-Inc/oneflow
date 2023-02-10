@@ -207,6 +207,11 @@ if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
 
+set(CUTLASS_URL
+    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
+use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
+set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
+
 include(cuda)
 add_subdirectory(external)
 include(third_party)

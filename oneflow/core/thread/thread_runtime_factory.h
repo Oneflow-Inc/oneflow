@@ -16,8 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_FACTORY_H_
 #define ONEFLOW_CORE_THREAD_THREAD_EXECUTOR_FACTORY_H_
 
-#include "oneflow/maybe/variant.h"
-#include "oneflow/core/thread/thread_executor.h"
+#include "oneflow/core/thread/thread_runtime.h"
 
 namespace oneflow {
 namespace thread {
@@ -38,17 +37,17 @@ constexpr bool IsOmpEnabled() {
 #endif
 }
 
-enum class ExecutorType {
+enum class RuntimeType {
   kSeq,
   kOf,
   kTbb,
   kOmp,
 };
 
-class ExecutorFactory {
+class RuntimeFactory {
  public:
-  static Maybe<thread::ExecutorBase> Create(ExecutorType type);
-  static Maybe<thread::ExecutorBase> Create(const std::string& type);
+  static Maybe<thread::RuntimeBase> Create(RuntimeType type);
+  static Maybe<thread::RuntimeBase> Create(const std::string& type);
 };
 
 }  // namespace thread

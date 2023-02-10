@@ -18,8 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-#include "oneflow/core/thread/thread_executor_factory.h"
-#include "oneflow/maybe/variant.h"
+#include "oneflow/core/thread/thread_runtime_factory.h"
 
 #ifdef WITH_ONEDNN
 #include <oneapi/dnnl/dnnl.hpp>
@@ -64,7 +63,7 @@ class CpuStream : public Stream {
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
 
   explicit CpuStream(CpuDevice* device) : device_(device) {
-    CHECK_JUST(InitThreadExecutor());
+    CHECK_JUST(InitThreadRuntime());
 #ifdef WITH_ONEDNN
     onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
@@ -84,7 +83,7 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
-    thread_executor_->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
+    thread_runtime_->ParallelFor(begin, end, func, device()->GetNumThreads(), grain_size);
   }
 
 #ifdef WITH_ONEDNN
@@ -94,9 +93,9 @@ class CpuStream : public Stream {
  private:
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
-  std::shared_ptr<thread::ExecutorBase> thread_executor_;
+  std::shared_ptr<thread::ExecutorBase> thread_runtime_;
 
-  Maybe<void> InitThreadExecutor();
+  Maybe<void> InitThreadRuntime();
 
 #ifdef WITH_ONEDNN
   std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;
