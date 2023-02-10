@@ -4839,7 +4839,7 @@ class FusedMultiHeadAttentionInferenceFunctor {
              "of the last dimension of the query tensor.";
       CHECK_LT_OR_RETURN(slice_start, dim_size)
           << tensor_name
-          << "hidden_slice_start should be greater than or equal to 0 and less than the size "
+          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
              "of the last dimension of the query tensor.";
       if (slice_end == -1) {
         slice_end = dim_size;
@@ -4870,8 +4870,12 @@ class FusedMultiHeadAttentionInferenceFunctor {
         CheckHiddenSize("key", key_hidden_slice_start, key_hidden_slice_end, key->shape()->At(2)));
     CHECK_EQ_OR_RETURN(key_hidden_size, query_hidden_size)
         << "The hidden size of the query and key must be the same.";
-    JUST(CheckHiddenSize("value", value_hidden_slice_start, value_hidden_slice_end,
-                         value->shape()->At(2)));
+    CHECK_EQ_OR_RETURN((query_hidden_size / num_heads) % 8, 0)
+        << "The head size of query and key should be a multiple of 8.";
+    const int64_t value_hidden_size = JUST(CheckHiddenSize(
+        "value", value_hidden_slice_start, value_hidden_slice_end, value->shape()->At(2)));
+    CHECK_EQ_OR_RETURN((value_hidden_size / num_heads) % 8, 0)
+        << "The head size of value should be a multiple of 8.";
     if (attn_bias) {
       const auto attn_bias_shape = JUST(attn_bias)->shape();
       const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
