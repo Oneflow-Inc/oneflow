@@ -57,12 +57,10 @@ class ContiguousParamsGroup(object):
 
         # making params_group_list 2D List of Tensors
         self.params_group_list = params_group_list.copy()
-        if all(
-            [
-                all([isinstance(p, Tensor) for p in params])
-                for params in self.params_group_list
-            ]
-        ):
+        if all([
+            all([isinstance(p, Tensor) for p in params])
+            for params in self.params_group_list
+        ]):
             pass
         elif all([isinstance(p, Tensor) for p in self.params_group_list]):
             self.params_group_list = [self.params_group_list]
@@ -225,11 +223,11 @@ class ContiguousParamsGroup(object):
             self.grouped_tensors_offset[physical_param_buf] = index
 
             # construct the logical param_buf for new usage
-            logical_param_buf = physical_param_buf[physical_index_start:index].view(
-                logical_bufsize
-            )
+            logical_param_buf = physical_param_buf[
+                physical_index_start : index
+            ].view(logical_bufsize)
             logical_param_grad_buf = physical_param_grad_buf[
-                physical_index_start:index
+                physical_index_start : index
             ].view(logical_bufsize)
             logical_param_buf.grad = logical_param_grad_buf
 
