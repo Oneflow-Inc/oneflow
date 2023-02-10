@@ -193,29 +193,6 @@ class ContiguousParamsGroup(object):
                 physical_param_buf[index : index + size] = p_data.data.view(-1)
                 p.data = physical_param_buf[index : index + size].view(shape)
                 p._ref_tensor = physical_param_buf
-
-                """
-                Assigning p.grad makes p.grad_fn = <accumulate_grad>, which makes oneflow
-                and pytorch behave differently as following, but won't affect this function yet.
-
-                Oneflow:
-                >>> a = oneflow.ones(1)
-                >>> b = oneflow.ones(1, requires_grad=True)
-                >>> b
-                tensor([1.], dtype=oneflow.float32, requires_grad=True)
-                >>> b.grad = a[:1]
-                >>> b
-                tensor([1.], dtype=oneflow.float32, grad_fn=<accumulate_grad>)
-
-                Pytorch:
-                >>> a = torch.ones(1)
-                >>> b = torch.ones(1, requires_grad=True)
-                >>> b
-                tensor([1.], requires_grad=True)
-                >>> b.grad = a[:1]
-                >>> b
-                tensor([1.], requires_grad=True)
-                """
                 p.grad = physical_param_grad_buf[index : index + size].view(shape)
 
                 index += numel_in_bucket(p)
