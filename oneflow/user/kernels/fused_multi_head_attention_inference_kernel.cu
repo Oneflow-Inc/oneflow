@@ -85,6 +85,9 @@ struct Params {
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block,
          bool single_value_iteration, bool with_attn_bias>
 void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
+  // The fmha implementation below is based on xformers's fmha
+  // implementation at:
+  // https://github.com/facebookresearch/xformers/tree/main/xformers/csrc/attention/cuda/fmha
   using Attention = AttentionKernel<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
                                     single_value_iteration, false, with_attn_bias>;
   typename Attention::Params p{};
@@ -349,12 +352,12 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     params.query_hidden_stride = query->shape_view().At(2);
     params.key_hidden_stride = key->shape_view().At(2);
     params.value_hidden_stride = value->shape_view().At(2);
-    params.query_ptr = query->dptr<char>() + query_hidden_offset;
-    params.key_ptr = key->dptr<char>() + key_hidden_offset;
-    params.value_ptr = value->dptr<char>() + value_hidden_offset;
+    params.query_ptr = query->dptr<char>() + query_hidden_offset * GetSizeOfDataType(data_type);
+    params.key_ptr = key->dptr<char>() + key_hidden_offset * GetSizeOfDataType(data_type);
+    params.value_ptr = value->dptr<char>() + value_hidden_offset * GetSizeOfDataType(data_type);
     params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
-    params.workspace = tmp->mut_dptr<char>();
+    params.workspace = tmp->mut_dptr();
     params.workspace_size = tmp_buffer_size;
     params.causal = causal;
     if (attn_bias != nullptr) {
