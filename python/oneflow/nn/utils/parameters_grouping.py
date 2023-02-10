@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-from typing import List
+import warnings
+from typing import Union, List
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
@@ -37,12 +38,14 @@ def numel_in_bucket(tensor: Tensor):
     )
 
 
+_tensor_or_tensors = Union[Tensor, List[Tensor], List[List[Tensor]]]
+
 # recording all grouped params in use
-_all_grouped_params = set()
+_all_grouped_params = []
 
 
 class ContiguousParamsGroup(object):
-    def __init__(self, params_group_list: List[List[Tensor]]):
+    def __init__(self, params_group_list: _tensor_or_tensors):
         """
         The ContiguousParamsGroup is created by 2D List of Tensors,
         which indicates the Tensors in the same 1D List should be 
@@ -52,8 +55,20 @@ class ContiguousParamsGroup(object):
             [any([p.is_global for p in params]) for params in params_group_list]
         ), "All parameters must be local tensor for params grouping."
 
-        self.params_group_list = params_group_list
+        # making params_group_list 2D List of Tensors
+        self.params_group_list = params_group_list.copy()
+        if all([all([isinstance(p, Tensor) for p in params]) for params in self.params_group_list]):
+            pass
+        elif all([isinstance(p, Tensor) for p in self.params_group_list]):
+            self.params_group_list = [self.params_group_list]
+        elif isinstance(self.params_group_list, Tensor):
+            warnings.warn('Single tensor is best not do grouping.')
+            self.params_group_list = [[self.params_group_list]]
+        else:
+            raise ValueError("The shape of params_group_list is illegal!")
+
         self.grouped_tensors = []
+        self.grouped_grads = []
         self.grouped_tensors_offset = {}
         self.modified_buf = set()
         last_extra_params = self._remapping_groups()
@@ -61,52 +76,61 @@ class ContiguousParamsGroup(object):
 
     def _remapping_groups(self):
         global _all_grouped_params
+        all_grouped_params_set = set(_all_grouped_params)
+        last_extra_params_set = set(_all_grouped_params)
 
         current_buffer_tensor_mapping = collections.defaultdict(set)
         current_buffer_tensor_mapping[None] = set()
         params_requires_grad_group_list = []
-        last_extra_params = _all_grouped_params.copy()
+        new_all_grouped_params = _all_grouped_params.copy()
+        last_extra_params = []
 
         for params in self.params_group_list:
-            params_set = set()
+            params_list = []
             for p in params:
                 if p.requires_grad:
                     current_buffer_tensor_mapping[p._ref_tensor].add(p)
                     self.grouped_tensors_offset[p._ref_tensor] = 0
-                    params_set.add(p)
+                    params_list.append(p)
 
                     if p._ref_tensor is not None:
                         self.modified_buf.add(p._ref_tensor)
 
-            params_requires_grad_group_list.append(params_set)
+            params_requires_grad_group_list.append(params_list)
+            params_set = set(params_list)
 
             # handling parameters used last time but not this time
-            last_extra_params -= params_set
+            last_extra_params_set -= params_set
 
             # updating all grouped parameters set
-            _all_grouped_params |= params_set
+            all_grouped_params_set |= params_set
 
+            # keeping the parameters' order in all_grouped_params_set and last_extra_params_set
+            for p in params:
+                if p not in all_grouped_params_set:
+                    new_all_grouped_params.append(p)
+                if p in last_extra_params_set:
+                    # clone last_extra_params data and detach data for memcpy
+                    last_extra_params.append((p, p.detach().clone()))
+
+        _all_grouped_params = new_all_grouped_params
         self.params_group_list = params_requires_grad_group_list
-
-        # clone last_extra_params data
-        new_last_extra_params = set()
-        for tensor in last_extra_params:
-            # since we do memcpy the tensors on buf, so we record the copy of data here
-            new_last_extra_params.add((tensor, tensor.detach().clone()))
-        last_extra_params = new_last_extra_params
 
         new_params_group_list = []
         for tensors_set in current_buffer_tensor_mapping.values():
-            for new_tensors_set in self.params_group_list:
+            for new_tensors in self.params_group_list:
                 # handling the new groups that satisfy both conditions
+                new_tensors_set = set(new_tensors)
                 tensors_intersection = tensors_set & new_tensors_set
 
                 actual_tensors_group = collections.defaultdict(list)
-                for tensor in tensors_intersection:
-                    tensor_key = (tensor.dtype, tensor.device)
-                    actual_tensors_group[tensor_key].append(
-                        (tensor, tensor.detach().clone())
-                    )
+                # keeping the parameters' order in group list
+                for tensor in new_tensors:
+                    if tensor in tensors_intersection:
+                        tensor_key = (tensor.dtype, tensor.device)
+                        actual_tensors_group[tensor_key].append(
+                            (tensor, tensor.detach().clone())
+                        )
 
                 for actual_tensors in actual_tensors_group.values():
                     if len(actual_tensors) > 0:
@@ -203,10 +227,16 @@ class ContiguousParamsGroup(object):
                 physical_index_start:index
             ].view(logical_bufsize)
             logical_param_buf.grad = logical_param_grad_buf
+
             self.grouped_tensors.append(logical_param_buf)
+            self.grouped_grads.append(logical_param_grad_buf)
 
         flow.cuda.empty_cache()
 
     @property
     def grouped_parameters(self):
         return self.grouped_tensors
+
+    @property
+    def grouped_parameters_grad(self):
+        return self.grouped_grads
