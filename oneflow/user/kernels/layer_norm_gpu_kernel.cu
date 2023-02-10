@@ -833,7 +833,7 @@ __global__ void GammaBetaBackward(IndexType M,IndexType N,const scalar_t* dY,con
 
 template <typename scalar_t>
 __global__ void LayerNormBackward_kernel(IndexType N,const scalar_t* dY,const scalar_t* X,const scalar_t* gamma,const acc_type<scalar_t, true>* mean,
-                                         const acc_type<scalar_t, true>* rstd, scalar_t* dX)
+                                         const acc_type<scalar_t, true>* rstd, scalar_t* dX, const scalar_t* add_to_output)
 {
   using T_ACC = acc_type<scalar_t, true>;
   __shared__ T_ACC ds_shared[C10_WARP_SIZE];
@@ -862,7 +862,8 @@ __global__ void LayerNormBackward_kernel(IndexType N,const scalar_t* dY,const sc
   for (IndexType j = threadIdx.x; j < N; j += blockDim.x) {
     const IndexType index = i * N + j;
     const T_ACC gamma_v = gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j]);
-    dX[index] = static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(dY[index]) * gamma_v + b * static_cast<T_ACC>(X[index]) + c;
+    dX[index] = static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(dY[index]) * gamma_v + b * static_cast<T_ACC>(X[index]) + c 
+    + (add_to_output == nullptr ? T_ACC(0) : static_cast<T_ACC>(add_to_output[index]));
   }
 }
 
@@ -876,7 +877,8 @@ void LayerNormBackwardKernelImplInternal(
     const T* gamma,
     int64_t M,
     int64_t N,
-    T* dX) {
+    T* dX,
+    const T* add_to_output) {
   using T_ACC = acc_type<T, true>;
   const T* dY_data = dY;
   const T* X_data = X;
@@ -884,10 +886,11 @@ void LayerNormBackwardKernelImplInternal(
   const T_ACC* rstd_data = rstd;
   const T* gamma_data = gamma;
   T* dX_data = dX;
+  const T* add_to_output_data = add_to_output;
   hipStream_t cuda_stream = stream->As<oneflow::ep::CudaStream>()->cuda_stream();
   if (dX_data != nullptr) {
     LayerNormBackward_kernel<T><<<M, BlockReduceNumThreads, 0, cuda_stream>>>(
-                  N, dY_data, X_data,gamma_data,mean_data,rstd_data,dX_data);
+                  N, dY_data, X_data,gamma_data,mean_data,rstd_data,dX_data,add_to_output_data);
   }
 }
 
@@ -1021,7 +1024,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     //                            mean, inv_variance, gamma_ptr, add_to_output_ptr, dx->mut_dptr<T>());
     using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
     LayerNormBackwardKernelImplInternal<T>(ctx->stream(), dy->dptr<T>(), x->dptr<T>(), mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), 
-                                        gamma_ptr, num_instances, norm_size, dx->mut_dptr<T>());
+                                        gamma_ptr, num_instances, norm_size, dx->mut_dptr<T>(), add_to_output_ptr);
   };
 };
 
