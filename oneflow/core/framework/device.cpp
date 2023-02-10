@@ -85,10 +85,7 @@ Maybe<void> Device::Init() {
   static thread_local HashMap<std::string, Symbol<Device>> map;
   auto iter = map.find(device_str);
   if (iter == map.end()) {
-    std::string type;
-    int device_id = -1;
-    bool with_remat = false;
-    JUST(ParseDeviceString(device_str, &type, &device_id, &with_remat));
+    auto [type, device_id, with_remat] = *JUST(ParseDeviceString(device_str));
     CheckDeviceType(type);
     if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
     Device device(type, device_id, with_remat);
@@ -164,26 +161,21 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParseDeviceString(std::string device_str, std::string* device_name, int* device_index,
-                             bool* with_remat) {
+Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(std::string device_str) {
+  bool with_remat = false;
   if (device_str.size() > 6 && device_str.substr(device_str.size() - 6, 6) == "+remat") {
-    *with_remat = true;
+    with_remat = true;
     device_str = device_str.substr(0, device_str.size() - 6);
-  } else {
-    *with_remat = false;
   }
   std::string::size_type pos = device_str.find(':');
   if (pos == std::string::npos) {
-    *device_name = device_str;
-    *device_index = -1;
+    return std::make_tuple(device_str, -1, with_remat);
   } else {
     std::string index_str = device_str.substr(pos + 1);
     CHECK_OR_RETURN(IsStrInt(index_str))
         << Error::InvalidValueError() << "Invalid device tag " << device_str;
-    *device_name = device_str.substr(0, pos);
-    *device_index = std::stoi(index_str);
+    return std::make_tuple(device_str.substr(0, pos), std::stoi(index_str), with_remat);
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
