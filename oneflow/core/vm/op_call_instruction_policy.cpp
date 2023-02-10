@@ -196,28 +196,28 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first, bool recompute) {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
-    bool remat_input = false;
-    bool remat_output = false;
+    bool inputs_support_remat = false;
+    bool outputs_support_remat = false;
     if (op_call_instruction_policy->opkernel().op_type_name() == "copy") {
-      remat_input =
+      inputs_support_remat =
           op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->with_remat();
-      remat_output =
+      outputs_support_remat =
           op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->with_remat();
     } else {
-      remat_input = vm_stream->device()->with_remat();
-      remat_output = vm_stream->device()->with_remat();
+      inputs_support_remat = vm_stream->device()->with_remat();
+      outputs_support_remat = vm_stream->device()->with_remat();
     }
     VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
-    VLOG(1) << "remat_input: " << remat_input << ", remat_output: " << remat_output << std::endl;
+    VLOG(1) << "remat_input: " << inputs_support_remat << ", remat_output: " << outputs_support_remat << std::endl;
     Pack pack(*op_call_instruction_policy);
-    if (!remat_input && remat_output) {
+    if (!inputs_support_remat && outputs_support_remat) {
       for (auto& storage : pack.output_storages) { 
         VLOG(1) << "set storage " << storage->id() << " unevictable" << std::endl;
         storage->set_eviction_disabled(true); }
     }
-    if (remat_input) { JUST(RematInputs(pack, vm_stream, first, recompute)); }
+    if (inputs_support_remat) { JUST(RematInputs(pack, vm_stream, first, recompute)); }
     std::vector<bool> storage_is_initialized;
-    if (remat_output) {
+    if (outputs_support_remat) {
       storage_is_initialized.reserve(pack.output_storages.size());
       for (auto& storage : pack.output_storages) {
         storage_is_initialized.push_back(storage->is_initialized());
@@ -237,8 +237,8 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    if (remat_input) { JUST(EagerEvictRemattedTensors(pack, vm_stream, first, recompute)); }
-    JUST(UpdateRematInfo(pack, vm_stream, first, recompute, remat_input, remat_output,
+    if (inputs_support_remat) { JUST(EagerEvictRemattedTensors(pack, vm_stream, first, recompute)); }
+    JUST(UpdateRematInfo(pack, vm_stream, first, recompute, inputs_support_remat, outputs_support_remat,
                          storage_is_initialized));
     return Maybe<void>::Ok();
   }

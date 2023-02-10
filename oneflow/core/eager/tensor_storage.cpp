@@ -73,6 +73,14 @@ void RematableTensorStorage::Release() {
   return Evict(true);
 }
 
+Maybe<void> TensorStorage::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
+  CHECK_OR_RETURN(!producer_stream_.has_value());
+  producer_stream_ = producer_stream;
+  device_ = producer_stream->device();
+  VLOG(1) << "device remat: " << device_->with_remat() << ", repr: " << device_->ToRepr();
+  return Maybe<void>::Ok();
+}
+
 std::vector<std::string> random_ops{"uniform", "uniform_int", "normal", "randperm"};
 
 bool RematableTensorStorage::is_evictable() const {

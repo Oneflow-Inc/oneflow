@@ -38,12 +38,7 @@ class TensorStorage {
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
-  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
-    CHECK_OR_RETURN(!producer_stream_.has_value());
-    producer_stream_ = producer_stream;
-    device_ = producer_stream->device();
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream);
 
   const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const { return last_used_stream_; }
   void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {

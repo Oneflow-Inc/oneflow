@@ -88,9 +88,7 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
   }
 }
 
-int64_t EagerBlobObject::storage_offset() const {
-  return storage_offset_;
-}
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
@@ -127,18 +125,23 @@ Maybe<void> EagerBlobObject::DeallocateBlobDataPtr() {
   tensor_storage_->Release();
   return Maybe<void>::Ok();
 }
+
 void EagerBlobObject::RegisterStorageDeleteHook(const std::function<void()>& hook) {
   tensor_storage_->RegisterStorageDeleteHook(hook);
 }
+
 const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::producer_stream() const {
   return tensor_storage_->producer_stream();
 }
+
 Maybe<void> EagerBlobObject::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
   return tensor_storage_->init_producer_stream(producer_stream);
 }
+
 const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::last_used_stream() const {
   return tensor_storage_->last_used_stream();
 }
+
 void EagerBlobObject::set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
   tensor_storage_->set_last_used_stream(last_used_stream);
 }

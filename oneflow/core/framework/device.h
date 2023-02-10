@@ -79,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, Symbol<Device> device);
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
-Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(const std::string& device_str);
+Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(std::string device_str);
 
 }  // namespace oneflow
 
