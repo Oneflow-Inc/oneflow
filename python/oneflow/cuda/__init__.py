@@ -194,3 +194,28 @@ def empty_cache() -> None:
 
 
 from .random import *  # noqa: F403
+
+
+class device(object):
+    r"""Context-manager that changes the selected device.
+
+    Args:
+        device (flow.device or int): device index to select. It's a no-op if
+            this argument is a negative integer or ``None``.
+    """
+
+    def __init__(self, device: Any):
+        self.idx = _get_device_index(device, optional=True)
+        self.prev_idx = -1
+
+    def __enter__(self):
+        if self.idx == -1:
+            return
+        self.prev_idx = current_device()
+        if self.prev_idx != self.idx:
+            set_device(self.idx)
+
+    def __exit__(self, type: Any, value: Any, traceback: Any):
+        if self.prev_idx != self.idx:
+            set_device(self.prev_idx)
+        return False

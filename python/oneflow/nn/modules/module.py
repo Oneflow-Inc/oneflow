@@ -1390,3 +1390,17 @@ class Module(object):
                 main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _replicate_for_data_parallel(self):
+        # use this model for DP mode
+        replica = self.__new__(type(self))
+        replica.__dict__ = self.__dict__.copy()
+
+        # replicas do not have parameters themselves, the replicas reference the original
+        # module.
+        replica._parameters = OrderedDict()
+        replica._buffers = replica._buffers.copy()
+        replica._modules = replica._modules.copy()
+        replica._is_replica = True  # type: ignore[assignment]
+
+        return replica

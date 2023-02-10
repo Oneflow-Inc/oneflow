@@ -69,3 +69,35 @@ def _get_device_index(
                 "or an integer, but got:{}".format(device)
             )
     return device_idx
+
+
+def _get_all_device_indices():
+    # all device index
+    return _get_device_attr(lambda m: list(range(m.device_count())))
+
+
+def _get_device_attr(get_member):
+    device_type = _get_available_device_type()
+    if device_type and device_type.lower() == "cuda":
+        return get_member(flow.cuda)
+    # add more available device types here
+    return None
+
+
+def _get_available_device_type():
+    if flow.cuda.is_available():
+        return "cuda"
+    # add more available device types here
+    return None
+
+
+def _get_devices_properties(device_ids):
+    # all device properties
+    return [_get_device_attr(lambda m: m.get_device_properties(i)) for i in device_ids]
+
+
+def _handle_complex(tensor):
+    """
+    Complex checking is not supported by oneflow, we add this for future usage.
+    """
+    return tensor

@@ -16,6 +16,8 @@ limitations under the License.
 import sys
 import traceback
 import oneflow as flow
+from collections import defaultdict
+from typing import Any, DefaultDict, List, Optional
 
 
 class KeyErrorMessage(str):
@@ -106,3 +108,52 @@ def _unflatten_dense_tensors(flat, tensors):
             outputs.append(flow.narrow(flat, 0, offset, numel).view(tensor.size()))
             offset += numel
     return outputs
+
+
+def _take_tensors(tensors, size_limit):
+    """Group tensors into chunks. This generator yields a chunk at each time,
+    each containing tensors of same type up to certain byte limit in total size.
+
+    Args:
+        tensors (Sequence): A sequence of tensors to be separated into chunks.
+        size_limit (int): The limit of each chunk in bytes.
+
+    Yields:
+        Blocks of tensors of same type and within size_limit. The yielded
+        tensors are only ordered as the original sequence within its types.
+    """
+    buf_dict: DefaultDict[str, List] = defaultdict(lambda: [[], 0])
+    for tensor in tensors:
+        t = tensor.type()
+        size = tensor.numel() * tensor.element_size()
+        buf_and_size = buf_dict[t]
+        if buf_and_size[1] + size > size_limit and buf_and_size[1] > 0:
+            yield buf_and_size[0]
+            buf_and_size = buf_dict[t] = [[], 0]
+        buf_and_size[0].append(tensor)
+        buf_and_size[1] += size
+    for buf, _ in buf_dict.values():
+        if len(buf) > 0:
+            yield buf
+
+
+def _reorder_tensors_as(tensors, ordered_tensors):
+    """Assume that tensors are of same order as ordered_tensors within their
+    types, e.g., from _take_tensors. Reorder them to be of same order as
+    ordered_tensors.
+
+    Args:
+        tensors (Iterable[Tensor]): tensors to be reordered. They should be of
+          the same order as ordered_tensors within their own types.
+        ordered_tensors (Iterable[Tensor]): tensors whose order will be the
+          reference.
+
+    Returns:
+        Ordered tuple of tensors with contents from tensors and order of
+        ordered_tensors.
+    """
+    type_dict = defaultdict(list)
+    for tensor in tensors:
+        type_dict[tensor.type()].append(tensor)
+    type_dict_ = {t: iter(coll) for t, coll in type_dict.items()}
+    return tuple(next(type_dict_[tensor.type()]) for tensor in ordered_tensors)
