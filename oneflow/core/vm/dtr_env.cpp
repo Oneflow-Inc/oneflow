@@ -9,7 +9,7 @@ namespace dtr {
 vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     vm::RematableTensorStorage* storage, const vm::OpCallInstructionPolicy& current_compute_op) {
   // FIXME: set disjnode properly
-  auto new_storage = std::make_shared<vm::RematableTensorStorage>();
+  auto new_storage = std::make_shared<vm::RematableTensorStorage>(storage->device());
   std::unordered_map<vm::EagerBlobObject*, std::shared_ptr<vm::EagerBlobObject>> old2new;
   auto update = [&new_storage, &old2new](std::shared_ptr<vm::EagerBlobObject>& old) {
     auto it = old2new.find(old.get());

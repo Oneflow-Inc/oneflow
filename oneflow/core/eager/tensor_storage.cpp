@@ -15,15 +15,15 @@ int64_t unique_id_2() {
 
 }  // namespace
 
-TensorStorage::TensorStorage(bool is_allocated_in_vm)
+TensorStorage::TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
     : blob_bytes_(0),
+      device_(device),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
       producer_stream_(NullOpt),
-      last_used_stream_(NullOpt),
-      is_allocated_in_vm_(is_allocated_in_vm) {}
+      last_used_stream_(NullOpt), is_allocated_in_vm_(is_allocated_in_vm) {}
 
-RematableTensorStorage::RematableTensorStorage()
-    : TensorStorage(true),
+RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
+    : TensorStorage(true, device),
       node(std::make_shared<dtr::DisjNode>(0)),
       id_(unique_id_2()),
       num_pinned_(0),
@@ -35,6 +35,10 @@ RematableTensorStorage::RematableTensorStorage()
 RematableTensorStorage::~RematableTensorStorage() {
   if (compute_op_) { Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get()); }
   VLOG(1) << "delete storage " << id_;
+}
+
+void TensorStorage::set_device(Symbol<Device> device) {
+  device_ = device;
 }
 
 Symbol<Device> TensorStorage::device() const { return device_; }
@@ -76,8 +80,6 @@ void RematableTensorStorage::Release() {
 Maybe<void> TensorStorage::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
   CHECK_OR_RETURN(!producer_stream_.has_value());
   producer_stream_ = producer_stream;
-  device_ = producer_stream->device();
-  VLOG(1) << "device remat: " << device_->with_remat() << ", repr: " << device_->ToRepr();
   return Maybe<void>::Ok();
 }
 

@@ -18,7 +18,7 @@ class DtrOpCallInstructionPolicy;
 
 class TensorStorage {
  public:
-  explicit TensorStorage(bool is_allocated_in_vm);
+  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
   virtual ~TensorStorage() = default;
@@ -51,6 +51,7 @@ class TensorStorage {
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
   }
+  void set_device(Symbol<Device> device);
   Symbol<Device> device() const;
 
  protected:
@@ -69,7 +70,7 @@ class TensorStorage {
 
 class RematableTensorStorage final : public TensorStorage {
  public:
-  RematableTensorStorage();
+  explicit RematableTensorStorage(Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(RematableTensorStorage);
   ~RematableTensorStorage() override;
 

@@ -39,7 +39,9 @@ CallContext::CallContext(const DtrCallContext& dtr_call_ctx)
       outputs_.push_back(std::make_shared<vm::EagerBlobObject>(
           dtr_call_ctx.ebo_infos_[i].mem_case, dtr_call_ctx.ebo_infos_[i].local_tensor_meta,
           dtr_call_ctx.ebo_infos_[i].dynamic_local_tensor_meta,
-          dtr_call_ctx.ebo_infos_[i].data_type, std::make_shared<vm::TensorStorage>(true)));
+          dtr_call_ctx.ebo_infos_[i].data_type,
+          std::make_shared<vm::TensorStorage>(
+              true, dtr_call_ctx.ebo_infos_[i].local_tensor_meta->device())));
     } else {
       outputs_.push_back(weak.lock());
     }
