@@ -127,4 +127,4 @@ class OmpRuntime final : public RuntimeBase {
 }  // namespace thread
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_THREAD_THREAD_RUNTIME_H_
+#endif  // ONEFLOW_CORE_THREAD_THREAD_RUNTIME_H_
