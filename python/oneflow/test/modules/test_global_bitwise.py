@@ -35,10 +35,15 @@ class TestBitwiseModule(flow.unittest.TestCase):
     def test_bitwise_and_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_bitwise_ops_with_random_data(test_case, torch.bitwise_and, placement, sbp)
-                _test_bitwise_ops_with_random_data(test_case, torch.bitwise_or, placement, sbp)
-                _test_bitwise_ops_with_random_data(test_case, torch.bitwise_xor, placement, sbp)
-
+                _test_bitwise_ops_with_random_data(
+                    test_case, torch.bitwise_and, placement, sbp
+                )
+                _test_bitwise_ops_with_random_data(
+                    test_case, torch.bitwise_or, placement, sbp
+                )
+                _test_bitwise_ops_with_random_data(
+                    test_case, torch.bitwise_xor, placement, sbp
+                )
 
 
 if __name__ == "__main__":
