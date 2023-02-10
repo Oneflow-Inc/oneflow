@@ -84,6 +84,7 @@ REGISTER_COPY_DATA_CONTENT_KERNEL("parallel_cast");
 REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast");
 REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast_like");
 REGISTER_COPY_DATA_CONTENT_KERNEL("pinned_identity");
+REGISTER_COPY_DATA_CONTENT_KERNEL("depend");
 
 }  // namespace
 
