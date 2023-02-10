@@ -104,11 +104,13 @@ bool IsScalarTensor(const std::shared_ptr<Tensor>& x) {
 }
 
 Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
-  // reference: (pytorch) c10/core/TensorImpl.cpp
+  // A function used to check whether the tensor is non-overlapping and dense, reference: (pytorch)
+  // c10/core/TensorImpl.cpp
   const int64_t ndim = x->ndim();
   const auto& shape = x->shape();
   const auto& stride = JUST(x->stride());
 
+  // If 1D tensor and shape(0) < 2 or stride(0) == 1 then true
   if (ndim == 1) { return shape->at(0) < 2 || stride->at(0) == 1; }
   small_vector<int64_t, 5> perm;
   perm.resize(ndim);
@@ -122,6 +124,7 @@ Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
     }
     return stride->at(a) < stride->at(b);
   });
+  // CHeck if tareget stride == required stride
   auto require_stride = 1;
   for (int64_t i = 0; i < ndim; ++i) {
     const auto size_perm_i = shape->at(perm[i]);
@@ -133,6 +136,8 @@ Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
 }
 
 Maybe<bool> IsNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
+  // if tensor is_contiguous or ComputeNonOverlappingAndDense = True, then indicates it's memory
+  // layout is non-overlapping and dense.
   return x->is_contiguous() || JUST(ComputeNonOverlappingAndDense(x));
 }
 
