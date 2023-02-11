@@ -174,4 +174,167 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
+    const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
+    std::vector<std::vector<std::pair<int, int>>>* in2out_axis) {
+  CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
+      << Error::RuntimeError()
+      << "The dimension of input tensor must be greater than or equal to zero, "
+      << "but got " << in_shape.NumAxes();  // support 0D tensor
+  CHECK_GE_OR_RETURN(out_shape.NumAxes(), 0)
+      << Error::RuntimeError()
+      << "The dimension of output tensor must be greater than or equal to zero, "
+      << "but got " << out_shape.NumAxes();  // support 0D tensor
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt())
+      << Error::RuntimeError()
+      << "The element number of input tensor must be equal to output tensor, "
+      << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
+
+  int in_axis = -1;
+  int out_axis = -1;
+  int64_t in_dim_size = 0;
+  int64_t out_dim_size = 0;
+  int64_t in_count = 1;
+  int64_t out_count = 1;
+  Shape src_shape = in_shape;
+  Shape dst_shape = out_shape;
+  DimVector src_dim_vec;
+  DimVector dst_dim_vec;
+  HashMap<int, int> simplified_src_axis2origin_axis;
+  HashMap<int, int> simplified_dst_axis2origin_axis;
+
+  auto NextAxis = [](const Shape& shape, int& axis, int64_t& dim_size, int64_t& count) {
+    axis++;
+    if (axis >= 0 && axis < shape.size()) {
+      dim_size = shape[axis];
+      count *= dim_size;
+    }
+  };
+
+  auto NextSrcAxis = [&]() { NextAxis(src_shape, in_axis, in_dim_size, in_count); };
+  auto NextDstAxis = [&]() { NextAxis(dst_shape, out_axis, out_dim_size, out_count); };
+  NextSrcAxis();
+  NextDstAxis();
+
+  // step 1: squeeze and prune equal axes between in and out
+  while (in_axis < in_shape.size() && out_axis < out_shape.size()) {
+    if (in_shape[in_axis] == 1) {
+      NextSrcAxis();
+      continue;
+    }
+    if (out_shape[out_axis] == 1) {
+      NextDstAxis();
+      continue;
+    }
+    if (in_shape[in_axis] == out_shape[out_axis] && in_count == out_count) {
+      NextSrcAxis();
+      NextDstAxis();
+      continue;
+    }
+    CHECK_OR_RETURN(simplified_src_axis2origin_axis.emplace(src_dim_vec.size(), in_axis).second);
+    CHECK_OR_RETURN(simplified_dst_axis2origin_axis.emplace(dst_dim_vec.size(), out_axis).second);
+    src_dim_vec.push_back(in_axis);
+    dst_dim_vec.push_back(out_axis);
+  }
+
+  src_shape = Shape(src_dim_vec);
+  dst_shape = Shape(dst_dim_vec);
+  in_axis = -1;
+  out_axis = -1;
+  in_dim_size = 0;
+  out_dim_size = 0;
+  in_count = 1;
+  out_count = 1;
+  NextSrcAxis();
+  NextDstAxis();
+
+  int rank_axis = -1;
+  bool nd_split_failed = false;
+  std::vector<int> group_in_axes;
+  std::vector<int> group_out_axes;
+  group_in_axes.reserve(rank_mesh.size());
+  group_out_axes.reserve(rank_mesh.size());
+
+  // step 2: find contiguous splitable axes
+  while (in_axis < src_shape.size() && out_axis < dst_shape.size()) {
+    if (!nd_split_failed) {
+      while (rank_axis < rank_mesh.size()) {
+        int64_t rank_num = rank_mesh[rank_axis];
+        if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) {
+          group_in_axes.clear();
+          group_out_axes.clear();
+          nd_split_failed = true;
+          break;
+        }
+        in_dim_size /= rank_num;
+        out_dim_size /= rank_num;
+        if (in_dim_size == 1 || out_dim_size == 1) { break; }
+        rank_axis++;
+      }
+      if (in_dim_size == 1) {
+        group_in_axes.push_back(in_axis);
+        NextSrcAxis();
+      }
+      if (out_dim_size == 1) {
+        group_out_axes.push_back(out_axis);
+        NextDstAxis();
+      }
+      if (rank_axis == rank_mesh.size() && group_in_axes.size() == rank_mesh.size()
+          && group_out_axes.size() == rank_mesh.size()) {
+        in2out_axis->emplace_back();
+        auto& group_in2out_axis_pairs = in2out_axis->back();
+        for (size_t i = 0; i < rank_mesh.size(); ++i) {
+          group_in2out_axis_pairs.emplace_back(group_in_axes[i], group_out_axes[i]);
+        }
+        group_in_axes.clear();
+        group_out_axes.clear();
+      }
+      continue;
+    }
+
+    if (in_count > out_count) {
+      NextDstAxis();
+    } else if (in_count < out_count) {
+      NextSrcAxis();
+    } else {  // in_count == out_count
+      NextSrcAxis();
+      NextDstAxis();
+      nd_split_failed = false;
+      rank_axis = 0;
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
+    const std::vector<user_op::OpArg>& in_args, const Shape& in_shape,
+    const std::vector<user_op::OpArg>& out_args, const Shape& out_shape, const Shape& rank_mesh,
+    std::vector<NdSbpSignature>* nd_sbp_sig_list) {
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
+  if (in_shape.elem_cnt() == 0) { return Maybe<void>::Ok(); }
+  if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
+  std::vector<std::vector<std::pair<int, int>>> split_in2out_axis;
+  JUST(ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(in_shape, out_shape, rank_mesh,
+                                                         &split_in2out_axis));
+  for (const auto& in2out_axes : split_in2out_axis) {
+    nd_sbp_sig_list->emplace_back();
+    auto& nd_sbp_sig = nd_sbp_sig_list->back();
+    for (const auto& in2out_axis : in2out_axes) {
+      for (const auto& in_arg : in_args) {
+        const auto& ibn = in_arg.name() + "_" + std::to_string(in_arg.index());
+        auto& in_nd_sbp = (*nd_sbp_sig.mutable_bn_in_op2nd_sbp())[ibn];
+        auto* in_sbp = in_nd_sbp.add_sbp_parallel();
+        in_sbp->mutable_split_parallel()->set_axis(in2out_axis.first);
+      }
+      for (const auto& out_arg : out_args) {
+        const auto& obn = out_arg.name() + "_" + std::to_string(out_arg.index());
+        auto& out_nd_sbp = (*nd_sbp_sig.mutable_bn_in_op2nd_sbp())[obn];
+        auto* out_sbp = out_nd_sbp.add_sbp_parallel();
+        out_sbp->mutable_split_parallel()->set_axis(in2out_axis.second);
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

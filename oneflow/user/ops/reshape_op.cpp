@@ -32,6 +32,13 @@ namespace oneflow {
 
 /*static*/ Maybe<void> ReshapeOp::EnumerateNdSbpSignatures(
     user_op::GetNdSbpSignatureListContext* ctx) {
+  const Shape& in_shape = ctx->BlobShape4InputArgNameAndIndex("in", 0);
+  const Shape& shape = ctx->Attr<Shape>("shape");
+  const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
+  std::vector<NdSbpSignature> nd_sbp_sig_list;
+  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
+                                                   ctx->parallel_hierarchy(), &nd_sbp_sig_list));
+  for (auto& nd_sbp_sig : nd_sbp_sig_list) { ctx->AddNdSbpSignature(nd_sbp_sig); }
   return Maybe<void>::Ok();
 }
 
