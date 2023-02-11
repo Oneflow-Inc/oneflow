@@ -47,12 +47,12 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    ArgsTree,
     operators_repr,
     GraphIR,
     seq_to_func_return,
     sys_exc_error_msg,
 )
+from oneflow.framework.args_tree import ArgsTree
 from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
