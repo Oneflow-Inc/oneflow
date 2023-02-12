@@ -176,7 +176,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 
 Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
     const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
-    std::vector<std::vector<std::pair<int, int>>>* in2out_axis) {
+    std::vector<std::vector<std::pair<int, int>>>* nd_split_in2out_axis_list) {
   CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError()
       << "The dimension of input tensor must be greater than or equal to zero, "
@@ -196,12 +196,12 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
   int64_t out_dim_size = 0;
   int64_t in_count = 1;
   int64_t out_count = 1;
-  Shape src_shape = in_shape;
-  Shape dst_shape = out_shape;
-  DimVector src_dim_vec;
-  DimVector dst_dim_vec;
-  HashMap<int, int> simplified_src_axis2origin_axis;
-  HashMap<int, int> simplified_dst_axis2origin_axis;
+  Shape _in_shape = in_shape;
+  Shape _out_shape = out_shape;
+  DimVector in_dim_vec;
+  DimVector out_dim_vec;
+  HashMap<int, int> simplified_in_axis2origin_axis;
+  HashMap<int, int> simplified_out_axis2origin_axis;
 
   auto NextAxis = [](const Shape& shape, int& axis, int64_t& dim_size, int64_t& count) {
     axis++;
@@ -210,99 +210,103 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
       count *= dim_size;
     }
   };
+  auto NextInAxis = [&]() { NextAxis(_in_shape, in_axis, in_dim_size, in_count); };
+  auto NextOutAxis = [&]() { NextAxis(_out_shape, out_axis, out_dim_size, out_count); };
+  NextInAxis();
+  NextOutAxis();
 
-  auto NextSrcAxis = [&]() { NextAxis(src_shape, in_axis, in_dim_size, in_count); };
-  auto NextDstAxis = [&]() { NextAxis(dst_shape, out_axis, out_dim_size, out_count); };
-  NextSrcAxis();
-  NextDstAxis();
-
-  // step 1: squeeze and prune equal axes between in and out
-  while (in_axis < in_shape.size() && out_axis < out_shape.size()) {
-    if (in_shape[in_axis] == 1) {
-      NextSrcAxis();
+  // step 1: squeeze and prune equal axes between in_shape and out_shape
+  while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
+    if (in_dim_size == out_dim_size && in_count == out_count) {
+      NextInAxis();
+      NextOutAxis();
       continue;
     }
-    if (out_shape[out_axis] == 1) {
-      NextDstAxis();
-      continue;
+    if (in_count <= out_count && in_axis < in_shape.size()) {
+      if (in_dim_size != 1) {
+        simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
+        in_dim_vec.push_back(in_dim_size);
+      }
+      NextInAxis();
     }
-    if (in_shape[in_axis] == out_shape[out_axis] && in_count == out_count) {
-      NextSrcAxis();
-      NextDstAxis();
-      continue;
+    if (in_count >= out_count && out_axis < out_shape.size()) {
+      if (out_dim_size != 1) {
+        simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
+        out_dim_vec.push_back(out_dim_size);
+      }
+      NextOutAxis();
     }
-    CHECK_OR_RETURN(simplified_src_axis2origin_axis.emplace(src_dim_vec.size(), in_axis).second);
-    CHECK_OR_RETURN(simplified_dst_axis2origin_axis.emplace(dst_dim_vec.size(), out_axis).second);
-    src_dim_vec.push_back(in_axis);
-    dst_dim_vec.push_back(out_axis);
   }
 
-  src_shape = Shape(src_dim_vec);
-  dst_shape = Shape(dst_dim_vec);
+  _in_shape = Shape(in_dim_vec);
+  _out_shape = Shape(out_dim_vec);
   in_axis = -1;
   out_axis = -1;
   in_dim_size = 0;
   out_dim_size = 0;
   in_count = 1;
   out_count = 1;
-  NextSrcAxis();
-  NextDstAxis();
+  NextInAxis();
+  NextOutAxis();
 
-  int rank_axis = -1;
+  int rank_axis = 0;
   bool nd_split_failed = false;
-  std::vector<int> group_in_axes;
-  std::vector<int> group_out_axes;
-  group_in_axes.reserve(rank_mesh.size());
-  group_out_axes.reserve(rank_mesh.size());
+  std::vector<int> nd_split_in_axis;
+  std::vector<int> nd_split_out_axis;
+  nd_split_in_axis.reserve(rank_mesh.size());
+  nd_split_out_axis.reserve(rank_mesh.size());
 
   // step 2: find contiguous splitable axes
-  while (in_axis < src_shape.size() && out_axis < dst_shape.size()) {
+  while (in_axis < _in_shape.size() || out_axis < _out_shape.size()) {
     if (!nd_split_failed) {
-      while (rank_axis < rank_mesh.size()) {
+      while (rank_axis < rank_mesh.size() && in_dim_size != 1 && out_dim_size != 1) {
         int64_t rank_num = rank_mesh[rank_axis];
         if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) {
-          group_in_axes.clear();
-          group_out_axes.clear();
+          nd_split_in_axis.clear();
+          nd_split_out_axis.clear();
           nd_split_failed = true;
           break;
         }
+        nd_split_in_axis.push_back(in_axis);
+        nd_split_out_axis.push_back(out_axis);
         in_dim_size /= rank_num;
         out_dim_size /= rank_num;
-        if (in_dim_size == 1 || out_dim_size == 1) { break; }
         rank_axis++;
       }
-      if (in_dim_size == 1) {
-        group_in_axes.push_back(in_axis);
-        NextSrcAxis();
+      if (in_dim_size == 1 && in_axis < _in_shape.size()) {
+        NextInAxis();
+        continue;
       }
-      if (out_dim_size == 1) {
-        group_out_axes.push_back(out_axis);
-        NextDstAxis();
+      if (out_dim_size == 1 && out_axis < _out_shape.size()) {
+        NextOutAxis();
+        continue;
       }
-      if (rank_axis == rank_mesh.size() && group_in_axes.size() == rank_mesh.size()
-          && group_out_axes.size() == rank_mesh.size()) {
-        in2out_axis->emplace_back();
-        auto& group_in2out_axis_pairs = in2out_axis->back();
+      if (rank_axis == rank_mesh.size() && nd_split_in_axis.size() == rank_mesh.size()
+          && nd_split_out_axis.size() == rank_mesh.size()) {
+        nd_split_in2out_axis_list->emplace_back();
+        auto& nd_split_in2out_axis = nd_split_in2out_axis_list->back();
         for (size_t i = 0; i < rank_mesh.size(); ++i) {
-          group_in2out_axis_pairs.emplace_back(group_in_axes[i], group_out_axes[i]);
+          int origin_in_axis = simplified_in_axis2origin_axis.at(nd_split_in_axis[i]);
+          int origin_out_axis = simplified_out_axis2origin_axis.at(nd_split_out_axis[i]);
+          nd_split_in2out_axis.emplace_back(origin_in_axis, origin_out_axis);
         }
-        group_in_axes.clear();
-        group_out_axes.clear();
+        nd_split_in_axis.clear();
+        nd_split_out_axis.clear();
       }
-      continue;
     }
 
-    if (in_count > out_count) {
-      NextDstAxis();
-    } else if (in_count < out_count) {
-      NextSrcAxis();
+    if (in_count < out_count) {
+      NextInAxis();
+    } else if (in_count > out_count) {
+      NextOutAxis();
     } else {  // in_count == out_count
-      NextSrcAxis();
-      NextDstAxis();
+      NextInAxis();
+      NextOutAxis();
       nd_split_failed = false;
       rank_axis = 0;
     }
   }
+
   return Maybe<void>::Ok();
 }
 
@@ -313,13 +317,13 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   if (in_shape.elem_cnt() == 0) { return Maybe<void>::Ok(); }
   if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
-  std::vector<std::vector<std::pair<int, int>>> split_in2out_axis;
+  std::vector<std::vector<std::pair<int, int>>> nd_split_in2out_axis_list;
   JUST(ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(in_shape, out_shape, rank_mesh,
-                                                         &split_in2out_axis));
-  for (const auto& in2out_axes : split_in2out_axis) {
+                                                         &nd_split_in2out_axis_list));
+  for (const auto& nd_split_in2out_axis : nd_split_in2out_axis_list) {
     nd_sbp_sig_list->emplace_back();
     auto& nd_sbp_sig = nd_sbp_sig_list->back();
-    for (const auto& in2out_axis : in2out_axes) {
+    for (const auto& in2out_axis : nd_split_in2out_axis) {
       for (const auto& in_arg : in_args) {
         const auto& ibn = in_arg.name() + "_" + std::to_string(in_arg.index());
         auto& in_nd_sbp = (*nd_sbp_sig.mutable_bn_in_op2nd_sbp())[ibn];
