@@ -213,42 +213,39 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
   auto MoveOutAxis = [&]() { MoveAxis(out_shape, out_axis, out_dim_size, out_count); };
   MoveInAxis();
   MoveOutAxis();
-  bool move_in_axis = true;
-  bool move_out_axis = true;
 
   // step 1: squeeze and prune equal axes between in_shape and out_shape
   while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
-    if (in_dim_size == out_dim_size && in_count == out_count) {
+    if (in_dim_size == 1 && in_axis < in_shape.size()) {
       MoveInAxis();
+      continue;
+    }
+    if (out_dim_size == 1 && out_axis < out_shape.size()) {
       MoveOutAxis();
       continue;
     }
-    if (move_in_axis && in_axis >= 0 && in_axis < in_shape.size() && in_dim_size != 1) {
+    if (in_count < out_count) {
       simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
       in_dim_vec.push_back(in_dim_size);
-    }
-    if (move_out_axis && out_axis >= 0 && out_axis < out_shape.size() && out_dim_size != 1) {
+      MoveInAxis();
+    } else if (in_count > out_count) {
       simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
       out_dim_vec.push_back(out_dim_size);
-    }
-    if (in_count < out_count) {
-      MoveInAxis();
-      move_in_axis = true;
-      move_out_axis = false;
-    } else if (in_count > out_count) {
       MoveOutAxis();
-      move_in_axis = false;
-      move_out_axis = true;
     } else {  // in_count == out_count
+      if (in_dim_size != out_dim_size) {
+        simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
+        in_dim_vec.push_back(in_dim_size);
+        simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
+        out_dim_vec.push_back(out_dim_size);
+      }
       MoveInAxis();
       MoveOutAxis();
-      move_in_axis = true;
-      move_out_axis = true;
     }
   }
   in_shape = Shape(in_dim_vec);
   out_shape = Shape(out_dim_vec);
-  CHECK_EQ_OR_THROW(in_shape.elem_cnt(), out_shape.elem_cnt());
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
 
   in_axis = -1;
   out_axis = -1;
@@ -295,25 +292,21 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
         nd_split_in_axis.clear();
         nd_split_out_axis.clear();
       }
-      if (in_dim_size == 1 && in_axis < in_shape.size()) {
-        MoveInAxis();
-        continue;
-      }
-      if (out_dim_size == 1 && out_axis < out_shape.size()) {
-        MoveOutAxis();
-        continue;
-      }
     }
 
-    if (in_count < out_count) {
+    if ((in_dim_size == 1 && out_dim_size == 1) || in_count == out_count) {
+      if (in_shape[in_axis] != out_shape[out_axis]) {
+        nd_split_failed = false;
+        if (rank_axis == rank_mesh.size()) { rank_axis = 0; }
+      }
       MoveInAxis();
-    } else if (in_count > out_count) {
       MoveOutAxis();
-    } else {  // in_count == out_count
+    } else if (in_dim_size == 1 || in_count < out_count) {
       MoveInAxis();
+    } else if (out_dim_size == 1 || in_count > out_count) {
       MoveOutAxis();
-      nd_split_failed = false;
-      rank_axis = 0;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 
