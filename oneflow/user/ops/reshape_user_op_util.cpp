@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
@@ -175,16 +176,16 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 }
 
 Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
-    const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
+    const Shape& in_shape_, const Shape& out_shape_, const Shape& rank_mesh,
     std::vector<std::vector<std::pair<int, int>>>* nd_split_in2out_axis_list) {
-  CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
-      << Error::RuntimeError()
-      << "The dimension of input tensor must be greater than or equal to zero, "
-      << "but got " << in_shape.NumAxes();  // support 0D tensor
-  CHECK_GE_OR_RETURN(out_shape.NumAxes(), 0)
-      << Error::RuntimeError()
-      << "The dimension of output tensor must be greater than or equal to zero, "
-      << "but got " << out_shape.NumAxes();  // support 0D tensor
+  Shape in_shape = in_shape_;
+  Shape out_shape = out_shape_;
+  CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0)
+      << Error::RuntimeError() << "The dimension of input tensor must be greater than zero, "
+      << "but got " << in_shape.NumAxes();
+  CHECK_GT_OR_RETURN(out_shape.NumAxes(), 0)
+      << Error::RuntimeError() << "The dimension of output tensor must be greater than zero, "
+      << "but got " << out_shape.NumAxes();
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt())
       << Error::RuntimeError()
       << "The element number of input tensor must be equal to output tensor, "
@@ -196,58 +197,67 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
   int64_t out_dim_size = 0;
   int64_t in_count = 1;
   int64_t out_count = 1;
-  Shape _in_shape = in_shape;
-  Shape _out_shape = out_shape;
   DimVector in_dim_vec;
   DimVector out_dim_vec;
   HashMap<int, int> simplified_in_axis2origin_axis;
   HashMap<int, int> simplified_out_axis2origin_axis;
 
-  auto NextAxis = [](const Shape& shape, int& axis, int64_t& dim_size, int64_t& count) {
+  auto MoveAxis = [](const Shape& shape, int& axis, int64_t& dim_size, int64_t& count) {
     axis++;
     if (axis >= 0 && axis < shape.size()) {
       dim_size = shape[axis];
       count *= dim_size;
     }
   };
-  auto NextInAxis = [&]() { NextAxis(_in_shape, in_axis, in_dim_size, in_count); };
-  auto NextOutAxis = [&]() { NextAxis(_out_shape, out_axis, out_dim_size, out_count); };
-  NextInAxis();
-  NextOutAxis();
+  auto MoveInAxis = [&]() { MoveAxis(in_shape, in_axis, in_dim_size, in_count); };
+  auto MoveOutAxis = [&]() { MoveAxis(out_shape, out_axis, out_dim_size, out_count); };
+  MoveInAxis();
+  MoveOutAxis();
+  bool move_in_axis = true;
+  bool move_out_axis = true;
 
   // step 1: squeeze and prune equal axes between in_shape and out_shape
   while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
     if (in_dim_size == out_dim_size && in_count == out_count) {
-      NextInAxis();
-      NextOutAxis();
+      MoveInAxis();
+      MoveOutAxis();
       continue;
     }
-    if (in_count <= out_count && in_axis < in_shape.size()) {
-      if (in_dim_size != 1) {
-        simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
-        in_dim_vec.push_back(in_dim_size);
-      }
-      NextInAxis();
+    if (move_in_axis && in_axis >= 0 && in_axis < in_shape.size() && in_dim_size != 1) {
+      simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
+      in_dim_vec.push_back(in_dim_size);
     }
-    if (in_count >= out_count && out_axis < out_shape.size()) {
-      if (out_dim_size != 1) {
-        simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
-        out_dim_vec.push_back(out_dim_size);
-      }
-      NextOutAxis();
+    if (move_out_axis && out_axis >= 0 && out_axis < out_shape.size() && out_dim_size != 1) {
+      simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
+      out_dim_vec.push_back(out_dim_size);
+    }
+    if (in_count < out_count) {
+      MoveInAxis();
+      move_in_axis = true;
+      move_out_axis = false;
+    } else if (in_count > out_count) {
+      MoveOutAxis();
+      move_in_axis = false;
+      move_out_axis = true;
+    } else {  // in_count == out_count
+      MoveInAxis();
+      MoveOutAxis();
+      move_in_axis = true;
+      move_out_axis = true;
     }
   }
+  in_shape = Shape(in_dim_vec);
+  out_shape = Shape(out_dim_vec);
+  CHECK_EQ_OR_THROW(in_shape.elem_cnt(), out_shape.elem_cnt());
 
-  _in_shape = Shape(in_dim_vec);
-  _out_shape = Shape(out_dim_vec);
   in_axis = -1;
   out_axis = -1;
   in_dim_size = 0;
   out_dim_size = 0;
   in_count = 1;
   out_count = 1;
-  NextInAxis();
-  NextOutAxis();
+  MoveInAxis();
+  MoveOutAxis();
 
   int rank_axis = 0;
   bool nd_split_failed = false;
@@ -257,7 +267,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
   nd_split_out_axis.reserve(rank_mesh.size());
 
   // step 2: find contiguous splitable axes
-  while (in_axis < _in_shape.size() || out_axis < _out_shape.size()) {
+  while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
     if (!nd_split_failed) {
       while (rank_axis < rank_mesh.size() && in_dim_size != 1 && out_dim_size != 1) {
         int64_t rank_num = rank_mesh[rank_axis];
@@ -273,14 +283,6 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
         out_dim_size /= rank_num;
         rank_axis++;
       }
-      if (in_dim_size == 1 && in_axis < _in_shape.size()) {
-        NextInAxis();
-        continue;
-      }
-      if (out_dim_size == 1 && out_axis < _out_shape.size()) {
-        NextOutAxis();
-        continue;
-      }
       if (rank_axis == rank_mesh.size() && nd_split_in_axis.size() == rank_mesh.size()
           && nd_split_out_axis.size() == rank_mesh.size()) {
         nd_split_in2out_axis_list->emplace_back();
@@ -293,15 +295,23 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
         nd_split_in_axis.clear();
         nd_split_out_axis.clear();
       }
+      if (in_dim_size == 1 && in_axis < in_shape.size()) {
+        MoveInAxis();
+        continue;
+      }
+      if (out_dim_size == 1 && out_axis < out_shape.size()) {
+        MoveOutAxis();
+        continue;
+      }
     }
 
     if (in_count < out_count) {
-      NextInAxis();
+      MoveInAxis();
     } else if (in_count > out_count) {
-      NextOutAxis();
+      MoveOutAxis();
     } else {  // in_count == out_count
-      NextInAxis();
-      NextOutAxis();
+      MoveInAxis();
+      MoveOutAxis();
       nd_split_failed = false;
       rank_axis = 0;
     }
