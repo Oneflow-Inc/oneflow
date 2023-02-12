@@ -34,48 +34,15 @@ class OpKernel;
 
 namespace vm {
 
-inline int64_t unique_id() {
-  static size_t id = 0;
-  return id++;
-}
-
 class DtrOpCallInstructionPolicy;
 
 class OpCallInstructionPolicy final : public InstructionPolicy {
  public:
-  size_t id;
-  OpCallInstructionPolicy(const OpCallInstructionPolicy& other)
-      : id(unique_id()),
-        vm_stream_(other.vm_stream_),
-        call_ctx_(other.call_ctx_),
-        opkernel_(other.opkernel_),
-        user_opkernel_(other.user_opkernel_),
-        infer_tmp_size_fn_(other.infer_tmp_size_fn_),
-        need_temp_storage_(other.need_temp_storage_),
-        dev_vm_dep_object_consume_mode_(other.dev_vm_dep_object_consume_mode_),
-        input_dependences_(other.input_dependences_),
-        output_dependences_(other.output_dependences_) {
-  }
-  OpCallInstructionPolicy(OpCallInstructionPolicy&& other) noexcept
-      : id(unique_id()),
-        vm_stream_(other.vm_stream_),
-        call_ctx_(other.call_ctx_),
-        opkernel_(other.opkernel_),
-        user_opkernel_(other.user_opkernel_),
-        infer_tmp_size_fn_(other.infer_tmp_size_fn_),
-        need_temp_storage_(other.need_temp_storage_),
-        dev_vm_dep_object_consume_mode_(other.dev_vm_dep_object_consume_mode_),
-        input_dependences_(other.input_dependences_),
-        output_dependences_(other.output_dependences_) {
-    other.vm_stream_ = nullptr;
-    other.opkernel_ = nullptr;
-    other.user_opkernel_ = nullptr;
-    other.infer_tmp_size_fn_ = nullptr;
-
-  }
+  OpCallInstructionPolicy(const OpCallInstructionPolicy& other) = default;
+  OpCallInstructionPolicy(OpCallInstructionPolicy&& other) = default;
   OpCallInstructionPolicy& operator=(const OpCallInstructionPolicy& other) = delete;
   OpCallInstructionPolicy& operator=(OpCallInstructionPolicy&& other) = delete;
-  ~OpCallInstructionPolicy() override { }
+  ~OpCallInstructionPolicy() override = default;
 
   template<typename... Args>
   static Maybe<OpCallInstructionPolicy> New(Args&&... args) {
@@ -133,6 +100,7 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   std::string DebugName(const vm::Instruction& instruction) const override;
 
   explicit OpCallInstructionPolicy(const DtrOpCallInstructionPolicy& policy);
+
  private:
   OpCallInstructionPolicy(
       Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
@@ -167,7 +135,8 @@ class DtrOpCallInstructionPolicy {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
-  public:
+
+ public:
   explicit DtrOpCallInstructionPolicy(const OpCallInstructionPolicy& op)
       : vm_stream_(op.vm_stream()),
         dtr_call_ctx_(op.call_ctx()),

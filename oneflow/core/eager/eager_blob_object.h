@@ -149,6 +149,7 @@ class EagerBlobObject final : public user_op::Tensor,
 
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
+  // for rematerialization (i.e. Coop/DTR)
   std::shared_ptr<EagerBlobObject> input_of_view_op_;
 };
 

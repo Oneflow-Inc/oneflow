@@ -43,8 +43,11 @@ size_t AutoGradCaptureState::SaveTensorForBackward(const std::shared_ptr<Tensor>
     return offset;
   } else {
     size_t offset = saved_tensors_.size();
-    if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(CHECK_JUST(tensor->eager_blob_object())->tensor_storage())) {
-      rematable_storage->set_needed_by_backward();
+    if (tensor->is_local()) {
+      if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+              CHECK_JUST(tensor->eager_blob_object())->tensor_storage())) {
+        rematable_storage->set_needed_by_backward();
+      }
     }
     saved_tensors_.emplace_back(tensor);
     return offset;

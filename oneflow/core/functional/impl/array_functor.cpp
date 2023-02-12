@@ -1728,8 +1728,12 @@ class CopyToDeviceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
-    if (auto x_device = JUST(x->device()); x_device != device && x_device->with_remat()) {
-      std::dynamic_pointer_cast<vm::RematableTensorStorage>(JUST(x->eager_blob_object())->tensor_storage())->Remat();
+    if (x->is_local()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->with_remat()) {
+        std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(x->eager_blob_object())->tensor_storage())
+            ->Remat();
+      }
     }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);

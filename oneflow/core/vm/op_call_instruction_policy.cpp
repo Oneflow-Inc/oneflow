@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/vm/dtr_disjoint_set.h"
-#include "oneflow/core/vm/dtr_env.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
@@ -115,8 +115,6 @@ struct OpCallInstructionUtil final {
                 << ". Storage id: " << storage->id();
         OpCallInstructionPolicy tmp_op = storage->compute_op();
         JUST(Compute(&tmp_op, vm_stream, false, true));
-        // JUST(vm_stream->mut_stream_policy()->stream()->Sync());
-        // CHECK_OR_RETURN(x->tensor_storage()->is_in_memory());
       }
     }
     return Maybe<void>::Ok();
@@ -326,7 +324,7 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-    : id(-1),
+    : 
       vm_stream_(vm_stream),
       call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), std::move(inputs),
                 std::move(outputs), global_tensor_infer_result, op_interp_ctx,
@@ -345,12 +343,11 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {
-  id = unique_id();
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
 OpCallInstructionPolicy::OpCallInstructionPolicy(const DtrOpCallInstructionPolicy& policy)
-    : id(unique_id()),
+    : 
       vm_stream_(policy.vm_stream_),
       call_ctx_(policy.dtr_call_ctx_),
       opkernel_(policy.opkernel_),

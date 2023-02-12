@@ -21,7 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/eager/dtr_util.h"
-#include "oneflow/core/vm/dtr_env.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
@@ -678,11 +678,6 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   total_allocate_bytes_ += size;
   piece->is_free = false;
 
-  // if (oneflow::DTRDebugEnabled()) {
-  //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
-  //             << "MB, total allocate bytes: " << (total_allocate_bytes_ / 1024. / 1024.)
-  //             << std::endl;
-  // }
   return Maybe<void>::Ok();
 }
 
@@ -728,11 +723,6 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   InsertToFreeList(last_piece_insert_to_free_list);
   total_deallocate_bytes_ += size;
   CheckPieces();
-  // if (oneflow::DTRDebugEnabled()) {
-  //   std::cout << "id: " << id_ << "deallocate " << (size / 1024. / 1024.)
-  //             << "MB, total deallocate bytes: " << (total_deallocate_bytes_ / 1024. / 1024.)
-  //             << std::endl;
-  // }
 }
 
 size_t DtrEpAllocator::allocated_memory() {

@@ -55,19 +55,25 @@ Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
 Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
     : ProxyTensor<Parameter>(tensor) {
   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
-  if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
-          CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
-      rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager()) {
-    rematable_storage->set_eviction_disabled(true);
+  if (tensor->is_local() && tensor->is_eager()) {
+    if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
+        rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager()) {
+      rematable_storage->set_eviction_disabled(true);
+    }
   }
 }
 Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
-  auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
-      CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
-  bool enable_remat = rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager();
-  if (enable_remat) { rematable_storage->set_eviction_disabled(false); }
-  JUST(tensor_->set_data(other));
-  if (enable_remat) { rematable_storage->set_eviction_disabled(true); }
+  if (is_local() && is_eager()) {
+    auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+        CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
+    bool enable_remat = rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager();
+    if (enable_remat) { rematable_storage->set_eviction_disabled(false); }
+    JUST(tensor_->set_data(other));
+    if (enable_remat) { rematable_storage->set_eviction_disabled(true); }
+  } else {
+    JUST(tensor_->set_data(other));
+  }
   return Maybe<void>::Ok();
 }
 

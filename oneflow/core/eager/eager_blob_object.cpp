@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/tensor_meta.h"
-#include "oneflow/core/vm/op_call_instruction_policy.h"
 
 namespace oneflow {
 
