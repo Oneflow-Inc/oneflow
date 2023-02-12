@@ -75,7 +75,7 @@ void RematableTensorStorage::Evict(bool eager_eviction) {
 }
 
 void RematableTensorStorage::Release() {
-  CHECK(device_->with_remat());
+  CHECK(device_->rematable());
   if (is_eviction_disabled()) { return; }
   return Evict(true);
 }

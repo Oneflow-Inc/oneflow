@@ -40,12 +40,12 @@ void CheckDeviceType(const std::string& type) {
 
 }  // namespace
 
-Device::Device(const std::string& type, int64_t device_id, bool with_remat)
+Device::Device(const std::string& type, int64_t device_id, bool rematable)
     : type_(type),
       enum_type_(kInvalidDevice),
       device_id_(device_id),
-      with_remat_(with_remat),
-      hash_value_(Hash(type, device_id, with_remat)) {}
+      rematable_(rematable),
+      hash_value_(Hash(type, device_id, rematable)) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -59,14 +59,14 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id,
-                                               bool with_remat) {
+                                               bool rematable) {
   CHECK_GE_OR_RETURN(device_id, 0)
       << Error::InvalidValueError() << "Device ID should be non-negative";
   static thread_local HashMap<std::tuple<std::string, int, bool>, Symbol<Device>> map;
-  auto key = std::make_tuple(type, device_id, with_remat);
+  auto key = std::make_tuple(type, device_id, rematable);
   auto iter = map.find(key);
   if (iter == map.end()) {
-    Device device(type, device_id, with_remat);
+    Device device(type, device_id, rematable);
     JUST(device.Init());
     iter = map.emplace(key, SymbolOf(device)).first;
   }
@@ -85,10 +85,10 @@ Maybe<void> Device::Init() {
   static thread_local HashMap<std::string, Symbol<Device>> map;
   auto iter = map.find(device_str);
   if (iter == map.end()) {
-    auto [type, device_id, with_remat] = *JUST(ParseDeviceString(device_str));
+    auto [type, device_id, rematable] = *JUST(ParseDeviceString(device_str));
     CheckDeviceType(type);
     if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
-    Device device(type, device_id, with_remat);
+    Device device(type, device_id, rematable);
     JUST(device.Init());
     iter = map.emplace(device_str, SymbolOf(device)).first;
   }
@@ -101,7 +101,7 @@ std::string Device::ToRepr() const {
   ss << type_;
   ss << "', index=";
   ss << device_id_;
-  if (with_remat_) { ss << ", with_remat=True"; }
+  if (rematable_) { ss << ", rematable=True"; }
   ss << ")";
   return ss.str();
 }
@@ -115,7 +115,7 @@ std::string Device::ToString() const {
   std::stringstream ss;
   ss << type_;
   ss << ":" << device_id_;
-  if (with_remat_) { ss << "+remat"; }
+  if (rematable_) { ss << "+remat"; }
   return ss.str();
 }
 
@@ -162,19 +162,19 @@ decltype(Device::GetPlacement) Device::GetPlacement =
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
 Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(std::string device_str) {
-  bool with_remat = false;
+  bool rematable = false;
   if (device_str.size() > 6 && device_str.substr(device_str.size() - 6, 6) == "+remat") {
-    with_remat = true;
+    rematable = true;
     device_str = device_str.substr(0, device_str.size() - 6);
   }
   std::string::size_type pos = device_str.find(':');
   if (pos == std::string::npos) {
-    return std::make_tuple(device_str, -1, with_remat);
+    return std::make_tuple(device_str, -1, rematable);
   } else {
     std::string index_str = device_str.substr(pos + 1);
     CHECK_OR_RETURN(IsStrInt(index_str))
         << Error::InvalidValueError() << "Invalid device tag " << device_str;
-    return std::make_tuple(device_str.substr(0, pos), std::stoi(index_str), with_remat);
+    return std::make_tuple(device_str.substr(0, pos), std::stoi(index_str), rematable);
   }
 }
 

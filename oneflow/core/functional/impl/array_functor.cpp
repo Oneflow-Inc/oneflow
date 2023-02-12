@@ -1729,7 +1729,7 @@ class CopyToDeviceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
     if (x->is_local()) {
-      if (auto x_device = JUST(x->device()); x_device != device && x_device->with_remat()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->rematable()) {
         std::dynamic_pointer_cast<vm::RematableTensorStorage>(
             JUST(x->eager_blob_object())->tensor_storage())
             ->Remat();
