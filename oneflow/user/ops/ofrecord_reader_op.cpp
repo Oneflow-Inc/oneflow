@@ -47,8 +47,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> OFRecordReaderOp::GetNdSbpSignatureList(
-    user_op::GetNdSbpSignatureListContext* ctx) {
+/* static */ Maybe<void> OFRecordReaderOp::EnumerateNdSbpSignatures(
+    user_op::EnumerateNdSbpSignaturesContext* ctx) {
   NdSbpSignature nd_sbp_signature;
   SbpParallel split_sbp_parallel;
   split_sbp_parallel.mutable_split_parallel()->set_axis(0);

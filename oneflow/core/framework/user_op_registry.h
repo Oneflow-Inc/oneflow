@@ -41,7 +41,7 @@ class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceAndStreamInferContext;
 class ComputeComplexityFnContext;
-class GetNdSbpSignatureListContext;
+class EnumerateNdSbpSignaturesContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -63,8 +63,7 @@ using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTime
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
 // TODO: set up another context
-using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
-using EnumerateNdSbpSignaturesFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
+using EnumerateNdSbpSignaturesFn = std::function<Maybe<void>(EnumerateNdSbpSignaturesContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult()
@@ -94,7 +93,6 @@ struct OpRegistryResult {
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
   NdSbpInferFn nd_sbp_infer_fn;
   ComputeComplexityFn compute_complexity_fn;
-  GetNdSbpSignatureListFn get_nd_sbp_list_fn;
   EnumerateNdSbpSignaturesFn enumerate_nd_sbp_signatures_fn;
   Operator::DumpNdSbpSignatureForOpConfFn dump_nd_sbp_signature_for_op_conf_fn;
 };
@@ -144,7 +142,6 @@ class OpRegistry final {
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
-  OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
   OpRegistry& SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn);
   OpRegistry& SetDumpNdSbpSignatureForOpConfFn(Operator::DumpNdSbpSignatureForOpConfFn fn);
 

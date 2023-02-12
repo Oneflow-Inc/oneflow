@@ -1582,7 +1582,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, N
   let has_data_type_infer_fn = 1;
   let has_output_arg_modify_fn = 1;
   let has_nd_sbp_infer_fn = 1;
-  let has_get_nd_sbp_fn = 1;
+  let has_enumerate_nd_sbp_signatures_fn = 1;
   let has_compute_complexity_fn = 1;
 }
 
@@ -7637,7 +7637,7 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
-  let has_get_nd_sbp_fn = 1;
+  let has_enumerate_nd_sbp_signatures_fn = 1;
 }
 
 def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

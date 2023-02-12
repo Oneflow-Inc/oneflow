@@ -69,10 +69,6 @@ class UserOp final : public Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc,
       std::vector<NdSbpSignature>* nd_sbp_sig_list) const override;
-  Maybe<void> EnumerateNdSbpSignatures(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc,
-      std::vector<NdSbpSignature>* nd_sbp_sig_list) const override;
   Maybe<void> InferOpTimeShape(
       const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       std::shared_ptr<const Shape>* time_shape) const override;

@@ -31,7 +31,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ReshapeOp::EnumerateNdSbpSignatures(
-    user_op::GetNdSbpSignatureListContext* ctx) {
+    user_op::EnumerateNdSbpSignaturesContext* ctx) {
   const Shape& in_shape = ctx->BlobShape4InputArgNameAndIndex("in", 0);
   const Shape& shape = ctx->Attr<Shape>("shape");
   const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
