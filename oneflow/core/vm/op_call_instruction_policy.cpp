@@ -208,12 +208,14 @@ struct OpCallInstructionUtil final {
       outputs_support_remat = vm_stream->device()->with_remat();
     }
     VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
-    VLOG(1) << "remat_input: " << inputs_support_remat << ", remat_output: " << outputs_support_remat << std::endl;
+    VLOG(1) << "input_remat: " << inputs_support_remat
+            << ", output_remat: " << outputs_support_remat << std::endl;
     Pack pack(*op_call_instruction_policy);
     if (!inputs_support_remat && outputs_support_remat) {
-      for (auto& storage : pack.output_storages) { 
+      for (auto& storage : pack.output_storages) {
         VLOG(1) << "set storage " << storage->id() << " unevictable" << std::endl;
-        storage->set_eviction_disabled(true); }
+        storage->set_eviction_disabled(true);
+      }
     }
     if (inputs_support_remat) { JUST(RematInputs(pack, vm_stream, first, recompute)); }
     std::vector<bool> storage_is_initialized;
@@ -237,9 +239,11 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    if (inputs_support_remat) { JUST(EagerEvictRemattedTensors(pack, vm_stream, first, recompute)); }
-    JUST(UpdateRematInfo(pack, vm_stream, first, recompute, inputs_support_remat, outputs_support_remat,
-                         storage_is_initialized));
+    if (inputs_support_remat) {
+      JUST(EagerEvictRemattedTensors(pack, vm_stream, first, recompute));
+    }
+    JUST(UpdateRematInfo(pack, vm_stream, first, recompute, inputs_support_remat,
+                         outputs_support_remat, storage_is_initialized));
     return Maybe<void>::Ok();
   }
 
@@ -278,9 +282,9 @@ struct OpCallInstructionUtil final {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
         if (auto* dtr_allocator = dynamic_cast<vm::DtrEpAllocatorProxy*>(allocator)) {
-          // TODO: Allocate(void** ptr, size_t size, TensorStorage storage)
-          dtr_allocator->allocator->Mark(blob_object.get(),
-                                         static_cast<const char*>(blob_object->dptr()));
+          dtr_allocator->allocator->LinkStorageAndPtr(
+              dynamic_cast<RematableTensorStorage*>(blob_object->tensor_storage().get()),
+              static_cast<const char*>(blob_object->dptr()));
         }
       }
     }

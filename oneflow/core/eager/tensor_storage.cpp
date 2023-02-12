@@ -38,10 +38,6 @@ RematableTensorStorage::~RematableTensorStorage() {
   VLOG(1) << "delete storage " << id_;
 }
 
-void TensorStorage::set_device(Symbol<Device> device) {
-  device_ = device;
-}
-
 Symbol<Device> TensorStorage::device() const { return device_; }
 
 void RematableTensorStorage::LogEviction(bool eager_eviction) const {

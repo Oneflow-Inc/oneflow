@@ -81,9 +81,9 @@ DtrEpAllocator::offset_t DtrEpAllocator::get_offset(const char* mem_ptr) const {
   return mem_ptr - (char*)memory_;
 }
 
-void DtrEpAllocator::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
+void DtrEpAllocator::LinkStorageAndPtr(RematableTensorStorage* storage, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
-  piece->tensor = dynamic_cast<RematableTensorStorage*>(ebo->tensor_storage().get());
+  piece->tensor = storage;
   CHECK_NOTNULL(piece->tensor);
   if (dtr::debug_level() >= 1) {
     LOG(INFO) << "tensor " << piece->tensor->id() << " is allocated at " << get_offset(mem_ptr)

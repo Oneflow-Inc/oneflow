@@ -51,7 +51,6 @@ class TensorStorage {
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
   }
-  void set_device(Symbol<Device> device);
   Symbol<Device> device() const;
 
  protected:

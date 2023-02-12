@@ -40,7 +40,7 @@ class DtrEpAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  void Mark(EagerBlobObject* ebo, const char* mem_ptr);
+  void LinkStorageAndPtr(RematableTensorStorage* storage, const char* mem_ptr);
   void CheckPieces();
   void DisplayAllPieces();
   nlohmann::json DumpSearchFreeMemCost();
