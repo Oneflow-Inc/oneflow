@@ -36,11 +36,11 @@ struct ReshapeUserOpUtil {
   static Maybe<void> EnumerateNdSplitIn2OutAxis(
       const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
       std::vector<std::vector<std::pair<int, int>>>* in2out_axis);
-  static Maybe<void> EnumerateNdSbpSignatures(const std::vector<user_op::OpArg>& in_args,
-                                              const Shape& in_shape,
-                                              const std::vector<user_op::OpArg>& out_args,
-                                              const Shape& out_shape, const Shape& rank_mesh,
-                                              std::vector<NdSbpSignature>* nd_sbp_sig_list);
+  static Maybe<void> EnumerateNdSplitSignatures(const std::vector<user_op::OpArg>& in_args,
+                                                const Shape& in_shape,
+                                                const std::vector<user_op::OpArg>& out_args,
+                                                const Shape& out_shape, const Shape& rank_mesh,
+                                                std::vector<NdSbpSignature>* nd_sbp_sig_list);
 };
 }  // namespace oneflow
 

@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/ops/reshape_user_op_util.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/reshape_user_op_util.h"
 
 namespace oneflow {
 
@@ -33,11 +35,51 @@ namespace oneflow {
 /*static*/ Maybe<void> ReshapeOp::EnumerateNdSbpSignatures(
     user_op::EnumerateNdSbpSignaturesContext* ctx) {
   const Shape& in_shape = ctx->BlobShape4InputArgNameAndIndex("in", 0);
-  const Shape& shape = ctx->Attr<Shape>("shape");
-  const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
+  const Shape& shape_attr = ctx->Attr<Shape>("shape");
+  const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_attr));
+
   std::vector<NdSbpSignature> nd_sbp_sig_list;
-  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
-                                                   ctx->parallel_hierarchy(), &nd_sbp_sig_list));
+  HashMap<int32_t, SbpSignatureList> hierarchy_value2sbp_sig_list;
+  for (int32_t hierarchy_value : ctx->parallel_hierarchy()) {
+    if (hierarchy_value2sbp_sig_list.find(hierarchy_value) == hierarchy_value2sbp_sig_list.end()) {
+      auto& sbp_sig_list = hierarchy_value2sbp_sig_list[hierarchy_value];
+      user_op::UserOpSbpSignatureBuilder builder(&sbp_sig_list);
+      JUST(ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
+          in_shape, out_shape, {{"in", 0}}, {{"out", 0}}, hierarchy_value, &builder));
+      CHECK_GT_OR_RETURN(sbp_sig_list.sbp_signature_size(), 0)
+          << "reshape can't enumerate any SBP signatures with rank dim (" << hierarchy_value << ")";
+    }
+  }
+
+  int32_t sbp_dimension = ctx->parallel_hierarchy().NumAxes();
+  NdSbpSignature nd_sbp_sig;
+  SbpSignatureToNdSbpSignature(hierarchy_value2sbp_sig_list.begin()->second.sbp_signature(0),
+                               &nd_sbp_sig);
+  ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
+  // ND sbp signature list would be direct product of 1D sbp signatures
+  CHECK_OR_RETURN(nd_sbp_sig_list.empty());
+  DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, ctx->parallel_hierarchy(),
+                       hierarchy_value2sbp_sig_list, &nd_sbp_sig_list);
+
+  JUST(ReshapeUserOpUtil::EnumerateNdSplitSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
+                                                     ctx->parallel_hierarchy(), &nd_sbp_sig_list));
+
+  // Go down from the tail to the head, since we might drop the tail.
+  for (int32_t sbp_id = nd_sbp_sig_list.size() - 1; sbp_id >= 0; sbp_id--) {
+    auto& nd_sbp_sig = nd_sbp_sig_list[sbp_id];
+    const auto& out_nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find("out_0");
+    CHECK_OR_RETURN(out_nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
+        << "can't get sbp for out_0";
+    Shape out_logical_shape = out_shape;
+    // filter output only here
+    // filter input in Operator::FilterNdSbpSignatureListByLogicalShape
+    if (Storage4NdSbp(out_nd_sbp_it->second, out_logical_shape, ctx->parallel_hierarchy())
+        > GetValidMaxCopyCost()) {
+      // Remove the Nd SBP candidate
+      std::swap(nd_sbp_sig, nd_sbp_sig_list.back());
+      nd_sbp_sig_list.pop_back();
+    }
+  }
   for (auto& nd_sbp_sig : nd_sbp_sig_list) { ctx->AddNdSbpSignature(nd_sbp_sig); }
   return Maybe<void>::Ok();
 }

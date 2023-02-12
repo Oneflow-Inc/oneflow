@@ -312,7 +312,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitSignatures(
     const std::vector<user_op::OpArg>& in_args, const Shape& in_shape,
     const std::vector<user_op::OpArg>& out_args, const Shape& out_shape, const Shape& rank_mesh,
     std::vector<NdSbpSignature>* nd_sbp_sig_list) {
