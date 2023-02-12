@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
@@ -175,7 +174,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
     const Shape& in_shape_, const Shape& out_shape_, const Shape& rank_mesh,
     std::vector<std::vector<std::pair<int, int>>>* nd_split_in2out_axis_list) {
   Shape in_shape = in_shape_;
@@ -321,8 +320,8 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
   if (in_shape.elem_cnt() == 0) { return Maybe<void>::Ok(); }
   if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
   std::vector<std::vector<std::pair<int, int>>> nd_split_in2out_axis_list;
-  JUST(ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(in_shape, out_shape, rank_mesh,
-                                                         &nd_split_in2out_axis_list));
+  JUST(ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(in_shape, out_shape, rank_mesh,
+                                                     &nd_split_in2out_axis_list));
   for (const auto& nd_split_in2out_axis : nd_split_in2out_axis_list) {
     nd_sbp_sig_list->emplace_back();
     auto& nd_sbp_sig = nd_sbp_sig_list->back();

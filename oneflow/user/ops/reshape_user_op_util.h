@@ -33,7 +33,7 @@ struct ReshapeUserOpUtil {
                                                    const std::vector<user_op::OpArg>& out_args,
                                                    const int64_t hierarchy_value,
                                                    user_op::UserOpSbpSignatureBuilder* builder);
-  static Maybe<void> EnumerateNdSplitInAxis2OutAxis(
+  static Maybe<void> EnumerateNdSplitIn2OutAxis(
       const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
       std::vector<std::vector<std::pair<int, int>>>* in2out_axis);
   static Maybe<void> EnumerateNdSbpSignatures(const std::vector<user_op::OpArg>& in_args,

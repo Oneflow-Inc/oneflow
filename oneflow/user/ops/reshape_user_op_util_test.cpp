@@ -26,8 +26,8 @@ void TestEnumerateNdSplitInAxis2OutAxis(
     const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
     const std::vector<std::vector<std::pair<int, int>>>& expected_in2out_axis) {
   std::vector<std::vector<std::pair<int, int>>> actual_in2out_axis;
-  CHECK_JUST(ReshapeUserOpUtil::EnumerateNdSplitInAxis2OutAxis(in_shape, out_shape, rank_mesh,
-                                                               &actual_in2out_axis));
+  CHECK_JUST(ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(in_shape, out_shape, rank_mesh,
+                                                           &actual_in2out_axis));
   ASSERT_EQ(expected_in2out_axis.size(), actual_in2out_axis.size());
   for (size_t i = 0; i < expected_in2out_axis.size(); ++i) {
     const auto& exp_nd_split_axis = expected_in2out_axis[i];
@@ -42,7 +42,7 @@ void TestEnumerateNdSplitInAxis2OutAxis(
 
 }  // namespace
 
-TEST(ReshapeUserOpUtil, EnumerateNdSplitInAxis2OutAxis) {
+TEST(ReshapeUserOpUtil, EnumerateNdSplitIn2OutAxis) {
   // 2D-split
   TestEnumerateNdSplitInAxis2OutAxis({4}, {2, 2}, {2, 2}, {{{0, 0}, {0, 1}}});
   TestEnumerateNdSplitInAxis2OutAxis({12}, {2, 2, 3}, {2, 2}, {{{0, 0}, {0, 1}}});
