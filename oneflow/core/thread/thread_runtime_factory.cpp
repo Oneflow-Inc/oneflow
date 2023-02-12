@@ -41,11 +41,15 @@ Maybe<thread::RuntimeBase> RuntimeFactory::Create(RuntimeType type) {
 
   if (type == RuntimeType::kTbb) {
     if (!IsTbbEnabled()) { return Error::RuntimeError() << format_error_msg("OneTBB", "TBB"); }
+#ifdef WITH_TBB
     return CreateRuntime<thread::TbbRuntime>();
+#endif
   }
   if (type == RuntimeType::kOmp) {
     if (!IsOmpEnabled()) { return Error::RuntimeError() << format_error_msg("OpenMP", "OMP"); }
+#ifdef WITH_OMP
     return CreateRuntime<thread::OmpRuntime>();
+#endif
   }
   return CreateRuntime<thread::SeqRuntime>();
 }
