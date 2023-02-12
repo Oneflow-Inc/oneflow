@@ -20,7 +20,8 @@ TensorStorage::TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
       device_(device),
       non_pod_allocator_(std::make_unique<MemoryAllocator>()),
       producer_stream_(NullOpt),
-      last_used_stream_(NullOpt), is_allocated_in_vm_(is_allocated_in_vm) {}
+      last_used_stream_(NullOpt),
+      is_allocated_in_vm_(is_allocated_in_vm) {}
 
 RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
     : TensorStorage(true, device),
