@@ -13,19 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/nd_sbp_util.h"
 #ifdef WITH_CUDA
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
-#include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
-#include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
