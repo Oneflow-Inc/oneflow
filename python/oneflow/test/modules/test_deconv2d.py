@@ -890,7 +890,7 @@ class TestDeconv2d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim1=channels).to(device)
+        x = random_tensor(ndim=4, dim1=channels, dim2=random(5, 10), dim3=random(5, 10)).to(device)
         y = m(x)
         return y
 
@@ -912,7 +912,7 @@ class TestDeconv2d(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_tensor(
-            ndim=3, dim0=channels, dim1=random(5, 10), dim2=random(5, 10)
+            ndim=3, dim0=channels, dim1=random(5, 10), dim2=random(5, 10),
         ).to(device)
         y = m(x)
         return y
