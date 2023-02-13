@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_origin
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -45,8 +46,8 @@ class TestModule(flow.unittest.TestCase):
     def test_flow_tensor_matmul_with_random_int_data(test_case):
         x = np.random.randint(10, 21, size=5)
         y = np.random.randint(1, 14, size=(5, 4))
-        torch_x = torch.from_numpy(x).to(torch.int)
-        torch_y = torch.from_numpy(y).to(torch.int)
+        torch_x = torch_origin.from_numpy(x).to(torch_origin.int)
+        torch_y = torch_origin.from_numpy(y).to(torch_origin.int)
         torch_output_numpy = torch_x.matmul(torch_y).numpy()
         flow_x = flow.tensor(x).to(flow.int)
         flow_y = flow.tensor(y).to(flow.int)
