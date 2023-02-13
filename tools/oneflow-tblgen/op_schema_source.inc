@@ -76,6 +76,9 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.has_get_sbp_fn -%}
     .SetGetSbpFn(&{{opname}}::GetSbp)
 {%- endif -%}
+{%- if op.has_get_nd_sbp_fn -%}
+    .SetGetNdSbpSignatureListFn(&{{opname}}::GetNdSbpSignatureList)
+{%- endif -%}
 {%- if op.has_enumerate_nd_sbp_signatures_fn -%}
     .SetEnumerateNdSbpSignaturesFn(&{{opname}}::EnumerateNdSbpSignatures)
 {%- endif -%}
