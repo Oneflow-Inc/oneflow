@@ -49,8 +49,8 @@ namespace oneflow {
     CHECK_OR_RETURN(out_nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
         << "can't get sbp for out_0";
     Shape out_logical_shape = out_shape;
-    // filter output only here
-    // filter input in Operator::FilterNdSbpSignatureListByLogicalShape
+    // filter by output only be needed here
+    // filter by input will be done in Operator::FilterNdSbpSignatureListByLogicalShape
     if (Storage4NdSbp(out_nd_sbp_it->second, out_logical_shape, ctx->parallel_hierarchy())
         > GetValidMaxCopyCost()) {
       // Remove the Nd SBP candidate

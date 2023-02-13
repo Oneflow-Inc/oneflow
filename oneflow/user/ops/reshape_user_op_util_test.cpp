@@ -60,6 +60,8 @@ TEST(ReshapeUserOpUtil, EnumerateNdSplitIn2OutAxis) {
   // 3D-split
   TestEnumerateNdSplitInAxis2OutAxis({24}, {2, 4, 3}, {2, 2, 2}, {{{0, 0}, {0, 1}, {0, 1}}});
   TestEnumerateNdSplitInAxis2OutAxis({3, 24}, {3, 2, 2, 6}, {2, 2, 2}, {{{1, 1}, {1, 2}, {1, 3}}});
+  TestEnumerateNdSplitInAxis2OutAxis({4, 77, 3}, {2, 2, 77, 3}, {2, 2, 3},
+                                     {{{0, 0}, {0, 1}, {2, 3}}});
   TestEnumerateNdSplitInAxis2OutAxis({2, 3, 2, 5}, {12, 5}, {2, 3, 2}, {{{0, 0}, {1, 0}, {2, 0}}});
   TestEnumerateNdSplitInAxis2OutAxis({2, 1, 3, 2, 5}, {12, 1, 5}, {2, 3, 2},
                                      {{{0, 0}, {2, 0}, {3, 0}}});
@@ -73,6 +75,9 @@ TEST(ReshapeUserOpUtil, EnumerateNdSplitIn2OutAxis) {
                                      {{{0, 0}, {0, 2}, {1, 3}}});
   TestEnumerateNdSplitInAxis2OutAxis({6, 5, 4}, {2, 3, 5, 2, 2}, {2, 3, 2},
                                      {{{0, 0}, {0, 1}, {2, 3}}});
+  // 4D-split
+  TestEnumerateNdSplitInAxis2OutAxis({4, 77, 8}, {2, 2, 77, 2, 4}, {2, 2, 2, 2},
+                                     {{{0, 0}, {0, 1}, {2, 3}, {2, 4}}});
 }
 
 }  // namespace test
