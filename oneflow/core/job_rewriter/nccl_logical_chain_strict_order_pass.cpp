@@ -106,12 +106,20 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       std::string placement_key = GenParallelConfKey(node->parallel_desc().parallel_conf());
       if (time_shape_cnt == acc_num) {
         // fw/bw chain
-        placement2last_normal_node.emplace(placement_key, node);  // create or update
+        placement2last_normal_node[placement_key] = node;  // create or update
+        // placement2last_normal_node.emplace(placement_key, node);
+        LOG(INFO) << " ccdebuglog v2: update last normal op of placement: " << placement_key
+                  << " is " << node->op().op_name() << " now. "
+                  << " \n\n and placement2last_normal_node = "
+                  << placement2last_normal_node.at(placement_key)->op().op_name();
+
       } else {
         // acc chain
         if (placement2first_after_acc_node.find(placement_key)
             == placement2first_after_acc_node.end()) {
           CHECK(placement2first_after_acc_node.emplace(placement_key, node).second);
+          LOG(INFO) << " ccdebuglog v2: first after acc op of placement: " << placement_key
+                    << " is " << node->op().op_name() << " now. ";
         }
       }
     }
@@ -126,6 +134,9 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       const OpNode* first_after_acc_node = placement2first_after_acc_node.at(pair.first);
       const std::string& last_bw_op_name = last_bw_node->op().op_name();
       const std::string& first_after_acc_op_name = first_after_acc_node->op().op_name();
+
+      LOG(INFO) << " ccdebuglog v2: last normal op of placement: " << pair.first
+                << " is : " << last_bw_op_name;
 
       CHECK_OR_RETURN(!IsReachable(first_after_acc_op_name, last_bw_op_name))
           << Error::RuntimeError()
