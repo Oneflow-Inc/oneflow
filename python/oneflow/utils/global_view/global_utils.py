@@ -18,7 +18,7 @@ import pickle
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 
 
 def to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):

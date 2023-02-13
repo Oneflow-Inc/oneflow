@@ -114,8 +114,6 @@ static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unuse
 
 static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   HANDLE_ERRORS
-  CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
-      << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
   PyObjectPtr tuple(PyTuple_Pack(1, self));
   PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -335,6 +333,9 @@ DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1024,6 +1025,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -1097,10 +1101,13 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LT: return functional::less(NULL, tuple.get(), NULL);
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
-      if (self == Py_None || other == Py_None) return Py_False;
+      if (self == Py_None || other == Py_None) Py_RETURN_FALSE;
       return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
-    case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
+    case Py_NE: {
+      if (self == Py_None || other == Py_None) Py_RETURN_TRUE;
+      return functional::not_equal(NULL, tuple.get(), NULL);
+    }
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
     case Py_GE: return functional::greater_equal(NULL, tuple.get(), NULL);
   }
