@@ -17,13 +17,13 @@ limitations under the License.
 #include "oneflow/core/vm/ep_stream_policy.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/stream_type.h"
-#include "oneflow/core/vm/dtr_ep_allocator.h"
+#include "oneflow/core/vm/remat/allocator.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/vm/remat/util.h"
 
 namespace oneflow {
 namespace vm {

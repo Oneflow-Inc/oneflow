@@ -17,16 +17,19 @@ limitations under the License.
 #include <iterator>
 #include <vector>
 #include "nlohmann/json.hpp"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/profiler/util.h"
 
-#include "oneflow/core/common/env_var/dtr.h"
-#include "oneflow/core/eager/dtr_util.h"
-#include "oneflow/core/eager/dtr_util.h"
-#include "oneflow/core/vm/dtr_ep_allocator.h"
+#include "oneflow/core/common/env_var/remat.h"
+#include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/remat/allocator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/vm/remat/env.h"
+#include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
-#include "oneflow/core/vm/dtr_disjoint_set.h"
+#include "oneflow/core/vm/remat/disjoint_set.h"
 #include <iostream>
 
 namespace oneflow {
@@ -43,7 +46,7 @@ inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 static constexpr size_t kSmallPieceThreshold = 10 * 1024;  // 10 KB
 
 inline bool ShouldBeHeldBySmallPiece(size_t size) {
-  return EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && size <= kSmallPieceThreshold;
+  return EnvBool<ONEFLOW_REMAT_SMALL_PIECE>() && size <= kSmallPieceThreshold;
 }
 
 std::vector<size_t> GroupNumToIndexes(size_t group_num) {
@@ -65,7 +68,7 @@ DtrEpAllocator::DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& ba
       backend_(std::move(backend)),
       memory_size_(0),
       recycle_piece_list_(nullptr),
-      normal_group_num_(EnvInteger<ONEFLOW_DTR_GROUP_NUM>()),
+      normal_group_num_(EnvInteger<ONEFLOW_REMAT_GROUP_NUM>()),
       group_indexes_(GroupNumToIndexes(normal_group_num_)),
       cur_group_index_id_(normal_group_num_ > 1 ? 1 : 0),
       cur_group_index_id_high_cost_(0),
@@ -85,10 +88,8 @@ void DtrEpAllocator::LinkStorageAndPtr(RematableTensorStorage* storage, const ch
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = storage;
   CHECK_NOTNULL(piece->tensor);
-  if (dtr::debug_level() >= 1) {
-    LOG(INFO) << "tensor " << piece->tensor->id() << " is allocated at " << get_offset(mem_ptr)
-              << ", left: " << piece->is_left;
-  }
+  VLOG(1) << "tensor " << piece->tensor->id() << " is allocated at " << get_offset(mem_ptr)
+          << ", left: " << piece->is_left;
 }
 
 Maybe<bool> DtrEpAllocator::InSmallMemoryArea(void* ptr) {
@@ -363,11 +364,11 @@ size_t DtrEpAllocator::group_index(bool high) const {
 }
 
 void DtrEpAllocator::InitMemory() {
-  memory_size_ = dtr::memory_threshold();
+  memory_size_ = EnvInteger<ONEFLOW_REMAT_BUDGET_MB>() * 1024 * 1024;
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
   LOG(INFO) << "memory_: " << (void*)memory_ << ", size: " << memory_size_;
   const size_t small_piece_area_size =
-      EnvBool<ONEFLOW_DTR_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
+      EnvBool<ONEFLOW_REMAT_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
   const size_t normal_area_size = memory_size_ - small_piece_area_size;
   small_piece_area_ptr_ = memory_ + normal_area_size;
 
@@ -478,7 +479,7 @@ void DtrEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 
 Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t required_size,
                                                                     bool consider_neighbor) {
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
+  VLOG(2) << "required size: " << required_size;
   auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t {
     size_t size = it->second->size;
     if (it != begin) {
@@ -523,7 +524,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t requi
 }
 
 Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t required_size) {
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
+  VLOG(2) << "required size: " << required_size;
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -539,12 +540,10 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
     if (total_size < required_size) {
       auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
-        if (dtr::debug_level() >= 2) {
-          LOG(INFO) << "skip tensor: " << end_tensor << ", size: " << end_tensor->blob_bytes()
-                    << ", compute op " << end_tensor->compute_op_type_name()
-                    << ", num_pinned: " << end_tensor->num_pinned()
-                    << ", is_evictable: " << end_tensor->is_evictable();
-        }
+        VLOG(2) << "skip tensor: " << end_tensor << ", size: " << end_tensor->blob_bytes()
+                << ", compute op " << end_tensor->compute_op_type_name()
+                << ", num_pinned: " << end_tensor->num_pinned()
+                << ", is_evictable: " << end_tensor->is_evictable();
         end++;
         costs.push_back(0);
         end_i++;
@@ -558,12 +557,10 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
       auto cur_op_cost = get_cost(end_tensor);
       costs.push_back(cur_op_cost);
       cost_except_size += cur_op_cost;
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "move end, include op: "
-                  << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << end->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
-      }
+      VLOG(2) << "move end, include op: "
+              << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
+              << ", size: " << end->second->size << ", total_size: " << total_size
+              << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
       end++;
       end_i++;
     } else {
@@ -574,12 +571,10 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
       double cur_op_cost = 0;
       cur_op_cost = costs[start_i];
       cost_except_size -= cur_op_cost;
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "move start, exclude op: "
-                  << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << start->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
-      }
+      VLOG(2) << "move start, exclude op: "
+              << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
+              << ", size: " << start->second->size << ", total_size: " << total_size
+              << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
       start++;
       start_i++;
     }
@@ -588,7 +583,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
       min_cost = cost;
       min_start = start;
       min_end = end;
-      if (dtr::debug_level() >= 2) { LOG(INFO) << "record, min_cost: " << min_cost; }
+      VLOG(2) << "record, min_cost: " << min_cost;
     }
   }
   // CHECK(min_end != start);
@@ -598,7 +593,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
     Piece* piece = it->second;
     pieces_to_be_evicted.push_back(piece);
   }
-  if (dtr::is_enabled_and_debug()) {
+  if (IsInDebugMode()) {
     for (auto* piece : pieces_to_be_evicted) {
       LOG(INFO) << "release dptr: " << get_offset(piece->ptr) << ", size: " << piece->size
                 << ", cost: " << get_cost(piece->tensor) << ", compute op: "
@@ -619,7 +614,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
       piece->tensor->Evict(false);
     }
   }
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << evict_size; }
+  VLOG(2) << "evict size: " << evict_size;
 
   if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(JUST(FindPiece(required_size, true))); }
   return nullptr;
@@ -637,14 +632,14 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
 
   if (piece == nullptr) {
     if (first_time) {
-      if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) { DisplayAllPieces(); }
+      if (EnvBool<ONEFLOW_REMAT_DISPLAY_IN_FIRST_TIME>()) { DisplayAllPieces(); }
       first_time = false;
     }
     const auto started_at = profiler::GetTimeNow();
     const size_t evict_num1 = Singleton<dtr::Env>::Get()->forced_eviction_num();
-    if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTE>()) {
+    if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, true));
-    } else if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTR>()) {
+    } else if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, false));
     } else {
       piece = JUST(EvictAndFindPieceOnce(aligned_size));
@@ -652,7 +647,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
     const size_t evict_num2 = Singleton<dtr::Env>::Get()->forced_eviction_num();
     const auto duration = profiler::GetTimeNow() - started_at;
     search_free_mem_cost_.emplace_back(size, evict_num2 - evict_num1, duration);
-    if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
+    if (EnvBool<ONEFLOW_REMAT_RECORD_MEM_FRAG_RATE>()) {
       size_t free_mem = 0;
       for (const auto& pair : ptr2piece_) {
         Piece* piece = pair.second;
@@ -661,7 +656,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
           free_mem += piece->size;
         }
       }
-      dtr::append_memory_frag_info_and_get(free_mem, dtr::memory_threshold());
+      dtr::append_memory_frag_info_and_get(free_mem, memory_size_);
     }
   }
 
@@ -670,10 +665,8 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   CHECK_OR_RETURN(piece != nullptr) << "Error! : Out of memory when allocate size : " << size;
   CHECK_NOTNULL(piece->ptr);
   CHECK_OR_RETURN(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
-  if (dtr::is_enabled_and_debug()) {
-    LOG(INFO) << "allocate offset: " << get_offset(piece->ptr) << ", size: " << piece->size
-              << std::endl;
-  }
+  LOG(INFO) << "allocate offset: " << get_offset(piece->ptr) << ", size: " << piece->size
+            << std::endl;
   *mem_ptr = piece->ptr;
   total_allocate_bytes_ += size;
   piece->is_free = false;
@@ -740,4 +733,23 @@ nlohmann::json DtrEpAllocator::DumpSearchFreeMemCost() {
 }
 
 }  // namespace vm
+
+vm::DtrEpAllocator* dtr::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
+                                                           size_t device_index) {
+  auto key = std::make_pair(device_type, device_index);
+  auto it = allocators_.find(key);
+  if (it == allocators_.end()) {
+    auto ep_device =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+    auto ep_backend_allocator =
+        std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+    auto allocator = std::make_unique<vm::DtrEpAllocator>(ep::kMaxAlignmentRequirement,
+                                                          std::move(ep_backend_allocator));
+    allocators_.emplace(key, std::move(allocator));
+    return allocators_.at(key).get();
+  } else {
+    return it->second.get();
+  }
+}
+
 }  // namespace oneflow

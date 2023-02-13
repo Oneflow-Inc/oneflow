@@ -49,22 +49,22 @@ def assert_no_small_piece_optimization(f):
     @functools.wraps(f)
     def new_f(*args, **kwargs):
         assert (
-            os.getenv("ONEFLOW_DTR_SMALL_PIECE") is not None
-        ), "Please set ONEFLOW_DTR_SMALL_PIECE to False, 0 or OFF"
+            os.getenv("ONEFLOW_REMAT_SMALL_PIECE") is not None
+        ), "Please set ONEFLOW_REMAT_SMALL_PIECE to False, 0 or OFF"
         return f(*args, **kwargs)
 
     return new_f
 
 
 def only_fbip():
-    if os.getenv("ONEFLOW_DTR_COPY_ON_WRITE") is None:
+    if os.getenv("ONEFLOW_REMAT_COPY_ON_WRITE") is None:
         return lambda f: f
     else:
         return unittest.skip("")
 
 
 def only_copy_on_write():
-    if os.getenv("ONEFLOW_DTR_COPY_ON_WRITE") is not None:
+    if os.getenv("ONEFLOW_REMAT_COPY_ON_WRITE") is not None:
         return lambda f: f
     else:
         return unittest.skip("")
@@ -89,7 +89,7 @@ def memory_budget(budget_mb, device):
     def deco(f):
         @functools.wraps(f)
         def new_f(*args, **kwargs):
-            total_budget = int(os.environ['ONEFLOW_DTR_BUDGET_MB'])
+            total_budget = int(os.environ['ONEFLOW_REMAT_BUDGET_MB'])
             assert total_budget >= budget_mb, "Not enough memory budget"
             remat_device = device + "+remat"
             with generate_placeholder(total_budget - budget_mb, remat_device):
@@ -116,6 +116,7 @@ class TestDTR(flow.unittest.TestCase):
 
         self.assertEqual(allocated_memory('cpu'), 0)
         self.assertEqual(allocated_memory('cuda'), 0)
+        flow._oneflow_internal.dtr.clear_stats()
 
     def tearDown(self):
         super().tearDown()
@@ -193,8 +194,10 @@ class TestDTR(flow.unittest.TestCase):
         self.assertTrue(is_in_memory(x1))
         self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
         x2 = x1 + 2
+        self.assertEqual(allocated_memory(device), 8 * 1024 * 1024)
         # eager eviction
         del x1
+        self.assertEqual(allocated_memory(device), 4 * 1024 * 1024)
         self.assertTrue(is_in_memory(x2))
         x3 = x2 + 2
         self.assertTrue(is_in_memory(x2))
@@ -203,9 +206,12 @@ class TestDTR(flow.unittest.TestCase):
         x5 = x4 + 2
         self.assertFalse(is_in_memory(x2))
         self.assertTrue(is_in_memory(x3))
+        self.assertTrue(is_in_memory(x4))
         x6 = x5 + 2
         self.assertFalse(is_in_memory(x2))
-        self.assertFalse(is_in_memory(x3))
+        # the eviction of x2 increases the cost of x3, so x4 is evicted
+        self.assertTrue(is_in_memory(x3))
+        self.assertFalse(is_in_memory(x4))
 
         self.assertTrue(np.array_equal(x6.numpy(), np.ones(x6.shape) * 11))
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
@@ -228,9 +234,12 @@ class TestDTR(flow.unittest.TestCase):
         x5 = x4 + 2
         self.assertFalse(is_in_memory(x2))
         self.assertTrue(is_in_memory(x3))
+        self.assertTrue(is_in_memory(x4))
         x6 = x5 + 2
         self.assertFalse(is_in_memory(x2))
-        self.assertFalse(is_in_memory(x3))
+        # the eviction of x2 increases the cost of x3, so x4 is evicted
+        self.assertTrue(is_in_memory(x3))
+        self.assertFalse(is_in_memory(x4))
 
         self.assertTrue(np.array_equal(x6.numpy(), np.ones(x6.shape) * 11))
         self.assertTrue(np.array_equal(x3.numpy(), np.ones(x3.shape) * 5))
@@ -287,6 +296,18 @@ class TestDTR(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
+    @memory_budget(80, 'cpu')
+    def test_copy(self, device):
+        x1 = flow.ones(1)
+        x2 = x1.to(device)
+        self.assertTrue(x2.device.rematable)
+        x3 = x2.to(flow.int64)
+        self.assertTrue(x3.device.rematable)
+        x4 = x2 + 1
+        self.assertTrue(x4.device.rematable)
+
+    @flow.unittest.skip_unless_1n1d()
+    @assert_no_small_piece_optimization
     @memory_budget(80, 'cuda')
     def test_bn_and_backward(self, device):
         model = nn.Sequential(
@@ -319,7 +340,7 @@ class TestDTR(flow.unittest.TestCase):
 
     def _test_resnet18(self, optimizer_fn, ddp, expected_loss):
         flow.manual_seed(flow.env.get_rank())
-        device = 'cpu'
+        device = 'cpu+remat'
 
         model = flowvision.models.resnet18().to(device)
         if ddp:

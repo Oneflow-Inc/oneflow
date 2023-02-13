@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/vm/dtr_disjoint_set.h"
+#include "oneflow/core/vm/remat/disjoint_set.h"
 
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/eager/tensor_storage.h"
-#include "oneflow/core/vm/dtr_ep_allocator.h"
+#include "oneflow/core/vm/remat/allocator.h"
 
 namespace oneflow {
 

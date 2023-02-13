@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -49,3 +51,4 @@ class DisjointSet {
 
 }  // namespace dtr
 }  // namespace oneflow
+

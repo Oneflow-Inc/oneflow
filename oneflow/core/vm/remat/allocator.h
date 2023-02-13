@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_
 
 #include <cstdint>
-#include "oneflow/core/common/env_var/dtr.h"
+#include "oneflow/core/common/env_var/remat.h"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
@@ -155,6 +155,18 @@ class DtrEpAllocatorProxy final : public Allocator {
 };
 
 }  // namespace vm
+
+namespace dtr {
+class AllocatorManager {
+ public:
+  vm::DtrEpAllocator* CreateOrGetAllocator(DeviceType device_type, size_t device_index);
+
+ private:
+  std::unordered_map<std::pair<DeviceType, size_t>, std::unique_ptr<vm::DtrEpAllocator>>
+      allocators_;
+};
+
+}  // namespace dtr
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_

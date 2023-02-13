@@ -1,8 +1,9 @@
 #include "oneflow/core/eager/tensor_storage.h"
-#include "oneflow/core/common/env_var/dtr.h"
+#include "oneflow/core/common/env_var/remat.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
-#include "oneflow/core/vm/dtr_disjoint_set.h"
-#include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/vm/remat/disjoint_set.h"
+#include "oneflow/core/vm/remat/env.h"
+#include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
@@ -139,10 +140,10 @@ void RematableTensorStorage::Access() {
 Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
   const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
-  if (EnvBool<ONEFLOW_DTR_HEURISTIC_DTE>() || EnvBool<ONEFLOW_DTR_HEURISTIC_DTR>()) {
+  if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>() || EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
     size = override_size == 0 ? blob_bytes_ : override_size;
   }
-  return (EnvBool<ONEFLOW_DTR_NEIGHBOR>() ? approx_neighbor_cost() : compute_time_)
+  return (EnvBool<ONEFLOW_REMAT_NEIGHBOR>() ? approx_neighbor_cost() : compute_time_)
          / time_since_last_access / static_cast<double>(size);
 }
 

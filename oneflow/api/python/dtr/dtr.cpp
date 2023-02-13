@@ -15,13 +15,12 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/vm/remat/allocator.h"
+#include "oneflow/core/vm/remat/env.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/vm/dtr_ep_allocator.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/eager/tensor_storage.h"
-#include "oneflow/core/eager/dtr_util.h"
 
 namespace py = pybind11;
 
@@ -74,7 +73,7 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     JUST(rematable_storage(t))->clear_compute_op();
     return Maybe<void>::Ok();
   });
-  m.def("clear_time", []() { Singleton<dtr::Env>::Get()->clear_time(); });
+  m.def("clear_stats", []() { Singleton<dtr::Env>::Get()->clear_stats(); });
   m.def("forced_eviction_num", []() { return Singleton<dtr::Env>::Get()->forced_eviction_num(); });
   m.def("eager_eviction_num", []() { return Singleton<dtr::Env>::Get()->eager_eviction_num(); });
   m.def("recomputation_num", []() { return Singleton<dtr::Env>::Get()->recomputation_num(); });
