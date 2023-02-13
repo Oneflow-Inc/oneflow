@@ -48,7 +48,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t dim(int64_t index) const { return shape()->At(index); }
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
-  Maybe<Tensor> ref_tensor() const { return ref_tensor_; }
+  Maybe<Tensor> ref_tensor() const { return ref_tensor_.lock(); }
 
   virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
@@ -146,7 +146,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
  private:
   std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
   bool owns_pyobj_;
-  std::shared_ptr<Tensor> ref_tensor_;
+  std::weak_ptr<Tensor> ref_tensor_;
 };
 
 class StaticZerosTensor final : public Tensor {
