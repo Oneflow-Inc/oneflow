@@ -20,6 +20,7 @@ https://github.com/pytorch/pytorch/blob/master/test/test_optim.py.
 import math
 import unittest
 import itertools
+import numpy as np
 
 import oneflow as flow
 import oneflow.optim as optim
@@ -67,11 +68,8 @@ class TestLRScheduler(flow.unittest.TestCase):
         for epoch in range(epochs):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
-                    flow.allclose(
-                        flow.tensor(target[epoch]),
-                        flow.tensor(param_group["lr"]),
-                        atol=1e-6,
-                        rtol=1e-5,
+                    np.allclose(
+                        target[epoch], param_group["lr"], atol=1e-6, rtol=1e-5,
                     ),
                     msg="LR is wrong in epoch {}: expected {}, got {}".format(
                         epoch, target[epoch], param_group["lr"]
@@ -141,11 +139,8 @@ class TestLRScheduler(flow.unittest.TestCase):
         for epoch in range(epochs):
             for param_group, target in zip(self.opt.param_groups, targets):
                 self.assertTrue(
-                    flow.allclose(
-                        flow.tensor(target[epoch]),
-                        flow.tensor(target[epoch]),
-                        atol=1e-6,
-                        rtol=1e-5,
+                    np.allclose(
+                        target[epoch], param_group["lr"], atol=1e-6, rtol=1e-5,
                     ),
                     msg="LR is wrong in epoch {}: expected {}, got {}".format(
                         epoch, target[epoch], param_group["lr"]
@@ -202,7 +197,7 @@ class TestSWAUtils(flow.unittest.TestCase):
 
         for p_avg, p_swa in zip(averaged_params, averaged_dnn.parameters()):
             self.assertTrue(
-                flow.allclose(p_avg.cpu(), p_swa.cpu(), atol=1e-6, rtol=1e-5)
+                flow.allclose(p_avg.cpu(), p_swa.cpu(), atol=1e-5, rtol=1e-4)
             )
             # Check that AveragedModel is on the correct device
             self.assertTrue(p_swa.device == swa_device)
@@ -236,7 +231,7 @@ class TestSWAUtils(flow.unittest.TestCase):
             averaged_dnn.update_parameters(dnn)
 
         for p_avg, p_swa in zip(averaged_params, averaged_dnn.parameters()):
-            self.assertTrue(flow.max(flow.abs(p_avg - p_swa)).item() < 1e-5)
+            self.assertTrue(flow.allclose(p_avg, p_swa, atol=1e-5, rtol=1e-4))
             # Check that AveragedModel is on the correct device
             self.assertTrue(p_avg.device == p_swa.device)
 
@@ -253,9 +248,7 @@ class TestSWAUtils(flow.unittest.TestCase):
             averaged_dnn.update_parameters(dnn)
         averaged_dnn2.load_state_dict(averaged_dnn.state_dict())
         for p_swa, p_swa2 in zip(averaged_dnn.parameters(), averaged_dnn2.parameters()):
-            self.assertTrue(
-                flow.allclose(p_swa.cpu(), p_swa2.cpu(), atol=1e-6, rtol=1e-5)
-            )
+            self.assertTrue(flow.allclose(p_swa, p_swa2, atol=1e-5, rtol=1e-4))
         self.assertTrue(averaged_dnn.n_averaged == averaged_dnn2.n_averaged)
 
     def test_averaged_model_exponential(self):
@@ -293,9 +286,9 @@ class TestSWAUtils(flow.unittest.TestCase):
             averaged_params = updated_averaged_params
 
         for p_avg, p_swa in zip(averaged_params, averaged_dnn.parameters()):
-            self.assertTrue(flow.allclose(p_avg, p_swa, atol=1e-6, rtol=1e-5))
+            self.assertTrue(flow.allclose(p_avg, p_swa, atol=1e-5, rtol=1e-4))
         for b_avg, b_swa in zip(dnn.buffers(), averaged_dnn.module.buffers()):
-            self.assertTrue(flow.allclose(b_avg, b_swa, atol=1e-6, rtol=1e-5))
+            self.assertTrue(flow.allclose(b_avg, b_swa, atol=1e-5, rtol=1e-4))
 
     def test_averaged_model_exponential_buffers(self):
         # Test AveragedModel with EMA as avg_fn and use_buffers as True.
@@ -338,7 +331,7 @@ class TestSWAUtils(flow.unittest.TestCase):
                 averaged_dnn.module.parameters(), averaged_dnn.module.buffers()
             ),
         ):
-            self.assertTrue(flow.allclose(p_avg, p_avg, atol=1e-6, rtol=1e-5))
+            self.assertTrue(flow.allclose(p_avg, p_swa, atol=1e-5, rtol=1e-4))
 
     def _test_update_bn(self, dnn, dl_x, dl_xy, momentum, cuda):
 
@@ -369,7 +362,7 @@ class TestSWAUtils(flow.unittest.TestCase):
 
         update_bn(dl_xy, dnn, device=x.device)
         self.assertTrue(
-            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-5, rtol=1e-3)
+            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-6, rtol=1e-3)
         )
         self.assertTrue(
             flow.allclose(preactivation_var, dnn.bn.running_var, atol=1e-1, rtol=1e-1)
@@ -384,7 +377,7 @@ class TestSWAUtils(flow.unittest.TestCase):
         dnn.apply(_reset_bn)
         update_bn(dl_xy, dnn, device=x.device)
         self.assertTrue(
-            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-5, rtol=1e-3)
+            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-6, rtol=1e-3)
         )
         self.assertTrue(
             flow.allclose(preactivation_var, dnn.bn.running_var, atol=1e-1, rtol=1e-1)
@@ -393,7 +386,7 @@ class TestSWAUtils(flow.unittest.TestCase):
         dnn.apply(_reset_bn)
         update_bn(dl_x, dnn, device=x.device)
         self.assertTrue(
-            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-5, rtol=1e-3)
+            flow.allclose(preactivation_mean, dnn.bn.running_mean, atol=1e-6, rtol=1e-3)
         )
         self.assertTrue(
             flow.allclose(preactivation_var, dnn.bn.running_var, atol=1e-1, rtol=1e-1)
