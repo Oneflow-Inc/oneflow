@@ -41,6 +41,7 @@ def _test_bitwise_op(test_case, op):
     bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
     return op(op(x, y), bool_tensor)
 
+
 def _test_scalar_bitwise(test_case, op, inverse=False):
     # inverse=True for testing declarition Op(Scalar, Tensor)
     device = random_device()
@@ -83,7 +84,9 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
 
     @autotest(n=20, auto_backward=False)
     def test_scalar_bitwise_and(test_case):
-        return _test_scalar_bitwise(test_case, torch.bitwise_and, inverse=random_bool().value())
+        return _test_scalar_bitwise(
+            test_case, torch.bitwise_and, inverse=random_bool().value()
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -94,7 +97,9 @@ class TestBitwiseOrModule(flow.unittest.TestCase):
 
     @autotest(n=20, auto_backward=False)
     def test_scalar_bitwise_or(test_case):
-        return _test_scalar_bitwise(test_case, torch.bitwise_or, inverse=random_bool().value())
+        return _test_scalar_bitwise(
+            test_case, torch.bitwise_or, inverse=random_bool().value()
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -105,7 +110,9 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
 
     @autotest(n=20, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
-        return _test_scalar_bitwise(test_case, torch.bitwise_xor, inverse=random_bool().value())
+        return _test_scalar_bitwise(
+            test_case, torch.bitwise_xor, inverse=random_bool().value()
+        )
 
 
 if __name__ == "__main__":
