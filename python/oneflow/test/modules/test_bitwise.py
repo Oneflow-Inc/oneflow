@@ -43,7 +43,6 @@ def _test_bitwise_op(test_case, op):
 
 
 def _test_scalar_bitwise(test_case, op):
-    # inverse=True for testing declarition Op(Scalar, Tensor)
     device = random_device()
     dtype = random_dtype(["int", "bool", "unsigned"])
     x = (
@@ -63,7 +62,8 @@ def _test_scalar_bitwise(test_case, op):
     result = op(op(x, scalar), bool_scalar)
     return result
 
-
+# Bitwise ops only accept integral dtype,
+# so auto_backward isn't necessary
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseAndModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
