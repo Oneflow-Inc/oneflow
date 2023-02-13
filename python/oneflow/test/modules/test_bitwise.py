@@ -43,9 +43,8 @@ def _test_bitwise_op(test_case, op):
 
 
 def _test_scalar_bitwise(test_case, op):
-    # inverse=True for testing declarition Op(Scalar, Tensor)
     device = random_device()
-    dtype = random_dtype(["int", "bool", "unsigned"])
+    dtype = random_dtype(["index", "unsigned"])
     x = (
         random_tensor(
             ndim=4,
@@ -77,9 +76,31 @@ def _test_bitwise_shift_op(test_case, op):
     # So, use "index" instead of "int" in `random_dtype`
     x_dtype = random_dtype(["index", "unsigned"])
     y_dtype = random_dtype(["index", "unsigned"])
-    x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
-    y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
+    x = random_tensor(dtype=int, **dims_kwargs, high=10).to(device).to(x_dtype)
+    y = random_tensor(dtype=int, **dims_kwargs, high=10).to(device).to(y_dtype)
     return op(x, y)
+
+
+def _test_scalar_bitwise_shift_op(test_case, op):
+    device = random_device()
+    dtype = random_dtype(["int", "unsigned"])
+    x = (
+        random_tensor(
+            ndim=4,
+            dim0=random(low=4, high=8).to(int),
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+            dtype=int,
+            low=0,
+            high=5,
+        )
+        .to(device)
+        .to(dtype)
+    )
+    scalar = random(low=0, high=5).to(int)
+    result = [op(x, scalar), op(scalar, x)]
+    return result
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -121,9 +142,9 @@ class TestBitwiseLeftShiftModule(flow.unittest.TestCase):
     def test_bitwise_left_shift(test_case):
         return _test_bitwise_shift_op(test_case, torch.bitwise_left_shift)
 
-    # @autotest(n=10, auto_backward=False)
-    # def test_scalar_bitwise_xor(test_case):
-    #     return _test_scalar_bitwise(test_case, torch.bitwise_xor,)
+    @autotest(n=10, auto_backward=False)
+    def test_scalar_bitwise_left_shift(test_case):
+        return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_left_shift)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -131,6 +152,10 @@ class TestBitwiseRightShiftModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_bitwise_right_shift(test_case):
         return _test_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+
+    @autotest(n=10, auto_backward=False)
+    def test_scalar_bitwise_right_shift(test_case):
+        return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
 
 
 if __name__ == "__main__":

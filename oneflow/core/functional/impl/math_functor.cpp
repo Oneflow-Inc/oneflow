@@ -2444,6 +2444,61 @@ class ScalarBitwiseXor2Functor {
   }
 };
 
+class ScalarBitwiseShiftBaseFunctor {
+ public:
+  explicit ScalarBitwiseShiftBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
+  }
+  virtual ~ScalarBitwiseShiftBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype = x->dtype();
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("operand");
+    CHECK_OR_RETURN(scalar.IsIntegral()) << "Bitwise ops only support int dtype";
+    attrs.SetAllAttrs(scalar.As<int64_t>());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarBitwiseLeftShiftFunctor : public ScalarBitwiseShiftBaseFunctor {
+ public:
+  ScalarBitwiseLeftShiftFunctor()
+      : ScalarBitwiseShiftBaseFunctor(/*op_name=*/"scalar_bitwise_left_shift") {}
+};
+
+class ScalarReverseBitwiseLeftShiftFunctor : public ScalarBitwiseShiftBaseFunctor {
+ public:
+  ScalarReverseBitwiseLeftShiftFunctor()
+      : ScalarBitwiseShiftBaseFunctor(/*op_name=*/"scalar_reverse_bitwise_left_shift") {}
+
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarBitwiseShiftBaseFunctor::operator()(x, scalar);
+  }
+};
+
+class ScalarBitwiseRightShiftFunctor : public ScalarBitwiseShiftBaseFunctor {
+ public:
+  ScalarBitwiseRightShiftFunctor()
+      : ScalarBitwiseShiftBaseFunctor(/*op_name=*/"scalar_bitwise_right_shift") {}
+};
+
+class ScalarReverseBitwiseRightShiftFunctor : public ScalarBitwiseShiftBaseFunctor {
+ public:
+  ScalarReverseBitwiseRightShiftFunctor()
+      : ScalarBitwiseShiftBaseFunctor(/*op_name=*/"scalar_reverse_bitwise_right_shift") {}
+
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarBitwiseShiftBaseFunctor::operator()(x, scalar);
+  }
+};
+
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
@@ -4218,6 +4273,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarBitwiseAndFunctor, impl::ScalarBitwiseAnd2Functor>("ScalarBitwiseAnd");
   m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
+  m.add_functor<impl::ScalarBitwiseLeftShiftFunctor, impl::ScalarReverseBitwiseLeftShiftFunctor>(
+      "ScalarBitwiseLeftShift");
+  m.add_functor<impl::ScalarBitwiseRightShiftFunctor, impl::ScalarReverseBitwiseRightShiftFunctor>(
+      "ScalarBitwiseRightShift");
 };
 
 }  // namespace functional

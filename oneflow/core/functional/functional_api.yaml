@@ -210,8 +210,8 @@
   signature:
     [
       "Tensor (Tensor input, Tensor other) => BroadcastBitwiseLeftShift",
-      # "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
-      # "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseLeftShift",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseLeftShift",
     ]
   bind_python: true
 
@@ -219,8 +219,8 @@
   signature:
     [
       "Tensor (Tensor input, Tensor other) => BroadcastBitwiseRightShift",
-      # "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
-      # "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseRightShift",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseRightShift",
     ]
   bind_python: true
 

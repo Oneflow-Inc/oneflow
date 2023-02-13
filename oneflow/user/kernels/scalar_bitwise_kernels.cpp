@@ -77,6 +77,48 @@ REGISTER_UNARY_BITWISE_SCALAR_ELEMWISE_USER_KERNEL("scalar_bitwise_or",
                                                    ep::primitive::BinaryOp::kBitwiseOr);
 REGISTER_UNARY_BITWISE_SCALAR_ELEMWISE_USER_KERNEL("scalar_bitwise_xor",
                                                    ep::primitive::BinaryOp::kBitwiseXor);
+REGISTER_UNARY_BITWISE_SCALAR_ELEMWISE_USER_KERNEL("scalar_bitwise_left_shift",
+                                                   ep::primitive::BinaryOp::kBitwiseLeftShift);
+REGISTER_UNARY_BITWISE_SCALAR_ELEMWISE_USER_KERNEL("scalar_bitwise_right_shift",
+                                                   ep::primitive::BinaryOp::kBitwiseRightShift);
+
+template<ep::primitive::BinaryOp op>
+class ScalarReverseBitwiseKernel final : public user_op::OpKernel,
+                                         public user_op::CudaGraphSupport {
+ public:
+  ScalarReverseBitwiseKernel() = default;
+  ~ScalarReverseBitwiseKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Scalar scalar_operand = ctx->Attr<int64_t>("operand");
+
+    int64_t elem_cnt = out->shape_view().elem_cnt();
+    if (elem_cnt != 0) {
+      std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
+          NewBinaryPrimitive(ctx, op);
+      CHECK(primitive);
+      primitive->Launch(ctx->stream(), scalar_operand, in->shape_view().NumAxes(),
+                        in->shape_view().ptr(), in->dptr(), out->mut_dptr());
+    } else {
+      // For 0-d Tensor
+      return;
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_UNARY_BITWISE_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(kernel_name, binary_op) \
+  REGISTER_USER_KERNEL(kernel_name)                                                        \
+      .SetCreateFn<ScalarReverseBitwiseKernel<binary_op>>()                                \
+      .SetIsMatchedHob(PrimitiveExists<binary_op>());
+
+REGISTER_UNARY_BITWISE_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(
+    "scalar_reverse_bitwise_left_shift", ep::primitive::BinaryOp::kBitwiseLeftShift);
+REGISTER_UNARY_BITWISE_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(
+    "scalar_reverse_bitwise_right_shift", ep::primitive::BinaryOp::kBitwiseRightShift);
 
 }  // namespace
 
