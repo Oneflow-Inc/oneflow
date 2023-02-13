@@ -11,6 +11,6 @@ Pattern {
 
   rewrite mul with{
     let mulcast = OutlineMulCast(mul, cast);
-    replace mul with CopyUserOpAttrs(mul, mulcast);
+    replace mul with mulcast;
   };
 }

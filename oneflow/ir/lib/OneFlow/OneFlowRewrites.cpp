@@ -55,7 +55,6 @@ std::string getUniqName(llvm::StringRef name) {
 }
 
 static Operation* CopyUserOpAttrs(PatternRewriter& rewriter, Operation* src, Operation* dst) {
-  SmallString<16> tempBuffer;
   dst->setAttr(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
                OpTrait::IsOpConfCompatible<void>::getDeviceTag(src));
   dst->setAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
@@ -68,8 +67,7 @@ static Operation* CopyUserOpAttrs(PatternRewriter& rewriter, Operation* src, Ope
   }
   dst->setAttr(
       OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-      rewriter.getStringAttr(SanitizeIdentifier(
-          getUniqName(OpTrait::IsOpConfCompatible<void>::getOpName(src).str()), tempBuffer)));
+      rewriter.getStringAttr(getUniqName(OpTrait::IsOpConfCompatible<void>::getOpName(src).str())));
   return dst;
 }
 
@@ -332,11 +330,13 @@ static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Oper
   }
   auto cast_op = llvm::dyn_cast<CastOp>(cast);
   // TODO: extract a function to generate op name for jit op from ops being fused
+  SmallString<64> op_name_storage;
   auto op_name =
-      (mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-           .getValue()
-           .str()
-       + "-mlir-gen-" + std::to_string(uniqID + 1));
+      (cast_op.op_name() + "__FUSE__"
+       + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+             .getValue()
+             .str())
+          .toStringRef(op_name_storage);
   SmallString<16> tempBuffer;
   op_name = SanitizeIdentifier(op_name, tempBuffer);
   SmallVector<::mlir::Value, 2> operands;
