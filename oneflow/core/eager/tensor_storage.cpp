@@ -51,6 +51,12 @@ RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
 }
 
 RematableTensorStorage::~RematableTensorStorage() {
+  // We must call _Release before destruction or the release will be
+  // called in base class's destructor and causes segfault.
+  // Time order:
+  // 1. ~RematableTensorStorage destructs its members
+  // 2. ~TensorStorage, Allocator::Deallocate, which uses RematableTensorStorage members
+  _Release();
   if (compute_op_) { Singleton<remat::Env>::Get()->remove_compute_op(compute_op_.get()); }
   VLOG(1) << "delete storage " << id_;
 }
