@@ -30,7 +30,7 @@ class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceAndStreamInferContext;
 class ComputeComplexityFnContext;
-class EnumerateNdSbpSignaturesContext;
+class GetNdSbpSignatureListContext;
 }  // namespace user_op
 
 using GetInputArgModifier =
@@ -48,8 +48,11 @@ class {{opname}} : public OpDefinition<{{opname}}> {
   {% if op.has_get_sbp_fn -%}
   static Maybe<void> GetSbp(user_op::SbpContext* ctx);
   {% endif -%}
+  {% if op.has_get_nd_sbp_fn -%}
+  static Maybe<void> GetNdSbpSignatureList(user_op::GetNdSbpSignatureListContext* ctx);
+  {% endif -%}
   {% if op.has_enumerate_nd_sbp_signatures_fn -%}
-  static Maybe<void> EnumerateNdSbpSignatures(user_op::EnumerateNdSbpSignaturesContext* ctx);
+  static Maybe<void> EnumerateNdSbpSignatures(user_op::GetNdSbpSignatureListContext* ctx);
   {% endif -%}
   {% if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
   static Maybe<void> DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf);

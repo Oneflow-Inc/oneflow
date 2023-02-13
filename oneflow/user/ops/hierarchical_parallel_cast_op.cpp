@@ -50,8 +50,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> HierarchicalParallelCastOp::EnumerateNdSbpSignatures(
-    user_op::EnumerateNdSbpSignaturesContext* ctx) {
+/* static */ Maybe<void> HierarchicalParallelCastOp::GetNdSbpSignatureList(
+    user_op::GetNdSbpSignatureListContext* ctx) {
   const auto& conf = ctx->Attr<std::vector<std::string>>("nd_sbp");
   NdSbpSignature nd_sbp_signature;
   for (const std::string& sbp_str : conf) {

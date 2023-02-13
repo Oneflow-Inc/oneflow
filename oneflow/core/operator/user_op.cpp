@@ -621,18 +621,18 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
-class UserOpEnumerateNdSbpSignaturesContext : public user_op::EnumerateNdSbpSignaturesContext {
+class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureListContext {
  public:
-  UserOpEnumerateNdSbpSignaturesContext(
+  UserOpGetNdSbpSignatureListContext(
       const UserOp* op,
       std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list)
-      : user_op::EnumerateNdSbpSignaturesContext(user_op::UserOpConfWrapper(op->user_op_conf())),
+      : user_op::GetNdSbpSignatureListContext(user_op::UserOpConfWrapper(op->user_op_conf())),
         op_(op),
         logical_blob_desc4ibn_(std::move(LogicalBlobDesc4Ibn)),
         parallel_desc_(parallel_desc),
         nd_sbp_sig_list_(nd_sbp_sig_list) {}
-  ~UserOpEnumerateNdSbpSignaturesContext() override = default;
+  ~UserOpGetNdSbpSignatureListContext() override = default;
 
   void AddNdSbpSignature(NdSbpSignature& nd_sbp_sig) override {
     nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
@@ -992,12 +992,26 @@ Maybe<void> UserOp::InferNdSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> UserOp::EnumerateNdSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  if (val_->enumerate_nd_sbp_signatures_fn) {
+    NdSbpSignature empty_sbp_signature;
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+    return val_->enumerate_nd_sbp_signatures_fn(&user_op_get_nd_sbp_list_context);
+  } else {
+    JUST(Operator::EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> UserOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
   if (val_->enumerate_nd_sbp_signatures_fn) {
     NdSbpSignature empty_sbp_signature;
-    UserOpEnumerateNdSbpSignaturesContext user_op_get_nd_sbp_list_context(
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
         this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
     return val_->enumerate_nd_sbp_signatures_fn(&user_op_get_nd_sbp_list_context);
   } else {

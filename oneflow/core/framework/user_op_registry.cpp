@@ -213,6 +213,11 @@ OpRegistry& OpRegistry::SetComputeComplexityFn(ComputeComplexityFn compute_compl
   return *this;
 }
 
+OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_nd_sbp_list_fn) {
+  result_.get_nd_sbp_list_fn = std::move(get_nd_sbp_list_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn) {
   result_.enumerate_nd_sbp_signatures_fn = std::move(fn);
   return *this;

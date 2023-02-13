@@ -28,9 +28,9 @@ namespace user_op {
 
 class UserOpDefWrapper;
 
-class EnumerateNdSbpSignaturesContext {
+class GetNdSbpSignatureListContext {
  public:
-  virtual ~EnumerateNdSbpSignaturesContext() = default;
+  virtual ~GetNdSbpSignatureListContext() = default;
 
   virtual void AddNdSbpSignature(NdSbpSignature&) = 0;
   virtual const Shape& parallel_hierarchy() = 0;
@@ -44,7 +44,7 @@ class EnumerateNdSbpSignaturesContext {
   const UserOpConfWrapper& user_op_conf() const { return conf_; }
 
  protected:
-  explicit EnumerateNdSbpSignaturesContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
+  explicit GetNdSbpSignatureListContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
 
  private:
   UserOpConfWrapper conf_;
