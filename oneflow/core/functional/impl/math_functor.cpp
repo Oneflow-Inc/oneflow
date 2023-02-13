@@ -2377,6 +2377,73 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+class ScalarBitwiseBaseFunctor {
+ public:
+  explicit ScalarBitwiseBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
+  }
+  virtual ~ScalarBitwiseBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("operand");
+    CHECK_OR_RETURN(scalar.IsIntegral() || scalar.IsBool())
+        << "Bitwise ops only support int and bool dtype";
+    attrs.SetAllAttrs(scalar.As<int64_t>());
+    // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+    if (DType::priority_order[x->dtype()->data_type()]
+        == DType::priority_order[DType::Bool()->data_type()]) {
+      lowest_dtype = DType::Int64();
+    } else {
+      lowest_dtype = x->dtype();
+    }
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarBitwiseAndFunctor : public ScalarBitwiseBaseFunctor {
+ public:
+  ScalarBitwiseAndFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
+};
+
+class ScalarBitwiseAnd2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarBitwiseAnd(x, scalar);
+  }
+};
+
+class ScalarBitwiseOrFunctor : public ScalarBitwiseBaseFunctor {
+ public:
+  ScalarBitwiseOrFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_or") {}
+};
+
+class ScalarBitwiseOr2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarBitwiseOr(x, scalar);
+  }
+};
+
+class ScalarBitwiseXorFunctor : public ScalarBitwiseBaseFunctor {
+ public:
+  ScalarBitwiseXorFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_xor") {}
+};
+
+class ScalarBitwiseXor2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarBitwiseXor(x, scalar);
+  }
+};
+
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
@@ -4148,6 +4215,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedGetConvexDiagonalSquaredFunctor>("FusedGetConvexDiagonalSquared");
   m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
       "FusedGetConvexDiagonalSquaredGrad");
+  m.add_functor<impl::ScalarBitwiseAndFunctor, impl::ScalarBitwiseAnd2Functor>("ScalarBitwiseAnd");
+  m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
+  m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
 };
 
 }  // namespace functional

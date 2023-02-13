@@ -333,6 +333,9 @@ DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1022,6 +1025,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

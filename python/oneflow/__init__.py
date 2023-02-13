@@ -244,6 +244,7 @@ from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
 from oneflow._C import clone
+from oneflow._C import bitwise_and, bitwise_or, bitwise_xor
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -269,7 +270,6 @@ session_ctx.NewDefaultSession(_oneflow_global_unique_env)
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.RegisterStackGetter()
-oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
 class ExitHook:
