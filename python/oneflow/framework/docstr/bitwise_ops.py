@@ -24,6 +24,9 @@ add_docstr(
     The input tensor must be of integral or Boolean types.
     For bool tensors, it computes the logical AND.
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_and.html
+
     Args:
         input (oneflow.Tensor): The input Tensor
         other (oneflow.Tensor): The Tensor to compute bitwise AND with
@@ -43,7 +46,6 @@ add_docstr(
         >>> flow.bitwise_and(x, y)
         tensor([1, 2, 3], dtype=oneflow.int64)
 
-
     """,
 )
 
@@ -54,6 +56,9 @@ add_docstr(
     Computes the bitwise OR of input and other.
     The input tensor must be of integral or Boolean types.
     For bool tensors, it computes the logical OR.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_or.html
 
     Args:
         input (oneflow.Tensor): The input Tensor
@@ -84,6 +89,9 @@ add_docstr(
     Computes the bitwise XOR of input and other.
     The input tensor must be of integral or Boolean types.
     For bool tensors, it computes the logical XOR.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_xor.html
 
     Args:
         input (oneflow.Tensor): The input Tensor
