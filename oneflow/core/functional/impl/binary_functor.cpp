@@ -548,6 +548,22 @@ class BroadcastBitwiseXorFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastBitwiseLeftShiftFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseLeftShiftFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_left_shift").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseRightShiftFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseRightShiftFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_right_shift").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastLessFunctor : public BinaryFunctor {
  public:
   BroadcastLessFunctor() {
@@ -647,6 +663,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastBitwiseAndFunctor>("BroadcastBitwiseAnd");
   m.add_functor<impl::BroadcastBitwiseOrFunctor>("BroadcastBitwiseOr");
   m.add_functor<impl::BroadcastBitwiseXorFunctor>("BroadcastBitwiseXor");
+  m.add_functor<impl::BroadcastBitwiseLeftShiftFunctor>("BroadcastBitwiseLeftShift");
+  m.add_functor<impl::BroadcastBitwiseRightShiftFunctor>("BroadcastBitwiseRightShift");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");

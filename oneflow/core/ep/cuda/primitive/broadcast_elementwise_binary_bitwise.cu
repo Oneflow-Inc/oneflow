@@ -30,6 +30,9 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_BI
                                  BINARY_BITWISE_OP_SEQ,
                                  CUDA_PRIMITIVE_INT_TYPE_SEQ CUDA_PRIMITIVE_BOOL_TYPE_SEQ);
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_BITWISE_ENTRY,
+                                 BINARY_BITWISE_SHIFT_OP_SEQ, CUDA_PRIMITIVE_INT_TYPE_SEQ);
+
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep

@@ -327,6 +327,18 @@ struct BinaryFuncBitwiseXor final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseXor);
 
+template<typename T>
+struct BinaryFuncBitwiseLeftShift final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x << y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseLeftShift);
+
+template<typename T>
+struct BinaryFuncBitwiseRightShift final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x >> y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseRightShift);
+
 #if defined(__CUDACC__)
 template<>
 struct BinaryFuncAdd<half> final {

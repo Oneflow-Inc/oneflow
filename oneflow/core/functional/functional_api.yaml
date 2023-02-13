@@ -206,6 +206,24 @@
     ]
   bind_python: true
 
+- name: "bitwise_left_shift"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseLeftShift",
+      # "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
+      # "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+    ]
+  bind_python: true
+
+- name: "bitwise_right_shift"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseRightShift",
+      # "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
+      # "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+    ]
+  bind_python: true
+
 - name: "less"
   signature:
     [

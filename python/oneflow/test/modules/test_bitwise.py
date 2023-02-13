@@ -64,6 +64,24 @@ def _test_scalar_bitwise(test_case, op):
     return result
 
 
+def _test_bitwise_shift_op(test_case, op):
+    device = random_device()
+    dims_kwargs = {
+        "ndim": 4,
+        "dim0": random(low=4, high=8).to(int),
+        "dim1": random(low=4, high=8).to(int),
+        "dim2": random(low=4, high=8).to(int),
+        "dim3": random(low=4, high=8).to(int),
+    }
+    # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+    # So, use "index" instead of "int" in `random_dtype`
+    x_dtype = random_dtype(["index", "unsigned"])
+    y_dtype = random_dtype(["index", "unsigned"])
+    x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
+    y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
+    return op(x, y)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseAndModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
@@ -95,6 +113,24 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_xor,)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBitwiseLeftShiftModule(flow.unittest.TestCase):
+    @autotest(n=10, auto_backward=False)
+    def test_bitwise_left_shift(test_case):
+        return _test_bitwise_shift_op(test_case, torch.bitwise_left_shift)
+
+    # @autotest(n=10, auto_backward=False)
+    # def test_scalar_bitwise_xor(test_case):
+    #     return _test_scalar_bitwise(test_case, torch.bitwise_xor,)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBitwiseRightShiftModule(flow.unittest.TestCase):
+    @autotest(n=10, auto_backward=False)
+    def test_bitwise_right_shift(test_case):
+        return _test_bitwise_shift_op(test_case, torch.bitwise_right_shift)
 
 
 if __name__ == "__main__":
