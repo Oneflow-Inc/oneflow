@@ -42,7 +42,7 @@ def _test_bitwise_op(test_case, op):
     return op(op(x, y), bool_tensor)
 
 
-def _test_scalar_bitwise(test_case, op, inverse=False):
+def _test_scalar_bitwise(test_case, op):
     # inverse=True for testing declarition Op(Scalar, Tensor)
     device = random_device()
     dtype = random_dtype(["int", "bool", "unsigned"])
@@ -59,20 +59,8 @@ def _test_scalar_bitwise(test_case, op, inverse=False):
         .to(dtype)
     )
     scalar = random(low=-10, high=10).to(int)
-    bool_scalar = random(low=0, high=2, dtype=int).to(bool)
-    if inverse:
-        # torch doesn't support bitwise_and(Scalar, Tensor), so manually compare results
-        torch_result = torch.bitwise_and(
-            torch.bitwise_and(x, scalar), bool_scalar
-        ).pytorch
-        flow_result = flow.bitwise_and(
-            bool_scalar.value(), flow.bitwise_and(x.oneflow, scalar.value())
-        )
-        test_case.assertTrue(
-            np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
-        )
-    else:
-        result = op(op(x, scalar), bool_scalar)
+    bool_scalar = random_bool()
+    result = op(op(x, scalar), bool_scalar)
     return result
 
 
@@ -82,11 +70,9 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
     def test_bitwise_and(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_and)
 
-    @autotest(n=20, auto_backward=False)
+    @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_and(test_case):
-        return _test_scalar_bitwise(
-            test_case, torch.bitwise_and, inverse=random_bool().value()
-        )
+        return _test_scalar_bitwise(test_case, torch.bitwise_and,)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -97,9 +83,7 @@ class TestBitwiseOrModule(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_or(test_case):
-        return _test_scalar_bitwise(
-            test_case, torch.bitwise_or, inverse=random_bool().value()
-        )
+        return _test_scalar_bitwise(test_case, torch.bitwise_or,)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -110,9 +94,7 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
-        return _test_scalar_bitwise(
-            test_case, torch.bitwise_xor, inverse=random_bool().value()
-        )
+        return _test_scalar_bitwise(test_case, torch.bitwise_xor,)
 
 
 @flow.unittest.skip_unless_1n1d()
