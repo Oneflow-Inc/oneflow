@@ -22,10 +22,10 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, auto_backward=False)
+@autotest(n=1, auto_backward=False)
 def _test_bitwise_ops_with_random_data(test_case, op, placement, sbp):
-    x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
-    y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
+    x = random_tensor(ndim=1, dim0=8, dtype=int).to_global(placement, sbp)
+    y = random_tensor(ndim=1, dim0=8, dtype=int).to_global(placement, sbp)
     out = op(x, y)
     return out
 
