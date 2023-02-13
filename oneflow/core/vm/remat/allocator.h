@@ -31,11 +31,11 @@ namespace vm {
 class EagerBlobObject;
 class RematableTensorStorage;
 
-class DtrEpAllocator final : public Allocator {
+class RematEpAllocator final : public Allocator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DtrEpAllocator);
-  explicit DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
-  ~DtrEpAllocator() override;
+  OF_DISALLOW_COPY_AND_MOVE(RematEpAllocator);
+  explicit RematEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
+  ~RematEpAllocator() override;
   void DeviceReset() override;
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
@@ -142,7 +142,7 @@ class DtrEpAllocator final : public Allocator {
 
 class DtrEpAllocatorProxy final : public Allocator {
  public:
-  explicit DtrEpAllocatorProxy(vm::DtrEpAllocator* allocator) : allocator(allocator) {}
+  explicit DtrEpAllocatorProxy(vm::RematEpAllocator* allocator) : allocator(allocator) {}
   void DeviceReset() override { allocator->DeviceReset(); }
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override {
@@ -151,7 +151,7 @@ class DtrEpAllocatorProxy final : public Allocator {
   void Deallocate(char* mem_ptr, std::size_t size) override {
     allocator->Deallocate(mem_ptr, size);
   }
-  vm::DtrEpAllocator* const allocator;
+  vm::RematEpAllocator* const allocator;
 };
 
 }  // namespace vm
@@ -159,10 +159,10 @@ class DtrEpAllocatorProxy final : public Allocator {
 namespace remat {
 class AllocatorManager {
  public:
-  vm::DtrEpAllocator* CreateOrGetAllocator(DeviceType device_type, size_t device_index);
+  vm::RematEpAllocator* CreateOrGetAllocator(DeviceType device_type, size_t device_index);
 
  private:
-  std::unordered_map<std::pair<DeviceType, size_t>, std::unique_ptr<vm::DtrEpAllocator>>
+  std::unordered_map<std::pair<DeviceType, size_t>, std::unique_ptr<vm::RematEpAllocator>>
       allocators_;
 };
 

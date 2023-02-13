@@ -62,7 +62,7 @@ std::vector<size_t> GroupNumToIndexes(size_t group_num) {
 
 }  // namespace
 
-DtrEpAllocator::DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
+RematEpAllocator::RematEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
     : Allocator(),
       alignment_(alignment),
       backend_(std::move(backend)),
@@ -76,15 +76,15 @@ DtrEpAllocator::DtrEpAllocator(size_t alignment, std::unique_ptr<Allocator>&& ba
   free_pieces_overlapping_with_group_.resize(normal_group_num_ + 1);
 }
 
-DtrEpAllocator::~DtrEpAllocator() {
+RematEpAllocator::~RematEpAllocator() {
   if (memory_ != nullptr) { backend_->Deallocate(static_cast<char*>(memory_), memory_size_); }
 }
 
-DtrEpAllocator::offset_t DtrEpAllocator::get_offset(const char* mem_ptr) const {
+RematEpAllocator::offset_t RematEpAllocator::get_offset(const char* mem_ptr) const {
   return mem_ptr - (char*)memory_;
 }
 
-void DtrEpAllocator::LinkStorageAndPtr(RematableTensorStorage* storage, const char* mem_ptr) {
+void RematEpAllocator::LinkStorageAndPtr(RematableTensorStorage* storage, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = storage;
   CHECK_NOTNULL(piece->tensor);
@@ -92,7 +92,7 @@ void DtrEpAllocator::LinkStorageAndPtr(RematableTensorStorage* storage, const ch
           << ", left: " << piece->is_left;
 }
 
-Maybe<bool> DtrEpAllocator::InSmallMemoryArea(void* ptr) {
+Maybe<bool> RematEpAllocator::InSmallMemoryArea(void* ptr) {
   CHECK_NOTNULL_OR_RETURN(small_piece_area_ptr_);
   CHECK_GE_OR_RETURN(ptr, memory_);
   CHECK_LT_OR_RETURN(ptr, (char*)memory_ + memory_size_);
@@ -100,7 +100,7 @@ Maybe<bool> DtrEpAllocator::InSmallMemoryArea(void* ptr) {
   return std::greater_equal<>{}(ptr, small_piece_area_ptr_);
 }
 
-DtrEpAllocator::Piece* DtrEpAllocator::AllocatePiece() {
+RematEpAllocator::Piece* RematEpAllocator::AllocatePiece() {
   if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
@@ -111,7 +111,7 @@ DtrEpAllocator::Piece* DtrEpAllocator::AllocatePiece() {
   }
 }
 
-void DtrEpAllocator::DeallocatePiece(Piece* piece) {
+void RematEpAllocator::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
   CHECK(piece->is_free);
@@ -121,13 +121,13 @@ void DtrEpAllocator::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-void DtrEpAllocator::InsertPiece2PtrMap(Piece* piece) {
+void RematEpAllocator::InsertPiece2PtrMap(Piece* piece) {
   VLOG(2) << "insert piece, offset " << get_offset(piece->ptr);
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
 
-void DtrEpAllocator::ErasePieceFromPtrMap(Piece* piece) {
+void RematEpAllocator::ErasePieceFromPtrMap(Piece* piece) {
   VLOG(2) << "erase piece, offset " << get_offset(piece->ptr);
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
@@ -151,7 +151,7 @@ double get_cost(const vm::RematableTensorStorage* storage, size_t size) {
   return cost;
 }
 
-void DtrEpAllocator::CheckPieces() {
+void RematEpAllocator::CheckPieces() {
   auto it = ptr2piece_.cbegin();
   for (int i = 0; i < ptr2piece_.size(); ++i) {
     Piece* piece = it->second;
@@ -175,7 +175,7 @@ void DtrEpAllocator::CheckPieces() {
   }
 }
 
-void DtrEpAllocator::DisplayAllPieces() {
+void RematEpAllocator::DisplayAllPieces() {
   std::cout << "ops: " << Singleton<remat::Env>::Get()->ops.size() << std::endl;
   for (const auto& pair : ptr2piece_) {
     Piece* piece = pair.second;
@@ -193,7 +193,7 @@ void DtrEpAllocator::DisplayAllPieces() {
   }
 }
 
-void DtrEpAllocator::Display() {
+void RematEpAllocator::Display() {
   double total_free_piece_bytes = 0.;
   for (const auto& free_list : free_pieces_overlapping_with_group_) {
     for (auto it = free_list.begin(); it != free_list.end(); ++it) {
@@ -213,7 +213,7 @@ void DtrEpAllocator::Display() {
 
 // 开启了 left-right 之后，才能开启 op guided
 
-DtrEpAllocator::offset_t DtrEpAllocator::FindProperPositionInGroup(Piece* piece, size_t group_idx,
+RematEpAllocator::offset_t RematEpAllocator::FindProperPositionInGroup(Piece* piece, size_t group_idx,
                                                                    size_t request_size) const {
   const offset_t grp_left_bound = group_boundaries_[group_idx].first;
   const offset_t grp_right_bound = group_boundaries_[group_idx].second;
@@ -250,7 +250,7 @@ DtrEpAllocator::offset_t DtrEpAllocator::FindProperPositionInGroup(Piece* piece,
   return SIZE_MAX;
 }
 
-void DtrEpAllocator::InsertToFreeList(Piece* piece) {
+void RematEpAllocator::InsertToFreeList(Piece* piece) {
   const offset_t piece_left = get_offset(piece->ptr);
   const offset_t piece_right = piece_left + piece->size;
   VLOG(3) << "piece_left: " << piece_left << ", right: " << piece_right << std::endl;
@@ -266,7 +266,7 @@ void DtrEpAllocator::InsertToFreeList(Piece* piece) {
   }
 }
 
-void DtrEpAllocator::EraseFromFreeList(Piece* piece) {
+void RematEpAllocator::EraseFromFreeList(Piece* piece) {
   VLOG(3) << "erase " << get_offset(piece->ptr);
   // NOTE: very strange bug:
   // std::map::erase(Key) returns 2 instead of 0 or 1, which conflicts with documentation.
@@ -280,7 +280,7 @@ void DtrEpAllocator::EraseFromFreeList(Piece* piece) {
   }
 }
 
-auto DtrEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size)
+auto RematEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size)
     -> Piece* {
   auto SplitPiece = [this](Piece* piece, offset_t offset_in_piece) -> Piece* {
     // offset_in_piece must be less (not equal) than piece->size so that
@@ -335,7 +335,7 @@ auto DtrEpAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piec
   return piece2;
 }
 
-size_t DtrEpAllocator::iterate_group_index(bool high) const {
+size_t RematEpAllocator::iterate_group_index(bool high) const {
   if (normal_group_num_ == 1) { return 0; }
   auto is_high_group = [](size_t idx) -> bool { return (idx / 2) % 2 == (idx % 2); };
   if (high) {
@@ -355,7 +355,7 @@ size_t DtrEpAllocator::iterate_group_index(bool high) const {
   }
 }
 
-size_t DtrEpAllocator::group_index(bool high) const {
+size_t RematEpAllocator::group_index(bool high) const {
   if (high) {
     return group_indexes_[cur_group_index_id_high_cost_];
   } else {
@@ -363,7 +363,7 @@ size_t DtrEpAllocator::group_index(bool high) const {
   }
 }
 
-void DtrEpAllocator::InitMemory() {
+void RematEpAllocator::InitMemory() {
   memory_size_ = EnvInteger<ONEFLOW_REMAT_BUDGET_MB>() * 1024 * 1024;
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
   LOG(INFO) << "memory_: " << (void*)memory_ << ", size: " << memory_size_;
@@ -405,7 +405,7 @@ void DtrEpAllocator::InitMemory() {
   InsertPiece2PtrMap(piece);
 }
 
-Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
+Maybe<RematEpAllocator::Piece*> RematEpAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) { InitMemory(); }
@@ -463,7 +463,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
   return nullptr;
 }
 
-void DtrEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
+void RematEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   CHECK(lhs->is_free);
   CHECK(rhs->is_free);
   CHECK(lhs->next == rhs);
@@ -477,7 +477,7 @@ void DtrEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t required_size,
+Maybe<RematEpAllocator::Piece*> RematEpAllocator::EvictAndFindPieceLoop(size_t required_size,
                                                                     bool consider_neighbor) {
   VLOG(2) << "required size: " << required_size;
   auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t {
@@ -523,7 +523,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceLoop(size_t requi
   }
 }
 
-Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t required_size) {
+Maybe<RematEpAllocator::Piece*> RematEpAllocator::EvictAndFindPieceOnce(size_t required_size) {
   VLOG(2) << "required size: " << required_size;
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
@@ -620,7 +620,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::EvictAndFindPieceOnce(size_t requi
   return nullptr;
 }
 
-Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> RematEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
     return Maybe<void>::Ok();
@@ -674,7 +674,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
   return Maybe<void>::Ok();
 }
 
-void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+void RematEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
   ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
 
@@ -718,23 +718,23 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CheckPieces();
 }
 
-size_t DtrEpAllocator::allocated_memory() {
+size_t RematEpAllocator::allocated_memory() {
   CHECK_GE(total_allocate_bytes_, total_deallocate_bytes_);
   return total_allocate_bytes_ - total_deallocate_bytes_;
 }
 
-void DtrEpAllocator::DeviceReset() {
+void RematEpAllocator::DeviceReset() {
   ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
   backend_->DeviceReset();
 }
 
-nlohmann::json DtrEpAllocator::DumpSearchFreeMemCost() {
+nlohmann::json RematEpAllocator::DumpSearchFreeMemCost() {
   return {{"overhead", search_free_mem_cost_}};
 }
 
 }  // namespace vm
 
-vm::DtrEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
+vm::RematEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
                                                            size_t device_index) {
   auto key = std::make_pair(device_type, device_index);
   auto it = allocators_.find(key);
@@ -743,7 +743,7 @@ vm::DtrEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType dev
         Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
     auto ep_backend_allocator =
         std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-    auto allocator = std::make_unique<vm::DtrEpAllocator>(ep::kMaxAlignmentRequirement,
+    auto allocator = std::make_unique<vm::RematEpAllocator>(ep::kMaxAlignmentRequirement,
                                                           std::move(ep_backend_allocator));
     allocators_.emplace(key, std::move(allocator));
     return allocators_.at(key).get();
