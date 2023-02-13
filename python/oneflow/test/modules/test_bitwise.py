@@ -62,6 +62,7 @@ def _test_scalar_bitwise(test_case, op):
     result = op(op(x, scalar), bool_scalar)
     return result
 
+
 # Bitwise ops only accept integral dtype,
 # so auto_backward isn't necessary
 @flow.unittest.skip_unless_1n1d()
