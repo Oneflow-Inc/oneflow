@@ -251,7 +251,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
   int64_t root = JUST(broadcast_parallel_desc->MachineId4ParallelId(0));
-  return Broadcast(tensor, root, broadcast_parallel_desc, true);
+  return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta) {
