@@ -92,7 +92,7 @@ class TestBitwiseOrModule(flow.unittest.TestCase):
     def test_bitwise_or(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_or)
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=20, auto_backward=False)
     def test_scalar_bitwise_or(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_or, inverse=random_bool().value())
 
@@ -103,7 +103,7 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
     def test_bitwise_xor(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_xor)
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=20, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_xor, inverse=random_bool().value())
 
