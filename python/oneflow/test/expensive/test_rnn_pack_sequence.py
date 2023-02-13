@@ -325,6 +325,7 @@ def _test_gru_pack_sequence(test_case, device):
         flow_np = flow_params[i].grad.cpu().numpy()
         test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
 
+
 @unittest.skip(
     "When upgrade PyTorch 1.13, rnn_pack_sequence ci test throw Could not load library libcudnn_adv_infer.so.8, so skip it temporarily"
 )
