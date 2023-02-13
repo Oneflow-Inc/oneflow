@@ -2873,7 +2873,8 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let input = (ins
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value
+    OneFlow_Tensor:$value,
+    Optional<OneFlow_Tensor>:$attn_bias
   );
   let output = (outs
     OneFlow_Tensor:$out
