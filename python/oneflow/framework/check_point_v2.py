@@ -33,7 +33,7 @@ import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
 from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 import pickle
 from oneflow.nn.graph import GraphTensor
 
