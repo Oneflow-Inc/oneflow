@@ -339,9 +339,8 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
 
   // Decide which node should run first
   InitDecideParameters(sat, &decide_parameters);
-  // TODO: revert it
-  std::cout << "Straightening order in sbp graph: " << std::endl;
-  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << std::endl; }
+  VLOG(3) << "Straightening order in sbp graph: ";
+  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 }
 
 void StraightenOpNodes(const OpGraph& op_graph,
@@ -388,7 +387,6 @@ void StraightenOpNodes(const OpGraph& op_graph,
 
 }  // anonymous namespace
 
-// TODO: Use straighten order
 // Use two function
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream) {
   // Generate topological data structure for each sbp node

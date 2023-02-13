@@ -49,8 +49,7 @@ Maybe<void> StraightenOpGraphPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   // Have some conflict with grad acc, move the straighten into the logical chain pass.
   // But if the logical chain pass is not executed, we need to do the straighten here.
   if (EnableLogicalChain()) { return Maybe<void>::Ok(); }
-  // TODO: use VLOG(3) here
-  std::cout << "Straighten op graph is working!" << std::endl;
+  VLOG(3) << "Straighten op graph is working!";
   std::vector<const OpNode*> ordered_op_nodes;
   auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
 
