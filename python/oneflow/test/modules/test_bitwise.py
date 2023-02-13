@@ -23,70 +23,43 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestBitwiseAndModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
-    def test_bitwise_and(test_case):
-        device = random_device()
-        dims_kwargs = {
-            "ndim": 4,
-            "dim0": random(low=4, high=8).to(int),
-            "dim1": random(low=4, high=8).to(int),
-            "dim2": random(low=4, high=8).to(int),
-            "dim3": random(low=4, high=8).to(int),
-        }
-        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
-        # So, use "index" instead of "int" in `random_dtype`
-        x_dtype = random_dtype(["index", "bool", "unsigned"])
-        y_dtype = random_dtype(["index", "bool", "unsigned"])
-        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
-        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
-        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
-        return torch.bitwise_and(torch.bitwise_and(x, y), bool_tensor)
+def _test_bitwise_op(test_case, op):
+    device = random_device()
+    dims_kwargs = {
+        "ndim": 4,
+        "dim0": random(low=4, high=8).to(int),
+        "dim1": random(low=4, high=8).to(int),
+        "dim2": random(low=4, high=8).to(int),
+        "dim3": random(low=4, high=8).to(int),
+    }
+    # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+    # So, use "index" instead of "int" in `random_dtype`
+    x_dtype = random_dtype(["index", "bool", "unsigned"])
+    y_dtype = random_dtype(["index", "bool", "unsigned"])
+    x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
+    y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
+    bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
+    return op(op(x, y), bool_tensor)
 
-    @autotest(n=10, auto_backward=False)
-    def test_scalar_bitwise_and(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
+def _test_scalar_bitwise(test_case, op, inverse=False):
+    # inverse=True for testing declarition Op(Scalar, Tensor)
+    device = random_device()
+    dtype = random_dtype(["int", "bool", "unsigned"])
+    x = (
+        random_tensor(
+            ndim=4,
+            dim0=random(low=4, high=8).to(int),
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+            dtype=int,
         )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
-        # torch doesn't support bitwise_and(Scalar, Tensor)
-        result = torch.bitwise_and(torch.bitwise_and(x, scalar), bool_scalar)
-        return result
-
-    # test declaration for bitwise_and(Scalar, Tensor)
-    @autotest(n=10, auto_backward=False)
-    def test_scalar_bitwise_and2(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
-        )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
+        .to(device)
+        .to(dtype)
+    )
+    scalar = random(low=-10, high=10).to(int)
+    bool_scalar = random(low=0, high=2, dtype=int).to(bool)
+    if inverse:
         # torch doesn't support bitwise_and(Scalar, Tensor), so manually compare results
         torch_result = torch.bitwise_and(
             torch.bitwise_and(x, scalar), bool_scalar
@@ -97,156 +70,42 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
         )
+    else:
+        result = op(op(x, scalar), bool_scalar)
+    return result
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBitwiseAndModule(flow.unittest.TestCase):
+    @autotest(n=10, auto_backward=False)
+    def test_bitwise_and(test_case):
+        return _test_bitwise_op(test_case, torch.bitwise_and)
+
+    @autotest(n=20, auto_backward=False)
+    def test_scalar_bitwise_and(test_case):
+        return _test_scalar_bitwise(test_case, torch.bitwise_and, inverse=random_bool().value())
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseOrModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_bitwise_or(test_case):
-        device = random_device()
-        dims_kwargs = {
-            "ndim": 4,
-            "dim0": random(low=4, high=8).to(int),
-            "dim1": random(low=4, high=8).to(int),
-            "dim2": random(low=4, high=8).to(int),
-            "dim3": random(low=4, high=8).to(int),
-        }
-        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
-        # So, use "index" instead of "int" in `random_dtype`
-        x_dtype = random_dtype(["index", "bool", "unsigned"])
-        y_dtype = random_dtype(["index", "bool", "unsigned"])
-        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
-        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
-        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
-        return torch.bitwise_or(torch.bitwise_or(x, y), bool_tensor)
+        return _test_bitwise_op(test_case, torch.bitwise_or)
 
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_or(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
-        )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
-        result = torch.bitwise_or(torch.bitwise_or(x, scalar), bool_scalar)
-        return result
-
-    # test declaration for bitwise_or(Scalar, Tensor)
-    @autotest(n=10, auto_backward=False)
-    def test_scalar_bitwise_or2(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
-        )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
-        # torch doesn't support bitwise_or(Scalar, Tensor), so manually compare results
-        torch_result = torch.bitwise_or(
-            torch.bitwise_or(x, scalar), bool_scalar
-        ).pytorch
-        flow_result = flow.bitwise_or(
-            bool_scalar.value(), flow.bitwise_or(x.oneflow, scalar.value())
-        )
-        test_case.assertTrue(
-            np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
-        )
+        return _test_scalar_bitwise(test_case, torch.bitwise_or, inverse=random_bool().value())
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseXorModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_bitwise_xor(test_case):
-        device = random_device()
-        dims_kwargs = {
-            "ndim": 4,
-            "dim0": random(low=4, high=8).to(int),
-            "dim1": random(low=4, high=8).to(int),
-            "dim2": random(low=4, high=8).to(int),
-            "dim3": random(low=4, high=8).to(int),
-        }
-        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
-        # So, use "index" instead of "int" in `random_dtype`
-        x_dtype = random_dtype(["index", "bool", "unsigned"])
-        y_dtype = random_dtype(["index", "bool", "unsigned"])
-        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(x_dtype)
-        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(y_dtype)
-        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
-        return torch.bitwise_xor(torch.bitwise_xor(x, y), bool_tensor)
+        return _test_bitwise_op(test_case, torch.bitwise_xor)
 
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
-        )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
-        result = torch.bitwise_xor(torch.bitwise_xor(x, scalar), bool_scalar)
-        return result
-
-    # test declaration for bitwise_xor(Scalar, Tensor)
-    @autotest(n=10, auto_backward=False)
-    def test_scalar_bitwise_xor2(test_case):
-        device = random_device()
-        dtype = random_dtype(["int", "bool", "unsigned"])
-        x = (
-            random_tensor(
-                ndim=4,
-                dim0=random(low=4, high=8).to(int),
-                dim1=random(low=4, high=8).to(int),
-                dim2=random(low=4, high=8).to(int),
-                dim3=random(low=4, high=8).to(int),
-                dtype=int,
-            )
-            .to(device)
-            .to(dtype)
-        )
-
-        scalar = random(low=-10, high=10).to(int)
-        bool_scalar = random(low=0, high=2).to(bool)
-        # torch doesn't support bitwise_xor(Scalar, Tensor), so manually compare results
-        torch_result = torch.bitwise_xor(
-            torch.bitwise_xor(x, scalar), bool_scalar
-        ).pytorch
-        flow_result = flow.bitwise_xor(
-            bool_scalar.value(), flow.bitwise_xor(x.oneflow, scalar.value())
-        )
-        test_case.assertTrue(
-            np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
-        )
+        return _test_scalar_bitwise(test_case, torch.bitwise_xor, inverse=random_bool().value())
 
 
 if __name__ == "__main__":
