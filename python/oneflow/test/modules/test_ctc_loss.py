@@ -287,6 +287,9 @@ def gen_arg_list():
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# This test case can always success out of ci container, but will get error in ci container for unknown reason: error:
+# 'oneflow.ctc_loss' op attribute 'blank' failed to satisfy constraint: 32-bit signed integer attribute
+# loc("-":0:0): error: Failed to run round-trip passes
 @autotest(n=3, auto_backward=True, check_graph=False)
 def _test_ctc_loss_with_diff_device_input(test_case, reduction):
     log_probs = torch.tensor(
