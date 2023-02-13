@@ -24,9 +24,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
-  std::string device_name = "";
-  int device_index = -1;
-  JUST(ParseDeviceString(device_str, &device_name, &device_index));
+  auto [device_name, device_index] = *JUST(ParseDeviceString(device_str));
   return one::MakeGenerator(device_name, device_index);
 }
 
@@ -59,9 +57,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         });
   m.def("create_generator", &CreateGenerator);
   m.def("default_generator", [](const std::string& device_str) -> Maybe<one::Generator> {
-    std::string device_name = "";
-    int device_index = -1;
-    JUST(ParseDeviceString(device_str, &device_name, &device_index));
+    auto [device_name, device_index] = *JUST(ParseDeviceString(device_str));
     return one::DefaultGenerator(device_name, device_index);
   });
   m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) -> Maybe<void> {
