@@ -241,7 +241,7 @@ func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location
   SmallVector<Type, 4> argument_types;
   argument_types.reserve(operands.size());
   SmallVector<Type, 4> result_types;
-  argument_types.reserve(results.size());
+  result_types.reserve(results.size());
   for (auto argument : operands) { argument_types.push_back(argument.getType()); }
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
@@ -323,19 +323,7 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef fu
 }
 
 static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Operation* cast) {
-  auto mul_op = mul;
-  auto scale = mlir::Value();
-  auto output = mlir::Value();
-  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
-    scale = scalar_mul_op.scalar();
-    output = scalar_mul_op.y();
-  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
-    scale = broadcast_mul_op.y();
-    output = broadcast_mul_op.z();
-  } else {
-    mul->emitError("pattern mul(cast(x), scalar) doesn't support this op");
-    exit(1);
-  }
+  auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul);
   if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
     mul->emitError("not OpConf compatible");
     exit(1);
@@ -353,9 +341,9 @@ static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Oper
   op_name = SanitizeIdentifier(op_name, tempBuffer);
   SmallVector<::mlir::Value, 2> operands;
   operands.push_back(cast_op.in());
-  operands.push_back(scale);
-  SmallVector<::mlir::Value, 1> results;
-  results.push_back(output);
+  operands.push_back(mul_op.scalar());
+  SmallVector<Value, 1> results;
+  results.push_back(mul_op.y());
   NamedAttrList attributes =
       GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
   SmallVector<Operation*, 4> ops = {cast_op, mul_op};
