@@ -248,38 +248,6 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
             np.array_equal(torch_result.cpu().numpy(), flow_result.numpy())
         )
 
-    # def test_scalar_logical_xor(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [_test_tensor_scalar_logical_xor]
-    #     arg_dict["shape"] = [(2, 3), (2, 4, 5)]
-    #     arg_dict["scalar"] = [1, 0]
-    #     arg_dict["dtype"] = [flow.float32, flow.int32]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
-
-    # @autotest(n=10, auto_backward=False, check_graph=True)
-    # def test_logical_xor_with_random_data(test_case):
-    #     device = random_device()
-    #     shape = random_tensor().oneflow.shape
-    #     x1 = random_tensor(len(shape), *shape, requires_grad=False).to(device)
-    #     x2 = random_tensor(len(shape), *shape, requires_grad=False).to(device)
-    #     y = torch.logical_xor(x1, x2)
-    #     return y
-
-    # @autotest(n=10, auto_backward=False, check_graph=True)
-    # def test_logical_xor_bool_with_random_data(test_case):
-    #     device = random_device()
-    #     shape = random_tensor().oneflow.shape
-    #     x1 = random_tensor(len(shape), *shape, requires_grad=False).to(
-    #         device=device, dtype=torch.bool
-    #     )
-    #     x2 = random_tensor(len(shape), *shape, requires_grad=False).to(
-    #         device=device, dtype=torch.bool
-    #     )
-    #     y = torch.logical_xor(x1, x2)
-    #     return y
-
 
 if __name__ == "__main__":
     unittest.main()
