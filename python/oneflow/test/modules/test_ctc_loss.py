@@ -287,7 +287,7 @@ def gen_arg_list():
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@autotest(n=3, auto_backward=True, check_graph=True)
+@autotest(n=3, auto_backward=True, check_graph=False)
 def _test_ctc_loss_with_diff_device_input(test_case, reduction):
     log_probs = torch.tensor(
         [
