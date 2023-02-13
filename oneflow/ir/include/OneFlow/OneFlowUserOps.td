@@ -2830,7 +2830,8 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let input = (ins
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value
+    OneFlow_Tensor:$value,
+    Optional<OneFlow_Tensor>:$attn_bias
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4920,8 +4921,8 @@ def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, 
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
-// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad, matrix_vector_product, matrix_vector_product_grad_a, matrix_vector_product_grad_b, vector_matrix_product, vector_matrix_product_grad_a, vector_matrix_product_grad_b, grouped_matmul_bias, fused_glu
-// Total: 22
+// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad, matrix_vector_product, matrix_vector_product_grad_a, matrix_vector_product_grad_b, vector_matrix_product, vector_matrix_product_grad_a, vector_matrix_product_grad_b, grouped_matmul_bias, fused_glu, fused_glu_without_linear_grad
+// Total: 23
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
@@ -5310,6 +5311,25 @@ def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOpe
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_linear_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$matmul_wx,
+    Optional<OneFlow_Tensor>:$matmul_vx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation
+  );
+  let output = (outs
+    OneFlow_Tensor:$d_matmul_wx,
+    Optional<OneFlow_Tensor>:$d_matmul_vx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_GroupedMatmulBiasOp : OneFlow_BaseOp<"grouped_matmul_bias", [NoSideEffect, AttrSizedOperandSegments,  DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$xs,
@@ -5328,8 +5348,8 @@ def OneFlow_GroupedMatmulBiasOp : OneFlow_BaseOp<"grouped_matmul_bias", [NoSideE
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
 // Group: MISC
-// CategoricalOrdinalEncode, add_n, arange, bincount, coin_flip, concat, tensor_constant, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique, unique_with_counts, xdivy_x_grad, xdivy_y_grad, stack, stack_grad, fill_, fill_tensor_, exponential, multinomial_with_replacement, fused_weighted_sum
-// Total: 40
+// CategoricalOrdinalEncode, add_n, arange, bincount, coin_flip, concat, tensor_constant, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique, unique_with_counts, xdivy_x_grad, xdivy_y_grad, stack, stack_grad, fill_, fill_tensor_, exponential, multinomial_with_replacement, fused_weighted_sum, depend
+// Total: 41
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
@@ -6074,6 +6094,20 @@ def OneFlow_FusedWeightedSumOp : OneFlow_BaseOp<"fused_weighted_sum", [NoSideEff
     DefaultValuedAttr<F32Attr, "1.0">:$alpha
   );
   let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_DependOp : OneFlow_BaseOp<"depend", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$depend_tensor
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9534,8 +9568,8 @@ def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, Dec
 #endif // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
 // Group: UNARY
-// acc, acc_ctrl_tick, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flip, fold, gelu, fast_gelu, quick_gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc, index_add
-// Total: 58
+// acc, acc_ctrl_tick, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flip, fold, gelu, fast_gelu, quick_gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc, index_add, rrelu
+// Total: 59
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
@@ -9945,6 +9979,25 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$alpha
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RReluOp : OneFlow_BaseOp<"rrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$output,
+    OneFlow_Tensor:$noise_data
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.125">:$lower,
+    DefaultValuedAttr<F32Attr, "0.3333333333333333">:$upper,
+    DefaultValuedAttr<BoolAttr, "false">:$training
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
