@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
-namespace dtr {
+namespace remat {
 class DisjNode;
 }
 
@@ -70,13 +73,13 @@ class TensorStorage {
   size_t blob_bytes_;
   bool is_initialized_ = false;
   Symbol<Device> device_;
+
  private:
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
   bool is_allocated_in_vm_;
-
 };
 
 class RematableTensorStorage final : public TensorStorage {
@@ -111,7 +114,7 @@ class RematableTensorStorage final : public TensorStorage {
   bool is_needed_by_backward() const { return is_needed_by_backward_; }
   void set_needed_by_backward() { is_needed_by_backward_ = true; }
   double compute_time() const { return compute_time_; }
-  std::shared_ptr<dtr::DisjNode> node;
+  std::shared_ptr<remat::DisjNode> node;
 
  private:
   int64_t id_{};

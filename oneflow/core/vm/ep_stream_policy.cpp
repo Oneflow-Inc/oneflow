@@ -46,7 +46,7 @@ std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
 
 EpStreamPolicy::EpStreamPolicy(Symbol<Device> device)
     : EpStreamPolicyBase(device, device->rematable() ? std::make_unique<vm::DtrEpAllocatorProxy>(
-                                     Singleton<dtr::AllocatorManager>::Get()->CreateOrGetAllocator(
+                                     Singleton<remat::AllocatorManager>::Get()->CreateOrGetAllocator(
                                          device->enum_type(), device->device_id()))
                                                       : static_cast<std::unique_ptr<vm::Allocator>>(
                                                           CreateEpBackendDeviceAllocator(device))) {

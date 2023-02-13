@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-namespace dtr {
+namespace remat {
 
 vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
     vm::RematableTensorStorage* storage, const vm::OpCallInstructionPolicy& current_compute_op) {

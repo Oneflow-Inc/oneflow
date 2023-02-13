@@ -45,7 +45,7 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> _Compute(OpCallInstructionPolicy* op_call_instruction_policy,
+  static inline Maybe<void> ComputeFnForRemat(OpCallInstructionPolicy* op_call_instruction_policy,
                                      vm::Stream* vm_stream) {
     return Compute(op_call_instruction_policy, vm_stream, false, true);
   }
@@ -74,7 +74,7 @@ struct OpCallInstructionUtil final {
         storage->set_eviction_disabled(true);
       }
     }
-    if (inputs_rematable) { JUST(RematInputs(pack, vm_stream, first, _Compute)); }
+    if (inputs_rematable) { JUST(RematInputs(pack, vm_stream, first, ComputeFnForRemat)); }
     std::vector<bool> storage_is_initialized;
     if (outputs_rematable) {
       storage_is_initialized.reserve(pack.output_storages.size());

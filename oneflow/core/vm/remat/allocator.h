@@ -156,7 +156,7 @@ class DtrEpAllocatorProxy final : public Allocator {
 
 }  // namespace vm
 
-namespace dtr {
+namespace remat {
 class AllocatorManager {
  public:
   vm::DtrEpAllocator* CreateOrGetAllocator(DeviceType device_type, size_t device_index);
@@ -166,7 +166,7 @@ class AllocatorManager {
       allocators_;
 };
 
-}  // namespace dtr
+}  // namespace remat
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_DTR_EP_ALLOCATOR_H_

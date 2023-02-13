@@ -152,7 +152,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
-  Singleton<dtr::Env>::New();
+  Singleton<remat::Env>::New();
   Singleton<EnvDesc>::New(env_proto);
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
@@ -189,7 +189,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Singleton<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
   Singleton<ep::DeviceManagerRegistry>::New();
-  Singleton<dtr::AllocatorManager>::New();
+  Singleton<remat::AllocatorManager>::New();
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
@@ -258,7 +258,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<RpcManager>::Delete();
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
-  Singleton<dtr::Env>::Delete();
+  Singleton<remat::Env>::Delete();
   ClearAllSymbol();
   ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {

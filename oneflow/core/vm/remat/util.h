@@ -25,13 +25,13 @@ namespace vm {
 class OpCallInstructionPolicy;
 }
 
-namespace dtr {
+namespace remat {
 
 double append_memory_frag_info_and_get(size_t free_mem, size_t threshold);
 
 Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand);
 
-}  // namespace dtr
+}  // namespace remat
 
 namespace vm {
 

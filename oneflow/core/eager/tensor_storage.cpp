@@ -42,7 +42,7 @@ Maybe<void> TensorStorage::init_producer_stream(Symbol<::oneflow::Stream> produc
 
 RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
     : TensorStorage(true, device),
-      node(std::make_shared<dtr::DisjNode>(0)),
+      node(std::make_shared<remat::DisjNode>(0)),
       id_(unique_id()),
       num_pinned_(0),
       last_access_time_(0),
@@ -51,12 +51,12 @@ RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
 }
 
 RematableTensorStorage::~RematableTensorStorage() {
-  if (compute_op_) { Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get()); }
+  if (compute_op_) { Singleton<remat::Env>::Get()->remove_compute_op(compute_op_.get()); }
   VLOG(1) << "delete storage " << id_;
 }
 
 void RematableTensorStorage::LogEviction(bool eager_eviction) const {
-  Singleton<dtr::Env>::Get()->add_eviction_num(eager_eviction);
+  Singleton<remat::Env>::Get()->add_eviction_num(eager_eviction);
   VLOG(1) << "evict storage " << id_ << ", compute op type: " << compute_op_type_name()
           << ", eager_eviction: " << eager_eviction;
 }
@@ -113,7 +113,7 @@ void RematableTensorStorage::Unpin() {
 void RematableTensorStorage::clear_compute_op() {
   if (compute_op_ == nullptr) { return; }
   VLOG(1) << "clear_compute_op: " << id_;
-  Singleton<dtr::Env>::Get()->remove_compute_op(compute_op_.get());
+  Singleton<remat::Env>::Get()->remove_compute_op(compute_op_.get());
   compute_op_ = nullptr;
   compute_time_ = -1;
 }
@@ -123,7 +123,7 @@ void RematableTensorStorage::set_compute_op(
   CHECK_ISNULL(compute_op_);
   compute_op_ = compute_op;
   VLOG(1) << "set_compute_op: " << id_ << ", compute op: " << compute_op.get();
-  Singleton<dtr::Env>::Get()->ops.push_back(CHECK_NOTNULL(compute_op_.get()));
+  Singleton<remat::Env>::Get()->ops.push_back(CHECK_NOTNULL(compute_op_.get()));
   compute_time_ = compute_time;
 }
 
@@ -134,11 +134,11 @@ std::string RematableTensorStorage::compute_op_type_name() const {
 }
 
 void RematableTensorStorage::Access() {
-  last_access_time_ = Singleton<dtr::Env>::Get()->time_now();
+  last_access_time_ = Singleton<remat::Env>::Get()->time_now();
 }
 
 Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
-  const double time_since_last_access = Singleton<dtr::Env>::Get()->time_now() - last_access_time_;
+  const double time_since_last_access = Singleton<remat::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
   if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>() || EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
     size = override_size == 0 ? blob_bytes_ : override_size;
@@ -155,7 +155,7 @@ double RematableTensorStorage::approx_neighbor_cost() const {
     const auto& tmp = inputs[i];
     if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
         !storage->is_in_memory()) {
-      double p_cost = dtr::DisjointSet::find_father(storage->node)->compute_time();
+      double p_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
       if (p_cost < storage->compute_time()) { p_cost = storage->compute_time(); }
       cost += p_cost;
     }
@@ -166,7 +166,7 @@ double RematableTensorStorage::approx_neighbor_cost() const {
     const auto& tmp = outputs[i];
     if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
         !storage->is_in_memory()) {
-      double c_cost = dtr::DisjointSet::find_father(storage->node)->compute_time();
+      double c_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
       if (c_cost < storage->compute_time()) { c_cost = storage->compute_time(); }
       cost += c_cost;
     }

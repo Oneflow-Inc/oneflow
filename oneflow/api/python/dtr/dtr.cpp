@@ -41,13 +41,13 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   });
   m.def("allocated_memory", [](const std::string& device_str) -> Maybe<size_t> {
     auto device = JUST(Device::ParseAndNew(device_str));
-    return Singleton<dtr::AllocatorManager>::Get()
+    return Singleton<remat::AllocatorManager>::Get()
         ->CreateOrGetAllocator(device->enum_type(), device->device_id())
         ->allocated_memory();
   });
   m.def("display", [](const std::string& device_str) -> Maybe<void> {
     auto device = JUST(Device::ParseAndNew(device_str));
-    Singleton<dtr::AllocatorManager>::Get()
+    Singleton<remat::AllocatorManager>::Get()
         ->CreateOrGetAllocator(device->enum_type(), device->device_id())
         ->DisplayAllPieces();
     return Maybe<void>::Ok();
@@ -73,10 +73,10 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     JUST(rematable_storage(t))->clear_compute_op();
     return Maybe<void>::Ok();
   });
-  m.def("clear_stats", []() { Singleton<dtr::Env>::Get()->clear_stats(); });
-  m.def("forced_eviction_num", []() { return Singleton<dtr::Env>::Get()->forced_eviction_num(); });
-  m.def("eager_eviction_num", []() { return Singleton<dtr::Env>::Get()->eager_eviction_num(); });
-  m.def("recomputation_num", []() { return Singleton<dtr::Env>::Get()->recomputation_num(); });
+  m.def("clear_stats", []() { Singleton<remat::Env>::Get()->clear_stats(); });
+  m.def("forced_eviction_num", []() { return Singleton<remat::Env>::Get()->forced_eviction_num(); });
+  m.def("eager_eviction_num", []() { return Singleton<remat::Env>::Get()->eager_eviction_num(); });
+  m.def("recomputation_num", []() { return Singleton<remat::Env>::Get()->recomputation_num(); });
 }
 
 }  // namespace oneflow

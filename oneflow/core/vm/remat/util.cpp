@@ -29,7 +29,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace dtr {
+namespace remat {
 
 double append_memory_frag_info_and_get(size_t free_mem, size_t threshold) {
   static size_t num = 0;
@@ -150,7 +150,7 @@ Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand) {
   return GetEstimatedComputeTime(operand);
 }
 
-}  // namespace dtr
+}  // namespace remat
 
 namespace vm {
 
@@ -178,7 +178,7 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
     if (!storage->is_in_memory()) {
       OpCallInstructionPolicy tmp_op = storage->compute_op();
       if (!storage->is_needed_by_backward()) {
-        Singleton<dtr::Env>::Get()->need_eager_eviction_storages.insert(storage.get());
+        Singleton<remat::Env>::Get()->need_eager_eviction_storages.insert(storage.get());
       }
 
       if (visited_ops.find(storage->dtr_compute_op().get()) == visited_ops.end()) {
@@ -204,9 +204,9 @@ Maybe<void> RematInputs(
     const Pack& pack, vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
-  Singleton<dtr::Env>::Get()->current_op_type_name =
+  Singleton<remat::Env>::Get()->current_op_type_name =
       pack.op_call_instruction_policy.opkernel().op_type_name();
-  VLOG(2) << "set current op type name to " << Singleton<dtr::Env>::Get()->current_op_type_name
+  VLOG(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
           << std::endl;
   if (first) { JUST(IncReferenceNumOfRecomputedTensor(pack)); }
   VLOG(1) << "compute " << pack.op_call_instruction_policy.opkernel().op_type_name() << std::endl;
@@ -225,7 +225,7 @@ Maybe<void> RematInputs(
 }
 
 Maybe<void> EagerlyEvictRemattedTensors(const Pack& pack, vm::Stream* vm_stream, bool first) {
-  auto& need_eager_eviction_storages = Singleton<dtr::Env>::Get()->need_eager_eviction_storages;
+  auto& need_eager_eviction_storages = Singleton<remat::Env>::Get()->need_eager_eviction_storages;
   for (auto& storage : pack.input_storages) {
     storage->Unpin();
     if (storage->num_pinned() == 0 && need_eager_eviction_storages.count(storage.get()) > 0) {
@@ -258,7 +258,7 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
           VLOG(1) << "storage->is_initialized(), op is " << storage->compute_op_type_name()
                   << std::endl;
           compute_op = std::make_unique<OpCallInstructionPolicy>(
-              Singleton<dtr::Env>::Get()->update_tensor_with_storage(
+              Singleton<remat::Env>::Get()->update_tensor_with_storage(
                   storage.get(), pack.op_call_instruction_policy));
         }
       }
@@ -266,7 +266,7 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
     }();
     std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op =
         std::make_shared<DtrOpCallInstructionPolicy>(*compute_op);
-    double compute_time = JUST(dtr::GetComputeTime(*compute_op));
+    double compute_time = JUST(remat::GetComputeTime(*compute_op));
     for (auto& storage : pack.output_storages) {
       storage->Pin();
       if (!recompute && !storage->is_eviction_disabled()) {
@@ -274,7 +274,7 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
       }
       storage->Unpin();
       storage->Access();
-      dtr::DisjointSet::update_after_compute(storage.get());
+      remat::DisjointSet::update_after_compute(storage.get());
     }
   }
   if (include_input) {
@@ -285,11 +285,11 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
     for (auto& storage : pack.input_storages) { storage->Access(); }
   }
 
-  if (recompute) { Singleton<dtr::Env>::Get()->add_recomputation_num(); }
-  Singleton<dtr::Env>::Get()->add_time(JUST(dtr::GetComputeTime(pack.op_call_instruction_policy)));
+  if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
+  Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
   VLOG(1) << "end compute " << pack.op_call_instruction_policy.opkernel().op_type_name()
           << std::endl;
-  Singleton<dtr::Env>::Get()->current_op_type_name = "None";
+  Singleton<remat::Env>::Get()->current_op_type_name = "None";
   return Maybe<void>::Ok();
 }
 }  // namespace vm

@@ -10,7 +10,7 @@ class OpCallInstructionPolicy;
 class DtrOpCallInstructionPolicy;
 }  // namespace vm
 
-namespace dtr {
+namespace remat {
 
 class Env {
  public:
@@ -54,5 +54,5 @@ class Env {
   int recomputation_num_ = 0;
 };
 
-}  // namespace dtr
+}  // namespace remat
 }  // namespace oneflow

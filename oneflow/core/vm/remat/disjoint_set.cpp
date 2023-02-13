@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace dtr {
+namespace remat {
 
 void DisjointSet::merge(std::shared_ptr<DisjNode>& x, std::shared_ptr<DisjNode>& y) {
   auto&& parent_x = find_father(x);
@@ -74,5 +74,5 @@ Maybe<void> DisjointSet::update_after_release(vm::RematableTensorStorage* obj) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace dtr
+}  // namespace remat
 }  // namespace oneflow

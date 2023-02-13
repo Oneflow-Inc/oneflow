@@ -10,7 +10,7 @@ namespace vm {
 class RematableTensorStorage;
 }
 
-namespace dtr {
+namespace remat {
 
 class DisjNode {
  public:
@@ -49,6 +49,6 @@ class DisjointSet {
   static Maybe<void> update_after_release(vm::RematableTensorStorage* obj);
 };
 
-}  // namespace dtr
+}  // namespace remat
 }  // namespace oneflow
 

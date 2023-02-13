@@ -176,7 +176,7 @@ void DtrEpAllocator::CheckPieces() {
 }
 
 void DtrEpAllocator::DisplayAllPieces() {
-  std::cout << "ops: " << Singleton<dtr::Env>::Get()->ops.size() << std::endl;
+  std::cout << "ops: " << Singleton<remat::Env>::Get()->ops.size() << std::endl;
   for (const auto& pair : ptr2piece_) {
     Piece* piece = pair.second;
     std::stringstream ss;
@@ -414,7 +414,7 @@ Maybe<DtrEpAllocator::Piece*> DtrEpAllocator::FindPiece(size_t aligned_size, boo
   const bool is_high_op = [&]() {
     std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad", "conv_filter_grad",
                                                      "add_n",  "matmul",         "batch_matmul"};
-    const auto& current_op_type_name = Singleton<dtr::Env>::Get()->current_op_type_name;
+    const auto& current_op_type_name = Singleton<remat::Env>::Get()->current_op_type_name;
     CHECK_NE(current_op_type_name, "");
     PNT3(current_op_type_name);
     if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(),
@@ -636,7 +636,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
       first_time = false;
     }
     const auto started_at = profiler::GetTimeNow();
-    const size_t evict_num1 = Singleton<dtr::Env>::Get()->forced_eviction_num();
+    const size_t evict_num1 = Singleton<remat::Env>::Get()->forced_eviction_num();
     if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>()) {
       piece = JUST(EvictAndFindPieceLoop(aligned_size, true));
     } else if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
@@ -644,7 +644,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
     } else {
       piece = JUST(EvictAndFindPieceOnce(aligned_size));
     }
-    const size_t evict_num2 = Singleton<dtr::Env>::Get()->forced_eviction_num();
+    const size_t evict_num2 = Singleton<remat::Env>::Get()->forced_eviction_num();
     const auto duration = profiler::GetTimeNow() - started_at;
     search_free_mem_cost_.emplace_back(size, evict_num2 - evict_num1, duration);
     if (EnvBool<ONEFLOW_REMAT_RECORD_MEM_FRAG_RATE>()) {
@@ -656,7 +656,7 @@ Maybe<void> DtrEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
           free_mem += piece->size;
         }
       }
-      dtr::append_memory_frag_info_and_get(free_mem, memory_size_);
+      remat::append_memory_frag_info_and_get(free_mem, memory_size_);
     }
   }
 
@@ -686,7 +686,7 @@ void DtrEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK_EQ(piece->ptr, mem_ptr);
   CHECK(!piece->is_free);
 
-  if (auto* tensor = piece->tensor) { CHECK_JUST(dtr::DisjointSet::update_after_release(tensor)); }
+  if (auto* tensor = piece->tensor) { CHECK_JUST(remat::DisjointSet::update_after_release(tensor)); }
 
   piece->is_free = true;
   piece->tensor = nullptr;
@@ -734,7 +734,7 @@ nlohmann::json DtrEpAllocator::DumpSearchFreeMemCost() {
 
 }  // namespace vm
 
-vm::DtrEpAllocator* dtr::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
+vm::DtrEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
                                                            size_t device_index) {
   auto key = std::make_pair(device_type, device_index);
   auto it = allocators_.find(key);
