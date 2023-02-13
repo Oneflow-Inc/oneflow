@@ -86,7 +86,6 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
   // LoadLbi2SbpEdge(op_graph).
   InitAvailableMemory();
-
   InitMemory(op_graph, &sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
@@ -136,7 +135,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
     double total_weighted_cost = sbp_graph_.ComputeWeightedCost();
     LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
               << ", memory: " << curr_memory << ", total cost: " << total_weighted_cost
-              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory) << std::endl;
+              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory);
     if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
     if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
     if (curr_memory > available_memory_ * kImpossibleRatio) {
@@ -409,7 +408,8 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
 }
 
 // TODO: delete this, this is for variable op only
-Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph) {
+Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOpCtrlDeps(
+    const OpGraph& op_graph) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
