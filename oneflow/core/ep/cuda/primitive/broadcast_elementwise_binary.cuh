@@ -46,11 +46,13 @@ union Pack {
   T elem[N];
 };
 
-template<size_t max_dims, typename IndexType>
+template<size_t max_dims, typename IndexType, typename DivType>
 struct BroadcastElementwiseBinaryParams {
-  NdIndexOffsetHelper<IndexType, max_dims> src0_index_helper;
-  NdIndexOffsetHelper<IndexType, max_dims> src1_index_helper;
-  NdIndexOffsetHelper<IndexType, max_dims> dst_index_helper;
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
+  FastDivide<DivType> fast_dividers[max_dims];
+
   size_t num_dims;
   IndexType src0_index_mask[max_dims];
   IndexType src1_index_mask[max_dims];
@@ -63,9 +65,9 @@ struct BroadcastElementwiseBinaryParams {
 };
 
 template<BinaryOp binary_op, typename Src, typename Dst, size_t max_dims, size_t src0_pack_size,
-         size_t src1_pack_size, typename IndexType>
+         size_t src1_pack_size, typename IndexType, typename DivType>
 __global__ void BroadcastElementwiseBinaryGpu(
-    BroadcastElementwiseBinaryParams<max_dims, IndexType> params) {
+    BroadcastElementwiseBinaryParams<max_dims, IndexType, DivType> params) {
   constexpr size_t dst_pack_size =
       src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
   static_assert(src0_pack_size == dst_pack_size || src0_pack_size == 1, "");
@@ -77,24 +79,20 @@ __global__ void BroadcastElementwiseBinaryGpu(
       reinterpret_cast<const PackType<Src, src1_pack_size>*>(params.src1);
   PackType<Dst, dst_pack_size>* dst = reinterpret_cast<PackType<Dst, dst_pack_size>*>(params.dst);
 
-  IndexType src0_index[max_dims];
-  IndexType src1_index[max_dims];
-  IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
-    params.dst_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
+    IndexType src0_offset = 0;
+    IndexType src1_offset = 0;
+    DivType remaining = offset;
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
       if (i < num_dims) {
-        src0_index[i] = params.src0_index_mask[i] * dst_index[i];
-        src1_index[i] = params.src1_index_mask[i] * dst_index[i];
-      } else {
-        src0_index[i] = 0;
-        src1_index[i] = 0;
+        const IndexType idx = params.fast_dividers[i].divides(remaining);
+        remaining = remaining - idx * params.dst_strides[i];
+        src0_offset += params.src0_index_mask[i] * idx * params.src0_strides[i];
+        src1_offset += params.src1_index_mask[i] * idx * params.src1_strides[i];
       }
     }
-    const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index, num_dims);
-    const IndexType src1_offset = params.src1_index_helper.NdIndexToOffset(src1_index, num_dims);
     Pack<Src, src0_pack_size> src0_pack;
     src0_pack.storage = src0[src0_offset];
     Pack<Src, src1_pack_size> src1_pack;
@@ -114,18 +112,30 @@ __global__ void BroadcastElementwiseBinaryGpu(
 }
 
 template<BinaryOp op, typename T, typename R, size_t max_dims, size_t src0_pack_size,
-         size_t src1_pack_size, typename IndexType>
+         size_t src1_pack_size, typename IndexType, typename DivType>
 void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const void* src0,
                   const int64_t* src1_dims, const void* src1, const int64_t* dst_dims, void* dst,
                   size_t count, Scalar attr0, Scalar attr1) {
-  BroadcastElementwiseBinaryParams<max_dims, IndexType> params;
+  BroadcastElementwiseBinaryParams<max_dims, IndexType, DivType> params;
   for (size_t i = 0; i < num_dims; ++i) {
     params.src0_index_mask[i] = (src0_dims[i] == 1) ? 0 : 1;
     params.src1_index_mask[i] = (src1_dims[i] == 1) ? 0 : 1;
   }
-  params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src0_dims, num_dims);
-  params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src1_dims, num_dims);
-  params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(dst_dims, num_dims);
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
+  FastDivide<DivType> fast_dividers[max_dims];
+  InitStrides<IndexType, max_dims>(src0_dims, src0_strides, num_dims);
+  InitStrides<IndexType, max_dims>(src1_dims, src1_strides, num_dims);
+  InitStrides<IndexType, max_dims>(dst_dims, dst_strides, num_dims);
+  InitFastDividers<IndexType, DivType>(dst_strides, fast_dividers, num_dims);
+  for (int i = 0; i < max_dims; i++) {
+    params.src0_strides[i] = src0_strides[i];
+    params.src1_strides[i] = src1_strides[i];
+    params.dst_strides[i] = dst_strides[i];
+    params.fast_dividers[i] = fast_dividers[i];
+  }
+
   params.num_dims = num_dims;
   params.src0 = src0;
   params.src1 = src1;
@@ -134,7 +144,8 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
   params.attr0 = attr0;
   params.attr1 = attr1;
   auto* cuda_stream = stream->As<CudaStream>();
-  BroadcastElementwiseBinaryGpu<op, T, R, max_dims, src0_pack_size, src1_pack_size, IndexType>
+  BroadcastElementwiseBinaryGpu<op, T, R, max_dims, src0_pack_size, src1_pack_size, IndexType,
+                                DivType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,
          cuda_stream->cuda_stream()>>>(params);
 }
@@ -145,11 +156,11 @@ void DispatchIndexType(Stream* stream, size_t num_dims, const int64_t* src0_dims
                        const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
                        void* dst, Scalar attr0, Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
-  if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int32_t>(
+  if (count < GetMaxVal<int32_t>() / 2) {
+    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int32_t, uint32_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count, attr0, attr1);
   } else {
-    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int64_t>(
+    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int64_t, uint64_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count, attr0, attr1);
   }
 }
