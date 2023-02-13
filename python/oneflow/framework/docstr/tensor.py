@@ -2514,3 +2514,61 @@ add_docstr(
         tensor([1, 2, 3], dtype=oneflow.int64)
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.bitwise_and,
+    """
+    See :func:`oneflow.bitwise_and`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_and(4)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_and(y)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_or,
+    """
+    See :func:`oneflow.bitwise_or`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_or(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_or(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_xor,
+    """
+    See :func:`oneflow.bitwise_xor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_xor(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_xor(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+    """,
+)
