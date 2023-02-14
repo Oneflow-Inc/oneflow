@@ -79,8 +79,9 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
 
     a.setRandom();
 
-    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a(a_dims[0]*a_broadcast[0], a_dims[1]*a_broadcast[1], 
-      a_dims[2]*a_broadcast[2], a_dims[3]*a_broadcast[3]);
+    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a(
+        a_dims[0] * a_broadcast[0], a_dims[1] * a_broadcast[1], a_dims[2] * a_broadcast[2],
+        a_dims[3] * a_broadcast[3]);
     broadcast_a = a.broadcast(a_broadcast).template cast<Dst>();
 
     const int64_t a_size = a.size() * sizeof(Src);
