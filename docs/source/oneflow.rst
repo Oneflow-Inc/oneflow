@@ -107,6 +107,7 @@ Indexing, Slicing, Joining, Mutating Ops
     vsplit
     vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
@@ -265,6 +266,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 
@@ -273,6 +275,10 @@ Pointwise Ops
     logical_not 
     logical_or 
     logical_xor 
+    bitwise_and
+    bitwise_or
+    bitwise_xor
+    bitwise_not
     mish
     mul 
     neg 
@@ -315,6 +321,7 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  
@@ -393,6 +400,10 @@ Other Ops
     triu
     cross
     bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -402,7 +413,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm

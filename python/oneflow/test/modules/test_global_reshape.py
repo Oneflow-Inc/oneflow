@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_reshape_impl(test_case, pair, placement, sbp):
     shape, to_shape = pair
     x = random_tensor(len(shape), *shape)
@@ -40,12 +40,12 @@ def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
 
     x = flow.tensor(nd_arr)
     like = flow.empty(to_shape)
-    y = x.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast).to_global(
+    y = x.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
         placement=placement, sbp=in_sbp
     )
-    like = like.to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    ).to_global(placement=placement, sbp=like_sbp)
+    like = like.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
+        placement=placement, sbp=like_sbp
+    )
     z = flow._C.reshape_like(y, like)
     local_z = z.to_global(
         placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]

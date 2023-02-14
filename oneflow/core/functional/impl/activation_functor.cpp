@@ -26,10 +26,12 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace one {
@@ -215,6 +217,34 @@ class GeluGradFunctor : public BinaryFunctor {
   }
 };
 
+class FastGeluFunctor : public UnaryFunctor {
+ public:
+  FastGeluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fast_gelu").Input("in").Output("out").Build());
+  }
+};
+
+class FastGeluGradFunctor : public BinaryFunctor {
+ public:
+  FastGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fast_gelu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class QuickGeluFunctor : public UnaryFunctor {
+ public:
+  QuickGeluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu").Input("x").Output("y").Build());
+  }
+};
+
+class QuickGeluGradFunctor : public BinaryFunctor {
+ public:
+  QuickGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
 class GluFunctor {
  public:
   GluFunctor() {}
@@ -324,8 +354,6 @@ class SoftmaxFunctorBase {
     };
 
     int64_t dim_ = dim ? JUST(dim) : get_dim();
-    if (dim_ < 0) { dim_ += num_axes; }
-
     dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
@@ -396,6 +424,62 @@ class LogSoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GumbelSoftmaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
+                           const Optional<int64_t>& dim, bool hard,
+                           const Optional<one::Generator>& generator) const {
+    auto in_shape = in->shape();
+    auto device = JUST(in->device());
+    auto dtype = in->dtype();
+    const int64_t num_axes = in_shape->NumAxes();
+
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
+    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
+
+    auto random_tensor =
+        JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
+    auto gumbel_noise_tensor = JUST(functional::ScalarSub(
+        Scalar(0.0),
+        JUST(functional::Log(JUST(functional::ScalarSub(
+            Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0)))),
+        /*alpha=*/1.0));
+    auto gumbel_in_tensor = JUST(functional::ScalarDiv(
+        JUST(functional::Add(in, gumbel_noise_tensor, /*alpha=*/1.0, /*inplace=*/false)),
+        Scalar(tau)));
+
+    auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
+    if (hard) {
+      const auto get_dim = [num_axes]() -> int64_t {
+        const int64_t ndim = num_axes;
+        if (ndim == 0 || ndim == 1 || ndim == 3) {
+          return 0;
+        } else {
+          return 1;
+        }
+      };
+
+      int64_t dim_ = dim ? JUST(dim) : get_dim();
+      dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+      auto out_max = JUST(functional::ArgMax(out_soft, dim_, /*keepdim=*/true, dtype));
+      auto index =
+          JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*copy=*/false));
+      auto zero = JUST(functional::ZerosLike(out_soft));
+      auto out_hard =
+          JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
+
+      auto out_hard_has_grad =
+          functional::Add(JUST(functional::Sub(out_hard, JUST(out_soft->detach()), /*alpha=*/1.0,
+                                               /*inplace=*/false)),
+                          out_soft, /*alpha=*/1.0, /*inplace=*/false);
+      return out_hard_has_grad;
+    } else {
+      return out_soft;
+    }
+  }
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -448,6 +532,38 @@ class LeakyReluGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class RReluFunctor {
+ public:
+  RReluFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("rrelu").Input("in").Output("output").Output("noise_data").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training, bool inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("lower", "upper", "training");
+    attrs.SetAllAttrs(lower, upper, training);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
+    if (!training) { return JUST(functional::LeakyRelu(x, ((lower + upper) / 2), inplace)); }
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      outputs->at(0) = x;
+    }
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RReluInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training) const {
+    return JUST(functional::RRelu(x, lower, upper, training, true /*inplace*/));
+  }
 };
 
 class SoftplusFunctor {
@@ -626,6 +742,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CeluGradFunctor>("CeluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
+  m.add_functor<impl::FastGeluFunctor>("FastGelu");
+  m.add_functor<impl::FastGeluGradFunctor>("FastGeluGrad");
+  m.add_functor<impl::QuickGeluFunctor>("QuickGelu");
+  m.add_functor<impl::QuickGeluGradFunctor>("QuickGeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
@@ -635,10 +755,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::LogSoftmaxGradFunctor>("LogSoftmaxGrad");
+  m.add_functor<impl::GumbelSoftmaxFunctor>("GumbelSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::RReluFunctor>("RRelu");
+  m.add_functor<impl::RReluInplaceFunctor>("RReluInplace");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");

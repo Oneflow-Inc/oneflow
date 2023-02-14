@@ -18,7 +18,7 @@ import sys
 
 import oneflow as flow
 import oneflow.framework.id_util as id_util
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class _DropoutNd(Module):

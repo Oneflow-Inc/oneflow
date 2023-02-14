@@ -87,7 +87,7 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
       primitive->Launch(ctx->stream(), num_src0_dims, src0_dims, x->dptr(), num_src1_dims,
                         src1_dims, y->dptr(), z->mut_dptr());
     } else {
-      // For 0-d Tensor
+      // For 0-size Tensor
       return;
     }
   }
@@ -128,6 +128,9 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_neq_nan", ep::primitive::
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_and", ep::primitive::BinaryOp::kBitwiseAnd)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_or", ep::primitive::BinaryOp::kBitwiseOr)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_xor", ep::primitive::BinaryOp::kBitwiseXor)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_floor_mod", ep::primitive::BinaryOp::kFloorMod)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_fmod", ep::primitive::BinaryOp::kFmod)
 

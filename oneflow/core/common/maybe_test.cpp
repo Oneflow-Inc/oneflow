@@ -17,6 +17,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 #include <gtest/gtest-death-test.h>
 #include <memory>
+#include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -50,8 +51,11 @@ TEST(Maybe, JUST_MSG) {
   ASSERT_EQ(err->stack_frame().at(0)->code_text(), "f(y)");
   ASSERT_EQ(err->stack_frame().at(1)->code_text(), "h(y)");
 
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
-  ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");
+  try {
+    CHECK_JUST(i(10.234));
+  } catch (const RuntimeException& e) {
+    EXPECT_TRUE(std::string(e.what()).find(R"(input value 53)") != std::string::npos);
+  }
 }
 
 TEST(Maybe, CHECK_OK) {

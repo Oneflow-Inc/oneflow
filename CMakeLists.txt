@@ -1,4 +1,5 @@
 # Minimum CMake required
+set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 cmake_minimum_required(VERSION 3.18.0)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
@@ -78,10 +79,10 @@ endif()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
+set(COMPILER_VERSION_ERROR_MSG "At least gcc 9, clang 5 or Apple clang 12 is supported.")
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 7)
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
 
@@ -199,7 +200,7 @@ endif()
 add_definitions(-DRPC_BACKEND_LOCAL)
 message(STATUS "RPC backend enabled: local")
 enable_testing()
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
@@ -249,7 +250,7 @@ if(WIN32)
   # set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
-  set(EXTRA_CXX_FLAGS "-std=c++14 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
+  set(EXTRA_CXX_FLAGS "-Wall -Wno-sign-compare -Wno-unused-function -fPIC")
 
   if(APPLE)
     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations")
@@ -293,9 +294,9 @@ set(ROBIN_HOOD_HASHING_URL
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
-set(FMT_URL https://github.com/fmtlib/fmt/archive/e9ca7ea472a387639cef65a93037afcee26e4733.zip)
+set(FMT_URL https://github.com/fmtlib/fmt/archive/fc07217d85e6dcec52878807d6bbd89a9d9156a5.zip)
 use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
-set(FMT_MD5 f126df4cffec775e118837db0c64b920)
+set(FMT_MD5 7d9bb2ececc9ede29cd35bdc42a7e22c)
 
 set(KINETO_URL
     https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
@@ -303,13 +304,11 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/NVIDIA/cutlass/archive/4db6a6140e45c4ffe6339c55b43b159602fa1f35.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/ba2ef44c0224ab62cdf33c52d44a0a0ca13c8e8a.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 132bc2d7b635e33666dd6fab1a9ab340)
+set(CUTLASS_MD5 8c222839ca86f64162b36d117355a398)
 
 include(cuda)
-add_subdirectory(external)
-include(third_party)
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
@@ -345,6 +344,14 @@ if(BUILD_CUDA)
     endif()
   endif()
 
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
@@ -355,11 +362,14 @@ if(BUILD_CUDA)
       set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
       list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
     endif()
-
+    list(APPEND CUDA_NVCC_FLAGS "-Xcompiler=-fno-strict-aliasing")
     message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
     list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
   endif()
 endif()
+
+add_subdirectory(external)
+include(third_party)
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 

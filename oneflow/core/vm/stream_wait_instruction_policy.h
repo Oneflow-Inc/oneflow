@@ -47,8 +47,6 @@ class StreamWaitInstructionPolicy final : public vm::InstructionPolicy {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
-
  private:
   vm::Stream* mut_from_vm_stream() { return from_vm_stream_; }
   std::shared_ptr<EpEvent>& mut_ep_event() { return ep_event_; }

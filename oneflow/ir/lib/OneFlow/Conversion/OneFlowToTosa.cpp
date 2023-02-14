@@ -211,7 +211,7 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
     const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
     if (!mgr) { return op->emitError("global variable tensor manager miss"); }
 
-    const auto tensor = mgr->Get(op.op_name().str());
+    const auto tensor = CHECK_JUST(mgr->Get(op.op_name().str()));
     if (!tensor) { return op->emitError("tensor is null"); }
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();

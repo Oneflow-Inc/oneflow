@@ -17,7 +17,7 @@ from typing import Optional
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.constant import _ConstantBase
 
 

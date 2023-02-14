@@ -60,8 +60,9 @@ class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGra
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
-    const int64_t num_classes = in->shape_view().At(in->shape_view().NumAxes() - 1);
-    const int64_t num_instances = in->shape_view().Count(0, in->shape_view().NumAxes() - 1);
+    const ShapeView& in_shape = in->shape_view();
+    const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
+    const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
     std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream(), num_instances, num_classes, in->dptr(), prob->mut_dptr());

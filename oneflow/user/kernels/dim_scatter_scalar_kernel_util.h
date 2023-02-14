@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_SCALAR_KERNEL_UTIL_H_
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
+#include <cuda_fp16.h>
 #endif  // WITH_CUDA
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
@@ -25,6 +26,10 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
+
+#define NO_HALF_UTIL_FOUND         \
+  printf("cuda arch must >= 530"); \
+  assert(false)
 
 namespace user_op {
 
@@ -40,6 +45,19 @@ struct AddScalarFunctor {
 #endif
   }
 };
+
+#ifdef WITH_CUDA
+template<>
+struct AddScalarFunctor<half> {
+  OF_DEVICE_FUNC static void apply(const half x, half* y) {
+#if __CUDA_ARCH__
+    *y = __float2half(__half2float(*y) + __half2float(x));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+#endif
 
 template<>
 struct AddScalarFunctor<int8_t> {
@@ -61,19 +79,37 @@ struct UpdateScalarFunctor {
   OF_DEVICE_FUNC static void apply(const T x, T* y) { *y = x; }
 };
 
-#define INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(device_type, opt)             \
+#define INSTANTIATE_DIM_SCATTER_SCARLAR_CPU_FUNCTORS(device_type, opt)         \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, float16, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
-  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;
+  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, float16, int64_t, opt>;
+
+#define INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(device_type, opt)        \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, half, int32_t, opt>;    \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, half, int64_t, opt>;
 
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;

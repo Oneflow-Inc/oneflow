@@ -48,7 +48,7 @@ class FunctionNode {
 
   Maybe<bool> Apply(bool create_graph);
   Maybe<void> AccGrad4LeafTensor(bool create_graph);
-  Maybe<void> AccGrad4RetainGradTensor();
+  Maybe<void> AccGrad4RetainGradTensor(bool create_graph);
   void ReleaseOutTensorArgs();
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -62,7 +62,12 @@ class FunctionNode {
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
 
+  using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
+                                                                            const TensorTuple&)>;
+  void add_post_hook(const Hook& hook) { hooks_.push_back(hook); }
+
  protected:
+  friend class GraphTask;
   explicit FunctionNode(const std::string& name,
                         const std::shared_ptr<BackwardFunction>& backward_fn)
       : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
@@ -79,6 +84,8 @@ class FunctionNode {
 
   // The execution scope
   std::shared_ptr<Scope> scope_;
+
+  std::vector<Hook> hooks_;
 };
 
 class AutogradEngine {
@@ -139,13 +146,26 @@ class GraphTask final {
   Maybe<void> ComputeDependencies();
   Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
   Maybe<void> Apply(bool save_grad_for_leaf);
+  std::shared_ptr<TensorTuple> GetCapturedGrads() const { return captured_grads_; }
+  Maybe<void> WriteGraphToDotFile(const std::string& file_name) const;
 
  private:
+  class ExecInfo {
+   public:
+    ExecInfo() = default;
+
+    int32_t dependencies = 0;
+    bool need_execute = false;
+    // Used in autograd.grad interface, to record which grad of tensor will be captured.
+    // The pair means: <output index of this Node, the index of captured_grads_ to be saved>
+    std::unique_ptr<std::vector<std::pair<size_t, size_t>>> capture_indices;
+  };
+
   bool retain_graph_;
   bool create_graph_;
   std::vector<FunctionNode*> roots_;
-  HashMap<FunctionNode*, int> dependencies_;
-  HashSet<FunctionNode*> need_execute_;
+  HashMap<FunctionNode*, ExecInfo> grad_fn2exec_info_;
+  std::shared_ptr<TensorTuple> captured_grads_;
 };
 
 class GraphAutogradEngine final : public AutogradEngine {

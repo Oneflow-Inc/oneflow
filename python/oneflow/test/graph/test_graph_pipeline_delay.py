@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 def _test_graph_pipeline_delay_output(test_case):
@@ -67,8 +68,8 @@ def _test_graph_pipeline_delay_output(test_case):
         def __init__(self):
             super().__init__()
             self.pp_m = pp_m
-            self.pp_m.layer_0.config.stage_id = 0
-            self.pp_m.layer_1.config.stage_id = 1
+            self.pp_m.layer_0.to(GraphModule).stage_id = 0
+            self.pp_m.layer_1.to(GraphModule).stage_id = 1
             self.config.set_gradient_accumulation_steps(4)
             self.add_optimizer(of_sgd)
 

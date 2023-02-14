@@ -251,24 +251,28 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_local_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
-        )
-        test_case._test_non_contiguous_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
-        )
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
+            test_case._test_non_contiguous_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
 
     @flow.unittest.skip_unless_1n2d()
     def test_global_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(
-                *args,
-                **kwargs,
-                sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", range(2))
-            ),
-            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
-        )
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(
+                    *args,
+                    **kwargs,
+                    sbp=flow.sbp.broadcast,
+                    placement=flow.placement(device, range(2))
+                ),
+                lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
+            )
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_with_single_int(test_case):
@@ -381,6 +385,12 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertIsNone(x.grad)
         test_case.assertIsNotNone(y.grad)
         w.backward(gradient=grad, retain_graph=True)
+        # autocast test for fill_
+        x = flow.tensor([2.4, 3.5], device="cuda", dtype=flow.float16)
+        with flow.amp.autocast("cuda", flow.float16):
+            y = x.clone()
+            y.fill_(2.36)
+            test_case.assertTrue(y.dtype == flow.float16)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_autograd_fill_cuda(test_case):
@@ -948,6 +958,14 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(auto_backward=False, check_graph=True)
+    def test_sort_tensor_return_type(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        result = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return result.values, result.indices
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False, check_graph=True)
     def test_argsort_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
@@ -1023,11 +1041,23 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
         y = x.topk(
             random(low=1, high=8).to(int),
+            dim=random(low=1, high=4).to(int) | nothing(),
+            largest=random_bool() | nothing(),
+            sorted=constant(True) | nothing(),
+        )
+        return y[0], y[1]
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_tensor_topk_return_type(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        result = x.topk(
+            random(low=1, high=8).to(int),
             dim=random(low=1, high=4).to(int),
             largest=random_bool(),
             sorted=constant(True),
         )
-        return y[0], y[1]
+        return result.values, result.indices
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_fmod_element_with_random_data(test_case):
@@ -1273,6 +1303,9 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEqual(x.dtype, flow.int8)
+        x = flow.tensor([flow.tensor([1, 2])] * 3, dtype=flow.float32)
+        test_case.assertTrue(np.array_equal(x.numpy(), [[1, 2], [1, 2], [1, 2]]))
+        test_case.assertEqual(x.dtype, flow.float32)
 
     def test_tensor_contains_magic_method(test_case):
         x = flow.tensor([[1, 2, 3], [4, 5, 6]])

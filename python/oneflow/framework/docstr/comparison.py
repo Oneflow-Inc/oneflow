@@ -106,6 +106,40 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.equal,
+    """equal(input, other) -> bool
+
+    `True` if two tensors have the same size and elements, `False` otherwise.
+
+    Args:
+        input (oneflow.Tensor): the tensor to compare
+        other (oneflow.Tensor): the target to compare
+
+    Returns:
+        A boolean value
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+
+        >>> y = flow.equal(input, other)
+        >>> y
+        False
+
+        >>> y = flow.equal(input, input)
+        >>> y
+        True
+
+    """,
+)
+
+add_docstr(
     oneflow.ne,
     """ne(input, other) -> Tensor
 

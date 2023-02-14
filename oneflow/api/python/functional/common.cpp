@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/kernel/kernel_util.h"
-
+#include "oneflow/core/framework/tensor_util.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -42,42 +42,8 @@ namespace detail {
 namespace {
 
 template<typename T>
-Maybe<T> GetItemInScalarTensor(PyObject* obj) {
-  std::shared_ptr<LocalTensor> local_tensor;
-  {
-    auto tensor = PyTensor_Unpack(obj);
-    if (tensor->is_global()) {
-      Symbol<ParallelDesc> parallel_desc;
-      {
-        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
-        JUST(PhysicalRun(
-            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
-              return Maybe<void>::Ok();
-            }));
-      }
-      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
-                                         /*check_meta=*/false, /*copy=*/false));
-      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
-    }
-    local_tensor = JUST(tensor->AsLocalTensor());
-  }
-
-  T scalar = 0;
-  {
-    const auto& Callback = [&](ep::Stream* stream,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
-                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  }
-  return scalar;
+Maybe<T> GetItemInPyScalarTensor(PyObject* obj) {
+  return GetItemInScalarTensor<T>(PyTensor_Unpack(obj));
 }
 
 }  // namespace
@@ -184,6 +150,10 @@ Scalar PyUnpackScalar(PyObject* obj) {
     return static_cast<int64_t>(PyLong_AsLongLong(obj));
   } else if (PyFloat_Check(obj)) {
     return PyFloat_AsDouble(obj);
+  } else if (PyArray_IsScalar(obj, Bool)) {
+    return obj == Py_True;
+  } else if (PyArray_IsScalar(obj, Floating)) {
+    return PyFloat_AsDouble(obj);
   }
   THROW(RuntimeError) << "The object is not scalar, but is " << Py_TYPE(obj)->tp_name;
   return 0;
@@ -193,7 +163,8 @@ Scalar PyUnpackScalar(PyObject* obj) {
 bool PyScalarTensorCheck(PyObject* obj) {
   if (!LazyMode::is_enabled() && PyTensor_Check(obj)) {
     const auto& tensor = PyTensor_Unpack(obj);
-    return tensor->shape()->size() == 0 && IsPODDataType(tensor->dtype()->data_type());
+    return tensor->shape()->size() == 0
+           && IsTriviallyCopyableDataType(tensor->dtype()->data_type());
   }
   return false;
 }
@@ -214,7 +185,7 @@ Scalar PyUnpackScalarTensor(PyObject* obj) {
 
 #define SWITCH_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type:                                           \
-    return detail::GetItemInScalarTensor<cpp_type>(obj).GetOrThrow();
+    return detail::GetItemInPyScalarTensor<cpp_type>(obj).GetOrThrow();
 
 #define SCALAR_TENSOR_UNPACK_FUNC_IMPL(func_name, return_type, type_seq)                  \
   return_type func_name(PyObject* obj) {                                                  \

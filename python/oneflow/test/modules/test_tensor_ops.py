@@ -35,7 +35,6 @@ def _test_type_as(test_case, shape, src_device, dst_device, src_dtype, dst_dtype
     test_case.assertEqual(input.dtype, target.dtype)
     test_case.assertEqual(input.device, target.device)
 
-
 def _test_is_floating_point(test_case, shape, device, dtype):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype, device=device)
@@ -298,15 +297,12 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.tolist())
         return y
 
+    @autotest()
     def test_type_as(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
-        arg_dict["src_device"] = ["cpu", "cuda"]
-        arg_dict["dst_device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        arg_dict["dst_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        for arg in GenArgList(arg_dict):
-            _test_type_as(test_case, *arg)
+        input = random_tensor().to(random_device())
+        target = random_tensor().to(random_device())
+        input = input.type_as(target)
+        return input
 
     def test_is_floating_point(test_case):
         arg_dict = OrderedDict()

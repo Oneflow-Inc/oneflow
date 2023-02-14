@@ -13,14 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from inspect import ismodule
+from inspect import ismodule, currentframe
 from types import ModuleType
 from typing import Any
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
+from contextlib import contextmanager
 
+import oneflow.support.env_var_util
+
+_first_init = True
 
 error_msg = """ is not implemented, please submit an issue at  
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
@@ -37,7 +41,7 @@ class ModuleWrapper(ModuleType):
                 return None
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
-            raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
+            raise ModuleNotFoundError(self.module.__name__ + "." + name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
             return ModuleWrapper(attr)
@@ -45,9 +49,24 @@ class ModuleWrapper(ModuleType):
             return attr
 
 
+def _is_torch(s: str):
+    return s == "torch" or s.startswith("torch.")
+
+
 class OneflowImporter(MetaPathFinder, Loader):
+    def __init__(self):
+        # module_from_spec will try to call the loader's create_module, resulting in infinite recursion
+        self.in_create_module = False
+        self.enable = False
+        # both __init__.py of oneflow and torch can't be executed multiple times, so we use a cache
+        self.enable_mod_cache = {}
+        self.disable_mod_cache = {}
+
     def find_spec(self, fullname, path, target=None):
-        if fullname.startswith("torch"):  # don't touch modules other than torch
+        if _is_torch(fullname):  # don't touch modules other than torch
+            # for first import of real torch, we use default meta path finders, not our own
+            if not self.enable and self.disable_mod_cache.get(fullname) is None:
+                return None
             return ModuleSpec(fullname, self)
         return None
 
@@ -56,28 +75,115 @@ class OneflowImporter(MetaPathFinder, Loader):
         return spec
 
     def create_module(self, spec):
-        oneflow_mod_fullname = "oneflow" + spec.name[len("torch") :]
-        # get actual oneflow module
-        real_spec = find_spec(oneflow_mod_fullname)
-        if real_spec is None:
-            raise NotImplementedError(oneflow_mod_fullname + error_msg)
-        real_mod = module_from_spec(real_spec)
-        if sys.modules.get(oneflow_mod_fullname) is None:
-            # oneflow/__init__.py can't be executed twice
-            real_spec.loader.exec_module(real_mod)
+        if self.in_create_module:
+            return None
+        self.in_create_module = True
+        if self.enable:
+            oneflow_mod_fullname = "oneflow" + spec.name[len("torch") :]
+            if (
+                sys.modules.get(oneflow_mod_fullname) is None
+                and self.enable_mod_cache.get(spec.name) is None
+            ):
+                # get actual oneflow module
+                real_spec = find_spec(oneflow_mod_fullname)
+                if real_spec is None:
+                    raise ModuleNotFoundError(oneflow_mod_fullname + error_msg)
+                real_mod = module_from_spec(real_spec)
+                real_spec.loader.exec_module(real_mod)
+            else:
+                real_mod = sys.modules.get(oneflow_mod_fullname)
+                if real_mod is None:
+                    real_mod = self.enable_mod_cache[spec.name]
+            self.in_create_module = False
+            return real_mod
         else:
-            real_mod = sys.modules[oneflow_mod_fullname]
-        return real_mod
+            torch_full_name = spec.name
+            real_mod = self.disable_mod_cache[torch_full_name]
+            self.in_create_module = False
+            return real_mod
 
     def exec_module(self, module):
         fullname = "torch" + module.__name__[len("oneflow") :]
-        sys.modules[fullname] = ModuleWrapper(module)
-        globals()[fullname] = ModuleWrapper(module)
+        if self.enable:
+            module = ModuleWrapper(module)
+        sys.modules[fullname] = module
+        globals()[fullname] = module
+
+    def _enable(self, globals):
+        global _first_init
+        if _first_init:
+            _first_init = False
+            self.enable = False  # deal with previously imported torch
+            sys.meta_path.insert(0, self)
+            self._enable(globals)
+            return
+        if self.enable:  # already enabled
+            return
+        for k, v in sys.modules.copy().items():
+            if _is_torch(k):
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.disable_mod_cache.update({k: (v, aliases)})
+                del sys.modules[k]
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.enable_mod_cache.items():
+            sys.modules.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
+        self.enable = True
+
+    def _disable(self, globals):
+        if not self.enable:  # already disabled
+            return
+        for k, v in sys.modules.copy().items():
+            if _is_torch(k):
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.enable_mod_cache.update({k: (v, aliases)})
+                del sys.modules[k]
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.disable_mod_cache.items():
+            sys.modules.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
+        self.enable = False
 
 
-# dynamically mock torch and its submodules
-def mock():
-    if sys.modules.get("torch") is not None:
-        print("Warning: Detected imported torch modules, quitting `mock`")
-    else:
-        sys.meta_path.insert(0, OneflowImporter())
+_importer = OneflowImporter()
+
+
+class enable:
+    def __init__(self):
+        self.enable = _importer.enable
+        forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
+            "ONEFLOW_DISABLE_MOCK_TORCH", False
+        )
+        globals = currentframe().f_back.f_globals
+        self.globals = globals
+        if self.enable or forcedly_disabled_by_env_var:
+            return
+        _importer._enable(globals)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        if not self.enable:
+            _importer._disable(self.globals)
+
+
+class disable:
+    def __init__(self):
+        self.enable = _importer.enable
+        if not self.enable:
+            return
+        globals = currentframe().f_back.f_globals
+        self.globals = globals
+        _importer._disable(globals)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        if self.enable:
+            _importer._enable(self.globals)

@@ -117,10 +117,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
       // check TensorMeta of infer result and TensorMeta of output i.
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()      // NOLINT
-                      == output_tensor_metas.at(i)->shape());  // NOLINT
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype()      // NOLINT
-                      == output_tensor_metas.at(i)->dtype());  // NOLINT
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()                                 // NOLINT
+                      == output_tensor_metas.at(i)->shape())                              // NOLINT
+          << Error::RuntimeError() << tensor_impl->tensor_meta()->shape().ToString()      // NOLINT
+          << " .vs "                                                                      // NOLINT
+          << output_tensor_metas.at(i)->shape().ToString();                               // NOLINT
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype()                                 // NOLINT
+                      == output_tensor_metas.at(i)->dtype())                              // NOLINT
+          << Error::RuntimeError() << DataType_Name(tensor_impl->tensor_meta()->dtype())  // NOLINT
+          << " .vs "                                                                      // NOLINT
+          << DataType_Name(output_tensor_metas.at(i)->dtype());                           // NOLINT
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
       CHECK_OR_RETURN(has_eager_blob_object);  // NOLINT
       output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
@@ -136,7 +142,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }));
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(index)));
-    auto btb = std::make_shared<BlockingThenBusy>(1);
+    auto btb = std::make_shared<BlockingThenBusy>();
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(
           tensor_impl, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
@@ -203,7 +209,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
   attrs.SetAllAttrs(src_rank);
-  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
+  if (inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
                                 one::OpExprInterpContext(attrs, parallel_desc)));
@@ -225,7 +231,7 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
   attrs.SetAllAttrs(src_rank);
-  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
+  if (inplace) {
     auto outputs = std::make_shared<TensorTuple>(inputs);
     JUST(OpInterpUtil::Dispatch(*op_expr, inputs, outputs.get(),
                                 one::OpExprInterpContext(attrs, parallel_desc)));

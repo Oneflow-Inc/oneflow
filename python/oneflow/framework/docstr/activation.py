@@ -115,6 +115,28 @@ add_docstr(
 
 
 add_docstr(
+    oneflow._C.quick_gelu,
+    r"""
+    quick_gelu(x: Tensor) -> Tensor 
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    See    
+    :class:`~oneflow.nn.QuickGELU` for more details.
+ 
+    """,
+)
+
+add_docstr(
     oneflow._C.softmax,
     r"""
     softmax(x: Tensor, dim: int) -> Tensor 
@@ -139,6 +161,37 @@ add_docstr(
         \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
     
     See :class:`~oneflow.nn.LogSoftmax` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.gumbel_softmax,
+    r"""
+    gumbel_softmax(x: Tensor, dim: int, tau: float = 1.0, hard: bool = False) -> Tensor 
+
+    Solve the problem that the output values of argmax do not reflect the probability distribution of the model's output.
+    Compensates for the fact that the argmax cannot participate in gradient back-propagation.
+
+    Gumbel is defined as:
+
+    .. math::
+        Gumbel_i = -log(-log(U_i)),\ U_i \sim U(0,1)
+
+    Add Noise ~ Gumbel:
+
+    .. math::
+        In = (In + Noise) / tau
+
+    Calculate Softmax value:
+
+    .. math::
+        gumbel\_softmax(In)=\frac{e^{In_i/tau}}{\sum_{j=1}^n{e^{In_j/tau}}},i=1,2,3...n
+
+    Parameters:
+        x (oneflow.Tensor): the input Tensor.
+        dim (int, Tuple[int]): the dimension to softmax. 
+        tau (double): the input tensor of Softmax should obey the Gumbel(x, tau).
+        hard (bool): if `hard=True`, the output tensor will be one-hot.
     """,
 )
 
@@ -379,6 +432,29 @@ add_docstr(
 
     See :class:`~oneflow.nn.LeakyReLU` for more details.
 
+    """,
+)
+add_docstr(
+    oneflow._C.rrelu,
+    """
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False, inplace: bool = False) -> Tensor
+
+    Applies the randomized leaky rectified liner unit function, element-wise
+    :math:`\text{RReLU}(x) = \max(0, x) + a * \min(0, x)`
+
+    where :math:`a` is randomly sampled from uniform distribution
+    :math:`\mathcal{U}(\text{lower}, \text{upper})`.
+    
+    See :class:`~oneflow.nn.RReLU` for more details.
+
+    """,
+)
+add_docstr(
+    oneflow._C.rrelu_,
+    """
+    rrelu(x: Tensor, lower: Float = 1.0 / 8, upper: Float = 1.0 / 3, training: bool = False) -> Tensor
+
+    In-place version of :func:`rrelu`.
     """,
 )
 add_docstr(

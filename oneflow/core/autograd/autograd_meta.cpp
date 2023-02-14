@@ -63,7 +63,6 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
     : is_leaf_(is_leaf),
       requires_grad_(requires_grad),
       retain_grad_(false),
-      is_grad_acc_inplace_(false),
       current_grad_(new TensorArg) {}
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
@@ -73,6 +72,15 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
     acc_grad_ = grad;
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<Tensor> AutogradMeta::current_grad_value() const {
+  std::shared_ptr<Tensor> res = JUST(current_grad_->GetAccTensor());
+  for (const auto& hook : hooks_) {
+    const auto& new_tensor = hook(res);
+    if (new_tensor) { res = new_tensor; }
+  }
+  return res;
 }
 
 }  // namespace one

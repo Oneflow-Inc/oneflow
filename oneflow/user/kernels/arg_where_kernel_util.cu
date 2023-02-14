@@ -77,7 +77,7 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
   cub::TransformInputIterator<bool, IsTrue<IN_T>, const IN_T*> flag_iter(input, is_true);
   cub::CountingInputIterator<OUT_T> offset_counter(0);
   return cub::DeviceSelect::Flagged(temp_storage, temp_storage_bytes, offset_counter, flag_iter,
-                                    output_iter, num_selected, num_items, stream, false);
+                                    output_iter, num_selected, num_items, stream);
 }
 
 template<typename IN_T, typename OUT_T>
@@ -147,6 +147,13 @@ struct ArgWhereKernelUtil<DeviceType::kCUDA, IN_T, OUT_T, NDIM> {
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 
+#define INSTANTIATE_CUDA_HALF_ARG_WHERE_KERNEL_UTIL                                              \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARG_WHERE_KERNEL_UTIL_WITH_DTYPE_PAIR,            \
+                                   (DeviceType::kCUDA), HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, \
+                                   DIM_SEQ)
+
+INSTANTIATE_CUDA_HALF_ARG_WHERE_KERNEL_UTIL
+
 template<DeviceType device_type, typename IN_T, typename OUT_T>
 void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size_ptr) {
   SetOutputSizeKernel<IN_T, OUT_T>
@@ -154,5 +161,11 @@ void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size
 }
 
 INSTANTIATE_SET_OUTPUT_SIZE_FOR_DEVICE(DeviceType::kCUDA)
+
+#define INSTANTIATE_CUDA_HALF_SET_OUTPUT_SIZE                                   \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SET_OUTPUT_SIZE_WITH_DTYPE_PAIR, \
+                                   (DeviceType::kCUDA), HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+INSTANTIATE_CUDA_HALF_SET_OUTPUT_SIZE
 
 }  // namespace oneflow

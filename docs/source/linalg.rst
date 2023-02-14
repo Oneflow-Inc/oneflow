@@ -20,3 +20,4 @@ Matrix Properties
     diagonal
     inv
     cross
+    det
