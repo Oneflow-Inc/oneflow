@@ -71,26 +71,39 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
 
   for (int i = 0; i < 5; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
+    printf("1\n");
     const std::vector<int64_t>& c_dims = broadcast_dims_vec[i];
+    printf("2\n");
     const Eigen::array<int64_t, 4> a_broadcast = {a_broadcasts_vec[i][0], a_broadcasts_vec[i][1],
                                                   a_broadcasts_vec[i][2], a_broadcasts_vec[i][3]};
+    printf("3\n");
     Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dims[0], a_dims[1], a_dims[2], a_dims[3]);
+    printf("4\n");
 
     const std::vector<int64_t>& a_strides = a_strides_vec[i];
+    printf("5\n");
     const std::vector<int64_t>& c_strides = c_strides_vec[i];
+    printf("6\n");
 
     a.setRandom();
+    printf("7\n");
 
     Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a =
         a.broadcast(a_broadcast).template cast<Dst>();
+    printf("8\n");
 
     const int64_t a_size = a.size() * sizeof(Src);
+    printf("9\n");
     const int64_t c_count =
         std::accumulate(c_dims.begin(), c_dims.end(), 1, std::multiplies<int64_t>());
+    printf("10\n");
     const int64_t c_size = c_count * sizeof(Dst);
+    printf("11\n");
     const int64_t broadcast_a_size = broadcast_a.size() * sizeof(Dst);
+    printf("12\n");
 
     ASSERT_TRUE(c_size == broadcast_a_size);
+    printf("13\n");
 
     printf("%dth vector init\n", i);
 
