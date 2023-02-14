@@ -66,7 +66,6 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
        broadcast_dims_vec[3][2], 1, broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]},
       {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1],
        broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]}};
-  
 
   printf("tensor init\n");
 
@@ -114,15 +113,9 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
       std::unique_ptr<ElementwiseUnary> unary = NewPrimitive<ElementwiseUnaryFactory>(
           device_type, unary_op, src_data_type, dst_data_type);
-      if (d2h.operator bool() == false) {
-        printf("%dth false d2h\n", i);
-      }
-      if (h2d.operator bool() == false) {
-        printf("%dth false h2d\n", i);
-      }
-      if (unary.operator bool() == false) {
-        printf("%dth false unary\n", i);
-      }
+      if (d2h.operator bool() == false) { printf("%dth false d2h\n", i); }
+      if (h2d.operator bool() == false) { printf("%dth false h2d\n", i); }
+      if (unary.operator bool() == false) { printf("%dth false unary\n", i); }
       ASSERT_TRUE(d2h.operator bool());
       ASSERT_TRUE(h2d.operator bool());
       ASSERT_TRUE(unary.operator bool());
@@ -147,9 +140,7 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
           NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, unary_op, src_data_type,
                                                          dst_data_type,
                                                          MAX(num_src_axes[i], num_dst_axes[i]));
-      if (broadcast_unary.operator bool() == false) {
-        printf("%dth false broadcast_unary\n", i);
-      }
+      if (broadcast_unary.operator bool() == false) { printf("%dth false broadcast_unary\n", i); }
       ASSERT_TRUE(broadcast_unary.operator bool());
       h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
 
