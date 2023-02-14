@@ -28,7 +28,7 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return a.shape == b.shape and np.allclose(a, b, *args, **kwargs)
 
 
-def test_cpg_grouping(test_case, device):
+def cpg_grouping(test_case, device):
     init_seq = []
 
     for i in range(7):
@@ -106,7 +106,7 @@ class TestCPG(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgDict(arg_dict):
-            test_cpg_grouping(test_case, **arg)
+            cpg_grouping(test_case, **arg)
 
 
 if __name__ == "__main__":
