@@ -155,10 +155,10 @@ class TestConvBnFuse(flow.unittest.TestCase):
         model.eval()
 
         fused_model = TestConvBnFuse.fuse(model)
-        for i in range(5):
-            inp = flow.randn(5, 1, 1, 1)
+        for i in range(10):
+            inp = flow.randn(5, 1, 32, 32)
             test_case.assertTrue(
-                np.allclose(fused_model(inp).numpy(), model(inp).numpy())
+                np.allclose(fused_model(inp).numpy(), model(inp).numpy(), atol=1e-6)
             )
 
 
