@@ -7,7 +7,6 @@ else()
 endif()
 
 set(WITH_CUTLASS ${WITH_CUTLASS_INIT} CACHE BOOL "")
-set(WITH_OF_FLASH_ATTENTION ON CACHE BOOL "")
 
 if(WITH_CUTLASS)
 
@@ -105,29 +104,5 @@ if(WITH_CUTLASS)
                 ${CUTLASS_INSTALL_DIR}/examples/${filename})
     endforeach()
 
-    if(WITH_OF_FLASH_ATTENTION)
-      set(OF_FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
-      set(OF_FLASH_ATTENTION_INCLUDE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include/csrc/flash_attn/src)
-      FetchContent_Declare(
-          flash-attention
-          URL     https://github.com/Oneflow-Inc/flash-attention/archive/580e7d29083f96545e3956c3d3f37c553e59645e.zip
-          URL_HASH MD5=56e0f1761f61351e2e0248faab472799
-          SOURCE_DIR ${OF_FLASH_ATTENTION_INSTALL_DIR}/include
-      )
-      FetchContent_MakeAvailable(flash-attention)
-      file(GLOB OF_FLASH_ATTENTION_SRC_FILES 
-                ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_fwd_hdim*.cu 
-                ${OF_FLASH_ATTENTION_INCLUDE_DIR}/fmha_bwd_hdim*.cu)
-
-      add_library(of_flash_attention ${OF_FLASH_ATTENTION_SRC_FILES})
-      add_dependencies(of_flash_attention cutlass)
-      target_compile_options(of_flash_attention PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-                              --expt-relaxed-constexpr --use_fast_math
-                          >)
-      set(OF_FLASH_ATTENTION_LIBRARIES ${PROJECT_BINARY_DIR}/libof_flash_attention.a)
-      set_target_properties(of_flash_attention PROPERTIES CUDA_ARCHITECTURES "75;80;86")
-      target_include_directories(of_flash_attention PUBLIC $<BUILD_INTERFACE:${OF_FLASH_ATTENTION_INCLUDE_DIR}>)
-      target_include_directories(of_flash_attention PRIVATE ${CUTLASS_INCLUDE_DIR})
-    endif(WITH_OF_FLASH_ATTENTION)
   endif(THIRD_PARTY)
 endif(WITH_CUTLASS)
