@@ -67,52 +67,31 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1],
        broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]}};
 
-  printf("tensor init\n");
-
   for (int i = 0; i < 5; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
-    printf("1\n");
     const std::vector<int64_t>& c_dims = broadcast_dims_vec[i];
-    printf("2\n");
     const Eigen::array<int64_t, 4> a_broadcast = {a_broadcasts_vec[i][0], a_broadcasts_vec[i][1],
                                                   a_broadcasts_vec[i][2], a_broadcasts_vec[i][3]};
-    printf("3\n");
     Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dims[0], a_dims[1], a_dims[2], a_dims[3]);
-    printf("4\n");
 
     const std::vector<int64_t>& a_strides = a_strides_vec[i];
-    printf("5\n");
     const std::vector<int64_t>& c_strides = c_strides_vec[i];
-    printf("6\n");
 
     a.setRandom();
-    printf("7\n");
 
-    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a =
-        a.broadcast(a_broadcast).template cast<Dst>();
-    printf("8\n");
+    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a(a_dims[0]*a_broadcast[0], a_dims[1]*a_broadcast[1], 
+      a_dims[2]*a_broadcast[2], a_dims[3]*a_broadcast[3]);
+    broadcast_a = a.broadcast(a_broadcast).template cast<Dst>();
 
     const int64_t a_size = a.size() * sizeof(Src);
-    printf("9\n");
     const int64_t c_count =
         std::accumulate(c_dims.begin(), c_dims.end(), 1, std::multiplies<int64_t>());
-    printf("10\n");
     const int64_t c_size = c_count * sizeof(Dst);
-    printf("11\n");
     const int64_t broadcast_a_size = broadcast_a.size() * sizeof(Dst);
-    printf("12\n");
 
     ASSERT_TRUE(c_size == broadcast_a_size);
-    printf("13\n");
-
-    printf("%dth vector init\n", i);
 
     for (const auto& device_type : device_types) {
-      if (device_type == DeviceType::kCUDA) {
-        printf("%dth cuda\n", i);
-      } else {
-        printf("%dth cpu\n", i);
-      }
       // broadcast a with non-broadcast elementwise unary primitive
       auto device = registry->GetDevice(device_type, 0);
       ep::test::PinnedMemoryGuard input_broadcast_a(device.get(), broadcast_a_size);
@@ -126,21 +105,15 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
       std::unique_ptr<ElementwiseUnary> unary = NewPrimitive<ElementwiseUnaryFactory>(
           device_type, unary_op, src_data_type, dst_data_type);
-      if (d2h.operator bool() == false) { printf("%dth false d2h\n", i); }
-      if (h2d.operator bool() == false) { printf("%dth false h2d\n", i); }
-      if (unary.operator bool() == false) { printf("%dth false unary\n", i); }
       ASSERT_TRUE(d2h.operator bool());
       ASSERT_TRUE(h2d.operator bool());
       ASSERT_TRUE(unary.operator bool());
       h2d->Launch(stream.stream(), device_broadcast_a.ptr(), input_broadcast_a.ptr(),
                   broadcast_a_size);
-      printf("%dth successful h2d->launch\n", i);
       unary->Launch(stream.stream(), device_broadcast_a.ptr(), device_broadcast_c.ptr(),
                     c_count);  // c.size() is for count
-      printf("%dth successful unary->launch\n", i);
       d2h->Launch(stream.stream(), broadcast_output.ptr(), device_broadcast_c.ptr(),
                   c_size);  // c_size is in bytes
-      printf("%dth successful d2h->launch\n", i);
       CHECK_JUST(stream.stream()->Sync());
 
       ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
@@ -153,16 +126,13 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
           NewPrimitive<BroadcastElementwiseUnaryFactory>(device_type, unary_op, src_data_type,
                                                          dst_data_type,
                                                          MAX(num_src_axes[i], num_dst_axes[i]));
-      if (broadcast_unary.operator bool() == false) { printf("%dth false broadcast_unary\n", i); }
       ASSERT_TRUE(broadcast_unary.operator bool());
       h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
 
       broadcast_unary->Launch(stream.stream(), num_src_axes[i], a_dims.data(), a_strides.data(),
                               device_a.ptr(), num_dst_axes[i], c_dims.data(), c_strides.data(),
                               device_c.ptr());
-      printf("%dth successful broadcast_unary->launch\n", i);
       d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
-      printf("%dth successful d2h->launch\n", i);
       CHECK_JUST(stream.stream()->Sync());
 
       Dst thresh = 1e-4;
@@ -177,8 +147,6 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
                                      a_broadcast_strides[0] * a_dims[j + 1] * a_broadcast[j + 1]);
         }
       }
-
-      printf("%dth successful insert\n", i);
 
       for (int i0 = 0; i0 < c_dims[0]; i0++) {
         for (int i1 = 0; i1 < c_dims[1]; i1++) {
@@ -198,10 +166,6 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
             }
           }
         }
-      }
-      if (res == false) {
-        printf("TestElementwiseBroadcastUnary Failed\n");
-        printf("i-th %d\n", i);
       }
       ASSERT_TRUE(res);
     }
@@ -270,10 +234,6 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
           }
 #undef ABS
         }
-      }
-      if (res == false) {
-        printf("TestElementwiseBroadcastUnaryBatchPermute Failed\n");
-        printf("i-th %d\n", i);
       }
       ASSERT_TRUE(res);
     }
