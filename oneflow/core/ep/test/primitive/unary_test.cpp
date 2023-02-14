@@ -53,8 +53,8 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       {0, 0, 0, 0},
       {a_dims_vec[3][1] * a_dims_vec[3][2] * a_dims_vec[3][3], a_dims_vec[3][2] * a_dims_vec[3][3],
        a_dims_vec[3][3], 1},
-      {a_dims_vec[4][1] * a_dims_vec[4][2] * a_dims_vec[4][3], a_dims_vec[4][2] * a_dims_vec[4][3],
-       a_dims_vec[4][3], 1}};
+      {a_dims_vec[3][1] * a_dims_vec[3][2] * a_dims_vec[3][3], a_dims_vec[3][2] * a_dims_vec[3][3],
+       a_dims_vec[3][3], 1}};
   const std::vector<std::vector<int64_t>> c_strides_vec = {
       {broadcast_dims_vec[0][1] * broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3],
        broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3], broadcast_dims_vec[0][3], 1},
@@ -64,14 +64,15 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       {0, 0, 0, 0},
       {broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2] * broadcast_dims_vec[3][3],
        broadcast_dims_vec[3][2], 1, broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]},
-      {1, broadcast_dims_vec[4][0], broadcast_dims_vec[4][0] * broadcast_dims_vec[4][1],
-       broadcast_dims_vec[4][0] * broadcast_dims_vec[4][1] * broadcast_dims_vec[4][2]}};
+      {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1],
+       broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]}};
 
   for (int i = 0; i < 5; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
     const std::vector<int64_t>& c_dims = broadcast_dims_vec[i];
     const Eigen::array<int64_t, 4> a_broadcast = {a_broadcasts_vec[i][0], a_broadcasts_vec[i][1],
                                                   a_broadcasts_vec[i][2], a_broadcasts_vec[i][3]};
+    printf("%ld %ld %ld %ld\n", a_dims[0], a_dims[1], a_dims[2], a_dims[3]);
     Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dims[0], a_dims[1], a_dims[2], a_dims[3]);
 
     const std::vector<int64_t>& a_strides = a_strides_vec[i];
