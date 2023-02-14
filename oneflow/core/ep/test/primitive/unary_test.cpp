@@ -80,11 +80,8 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
 
     a.setRandom();
 
-    printf("1\n");
     Eigen::Tensor<Src, 4, Eigen::RowMajor> t = a.broadcast(a_broadcast);
-    printf("2\n");
     Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a = t.template cast<Dst>();
-    printf("3\n");
 
     const int64_t a_size = a.size() * sizeof(Src);
     const int64_t c_count =
@@ -248,8 +245,8 @@ void TestElementwiseBroadcastUnaryBatchPermute(DeviceManagerRegistry* registry,
 TEST_F(PrimitiveTest, TestUnary) {
   TestElementwiseBroadcastUnary<UnaryOp::kIdentity, DataType::kFloat, float, DataType::kFloat,
                                 float>(&device_manager_registry_, available_device_types_);
-  // TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, DataType::kFloat, float>(
-  //    &device_manager_registry_, available_device_types_);
+  TestElementwiseBroadcastUnaryBatchPermute<DataType::kFloat, float, DataType::kFloat, float>(
+      &device_manager_registry_, available_device_types_);
 }
 
 }  // namespace test
