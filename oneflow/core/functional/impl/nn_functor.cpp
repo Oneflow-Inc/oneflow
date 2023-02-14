@@ -5152,53 +5152,49 @@ class FusedMSASoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMSABiasaddSigmoidMulFunctor {
+class FusedMSASigmoidMulFunctor {
  public:
-  FusedMSABiasaddSigmoidMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_biasadd_sigmoid_mul")
-                         .Input("b")
-                         .Input("g")
-                         .Input("x")
-                         .Output("out")
-                         .Build());
+  FusedMSASigmoidMulFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_msa_sigmoid_mul").Input("x").Input("g").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& g,
-                           const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& g, const bool inplace) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
     attrs.SetAllAttrs(inplace);
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {b, g, x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, g}, outputs.get(), attrs));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {b, g, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, g}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMSABiasaddSigmoidMulGradFunctor {
+class FusedMSASigmoidMulGradFunctor {
  public:
-  FusedMSABiasaddSigmoidMulGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_biasadd_sigmoid_mul_grad")
+  FusedMSASigmoidMulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_msa_sigmoid_mul_grad")
                          .Input("dout")
-                         .Input("b")
-                         .Input("g")
                          .Input("x")
+                         .Input("g")
+                         .Input("out")
+                         .Output("dx")
                          .Output("dg")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
-                           const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& g,
-                           const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dout,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& g,
+                                const std::shared_ptr<one::Tensor>& out, const bool inplace) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
     attrs.SetAllAttrs(inplace);
     CHECK_EQ_OR_RETURN(inplace, false);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, b, g, x}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dout, x, g, out}, attrs);
   }
 
  private:
@@ -5455,8 +5451,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
   m.add_functor<impl::FusedMSASoftmaxFunctor>("FusedMSASoftmax");
   m.add_functor<impl::FusedMSASoftmaxGradFunctor>("FusedMSASoftmaxGrad");
-  m.add_functor<impl::FusedMSABiasaddSigmoidMulFunctor>("FusedMSABiasaddSigmoidMul");
-  m.add_functor<impl::FusedMSABiasaddSigmoidMulGradFunctor>("FusedMSABiaddaddSigmoidMulGrad");
+  m.add_functor<impl::FusedMSASigmoidMulFunctor>("FusedMSASigmoidMul");
+  m.add_functor<impl::FusedMSASigmoidMulGradFunctor>("FusedMSASigmoidMulGrad");
   m.add_functor<impl::FusedMSABiasaddDropoutResidualFunctor>("FusedMSABiasaddDropoutResidual");
   m.add_functor<impl::FusedMSABiasaddDropoutResidualGradFunctor>(
       "FusedMSABiasaddDropoutResidualGrad");

@@ -59,14 +59,14 @@ class IndexFirstAxis(flow.autograd.Function):
 
 index_first_axis = IndexFirstAxis.apply
 
+
 def index_first_axis_fn(x, indices):
     other_shape = x.shape[1:]
     second_dim = other_shape.numel()
     return flow.gather(
-        rearrange(x, "b ... -> b (...)"),
-        0,
-        repeat(indices, "z -> z d", d=second_dim),
+        rearrange(x, "b ... -> b (...)"), 0, repeat(indices, "z -> z d", d=second_dim),
     ).reshape(-1, *other_shape)
+
 
 def _unpad_input(hidden_states, attention_mask):
     """
@@ -260,7 +260,7 @@ def flash_attention(
         kv_cu_seqlens,
         max_seqlen_q=max_seqlen_q,
         max_seqlen_k=kv_max_s,
-        indices=(None if unpad_kv=="bert" else bias_nonzero_indices),
+        indices=(None if unpad_kv == "bert" else bias_nonzero_indices),
         mask=None,
         bias=bias,
         softmax_scale=1 / (c ** 0.5),

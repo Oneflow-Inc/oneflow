@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
-import math
+import os
 from typing import List
 
 import oneflow as flow
@@ -36,7 +36,7 @@ def _fused_op(qmk, v, scale, mask, bias, mode="row", inplace=False):
     return out
 
 
-def _general_op(qmk, v, scale, mask, bias=None, mode="row", inplace=False):
+def _ref_op(qmk, v, scale, mask, bias=None, mode="row", inplace=False):
     x = qmk * scale + mask + bias if bias is not None else qmk * scale + mask
     out = flow.softmax(x, dim=-1)
     out = flow.matmul(out, v)
@@ -86,7 +86,7 @@ def _test_fused_msa_softmax(
 
     # general op
     x.retain_grad()
-    out1 = _general_op(qmk, v, scale, mask, bias, mode, inplace)
+    out1 = _ref_op(qmk, v, scale, mask, bias, mode, inplace)
     out1.sum().backward(retain_graph=True)
     grad_x1 = x.grad
     grad_bias1 = bias.grad if bias is not None else None
@@ -94,16 +94,17 @@ def _test_fused_msa_softmax(
     # fused op
     out2 = _fused_op(qmk, v, scale, mask, bias, mode, inplace)
     out2.sum().backward()
-    grad_x2 = x.grad / 2
-    grad_bias2 = bias.grad / 2 if bias is not None else None
-    test_case.assertTrue(np.allclose(out1, out2, atol=5e-3, rtol=1e-5))
-    test_case.assertTrue(np.allclose(grad_x1, grad_x2, atol=1e-2, rtol=1e-5))
+    grad_x2 = x.grad
+    grad_bias2 = bias.grad if bias is not None else None
+    test_case.assertTrue(np.allclose(out1, out2, atol=2e-3, rtol=1e-5))
+    test_case.assertTrue(np.allclose(grad_x1, grad_x2, atol=1e-3, rtol=1e-5))
 
     if bias is not None:
         test_case.assertTrue(np.allclose(grad_bias1, grad_bias2, atol=5e-4, rtol=1e-5))
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaSoftmax(flow.unittest.TestCase):
     def test_fused_msa_softmax(test_case):
 
@@ -125,6 +126,7 @@ class TestFusedMsaSoftmax(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaBiasaddSigmoidMul(flow.unittest.TestCase):
     def test_fused_msa_softmax(test_case):
 
@@ -132,6 +134,7 @@ class TestFusedMsaBiasaddSigmoidMul(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaBiasaddDropoutResidual(flow.unittest.TestCase):
     def test_fused_msa_softmax(test_case):
 
@@ -139,6 +142,7 @@ class TestFusedMsaBiasaddDropoutResidual(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaTmu(flow.unittest.TestCase):
     def test_fused_msa_softmax(test_case):
 

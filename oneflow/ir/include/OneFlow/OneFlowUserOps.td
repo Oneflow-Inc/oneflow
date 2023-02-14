@@ -3318,11 +3318,12 @@ def OneFlow_FusedMSASoftmaxOp : OneFlow_BaseOp<"fused_msa_softmax", [NoSideEffec
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSABiasaddSigmoidMulOp : OneFlow_BaseOp<"fused_msa_biasadd_sigmoid_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSASigmoidMulDropoutResidualOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_dropout_residual", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$b,
     OneFlow_Tensor:$g,
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tansor>:$mask,
+    Optional<OneFlow_Tensor>:$residual
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -3336,15 +3337,19 @@ def OneFlow_FusedMSABiasaddSigmoidMulOp : OneFlow_BaseOp<"fused_msa_biasadd_sigm
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSABiasaddSigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_biasadd_sigmoid_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSASigmoidMulDropoutResidualGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_dropout_residual_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout,
-    OneFlow_Tensor:$b,
+    OneFlow_Tensor:$out,
     OneFlow_Tensor:$g,
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$mask,
+    Optional<OneFlow_Tensor>:$residual
   );
   let output = (outs
-    OneFlow_Tensor:$dg
+    OneFlow_Tensor:$dg,
+    OneFlow_Tensor:$dx,
+    Optional<OneFlow_Tensor>:dresidual
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$inplace
@@ -3355,12 +3360,11 @@ def OneFlow_FusedMSABiasaddSigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_biasadd_
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSABiasaddDropoutResidualOp : OneFlow_BaseOp<"fused_msa_biasadd_dropout_residual", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSADropoutResidualOp : OneFlow_BaseOp<"fused_msa_biasadd_dropout_residual", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$bias,
     OneFlow_Tensor:$x,
+    OneFlow_Tensor:$residual,
     OneFlow_Tensor:$mask,
-    OneFlow_Tensor:$residual
   );
   let output = (outs
     OneFlow_Tensor:$out

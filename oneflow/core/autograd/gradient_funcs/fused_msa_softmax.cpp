@@ -96,11 +96,12 @@ Maybe<void> FusedMSASoftmax::Apply(const FusedMSASoftmaxCaptureState* ctx,
   return Maybe<void>::Ok();
 }
 
-struct FusedMSABiasaddSigmoidMulCaptureState : public AutoGradCaptureState {
-  bool input_requires_grad = false;
+struct FusedMSASigmoidMulCaptureState : public AutoGradCaptureState {
+  bool input_x_requires_grad = false;
+  bool input_g_requires_grad = false;
 };
 
-class FusedMSABiasaddSigmoidMul : public OpExprGradFunction<FusedMSABiasaddSigmoidMulCaptureState> {
+class FusedMSASigmoidMul : public OpExprGradFunction<FusedMSASigmoidMulCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -108,32 +109,30 @@ class FusedMSABiasaddSigmoidMul : public OpExprGradFunction<FusedMSABiasaddSigmo
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
-  Maybe<void> Capture(FusedMSABiasaddSigmoidMulCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedMSASigmoidMulCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     bool inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
     CHECK_EQ_OR_RETURN(inplace, false);
-    ctx->input_requires_grad = inputs.at(1)->requires_grad();
+    ctx->input_x_requires_grad = inputs.at(0)->requires_grad();
+    ctx->input_g_requires_grad = inputs.at(1)->requires_grad();
     ctx->SaveTensorForBackward(inputs.at(0));
     ctx->SaveTensorForBackward(inputs.at(1));
-    ctx->SaveTensorForBackward(inputs.at(2));
+    ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
-  Maybe<void> Apply(const FusedMSABiasaddSigmoidMulCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FusedMSASigmoidMulCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    if (!ctx->input_requires_grad) return Maybe<void>::Ok();
-    in_grads->resize(3);
-    const std::shared_ptr<oneflow::one::Tensor>& b = ctx->SavedTensors().at(0);
+    if (!ctx->input_x_requires_grad && !ctx->input_g_requires_grad) return Maybe<void>::Ok();
+    in_grads->resize(2);
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& g = ctx->SavedTensors().at(1);
-    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(2);
-    const std::shared_ptr<oneflow::one::Tensor>& dg =
-        JUST(functional::FusedMSABiasaddSigmoidMulGrad(out_grads.at(0), b, g, x, false));
-    const auto n = dg->shape()->NumAxes();
-    std::vector<int32_t> dims(n - 1);
-    for (int i = 0; i < n - 1; ++i) dims.push_back(i);
-    in_grads->at(0) = JUST(functional::ReduceSum(dg, dims, false));
-    in_grads->at(1) = dg;
-    in_grads->at(2) = out_grads.at(0);
+    const std::shared_ptr<oneflow::one::Tensor>& out = ctx->SavedTensors().at(2);
+    const std::shared_ptr<oneflow::one::TensorTuple>& grads =
+        JUST(functional::FusedMSASigmoidMulGrad(out_grads.at(0), x, g, out, false));
+
+    in_grads->at(0) = grads->at(0);
+    in_grads->at(1) = grads->at(1);
     return Maybe<void>::Ok();
   }
 
@@ -239,7 +238,7 @@ class FusedMSATmu : public OpExprGradFunction<FusedMSATmuState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_softmax", FusedMSASoftmax);
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_biasadd_sigmoid_mul", FusedMSABiasaddSigmoidMul);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_sigmoid_mul", FusedMSASigmoidMul);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_biasadd_dropout_residual",
                                FusedMSABiasaddDropoutResidual);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_tmu", FusedMSATmu);

@@ -236,130 +236,182 @@ REGISTER_FUSED_MSA_SOFTMAX_GRAD_KERNEL_GPU(float)
 
 namespace alphafold {
 namespace gate {
-template<typename T>
-__device__ __forceinline__ T Sigmoid(const T x) {
-  const T half_of_one = static_cast<T>(0.5);
-  return half_of_one * tanh(half_of_one * x) + half_of_one;
-}
 
-template<>
-__device__ __forceinline__ half Sigmoid(const half x) {
-  return __float2half(Sigmoid(__half2float(x)));
+template<typename T>
+__device__ T sigmoid(const T x) {
+  return T(1) / (T(1) + __expf(x));
 }
 
 template<typename T>
-__global__ void biasadd_sigmoid_mul_kernel(const int n, const int cols, T* out, const T* b,
-                                           const T* g, const T* x) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = x[i] * Sigmoid<T>(g[i] + b[i % cols]); }
+__global__ void sigmoid_mul_dropout_residual_kernel(const int n, T* out_ptr, const T* g_ptr,
+                                                    const T* x_ptr, const T* mask_ptr,
+                                                    const T* residual_ptr, const int mask_stride) {
+  constexpr int pack_size = 16 / sizeof(T);
+  cuda::elementwise::Packed<T, pack_size> x, g, out, mask, residual;
+  const int global_tid = blockIdx.x * cuda::elementwise::kBlockSize + threadIdx.x;
+  int64_t i = global_tid;
+  const int tail_offset = n / pack_size * pack_size;
+  const int n_tail = n - tail_offset;
+  for (; i < n / pack_size; i += blockDim.x * gridDim.x) {
+    g = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(g_ptr) + i);
+    x = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(x_ptr) + i);
+    if(residual_ptr)
+      residual = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(residual_ptr) + i);
+    if(mask_ptr)
+      mask = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(mask_ptr) + i);
+#pragma unroll
+    for (int j = 0; j < pack_size; j++) { out.elem[j] = sigmoid(g.elem[j]) * x.elem[j]; }
+    *(reinterpret_cast<cuda::elementwise::Packed<T, pack_size>*>(out_ptr) + i) = out;
+  }
+  // tail
+  if (global_tid < n_tail)
+    out_ptr[tail_offset + global_tid] =
+        sigmoid(g_ptr[tail_offset + global_tid]) * x_ptr[tail_offset + global_tid];
 }
+
 template<typename T>
-__global__ void biasadd_sigmoid_mul_grad_kernel(const int n, const int cols, const T* dout,
-                                                const T* b, const T* g, const T* x, T* dg) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    T sigmoid_g = Sigmoid(g[i] + b[i % cols]);
-    dg[i] = sigmoid_g * (1 - sigmoid_g) * sigmoid_g * dout[i];
+__global__ void sigmoid_mul_dropout_residual_grad_kernel(const int n, const T* dout_ptr,
+                                                         const T* x_ptr, const T* g_ptr,
+                                                         const T* out_ptr, T* dx_ptr, T* dg_ptr) {
+  constexpr int pack_size = 16 / sizeof(T);
+  cuda::elementwise::Packed<T, pack_size> x, g, out, dx, dg, dout;
+  const int global_tid = blockIdx.x * cuda::elementwise::kBlockSize + threadIdx.x;
+  int64_t i = global_tid;
+  const int tail_offset = n / pack_size * pack_size;
+  const int n_tail = n - tail_offset;
+  for (; i < n / pack_size; i += blockDim.x * gridDim.x) {
+    g = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(g_ptr) + i);
+    x = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(x_ptr) + i);
+    out = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(out_ptr) + i);
+    dout = *(reinterpret_cast<const cuda::elementwise::Packed<T, pack_size>*>(dout_ptr) + i);
+#pragma unroll
+    for (int j = 0; j < pack_size; j++) {
+      T sigmoid_g = sigmoid(g.elem[j]);
+      dx.elem[j] = dout.elem[j] * sigmoid_g;
+      dg.elem[j] = dout.elem[j] * out.elem[j] * (static_cast<T>(1.0) - sigmoid_g);
+    }
+    *(reinterpret_cast<cuda::elementwise::Packed<T, pack_size>*>(dx_ptr) + i) = x;
+    *(reinterpret_cast<cuda::elementwise::Packed<T, pack_size>*>(dg_ptr) + i) = g;
+  }
+  // tail
+  if (global_tid < n_tail) {
+    T sigmoid_g = sigmoid(g_ptr[tail_offset + global_tid]);
+    dx_ptr[tail_offset + global_tid] = dout_ptr[tail_offset + global_tid] * sigmoid_g;
+    dg_ptr[tail_offset + global_tid] =
+        out_ptr[tail_offset + global_tid] * (static_cast<T>(1.0) - sigmoid_g);
   }
 }
 }  // namespace gate
 };  // namespace alphafold
 
-template<typename T>
-void launch_biasadd_sigmoid_mul(cudaStream_t stream, const int n, const int cols, T* out,
-                                const T* b, const T* g, const T* x) {
+void get_numblocks(int& grid_dim_x, const int n) {
   constexpr int block_dim = 128;
   constexpr int waves = 32;
   const int64_t num_blocks = n / block_dim;
-  int grid_dim_x;
   {
     cudaError_t err = cuda::softmax::GetNumBlocks(block_dim, num_blocks, waves, &grid_dim_x);
     OF_CUDA_CHECK(err);
   }
-  alphafold::gate::biasadd_sigmoid_mul_kernel<T>
-      <<<grid_dim_x, block_dim, 0, stream>>>(n, cols, out, b, g, x);
-};
+}
 
 template<typename T>
-void launch_biasadd_sigmoid_mul_grad(cudaStream_t stream, const int n, const int cols,
-                                     const T* dout, const T* b, const T* g, const T* x, T* dg) {
-  constexpr int block_dim = 128;
-  constexpr int waves = 32;
-  const int64_t num_blocks = n / block_dim;
+void launch_sigmoid_mul_dropout_residual(cudaStream_t stream, const int n, T* out, const T* g,
+                                         const T* x, const T* mask, const T* residual,
+                                         const int mask_stride) {
   int grid_dim_x;
-  {
-    cudaError_t err = cuda::softmax::GetNumBlocks(block_dim, num_blocks, waves, &grid_dim_x);
-    OF_CUDA_CHECK(err);
-  }
-  alphafold::gate::biasadd_sigmoid_mul_grad_kernel<T>
-      <<<grid_dim_x, block_dim, 0, stream>>>(n, cols, dout, b, g, x, dg);
+  get_numblocks(grid_dim_x, n);
+  alphafold::gate::sigmoid_mul_dropout_residual_kernel<T>
+      <<<grid_dim_x, 128, 0, stream>>>(n, out, g, x, mask, residual, mask_stride);
 };
 
 template<typename T>
-class FusedMSABiasaddSigmoidMulKernel final : public user_op::OpKernel {
+void launch_sigmoid_mul_dropout_residual_grad(cudaStream_t stream, const int n, const T* dout,
+                                              const T* x, const T* g, const T* out, T* dx, T* dg) {
+  int grid_dim_x;
+  get_numblocks(grid_dim_x, n);
+  alphafold::gate::sigmoid_mul_grad_kernel<T>
+      <<<grid_dim_x, 128, 0, stream>>>(n, dout, x, g, out, dx, dg);
+};
+
+template<typename T>
+class FusedMSASigmoidMulDropoutResidualKernel final : public user_op::OpKernel {
  public:
-  FusedMSABiasaddSigmoidMulKernel() = default;
-  ~FusedMSABiasaddSigmoidMulKernel() override = default;
+  FusedMSASigmoidMulDropoutResidualKernel() = default;
+  ~FusedMSASigmoidMulDropoutResidualKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("b", 0);
     const user_op::Tensor* gate = ctx->Tensor4ArgNameAndIndex("g", 0);
     auto cnt = gate->shape_view().elem_cnt();
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     CHECK(cnt == x->shape_view().elem_cnt());
-    auto cols = bias->shape_view().At(0);
+    int mask_stride = 1;
+    if (ctx->has_input("mask", 0)) {
+      auto mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+      for (int i = x->shape_view()->NumAxes() - 1; i >= 0; i--) {
+        if (x->shape_view().At(i) == mask->shape_view().At(i))
+          mask_stride *= x->shape_view().At(i);
+        else
+          break;
+      }
+    }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    launch_biasadd_sigmoid_mul<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), cnt, cols,
-                                  out->mut_dptr<T>(), bias->dptr<T>(), gate->dptr<T>(),
-                                  x->dptr<T>());
+    launch_sigmoid_mul_dropout_residual<T>(
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), cnt, out->mut_dptr<T>(),
+        gate->dptr<T>(), x->dptr<T>(),
+        ctx->has_input("mask", 0) ? ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr<T>() : nullptr,
+        ctx->has_input("residual", 0) ? ctx->Tensor4ArgNameAndIndex("residual", 0)->dptr<T>()
+                                      : nullptr,
+        mask_stride);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MSA_BIASADD_SIGMOID_MUL_KERNEL_GPU(dtype)       \
-  REGISTER_USER_KERNEL("fused_msa_biasadd_sigmoid_mul")                \
-      .SetCreateFn<FusedMSABiasaddSigmoidMulKernel<dtype>>()           \
+#define REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(dtype)               \
+  REGISTER_USER_KERNEL("fused_msa_sigmoid_mul")                        \
+      .SetCreateFn<FusedMSASigmoidMulKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("g", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MSA_BIASADD_SIGMOID_MUL_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(float)
 
 template<typename T>
-class FusedMSABiasaddSigmoidMulGradKernel final : public user_op::OpKernel {
+class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
  public:
-  FusedMSABiasaddSigmoidMulGradKernel() = default;
-  ~FusedMSABiasaddSigmoidMulGradKernel() override = default;
+  FusedMSASigmoidMulGradKernel() = default;
+  ~FusedMSASigmoidMulGradKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dout = ctx->Tensor4ArgNameAndIndex("dout", 0);
-    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    const user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const user_op::Tensor* g = ctx->Tensor4ArgNameAndIndex("g", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto cnt = g->shape_view().elem_cnt();
     CHECK(cnt = x->shape_view().elem_cnt());
-    auto cols = b->shape_view().At(0);
 
     user_op::Tensor* dg = ctx->Tensor4ArgNameAndIndex("dg", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     CHECK(cnt == dg->shape_view().elem_cnt());
-    launch_biasadd_sigmoid_mul_grad(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), cnt, cols,
-                                    dout->dptr<T>(), b->dptr<T>(), g->dptr<T>(), x->dptr<T>(),
-                                    dg->mut_dptr<T>());
+    launch_sigmoid_mul_grad(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), cnt,
+                            dout->dptr<T>(), x->dptr<T>(), g->dptr<T>(), out->dptr<T>(),
+                            dx->mut_dptr<T>(), dg->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MSA_BIASADD_SIGMOID_MUL_GRAD_KERNEL_GPU(dtype)  \
-  REGISTER_USER_KERNEL("fused_msa_biasadd_sigmoid_mul_grad")           \
-      .SetCreateFn<FusedMSABiasaddSigmoidMulGradKernel<dtype>>()       \
+#define REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(dtype)          \
+  REGISTER_USER_KERNEL("fused_msa_sigmoid_mul_grad")                   \
+      .SetCreateFn<FusedMSASigmoidMulGradKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dout", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MSA_BIASADD_SIGMOID_MUL_GRAD_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(float)
 
 namespace alphafold {
 namespace dropout_add {
@@ -488,7 +540,7 @@ __global__ void tri_mul_update_kernel(const int n, const int b1_stride, const in
                                       const int mask_stride, T* out, const T* x1, const T* b1,
                                       const T* x2, const T* b2, const T* mask, const T* residual) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    out[i] = (x1[i] + b1[i % b1_stride]) * alphafold::gate::Sigmoid(x2[i] + b2[i % b2_stride])
+    out[i] = (x1[i] + b1[i % b1_stride]) * alphafold::gate::sigmoid(x2[i] + b2[i % b2_stride])
                  * mask[i % mask_stride]
              + residual[i];
   }
@@ -500,7 +552,7 @@ __global__ void tri_mul_update_grad_kernel(const int n, const int b1_stride, con
                                            const T* b1, const T* x2, const T* b2, const T* mask,
                                            T* dx1, T* db1, T* dx2, T* db2, T* dr) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    auto sigmoid_o = alphafold::gate::Sigmoid(x2[i] + b2[i % b2_stride]);
+    auto sigmoid_o = alphafold::gate::sigmoid(x2[i] + b2[i % b2_stride]);
     auto out1 = x1[i] + b1[i % b1_stride];
     dx1[i] = dout[i] * sigmoid_o * mask[i % mask_stride];
     db1[i] = dx1[i];

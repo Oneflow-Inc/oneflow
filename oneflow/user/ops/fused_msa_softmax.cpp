@@ -158,93 +158,81 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferDataType(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ auto FusedMSASigmoidMulOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType g_type = ctx->InputDType("g", 0);
   DataType x_type = ctx->InputDType("x", 0);
-  DataType b_type = ctx->InputDType("b", 0);
   CHECK_EQ_OR_RETURN(g_type, x_type);
-  CHECK_EQ_OR_RETURN(b_type, x_type);
   ctx->SetOutputDType("out", 0, g_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASigmoidMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
-  const Shape& b_shape = ctx->InputShape("b", 0);
   const Shape& g_shape = ctx->InputShape("g", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   CHECK_EQ_OR_RETURN(g_shape, x_shape);
-  const int32_t n = x_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(b_shape.At(0), x_shape.At(n - 1));
   ctx->SetOutputShape("out", 0, g_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASigmoidMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSASigmoidMulOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const bool inplace = ctx->Attr<bool>("inplace");
   if (inplace) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), 0)
-        .Split(user_op::OpArg("g", 0), 0)
-        .Split(user_op::OpArg("b", 0), 0)
-        .Build();
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("g", 0), 0).Build();
   } else {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), 0)
         .Split(user_op::OpArg("g", 0), 0)
-        .Split(user_op::OpArg("b", 0), 0)
         .Split(user_op::OpArg("out", 0), 0)
         .Build();
   }
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferDataType(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ auto FusedMSASigmoidMulGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType dout_type = ctx->InputDType("dout", 0);
   DataType x_type = ctx->InputDType("x", 0);
   DataType g_type = ctx->InputDType("g", 0);
-  DataType b_type = ctx->InputDType("b", 0);
+  DataType out_type = ctx->InputDType("out", 0);
   CHECK_EQ_OR_RETURN(g_type, dout_type);
   CHECK_EQ_OR_RETURN(x_type, dout_type);
-  CHECK_EQ_OR_RETURN(b_type, dout_type);
+  CHECK_EQ_OR_RETURN(out_type, dout_type);
   const bool inplace = ctx->Attr<bool>("inplace");
   CHECK_EQ_OR_RETURN(inplace, false);
+  ctx->SetOutputDType("dx", 0, x_type);
   ctx->SetOutputDType("dg", 0, g_type);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASigmoidMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const Shape& dout_shape = ctx->InputShape("dout", 0);
   const Shape& g_shape = ctx->InputShape("g", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
-  const Shape& b_shape = ctx->InputShape("b", 0);
   CHECK_EQ_OR_RETURN(g_shape, dout_shape);
   CHECK_EQ_OR_RETURN(x_shape, dout_shape);
-  const int32_t n = x_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(b_shape.At(0), x_shape.At(n - 1));
+  ctx->SetOutputShape("dx", 0, x_shape);
   ctx->SetOutputShape("dg", 0, g_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedMSASigmoidMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSABiasaddSigmoidMulGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedMSASigmoidMulGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
+      .Split(user_op::OpArg("dout", 0), 0)
       .Split(user_op::OpArg("x", 0), 0)
       .Split(user_op::OpArg("g", 0), 0)
-      .Split(user_op::OpArg("b", 0), 0)
       .Split(user_op::OpArg("out", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
       .Split(user_op::OpArg("dg", 0), 0)
       .Build();
   return Maybe<void>::Ok();

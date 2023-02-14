@@ -24,18 +24,21 @@ from einops import repeat
 import oneflow as flow
 from oneflow.nn.functional import flash_attention
 
-def gen_bert_mask(k): 
+
+def gen_bert_mask(k):
     # 0001111111110000
     b, s = k.shape[-4], k.shape[-2]
-    se = flow.randint(1, s-1,  (b, 2)).cuda()
+    se = flow.randint(1, s - 1, (b, 2)).cuda()
     start = se.min(dim=-1) - 1
     end = se.max(dim=-1) + 1
-    padding_mask = repeat(flow.arange(s).cuda(), 's -> b s', b=b)
+    padding_mask = repeat(flow.arange(s).cuda(), "s -> b s", b=b)
     padding_mask = (padding_mask >= start) + (padding_mask < end)
     return padding_mask
 
 
-def gen_random_data(batch_size, num_heads, seqlen_q, seqlen_kv, head_dim, dtype, padding="random"):
+def gen_random_data(
+    batch_size, num_heads, seqlen_q, seqlen_kv, head_dim, dtype, padding="random"
+):
     q = (
         flow.randn(batch_size, num_heads, seqlen_q, head_dim, requires_grad=True)
         .cuda()
@@ -85,8 +88,8 @@ def _test_flash_attention(
     v.retain_grad()
     bias.retain_grad()
     out1 = flash_attention(q, k, v, mask=mask, bias=bias, unpad_kv=False)
-    if dtype==flow.bfloat16:
-        out2 = out1 # dim_gather do not support bf16
+    if dtype == flow.bfloat16:
+        out2 = out1  # dim_gather do not support bf16
     else:
         out2 = flash_attention(q, k, v, mask=mask, bias=bias, unpad_kv=True)
     out3 = flash_attention(q, k, v, mask=mask, bias=bias, unpad_kv="auto")
@@ -117,7 +120,7 @@ def _test_flash_attention(
     dprop = flow.cuda.get_device_properties()
     is_sm86 = dprop.major == 8 and dprop.minor == 6
     is_sm75 = dprop.major == 7 and dprop.minor == 5
-    if dtype == flow.bfloat16 or ((is_sm86 or is_sm75) and head_dim > 64): 
+    if dtype == flow.bfloat16 or ((is_sm86 or is_sm75) and head_dim > 64):
         return
     # bwd
     ref_out.sum().backward()
@@ -175,6 +178,7 @@ def _test_flash_attention(
     test_case.assertTrue(np.allclose(grad_bias, grad_bias_ref, atol=atol, rtol=rtol))
     del out3, grad_q, grad_k, grad_v, grad_bias
 
+
 @unittest.skipIf(True, "skip test")
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
@@ -182,17 +186,18 @@ class TestFlashAttention(flow.unittest.TestCase):
     def test_flash_attention(test_case):
         # batch_size, num_heads, seqlen_q, seqlen_kv, head_dim, dtype
         arg_dict = OrderedDict()
-        arg_dict['test_function'] = [_test_flash_attention]
+        arg_dict["test_function"] = [_test_flash_attention]
         arg_dict["batch_size"] = [8, 128, 512]
         arg_dict["num_heads"] = [4, 8]
         arg_dict["seqlen_q"] = [32, 256, 1024, 2500]
         arg_dict["seqlen_kv"] = [128, 333, 1501, 3072]
-        arg_dict['head_dim'] = [40, 64, 128]
-        arg_dict['dtype'] = [flow.float16, flow.bfloat16]
-        arg_dict['padding'] = ['random', 'bert']
+        arg_dict["head_dim"] = [40, 64, 128]
+        arg_dict["dtype"] = [flow.float16, flow.bfloat16]
+        arg_dict["padding"] = ["random", "bert"]
         for arg in GenArgList(arg_dict):
             print(arg[1:])
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
