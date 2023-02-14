@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "fmt/core.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -3664,104 +3658,6 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
-class FlashAttentionFunctor {
- public:
-  FlashAttentionFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("flash_attention")
-                         .Input("query")
-                         .Input("key")
-                         .Input("value")
-                         .Input("cu_seqlens_q")
-                         .Input("cu_seqlens_k")
-                         .Output("out")
-                         .Output("softmax_lse")
-                         .Build());
-    op_with_mask_ = CHECK_JUST(one::OpBuilder("flash_attention")
-                                   .Input("query")
-                                   .Input("key")
-                                   .Input("value")
-                                   .Input("cu_seqlens_q")
-                                   .Input("cu_seqlens_k")
-                                   .Input("mask")
-                                   .Output("out")
-                                   .Output("softmax_lse")
-                                   .Build());
-    op_with_bias_ = CHECK_JUST(one::OpBuilder("flash_attention")
-                                   .Input("query")
-                                   .Input("key")
-                                   .Input("value")
-                                   .Input("cu_seqlens_q")
-                                   .Input("cu_seqlens_k")
-                                   .Input("bias")
-                                   .Output("out")
-                                   .Output("softmax_lse")
-                                   .Build());
-    op_with_indices_bias_ = CHECK_JUST(one::OpBuilder("flash_attention")
-                                           .Input("query")
-                                           .Input("key")
-                                           .Input("value")
-                                           .Input("cu_seqlens_q")
-                                           .Input("cu_seqlens_k")
-                                           .Input("indices")
-                                           .Input("bias")
-                                           .Output("out")
-                                           .Output("softmax_lse")
-                                           .Build());
-    op_with_mask_and_bias_ = CHECK_JUST(one::OpBuilder("flash_attention")
-                                            .Input("query")
-                                            .Input("key")
-                                            .Input("value")
-                                            .Input("cu_seqlens_q")
-                                            .Input("cu_seqlens_k")
-                                            .Input("mask")
-                                            .Input("bias")
-                                            .Output("out")
-                                            .Output("softmax_lse")
-                                            .Build());
-  }
-  Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const std::shared_ptr<one::Tensor>& cu_seqlens_q,
-      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const Optional<one::Tensor>& indices,
-      const Optional<one::Tensor>& mask, const Optional<one::Tensor>& bias,
-      const int32_t max_seqlen_q, const int32_t max_seqlen_k, const float softmax_scale,
-      const bool causal, const float dropout_rate, const int32_t num_splits) const {
-    const bool has_indices = indices.has_value();
-    const bool has_mask = mask.has_value();
-    const bool has_bias = bias.has_value();
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_seqlen_q", "max_seqlen_k", "softmax_scale",
-                                                 "causal", "dropout_rate", "num_splits",
-                                                 "has_indices", "has_mask", "has_bias");
-    attrs.SetAllAttrs(max_seqlen_q, max_seqlen_k, softmax_scale, causal, dropout_rate, num_splits,
-                      has_indices, has_mask, has_bias);
-    if (mask) {
-      if (bias) {
-        return OpInterpUtil::Dispatch<TensorTuple>(
-            *op_with_mask_and_bias_,
-            {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(mask), JUST(bias)}, attrs);
-      }
-      return OpInterpUtil::Dispatch<TensorTuple>(
-          *op_with_mask_, {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(mask)}, attrs);
-    }
-    if (bias) {
-      if (indices)
-        return OpInterpUtil::Dispatch<TensorTuple>(
-            *op_with_indices_bias_,
-            {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(indices), JUST(bias)}, attrs);
-      return OpInterpUtil::Dispatch<TensorTuple>(
-          *op_with_bias_, {query, key, value, cu_seqlens_q, cu_seqlens_k, JUST(bias)}, attrs);
-    }
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_with_mask_;
-  std::shared_ptr<OpExpr> op_with_bias_;
-  std::shared_ptr<OpExpr> op_with_indices_bias_;
-  std::shared_ptr<OpExpr> op_with_mask_and_bias_;
-};
 
 class CtcGreedyDecoderFunctor {
  public:
@@ -5284,172 +5180,6 @@ class FusedMSASoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMSASigmoidMulFunctor {
- public:
-  FusedMSASigmoidMulFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("fused_msa_sigmoid_mul").Input("x").Input("g").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& g, const bool inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    if (inplace) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, g}, outputs.get(), attrs));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, g}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class FusedMSASigmoidMulGradFunctor {
- public:
-  FusedMSASigmoidMulGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_sigmoid_mul_grad")
-                         .Input("dout")
-                         .Input("x")
-                         .Input("g")
-                         .Input("out")
-                         .Output("dx")
-                         .Output("dg")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dout,
-                                const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& g,
-                                const std::shared_ptr<one::Tensor>& out, const bool inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    CHECK_EQ_OR_RETURN(inplace, false);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dout, x, g, out}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class FusedMSABiasaddDropoutResidualFunctor {
- public:
-  FusedMSABiasaddDropoutResidualFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_biasadd_dropout_residual")
-                         .Input("bias")
-                         .Input("x")
-                         .Input("mask")
-                         .Input("residual")
-                         .Output("out")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& bias,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const std::shared_ptr<one::Tensor>& residual,
-                           const bool inplace = false) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    if (inplace) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {bias, x, mask, residual}, outputs.get(), attrs));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {bias, x, mask, residual}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class FusedMSABiasaddDropoutResidualGradFunctor {
- public:
-  FusedMSABiasaddDropoutResidualGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_biasadd_dropout_residual_grad")
-                         .Input("dout")
-                         .Input("mask")
-                         .Output("dx")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const bool inplace = false) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, mask}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class FusedMSATmuFunctor {
- public:
-  FusedMSATmuFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_tmu")
-                         .Input("x1")
-                         .Input("b1")
-                         .Input("x2")
-                         .Input("b2")
-                         .Input("mask")
-                         .Input("residual")
-                         .Output("out")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x1,
-                           const std::shared_ptr<one::Tensor>& b1,
-                           const std::shared_ptr<one::Tensor>& x2,
-                           const std::shared_ptr<one::Tensor>& b2,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const std::shared_ptr<one::Tensor>& residual,
-                           const bool inplace = false) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    if (inplace) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x1;
-      JUST(OpInterpUtil::Dispatch(*op_, {x1, b1, x2, b2, mask, residual}, outputs.get(), attrs));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x1, b1, x2, b2, mask, residual}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class FusedMSATmuGradFunctor {
- public:
-  FusedMSATmuGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_msa_tmu_grad")
-                         .Input("dout")
-                         .Input("x1")
-                         .Input("b1")
-                         .Input("x2")
-                         .Input("b2")
-                         .Input("mask")
-                         .Output("dx1")
-                         .Output("dx2")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
-                           const std::shared_ptr<one::Tensor>& x1,
-                           const std::shared_ptr<one::Tensor>& b1,
-                           const std::shared_ptr<one::Tensor>& x2,
-                           const std::shared_ptr<one::Tensor>& b2,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const bool inplace = false) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
-    attrs.SetAllAttrs(inplace);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x1, b1, x2, b2, mask}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5544,7 +5274,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedBiasAddScaleMaskSoftmaxDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
-  m.add_functor<impl::FlashAttentionFunctor>("FlashAttention");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
@@ -5583,13 +5312,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
   m.add_functor<impl::FusedMSASoftmaxFunctor>("FusedMSASoftmax");
   m.add_functor<impl::FusedMSASoftmaxGradFunctor>("FusedMSASoftmaxGrad");
-  m.add_functor<impl::FusedMSASigmoidMulFunctor>("FusedMSASigmoidMul");
-  m.add_functor<impl::FusedMSASigmoidMulGradFunctor>("FusedMSASigmoidMulGrad");
-  m.add_functor<impl::FusedMSABiasaddDropoutResidualFunctor>("FusedMSABiasaddDropoutResidual");
-  m.add_functor<impl::FusedMSABiasaddDropoutResidualGradFunctor>(
-      "FusedMSABiasaddDropoutResidualGrad");
-  m.add_functor<impl::FusedMSATmuFunctor>("FusedMSATmu");
-  m.add_functor<impl::FusedMSATmuGradFunctor>("FusedMSATmuGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 

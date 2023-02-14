@@ -90,4 +90,3 @@ from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
 from oneflow._C import gumbel_softmax
 from .functional_depend import depend
-from .functional_flash_attention import flash_attention
