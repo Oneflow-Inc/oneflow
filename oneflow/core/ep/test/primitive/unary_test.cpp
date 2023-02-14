@@ -174,7 +174,7 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
         }
       }
 
-      printf("%dth successful insert\n");
+      printf("%dth successful insert\n", i);
 
       for (int i0 = 0; i0 < c_dims[0]; i0++) {
         for (int i1 = 0; i1 < c_dims[1]; i1++) {
