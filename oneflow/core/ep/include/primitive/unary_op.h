@@ -91,6 +91,9 @@ enum class UnaryOp {
   kIsNan,
   kIsFinite,
   kNanAssign,
+
+  // bitwise op
+  kBitwiseNot,
 };
 
 }
