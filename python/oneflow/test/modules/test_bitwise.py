@@ -103,7 +103,6 @@ def _test_scalar_bitwise_shift_op(test_case, op):
     return result
 
 
-
 # Bitwise ops only accept integral dtype,
 # so auto_backward isn't necessary
 @flow.unittest.skip_unless_1n1d()
@@ -159,6 +158,7 @@ class TestBitwiseRightShiftModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_right_shift(test_case):
         return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+
 
 class TestBitwiseNotModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)

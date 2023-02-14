@@ -339,7 +339,6 @@ struct BinaryFuncBitwiseRightShift final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseRightShift);
 
-
 #if defined(__CUDACC__)
 template<>
 struct BinaryFuncAdd<half> final {

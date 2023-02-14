@@ -102,6 +102,8 @@ NB_BINARY_FUNC(PyTensorObject_nb_or, functional::logical_or);
 NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
+NB_BINARY_FUNC(PyTensorObject_nb_left_shift, functional::bitwise_left_shift);
+NB_BINARY_FUNC(PyTensorObject_nb_right_shift, functional::bitwise_right_shift);
 
 static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
@@ -145,25 +147,25 @@ PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unus
 }
 
 PyNumberMethods PyTensorObject_as_number = {
-    PyTensorObject_nb_add,       // nb_add
-    PyTensorObject_nb_sub,       // nb_subtract
-    PyTensorObject_nb_mul,       // nb_multiply
-    PyTensorObject_nb_fmod,      // nb_remainder
-    NULL,                        // nb_divmod
-    PyTensorObject_nb_pow,       // nb_power
-    PyTensorObject_nb_negative,  // nb_negative
-    NULL,                        // nb_positive
-    PyTensorObject_nb_absolute,  // nb_absolute
-    NULL,                        // nb_bool
-    PyTensorObject_nb_invert,    // nb_invert
-    NULL,                        // nb_lshift
-    NULL,                        // nb_rshift
-    PyTensorObject_nb_and,       // nb_and
-    PyTensorObject_nb_xor,       // nb_xor
-    PyTensorObject_nb_or,        // nb_or
-    NULL,                        // nb_int
-    NULL,                        // nb_reserved
-    NULL,                        // nb_float
+    PyTensorObject_nb_add,          // nb_add
+    PyTensorObject_nb_sub,          // nb_subtract
+    PyTensorObject_nb_mul,          // nb_multiply
+    PyTensorObject_nb_fmod,         // nb_remainder
+    NULL,                           // nb_divmod
+    PyTensorObject_nb_pow,          // nb_power
+    PyTensorObject_nb_negative,     // nb_negative
+    NULL,                           // nb_positive
+    PyTensorObject_nb_absolute,     // nb_absolute
+    NULL,                           // nb_bool
+    PyTensorObject_nb_invert,       // nb_invert
+    PyTensorObject_nb_left_shift,   // nb_lshift
+    PyTensorObject_nb_right_shift,  // nb_rshift
+    PyTensorObject_nb_and,          // nb_and
+    PyTensorObject_nb_xor,          // nb_xor
+    PyTensorObject_nb_or,           // nb_or
+    NULL,                           // nb_int
+    NULL,                           // nb_reserved
+    NULL,                           // nb_float
 
     PyTensorObject_nb_inplace_add,  // nb_inplace_add
     PyTensorObject_nb_inplace_sub,  // nb_inplace_sub

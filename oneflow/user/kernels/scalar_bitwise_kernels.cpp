@@ -120,7 +120,6 @@ REGISTER_UNARY_BITWISE_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(
 REGISTER_UNARY_BITWISE_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(
     "scalar_reverse_bitwise_right_shift", ep::primitive::BinaryOp::kBitwiseRightShift);
 
-
 }  // namespace
 
 }  // namespace oneflow
