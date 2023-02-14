@@ -182,8 +182,10 @@ void RematEpAllocator::DisplayAllPieces() {
     std::stringstream ss;
     ss << "piece " << piece << ", " << (void*)piece->ptr << ", " << piece->size << ", ";
     if (piece->tensor) {
-      ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
-         << ", cost: " << get_cost(piece->tensor) << ", pinned: " << piece->tensor->num_pinned()
+      ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id() << ", cost: "
+         << (piece->tensor->is_eviction_disabled() ? "disabled"
+                                                   : std::to_string(get_cost(piece->tensor)))
+         << ", pinned: " << piece->tensor->num_pinned()
          << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();
     } else {
@@ -213,8 +215,9 @@ void RematEpAllocator::Display() {
 
 // 开启了 left-right 之后，才能开启 op guided
 
-RematEpAllocator::offset_t RematEpAllocator::FindProperPositionInGroup(Piece* piece, size_t group_idx,
-                                                                   size_t request_size) const {
+RematEpAllocator::offset_t RematEpAllocator::FindProperPositionInGroup(Piece* piece,
+                                                                       size_t group_idx,
+                                                                       size_t request_size) const {
   const offset_t grp_left_bound = group_boundaries_[group_idx].first;
   const offset_t grp_right_bound = group_boundaries_[group_idx].second;
   const offset_t piece_left_bound = get_offset(piece->ptr);
@@ -405,7 +408,8 @@ void RematEpAllocator::InitMemory() {
   InsertPiece2PtrMap(piece);
 }
 
-Maybe<RematEpAllocator::Piece*> RematEpAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
+Maybe<RematEpAllocator::Piece*> RematEpAllocator::FindPiece(size_t aligned_size,
+                                                            bool after_eviction) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) { InitMemory(); }
@@ -478,7 +482,7 @@ void RematEpAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 }
 
 Maybe<RematEpAllocator::Piece*> RematEpAllocator::EvictAndFindPieceLoop(size_t required_size,
-                                                                    bool consider_neighbor) {
+                                                                        bool consider_neighbor) {
   VLOG(2) << "required size: " << required_size;
   auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t {
     size_t size = it->second->size;
@@ -686,7 +690,9 @@ void RematEpAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK_EQ(piece->ptr, mem_ptr);
   CHECK(!piece->is_free);
 
-  if (auto* tensor = piece->tensor) { CHECK_JUST(remat::DisjointSet::update_after_release(tensor)); }
+  if (auto* tensor = piece->tensor) {
+    CHECK_JUST(remat::DisjointSet::update_after_release(tensor));
+  }
 
   piece->is_free = true;
   piece->tensor = nullptr;
@@ -735,7 +741,7 @@ nlohmann::json RematEpAllocator::DumpSearchFreeMemCost() {
 }  // namespace vm
 
 vm::RematEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType device_type,
-                                                           size_t device_index) {
+                                                                    size_t device_index) {
   auto key = std::make_pair(device_type, device_index);
   auto it = allocators_.find(key);
   if (it == allocators_.end()) {
@@ -744,7 +750,7 @@ vm::RematEpAllocator* remat::AllocatorManager::CreateOrGetAllocator(DeviceType d
     auto ep_backend_allocator =
         std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
     auto allocator = std::make_unique<vm::RematEpAllocator>(ep::kMaxAlignmentRequirement,
-                                                          std::move(ep_backend_allocator));
+                                                            std::move(ep_backend_allocator));
     allocators_.emplace(key, std::move(allocator));
     return allocators_.at(key).get();
   } else {

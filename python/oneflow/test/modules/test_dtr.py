@@ -402,7 +402,7 @@ class TestDTR(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @only_fbip()
-    @memory_budget(220, 'cpu')
+    @memory_budget(270, 'cpu')
     def test_resnet18_momentum_sgd(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), False, None)
@@ -410,7 +410,7 @@ class TestDTR(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @assert_no_small_piece_optimization
     @only_fbip()
-    @memory_budget(320, 'cpu')
+    @memory_budget(310, 'cpu')
     def test_resnet18_adam(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), False, None)

@@ -144,6 +144,7 @@ void RematableTensorStorage::Access() {
 }
 
 Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
+  CHECK_OR_RETURN(!is_eviction_disabled());
   const double time_since_last_access = Singleton<remat::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
   if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>() || EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
