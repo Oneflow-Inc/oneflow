@@ -304,9 +304,9 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/Oneflow-Inc/cutlass/archive/ba2ef44c0224ab62cdf33c52d44a0a0ca13c8e8a.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/90e0ae3491eba56baaf48105d75473e103eb6b79.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 8c222839ca86f64162b36d117355a398)
+set(CUTLASS_MD5 1996f5147655d4b2474bd5e039493cfb)
 
 include(cuda)
 
