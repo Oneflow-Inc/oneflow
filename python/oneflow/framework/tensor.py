@@ -333,10 +333,9 @@ def _tolist(self):
     return self.numpy().tolist()
 
 
-<<<<<<< HEAD
 def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
     return flow.topk(self, k, dim, largest, sorted)
-=======
+
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
@@ -549,25 +548,19 @@ def RegisterMethods():
     Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
     Tensor.norm = _norm
-<<<<<<< HEAD
-    Tensor.split = _split
-=======
+    # Tensor.split = _split
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
->>>>>>> master
     Tensor.to = _to
     Tensor.masked_select = _masked_select
-<<<<<<< HEAD
-    Tensor.item = _item
+    # Tensor.item = _item
     Tensor.sort = _sort
     Tensor.tolist = _tolist
     Tensor.topk = _topk
-=======
-    Tensor.eq = _eq
+    # Tensor.eq = _eq
     Tensor.sort = _sort
     Tensor.tolist = _tolist
->>>>>>> master
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
     Tensor.is_consistent = _is_consistent
