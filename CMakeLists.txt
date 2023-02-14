@@ -1,4 +1,5 @@
 # Minimum CMake required
+set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 cmake_minimum_required(VERSION 3.18.0)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
@@ -80,10 +81,10 @@ endif()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
+set(COMPILER_VERSION_ERROR_MSG "At least gcc 9, clang 5 or Apple clang 12 is supported.")
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 7)
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
 
@@ -201,7 +202,7 @@ endif()
 add_definitions(-DRPC_BACKEND_LOCAL)
 message(STATUS "RPC backend enabled: local")
 enable_testing()
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
@@ -251,7 +252,7 @@ if(WIN32)
   # set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
-  set(EXTRA_CXX_FLAGS "-std=c++14 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
+  set(EXTRA_CXX_FLAGS "-Wall -Wno-sign-compare -Wno-unused-function -fPIC")
 
   if(APPLE)
     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations")
@@ -305,9 +306,9 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/ba2ef44c0224ab62cdf33c52d44a0a0ca13c8e8a.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
+set(CUTLASS_MD5 8c222839ca86f64162b36d117355a398)
 
 include(cuda)
 

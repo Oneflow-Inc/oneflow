@@ -67,7 +67,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
 
 
         """
@@ -93,7 +93,7 @@ class GraphConfig(object):
     ):
         r"""Enable ZeRO redundancy optimizer.
 
-        This optimzation will reduce optimizer states memory consumption as described
+        This optimization will reduce optimizer states memory consumption as described
         by ZeRO https://arxiv.org/abs/1910.02054 .
 
         The default zero stage is 2.
@@ -118,7 +118,7 @@ class GraphConfig(object):
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3.
             shard_min_size (int): min size (element count) of a shard of an optimizer state.
-            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
+            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this parameter is at pre-alpha stage.
         """
         if not mode:
             self.proto.optimizer_placement_optimization_mode = "none"
@@ -159,12 +159,12 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_model_update_ops = mode
 
     def allow_fuse_add_to_output(self, mode: bool = True):
-        r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
+        r"""If set to true, try to fuse a binary element-wise add operator to one of the predecessors to improve performance.
 
         For example:
 
@@ -185,7 +185,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_add_to_output = mode
 
@@ -212,7 +212,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.enable_fuse_cast_scale = mode
 
@@ -262,14 +262,14 @@ class GraphConfig(object):
         # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
 
         Args:
-            value (int): graph ouputs buffer size.
+            value (int): graph outputs buffer size.
         """
         assert isinstance(value, int)
         assert value >= 1
         self._outputs_buffer_size = value
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
-        r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
+        r""" Whether enable cudnn conv operation to use heuristic search algorithm.
 
         Note:
             It is recommended to use `flow.backends.cudnn.enable_conv_heuristic_search_algo(False)` instead of this function.
@@ -292,7 +292,7 @@ class GraphConfig(object):
             graph = Graph()
 
         Args:
-            mode (bool, optional): The default vaule is True.
+            mode (bool, optional): The default value is True.
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 
@@ -319,21 +319,30 @@ class GraphConfig(object):
         Such procedure would reduce the gaps of the execution on gpus.
         It might speed up the training by 2%.
         If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
+
+        straighten_algorithm_tag 5: DelayShortGpu
+        Under the fifth configuration, the straighten algorithm would try to delay the cpu nodes.
+        Such procedure would reduce the gaps of the execution on gpus.
+        It might speed up the validation (or training).
+        If no cpu nodes exist, the straighten_algorithm_tag would be switch to 3 automatically.
         """
         assert (
             mode == "Disable"
             or mode == "SpeedFirst"
             or mode == "MemoryFirst"
             or mode == "OverlapCpuGpu"
-        )
+            or mode == "DelayShortGpu"
+        ), "please choose one type among {Disable, SpeedFirst, MemoryFirst, OverlapCpuGpu, DelayShortGpu}"
         if mode == "Disable":
             self.proto.straighten_algorithm_tag_in_task_graph = 1
         elif mode == "SpeedFirst":
             self.proto.straighten_algorithm_tag_in_task_graph = 2
         elif mode == "MemoryFirst":
             self.proto.straighten_algorithm_tag_in_task_graph = 3
-        else:
+        elif mode == "OverlapCpuGpu":
             self.proto.straighten_algorithm_tag_in_task_graph = 4
+        else:
+            self.proto.straighten_algorithm_tag_in_task_graph = 5
 
     def enable_compress_memory(self, mode: bool = True):
         """If true, then the graph will try its best to find the minimum memory allocation strategy.
@@ -389,6 +398,46 @@ class GraphConfig(object):
         Use \"sbp collector\" to create \"sbp proxy\" for nodes with multiple downstream operators.
         """
         self.proto.enable_auto_parallel_sbp_collector = mode
+
+    def enable_auto_memory(self, mode: str = "AdaptiveMemory"):
+        r""" Whether we use a parallelism strategy with less memory
+
+        Auto memory strategy 1: Disable
+        Disable auto memory in auto parallel.
+        Ignore the memory and try our best to speed up the training.
+
+        Auto memory strategy 2: SlightMemoryDown
+        Try to decrease the memory while maintaining the throughput.
+
+        Auto memory strategy 3: ModerateMemoryDown
+        Decrease the memory, throughput might or might not be affected.
+        Similar to data parallelism + ZeRO.
+
+        Auto memory strategy 4: HeavyMemoryDown
+        Try our best to decrease the memory, ignoring the throughput.
+
+        Auto memory strategy 5: AdaptiveMemory
+        Use normal auto parallelism without consideration of memory while we have enough memory.
+        Gradually decrease the memory to avoid out of memory while we have inadequate memory.
+        Always try to find the highest throughput under the current limitation of memory.
+        """
+        assert (
+            mode == "Disable"
+            or mode == "SlightMemoryDown"
+            or mode == "ModerateMemoryDown"
+            or mode == "HeavyMemoryDown"
+            or mode == "AdaptiveMemory"
+        )
+        if mode == "Disable":
+            self.proto.enable_auto_memory = 1
+        elif mode == "SlightMemoryDown":
+            self.proto.enable_auto_memory = 2
+        elif mode == "ModerateMemoryDown":
+            self.proto.enable_auto_memory = 3
+        elif mode == "HeavyMemoryDown":
+            self.proto.enable_auto_memory = 4
+        else:
+            self.proto.enable_auto_memory = 5
 
     def enable_multi_tensor_update(self, mode: bool = True):
         """

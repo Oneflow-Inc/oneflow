@@ -22,6 +22,8 @@ from importlib.util import find_spec, module_from_spec
 import sys
 from contextlib import contextmanager
 
+import oneflow.support.env_var_util
+
 _first_init = True
 
 error_msg = """ is not implemented, please submit an issue at  
@@ -39,7 +41,7 @@ class ModuleWrapper(ModuleType):
                 return None
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
-            raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
+            raise ModuleNotFoundError(self.module.__name__ + "." + name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
             return ModuleWrapper(attr)
@@ -85,7 +87,7 @@ class OneflowImporter(MetaPathFinder, Loader):
                 # get actual oneflow module
                 real_spec = find_spec(oneflow_mod_fullname)
                 if real_spec is None:
-                    raise NotImplementedError(oneflow_mod_fullname + error_msg)
+                    raise ModuleNotFoundError(oneflow_mod_fullname + error_msg)
                 real_mod = module_from_spec(real_spec)
                 real_spec.loader.exec_module(real_mod)
             else:
@@ -119,15 +121,15 @@ class OneflowImporter(MetaPathFinder, Loader):
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
-                self.disable_mod_cache.update({k: v})
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.disable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.enable_mod_cache.items():
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.enable_mod_cache.items():
             sys.modules.update({k: v})
-            globals.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
         self.enable = True
 
     def _disable(self, globals):
@@ -135,15 +137,15 @@ class OneflowImporter(MetaPathFinder, Loader):
             return
         for k, v in sys.modules.copy().items():
             if _is_torch(k):
-                self.enable_mod_cache.update({k: v})
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.enable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.disable_mod_cache.items():
+                for alias in aliases:
+                    del globals[alias]
+        for k, (v, aliases) in self.disable_mod_cache.items():
             sys.modules.update({k: v})
-            globals.update({k: v})
+            for alias in aliases:
+                globals.update({alias: v})
         self.enable = False
 
 
@@ -153,10 +155,13 @@ _importer = OneflowImporter()
 class enable:
     def __init__(self):
         self.enable = _importer.enable
-        if self.enable:
-            return
+        forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
+            "ONEFLOW_DISABLE_MOCK_TORCH", False
+        )
         globals = currentframe().f_back.f_globals
         self.globals = globals
+        if self.enable or forcedly_disabled_by_env_var:
+            return
         _importer._enable(globals)
 
     def __enter__(self):

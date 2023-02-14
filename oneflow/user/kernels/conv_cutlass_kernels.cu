@@ -30,7 +30,7 @@ namespace oneflow {
 
 namespace {
 
-class Conv2dCutlassKernel final : public user_op::OpKernel {
+class Conv2dCutlassKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   Conv2dCutlassKernel() = default;
   ~Conv2dCutlassKernel() override = default;
@@ -149,12 +149,14 @@ class Conv2dCutlassKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("conv2d")
     .SetCreateFn<Conv2dCutlassKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobAttr<std::string>("data_format") == "channels_last")
-                     && (user_op::HobAttr<int32_t>("groups") == 1)
-                     && (user_op::HobDataType("in", 0) == DataType::kFloat16)
-                     && (user_op::HobTrue()
-                         == ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false)))
+    .SetIsMatchedHob(
+        (user_op::HobDeviceType() == DeviceType::kCUDA)
+        && (user_op::HobAttr<std::string>("data_format") == "channels_last")
+        && (user_op::HobAttr<int32_t>("groups") == 1)
+        && (user_op::HobDataType("in", 0) == DataType::kFloat16)
+        // Compatible with typo `KERENL`
+        && ((user_op::HobEnvBool("ONEFLOW_KERNEL_CONV_ENABLE_CUTLASS_IMPL", false) == true)
+            || (user_op::HobEnvBool("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false) == true)))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
       // use static workspace size
       return 128 * 1024 * 1024;
