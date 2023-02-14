@@ -35,6 +35,7 @@ def _test_type_as(test_case, shape, src_device, dst_device, src_dtype, dst_dtype
     test_case.assertEqual(input.dtype, target.dtype)
     test_case.assertEqual(input.device, target.device)
 
+
 def _test_is_floating_point(test_case, shape, device, dtype):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype, device=device)
