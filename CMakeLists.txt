@@ -304,9 +304,9 @@ use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
 set(CUTLASS_URL
-    https://github.com/Oneflow-Inc/cutlass/archive/34b3d940ad5e0e20776d0372b4e70092e67c268c.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/ba2ef44c0224ab62cdf33c52d44a0a0ca13c8e8a.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 b75e600310e576811d89d37578d66fdb)
+set(CUTLASS_MD5 8c222839ca86f64162b36d117355a398)
 
 set(FLASH_ATTENTION_URL
     https://github.com/Oneflow-Inc/flash-attention/archive/2f6a59a84a3e9338b11b614bb437f36a099f99ce.zip

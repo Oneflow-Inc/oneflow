@@ -21,15 +21,14 @@ namespace ep {
 namespace primitive {
 namespace broadcast_elementwise_binary {
 
-#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY(binary_op,      \
-                                                                           data_type_pair) \
-  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
-      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>(      \
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_BITWISE_ENTRY(binary_op, data_type_pair) \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<         \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>(         \
       Scalar attr0, Scalar attr1);
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
-                                 BINARY_ACTIVATION_BACKWARD_OP_SEQ,
-                                 CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_BITWISE_ENTRY,
+                                 BINARY_BITWISE_OP_SEQ,
+                                 CUDA_PRIMITIVE_INT_TYPE_SEQ CUDA_PRIMITIVE_BOOL_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
