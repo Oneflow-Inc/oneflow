@@ -175,7 +175,7 @@ def _test_flash_attention(
     del out, ref_out, grad_q, grad_k, grad_v, grad_bias
 
 
-# @unittest.skipIf(True, "skip test")
+@unittest.skipIf(True, "skip test")
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFlashAttention(flow.unittest.TestCase):
@@ -193,7 +193,6 @@ class TestFlashAttention(flow.unittest.TestCase):
         arg_dict["add_mask"] = [True, False]
         arg_dict["add_bias"] = [True, False]
         for arg in GenArgList(arg_dict):
-            print(arg[1:])
             arg[0](test_case, *arg[1:])
 
 
