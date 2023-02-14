@@ -2,7 +2,8 @@ include(ExternalProject)
 
 include(FetchContent)
 
-use_mirror(VARIABLE FLATCC_URL URL https://github.com/dvidelabs/flatcc/archive/refs/tags/v0.6.1.tar.gz)
+use_mirror(VARIABLE FLATCC_URL URL
+           https://github.com/dvidelabs/flatcc/archive/refs/tags/v0.6.1.tar.gz)
 
 #FetchContent_Declare(flatcc URL ${FLATCC_URL})
 #FetchContent_Populate(flatcc)
