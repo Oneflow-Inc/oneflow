@@ -329,14 +329,15 @@ DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
+DIRECT_PASS_FUNC(PyTensorObject_diag, functional::diag)
+DIRECT_PASS_FUNC(PyTensorObject_diagonal, functional::diagonal)
+DIRECT_PASS_FUNC(PyTensorObject_matmul, functional::matmul)
+DIRECT_PASS_FUNC(PyTensorObject_softplus, functional::softplus)
+DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
+DIRECT_PASS_FUNC(PyTensorObject_var, functional::var)
+DIRECT_PASS_FUNC(PyTensorObject_std, functional::std)
 
 // functions that parsing at Python C api layer
-static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
-  HANDLE_ERRORS
-  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject_dim(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return functional::CastToPyObject(PyTensor_Unpack(self)->ndim());
@@ -379,65 +380,6 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   idx = CHECK_JUST(maybe_wrap_dim(idx, ndim));
   idx = idx < 0 ? idx + ndim : idx;
   return PyLong_FromLongLong(shape->At(idx));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dtype = NULL;
-  PyObject* pin_memory = Py_False;
-  static const char* keywords[3] = {"dtype", "pin_memory", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords), &dtype,
-                                   &PyBool_Type, &pin_memory)) {
-    return NULL;
-  }
-  CHECK_OR_THROW(functional::PyDTypeCheck(dtype))
-      << Error::TypeError() << "cast(): argument 'dtype' must be data type, but found "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype)));
-  const auto& result = functional::Cast(PyTensor_Unpack(self), functional::PyUnpackDType(dtype),
-                                        pin_memory == Py_True);
-  return PyTensor_New(ASSERT_PTR(result));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  int32_t diagonal = 0;
-  static const char* keywords[2] = {"diagonal", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i:diag", const_cast<char**>(keywords),
-                                   &diagonal)) {
-    return NULL;
-  }
-  return PyTensor_New(ASSERT_PTR(functional::Diag(PyTensor_Unpack(self), diagonal)));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  int32_t offset = 0;
-  int32_t dim1 = 0;
-  int32_t dim2 = 1;
-  static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iii:diagonal", const_cast<char**>(keywords),
-                                   &offset, &dim1, &dim2)) {
-    return NULL;
-  }
-  return PyTensor_New(ASSERT_PTR(functional::Diagonal(PyTensor_Unpack(self), offset, dim1, dim2)));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* other = NULL;
-  static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:matmul", const_cast<char**>(keywords),
-                                   &other)) {
-    return NULL;
-  }
-  PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
-  PyObject* result = functional::matmul(NULL, concat_args.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
   END_HANDLE_ERRORS
 }
 
@@ -499,82 +441,6 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dim_obj = Py_None;
-  PyObject* unbiased_obj = Py_True;
-  PyObject* keepdim_obj = Py_False;
-  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO!O!:var", const_cast<char**>(keywords),
-                                   &dim_obj, &PyBool_Type, &unbiased_obj, &PyBool_Type,
-                                   &keepdim_obj)) {
-    return NULL;
-  }
-  bool unbiased = unbiased_obj == Py_True;
-  bool keepdim = keepdim_obj == Py_True;
-  CHECK_OR_THROW(dim_obj == Py_None || PyLong_Check(dim_obj)
-                 || functional::PyLongSequenceCheck(dim_obj))
-      << Error::TypeError() << "var(): argument 'dim' must be int32 list, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
-  auto tensor = PyTensor_Unpack(self);
-  if (dim_obj == Py_None) {
-    return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, NullOpt, unbiased, keepdim)));
-  }
-  std::vector<int32_t> dim;
-  if (PyLong_Check(dim_obj)) {
-    dim.emplace_back(static_cast<int32_t>(PyLong_AsLong(dim_obj)));
-    return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, dim, unbiased, keepdim)));
-  }
-  dim = functional::PyUnpackLongSequence<int32_t>(dim_obj);
-  return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, dim, unbiased, keepdim)));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dim_obj = Py_None;
-  PyObject* unbiased_obj = Py_True;
-  PyObject* keepdim_obj = Py_False;
-  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO!O!:std", const_cast<char**>(keywords),
-                                   &dim_obj, &PyBool_Type, &unbiased_obj, &PyBool_Type,
-                                   &keepdim_obj)) {
-    return NULL;
-  }
-  bool unbiased = unbiased_obj == Py_True;
-  bool keepdim = keepdim_obj == Py_True;
-  CHECK_OR_THROW(dim_obj == Py_None || PyLong_Check(dim_obj)
-                 || functional::PyLongSequenceCheck(dim_obj))
-      << Error::TypeError() << "std(): argument 'dim' must be int32 list, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
-  auto tensor = PyTensor_Unpack(self);
-  if (dim_obj == Py_None) {
-    return PyTensor_New(
-        ASSERT_PTR(functional::StandardDeviation(tensor, NullOpt, unbiased, keepdim)));
-  }
-  std::vector<int32_t> dim;
-  if (PyLong_Check(dim_obj)) {
-    dim.emplace_back(static_cast<int32_t>(PyLong_AsLong(dim_obj)));
-    return PyTensor_New(ASSERT_PTR(functional::StandardDeviation(tensor, dim, unbiased, keepdim)));
-  }
-  dim = functional::PyUnpackLongSequence<int32_t>(dim_obj);
-  return PyTensor_New(ASSERT_PTR(functional::StandardDeviation(tensor, dim, unbiased, keepdim)));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_softplus(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  double beta = 1.0;
-  double threshold = 20.0;
-  static const char* keywords[3] = {"beta", "threshold", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "dd:softplus", const_cast<char**>(keywords), &beta,
-                                   &threshold)) {
-    return NULL;
-  }
-  return PyTensor_New(ASSERT_PTR(functional::Softplus(PyTensor_Unpack(self), beta, threshold)));
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject_relu(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::Relu(PyTensor_Unpack(self), false)));
@@ -614,6 +480,7 @@ REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMean
     END_HANDLE_ERRORS                                                      \
   }
 
+DATATYPE_FUNC(PyTensorObject_byte, DType::UInt8());
 DATATYPE_FUNC(PyTensorObject_bool, DType::Bool());
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
 DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
@@ -1076,7 +943,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
-    {"bitwise_not", (PyCFunction)PyTensorObject_bitwise_not, METH_NOARGS, NULL},
+    {"bitwise_not", PyTensorObject_bitwise_not, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},
