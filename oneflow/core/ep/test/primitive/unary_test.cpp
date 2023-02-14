@@ -53,8 +53,8 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       {0, 0, 0, 0},
       {a_dims_vec[3][1] * a_dims_vec[3][2] * a_dims_vec[3][3], a_dims_vec[3][2] * a_dims_vec[3][3],
        a_dims_vec[3][3], 1},
-      {a_dims_vec[3][1] * a_dims_vec[3][2] * a_dims_vec[3][3], a_dims_vec[3][2] * a_dims_vec[3][3],
-       a_dims_vec[3][3], 1}};
+      {a_dims_vec[4][1] * a_dims_vec[4][2] * a_dims_vec[4][3], a_dims_vec[4][2] * a_dims_vec[4][3],
+       a_dims_vec[4][3], 1}};
   const std::vector<std::vector<int64_t>> c_strides_vec = {
       {broadcast_dims_vec[0][1] * broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3],
        broadcast_dims_vec[0][2] * broadcast_dims_vec[0][3], broadcast_dims_vec[0][3], 1},
@@ -64,8 +64,8 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
       {0, 0, 0, 0},
       {broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2] * broadcast_dims_vec[3][3],
        broadcast_dims_vec[3][2], 1, broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]},
-      {1, broadcast_dims_vec[3][0], broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1],
-       broadcast_dims_vec[3][0] * broadcast_dims_vec[3][1] * broadcast_dims_vec[3][2]}};
+      {1, broadcast_dims_vec[4][0], broadcast_dims_vec[4][0] * broadcast_dims_vec[4][1],
+       broadcast_dims_vec[4][0] * broadcast_dims_vec[4][1] * broadcast_dims_vec[4][2]}};
 
   for (int i = 0; i < 5; i++) {
     const std::vector<int64_t>& a_dims = a_dims_vec[i];
@@ -79,9 +79,11 @@ void TestElementwiseBroadcastUnary(DeviceManagerRegistry* registry,
 
     a.setRandom();
 
-    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a(a_dims[0]*a_broadcast[0], a_dims[1]*a_broadcast[1], 
-      a_dims[2]*a_broadcast[2], a_dims[3]*a_broadcast[3]);
-    broadcast_a = a.broadcast(a_broadcast).template cast<Dst>();
+    printf("1\n");
+    Eigen::Tensor<Src, 4, Eigen::RowMajor> t = a.broadcast(a_broadcast);
+    printf("2\n");
+    Eigen::Tensor<Dst, 4, Eigen::RowMajor> broadcast_a = t.template cast<Dst>();
+    printf("3\n");
 
     const int64_t a_size = a.size() * sizeof(Src);
     const int64_t c_count =
