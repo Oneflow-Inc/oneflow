@@ -3658,7 +3658,6 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
-
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
