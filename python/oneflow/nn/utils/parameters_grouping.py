@@ -142,7 +142,7 @@ class ContiguousParamsGroup(object):
                             tensor_key = (tensor.dtype, tensor.placement, tensor.sbp)
                         else:
                             tensor_key = (tensor.dtype, tensor.device)
-                        
+
                         actual_tensors_group[tensor_key].append(
                             (tensor, tensor.detach().clone())
                         )
