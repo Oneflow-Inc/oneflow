@@ -44,7 +44,7 @@ def _test_bitwise_op(test_case, op):
 
 def _test_scalar_bitwise(test_case, op):
     device = random_device()
-    dtype = random_dtype(["index", "bool", "unsigned"])
+    dtype = random_dtype(["int", "bool", "unsigned"])
     x = (
         random_tensor(
             ndim=4,
