@@ -191,7 +191,6 @@ class TestFlashAttention(flow.unittest.TestCase):
         arg_dict['dtype'] = [flow.float16, flow.bfloat16]
         arg_dict['padding'] = ['random', 'bert']
         for arg in GenArgList(arg_dict):
-            print(arg[1:])
             arg[0](test_case, *arg[1:])
 
 if __name__ == "__main__":

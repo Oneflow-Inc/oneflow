@@ -3224,7 +3224,6 @@ def OneFlow_FusedGetIntersectionAreaGradOp : OneFlow_BaseOp<"fused_get_intersect
   let has_data_type_infer_fn = 1;
 }
 
-
 def OneFlow_FusedGetConvexDiagonalSquaredOp : OneFlow_BaseOp<"fused_get_convex_diagonal_squared", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$b1_x1,
