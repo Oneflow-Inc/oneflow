@@ -51,9 +51,6 @@ class ContiguousParamsGroup(object):
         which indicates the Tensors in the same 1D List should be 
         grouped into the same Tensor buffer.
         """
-        assert not any(
-            [any([p.is_global for p in params]) for params in params_group_list]
-        ), "All parameters must be local tensor for params grouping."
 
         # making params_group_list 2D List of Tensors
         self.params_group_list = params_group_list.copy()
@@ -71,6 +68,15 @@ class ContiguousParamsGroup(object):
             self.params_group_list = [[self.params_group_list]]
         else:
             raise ValueError("The shape of params_group_list is illegal!")
+
+        if all([all([p.is_global for p in params]) for params in params_group_list]):
+            self.is_global = True
+        elif all([all([p.is_local for p in params]) for params in params_group_list]):
+            self.is_global = False
+        else:
+            raise ValueError(
+                "Parameters must be all local tensors or all global tensors for params grouping."
+            )
 
         self.grouped_tensors = []
         self.grouped_grads = []
@@ -132,7 +138,11 @@ class ContiguousParamsGroup(object):
                 # keeping the parameters' order in group list
                 for tensor in new_tensors:
                     if tensor in tensors_intersection:
-                        tensor_key = (tensor.dtype, tensor.device)
+                        if self.is_global:
+                            tensor_key = (tensor.dtype, tensor.placement, tensor.sbp)
+                        else:
+                            tensor_key = (tensor.dtype, tensor.device)
+                        
                         actual_tensors_group[tensor_key].append(
                             (tensor, tensor.detach().clone())
                         )
@@ -170,14 +180,24 @@ class ContiguousParamsGroup(object):
 
             if physical_param_buf == None:
                 dtype = params[0][0].dtype
-                device = params[0][0].device
 
-                physical_param_buf = flow.zeros(
-                    logical_bufsize, dtype=dtype, device=device
-                )
-                physical_param_grad_buf = flow.zeros(
-                    logical_bufsize, dtype=dtype, device=device
-                )
+                if self.is_global:
+                    placement = params[0][0].placement
+                    sbp = params[0][0].sbp
+                    physical_param_buf = flow.zeros(
+                        logical_bufsize, dtype=dtype, placement=placement, sbp=sbp
+                    )
+                    physical_param_grad_buf = flow.zeros(
+                        logical_bufsize, dtype=dtype, placement=placement, sbp=sbp
+                    )
+                else:
+                    device = params[0][0].device
+                    physical_param_buf = flow.zeros(
+                        logical_bufsize, dtype=dtype, device=device
+                    )
+                    physical_param_grad_buf = flow.zeros(
+                        logical_bufsize, dtype=dtype, device=device
+                    )
                 physical_param_buf.grad = physical_param_grad_buf
 
                 self.grouped_tensors_offset[physical_param_buf] = 0
