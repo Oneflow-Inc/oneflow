@@ -59,14 +59,14 @@ class IndexFirstAxis(flow.autograd.Function):
 
 index_first_axis = IndexFirstAxis.apply
 
+
 def index_first_axis_fn(x, indices):
     other_shape = x.shape[1:]
     second_dim = other_shape.numel()
     return flow.gather(
-        rearrange(x, "b ... -> b (...)"),
-        0,
-        repeat(indices, "z -> z d", d=second_dim),
+        rearrange(x, "b ... -> b (...)"), 0, repeat(indices, "z -> z d", d=second_dim),
     ).reshape(-1, *other_shape)
+
 
 def _unpad_input(hidden_states, attention_mask):
     """
@@ -252,6 +252,7 @@ def flash_attention(
             bias_nonzero_indices,
         ]
     )
+    indices = None if (unpad_kv == "bert" or bias is None) else bias_nonzero_indices
     out, softmax_lse = flow._C.flash_attention(
         query,  # total_q * num_heads * head_size
         kv_unpad[..., 0, :, :],  # total_k * num_heads * head_size
@@ -260,8 +261,7 @@ def flash_attention(
         kv_cu_seqlens,
         max_seqlen_q=max_seqlen_q,
         max_seqlen_k=kv_max_s,
-        indices=(None if unpad_kv=="bert" else bias_nonzero_indices),
-        mask=None,
+        indices=indices,
         bias=bias,
         softmax_scale=1 / (c ** 0.5),
         causal=causal,
