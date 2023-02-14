@@ -44,7 +44,7 @@ def _test_bitwise_op(test_case, op):
 
 def _test_scalar_bitwise(test_case, op):
     device = random_device()
-    dtype = random_dtype(["index", "unsigned"])
+    dtype = random_dtype(["index", "bool", "unsigned"])
     x = (
         random_tensor(
             ndim=4,
@@ -101,6 +101,7 @@ def _test_scalar_bitwise_shift_op(test_case, op):
     scalar = random(low=0, high=5).to(int)
     result = [op(x, scalar), op(scalar, x)]
     return result
+
 
 
 @flow.unittest.skip_unless_1n1d()

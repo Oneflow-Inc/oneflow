@@ -34,6 +34,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_right_shift", BitwiseRightShift) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)                    \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)                             \
+
   OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", Pow)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ          \

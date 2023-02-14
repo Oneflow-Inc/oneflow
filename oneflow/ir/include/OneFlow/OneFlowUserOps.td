@@ -1060,6 +1060,7 @@ def OneFlow_BroadcastBitwiseRightShiftOp : OneFlow_BaseOp<"broadcast_bitwise_rig
   let has_data_type_infer_fn = 1;
 }
 
+
 #endif // GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
 // Group: CONV

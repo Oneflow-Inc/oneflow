@@ -47,4 +47,5 @@ IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseRightShift);
 IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarReverseBitwiseLeftShift);
 IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarReverseBitwiseRightShift);
 
+
 }  // namespace oneflow
