@@ -51,7 +51,7 @@ class RuntimeBase {
   void ParallelFor(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
                    size_t grain_size) {
     if (begin >= end) { return; }
-    if (num_threads == 1) { SeqFor(begin, end, func); }
+    if (num_threads == 1) { return SeqFor(begin, end, func); }
     ParallelForImpl(begin, end, func, num_threads, grain_size);
   }
 
