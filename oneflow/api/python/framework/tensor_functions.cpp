@@ -336,6 +336,9 @@ DIRECT_PASS_FUNC(PyTensorObject_softplus, functional::softplus)
 DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
 DIRECT_PASS_FUNC(PyTensorObject_var, functional::var)
 DIRECT_PASS_FUNC(PyTensorObject_std, functional::std)
+DIRECT_PASS_FUNC(PyTensorObject_mm, functional::mm)
+DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
+DIRECT_PASS_FUNC(PyTensorObject_fill, functional::fill_)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_dim(PyObject* self, PyObject* unused) {
@@ -888,6 +891,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mm", (PyCFunction)PyTensorObject_mm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mv", (PyCFunction)PyTensorObject_mv, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"fill_", (PyCFunction)PyTensorObject_fill, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

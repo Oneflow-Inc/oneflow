@@ -861,6 +861,22 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
+    
+    @autotest(n=3)
+    def test_tensor_diagonal(test_case):
+        device = random_device()
+        offset = random(-5, 5).to(int)
+        dim1 = random(-4, 4).to(int)
+        dim2 = random(-4, 4).to(int)
+
+        x = random_tensor(
+            ndim=4,
+            dim1=random(4, 6),
+            dim2=random(4, 6),
+            dim3=random(4, 6),
+            dim4=random(4, 6),
+        ).to(device)
+        return x.diagonal(offset, dim1, dim2)
 
     @autotest(auto_backward=False)
     def test_floordiv_elementwise_tensor_with_random_data(test_case):
