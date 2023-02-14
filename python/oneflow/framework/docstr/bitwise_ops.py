@@ -114,3 +114,34 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.bitwise_not,
+    """
+    Computes the bitwise NOT of input.
+    The input tensor must be of integral or Boolean types.
+    For bool tensors, it computes the logical NOT.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_not.html
+
+    Args:
+        input (oneflow.Tensor): The input Tensor
+
+    Returns:
+        oneflow.Tensor: The output Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> flow.bitwise_not(x)
+        tensor([-2, -3, -4], dtype=oneflow.int64)
+        >>> x = flow.tensor([0, 0, 1]).bool()
+        >>> flow.bitwise_not(x)
+        tensor([ True,  True, False], dtype=oneflow.bool)
+
+    """,
+)
