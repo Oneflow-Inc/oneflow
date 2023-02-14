@@ -104,6 +104,8 @@ def _test_scalar_bitwise_shift_op(test_case, op):
 
 
 
+# Bitwise ops only accept integral dtype,
+# so auto_backward isn't necessary
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseAndModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
@@ -157,6 +159,28 @@ class TestBitwiseRightShiftModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_right_shift(test_case):
         return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+
+class TestBitwiseNotModule(flow.unittest.TestCase):
+    @autotest(n=10, auto_backward=False)
+    def test_bitwise_not(test_case):
+        device = random_device()
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = (
+            random_tensor(
+                ndim=4,
+                dim0=random(low=4, high=8).to(int),
+                dim1=random(low=4, high=8).to(int),
+                dim2=random(low=4, high=8).to(int),
+                dim3=random(low=4, high=8).to(int),
+                dtype=int,
+                high=10,
+            )
+            .to(device)
+            .to(dtype)
+        )
+        return torch.bitwise_not(x)
 
 
 if __name__ == "__main__":

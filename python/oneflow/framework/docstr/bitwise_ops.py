@@ -116,24 +116,42 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.bitwise_not,
+    """
+    Computes the bitwise NOT of input.
+    The input tensor must be of integral or Boolean types.
+    For bool tensors, it computes the logical NOT.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_not.html
+    Args:
+        input (oneflow.Tensor): The input Tensor
+    Returns:
+        oneflow.Tensor: The output Tensor
+    For example:
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> flow.bitwise_not(x)
+        tensor([-2, -3, -4], dtype=oneflow.int64)
+        >>> x = flow.tensor([0, 0, 1]).bool()
+        >>> flow.bitwise_not(x)
+        tensor([ True,  True, False], dtype=oneflow.bool)
+    """,
+)
+
+add_docstr(
     oneflow.bitwise_left_shift,
     """
     Computes the left arithmetic shift of input by other bits. The input tensor must be of integral type. 
-
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_left_shift.html
-
     Args:
         input (oneflow.Tensor or Scalar): The input Tensor
         other (oneflow.Tensor or Scalar): The second input tensor
-
     Returns:
         oneflow.Tensor: The output Tensor
-
     For example:
-
     .. code-block:: python
-
         >>> import oneflow as flow
         >>> x = flow.tensor([1, 2, 3])
         >>> flow.bitwise_left_shift(x, 2)
@@ -141,7 +159,6 @@ add_docstr(
         >>> y = flow.tensor([3, 2, 1])
         >>> flow.bitwise_left_shift(x, y)
         tensor([8, 8, 6], dtype=oneflow.int64)
-
     """,
 )
 
@@ -149,21 +166,15 @@ add_docstr(
     oneflow.bitwise_right_shift,
     """
     Computes the right arithmetic shift of input by other bits. The input tensor must be of integral type. 
-
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bitwise_right_right.html
-
     Args:
         input (oneflow.Tensor or Scalar): The input Tensor
         other (oneflow.Tensor or Scalar): The second input tensor
-
     Returns:
         oneflow.Tensor: The output Tensor
-
     For example:
-
     .. code-block:: python
-
         >>> import oneflow as flow
         >>> x = flow.tensor([6, 7, 8])
         >>> flow.bitwise_right_shift(x, 2)
@@ -171,6 +182,5 @@ add_docstr(
         >>> y = flow.tensor([1, 2, 3])
         >>> flow.bitwise_right_shift(x, y)
         tensor([3, 1, 1], dtype=oneflow.int64)
-
     """,
 )

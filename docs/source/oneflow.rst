@@ -280,6 +280,7 @@ Pointwise Ops
     bitwise_xor
     bitwise_left_shift
     bitwise_right_shift
+    bitwise_not
     mish
     mul 
     neg 

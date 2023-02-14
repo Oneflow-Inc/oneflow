@@ -87,6 +87,7 @@ PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
+NB_UNARY_FUNC(PyTensorObject_nb_invert, functional::bitwise_not);
 // TODO: not implemented yet
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
@@ -107,15 +108,6 @@ static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unuse
   b = ndarray_judgment_and_compatibility(a, b);
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_nb_invert(PyObject* self) {
-  HANDLE_ERRORS
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -249,6 +241,7 @@ UNARY_METHOD(PyTensorObject_acosh, functional::Acosh);
 UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
+UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
 
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
@@ -1083,6 +1076,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+    {"bitwise_not", (PyCFunction)PyTensorObject_bitwise_not, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},

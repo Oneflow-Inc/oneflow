@@ -36,6 +36,12 @@ def _test_bitwise_shift_ops_with_random_data(test_case, op, placement, sbp):
     out = op(x, y)
     return out
 
+@autotest(n=1, auto_backward=False)
+def _test_bitwise_not_with_random_data(test_case, placement, sbp):
+    x = random_tensor(ndim=1, dim0=8, dtype=int).to_global(placement, sbp)
+    return torch.bitwise_not(x)
+
+
 class TestBitwiseModule(flow.unittest.TestCase):
     @globaltest
     def test_bitwise_and_with_random_data(test_case):
@@ -57,6 +63,7 @@ class TestBitwiseModule(flow.unittest.TestCase):
                     test_case, torch.bitwise_right_shift, placement, sbp
                 )
 
+                _test_bitwise_not_with_random_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
