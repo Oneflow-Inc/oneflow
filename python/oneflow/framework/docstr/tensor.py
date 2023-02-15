@@ -437,7 +437,7 @@ add_docstr(
           If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
 
     .. warning::
-        When the input tensor is local tensor and sbp is ``oneflow.sbp.broadcast``, the data on non-0 rank will be modified.
+        When the input tensor is a local tensor and sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified.
         If you want to keep the input local tensor unchanged, please set the arg copy to True.
 
     Args:
