@@ -26,11 +26,13 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -432,38 +434,31 @@ class LerpFunctor {
         << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
         << weight->dtype()->name();
 
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape() || *start->shape() != *weight->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape(), *weight->shape()}));
+    }
+
+    if (weight_elem_cnt == 1 && weight->is_eager() && !weight->requires_grad()) {
+      std::shared_ptr<Tensor> cast_double_weight = JUST(functional::Cast(weight, DType::Double(), /*pin_memory=*/false));
+      double weight_scalar = JUST(GetItemInScalarTensor<double>(cast_double_weight));
+      return functional::ScalarLerp(start, end, weight_scalar);
+    }
+
     std::shared_ptr<Tensor> broadcast_start = start;
     std::shared_ptr<Tensor> broadcast_end = end;
-    if (*start->shape() != *end->shape()) {
-      const int64_t dim = start->shape()->NumAxes();
-      bool broadcast_start_status = false;
-      bool broadcast_end_status = false;
-
-      for (int64_t i = 0; i < dim; i++) {
-        int64_t start_shape_i = start->shape()->At(i);
-        int64_t end_shape_i = end->shape()->At(i);
-        if (start_shape_i > end_shape_i) {
-          broadcast_end_status = true;
-          break;
-        } else if (start_shape_i < end_shape_i) {
-          broadcast_start_status = true;
-          break;
-        }
-      }
-
-      if (broadcast_start_status) {
-        broadcast_start = JUST(functional::BroadcastTo(broadcast_start, *end->shape()));
-      } else if (broadcast_end_status) {
-        broadcast_end = JUST(functional::BroadcastTo(broadcast_end, *start->shape()));
-      }
+    std::shared_ptr<Tensor> broadcast_weight = weight;
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(functional::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(functional::Expand(end, broadcast_shape));
+    }
+    if (*weight->shape() != broadcast_shape) {
+      broadcast_weight = JUST(functional::Expand(weight, broadcast_shape));
     }
 
-    if (weight_elem_cnt == 1) {
-      auto broadcast_weight = JUST(functional::Expand(weight, *broadcast_start->shape()));
-      return OpInterpUtil::Dispatch<Tensor>(*op_,
-                                            {broadcast_start, broadcast_end, broadcast_weight}, {});
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, weight}, {});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, broadcast_weight});
   }
 
  private:
@@ -479,6 +474,34 @@ class InplaceLerpFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
                            const std::shared_ptr<one::Tensor>& end,
                            const std::shared_ptr<one::Tensor>& weight) const {
+    const int64_t weight_elem_cnt = weight->nelement();
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes());
+    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
+        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
+        << weight->dtype()->name();
+
+    if (weight_elem_cnt == 1 && weight->is_eager() && !weight->requires_grad()) {
+      std::shared_ptr<Tensor> cast_double_weight = JUST(functional::Cast(weight, DType::Double(), /*pin_memory=*/false));
+      double weight_scalar = JUST(GetItemInScalarTensor<double>(cast_double_weight));
+      JUST(functional::ScalarInplaceLerp(start, end, weight_scalar));
+      return start;
+    }
+
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape() || *start->shape() != *weight->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape(), *weight->shape()}));
+    }
+
+    if (*start->shape() != broadcast_shape) {
+      JUST(view::InplaceExpand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      JUST(view::InplaceExpand(end, broadcast_shape));
+    }
+    if (*weight->shape() != broadcast_shape) {
+      JUST(view::InplaceExpand(weight, broadcast_shape));
+    }
+
     TensorProcessor tensor_processor;
     if (end->requires_grad() || weight->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)

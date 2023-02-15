@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
@@ -2636,38 +2637,90 @@ class ScalarLerpFunctor {
         CHECK_JUST(one::OpBuilder("scalar_lerp").Input("start").Input("end").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
-                           const std::shared_ptr<one::Tensor>& end, const Scalar& scalar) const {
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
+                           const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
+    }
+
+    std::shared_ptr<Tensor> broadcast_start = start;
+    std::shared_ptr<Tensor> broadcast_end = end;
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(functional::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(functional::Expand(end, broadcast_shape));
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
                                                  "int_operand", "has_int_operand");
-    if (scalar.IsFloatingPoint()) {
-      attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
-      // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[start->dtype()->data_type()]
-          < DType::priority_order[DType::Float16()->data_type()]) {
-        lowest_dtype = DType::Float();
-      } else {
-        lowest_dtype = start->dtype();
-      }
-    } else if (scalar.IsIntegral() || scalar.IsBool()) {
-      attrs.SetAllAttrs(NullOpt, false, scalar.As<int64_t>(), true);
-      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
-      if (DType::priority_order[start->dtype()->data_type()]
-          == DType::priority_order[DType::Bool()->data_type()]) {
-        lowest_dtype = DType::Int64();
-      } else {
-        lowest_dtype = start->dtype();
-      }
+    if (weight.IsFloatingPoint()) {
+      attrs.SetAllAttrs(weight.As<double>(), true, NullOpt, false);
+    } else if (weight.IsIntegral() || weight.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, weight.As<int64_t>(), true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
 
-    JUST(tensor_processor.AddInputs({start, end}, lowest_dtype).Apply());
-    TensorTuple inputs = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end}, attrs);
+  }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, inputs, attrs);
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarInplaceLerpFunctor {
+ public:
+  ScalarInplaceLerpFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("scalar_lerp").Input("start").Input("end").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
+    }
+
+    if (*start->shape() != broadcast_shape) {
+      JUST(view::InplaceExpand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      JUST(view::InplaceExpand(end, broadcast_shape));
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (weight.IsFloatingPoint()) {
+      attrs.SetAllAttrs(weight.As<double>(), true, NullOpt, false);
+    } else if (weight.IsIntegral() || weight.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, weight.As<int64_t>(), true);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+
+    TensorProcessor tensor_processor;
+    if (end->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(start)), end})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({start, end})
+               .Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(start));
+    JUST(CheckInplaceCastValid(start, start_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = start;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -4439,6 +4492,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<ScalarLerpFunctor>("ScalarLerp");
+  m.add_functor<ScalarInplaceLerpFunctor>("ScalarInplaceLerp");
   m.add_functor<ScalarLerpGradFunctor>("ScalarLerpGrad");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");

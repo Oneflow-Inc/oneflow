@@ -269,7 +269,11 @@
   bind_python: True
 
 - name: "lerp_"
-  signature: "Tensor (Tensor start, Tensor end, Tensor weight) => InplaceLerp"
+  signature: 
+    [
+      "Tensor (Tensor start, Tensor end, Tensor weight) => InplaceLerp",
+      "Tensor (Tensor start, Tensor end, Scalar weight) => ScalarInplaceLerp",
+    ]
   bind_python: True
 
 - name: "lerp_grad"

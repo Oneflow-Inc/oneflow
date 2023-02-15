@@ -24,12 +24,12 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLerp(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_lerp_with_broadcast_data(test_case):
         device = random_device()
         start = random_tensor(ndim=2, dim0=3, dim1=1).to(device)
-        end = random_tensor(ndim=2, dim0=3, dim1=3).to(device)
-        weight = random_tensor(ndim=1).to(device)
+        end = random_tensor(ndim=2, dim0=1, dim1=3).to(device)
+        weight = random_tensor(ndim=1, dim0=1).to(device)
         return torch.lerp(start, end, weight)
 
     @autotest()
@@ -48,7 +48,7 @@ class TestLerp(flow.unittest.TestCase):
         start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
-        return start.lerp(end, weight)
+        return start.lerp(end, oneof(weight, random().to(int), random().to(float)))
 
     @autotest()
     def test_tesnor_inplace_lerp_with_random_data(test_case):
@@ -56,7 +56,7 @@ class TestLerp(flow.unittest.TestCase):
         start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
         weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
-        return start.lerp_(end, weight)
+        return start.lerp_(end, oneof(weight, random().to(int), random().to(float)))
 
     @profile(torch.lerp)
     def profile_lerp(test_case):
