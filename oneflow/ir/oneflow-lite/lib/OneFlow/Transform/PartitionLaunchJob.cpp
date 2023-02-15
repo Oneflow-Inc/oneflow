@@ -19,6 +19,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpTraits.h"
 
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
