@@ -2683,12 +2683,8 @@ class ScalarInplaceLerpFunctor {
       broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
     }
 
-    if (*start->shape() != broadcast_shape) {
-      JUST(view::InplaceExpand(start, broadcast_shape));
-    }
-    if (*end->shape() != broadcast_shape) {
-      JUST(view::InplaceExpand(end, broadcast_shape));
-    }
+    if (*start->shape() != broadcast_shape) { JUST(view::InplaceExpand(start, broadcast_shape)); }
+    if (*end->shape() != broadcast_shape) { JUST(view::InplaceExpand(end, broadcast_shape)); }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
                                                  "int_operand", "has_int_operand");
@@ -2707,9 +2703,7 @@ class ScalarInplaceLerpFunctor {
                .AddInputs({JUST(Identity(start)), end})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({start, end})
-               .Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({start, end}).Apply());
     }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);

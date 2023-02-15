@@ -23,8 +23,14 @@ Maybe<void> LerpOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
 
-  CHECK_EQ_OR_RETURN(start.shape(), end.shape());
-  CHECK_EQ_OR_RETURN(start.shape(), weight.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), end.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor end"
+      << end.shape();
+  if (weight.shape().elem_cnt() != 1) {
+    CHECK_EQ_OR_RETURN(start.shape(), weight.shape())
+        << "The size of tensor start" << start.shape() << "must match the size of tensor weight"
+        << weight.shape();
+  }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_is_dynamic(start.is_dynamic());
@@ -42,8 +48,12 @@ Maybe<void> LerpOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
 
-  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type());
-  CHECK_EQ_OR_RETURN(start.data_type(), weight.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `end` but got dtype " << end.data_type();
+  CHECK_EQ_OR_RETURN(start.data_type(), weight.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `weight` but got dtype " << weight.data_type();
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_data_type(start.data_type());
@@ -69,9 +79,15 @@ Maybe<void> LerpGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
 
-  CHECK_EQ_OR_RETURN(start.shape(), end.shape());
-  CHECK_EQ_OR_RETURN(start.shape(), weight.shape());
-  CHECK_EQ_OR_RETURN(start.shape(), out_diff.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), end.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor end"
+      << end.shape();
+  CHECK_EQ_OR_RETURN(start.shape(), weight.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor weight"
+      << weight.shape();
+  CHECK_EQ_OR_RETURN(start.shape(), out_diff.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor out_diff"
+      << out_diff.shape();
 
   user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
   user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
@@ -79,11 +95,11 @@ Maybe<void> LerpGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   start_diff->set_is_dynamic(start.is_dynamic());
   start_diff->set_shape(start.shape());
 
-  end_diff->set_is_dynamic(start.is_dynamic());
-  end_diff->set_shape(start.shape());
+  end_diff->set_is_dynamic(end.is_dynamic());
+  end_diff->set_shape(end.shape());
 
-  weight_diff->set_is_dynamic(start.is_dynamic());
-  weight_diff->set_shape(start.shape());
+  weight_diff->set_is_dynamic(weight.is_dynamic());
+  weight_diff->set_shape(weight.shape());
 
   return Maybe<void>::Ok();
 }
@@ -98,17 +114,23 @@ Maybe<void> LerpGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
 
-  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type());
-  CHECK_EQ_OR_RETURN(start.data_type(), weight.data_type());
-  CHECK_EQ_OR_RETURN(start.data_type(), out_diff.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `end` but got dtype " << end.data_type();
+  CHECK_EQ_OR_RETURN(start.data_type(), weight.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `weight` but got dtype " << weight.data_type();
+  CHECK_EQ_OR_RETURN(start.data_type(), out_diff.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `out_diff` but got dtype " << out_diff.data_type();
 
   user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
   user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
   user_op::TensorDesc* weight_diff = ctx->MutOutputTensorDesc("weight_diff", 0);
-  start_diff->set_data_type(start.data_type());
 
-  end_diff->set_data_type(start.data_type());
-  weight_diff->set_data_type(start.data_type());
+  start_diff->set_data_type(start.data_type());
+  end_diff->set_data_type(end.data_type());
+  weight_diff->set_data_type(weight.data_type());
 
   return Maybe<void>::Ok();
 }
@@ -133,7 +155,9 @@ Maybe<void> ScalarLerpOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& start = ctx->InputTensorDesc("start", 0);
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
 
-  CHECK_EQ_OR_RETURN(start.shape(), end.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), end.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor end"
+      << end.shape();
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_is_dynamic(start.is_dynamic());
@@ -150,7 +174,9 @@ Maybe<void> ScalarLerpOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& start = ctx->InputTensorDesc("start", 0);
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
 
-  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `end` but got dtype " << end.data_type();
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_data_type(start.data_type());
@@ -174,8 +200,12 @@ Maybe<void> ScalarLerpGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
   const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
 
-  CHECK_EQ_OR_RETURN(start.shape(), end.shape());
-  CHECK_EQ_OR_RETURN(start.shape(), out_diff.shape());
+  CHECK_EQ_OR_RETURN(start.shape(), end.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor end"
+      << end.shape();
+  CHECK_EQ_OR_RETURN(start.shape(), out_diff.shape())
+      << "The size of tensor start" << start.shape() << "must match the size of tensor out_diff"
+      << out_diff.shape();
 
   user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
   user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
@@ -197,8 +227,12 @@ Maybe<void> ScalarLerpGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& end = ctx->InputTensorDesc("end", 0);
   const user_op::TensorDesc& out_diff = ctx->InputTensorDesc("out_diff", 0);
 
-  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type());
-  CHECK_EQ_OR_RETURN(start.data_type(), out_diff.data_type());
+  CHECK_EQ_OR_RETURN(start.data_type(), end.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `end` but got dtype " << end.data_type();
+  CHECK_EQ_OR_RETURN(start.data_type(), out_diff.data_type())
+      << Error::RuntimeError() << "expected dtype " << start.data_type()
+      << " for `out_diff` but got dtype " << out_diff.data_type();
 
   user_op::TensorDesc* start_diff = ctx->MutOutputTensorDesc("start_diff", 0);
   user_op::TensorDesc* end_diff = ctx->MutOutputTensorDesc("end_diff", 0);
