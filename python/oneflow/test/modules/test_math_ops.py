@@ -515,13 +515,40 @@ class TestFmod(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestRemainder(flow.unittest.TestCase):
+
+    @autotest(auto_backward=True)
+    def test_elementwise_remainder_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        return torch.remainder(x, y)
+
+    @autotest(n=5, auto_backward=True)
+    def test_flow_broadcast_remainder_with_random_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
+        return torch.remainder(x, y)
+
+    @autotest(auto_backward=True)
+    def test_tensor_remainder_scalar_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.remainder(x, y)
+    
+
+@flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_elementwise_pow_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
-
         return torch.pow(x, y)
 
     @autotest(n=5)

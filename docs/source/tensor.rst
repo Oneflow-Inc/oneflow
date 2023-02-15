@@ -311,6 +311,7 @@ Tensor class reference
     Tensor.repeat_interleave
     Tensor.requires_grad
     Tensor.requires_grad_
+    Tensor.remainder
     Tensor.reshape
     Tensor.reshape_as
     Tensor.retain_grad

@@ -264,6 +264,7 @@ DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
 DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul)
 DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_)
 DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
+DIRECT_PASS_FUNC(PyTensorObject_remainder, functional::remainder)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
 DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
 DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
@@ -965,6 +966,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"remainder", (PyCFunction)PyTensorObject_remainder, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_or", (PyCFunction)PyTensorObject_logical_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_xor", (PyCFunction)PyTensorObject_logical_xor, METH_VARARGS | METH_KEYWORDS, NULL},

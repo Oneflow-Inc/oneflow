@@ -264,7 +264,7 @@ Pointwise Ops
     expm1 
     floor 
     floor_ 
-    fmod 
+    fmod
     gelu
     quick_gelu
     log 
@@ -285,6 +285,7 @@ Pointwise Ops
     negative 
     pow 
     reciprocal 
+    remainder 
     round 
     rsqrt 
     selu
