@@ -252,7 +252,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
   int64_t root = JUST(broadcast_parallel_desc->MachineId4ParallelId(0));
-  if (broadcast_parallel_desc->parallel_num() > 1 && inplace && GlobalProcessCtx::Rank()) {
+  if (broadcast_parallel_desc->parallel_num() > 1 && inplace && GlobalProcessCtx::Rank() == 0) {
     LOG_FIRST_N(WARNING, 1)
         << "Casting a local tensor to a global tensor with Broadcast sbp will modify the data of "
            "input! "
