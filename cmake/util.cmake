@@ -233,10 +233,6 @@ function(set_compile_options_to_oneflow_target target)
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
   target_try_compile_options(${target} -Wno-covered-switch-default)
 
-  if(OMP_FLAGS)
-    target_try_compile_options(${target} ${OMP_FLAGS})
-  endif()
-
   set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
   if(BUILD_CUDA)
