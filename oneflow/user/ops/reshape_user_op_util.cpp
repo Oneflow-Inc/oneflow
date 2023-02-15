@@ -174,11 +174,128 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+void GenRankMeshSubset(const std::vector<int>& rank_axes,
+                       std::set<std::vector<int>>& rank_axes_subset) {
+  if (!rank_axes_subset.emplace(rank_axes).second) { return; }
+  if (rank_axes.size() <= 1) { return; }
+  for (size_t i = 0; i < rank_axes.size(); ++i) {
+    // Shape sub_rank_mesh(DimVector(rank_mesh.size() - 1));
+    std::vector<int> sub_rank_axes(rank_axes.size() - 1);
+    for (size_t j = 0; j < rank_axes.size(); ++j) {
+      if (j < i) {
+        sub_rank_axes[j] = rank_axes[j];
+      } else if (j > i) {
+        sub_rank_axes[j - 1] = rank_axes[j];
+      }
+      // else j == i dropped
+    }
+    GenRankMeshSubset(sub_rank_axes, rank_axes_subset);
+  }
+}
+
+void GenRankMeshSubset(size_t mesh_depth, std::set<std::vector<int>>& rank_axes_subset) {
+  std::vector<int> rank_axes(mesh_depth);
+  std::iota(rank_axes.begin(), rank_axes.end(), 0);
+  GenRankMeshSubset(rank_axes, rank_axes_subset);
+}
+
+}  // namespace
+
 Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
-    const Shape& in_shape_, const Shape& out_shape_, const Shape& rank_mesh,
-    std::vector<std::vector<std::pair<int, int>>>* nd_split_in2out_axis_list) {
-  Shape in_shape = in_shape_;
-  Shape out_shape = out_shape_;
+    const Shape& in_shape, const std::vector<int>& origin_in_axes, const Shape& out_shape,
+    const std::vector<int>& origin_out_axes, const Shape& rank_mesh,
+    std::vector<std::map<int, std::pair<int, int>>>* nd_split_groups) {
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
+  CHECK_EQ_OR_RETURN(in_shape.size(), origin_in_axes.size());
+  CHECK_EQ_OR_RETURN(out_shape.size(), origin_out_axes.size());
+
+  std::set<std::vector<int>> rank_axes_subset;
+  GenRankMeshSubset(rank_mesh.size(), rank_axes_subset);
+  for (const std::vector<int>& rank_axes : rank_axes_subset) {
+    int rank_axis_idx = 0;
+    int in_axis = in_shape.size() - 1;
+    int out_axis = out_shape.size() - 1;
+    int64_t in_dim_size = in_shape[in_axis];
+    int64_t out_dim_size = out_shape[out_axis];
+    bool nd_split_failed = false;
+    std::map<int, std::pair<int, int>> rank_in2out_axis;
+
+    while (in_axis >= 0 && out_axis >= 0 && rank_axis_idx < rank_axes.size()) {
+      if (in_dim_size == 1) {
+        in_axis--;
+        in_dim_size = in_shape[in_axis];
+        continue;
+      }
+      if (out_dim_size == 1) {
+        out_axis--;
+        out_dim_size = out_shape[in_axis];
+        continue;
+      }
+      int rank_axis = rank_axes[rank_axis_idx];
+      int64_t rank_num = rank_mesh[rank_axis];
+      if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) {
+        nd_split_failed = true;
+        break;
+      }
+      in_dim_size /= rank_num;
+      out_dim_size /= rank_num;
+      int origin_in_axis = origin_in_axes[in_axis];
+      int origin_out_axis = origin_out_axes[out_axis];
+      rank_in2out_axis.emplace(rank_axis, std::make_pair(origin_in_axis, origin_out_axis));
+      rank_axis_idx++;
+    }
+    if (!nd_split_failed && !rank_in2out_axis.empty()) {
+      nd_split_groups->emplace_back(std::move(rank_in2out_axis));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
+    const std::vector<std::map<int, std::pair<int, int>>>& nd_sbp_sig_groups, size_t rank_num_axes,
+    std::vector<std::vector<std::pair<int, int>>>* nd_sbp_sig_list) {
+  std::map<int, std::pair<int, int>> nd_sbp_sig_group;
+  std::set<std::vector<std::pair<int, int>>> nd_sbp_sig_set;
+  DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, nd_sbp_sig_group,
+                                 nd_sbp_sig_set);
+  std::copy(nd_sbp_sig_set.begin(), nd_sbp_sig_set.end(), back_inserter(*nd_sbp_sig_list));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
+    const std::vector<std::map<int, std::pair<int, int>>>& nd_sbp_sig_groups, size_t rank_num_axes,
+    const std::map<int, std::pair<int, int>>& nd_sbp_sig_group,
+    std::set<std::vector<std::pair<int, int>>>& nd_sbp_sig_set) {
+  if (nd_sbp_sig_group.size() == rank_num_axes) {
+    std::vector<std::pair<int, int>> nd_sbp_sig;
+    for (int i = 0; i < rank_num_axes; ++i) { nd_sbp_sig.emplace_back(nd_sbp_sig_group.at(i)); }
+    nd_sbp_sig_set.emplace(nd_sbp_sig);
+  } else {
+    for (const auto& nd_sbp_sig_group_to_combine : nd_sbp_sig_groups) {
+      std::map<int, std::pair<int, int>> new_nd_sbp_sig_group = nd_sbp_sig_group;
+      bool combine_failed = false;
+      for (const auto& rank_in2out_pair : nd_sbp_sig_group_to_combine) {
+        int rank_axis = rank_in2out_pair.first;
+        if (nd_sbp_sig_group.find(rank_axis) != nd_sbp_sig_group.end()) {
+          combine_failed = true;
+          break;
+        }
+        CHECK_OR_RETURN(new_nd_sbp_sig_group.emplace(rank_axis, rank_in2out_pair.second).second);
+      }
+      if (!combine_failed) {
+        DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, new_nd_sbp_sig_group,
+                                       nd_sbp_sig_set);
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpIn2OutSignatures(
+    const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
+    std::vector<std::vector<std::pair<int, int>>>* nd_sbp_in2out_signatures) {
   CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError() << "The dimension of input tensor must be greater than zero, "
       << "but got " << in_shape.NumAxes();
@@ -190,153 +307,121 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
       << "The element number of input tensor must be equal to output tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
 
-  int in_axis = -1;
-  int out_axis = -1;
-  int64_t in_dim_size = 0;
-  int64_t out_dim_size = 0;
+  int in_axis = in_shape.size();
+  int out_axis = out_shape.size();
   int64_t in_count = 1;
   int64_t out_count = 1;
-  DimVector in_dim_vec;
-  DimVector out_dim_vec;
-  HashMap<int, int> simplified_in_axis2origin_axis;
-  HashMap<int, int> simplified_out_axis2origin_axis;
-
-  auto MoveAxis = [](const Shape& shape, int& axis, int64_t& dim_size, int64_t& count) {
-    axis++;
-    if (axis >= 0 && axis < shape.size()) {
-      dim_size = shape[axis];
-      count *= dim_size;
-    }
+  auto MoveAxis = [](const Shape& shape, int& axis, int64_t& count) {
+    axis--;
+    if (axis >= 0 && axis < shape.size()) { count *= shape[axis]; }
   };
-  auto MoveInAxis = [&]() { MoveAxis(in_shape, in_axis, in_dim_size, in_count); };
-  auto MoveOutAxis = [&]() { MoveAxis(out_shape, out_axis, out_dim_size, out_count); };
+  auto MoveInAxis = [&]() { MoveAxis(in_shape, in_axis, in_count); };
+  auto MoveOutAxis = [&]() { MoveAxis(out_shape, out_axis, out_count); };
   MoveInAxis();
   MoveOutAxis();
 
-  // step 1: squeeze and prune equal axes between in_shape and out_shape
-  while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
-    if (in_dim_size == 1 && in_axis < in_shape.size()) {
-      MoveInAxis();
-      continue;
-    }
-    if (out_dim_size == 1 && out_axis < out_shape.size()) {
-      MoveOutAxis();
-      continue;
-    }
+  DimVector group_in_dim_vec;
+  DimVector group_out_dim_vec;
+  std::vector<int> group_in_axes;
+  std::vector<int> group_out_axes;
+  group_in_axes.reserve(rank_mesh.size());
+  group_out_axes.reserve(rank_mesh.size());
+  // groups of nd of rank_axis -> (in_axis, out_axis)
+  std::vector<std::map<int, std::pair<int, int>>> nd_sbp_signature_groups;
+
+  while (in_axis >= 0 && out_axis >= 0) {
     if (in_count < out_count) {
-      simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
-      in_dim_vec.push_back(in_dim_size);
+      if (in_shape[in_axis] != 1) {
+        group_in_dim_vec.push_back(in_shape[in_axis]);
+        group_in_axes.push_back(in_axis);
+      }
       MoveInAxis();
     } else if (in_count > out_count) {
-      simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
-      out_dim_vec.push_back(out_dim_size);
+      if (out_shape[out_axis] != 1) {
+        group_out_dim_vec.push_back(out_shape[out_axis]);
+        group_out_axes.push_back(out_axis);
+      }
       MoveOutAxis();
     } else {  // in_count == out_count
-      if (in_dim_size != out_dim_size) {
-        simplified_in_axis2origin_axis.emplace(in_dim_vec.size(), in_axis);
-        in_dim_vec.push_back(in_dim_size);
-        simplified_out_axis2origin_axis.emplace(out_dim_vec.size(), out_axis);
-        out_dim_vec.push_back(out_dim_size);
+      if (in_shape[in_axis] == out_shape[out_axis]) {
+        std::map<int, std::pair<int, int>> nd_split_in2out_axis;
+        for (int rank_axis = 0; rank_axis < rank_mesh.size(); ++rank_axis) {
+          int64_t rank_num = rank_mesh[rank_axis];
+          if (in_shape[in_axis] % rank_num == 0) {
+            nd_split_in2out_axis.emplace(rank_axis, std::make_pair(in_axis, out_axis));
+          }
+        }
+        nd_sbp_signature_groups.emplace_back(std::move(nd_split_in2out_axis));
+      } else {
+        group_in_dim_vec.push_back(in_shape[in_axis]);
+        group_in_axes.push_back(in_axis);
+        group_out_dim_vec.push_back(out_shape[out_axis]);
+        group_out_axes.push_back(out_axis);
+        EnumerateNdSplitIn2OutAxis(Shape(group_in_dim_vec), group_in_axes, Shape(group_out_dim_vec),
+                                   group_out_axes, rank_mesh, &nd_sbp_signature_groups);
+        group_in_dim_vec.clear();
+        group_out_dim_vec.clear();
+        group_in_axes.clear();
+        group_out_axes.clear();
       }
       MoveInAxis();
       MoveOutAxis();
     }
   }
-  in_shape = Shape(in_dim_vec);
-  out_shape = Shape(out_dim_vec);
-  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
 
-  in_axis = -1;
-  out_axis = -1;
-  in_dim_size = 0;
-  out_dim_size = 0;
-  in_count = 1;
-  out_count = 1;
-  MoveInAxis();
-  MoveOutAxis();
-
-  int rank_axis = 0;
-  bool nd_split_failed = false;
-  std::vector<int> nd_split_in_axis;
-  std::vector<int> nd_split_out_axis;
-  nd_split_in_axis.reserve(rank_mesh.size());
-  nd_split_out_axis.reserve(rank_mesh.size());
-
-  // step 2: find contiguous splitable axes
-  while (in_axis < in_shape.size() || out_axis < out_shape.size()) {
-    if (!nd_split_failed) {
-      while (rank_axis < rank_mesh.size() && in_dim_size != 1 && out_dim_size != 1) {
-        int64_t rank_num = rank_mesh[rank_axis];
-        if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) {
-          nd_split_in_axis.clear();
-          nd_split_out_axis.clear();
-          nd_split_failed = true;
-          break;
-        }
-        nd_split_in_axis.push_back(in_axis);
-        nd_split_out_axis.push_back(out_axis);
-        in_dim_size /= rank_num;
-        out_dim_size /= rank_num;
-        rank_axis++;
-      }
-      if (rank_axis == rank_mesh.size() && nd_split_in_axis.size() == rank_mesh.size()
-          && nd_split_out_axis.size() == rank_mesh.size()) {
-        nd_split_in2out_axis_list->emplace_back();
-        auto& nd_split_in2out_axis = nd_split_in2out_axis_list->back();
-        for (size_t i = 0; i < rank_mesh.size(); ++i) {
-          int origin_in_axis = simplified_in_axis2origin_axis.at(nd_split_in_axis[i]);
-          int origin_out_axis = simplified_out_axis2origin_axis.at(nd_split_out_axis[i]);
-          nd_split_in2out_axis.emplace_back(origin_in_axis, origin_out_axis);
-        }
-        nd_split_in_axis.clear();
-        nd_split_out_axis.clear();
-      }
-    }
-
-    if ((in_dim_size == 1 && out_dim_size == 1) || in_count == out_count) {
-      if (in_shape[in_axis] != out_shape[out_axis]) {
-        nd_split_failed = false;
-        if (rank_axis == rank_mesh.size()) { rank_axis = 0; }
-      }
-      MoveInAxis();
-      MoveOutAxis();
-    } else if (in_dim_size == 1 || in_count < out_count) {
-      MoveInAxis();
-    } else if (out_dim_size == 1 || in_count > out_count) {
-      MoveOutAxis();
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+  std::map<int, std::pair<int, int>> nd_sbp_in2out_group;
+  for (int rank_axis = 0; rank_axis < rank_mesh.size(); ++rank_axis) {
+    // -1 indicate broadcaste, -2 indicate partial sum
+    nd_sbp_in2out_group.emplace(rank_axis, std::make_pair(-1, -1));
+    nd_sbp_signature_groups.emplace_back(nd_sbp_in2out_group);
+    nd_sbp_in2out_group.clear();
+    nd_sbp_in2out_group.emplace(rank_axis, std::make_pair(-2, -2));
+    nd_sbp_signature_groups.emplace_back(nd_sbp_in2out_group);
+    nd_sbp_in2out_group.clear();
   }
 
+  DfsCombineNdSbpSignatureGroups(nd_sbp_signature_groups, rank_mesh.size(),
+                                 nd_sbp_in2out_signatures);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitSignatures(
+Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
     const std::vector<user_op::OpArg>& in_args, const Shape& in_shape,
     const std::vector<user_op::OpArg>& out_args, const Shape& out_shape, const Shape& rank_mesh,
     std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   if (in_shape.elem_cnt() == 0) { return Maybe<void>::Ok(); }
   if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
-  std::vector<std::vector<std::pair<int, int>>> nd_split_in2out_axis_list;
-  JUST(ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(in_shape, out_shape, rank_mesh,
-                                                     &nd_split_in2out_axis_list));
-  for (const auto& nd_split_in2out_axis : nd_split_in2out_axis_list) {
+  std::vector<std::vector<std::pair<int, int>>> nd_sbp_in2out_sig_list;
+  JUST(ReshapeUserOpUtil::EnumerateNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh,
+                                                         &nd_sbp_in2out_sig_list));
+  for (const auto& nd_sbp_in2out_axis : nd_sbp_in2out_sig_list) {
     nd_sbp_sig_list->emplace_back();
     auto& nd_sbp_sig = nd_sbp_sig_list->back();
-    for (const auto& in2out_axis : nd_split_in2out_axis) {
+    for (const auto& in2out_axis : nd_sbp_in2out_axis) {
       for (const auto& in_arg : in_args) {
         const auto& ibn = in_arg.name() + "_" + std::to_string(in_arg.index());
         auto& in_nd_sbp = (*nd_sbp_sig.mutable_bn_in_op2nd_sbp())[ibn];
         auto* in_sbp = in_nd_sbp.add_sbp_parallel();
-        in_sbp->mutable_split_parallel()->set_axis(in2out_axis.first);
+        if (in2out_axis.first == -1) {
+          in_sbp->mutable_broadcast_parallel();
+        } else if (in2out_axis.first == -2) {
+          in_sbp->mutable_partial_sum_parallel();
+        } else {
+          in_sbp->mutable_split_parallel()->set_axis(in2out_axis.first);
+        }
       }
       for (const auto& out_arg : out_args) {
         const auto& obn = out_arg.name() + "_" + std::to_string(out_arg.index());
         auto& out_nd_sbp = (*nd_sbp_sig.mutable_bn_in_op2nd_sbp())[obn];
         auto* out_sbp = out_nd_sbp.add_sbp_parallel();
-        out_sbp->mutable_split_parallel()->set_axis(in2out_axis.second);
+        if (in2out_axis.second == -1) {
+          out_sbp->mutable_broadcast_parallel();
+        } else if (in2out_axis.second == -2) {
+          out_sbp->mutable_partial_sum_parallel();
+        } else {
+          out_sbp->mutable_split_parallel()->set_axis(in2out_axis.second);
+        }
       }
     }
   }

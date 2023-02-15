@@ -39,8 +39,8 @@ namespace oneflow {
   const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_attr));
 
   std::vector<NdSbpSignature>* nd_sbp_sig_list = ctx->MutNdSbpSignatureList();
-  JUST(ReshapeUserOpUtil::EnumerateNdSplitSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
-                                                     ctx->parallel_hierarchy(), nd_sbp_sig_list));
+  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
+                                                   ctx->parallel_hierarchy(), nd_sbp_sig_list));
 
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
