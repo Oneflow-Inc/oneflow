@@ -57,10 +57,16 @@ class RuntimeBase {
 
  private:
   virtual void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func,
-                               size_t num_threads, size_t grain_size) {}
+                               size_t num_threads, size_t grain_size) = 0;
 };
 
-class SeqRuntime final : public RuntimeBase {};
+class SeqRuntime final : public RuntimeBase {
+ private:
+  void ParallelForImpl(int64_t begin, int64_t end, const CallableT& func, size_t num_threads,
+                       size_t grain_size) override {
+    return SeqFor(begin, end, func);
+  }
+};
 
 class OfRuntime final : public RuntimeBase {
  private:
