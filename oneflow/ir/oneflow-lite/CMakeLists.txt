@@ -10,7 +10,7 @@ set(LLVM_LINK_COMPONENTS Support)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_llvm_executable(oneflow-lite-compile OneFlowLiteCompileMain.cpp DEPENDS MLIROneFlow
-                    lite_schemas OneFlowLiteConversion)
+                    lite_schemas OneFlowLiteConversion flatcc-runtime)
 
 set(_origin_prefix "\$ORIGIN")
 if(APPLE)
@@ -22,4 +22,4 @@ set_target_properties(
 
 llvm_update_compile_flags(oneflow-lite-compile)
 
-target_link_libraries(oneflow-lite-compile PRIVATE OneFlowLiteConversion ${dialect_libs})
+target_link_libraries(oneflow-lite-compile PRIVATE OneFlowLiteConversion ${dialect_libs} flatcc-runtime)

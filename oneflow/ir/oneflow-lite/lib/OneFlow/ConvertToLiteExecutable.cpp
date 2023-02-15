@@ -16,6 +16,11 @@ limitations under the License.
 #include "OneFlow/ConvertToLiteExecutable.h"
 
 #include "OneFlow/OneFlowDialect.h"
+
+// undefine fallthrough to fix the conflicit of flatcc and fmt
+#if defined(fallthrough)
+#undef fallthrough
+#endif
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/Passes.h"
