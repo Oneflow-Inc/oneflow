@@ -345,6 +345,11 @@ class ScalarFModFunctor : public ScalarMathBaseFunctor {
   ScalarFModFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_fmod") {}
 };
 
+class ScalarRemainderFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarRemainderFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floor_mod") {}
+};
+
 class ReduceMaxFunctor {
  public:
   ReduceMaxFunctor() {
@@ -4161,6 +4166,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
+  m.add_functor<ScalarRemainderFunctor>("ScalarRemainder");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
   m.add_functor<ScalarTruncDivFunctor>("ScalarTruncDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");

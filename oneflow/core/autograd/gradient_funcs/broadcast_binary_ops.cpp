@@ -442,7 +442,7 @@ class BroadcastFloorMod : public BroadcastBinaryGrad {
           const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
           const std::vector<int32_t> x_axis =
               std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
-          borad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), x_axis));
+          broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), x_axis));
         }
       }
       if (ctx->broadcast_y) {

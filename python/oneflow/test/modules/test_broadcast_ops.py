@@ -33,6 +33,7 @@ binary_ops = [
     torch.max,
     torch.maximum,
     torch.fmod,
+    torch.remainder,
     torch.pow,
     torch.eq,
     torch.ne,
@@ -83,7 +84,7 @@ class TestBroadcastOps(flow.unittest.TestCase):
         def check_output(test_case, output):
             of_res = output.oneflow
             torch_res = output.pytorch
-            # NOTE: torch's device has no device index bug oneflow has.
+            # NOTE: torch's device has no device index but oneflow has.
             #       e.g. torch gets "cpu" but oneflow gets "cpu:0"
             test_case.assertTrue(str(torch_res.device) in str(of_res.device))
             test_case.assertTrue(

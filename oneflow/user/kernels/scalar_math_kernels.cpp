@@ -148,6 +148,7 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ("scalar_floordiv", ep::primitive::BinaryOp::kFloorDiv) \
   OF_PP_MAKE_TUPLE_SEQ("scalar_truncdiv", ep::primitive::BinaryOp::kTruncDiv) \
   OF_PP_MAKE_TUPLE_SEQ("scalar_fmod", ep::primitive::BinaryOp::kFmod)         \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_floor_mod", ep::primitive::BinaryOp::kFloorMod)\
   OF_PP_MAKE_TUPLE_SEQ("scalar_pow", ep::primitive::BinaryOp::kPow)
 
 #define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(op_name, binary_op)          \
