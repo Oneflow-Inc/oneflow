@@ -77,10 +77,10 @@ namespace oneflow {
           .Build();
     }
     ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("indices", 0))
-      .Split(user_op::OpArg("in", 0), indices_num_axes-1)
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
+        .Broadcast(user_op::OpArg("indices", 0))
+        .Split(user_op::OpArg("in", 0), indices_num_axes - 1)
+        .PartialSum(user_op::OpArg("out", 0))
+        .Build();
   }
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("indices", 0))
