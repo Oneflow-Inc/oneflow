@@ -25,6 +25,9 @@ namespace oneflow {
   DataType value_type = ctx->InputDType("value", 0);
   CHECK_EQ_OR_RETURN(key_type, query_type);
   CHECK_EQ_OR_RETURN(value_type, query_type);
+  if (ctx->has_input("attn_bias", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("attn_bias", 0), query_type);
+  }
   ctx->SetOutputDType("out", 0, query_type);
   return Maybe<void>::Ok();
 }
@@ -87,6 +90,24 @@ namespace oneflow {
   const int64_t value_hidden_size = value_slice_end - value_slice_start;
   CHECK_EQ_OR_RETURN(value_hidden_size % num_heads, 0);
 
+  if (ctx->has_input("attn_bias", 0)) {
+    const Shape& attn_bias_shape = ctx->InputShape("attn_bias", 0);
+    const int64_t num_attn_bias_axes = attn_bias_shape.NumAxes();
+    CHECK_GE_OR_RETURN(num_attn_bias_axes, 1);
+    CHECK_LE_OR_RETURN(num_attn_bias_axes, 4);
+    DimVector padded_attn_bias_shape;
+    for (int i = 0; i < 4 - num_attn_bias_axes; ++i) { padded_attn_bias_shape.push_back(1); }
+    for (int i = 0; i < num_attn_bias_axes; ++i) {
+      padded_attn_bias_shape.push_back(attn_bias_shape.At(i));
+    }
+    CHECK_OR_RETURN(padded_attn_bias_shape.at(0) == 1
+                    || padded_attn_bias_shape.at(0) == batch_size);
+    CHECK_OR_RETURN(padded_attn_bias_shape.at(1) == 1 || padded_attn_bias_shape.at(1) == num_heads);
+    CHECK_OR_RETURN(padded_attn_bias_shape.at(2) == 1
+                    || padded_attn_bias_shape.at(2) >= query_seq_len);
+    CHECK_OR_RETURN(padded_attn_bias_shape.at(3) >= kv_seq_len);
+  }
+
   ctx->SetOutputShape("out", 0, Shape({batch_size, query_seq_len, value_hidden_size}));
   return Maybe<void>::Ok();
 }
@@ -96,12 +117,24 @@ namespace oneflow {
 }
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("query", 0), 0)
-      .Split(user_op::OpArg("key", 0), 0)
-      .Split(user_op::OpArg("value", 0), 0)
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
+  bool broadcast_attn_bias = false;
+  if (ctx->user_op_conf().has_input("attn_bias", 0)) {
+    const user_op::TensorDesc& attn_bias =
+        ctx->LogicalTensorDesc4InputArgNameAndIndex("attn_bias", 0);
+    if (attn_bias.shape().NumAxes() < 4 || attn_bias.shape().At(0) == 1) {
+      broadcast_attn_bias = true;
+    }
+  }
+  if (broadcast_attn_bias) {
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), 0)
+        .Broadcast(user_op::OpArg("attn_bias", 0))
+        .Split(ctx->outputs(), 0)
+        .Build();
+
+  } else {
+    ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  }
   return Maybe<void>::Ok();
 }
 
