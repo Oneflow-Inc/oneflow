@@ -212,14 +212,6 @@ def _new_full(
     )
 
 
-# def _mm(self, mat2):
-#     return flow._C.mm(self, mat2)
-
-
-# def _mv(self, vec):
-#     return flow._C.matrix_vector_product(self, vec)
-
-
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
@@ -283,10 +275,6 @@ def _orthogonal(self, gain=1.0):
 
 def _normal(self, mean=0, std=1):
     return flow.nn.init.normal_(self, mean=mean, std=std)
-
-
-# def _fill(self, value):
-#     return flow._C.fill_(self, value)
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
@@ -597,7 +585,6 @@ def RegisterMethods():
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
-    # Tensor.fill_ = _fill
     Tensor.copy_ = _copy
     Tensor._meta_repr = _meta_repr
     Tensor.argsort = _argsort
@@ -611,7 +598,6 @@ def RegisterMethods():
     Tensor.squeeze_ = _squeeze_inplace
     Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
-    # Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
@@ -631,7 +617,6 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
-    # Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
     Tensor.cross = _cross
