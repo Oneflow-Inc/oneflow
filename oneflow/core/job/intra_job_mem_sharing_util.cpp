@@ -737,7 +737,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   HashMap<int64_t, HashMap<std::pair<MemAllocAlgoType, bool>, MemBlockResultInfo>>
       mem_chain2algo2result;
   {
-    int64_t work_size = mem_chain2mem_reused_regsts.size() * 3;
+    int64_t work_size = mem_chain2mem_reused_regsts.size() * CountMemAllocAlgoNum();
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
