@@ -31,32 +31,15 @@ __global__ void LerpForwardGpu(const int n, const T* start, const T* weight, con
 template<typename T, typename ValueT>
 __global__ void ScalarLerpForwardGpu(const int n, const T* start, const ValueT weight, const T* end,
                                      T* out) {
-  const T weight_clac = static_cast<T>(weight);
+  T weight_calculate = 0.0;
+  if constexpr (std::is_same<T, half>::value) {
+    weight_calculate = __float2half(static_cast<float>(weight));
+  } else {
+    weight_calculate = static_cast<T>(weight);
+  }
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T start_i = start[i];
-    out[i] = start_i + weight_clac * (end[i] - start_i);
-  }
-}
-
-template<>
-__global__ void ScalarLerpForwardGpu<half, int64_t>(const int n, const half* start,
-                                                    const int64_t weight, const half* end,
-                                                    half* out) {
-  const half weight_clac = __float2half(static_cast<float>(weight));
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    const half start_i = start[i];
-    out[i] = start_i + weight_clac * (end[i] - start_i);
-  }
-}
-
-template<>
-__global__ void ScalarLerpForwardGpu<half, double>(const int n, const half* start,
-                                                   const double weight, const half* end,
-                                                   half* out) {
-  const half weight_clac = __float2half(static_cast<float>(weight));
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    const half start_i = start[i];
-    out[i] = start_i + weight_clac * (end[i] - start_i);
+    out[i] = start_i + weight_calculate * (end[i] - start_i);
   }
 }
 
@@ -75,38 +58,15 @@ __global__ void LerpBackwardGpu(const int n, const T* start, const T* weight, co
 template<typename T, typename ValueT>
 __global__ void ScalarLerpBackwardGpu(const int n, const T* start, const ValueT weight,
                                       const T* end, const T* out_diff, T* start_diff, T* end_diff) {
-  const T weight_clac = static_cast<T>(weight);
+  T weight_calculate = 0.0;
+  if constexpr (std::is_same<T, half>::value) {
+    weight_calculate = __float2half(static_cast<float>(weight));
+  } else {
+    weight_calculate = static_cast<T>(weight);
+  }
   CUDA_1D_KERNEL_LOOP(i, n) {
     T out_diff_i = out_diff[i];
-    const T start_diff_i = (static_cast<T>(1.0) - weight_clac) * out_diff_i;
-    start_diff[i] = start_diff_i;
-    end_diff[i] = out_diff_i - start_diff_i;
-  }
-}
-
-template<>
-__global__ void ScalarLerpBackwardGpu<half, int64_t>(const int n, const half* start,
-                                                     const int64_t weight, const half* end,
-                                                     const half* out_diff, half* start_diff,
-                                                     half* end_diff) {
-  const half weight_clac = __float2half(static_cast<float>(weight));
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half out_diff_i = out_diff[i];
-    const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;
-    start_diff[i] = start_diff_i;
-    end_diff[i] = out_diff_i - start_diff_i;
-  }
-}
-
-template<>
-__global__ void ScalarLerpBackwardGpu<half, double>(const int n, const half* start,
-                                                    const double weight, const half* end,
-                                                    const half* out_diff, half* start_diff,
-                                                    half* end_diff) {
-  const half weight_clac = __float2half(static_cast<float>(weight));
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half out_diff_i = out_diff[i];
-    const half start_diff_i = (static_cast<half>(1.0) - weight_clac) * out_diff_i;
+    const T start_diff_i = (static_cast<T>(1.0) - weight_calculate) * out_diff_i;
     start_diff[i] = start_diff_i;
     end_diff[i] = out_diff_i - start_diff_i;
   }
