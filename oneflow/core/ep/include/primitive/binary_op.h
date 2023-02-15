@@ -51,6 +51,10 @@ enum class BinaryOp {
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
+  // Bitwise
+  kBitwiseAnd,
+  kBitwiseOr,
+  kBitwiseXor,
   // Unary Backward
   kIdentityBackwardWithDyX,
   kEluBackwardWithDyX,
