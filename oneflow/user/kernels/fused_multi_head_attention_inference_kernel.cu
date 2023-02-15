@@ -115,6 +115,7 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
+  p.o_strideM = p.head_dim_value * p.num_heads;
   p.bias_strideM = params.attn_bias_stride_m;
 
   p.q_strideH = params.head_size;
