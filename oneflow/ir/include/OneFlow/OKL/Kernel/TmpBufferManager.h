@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_TMP_BUFFER_MANAGER_H_
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
@@ -35,7 +36,7 @@ class TmpBufferManager {
     ShapeView shape_view() const override { return tensor_desc_->shape(); }
     const Stride& stride() const override { return tensor_desc_->stride(); }
     DataType data_type() const override { return tensor_desc_->data_type(); }
-    MutShapeView mut_shape_view() override { return tensor_->mut_shape_view(); }
+    MutShapeView mut_shape_view() override { TODO(); }
     const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
 
     const void* raw_dptr() const override { return raw_dptr_; }
@@ -74,6 +75,8 @@ class TmpBufferManager {
 
   explicit TmpBufferManager(user_op::Tensor* tensor) : tensor_(tensor) {}
   user_op::Tensor* GetPoolTensor(const user_op::TensorDesc* tensor_desc, int64_t offset) {
+    CHECK_LE(offset + tensor_desc->shape().elem_cnt() * GetSizeOfDataType(tensor_desc->data_type()),
+             tensor_->shape_view().elem_cnt());
     auto res = tensor_map_.insert({tensor_desc, PoolToTensor(tensor_, tensor_desc, offset)}).first;
     return &res->second;
   }
