@@ -2126,14 +2126,35 @@ class CtcLossFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
+    DeviceType log_probs_device_type;  // NOLINT
+    if (log_probs->is_local()) {
+      log_probs_device_type = JUST(log_probs->device())->enum_type();
+    } else {
+      log_probs_device_type = JUST(log_probs->parallel_desc())->device_type();
+    }
+    const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
+    std::shared_ptr<one::Tensor> target_lengths_on_log_probs_device =
+        JUST(functional::To(target_lengths, log_probs_device_str));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+          *op_,
+          {
+              log_probs,
+              JUST(functional::To(targets, log_probs_device_str)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
+          attrs));
     } else {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
-          {log_probs, JUST(functional::Cast(targets, DType::Int64(), false)), input_lengths,
-           target_lengths},
+          {
+              log_probs,
+              JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
+                                  DType::Int64(), false)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
           attrs));
     }
     if (zero_infinity) {
@@ -2178,7 +2199,7 @@ class CtcLossFunctor {
           })
           .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>({}),
                           false))
-          .call(target_lengths, Scalar(1), NullOpt);
+          .call(target_lengths_on_log_probs_device, Scalar(1), NullOpt);
     }
     return out;
   }
@@ -4797,13 +4818,118 @@ class FusedMultiHeadAttentionInferenceFunctor {
                          .Input("value")
                          .Output("out")
                          .Build());
+    op_with_attn_bias_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
+                                        .Input("query")
+                                        .Input("key")
+                                        .Input("value")
+                                        .Input("attn_bias")
+                                        .Output("out")
+                                        .Build());
   }
   Maybe<Tensor> operator()(
       const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
       const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
       const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
       const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
+      const Optional<one::Tensor>& attn_bias) const {
+    CHECK_EQ_OR_RETURN(query->shape()->NumAxes(), 3)
+        << "The number of dimensions of the query tensor should be 3.";
+    CHECK_EQ_OR_RETURN(key->shape()->NumAxes(), 3)
+        << "The number of dimensions of the key tensor should be 3.";
+    CHECK_EQ_OR_RETURN(value->shape()->NumAxes(), 3)
+        << "The number of dimensions of the value tensor should be 3.";
+    const int64_t batch_size = query->shape()->At(0);
+    CHECK_EQ_OR_RETURN(key->shape()->At(0), batch_size)
+        << "The size of the first dimension of the key tensor should be the same as that of the "
+           "query tensor.";
+    CHECK_EQ_OR_RETURN(value->shape()->At(0), batch_size)
+        << "The size of the first dimension of the value tensor should be the same as that of the "
+           "query tensor.";
+    const int64_t query_seq_len = query->shape()->At(1);
+    const int64_t kv_seq_len = key->shape()->At(1);
+    CHECK_EQ_OR_RETURN(value->shape()->At(1), kv_seq_len)
+        << "The size of the second dimension of the value tensor should be the same as that of the "
+           "key tensor.";
+
+    auto CheckHiddenSize = [num_heads](const std::string& tensor_name, int64_t slice_start,
+                                       int64_t slice_end, int64_t dim_size) -> Maybe<int64_t> {
+      CHECK_GE_OR_RETURN(slice_start, 0)
+          << tensor_name
+          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
+             "of the last dimension of the query tensor.";
+      CHECK_LT_OR_RETURN(slice_start, dim_size)
+          << tensor_name
+          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
+             "of the last dimension of the query tensor.";
+      if (slice_end == -1) {
+        slice_end = dim_size;
+      } else {
+        CHECK_GT_OR_RETURN(slice_end, 0)
+            << tensor_name
+            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
+               "of the last dimension of the "
+            << tensor_name << " tensor.";
+        CHECK_LE_OR_RETURN(slice_end, dim_size)
+            << tensor_name
+            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
+               "of the last dimension of the "
+            << tensor_name << " tensor.";
+        CHECK_GT_OR_RETURN(slice_end, slice_start)
+            << tensor_name << "_hidden_slice_end should be greater than " << tensor_name
+            << "_hidden_start.";
+      }
+      const int64_t hidden_size = slice_end - slice_start;
+      CHECK_EQ_OR_RETURN(hidden_size % num_heads, 0)
+          << "The hidden size of the " << tensor_name
+          << " should be a multiple of the number of heads.";
+      return hidden_size;
+    };
+    const int64_t query_hidden_size = JUST(CheckHiddenSize(
+        "query", query_hidden_slice_start, query_hidden_slice_end, query->shape()->At(2)));
+    const int64_t key_hidden_size = JUST(
+        CheckHiddenSize("key", key_hidden_slice_start, key_hidden_slice_end, key->shape()->At(2)));
+    CHECK_EQ_OR_RETURN(key_hidden_size, query_hidden_size)
+        << "The hidden size of the query and key must be the same.";
+    CHECK_EQ_OR_RETURN((query_hidden_size / num_heads) % 8, 0)
+        << "The head size of query and key should be a multiple of 8.";
+    const int64_t value_hidden_size = JUST(CheckHiddenSize(
+        "value", value_hidden_slice_start, value_hidden_slice_end, value->shape()->At(2)));
+    CHECK_EQ_OR_RETURN((value_hidden_size / num_heads) % 8, 0)
+        << "The head size of value should be a multiple of 8.";
+    if (attn_bias) {
+      const auto attn_bias_shape = JUST(attn_bias)->shape();
+      const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
+      CHECK_GT_OR_RETURN(num_attn_bias_axes, 0)
+          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
+             "equal to 4.";
+      CHECK_LE_OR_RETURN(num_attn_bias_axes, 4)
+          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
+             "equal to 4.";
+      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
+          << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
+             "second dimension of the key tensor";
+      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
+          << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
+      if (num_attn_bias_axes >= 2) {
+        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
+                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= query_seq_len)
+            << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
+               "second dimension of the query tensor or equal to 1.";
+      }
+      if (num_attn_bias_axes >= 3) {
+        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1
+                        || attn_bias_shape->At(num_attn_bias_axes - 3) == num_heads)
+            << "The size of the -3 dimension of attn_bias should be equal to num_heads or equal to "
+               "1.";
+      }
+      if (num_attn_bias_axes == 4) {
+        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == batch_size)
+            << "The size of the -4 dimension of attn_bias should be equal to the first dimension "
+               "of the query tensor or equal to 1.";
+      }
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
                                                  "query_hidden_slice_end", "key_hidden_slice_start",
                                                  "key_hidden_slice_end", "value_hidden_slice_start",
@@ -4811,11 +4937,17 @@ class FusedMultiHeadAttentionInferenceFunctor {
     attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
                       key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
                       value_hidden_slice_end);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+    if (attn_bias) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_attn_bias_,
+                                            {query, key, value, JUST(attn_bias)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_attn_bias_;
 };
 
 class FusedFastGeluMulFunctor {

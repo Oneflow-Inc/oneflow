@@ -46,8 +46,11 @@ class Model(flow.nn.Module):
         self.w2 = flow.nn.Parameter(flow.tensor([[0], [0]], dtype=flow.float32))
 
     def forward(self, x, label):
-        x1 = flow.matmul(x, self.w1)
-        return x1, label
+        if flow.env.get_rank() == 0:
+            x1 = flow.matmul(x, self.w1)
+        else:
+            x1 = flow.matmul(x, self.w2)
+        return ([x1, label + 1], label + 2)
 
 
 def train(test_case, train_x, device, output, requires_grad):
@@ -62,8 +65,9 @@ def train(test_case, train_x, device, output, requires_grad):
         x = train_x[rank].clone().to(device)
         y = output[rank].clone().to(device)
         y.requires_grad = requires_grad
-        y_pred, y2 = m(x, y)
-        test_case.assertEqual(y2.requires_grad, y.requires_grad)
+        (y_pred, y_add_1), y_add_2 = m(x, y)
+        test_case.assertEqual(y_add_1.requires_grad, y.requires_grad)
+        test_case.assertEqual(y_add_2.requires_grad, y.requires_grad)
         l = loss(y_pred, y)
         l.backward()
         optimizer.step()

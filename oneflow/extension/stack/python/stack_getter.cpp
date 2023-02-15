@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/extension/stack/python/stack_getter.h"
+
 #include <utility>
 
 #include "fmt/core.h"
@@ -26,6 +28,8 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/extension/stack/python/custom_eval_frame.h"
 
@@ -170,6 +174,131 @@ void RegisterPyStackGetter() {
   Singleton<ForeignStackGetter>::Delete();
   Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
   EnableCustomEvalFrameForCurrentThread(&RecordAndEvalFrame);
+}
+
+namespace {
+
+// get a formatted stack frame representation
+std::string get_python_frame_str_repr(PyFrameObject* frame) {
+  if (frame == NULL) return "";
+  std::string buffer;
+  PyCodeObject* code = frame->f_code;
+  std::string file_name = PyUnicodeToStdString(code->co_filename);
+  std::string code_name = PyUnicodeToStdString(code->co_name);
+  int line_number = PyFrame_GetLineNumber(frame);
+
+  fmt::format_to(std::back_inserter(buffer), "File \"{}\", line {}, in {}", file_name, line_number,
+                 code_name);
+
+  std::string line_text;
+  const bool debug_mode = GetGraphDebugMode() || IsInDebugMode();
+  if (debug_mode) {
+    const auto& GetCurSrc = [&file_name, line_number]() -> std::string {
+      std::string line_text;
+      std::ifstream ifs(file_name);
+      if (!ifs.is_open()) { return "<unknown>"; }
+      for (int j = 0; j < line_number; ++j) { std::getline(ifs, line_text); }
+      line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
+      line_text.erase(0, line_text.find_first_not_of(' '));  // prefixing spaces
+      return line_text;
+    };
+    line_text = GetCurSrc();
+    buffer += ", source < " + line_text + " >; ";
+  } else {
+    buffer += "; ";
+  }
+
+  return buffer;
+}
+
+bool check_if_python_file_should_be_filtered(const std::string& path) {
+  const auto& paths_to_be_kept = GetPythonPathsToBeKeptForDebugging();
+  for (int i = 0; i < paths_to_be_kept.size(); ++i) {
+    const std::string& path_to_be_kept = paths_to_be_kept[i];
+    if (path.size() > path_to_be_kept.size()) {
+      if (path.substr(0, path_to_be_kept.size()) == path_to_be_kept) { return false; }
+    }
+  }
+
+  const auto& paths_to_be_filtered = GetPythonPathsToBeFilteredForDebugging();
+  for (int i = 0; i < paths_to_be_filtered.size(); ++i) {
+    const std::string& path_to_be_filtered = paths_to_be_filtered[i];
+    if (path.size() > path_to_be_filtered.size()) {
+      if (path.substr(0, path_to_be_filtered.size()) == path_to_be_filtered) { return true; }
+    }
+  }
+
+  return false;
+}
+
+bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
+  std::string frame_file_name = PyUnicodeToStdString(frame->f_code->co_filename);
+  return check_if_python_file_should_be_filtered(frame_file_name);
+}
+
+bool check_if_should_skip_this_frame(PyFrameObject* frame) {
+  const bool only_user_py_stack = GetGraphDebugOnlyUserPyStack();
+  if (only_user_py_stack) { return check_if_frame_should_be_filtered(frame); }
+  return false;
+}
+
+int32_t get_cur_stack_depth() {
+  int32_t current_stack_depth = 0;
+  PyFrameObject* f = PyEval_GetFrame();
+  while (f) {
+    if (check_if_should_skip_this_frame(f)) {
+      f = f->f_back;
+      continue;
+    }
+
+    current_stack_depth++;
+    f = f->f_back;
+  }
+  return current_stack_depth;
+}
+
+std::string get_cur_frame_stack_str() {
+  const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
+  std::string cur_f_str;
+  PyFrameObject* cur_frame = PyEval_GetFrame();
+
+  int i = 0;
+  while (i < max_stack_depth) {
+    if (cur_frame == NULL) break;
+
+    if (check_if_should_skip_this_frame(cur_frame)) {
+      cur_frame = cur_frame->f_back;
+      continue;
+    }
+    cur_f_str += get_python_frame_str_repr(cur_frame);
+    cur_frame = cur_frame->f_back;
+    i++;
+  }
+
+  // show how may stack frames remain to be shown in debug mode
+  const bool debug_mode = GetGraphDebugMode() || IsInDebugMode();
+  if (debug_mode) {
+    const int32_t current_stack_depth = get_cur_stack_depth();
+    if (current_stack_depth > max_stack_depth) {
+      cur_f_str += "... " + std::to_string(current_stack_depth - max_stack_depth) + " more";
+    }
+  } else {
+    if (cur_frame != NULL) { cur_f_str += " ... more"; }
+  }
+
+  return cur_f_str;
+}
+
+}  // namespace
+
+PythonFrameGuard::PythonFrameGuard() {
+  if (OF_PREDICT_FALSE(LazyMode::is_enabled())) {
+    prev_frame_str_ = DispatchFrame::get_str();
+    DispatchFrame::set_str(get_cur_frame_stack_str());
+  }
+}
+PythonFrameGuard::~PythonFrameGuard() {
+  if (OF_PREDICT_FALSE(LazyMode::is_enabled())) { DispatchFrame::set_str(prev_frame_str_); }
 }
 
 }  // namespace oneflow
