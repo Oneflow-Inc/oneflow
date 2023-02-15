@@ -67,6 +67,7 @@ namespace oneflow {
 /* static */ Maybe<void> BatchGatherOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t indices_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
+
   if (indices_num_axes > 1) {
     FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
       ctx->NewBuilder()
@@ -75,6 +76,11 @@ namespace oneflow {
           .Split(user_op::OpArg("out", 0), i)
           .Build();
     }
+    ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("indices", 0))
+      .Split(user_op::OpArg("in", 0), indices_num_axes-1)
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   }
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("indices", 0))
