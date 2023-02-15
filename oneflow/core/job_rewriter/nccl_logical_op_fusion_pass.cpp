@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/user/ops/nccl_logical_util.h"
 
 namespace oneflow {
 
@@ -65,7 +66,8 @@ bool IsNcclLogicalOpNode(const OpNode* node) {
         || user_type_name == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous"
         || user_type_name == "_nccl_logical_2D_same_dim0_all2all"
         || user_type_name == "_nccl_logical_2D_same_dim1_all_reduce"
-        || user_type_name == "_nccl_logical_send_recv") {
+        /* || user_type_name == "_nccl_logical_send_recv" */) {
+      // TODO(chengcheng) : support nccl send/recv kernel
       return true;
     }
   }
@@ -85,6 +87,7 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
   const int64_t scope_symbol_id = first_nccl_conf.scope_symbol_id();
   std::vector<std::string> src_nd_sbp_str_list;
   std::vector<std::string> dst_nd_sbp_str_list;
+  std::vector<std::string> nccl_type_list;
   int64_t logical_chain_id = first_nccl_conf.logical_chain_id();
   bool has_stream_name_hint = first_nccl_conf.has_stream_name_hint();
   std::string stream_name_hint = first_nccl_conf.stream_name_hint();
@@ -98,6 +101,7 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleIbn())));
     dst_nd_sbp_str_list.push_back(
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleObn())));
+    nccl_type_list.push_back(nccl_op->op().op_conf().user_conf().op_type_name());
     CHECK_OR_RETURN(seed_placement == nccl_op->parallel_desc());
     CHECK_EQ_OR_RETURN(has_stream_name_hint, nccl_op->op().op_conf().has_stream_name_hint());
     CHECK_EQ_OR_RETURN(stream_name_hint, nccl_op->op().op_conf().stream_name_hint());
@@ -110,6 +114,7 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
       fusion_builder.Output("out", nccl_size)
           .Attr<std::vector<std::string>>("src_nd_sbp_str_list", src_nd_sbp_str_list)
           .Attr<std::vector<std::string>>("dst_nd_sbp_str_list", dst_nd_sbp_str_list)
+          .Attr<std::vector<std::string>>("nccl_type_list", nccl_type_list)
           .Attr<Shape>("hierarchy", *seed_placement.hierarchy())
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -194,17 +199,21 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   HashMap<std::string, OperatorConf> mut_op_name2conf;
 
   for (const auto& pair : nccl_depth2nccl_ops) {
-    HashMap<int64_t, HashMap<Shape, std::vector<const OpNode*>>> chain2hierarchy2nccl_ops;
+    HashMap<int64_t, HashMap<std::string, std::vector<const OpNode*>>> chain2comm2nccl_ops;
     for (const OpNode* nccl_op : pair.second) {
       CHECK_OR_RETURN(nccl_op->op().op_conf().has_logical_chain_id());
       int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
       const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
-      chain2hierarchy2nccl_ops[logical_chain_id][*hierarchy].push_back(nccl_op);
+      std::string comm_key =
+          hierarchy->ToString()
+          + GetCommKeyFromNcclType(nccl_op->op().op_conf().user_conf().op_type_name());
+      LOG(INFO) << "ccdebuglog: comm_key = " << comm_key << " nccl_op: " << nccl_op->op().op_name();
+      chain2comm2nccl_ops[logical_chain_id][comm_key].push_back(nccl_op);
     }
-    for (const auto& chain_pair : chain2hierarchy2nccl_ops) {
-      for (const auto& hierarchy_pair : chain_pair.second) {
+    for (const auto& chain_pair : chain2comm2nccl_ops) {
+      for (const auto& comm_pair : chain_pair.second) {
         JUST(ReplaceNcclOpsWithFusionOp(&nccl_fusion_ops, &nccl_fusion_op_parallel_confs, &del_ops,
-                                        &mut_op_name2conf, hierarchy_pair.second));
+                                        &mut_op_name2conf, comm_pair.second));
       }
     }
   }
