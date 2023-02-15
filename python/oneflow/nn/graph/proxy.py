@@ -33,9 +33,9 @@ from oneflow.nn.graph.graph_block import (
 )
 from oneflow.nn.graph.util import (
     add_indent,
-    ArgsTree,
     seq_to_func_return,
 )
+from oneflow.framework.args_tree import ArgsTree
 
 
 def get_proxy_cls(item):
