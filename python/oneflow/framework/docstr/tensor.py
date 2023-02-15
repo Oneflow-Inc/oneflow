@@ -316,7 +316,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.local_to_global,
     """
-    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=Ture, copy=False) -> Tensor
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, copy=False) -> Tensor
 
     Creates a global tensor from a local tensor.
 
