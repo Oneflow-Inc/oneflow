@@ -330,7 +330,7 @@ add_docstr(
         There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
 
     .. warning::
-        When sbp is ``oneflow.sbp.broadcast``, the data on non-0 rank will be modified. If you want to keep the input local tensor unchanged,
+        When the sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified. If you want to keep the input local tensor unchanged,
         please set the arg copy to True.
 
     Args:
