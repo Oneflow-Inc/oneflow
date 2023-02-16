@@ -568,7 +568,15 @@ Maybe<SubTskGphBuilderStatus> OfCollectiveBoxingSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
     const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
-  if (!IsSourceTimeShape(time_shape)) { return Error::BoxingNotSupportedError(); }
+
+  // 为了让occl能真正接管pp的所有coll，关闭这个环境变量
+  VLOG(1) << "time_shape.elem_cnt() = " << time_shape.elem_cnt();
+  if (ParseBooleanFromEnv("ONEFLOW_TIME_SHAPE", false)) {
+    VLOG(1) << "Judge IsSourceTimeShape";
+    if (!IsSourceTimeShape(time_shape)) { return Error::BoxingNotSupportedError(); }
+  } else {
+    VLOG(1) << "Do not care about timeshape";
+  }
   return chain_builder_->Build(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
                                in_parallel_desc, out_parallel_desc, lbi, logical_blob_desc,
                                in_sbp_parallel, out_sbp_parallel, time_shape);
