@@ -28,13 +28,9 @@ namespace oneflow {
   DataType mask_bias_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_bias_type, query_type);
 
-  const std::string mode = ctx->Attr<std::string>("mode");
   if (ctx->has_input("bias", 0)) {
-    CHECK_OR_RETURN(mode == "row" || mode == "triangular_start" || mode == "triangular_end");
     DataType bias_type = ctx->InputDType("bias", 0);
     CHECK_EQ_OR_RETURN(bias_type, query_type);
-  } else {
-    CHECK_OR_RETURN(mode == "global_col" || mode == "col" || mode == "template");
   }
   ctx->SetOutputDType("out", 0, query_type);
   return Maybe<void>::Ok();
@@ -46,60 +42,25 @@ namespace oneflow {
   CHECK_LE_OR_RETURN(scale, 1.);
 
   const Shape& x_shape = ctx->InputShape("x", 0);
-  const std::string mode = ctx->Attr<std::string>("mode");
-  if (mode == "global_col") {
-    int64_t naxes = x_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 3 || (naxes == 4 && x_shape.At(0) == 1));
-    int64_t start = naxes == 3 ? 0 : 1;
-    int64_t S1 = x_shape.At(0 + start), N = x_shape.At(2 + start);
-    const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), S1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), N);
-  } else if (mode == "col") {
-    int64_t naxes = x_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && x_shape.at(0) == 1));
-    int64_t start = naxes == 4 ? 0 : 1;
-    int64_t N = x_shape.At(start + 0), S = x_shape.At(start + 3);
-    const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), N);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), 1);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 3), S);
-  } else if (mode == "row" || mode == "triangular_start" || mode == "triangular_end") {
-    int64_t naxes = x_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && x_shape.at(0) == 1));
-    int64_t start = naxes == 4 ? 0 : 1;
-    const int64_t batch_size = x_shape.At(start + 0);
-    const int64_t num_heads = x_shape.At(start + 1);
-    const int64_t query_lens = x_shape.At(start + 2);
-    const int64_t key_lens = x_shape.At(start + 3);
-    CHECK_GT_OR_RETURN(query_lens, 0);
-    CHECK_EQ_OR_RETURN(query_lens, key_lens);
-
-    const Shape& mask_bias_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 0), batch_size);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 1), 1);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 2), 1);
-    CHECK_EQ_OR_RETURN(mask_bias_shape.At(start + 3), query_lens);
-
-    CHECK_OR_RETURN(ctx->has_input("bias", 0));
-    const Shape& pair_bias_shape = ctx->InputShape("bias", 0);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 0), 1);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 1), num_heads);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 2), query_lens);
-    CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 3), key_lens);
-  } else if (mode == "template") {
-    int64_t naxes = x_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 5 || (naxes == 6 && x_shape.At(0) == 1));  // *, S, S, h, 1, n_templ
-    int64_t start = naxes == 5 ? 0 : 1;
-    CHECK_OR_RETURN(x_shape.at(start + 0) == x_shape.at(start + 1));
-    int64_t Nt = x_shape.At(start + 4);
-    const Shape& mask_shape = ctx->InputShape("mask", 0);
-    CHECK_EQ_OR_RETURN(mask_shape.elem_cnt(), Nt);
-    CHECK_EQ_OR_RETURN(mask_shape.At(start + 4), Nt);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  CHECK_OR_RETURN(x_shape[-1] == mask_shape[-1]
+                  && (x_shape[0] == mask_shape[0] || mask_shape[0] == 1));
+  if (ctx->has_input("bias", 0)) {
+    const Shape& bias_shape = ctx->InputShape("bias", 0);
+    CHECK_OR_RETURN(mask_shape[-1] == bias_shape[-1]);
+    CHECK_OR_RETURN(mask_shape[0] == bias_shape[0] || bias_shape[0] == 1);
+    for (int i = 1; i < x_shape.NumAxes() - 1; i++) {
+      CHECK_OR_RETURN((mask_shape.At(i) == 1 || bias_shape.At(i) == 1)
+                      && mask_shape.at(i) * bias_shape.at(i) == x_shape.At(i));
+    }
   } else {
-    LOG(ERROR) << "mode \"" << mode << "\" unimplemented.";
+    auto axes = x_shape.NumAxes();
+    CHECK_OR_RETURN(mask_shape.At(axes - 1) == x_shape.At(axes - 1));
+    bool reach1 = false;
+    for (int i = 0; i < axes - 1; i++) {
+      CHECK_OR_RETURN((mask_shape.at(i) == x_shape.At(i) && !reach1) || (1 == mask_shape.At(i)));
+      reach1 = (1 == mask_shape.At(i));
+    }
   }
   ctx->SetOutputShape("out", 0, x_shape);
   return Maybe<void>::Ok();
@@ -132,7 +93,6 @@ namespace oneflow {
   DataType y_type = ctx->InputDType("y", 0);
   DataType dy_type = ctx->InputDType("dy", 0);
   CHECK_EQ_OR_RETURN(y_type, dy_type);
-  const std::string mode = ctx->Attr<std::string>("mode");
   ctx->SetOutputDType("dx", 0, y_type);
   return Maybe<void>::Ok();
 }

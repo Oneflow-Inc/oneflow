@@ -3280,9 +3280,7 @@ def OneFlow_FusedScaleMaskBiasSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_b
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.35355">:$scale,
-    DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
-    DefaultValuedAttr<BoolAttr, "false">:$inplace
+    DefaultValuedAttr<F32Attr, "0.35355">:$scale
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3301,7 +3299,6 @@ def OneFlow_FusedScaleMaskBiasSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_bias_
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.125">:$scale,
-    DefaultValuedAttr<StrAttr, "\"row\"">:$mode,
     DefaultValuedAttr<BoolAttr, "false">:$inplace
   );
   let has_logical_tensor_desc_infer_fn = 1;

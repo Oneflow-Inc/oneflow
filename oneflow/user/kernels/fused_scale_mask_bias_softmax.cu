@@ -24,79 +24,92 @@ namespace oneflow {
 namespace {
 template<typename SRC, typename DST>
 struct LoadWithBias {
-  LoadWithBias(const SRC* q, const SRC* m, const SRC* p, const SRC scale, int64_t stride,
-               int64_t row_size)
-      : q(q), m(m), p(p), scale(scale), stride(stride), row_size(row_size) {}
+  LoadWithBias(const SRC* x_ptr, const SRC* mask_ptr, const SRC* bias_ptr, const SRC scale,
+               int64_t row_stride, int64_t bias_stride, int64_t row_size)
+      : x_ptr_(x_ptr),
+        mask_ptr_(mask_ptr),
+        bias_ptr_(bias_ptr),
+        scale_(scale),
+        row_stride_(row_stride),
+        bias_stride_(bias_stride),
+        row_size_(row_size) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> x;
-    const int64_t offset = (row * row_size + col) / N;
-    x.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(q) + offset);
+    const int64_t offset = (row * row_size_ + col) / N;
+    x.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(x_ptr_) + offset);
     cuda::softmax::Pack<SRC, N> mask;
-    const int64_t m_offset = (row / stride * row_size + col) / N;
-    mask.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(m) + m_offset);
-    cuda::softmax::Pack<SRC, N> pair_bias;
-    const int64_t p_offset = (row % stride * row_size + col) / N;
-    pair_bias.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(p) + p_offset);
+    const int64_t m_offset = (row / row_stride_ * row_size_ + col) / N;
+    mask.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(mask_ptr_) + m_offset);
+    cuda::softmax::Pack<SRC, N> bias;
+    int64_t bias_offset =
+        (bias_stride_ > 0)
+            ? ((row % row_stride_ + row / bias_stride_ * row_stride_) * row_size_ + col) / N
+            : (row % row_stride_ * row_size_ + col) / N;
+    bias.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(bias_ptr_) + bias_offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
-      dst[i] = static_cast<DST>(x.elem[i]) * static_cast<DST>(scale)
-               + static_cast<DST>(mask.elem[i]) + static_cast<DST>(pair_bias.elem[i]);
+      dst[i] = static_cast<DST>(x.elem[i]) * static_cast<DST>(scale_)
+               + static_cast<DST>(mask.elem[i]) + static_cast<DST>(bias.elem[i]);
     }
   }
-  const SRC* q;
-  const SRC* m;
-  const SRC* p;
-  const SRC scale;
-  int64_t stride;
-  int64_t row_size;
+  const SRC* x_ptr_;
+  const SRC* mask_ptr_;
+  const SRC* bias_ptr_;
+  const SRC scale_;
+  int64_t row_stride_;
+  int64_t bias_stride_;
+  int64_t row_size_;
 };
 
 template<typename SRC, typename DST>
 struct LoadWithoutBias {
-  LoadWithoutBias(const SRC* q, const SRC* m, const SRC scale, int64_t stride, int64_t row_size)
-      : q(q), m(m), scale(scale), stride(stride), row_size(row_size) {}
+  LoadWithoutBias(const SRC* x_ptr, const SRC* mask_ptr, const SRC scale, int64_t row_stride,
+                  int64_t row_size)
+      : x_ptr_(x_ptr),
+        mask_ptr_(mask_ptr),
+        scale_(scale),
+        row_stride_(row_stride),
+        row_size_(row_size) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> x;
-    const int64_t offset = (row * row_size + col) / N;
-    x.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(q) + offset);
+    const int64_t offset = (row * row_size_ + col) / N;
+    x.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(x_ptr_) + offset);
     cuda::softmax::Pack<SRC, N> mask;
-    const int64_t m_offset = (row / stride * row_size + col) / N;
-    mask.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(m) + m_offset);
+    const int64_t m_offset = (row / row_stride_ * row_size_ + col) / N;
+    mask.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(mask_ptr_) + m_offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       dst[i] =
-          static_cast<DST>(x.elem[i]) * static_cast<DST>(scale) + static_cast<DST>(mask.elem[i]);
+          static_cast<DST>(x.elem[i]) * static_cast<DST>(scale_) + static_cast<DST>(mask.elem[i]);
     }
   }
-  const SRC* q;
-  const SRC* m;
-  const SRC scale;
-  int64_t stride;
-  int64_t row_size;
+  const SRC* x_ptr_;
+  const SRC* mask_ptr_;
+  const SRC scale_;
+  int64_t row_stride_;
+  int64_t row_size_;
 };
 
 template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
-void LaunchLoadWithBiasSoftmaxForwardKernel(cudaStream_t stream, T* out, const T* x, const T* mask,
-                                            const T* bias, T scale, const int64_t stride,
-                                            const int64_t row_size, const int64_t rows,
-                                            const int64_t cols) {
+void LaunchFusedSoftmaxForwardKernel(cudaStream_t stream, T* out, const T* x, const T* mask,
+                                     const T* bias, T scale, const int64_t row_stride,
+                                     const int64_t bias_stride, const int64_t rows,
+                                     const int64_t row_size) {
   cuda::softmax::DirectStore<ComputeType, T> store(out, row_size);
-  LoadWithBias<T, ComputeType> load(x, mask, bias, scale, stride, row_size);
-  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-      stream, load, store, rows, cols)));
-};
-
-template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
-void LaunchLoadWithoutBiasSoftmaxForwardKernel(cudaStream_t stream, T* out, const T* x,
-                                               const T* mask, T scale, const int64_t stride,
-                                               const int64_t row_size, const int64_t rows,
-                                               const int64_t cols) {
-  cuda::softmax::DirectStore<ComputeType, T> store(out, row_size);
-  LoadWithoutBias<T, ComputeType> load(x, mask, scale, stride, row_size);
-  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-      stream, load, store, rows, cols)));
+  if (bias != nullptr) {
+    LoadWithBias<T, ComputeType> load(x, mask, bias, scale, row_stride, bias_stride, row_size);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        stream, load, store, rows, row_size)));
+  } else {
+    LoadWithoutBias<T, ComputeType> load(x, mask, scale, row_stride, row_size);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        stream, load, store, rows, row_size)));
+  }
 };
 
 template<typename SRC, typename DST>
@@ -118,13 +131,13 @@ struct GradStore {
 
 template<typename T, typename ComputeType = typename cuda::softmax::DefaultComputeType<T>::type>
 void LaunchSoftmaxBackwardKernel(cudaStream_t stream, T* dx, const T* y, const T* dy, T scale,
-                                 const int64_t row_size, const int64_t rows, const int64_t cols) {
+                                 const int64_t rows, const int64_t row_size) {
   GradStore<ComputeType, T> store(dx, scale, row_size);
   cuda::softmax::DirectLoad<T, ComputeType> load_y(y, row_size);
   cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy, row_size);
-  OF_CUDA_CHECK((
-      cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
-                                         ComputeType>(stream, load_y, load_dy, store, rows, cols)));
+  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
+                                                    decltype(store), ComputeType>(
+      stream, load_y, load_dy, store, rows, row_size)));
 };
 
 }  // namespace
@@ -141,37 +154,33 @@ class FusedScaleMaskBiasSoftmaxKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const T scale = ctx->Attr<float>("scale");
-    const std::string mode = ctx->Attr<std::string>("mode");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     auto x_shape = x->shape_view();
     auto axes = x_shape.NumAxes();
-    int64_t B = x_shape.At(0), h = x_shape.At(1), S1 = x_shape.At(2), S2 = x_shape.At(axes - 1);
-    if (mode == "template") {
-      B = x_shape.At(0) * x_shape.At(1);
-      h = x_shape.At(2);
-      S1 = x_shape.At(3);
-      S2 = x_shape.At(4);
-    } else if (axes == 5) {
-      CHECK_EQ(x_shape.At(0), 1);
-      B = x_shape.At(1);
-      h = x_shape.At(2);
-      S1 = x_shape.At(3);
-      S2 = x_shape.At(4);
+    CHECK(axes == 3 || axes == 4 || axes == 5);
+    auto mask_shape = mask->shape_view();
+    CHECK(mask_shape.NumAxes() == axes);
+    const int row_size = x_shape.At(axes - 1);
+    const int rows = x_shape.elem_cnt() / row_size;
+    int row_stride = 1;
+    for (int i = axes - 2; i >= 0; i--) {
+      if (mask_shape.At(i) == 1)
+        row_stride *= x_shape.At(i);
+      else
+        break;
     }
 
+    user_op::Tensor* bias = nullptr;
+    int64_t bias_stride = 0;  // ensemble batch for axes==5
     if (ctx->has_input("bias", 0)) {
-      const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-      LaunchLoadWithBiasSoftmaxForwardKernel<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
-                                                out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(),
-                                                bias->dptr<T>(), scale, h * S1, S2, B * h * S1, S2);
-    } else {
-      int64_t stride = mode == "template" ? B * h * S1 : (mode == "col" ? h * S1 : h);
-      int64_t rows = mode == "global_col" ? h * B : B * h * S1;
-      LaunchLoadWithoutBiasSoftmaxForwardKernel<T>(
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), out->mut_dptr<T>(), x->dptr<T>(),
-          mask->dptr<T>(), scale, stride, S2, rows, S2);
+      bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      if (axes == 5 && x_shape.At(0) != 1) bias_stride = x_shape.At(0);
     }
+    LaunchFusedSoftmaxForwardKernel<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
+                                       out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(),
+                                       ctx->has_input("bias", 0) ? bias->dptr<T>() : nullptr, scale,
+                                       row_stride, bias_stride, rows, row_size);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -202,16 +211,15 @@ class FusedScaleMaskBiasSoftmaxGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const T scale = ctx->Attr<float>("scale");
-    const std::string mode = ctx->Attr<std::string>("mode");
     auto y_shape = y->shape_view();
 
     const int64_t axes = y_shape.NumAxes();
-    int64_t rows = y_shape.At(0) * y_shape.At(1), S = y_shape.At(axes - 1);
-    rows = mode == "global_col" ? rows : rows * y_shape.At(2);
+    int64_t row_size = y_shape.At(axes - 1);
+    int64_t rows = y_shape.elem_cnt() / row_size;
 
     LaunchSoftmaxBackwardKernel<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
-                                   dx->mut_dptr<T>(), y->dptr<T>(), dy->dptr<T>(), scale, S, rows,
-                                   S);
+                                   dx->mut_dptr<T>(), y->dptr<T>(), dy->dptr<T>(), scale, rows,
+                                   row_size);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

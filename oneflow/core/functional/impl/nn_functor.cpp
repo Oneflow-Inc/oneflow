@@ -5131,9 +5131,9 @@ class FusedScaleMaskBiasSoftmaxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask,
                            const Optional<one::Tensor>& bias, const float& scale,
-                           const std::string& mode, const bool& inplace = false) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode", "inplace");
-    attrs.SetAllAttrs(scale, mode, inplace);
+                           const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "inplace");
+    attrs.SetAllAttrs(scale, inplace);
     if (bias) {
       if (inplace) {
         std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -5168,16 +5168,9 @@ class FusedScaleMaskBiasSoftmaxGradFunctor {
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy, const float& scale,
-                           const std::string& mode, const bool& inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode", "inplace");
-    attrs.SetAllAttrs(scale, mode, inplace);
-    if (inplace) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = y;
-      JUST(OpInterpUtil::Dispatch(*op_, {y, dy}, outputs.get(), attrs));
-      return outputs->at(0);
-    }
+                           const std::shared_ptr<one::Tensor>& dy, const float& scale) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale");
+    attrs.SetAllAttrs(scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
   }
 

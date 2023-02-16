@@ -2584,11 +2584,11 @@
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax"
-  signature: 'Tensor (Tensor x, Tensor mask, Tensor bias=None, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedScaleMaskBiasSoftmax'
+  signature: 'Tensor (Tensor x, Tensor mask, Tensor bias=None, Float scale=0.35355, Bool inplace=False) => FusedScaleMaskBiasSoftmax'
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax_grad"
-  signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedScaleMaskBiasSoftmaxGrad'
+  signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355) => FusedScaleMaskBiasSoftmaxGrad'
   bind_python: False
 
 - name: "fused_get_center_dist"

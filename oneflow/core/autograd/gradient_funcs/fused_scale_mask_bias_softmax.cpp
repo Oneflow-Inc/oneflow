@@ -30,9 +30,7 @@ struct FusedScaleMaskBiasSoftmaxCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool bias_requires_grad = false;
   int32_t input_size = 3;
-  std::string mode = "row";
   float scale = 1.0;
-  bool inplace = false;
 };
 
 class FusedScaleMaskBiasSoftmax : public OpExprGradFunction<FusedScaleMaskBiasSoftmaxCaptureState> {
@@ -59,22 +57,11 @@ Maybe<void> FusedScaleMaskBiasSoftmax::Capture(FusedScaleMaskBiasSoftmaxCaptureS
                                                const TensorTuple& outputs,
                                                const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  const std::string& mode = JUST(composed_attrs.GetAttr<std::string>("mode"));
-  const bool& inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
-  if (mode == "row" || mode == "triangular_start" || mode == "triangular_end") {
-    CHECK_EQ_OR_RETURN(inputs.size(), 3);
-    ctx->bias_requires_grad = inputs.at(2)->requires_grad();
-  } else {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    ctx->input_size = 2;
-  }
-  ctx->mode = mode;
-  ctx->inplace = inplace;
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
+  if (inputs.size() == 3) ctx->bias_requires_grad = inputs.at(2)->requires_grad();
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
-
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -88,13 +75,13 @@ Maybe<void> FusedScaleMaskBiasSoftmax::Apply(const FusedScaleMaskBiasSoftmaxCapt
 
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& input_grad =
-      JUST(functional::FusedScaleMaskBiasSoftmaxGrad(y, out_grads.at(0), ctx->scale, ctx->mode,
-                                                     ctx->inplace));
+      JUST(functional::FusedScaleMaskBiasSoftmaxGrad(y, out_grads.at(0), ctx->scale));
 
   in_grads->at(0) = input_grad;
   if (ctx->bias_requires_grad) {
-    in_grads->at(2) = JUST(
-        functional::ScalarMul(1 / ctx->scale, JUST(functional::ReduceSum(input_grad, {0}, true))));
+    int batch_dim = (y->shape()->NumAxes() == 5) ? 1 : 0;
+    in_grads->at(2) = JUST(functional::ScalarMul(
+        1 / ctx->scale, JUST(functional::ReduceSum(input_grad, {batch_dim}, true))));
   }
 
   return Maybe<void>::Ok();
