@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/plan_util.h"
@@ -761,15 +760,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (auto& pair : mem_chain2algo2result) {
-    if (GlobalProcessCtx::Rank() == 0)
-      std::cout << "Lower bound: " << mem_chain2peak_memory[pair.first] << std::endl;
     MemBlockResultInfo* best_result = nullptr;
     for (auto& algo_result_pair : pair.second) {
-      if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Algorithm id: " << algo_result_pair.first.first << ", use compact insert? "
-                  << algo_result_pair.first.second
-                  << ", memory size: " << algo_result_pair.second.mem_block_size << std::endl;
-      }
       if (!best_result || algo_result_pair.second.mem_block_size < best_result->mem_block_size) {
         best_result = &algo_result_pair.second;
       }
