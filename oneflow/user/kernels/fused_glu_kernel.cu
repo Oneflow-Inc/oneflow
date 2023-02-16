@@ -490,7 +490,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
 
     // check whether the user provide bais tensors
     CHECK(!(has_b && (is_split_mode && !has_c)))
-      << "expected existance of c, when provide tensors w, v and b";
+        << "expected existance of c, when provide tensors w, v and b";
     bool has_bias = false;
     if (has_b && (is_split_mode && has_c)) {
       input_tensor_b = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -502,9 +502,9 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     } else {
       has_bias = false;
     }
-    
+
     cublasLtEpilogue_t epilogue;
-    if(has_bias){
+    if (has_bias) {
       epilogue = CUBLASLT_EPILOGUE_BIAS;
     } else {
       epilogue = CUBLASLT_EPILOGUE_DEFAULT;
@@ -514,7 +514,7 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     const ShapeView& x_shape = input_tensor_x->shape_view();
     const ShapeView& w_shape = input_tensor_w->shape_view();
     ShapeView b_shape;
-    if(has_bias){
+    if (has_bias) {
       Shape _b_shape;
       input_tensor_b->shape_view().ToShape(&_b_shape);
       b_shape = ShapeView(_b_shape);
@@ -526,18 +526,18 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
     CHECK_EQ(w_shape.NumAxes(), 2)
         << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
-    if(has_bias){
+    if (has_bias) {
       CHECK_EQ(b_shape.NumAxes(), 1)
-        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+          << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
     }
-    
+
     // check input tensor shapes
     size_t x_num_axes = x_shape.NumAxes();
     CHECK_EQ(w_shape.At(1), x_shape.At(x_num_axes - 1))
         << "dimension 1 of \'w\'(" << w_shape.At(1)
         << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
         << ")";
-    if(has_bias){
+    if (has_bias) {
       CHECK_EQ(b_shape.At(0), w_shape.At(0))
           << "dimension 0 of \'b\'(" << b_shape.At(0)
           << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
@@ -552,10 +552,10 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(v_shape.NumAxes(), 2)
           << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
       CHECK_EQ(v_shape, w_shape) << "the shape of \'v\' is not consistant with \'w\'";
-      if(has_bias){
+      if (has_bias) {
         const ShapeView& c_shape = input_tensor_c->shape_view();
         CHECK_EQ(c_shape.NumAxes(), 1)
-          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+            << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
         CHECK_EQ(c_shape, b_shape) << "the shape of \'c\' is not consistant with \'b\'";
       }
     }
@@ -570,21 +570,21 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
     const int64_t n = y_shape.At(x_num_axes - 1);
     const int64_t k = x_shape.At(x_num_axes - 1);
 
-    if(has_bias){
+    if (has_bias) {
       if (TryDispatchDualGemmImpl(
-          ctx->stream()->As<ep::CudaStream>(), ctx->Attr<std::string>("activation"), m, n, k,
-          input_tensor_x->dptr<T>(), input_tensor_w->dptr<T>(),
-          is_split_mode ? input_tensor_v->dptr<T>() : input_tensor_w->dptr<T>() + n * k,
-          input_tensor_b->dptr<T>(),
-          is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
-          out_tensor_matmul_wx->mut_dptr<T>(), is_split_mode ? n : 2 * n,
-          is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>()
-                        : out_tensor_matmul_wx->mut_dptr<T>() + n,
-          is_split_mode ? n : 2 * n, out_tensor_y->mut_dptr<T>())) {
+              ctx->stream()->As<ep::CudaStream>(), ctx->Attr<std::string>("activation"), m, n, k,
+              input_tensor_x->dptr<T>(), input_tensor_w->dptr<T>(),
+              is_split_mode ? input_tensor_v->dptr<T>() : input_tensor_w->dptr<T>() + n * k,
+              input_tensor_b->dptr<T>(),
+              is_split_mode ? input_tensor_c->dptr<T>() : input_tensor_b->dptr<T>() + n,
+              out_tensor_matmul_wx->mut_dptr<T>(), is_split_mode ? n : 2 * n,
+              is_split_mode ? out_tensor_matmul_vx->mut_dptr<T>()
+                            : out_tensor_matmul_wx->mut_dptr<T>() + n,
+              is_split_mode ? n : 2 * n, out_tensor_y->mut_dptr<T>())) {
         return;
       }
-    }  
-  
+    }
+
     // init scalar parameters for cublaslt
     const double alpha = 1.0;
     const double beta = 0.0;
@@ -613,8 +613,8 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
-                    has_bias ? input_tensor_b->dptr() : nullptr, nullptr, cublas_wx_m, cublas_wx_n, cublas_wx_k,
-                    cublas_wx_lda, cublas_wx_ldb, cublas_wx_ldc);
+                    has_bias ? input_tensor_b->dptr() : nullptr, nullptr, cublas_wx_m, cublas_wx_n,
+                    cublas_wx_k, cublas_wx_lda, cublas_wx_ldb, cublas_wx_ldc);
 
       // setup algorithms
       cublasLtMatmulPreference_t preference = nullptr;
@@ -661,8 +661,8 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
-                    has_bias ? input_tensor_c->dptr() : nullptr, nullptr, cublas_vx_m, cublas_vx_n, cublas_vx_k,
-                    cublas_vx_lda, cublas_vx_ldb, cublas_vx_ldc);
+                    has_bias ? input_tensor_c->dptr() : nullptr, nullptr, cublas_vx_m, cublas_vx_n,
+                    cublas_vx_k, cublas_vx_lda, cublas_vx_ldb, cublas_vx_ldc);
 
       // setup algorithm
       int vx_returned_result = 0;
@@ -711,8 +711,8 @@ class GpuFusedGluKernel final : public user_op::OpKernel, public user_op::CudaGr
       SetCublasAttr(fused_glu_cache, cublas_compute_dtype, cuda_data_type, false,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue,
-                    has_bias ? input_tensor_b->dptr() : nullptr, nullptr, cublas_m, cublas_n, cublas_k, cublas_lda,
-                    cublas_ldb, cublas_ldc);
+                    has_bias ? input_tensor_b->dptr() : nullptr, nullptr, cublas_m, cublas_n,
+                    cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
       // setup algorithm
       cublasLtMatmulPreference_t preference = nullptr;

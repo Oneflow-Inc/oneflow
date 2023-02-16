@@ -3479,7 +3479,6 @@ class FusedGluFunctor {
     const auto& w_shape = *(w->shape());
     std::shared_ptr<const oneflow::Shape> b_shape = NULL;
     if (has_bias) { b_shape = (JUST(b)->shape()); }
-    
 
     // check number of axes of x, w and b
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)

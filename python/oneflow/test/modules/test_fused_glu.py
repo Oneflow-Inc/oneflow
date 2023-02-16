@@ -176,6 +176,7 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
     print(f"============== PASSED =============")
     print("\n")
 
+
 def _test_fused_glu_without_bias(test_case, params: dict, dtype=flow.float32):
     print(f"========== Start Testing ==========")
     print(f"weight tensor: merged")
@@ -183,7 +184,7 @@ def _test_fused_glu_without_bias(test_case, params: dict, dtype=flow.float32):
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
     print(f'activation: {params["act"]}')
     print(f"dtype: {dtype}")
-    
+
     flow_module = Glu()
     x, w, b, y_nor = tensor_builder(params=params, dtype=dtype, is_split_mode=False)
 
@@ -284,6 +285,7 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     print(f"============== PASSED =============")
     print("\n")
 
+
 def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float32):
     print(f"========== Start Testing ==========")
     print(f"weight tensor: splited")
@@ -291,7 +293,6 @@ def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float
     print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
     print(f'activation: {params["act"]}')
     print(f"dtype: {dtype}")
-    
 
     flow_module = Glu()
     x, w, b, v, c, y_nor = tensor_builder(
@@ -299,9 +300,7 @@ def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float
     )
 
     # forward
-    y = flow_module.forward(
-        x=x, w=w, v=v, split_mode=True, activation=params["act"]
-    )
+    y = flow_module.forward(x=x, w=w, v=v, split_mode=True, activation=params["act"])
 
     # backward
     y.sum().backward()
@@ -338,6 +337,7 @@ def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float
     print(f"============== PASSED =============")
     print("\n")
 
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(False, "skip test")  # skip test for passing CI under cuda 10
 class TestFusedGlu(flow.unittest.TestCase):
@@ -348,7 +348,7 @@ class TestFusedGlu(flow.unittest.TestCase):
             _test_fused_glu,
             _test_fused_glu_split,
             _test_fused_glu_without_bias,
-            _test_fused_glu_split_without_bias
+            _test_fused_glu_split_without_bias,
         ]
 
         # set up env valuable if necessary
