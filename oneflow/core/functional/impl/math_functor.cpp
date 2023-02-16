@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -2630,6 +2631,37 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+class ScalarBitwiseBaseFunctor {
+ public:
+  explicit ScalarBitwiseBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
+  }
+  virtual ~ScalarBitwiseBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("operand");
+    CHECK_OR_RETURN(scalar.IsIntegral() || scalar.IsBool())
+        << "Bitwise ops only support int and bool dtype";
+    attrs.SetAllAttrs(scalar.As<int64_t>());
+    // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+    if (DType::priority_order[x->dtype()->data_type()]
+        == DType::priority_order[DType::Bool()->data_type()]) {
+      lowest_dtype = DType::Int64();
+    } else {
+      lowest_dtype = x->dtype();
+    }
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarLerpFunctor {
  public:
   ScalarLerpFunctor() {
@@ -2670,37 +2702,6 @@ class ScalarLerpFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarBitwiseBaseFunctor {
- public:
-  explicit ScalarBitwiseBaseFunctor(std::string op_name) {
-    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
-  }
-  virtual ~ScalarBitwiseBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
-
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("operand");
-    CHECK_OR_RETURN(scalar.IsIntegral() || scalar.IsBool())
-        << "Bitwise ops only support int and bool dtype";
-    attrs.SetAllAttrs(scalar.As<int64_t>());
-    // Only promote type to Int64 when tensor is Bool type but scalar is int type.
-    if (DType::priority_order[x->dtype()->data_type()]
-        == DType::priority_order[DType::Bool()->data_type()]) {
-      lowest_dtype = DType::Int64();
-    } else {
-      lowest_dtype = x->dtype();
-    }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
-    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class ScalarInplaceLerpFunctor {
  public:
   ScalarInplaceLerpFunctor() {
@@ -2714,8 +2715,14 @@ class ScalarInplaceLerpFunctor {
       broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
     }
 
-    if (*start->shape() != broadcast_shape) { JUST(view::InplaceExpand(start, broadcast_shape)); }
-    if (*end->shape() != broadcast_shape) { JUST(view::InplaceExpand(end, broadcast_shape)); }
+    std::shared_ptr<one::Tensor> broadcast_start = JUST(Identity(start));
+    std::shared_ptr<one::Tensor> broadcast_end = JUST(Identity(end));
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(view::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(view::Expand(end, broadcast_shape));
+    }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
                                                  "int_operand", "has_int_operand");
@@ -2729,18 +2736,20 @@ class ScalarInplaceLerpFunctor {
     }
 
     TensorProcessor tensor_processor;
-    if (end->requires_grad()) {
+    if (broadcast_end->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(start)), end})
+               .AddInputs({JUST(Identity(broadcast_start)), broadcast_end})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({start, end}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({broadcast_start, broadcast_end})
+               .Apply());
     }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
-    JUST(CheckInplaceValid(start));
-    JUST(CheckInplaceCastValid(start, start_cast));
+    JUST(CheckInplaceValid(broadcast_start));
+    JUST(CheckInplaceCastValid(broadcast_start, start_cast));
     JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = start;

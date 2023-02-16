@@ -493,25 +493,35 @@ class InplaceLerpFunctor {
           InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape(), *weight->shape()}));
     }
 
-    if (*start->shape() != broadcast_shape) { JUST(view::InplaceExpand(start, broadcast_shape)); }
-    if (*end->shape() != broadcast_shape) { JUST(view::InplaceExpand(end, broadcast_shape)); }
-    if (*weight->shape() != broadcast_shape) { JUST(view::InplaceExpand(weight, broadcast_shape)); }
+    std::shared_ptr<one::Tensor> broadcast_start = JUST(Identity(start));
+    std::shared_ptr<one::Tensor> broadcast_end = JUST(Identity(end));
+    std::shared_ptr<one::Tensor> broadcast_weight = JUST(Identity(weight));
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(view::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(view::Expand(end, broadcast_shape));
+    }
+    if (*weight->shape() != broadcast_shape) {
+      broadcast_weight = JUST(view::Expand(weight, broadcast_shape));
+    }
 
     TensorProcessor tensor_processor;
-    if (end->requires_grad() || weight->requires_grad()) {
+    if (broadcast_end->requires_grad() || broadcast_weight->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(start)), end, weight})
+               .AddInputs({JUST(Identity(broadcast_start)), broadcast_end, broadcast_weight})
                .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({start, end, weight})
+               .AddInputs({broadcast_start, broadcast_end, broadcast_weight})
                .Apply());
     }
+
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
-    JUST(CheckInplaceValid(start));
-    JUST(CheckInplaceCastValid(start, start_cast));
+    JUST(CheckInplaceValid(broadcast_start));
+    JUST(CheckInplaceCastValid(broadcast_start, start_cast));
     JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = start;

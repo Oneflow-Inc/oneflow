@@ -15,8 +15,6 @@ limitations under the License.
 """
 import unittest
 
-import torch
-
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
@@ -53,9 +51,9 @@ class TestLerp(flow.unittest.TestCase):
     @autotest()
     def test_tesnor_inplace_lerp_with_random_data(test_case):
         device = random_device()
-        start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
-        end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
-        weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device)
+        start = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device) + 0.01
+        end = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device) + 0.01
+        weight = random_tensor(ndim=3, dim0=3, dim1=4, dim2=5).to(device) + 0.01
         return start.lerp_(end, oneof(weight, random().to(int), random().to(float)))
 
     @profile(torch.lerp)
