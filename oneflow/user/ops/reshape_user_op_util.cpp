@@ -218,7 +218,6 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
     int out_axis = out_shape.size() - 1;
     int64_t in_dim_size = in_shape[in_axis];
     int64_t out_dim_size = out_shape[out_axis];
-    bool nd_split_failed = false;
     std::map<int, std::pair<int, int>> rank_in2out_axis;
 
     while (in_axis >= 0 && out_axis >= 0 && rank_axis_idx < rank_axes.size()) {
@@ -234,10 +233,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
       }
       int rank_axis = rank_axes[rank_axis_idx];
       int64_t rank_num = rank_mesh[rank_axis];
-      if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) {
-        nd_split_failed = true;
-        break;
-      }
+      if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) { break; }
       in_dim_size /= rank_num;
       out_dim_size /= rank_num;
       int origin_in_axis = origin_in_axes[in_axis];
@@ -245,7 +241,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
       rank_in2out_axis.emplace(rank_axis, std::make_pair(origin_in_axis, origin_out_axis));
       rank_axis_idx++;
     }
-    if (!nd_split_failed && rank_in2out_axis.size() == rank_axes.size()) {
+    if (rank_in2out_axis.size() == rank_axes.size()) {
       nd_split_groups->emplace_back(std::move(rank_in2out_axis));
     }
   }
