@@ -32,6 +32,8 @@ option(OF_LAYER_NORM_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
 option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
 
+option(LITE_USE_ASCEND_NPU "" OFF)
+
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
