@@ -763,8 +763,10 @@ void TaskGraph::DecideExecutionOrder() {
       || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
           && GlobalProcessCtx::WorldSize() == 1)) {
     SetOrderInGraphForEachNode();
+    LOG(INFO) << " order 0";
   } else {
     StraightenNodes(this, &ordered_task_nodes_);
+    LOG(INFO) << " order 1";
   }
 }
 

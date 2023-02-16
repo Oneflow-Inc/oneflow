@@ -445,6 +445,16 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   inline void HandleRegstMsg(const ActorMsg& msg) {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+    const auto& op_name = actor_ctx_->task_proto()
+                              .exec_sequence()
+                              .exec_node(0)
+                              .kernel_conf()
+                              .op_attribute()
+                              .op_conf()
+                              .name();
+    auto actor_id = actor_ctx_->task_proto().task_id();
+#endif  // OF_DEBUG_LAZY_RUNTIME
     int64_t regst_desc_id = msg.regst_desc_id();
     if (regst_desc_id == -1) { regst_desc_id = msg.regst()->regst_desc_id(); }
     const IndexType index = regst_desc_id_index_.Lookup(regst_desc_id);
@@ -457,6 +467,11 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       if (inplace && index == inplace_produced_index_[0] && state.produced.reading_cnt == 0) {
         return_inplace_consumed_fn_[0]();
       }
+#ifdef OF_DEBUG_LAZY_RUNTIME
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
+                << " got message from it's produced and cur cnt "
+                << static_cast<int64_t>(total_reading_cnt_) << " need cnt 0";
+#endif  // OF_DEBUG_LAZY_RUNTIME
     } else if (state.regst_type == RegstType::kConsumed) {
       CHECK_EQ(state.consumed.ready, false);
       CHECK_EQ(state.consumed.eord, false);
@@ -466,6 +481,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         CHECK(state.regst == msg.regst());
       }
       ready_consumed_ += 1;
+#ifdef OF_DEBUG_LAZY_RUNTIME
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
+                << " got message from it's consumed and cur cnt "
+                << static_cast<int64_t>(ready_consumed_) << " need cnt "
+                << static_cast<int64_t>(max_ready_consumed_);
+#endif  // OF_DEBUG_LAZY_RUNTIME
     } else {
       UNIMPLEMENTED();
     }

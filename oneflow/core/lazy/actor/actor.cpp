@@ -329,6 +329,15 @@ bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  const auto& op_name = actor_ctx_->task_proto()
+                            .exec_sequence()
+                            .exec_node(0)
+                            .kernel_conf()
+                            .op_attribute()
+                            .op_conf()
+                            .name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
@@ -374,6 +383,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       }
     }
+#ifdef OF_DEBUG_LAZY_RUNTIME
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
+              << " got regst message.";
+#endif  // OF_DEBUG_LAZY_RUNTIME
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
@@ -422,15 +435,17 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  const auto& op_name = actor_ctx_->task_proto()
+                            .exec_sequence()
+                            .exec_node(0)
+                            .kernel_conf()
+                            .op_attribute()
+                            .op_conf()
+                            .name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   while (IsReadReady() && IsWriteReady()) {
 #ifdef OF_DEBUG_LAZY_RUNTIME
-    const auto& op_name = actor_ctx_->task_proto()
-                              .exec_sequence()
-                              .exec_node(0)
-                              .kernel_conf()
-                              .op_attribute()
-                              .op_conf()
-                              .name();
     LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
               << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
 #endif  // OF_DEBUG_LAZY_RUNTIME
