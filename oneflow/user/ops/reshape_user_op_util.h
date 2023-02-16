@@ -45,7 +45,13 @@ struct ReshapeUserOpUtil {
       const Shape& in_shape, const std::vector<int>& origin_in_axes, const Shape& out_shape,
       const std::vector<int>& origin_out_axes, const Shape& rank_mesh,
       std::vector<std::map<int, std::pair<int, int>>>* nd_split_groups);
+  static Maybe<void> EnumerateNdSplitIn2OutAxisGroups(
+      const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
+      std::vector<std::map<int, std::pair<int, int>>>* nd_sbp_in2out_sig_groups);
   static Maybe<void> EnumerateNdSbpIn2OutSignatures(
+      const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
+      std::vector<std::vector<std::pair<int, int>>>* nd_sbp_in2out_signatures);
+  static Maybe<void> FilterNdSbpIn2OutSignatures(
       const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
       std::vector<std::vector<std::pair<int, int>>>* nd_sbp_in2out_signatures);
   static Maybe<void> EnumerateNdSbpSignatures(const std::vector<user_op::OpArg>& in_args,
