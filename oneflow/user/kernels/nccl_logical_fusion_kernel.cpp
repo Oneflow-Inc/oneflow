@@ -217,6 +217,8 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     CHECK_EQ(src_nd_sbp_str_list.size(), nccl_num_);
     CHECK_EQ(dst_nd_sbp_str_list.size(), nccl_num_);
     CHECK_EQ(nccl_type_list.size(), nccl_num_);
+    CHECK_EQ(src_split_axis_list_.size(), nccl_num_);
+    CHECK_EQ(dst_split_axis_list_.size(), nccl_num_);
 
     size_t total_buffer_size = 0;
 
@@ -238,8 +240,13 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     // NOTE(chengcheng): last element of vector is total_buffer_size
     tmp_buffer_offset_.push_back(total_buffer_size);
     CHECK_EQ(tmp_buffer_offset_.size(), nccl_num_ + 1);
-    CHECK_EQ(total_buffer_size,
-             GetTensorByteSize(*ctx->TensorDesc4ArgNameAndIndex("tmp_buffer", 0)));
+    const user_op::TensorDesc* tmp_buffer_tensor_desc =
+        ctx->TensorDesc4ArgNameAndIndex("tmp_buffer", 0);
+    if (tmp_buffer_tensor_desc == nullptr) {
+      CHECK_EQ(total_buffer_size, 0);
+    } else {
+      CHECK_EQ(total_buffer_size, GetTensorByteSize(*tmp_buffer_tensor_desc));
+    }
   }
 
   bool is_init_;
