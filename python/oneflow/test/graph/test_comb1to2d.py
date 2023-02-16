@@ -75,6 +75,9 @@ class _TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(0),
         ]
 
+        #for sbp1 in sbp_1ds:
+        #    for sbp2 in sbp_1ds:
+        #        for sbp3 in sbp_1ds:
         for sbp1 in sbp_1ds:
             for sbp2 in sbp_2ds:
                 for sbp3 in sbp_3ds:
@@ -170,7 +173,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         print("fininsh 0")
 
     def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
-        # Got stuck.
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
@@ -184,18 +186,22 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             ),
         )
 
+        # use nccl logical can pass test
+        #flow.boxing.nccl.enable_use_compute_stream(True)
+        # Got stuck.
         flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
+        print("fininsh 0")
+        flow._oneflow_internal.eager.Sync()
         test_case.assertTrue(
             np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05)
         )
         print("fininsh 1")
 
     def test_lazy_boxing_2d_all_combination_diff_placement_small(test_case):
-        # Got stuck.
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 

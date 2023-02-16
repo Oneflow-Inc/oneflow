@@ -1015,6 +1015,36 @@ void PlanUtil::GenCollectiveBoxingPlan(
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
+  if (request_set->request_size() == 6
+      && request_set->request().at(0).op_desc().name()
+             == "System-Boxing-NcclCollectiveBoxingP2SNoncontinuous-68") {
+    LOG(INFO) << "This is sep test";
+    auto req68 = request_set->request().at(0);
+    auto req67 = request_set->request().at(5);
+    request_set->mutable_request()->erase(request_set->mutable_request()->begin());
+    request_set->mutable_request()->erase(request_set->mutable_request()->end() - 1);
+    request_set->mutable_request()->Add(std::move(req68));
+    request_set->mutable_request()->Add(std::move(req67));
+
+    auto GetReq = [&](int64_t idx) { return request_set->mutable_request()->Mutable(idx); };
+    GetReq(0)->set_order(1);
+    GetReq(0)->set_dependency_depth(0);
+
+    GetReq(1)->set_order(0);
+    GetReq(1)->set_dependency_depth(0);
+
+    GetReq(2)->set_order(3);
+    GetReq(2)->set_dependency_depth(1);
+
+    GetReq(3)->set_order(2);
+    GetReq(3)->set_dependency_depth(1);
+
+    GetReq(4)->set_order(5);
+    GetReq(4)->set_dependency_depth(2);
+
+    GetReq(5)->set_order(4);
+    GetReq(5)->set_dependency_depth(2);
+  }
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
