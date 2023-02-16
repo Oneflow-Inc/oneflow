@@ -5346,7 +5346,7 @@ def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOpe
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$w,
-    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$b,
     Optional<OneFlow_Tensor>:$v,
     Optional<OneFlow_Tensor>:$c
   );
