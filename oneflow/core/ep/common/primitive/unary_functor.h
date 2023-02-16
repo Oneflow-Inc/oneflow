@@ -238,21 +238,21 @@ struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
 
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsInf, bool, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
 };
 
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsNan, bool, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
 };
 
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsFinite, bool, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return true; }
 };
@@ -544,8 +544,8 @@ struct UnaryFunctor<device, UnaryOp::kNanAssign, Dst, Src> {
   }
 };
 
-template<DeviceType device, typename Src, typename Dst>
-struct UnaryFunctor<device, UnaryOp::kCast, Src, Dst> {
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kCast, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src); }
