@@ -24,7 +24,7 @@ namespace oneflow {
 
 /*static*/ auto FusedScaleMaskBiasSoftmaxOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  DataType query_type = ctx->InputDType("qmk", 0);
+  DataType query_type = ctx->InputDType("x", 0);
   DataType mask_bias_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_bias_type, query_type);
 
@@ -45,35 +45,35 @@ namespace oneflow {
   const float scale = ctx->Attr<float>("scale");
   CHECK_LE_OR_RETURN(scale, 1.);
 
-  const Shape& qmk_shape = ctx->InputShape("qmk", 0);
+  const Shape& x_shape = ctx->InputShape("x", 0);
   const std::string mode = ctx->Attr<std::string>("mode");
   if (mode == "global_col") {
-    int64_t naxes = qmk_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 3 || (naxes == 4 && qmk_shape.At(0) == 1));
+    int64_t naxes = x_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 3 || (naxes == 4 && x_shape.At(0) == 1));
     int64_t start = naxes == 3 ? 0 : 1;
-    int64_t S1 = qmk_shape.At(0 + start), N = qmk_shape.At(2 + start);
+    int64_t S1 = x_shape.At(0 + start), N = x_shape.At(2 + start);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), S1);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), N);
   } else if (mode == "col") {
-    int64_t naxes = qmk_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
+    int64_t naxes = x_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && x_shape.at(0) == 1));
     int64_t start = naxes == 4 ? 0 : 1;
-    int64_t N = qmk_shape.At(start + 0), S = qmk_shape.At(start + 3);
+    int64_t N = x_shape.At(start + 0), S = x_shape.At(start + 3);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 0), N);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 1), 1);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 2), 1);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 3), S);
   } else if (mode == "row" || mode == "triangular_start" || mode == "triangular_end") {
-    int64_t naxes = qmk_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && qmk_shape.at(0) == 1));
+    int64_t naxes = x_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 4 || (naxes == 5 && x_shape.at(0) == 1));
     int64_t start = naxes == 4 ? 0 : 1;
-    const int64_t batch_size = qmk_shape.At(start + 0);
-    const int64_t num_heads = qmk_shape.At(start + 1);
-    const int64_t query_lens = qmk_shape.At(start + 2);
-    const int64_t key_lens = qmk_shape.At(start + 3);
+    const int64_t batch_size = x_shape.At(start + 0);
+    const int64_t num_heads = x_shape.At(start + 1);
+    const int64_t query_lens = x_shape.At(start + 2);
+    const int64_t key_lens = x_shape.At(start + 3);
     CHECK_GT_OR_RETURN(query_lens, 0);
     CHECK_EQ_OR_RETURN(query_lens, key_lens);
 
@@ -90,18 +90,18 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 2), query_lens);
     CHECK_EQ_OR_RETURN(pair_bias_shape.At(start + 3), key_lens);
   } else if (mode == "template") {
-    int64_t naxes = qmk_shape.NumAxes();
-    CHECK_OR_RETURN(naxes == 5 || (naxes == 6 && qmk_shape.At(0) == 1));  // *, S, S, h, 1, n_templ
+    int64_t naxes = x_shape.NumAxes();
+    CHECK_OR_RETURN(naxes == 5 || (naxes == 6 && x_shape.At(0) == 1));  // *, S, S, h, 1, n_templ
     int64_t start = naxes == 5 ? 0 : 1;
-    CHECK_OR_RETURN(qmk_shape.at(start + 0) == qmk_shape.at(start + 1));
-    int64_t Nt = qmk_shape.At(start + 4);
+    CHECK_OR_RETURN(x_shape.at(start + 0) == x_shape.at(start + 1));
+    int64_t Nt = x_shape.At(start + 4);
     const Shape& mask_shape = ctx->InputShape("mask", 0);
     CHECK_EQ_OR_RETURN(mask_shape.elem_cnt(), Nt);
     CHECK_EQ_OR_RETURN(mask_shape.At(start + 4), Nt);
   } else {
     LOG(ERROR) << "mode \"" << mode << "\" unimplemented.";
   }
-  ctx->SetOutputShape("out", 0, qmk_shape);
+  ctx->SetOutputShape("out", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
@@ -113,14 +113,14 @@ namespace oneflow {
 /*static*/ auto FusedScaleMaskBiasSoftmaxOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   if (ctx->Attr<bool>("inplace") == false)
     ctx->NewBuilder()
-        .Split(user_op::OpArg("qmk", 0), 0)
+        .Split(user_op::OpArg("x", 0), 0)
         .Split(user_op::OpArg("mask", 0), 0)
         .Broadcast(user_op::OpArg("bias", 0))
         .Split(user_op::OpArg("out", 0), 0)
         .Build();
   else
     ctx->NewBuilder()
-        .Split(user_op::OpArg("qmk", 0), 0)
+        .Split(user_op::OpArg("x", 0), 0)
         .Split(user_op::OpArg("mask", 0), 0)
         .Broadcast(user_op::OpArg("bias", 0))
         .Build();

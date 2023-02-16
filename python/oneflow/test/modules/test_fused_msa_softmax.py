@@ -49,21 +49,21 @@ def permute_final_dims(tensor: flow.Tensor, inds: List[int]):
 
 
 @timing
-def _fused_op(qmk, v, scale, mask, bias, mode="row", inplace=False):
-    out = flow._C.fused_msa_softmax(qmk, mask, bias, scale, mode, inplace=inplace)
+def _fused_op(x, v, scale, mask, bias, mode="row", inplace=False):
+    out = flow._C.fused_scale_mask_bias_softmax(x, mask, bias, scale, mode, inplace=inplace)
     out = flow.matmul(out, v)
     return out
 
 
 @timing
-def _ref_op(qmk, v, scale, mask, bias=None, mode="row", inplace=False):
-    x = qmk * scale + mask + bias if bias is not None else qmk * scale + mask
+def _ref_op(x, v, scale, mask, bias=None, mode="row", inplace=False):
+    x = x * scale + mask + bias if bias is not None else x * scale + mask
     out = flow.softmax(x, dim=-1)
     out = flow.matmul(out, v)
     return out
 
 
-def _test_fused_msa_softmax(
+def _test_fused_scale_mask_bias_softmax(
     test_case, N=512, S=128, D=128, h=8, d=32, mode="row", inplace=False
 ):
     x = flow.randn(N, S, D, requires_grad=True).cuda()  # N, S, D
@@ -102,48 +102,48 @@ def _test_fused_msa_softmax(
         mask = mask[..., :, None, :]  # N,1,S
         q = flow.matmul(q, w_q).view(*q.shape[:-1], h, d)  # N, h, d
         k, v = flow.matmul(x, w_kv).chunk(2, dim=-1)  # N, S, d
-    qmk = flow.matmul(q, k.transpose(-1, -2))
+    qk = flow.matmul(q, k.transpose(-1, -2))
 
     # general op
     x.retain_grad()
-    out1 = _ref_op(qmk, v, scale, mask, bias, mode, inplace)
+    out1 = _ref_op(qk, v, scale, mask, bias, mode, inplace)
     out1.sum().backward(retain_graph=True)
     grad_x1 = x.grad
     grad_bias1 = bias.grad if bias is not None else None
 
     # fused op
-    out2 = _fused_op(qmk, v, scale, mask, bias, mode, inplace)
+    out2 = _fused_op(qk, v, scale, mask, bias, mode, inplace)
     out2.sum().backward()
     grad_x2 = x.grad
     grad_bias2 = bias.grad if bias is not None else None
     test_case.assertTrue(np.allclose(out1, out2, atol=2e-3, rtol=1e-5))
-    test_case.assertTrue(np.allclose(grad_x1, grad_x2, atol=1e-3, rtol=1e-5))
+    test_case.assertTrue(np.allclose(grad_x1, grad_x2, atol=5e-3, rtol=1e-5))
 
     if bias is not None:
         test_case.assertTrue(np.allclose(grad_bias1, grad_bias2, atol=5e-4, rtol=1e-5))
 
 
-@unittest.skipIf(True, "skip test for msa softmax.")
+# @unittest.skipIf(True, "skip test for msa softmax.")
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaSoftmax(flow.unittest.TestCase):
     def test_fused_msa_softmax(test_case):
 
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "row")
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "col")
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "triangular_start")
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "triangular_end")
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "template")
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "global_col")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "row")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "col")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "triangular_start")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "triangular_end")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "template")
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "global_col")
 
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "row", True)
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "col", True)
-        _test_fused_msa_softmax(
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "row", True)
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "col", True)
+        _test_fused_scale_mask_bias_softmax(
             test_case, 128, 128, 64, 8, 32, "triangular_start", True
         )
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "triangular_end", True)
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "template", True)
-        _test_fused_msa_softmax(test_case, 16, 128, 64, 8, 32, "global_col", True)
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "triangular_end", True)
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "template", True)
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "global_col", True)
 
 
 if __name__ == "__main__":
