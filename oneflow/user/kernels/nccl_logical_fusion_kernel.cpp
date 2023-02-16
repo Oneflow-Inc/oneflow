@@ -28,6 +28,42 @@ namespace oneflow {
 
 namespace {
 
+size_t GetTmpBufferSizeByNcclType(const std::string& nccl_type, size_t in_tensor_byte_size,
+                                  size_t out_tensor_byte_size, const NdSbp& src_nd_sbp,
+                                  const NdSbp& dst_nd_sbp) {
+  if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
+    return out_tensor_byte_size;
+  } else if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
+    return in_tensor_byte_size;
+  } else if (nccl_type == "_nccl_logical_s2s") {
+    size_t ret = 0;
+    CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
+    CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
+    CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
+    CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
+    if (src_nd_sbp.sbp_parallel(0).split_parallel().axis() != 0) { ret += in_tensor_byte_size; }
+    if (dst_nd_sbp.sbp_parallel(0).split_parallel().axis() != 0) { ret += in_tensor_byte_size; }
+    return ret;
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
+    return out_tensor_byte_size;
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
+    size_t ret = 0;
+    CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+    CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+    CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+    CHECK(dst_nd_sbp.sbp_parallel(1).has_split_parallel());
+    if (src_nd_sbp.sbp_parallel(1).split_parallel().axis() != 0) { ret += in_tensor_byte_size; }
+    if (dst_nd_sbp.sbp_parallel(1).split_parallel().axis() != 0) { ret += in_tensor_byte_size; }
+    return ret;
+  }
+  return 0;
+}
+
+size_t GetTensorByteSize(const user_op::TensorDesc& tensor_desc) {
+  return GetCudaAlignedSize(tensor_desc.shape().elem_cnt()
+                            * GetSizeOfDataType(tensor_desc.data_type()));
+}
+
 class NcclLogicalFusionKernelState : public user_op::OpKernelState {
  public:
   explicit NcclLogicalFusionKernelState(user_op::KernelInitContext* ctx)
@@ -38,42 +74,41 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
         num_ranks_(-1),
         comm_key_("InvalidKey") {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
-    nccl_num_ = ctx->input_size("in");
-    CHECK_EQ(nccl_num_, ctx->output_size("out"));
-    src_split_axis_list_.resize(nccl_num_, -1);
-    dst_split_axis_list_.resize(nccl_num_, -1);
-
-    ParseSrcDstSplitAxisFromNdSbpStrAndNcclType(
-        ctx->Attr<std::vector<std::string>>("src_nd_sbp_str_list"),
-        ctx->Attr<std::vector<std::string>>("dst_nd_sbp_str_list"),
-        ctx->Attr<std::vector<std::string>>("nccl_type_list"));
+    InitSplitAxisAndTmpBufferOffset(ctx);
   }
   ~NcclLogicalFusionKernelState() override = default;
 
   ncclComm_t comm() {
-    if (!is_init_) { Init(); }
+    if (!is_init_) { InitComm(); }
     return comm_;
   }
 
   int64_t num_ranks() {
-    if (!is_init_) { Init(); }
+    if (!is_init_) { InitComm(); }
     return num_ranks_;
   }
 
   const std::string& stream_name() const { return stream_name_; }
-  int64_t src_split_axis(int64_t i) const {
+  int64_t src_split_axis(int32_t i) const {
+    CHECK_GE(i, 0);
     CHECK_LT(i, src_split_axis_list_.size());
     return src_split_axis_list_.at(i);
   }
-  int64_t dst_split_axis(int64_t i) const {
+  int64_t dst_split_axis(int32_t i) const {
+    CHECK_GE(i, 0);
     CHECK_LT(i, dst_split_axis_list_.size());
     return dst_split_axis_list_.at(i);
   }
 
   int32_t nccl_num() const { return nccl_num_; }
+  size_t tmp_buffer_offset(int32_t i) {
+    CHECK_GE(i, 0);
+    CHECK_LT(i, tmp_buffer_offset_.size());
+    return tmp_buffer_offset_.at(i);
+  }
 
  private:
-  void Init() {
+  void InitComm() {
     CHECK(!is_init_);
     std::set<std::pair<int64_t, int64_t>> device_set;
     const Shape& hierarchy = *parallel_desc_.hierarchy();
@@ -133,13 +168,57 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     }
   }
 
-  void ParseSrcDstSplitAxisFromNdSbpStrAndNcclType(
-      const std::vector<std::string>& src_nd_sbp_str_list,
-      const std::vector<std::string>& dst_nd_sbp_str_list,
-      const std::vector<std::string>& nccl_type_list) {
+  void UpdateSplitAxisByNcclType(const std::string& nccl_type, const int32_t i,
+                                 const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp) {
+    if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
+      CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
+      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
+      CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
+    } else if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
+      CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
+      CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
+      dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(0).split_parallel().axis();
+    } else if (nccl_type == "_nccl_logical_s2s") {
+      CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
+      CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
+      CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
+      CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
+      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
+      dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(0).split_parallel().axis();
+      CHECK_NE(src_split_axis_list_.at(i), dst_split_axis_list_.at(i));
+    } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
+      CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+      CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(1).split_parallel().axis();
+    } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
+      CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+      CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+      CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+      CHECK(dst_nd_sbp.sbp_parallel(1).has_split_parallel());
+      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(1).split_parallel().axis();
+      dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(1).split_parallel().axis();
+      CHECK_NE(src_split_axis_list_.at(i), dst_split_axis_list_.at(i));
+    }
+  }
+
+  void InitSplitAxisAndTmpBufferOffset(user_op::KernelInitContext* ctx) {
+    nccl_num_ = ctx->input_size("in");
+    const std::vector<std::string>& src_nd_sbp_str_list =
+        ctx->Attr<std::vector<std::string>>("src_nd_sbp_str_list");
+    const std::vector<std::string>& dst_nd_sbp_str_list =
+        ctx->Attr<std::vector<std::string>>("dst_nd_sbp_str_list");
+    const std::vector<std::string>& nccl_type_list =
+        ctx->Attr<std::vector<std::string>>("nccl_type_list");
+
+    CHECK_EQ(nccl_num_, ctx->output_size("out"));
+    src_split_axis_list_.resize(nccl_num_, -1);
+    dst_split_axis_list_.resize(nccl_num_, -1);
+
     CHECK_EQ(src_nd_sbp_str_list.size(), nccl_num_);
     CHECK_EQ(dst_nd_sbp_str_list.size(), nccl_num_);
     CHECK_EQ(nccl_type_list.size(), nccl_num_);
+
+    size_t total_buffer_size = 0;
 
     for (int32_t i = 0; i < nccl_num_; ++i) {
       NdSbp src_nd_sbp;
@@ -148,36 +227,19 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
       CHECK(ParseNdSbpFromLongString(dst_nd_sbp_str_list.at(i), &dst_nd_sbp));
       const std::string& nccl_type = nccl_type_list.at(i);
       UpdateOrCheckEqCommKey(GetCommKeyFromNcclType(nccl_type));
-      if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
-        CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
-        src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
-        CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
-      } else if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
-        CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
-        CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
-        dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(0).split_parallel().axis();
-      } else if (nccl_type == "_nccl_logical_s2s") {
-        CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
-        CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
-        CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
-        CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
-        src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
-        dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(0).split_parallel().axis();
-        CHECK_NE(src_split_axis_list_.at(i), dst_split_axis_list_.at(i));
-      } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
-        CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
-        CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
-        src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(1).split_parallel().axis();
-      } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
-        CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
-        CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
-        CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
-        CHECK(dst_nd_sbp.sbp_parallel(1).has_split_parallel());
-        src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(1).split_parallel().axis();
-        dst_split_axis_list_.at(i) = dst_nd_sbp.sbp_parallel(1).split_parallel().axis();
-        CHECK_NE(src_split_axis_list_.at(i), dst_split_axis_list_.at(i));
-      }
+      UpdateSplitAxisByNcclType(nccl_type, i, src_nd_sbp, dst_nd_sbp);
+      size_t in_tensor_byte_size = GetTensorByteSize(*ctx->TensorDesc4ArgNameAndIndex("in", i));
+      size_t out_tensor_byte_size = GetTensorByteSize(*ctx->TensorDesc4ArgNameAndIndex("out", i));
+
+      tmp_buffer_offset_.push_back(total_buffer_size);
+      total_buffer_size += GetTmpBufferSizeByNcclType(nccl_type, in_tensor_byte_size,
+                                                      out_tensor_byte_size, src_nd_sbp, dst_nd_sbp);
     }
+    // NOTE(chengcheng): last element of vector is total_buffer_size
+    tmp_buffer_offset_.push_back(total_buffer_size);
+    CHECK_EQ(tmp_buffer_offset_.size(), nccl_num_ + 1);
+    CHECK_EQ(total_buffer_size,
+             GetTensorByteSize(*ctx->TensorDesc4ArgNameAndIndex("tmp_buffer", 0)));
   }
 
   bool is_init_;
@@ -189,14 +251,15 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
   int32_t nccl_num_;
   std::vector<int64_t> src_split_axis_list_;
   std::vector<int64_t> dst_split_axis_list_;
+  std::vector<size_t> tmp_buffer_offset_;
   ncclComm_t comm_{};
 };
 
-class NcclLogicalFusion final : public user_op::OpKernel {
+class NcclLogicalFusionKernel final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalFusion);
-  NcclLogicalFusion() = default;
-  ~NcclLogicalFusion() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalFusionKernel);
+  NcclLogicalFusionKernel() = default;
+  ~NcclLogicalFusionKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -213,24 +276,48 @@ class NcclLogicalFusion final : public user_op::OpKernel {
   }
 };
 
-void NcclLogicalFusion::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-                                const user_op::OpKernelCache*) const {
+void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
+                                      user_op::OpKernelState* state,
+                                      const user_op::OpKernelCache*) const {
   auto* kernel_state = dynamic_cast<NcclLogicalFusionKernelState*>(state);
   CHECK_NOTNULL(kernel_state);
   LOG(INFO) << "ccdebuglog: kernel " << ctx->op_name() << " nccl_num: " << kernel_state->nccl_num()
             << " stream_name: " << kernel_state->stream_name();
   for (int32_t i = 0; i < kernel_state->nccl_num(); ++i) {
     LOG(INFO) << " === i = " << i << " , src_split_axis = " << kernel_state->src_split_axis(i)
-              << " , dst_split_axis = " << kernel_state->dst_split_axis(i);
+              << " , dst_split_axis = " << kernel_state->dst_split_axis(i)
+              << " , tmp_buffer_offset = " << kernel_state->tmp_buffer_offset(i);
   }
 }
 
-size_t InferTmpBufferSize(user_op::InferContext* ctx) { return 0; }
+size_t InferNcclLogicalFusionKernelTmpBufferSize(user_op::InferContext* ctx) {
+  size_t total_buffer_size = 0;
+  const auto& src_nd_sbp_str_list = ctx->Attr<std::vector<std::string>>("src_nd_sbp_str_list");
+  const auto& dst_nd_sbp_str_list = ctx->Attr<std::vector<std::string>>("dst_nd_sbp_str_list");
+  const auto& nccl_type_list = ctx->Attr<std::vector<std::string>>("nccl_type_list");
+  int32_t nccl_num = nccl_type_list.size();
+  CHECK_EQ(nccl_num, ctx->input_size("in"));
+  CHECK_EQ(nccl_num, ctx->output_size("out"));
+  CHECK_EQ(nccl_num, src_nd_sbp_str_list.size());
+  CHECK_EQ(nccl_num, dst_nd_sbp_str_list.size());
+  for (int32_t i = 0; i < nccl_num; ++i) {
+    const std::string& nccl_type = nccl_type_list.at(i);
+    size_t in_tensor_byte_size = GetTensorByteSize(ctx->InputTensorDesc("in", i));
+    size_t out_tensor_byte_size = GetTensorByteSize(ctx->OutputTensorDesc("out", i));
+    NdSbp src_nd_sbp;
+    NdSbp dst_nd_sbp;
+    CHECK(ParseNdSbpFromLongString(src_nd_sbp_str_list.at(i), &src_nd_sbp));
+    CHECK(ParseNdSbpFromLongString(dst_nd_sbp_str_list.at(i), &dst_nd_sbp));
+    total_buffer_size += GetTmpBufferSizeByNcclType(nccl_type, in_tensor_byte_size,
+                                                    out_tensor_byte_size, src_nd_sbp, dst_nd_sbp);
+  }
+  return total_buffer_size;
+}
 
 REGISTER_USER_KERNEL("_nccl_logical_fusion")
-    .SetCreateFn<NcclLogicalFusion>()
+    .SetCreateFn<NcclLogicalFusionKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
-    .SetInferTmpSizeFn(InferTmpBufferSize);
+    .SetInferTmpSizeFn(InferNcclLogicalFusionKernelTmpBufferSize);
 }  // namespace
 
 }  // namespace oneflow
