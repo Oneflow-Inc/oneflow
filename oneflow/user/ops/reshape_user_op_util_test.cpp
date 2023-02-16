@@ -69,14 +69,10 @@ void TestEnumerateNdSbpIn2OutSignatures(
     const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
     const std::vector<std::map<int, std::pair<int, int>>>& expected_nd_sbp_in2out_sig_groups,
     const std::vector<std::vector<std::pair<int, int>>>& expected_nd_sbp_in2out_sig_list) {
-  // LOG(ERROR) << "**** " << in_shape.ToString() << " -> " << out_shape.ToString() << " with "
-  //            << rank_mesh.ToString();
   std::vector<std::map<int, std::pair<int, int>>> actual_nd_sbp_in2out_sig_groups;
   CHECK_JUST(ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(in_shape, out_shape, rank_mesh,
                                                                  &actual_nd_sbp_in2out_sig_groups));
   std::sort(actual_nd_sbp_in2out_sig_groups.begin(), actual_nd_sbp_in2out_sig_groups.end());
-  // LOG(ERROR) << "actual_nd_sbp_in2out_sig_groups: "
-  //            << NdSbpSignatureGroupsToString(actual_nd_sbp_in2out_sig_groups);
   ASSERT_EQ(expected_nd_sbp_in2out_sig_groups.size(), actual_nd_sbp_in2out_sig_groups.size());
   for (size_t i = 0; i < actual_nd_sbp_in2out_sig_groups.size(); ++i) {
     const auto& exp_nd_sbp_sig_group = expected_nd_sbp_in2out_sig_groups[i];
@@ -96,8 +92,6 @@ void TestEnumerateNdSbpIn2OutSignatures(
   CHECK_JUST(ReshapeUserOpUtil::FilterNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh,
                                                             &actual_nd_sbp_in2out_sig_list));
   std::sort(actual_nd_sbp_in2out_sig_list.begin(), actual_nd_sbp_in2out_sig_list.end());
-  // LOG(ERROR) << "actual_nd_sbp_in2out_sig_list: "
-  //            << NdSbpIn2OutSignaturesToString(actual_nd_sbp_in2out_sig_list);
   ASSERT_EQ(expected_nd_sbp_in2out_sig_list.size(), actual_nd_sbp_in2out_sig_list.size());
   for (size_t i = 0; i < actual_nd_sbp_in2out_sig_list.size(); ++i) {
     const auto& exp_nd_sbp_sig = expected_nd_sbp_in2out_sig_list[i];
