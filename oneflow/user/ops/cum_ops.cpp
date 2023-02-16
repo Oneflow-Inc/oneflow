@@ -41,6 +41,29 @@ Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CumsumSubOneOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CumsumSubOneOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> CumsumSubOneOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  auto dim = ctx->Attr<int64_t>("dim");
+  for (auto i = dim + 1; i < in_tensor_desc.shape().NumAxes(); i++) {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CumsumSubOneOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> CumProdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
