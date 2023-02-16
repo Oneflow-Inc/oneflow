@@ -19,6 +19,11 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+template <typename T> struct CumsumSubOneFunctor final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x + y; }
+};
+
 template<typename T, template<typename> class BinaryFunc>
 void CumForward(const T* in_ptr, T* out_ptr, int64_t up_space, int64_t space, int64_t down_space,
                 int64_t elem_cnt) {
@@ -36,9 +41,33 @@ void CumForward(const T* in_ptr, T* out_ptr, int64_t up_space, int64_t space, in
     tmp_out_ptr_base += step;
   }
 }
-}  // namespace
 
-template<typename T, template<typename> class BinaryFunc>
+template <typename T, template <typename> class BinaryFunc>
+void CumForwardBias(const T *in_ptr, T *out_ptr, int64_t up_space,
+                    int64_t space, int64_t down_space, int64_t elem_cnt,
+                    T bias) {
+  std::copy_n(in_ptr, elem_cnt, out_ptr);
+  auto *tmp_out_ptr_base = out_ptr;
+  auto step = space * down_space;
+  for (auto i = 0; i < up_space; i++) {
+
+    for (auto j = 1; j < space; j++) {
+      auto *tmp_out_ptr = tmp_out_ptr_base + j * down_space;
+      auto *last_tmp_out_ptr = tmp_out_ptr - down_space;
+      for (auto k = 0; k < down_space; k++) {
+        tmp_out_ptr[k] =
+            BinaryFunc<T>::Invoke(tmp_out_ptr[k], last_tmp_out_ptr[k]);
+      }
+    }
+    for(auto s = 0; s < step; s++){
+      tmp_out_ptr_base[s] -= bias;
+    }
+    tmp_out_ptr_base += step;
+  }
+}
+} // namespace
+
+template <typename T, template <typename> class BinaryFunc>
 class CpuCumKernel : public user_op::OpKernel {
  public:
   CpuCumKernel() = default;
@@ -61,15 +90,22 @@ class CpuCumKernel : public user_op::OpKernel {
     auto space = in->shape_view().At(dim);
     auto down_space = in->shape_view().Count(dim + 1);
 
-    CumForward<T, BinaryFunc>(in_ptr, out_ptr, up_space, space, down_space, elem_cnt);
+    if (std::is_same<BinaryFunc<T>, CumsumSubOneFunctor<T>>::value) {
+      CumForwardBias<T, BinaryFunc>(in_ptr, out_ptr, up_space, space,
+                                    down_space, elem_cnt, 1);
+    } else {
+      CumForward<T, BinaryFunc>(in_ptr, out_ptr, up_space, space, down_space,
+                                elem_cnt);
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define CUMOP_SEQ                                \
-  OF_PP_MAKE_TUPLE_SEQ("cumprod", BinaryFuncMul) \
-  OF_PP_MAKE_TUPLE_SEQ("cumsum", BinaryFuncAdd)
+#define CUMOP_SEQ                                                              \
+  OF_PP_MAKE_TUPLE_SEQ("cumprod", BinaryFuncMul)                               \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", BinaryFuncAdd)                                \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum_subone", CumsumSubOneFunctor)
 
 #define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                                       \
   REGISTER_USER_KERNEL(op_name).SetCreateFn<CpuCumKernel<dtype, op_functor>>().SetIsMatchedHob( \
@@ -87,4 +123,4 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_CUMOP_KERNEL_WITH_DTYPE, CUMOP_SEQ);
 #undef REGISTER_CUMOP_KERNEL
 #undef REGISTER_CUMOP_KERNEL_WITH_DTYPE
 #undef CUMOP_SEQ
-}  // namespace oneflow
+} // namespace oneflow

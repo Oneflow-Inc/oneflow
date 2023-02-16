@@ -2658,6 +2658,10 @@
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
 
+- name: "cumsum_subone"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => CumsumSubOne"
+  bind_python: True
+
 - name: "cumprod"
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
   bind_python: True

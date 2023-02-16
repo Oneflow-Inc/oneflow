@@ -2609,6 +2609,11 @@ class CumsumFunctor : public CumBaseFunctor {
   CumsumFunctor() : CumBaseFunctor("cumsum") {}
 };
 
+class CumsumSubOneFunctor : public CumBaseFunctor {
+ public:
+  CumsumSubOneFunctor() : CumBaseFunctor("cumsum_subone") {}
+};
+
 class CumProdFunctor : public CumBaseFunctor {
  public:
   CumProdFunctor() : CumBaseFunctor("cumprod") {}
@@ -3938,6 +3943,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
+  m.add_functor<CumsumSubOneFunctor>("CumsumSubOne");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");

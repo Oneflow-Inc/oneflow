@@ -66,6 +66,7 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cumsum", CumsumGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cumsum_subone", CumsumGrad);
 
 class CumProdGrad : public CumGrad<CumCaptureState> {
  public:

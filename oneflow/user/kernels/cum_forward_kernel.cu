@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
+#include "oneflow/core/ep/common/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
 namespace oneflow {
 #ifdef WITH_CUDA
@@ -39,7 +41,18 @@ struct ProdFunctor {
   __device__ __forceinline__ T operator()(const T a, const T b) const { return a * b; }
 };
 
-template<typename T, template<typename> class BinaryFunc>
+template <typename T> struct SubOneFunctor {
+  OF_DEVICE_FUNC T operator()(T x) const { return x - static_cast<T>(1); }
+};
+
+
+template <typename T> struct SumSubOneFunctor {
+  __device__ __forceinline__ T operator()(const T a, const T b) const {
+    return a + b;
+  }
+};
+
+template <typename T, template <typename> class BinaryFunc>
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("x", 0);
   const int64_t dim = ctx->Attr<int64_t>("dim");
@@ -78,16 +91,47 @@ __global__ void CumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, 
   }
 }
 
-template<typename T, template<typename> class BinaryFunc>
-void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, int64_t dim, const T* in_ptr,
-                  T* out_ptr) {
+template <typename T, template <typename> class BinaryFunc>
+__global__ void CumForwardBiasGpu(const T *in_ptr, T *out_ptr,
+                                   int64_t cs_up_space, int64_t cs_space,
+                                   int64_t cs_down_space, T init, T bias) {
+  CUDA_1D_KERNEL_LOOP(i, cs_up_space * cs_down_space) {
+    auto cs_up_space_id = i / cs_down_space;
+    auto cs_down_space_id = i - (i / cs_down_space) * cs_down_space;
+
+    auto *in_ptr_base =
+        in_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+    auto *out_ptr_base =
+        out_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+
+    // calculate cs_space data in one thread
+    T scan_out = init;
+    for (auto j = 0; j < cs_space; j++) {
+      auto idx = j * cs_down_space;
+      scan_out = BinaryFunc<T>()(in_ptr_base[idx],
+                                 scan_out);
+      out_ptr_base[idx] = scan_out - bias;
+    }
+    
+  }
+}
+
+template <typename T, template <typename> class BinaryFunc>
+void ScanOuterDim(ep::Stream *ep_stream, const ShapeView &in_shape, int64_t dim,
+                  const T *in_ptr, T *out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
   auto space = in_shape.At(dim);
   auto down_space = in_shape.Count(dim + 1);
   auto thread_num = up_space * down_space;
-  RUN_CUDA_KERNEL((CumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr, up_space,
-                  space, down_space);
+
+  if (std::is_same<BinaryFunc<T>, SumSubOneFunctor<T>>::value) {
+    RUN_CUDA_KERNEL((CumForwardBiasGpu<T, BinaryFunc>), ep_stream, thread_num,
+                    in_ptr, out_ptr, up_space, space, down_space, /*init*/ 0, /*bias*/1);
+  } else {
+    RUN_CUDA_KERNEL((CumForwardGpu<T, BinaryFunc>), ep_stream, thread_num,
+                    in_ptr, out_ptr, up_space, space, down_space);
+  }
 }
 
 // Refer from
@@ -162,20 +206,25 @@ __global__ void ScanInnerMostDimKernel(const T* in_ptr, T* out_ptr, const int64_
       row_buf, const_cast<T*>(in_ptr), out_ptr, num_rows, row_size, init);
 }
 
-template<typename T, template<typename> class BinaryFunctor>
+template<typename T, template<typename> class BinaryFunc>
 void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const int64_t row_size,
                       const ep::CudaStream* cuda_stream) {
   dim3 block(16, 32);
   const int64_t max_grid_dim = cuda_stream->device()->properties().maxGridSize[0];
   dim3 grid(std::min(max_grid_dim, CeilDiv(num_rows, (int64_t)block.y)));
-  if (std::is_same<BinaryFunctor<T>, SumFunctor<T>>::value) {
+  if (std::is_same<BinaryFunc<T>, SumFunctor<T>>::value) {
     ScanInnerMostDimKernel<T, 16, 32, SumFunctor>
         <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
                                                          /*init*/ 0);
-  } else if (std::is_same<BinaryFunctor<T>, ProdFunctor<T>>::value) {
+  } else if (std::is_same<BinaryFunc<T>, ProdFunctor<T>>::value) {
     ScanInnerMostDimKernel<T, 16, 32, ProdFunctor>
         <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
                                                          /*init*/ 1);
+  } else if (std::is_same<BinaryFunc<T>, SumSubOneFunctor<T>>::value) {
+    ScanInnerMostDimKernel<T, 16, 32, SumSubOneFunctor>
+        <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr,
+                                                         num_rows, row_size,
+                                                         /*init*/ -1);
   } else {
     UNIMPLEMENTED() << "Only Support cumsum and cumprod for now.";
   }
@@ -186,11 +235,16 @@ void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
                       const ep::CudaStream* cuda_stream) {
   auto* temp_storage = temp_buffer->mut_dptr<T>();
   size_t temp_storage_bytes = temp_buffer->shape_view().elem_cnt();
-  OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
-                                               BinaryFunc<T>(), elem_cnt,
-                                               cuda_stream->cuda_stream()));
+  OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(
+      temp_storage, temp_storage_bytes, in_ptr, out_ptr, BinaryFunc<T>(),
+      elem_cnt, cuda_stream->cuda_stream()));
+  if (std::is_same<BinaryFunc<T>, SumSubOneFunctor<T>>::value) {
+    OF_CUDA_CHECK(cuda::elementwise::Unary(SubOneFunctor<T>(), elem_cnt,
+                                           out_ptr, out_ptr,
+                                           cuda_stream->cuda_stream()));
+  }
 }
-}  // namespace
+} // namespace
 
 template<typename T, template<typename> class BinaryFunc>
 class GpuCumKernel : public user_op::OpKernel {
@@ -230,9 +284,10 @@ class GpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define CUMOP_SEQ                              \
-  OF_PP_MAKE_TUPLE_SEQ("cumprod", ProdFunctor) \
-  OF_PP_MAKE_TUPLE_SEQ("cumsum", SumFunctor)
+#define CUMOP_SEQ                                                              \
+  OF_PP_MAKE_TUPLE_SEQ("cumprod", ProdFunctor)                                 \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", SumFunctor)                                   \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum_subone", SumSubOneFunctor)
 
 #define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                              \
   REGISTER_USER_KERNEL(op_name)                                                        \
