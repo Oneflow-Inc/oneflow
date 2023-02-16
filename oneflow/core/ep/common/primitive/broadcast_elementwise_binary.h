@@ -51,8 +51,10 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorDiv)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTruncDiv)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorMod)            \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarBasePowerGrad) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarExpPowerGrad)
+
+#define BINARY_MATH_OP_SEQ1                             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarBasePowerGrad) 
 
 #define BINARY_COMPARISION_OP_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)           \
