@@ -153,7 +153,7 @@ class TestTensor(flow.unittest.TestCase):
             dim2=random(1, 4).to(int),
             dim3=random(1, 5).to(int),
             low=0,
-            high=3,
+            high=dim,
             dtype=int,
         ).to(device)
         return input.gather(dim, index)
