@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedMSASoftmaxCaptureState : public AutoGradCaptureState {
+struct FusedScaleMaskBiasSoftmaxCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool bias_requires_grad = false;
   int32_t input_size = 3;
@@ -35,27 +35,29 @@ struct FusedMSASoftmaxCaptureState : public AutoGradCaptureState {
   bool inplace = false;
 };
 
-class FusedMSASoftmax : public OpExprGradFunction<FusedMSASoftmaxCaptureState> {
+class FusedScaleMaskBiasSoftmax : public OpExprGradFunction<FusedScaleMaskBiasSoftmaxCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(FusedMSASoftmaxCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedScaleMaskBiasSoftmaxCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FusedMSASoftmaxCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FusedScaleMaskBiasSoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> FusedMSASoftmax::Init(const OpExpr& op) {
+Maybe<void> FusedScaleMaskBiasSoftmax::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMSASoftmax::Capture(FusedMSASoftmaxCaptureState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> FusedScaleMaskBiasSoftmax::Capture(FusedScaleMaskBiasSoftmaxCaptureState* ctx,
+                                               const TensorTuple& inputs,
+                                               const TensorTuple& outputs,
+                                               const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   const std::string& mode = JUST(composed_attrs.GetAttr<std::string>("mode"));
   const bool& inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
@@ -77,15 +79,17 @@ Maybe<void> FusedMSASoftmax::Capture(FusedMSASoftmaxCaptureState* ctx, const Ten
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMSASoftmax::Apply(const FusedMSASoftmaxCaptureState* ctx,
-                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
+Maybe<void> FusedScaleMaskBiasSoftmax::Apply(const FusedScaleMaskBiasSoftmaxCaptureState* ctx,
+                                             const TensorTuple& out_grads,
+                                             TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // dy
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
   in_grads->resize(ctx->input_size);
 
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(0);
-  const std::shared_ptr<oneflow::one::Tensor>& input_grad = JUST(
-      functional::FusedMSASoftmaxGrad(y, out_grads.at(0), ctx->scale, ctx->mode, ctx->inplace));
+  const std::shared_ptr<oneflow::one::Tensor>& input_grad =
+      JUST(functional::FusedScaleMaskBiasSoftmaxGrad(y, out_grads.at(0), ctx->scale, ctx->mode,
+                                                     ctx->inplace));
 
   in_grads->at(0) = input_grad;
   if (ctx->bias_requires_grad) {
@@ -96,6 +100,6 @@ Maybe<void> FusedMSASoftmax::Apply(const FusedMSASoftmaxCaptureState* ctx,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_softmax", FusedMSASoftmax);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_scale_mask_bias_softmax", FusedScaleMaskBiasSoftmax);
 }  // namespace one
 }  // namespace oneflow

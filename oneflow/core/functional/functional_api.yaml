@@ -2583,12 +2583,12 @@
   signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None) => FusedMultiHeadAttentionInference"
   bind_python: True
 
-- name: "fused_msa_softmax"
-  signature: 'Tensor (Tensor qmk, Tensor mask, Tensor bias=None, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedMSASoftmax'
+- name: "fused_scale_mask_bias_softmax"
+  signature: 'Tensor (Tensor x, Tensor mask, Tensor bias=None, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedScaleMaskBiasSoftmax'
   bind_python: True
 
-- name: "fused_msa_softmax_grad"
-  signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedMSASoftmaxGrad'
+- name: "fused_scale_mask_bias_softmax_grad"
+  signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355, String mode="row", Bool inplace=False) => FusedScaleMaskBiasSoftmaxGrad'
   bind_python: False
 
 - name: "fused_get_center_dist"

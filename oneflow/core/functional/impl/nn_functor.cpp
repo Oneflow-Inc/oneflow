@@ -5113,19 +5113,22 @@ class MultiTensorYoloV5WeightUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
-class FusedMSASoftmaxFunctor {
+class FusedScaleMaskBiasSoftmaxFunctor {
  public:
-  FusedMSASoftmaxFunctor() {
-    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_msa_softmax")
-                                   .Input("qmk")
+  FusedScaleMaskBiasSoftmaxFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                   .Input("x")
                                    .Input("mask")
                                    .Input("bias")
                                    .Output("out")
                                    .Build());
-    op_without_bias_ = CHECK_JUST(
-        one::OpBuilder("fused_msa_softmax").Input("qmk").Input("mask").Output("out").Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                      .Input("x")
+                                      .Input("mask")
+                                      .Output("out")
+                                      .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& qmk,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask,
                            const Optional<one::Tensor>& bias, const float& scale,
                            const std::string& mode, const bool& inplace = false) const {
@@ -5134,20 +5137,20 @@ class FusedMSASoftmaxFunctor {
     if (bias) {
       if (inplace) {
         std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-        outputs->at(0) = qmk;
-        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {qmk, mask, JUST(bias)}, outputs.get(), attrs));
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {x, mask, JUST(bias)}, outputs.get(), attrs));
         return outputs->at(0);
       }
-      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {qmk, mask, JUST(bias)}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {x, mask, JUST(bias)}, attrs);
       ;
     }
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = qmk;
-      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {qmk, mask}, outputs.get(), attrs));
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {x, mask}, outputs.get(), attrs));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {qmk, mask}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {x, mask}, attrs);
   }
 
  private:
@@ -5155,11 +5158,14 @@ class FusedMSASoftmaxFunctor {
   std::shared_ptr<OpExpr> op_with_bias_;
 };
 
-class FusedMSASoftmaxGradFunctor {
+class FusedScaleMaskBiasSoftmaxGradFunctor {
  public:
-  FusedMSASoftmaxGradFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("fused_msa_softmax_grad").Input("y").Input("dy").Output("dx").Build());
+  FusedScaleMaskBiasSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const float& scale,
@@ -5309,8 +5315,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
-  m.add_functor<impl::FusedMSASoftmaxFunctor>("FusedMSASoftmax");
-  m.add_functor<impl::FusedMSASoftmaxGradFunctor>("FusedMSASoftmaxGrad");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 

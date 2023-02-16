@@ -22,7 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ auto FusedMSASoftmaxOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedScaleMaskBiasSoftmaxOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType query_type = ctx->InputDType("qmk", 0);
   DataType mask_bias_type = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_bias_type, query_type);
@@ -39,7 +40,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedScaleMaskBiasSoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const float scale = ctx->Attr<float>("scale");
   CHECK_LE_OR_RETURN(scale, 1.);
@@ -104,12 +105,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedScaleMaskBiasSoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSASoftmaxOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedScaleMaskBiasSoftmaxOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   if (ctx->Attr<bool>("inplace") == false)
     ctx->NewBuilder()
         .Split(user_op::OpArg("qmk", 0), 0)
@@ -126,7 +127,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASoftmaxGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedScaleMaskBiasSoftmaxGradOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
   DataType y_type = ctx->InputDType("y", 0);
   DataType dy_type = ctx->InputDType("dy", 0);
   CHECK_EQ_OR_RETURN(y_type, dy_type);
@@ -135,7 +137,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedScaleMaskBiasSoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
@@ -144,12 +146,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FusedMSASoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+/*static*/ auto FusedScaleMaskBiasSoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto FusedMSASoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FusedScaleMaskBiasSoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
       .Split(user_op::OpArg("y", 0), 0)
       .Split(user_op::OpArg("dy", 0), 0)

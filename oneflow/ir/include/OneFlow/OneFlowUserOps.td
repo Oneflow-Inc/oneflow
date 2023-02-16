@@ -3271,7 +3271,7 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSASoftmaxGradOp : OneFlow_BaseOp<"fused_msa_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskBiasSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_bias_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$dy
@@ -3290,9 +3290,9 @@ def OneFlow_FusedMSASoftmaxGradOp : OneFlow_BaseOp<"fused_msa_softmax_grad", [No
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMSASoftmaxOp : OneFlow_BaseOp<"fused_msa_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskBiasSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_bias_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$qmk,
+    OneFlow_Tensor:$x,
     OneFlow_Tensor:$mask,
     Optional<OneFlow_Tensor>:$bias
   );
