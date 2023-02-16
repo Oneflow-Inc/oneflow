@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#include "cutlass/arch/mma.h"
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
@@ -73,20 +74,28 @@ struct Params {
   const void* query_ptr;
   const void* key_ptr;
   const void* value_ptr;
+  const void* attn_bias_ptr;
+  int64_t attn_bias_stride_b;
+  int64_t attn_bias_stride_h;
+  int64_t attn_bias_stride_m;
   void* out_ptr;
   void* workspace;
   int64_t workspace_size;
 };
 
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block,
-         bool single_value_iteration>
+         bool single_value_iteration, bool with_attn_bias>
 void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
+  // The fmha implementation below is based on xformers's fmha
+  // implementation at:
+  // https://github.com/facebookresearch/xformers/tree/main/xformers/csrc/attention/cuda/fmha
   using Attention = AttentionKernel<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
-                                    single_value_iteration>;
-  typename Attention::Params p;
+                                    single_value_iteration, false, with_attn_bias>;
+  typename Attention::Params p{};
   p.query_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.query_ptr));
   p.key_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.key_ptr));
   p.value_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.value_ptr));
+  p.attn_bias_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.attn_bias_ptr));
   p.logsumexp_ptr = nullptr;
   p.output_ptr = reinterpret_cast<T*>(params.out_ptr);
   if (Attention::kNeedsOutputAccumulatorBuffer) {
@@ -106,19 +115,23 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
-  p.o_strideM = p.num_heads * params.value_head_size;
+  p.o_strideM = p.head_dim_value * p.num_heads;
+  p.bias_strideM = params.attn_bias_stride_m;
 
   p.q_strideH = params.head_size;
   p.k_strideH = params.head_size;
   p.v_strideH = params.value_head_size;
-  p.o_strideH = params.value_head_size;
+  p.bias_strideH = params.attn_bias_stride_h;
 
   p.q_strideB = params.query_seq_len * p.q_strideM;
   p.k_strideB = params.kv_seq_len * p.k_strideM;
   p.v_strideB = params.kv_seq_len * p.v_strideM;
-  p.o_strideB = params.query_seq_len * p.o_strideM;
+  p.bias_strideB = params.attn_bias_stride_b;
+
+  p.scale = 1.0 / std::sqrt(float(p.head_dim));
 
   p.causal = params.causal;
+  p.use_dropout = false;
 
   constexpr auto kernel_fn = attention_kernel_batched_impl<Attention>;
   int smem_bytes = sizeof(typename Attention::SharedStorage);
@@ -132,14 +145,26 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   kernel_fn<<<p.getBlocksGrid(), p.getThreadsGrid(), smem_bytes, stream->cuda_stream()>>>(p);
 }
 
+template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block,
+         bool single_value_iteration>
+void DispatchWithAttnBias(const Params& params, ep::CudaStream* stream) {
+  if (params.attn_bias_ptr != nullptr) {
+    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
+                      single_value_iteration, true>(params, stream);
+  } else {
+    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
+                      single_value_iteration, false>(params, stream);
+  }
+}
+
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block>
 void DispatchSingleValueIteration(const Params& params, ep::CudaStream* stream) {
   if (params.value_head_size <= keys_per_block) {
-    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block, true>(params,
-                                                                                       stream);
+    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, true>(params,
+                                                                                          stream);
   } else {
-    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block, false>(params,
-                                                                                        stream);
+    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, false>(params,
+                                                                                           stream);
   }
 }
 
@@ -156,8 +181,13 @@ template<typename T, typename ArchTag>
 void DispatchIsAligned(const Params& params, ep::CudaStream* stream) {
   if (reinterpret_cast<uintptr_t>(params.query_ptr) % 16 == 0
       && reinterpret_cast<uintptr_t>(params.key_ptr) % 16 == 0
+      && reinterpret_cast<uintptr_t>(params.value_ptr) % 16 == 0
       && params.query_hidden_stride % (16 / sizeof(T)) == 0
-      && params.key_hidden_stride % (16 / sizeof(T)) == 0) {
+      && params.key_hidden_stride % (16 / sizeof(T)) == 0
+      && params.value_hidden_stride % (16 / sizeof(T)) == 0
+      && params.attn_bias_stride_m % (16 / sizeof(T)) == 0
+      && params.head_size % (16 / sizeof(T)) == 0
+      && params.value_head_size % (16 / sizeof(T)) == 0) {
     DispatchKeysPerBlock<T, ArchTag, true>(params, stream);
   } else {
     DispatchKeysPerBlock<T, ArchTag, false>(params, stream);
@@ -204,6 +234,8 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const Tensor* query = ctx->Tensor4ArgNameAndIndex("query", 0);
     const Tensor* key = ctx->Tensor4ArgNameAndIndex("key", 0);
     const Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
+    const Tensor* attn_bias = nullptr;
+    if (ctx->has_input("attn_bias", 0)) { attn_bias = ctx->Tensor4ArgNameAndIndex("attn_bias", 0); }
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const DataType data_type = query->data_type();
@@ -273,7 +305,8 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const bool is_long_seq_len = query_seq_len >= 512;
     if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
         && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
-        && is_trt_supported_head_size && is_long_seq_len && is_trt_supported_arch && (!causal)) {
+        && is_trt_supported_head_size && is_long_seq_len && is_trt_supported_arch && (!causal)
+        && attn_bias == nullptr) {
       // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
       // implementation at:
       // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
@@ -321,14 +354,52 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     params.query_hidden_stride = query->shape_view().At(2);
     params.key_hidden_stride = key->shape_view().At(2);
     params.value_hidden_stride = value->shape_view().At(2);
-    params.query_ptr = query->dptr<char>() + query_hidden_offset;
-    params.key_ptr = key->dptr<char>() + key_hidden_offset;
-    params.value_ptr = value->dptr<char>() + value_hidden_offset;
+    params.query_ptr = query->dptr<char>() + query_hidden_offset * GetSizeOfDataType(data_type);
+    params.key_ptr = key->dptr<char>() + key_hidden_offset * GetSizeOfDataType(data_type);
+    params.value_ptr = value->dptr<char>() + value_hidden_offset * GetSizeOfDataType(data_type);
     params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
-    params.workspace = tmp->mut_dptr<char>();
+    params.workspace = tmp->mut_dptr();
     params.workspace_size = tmp_buffer_size;
     params.causal = causal;
+    if (attn_bias != nullptr) {
+      const int64_t num_attn_bias_axes = attn_bias->shape_view().NumAxes();
+      CHECK_GE(num_attn_bias_axes, 1);
+      CHECK_LE(num_attn_bias_axes, 4);
+      DimVector padded_attn_bias_shape;
+      for (int i = 0; i < 4 - num_attn_bias_axes; ++i) { padded_attn_bias_shape.push_back(1); }
+      for (int i = 0; i < num_attn_bias_axes; ++i) {
+        padded_attn_bias_shape.push_back(attn_bias->shape_view().At(i));
+      }
+      CHECK_GE(padded_attn_bias_shape.at(3), kv_seq_len);
+      int64_t bias_stride = padded_attn_bias_shape.at(3);
+      if (padded_attn_bias_shape.at(2) == 1) {
+        params.attn_bias_stride_m = 0;
+      } else {
+        CHECK_GE(padded_attn_bias_shape.at(2), query_seq_len);
+        params.attn_bias_stride_m = bias_stride;
+        bias_stride *= padded_attn_bias_shape.at(2);
+      }
+      if (padded_attn_bias_shape.at(1) == 1) {
+        params.attn_bias_stride_h = 0;
+      } else {
+        CHECK_EQ(padded_attn_bias_shape.at(1), num_heads);
+        params.attn_bias_stride_h = bias_stride;
+        bias_stride *= num_heads;
+      }
+      if (padded_attn_bias_shape.at(0) == 1) {
+        params.attn_bias_stride_b = 0;
+      } else {
+        CHECK_EQ(padded_attn_bias_shape.at(0), batch_size);
+        params.attn_bias_stride_b = bias_stride;
+      }
+      params.attn_bias_ptr = attn_bias->dptr();
+    } else {
+      params.attn_bias_ptr = nullptr;
+      params.attn_bias_stride_m = 0;
+      params.attn_bias_stride_h = 0;
+      params.attn_bias_stride_b = 0;
+    }
     DispatchCutlassFmha(params, cuda_stream);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
