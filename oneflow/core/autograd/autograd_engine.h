@@ -48,7 +48,7 @@ class FunctionNode {
 
   Maybe<bool> Apply(bool create_graph);
   Maybe<void> AccGrad4LeafTensor(bool create_graph);
-  Maybe<void> AccGrad4RetainGradTensor();
+  Maybe<void> AccGrad4RetainGradTensor(bool create_graph);
   void ReleaseOutTensorArgs();
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -61,6 +61,10 @@ class FunctionNode {
 
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
+
+  using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
+                                                                            const TensorTuple&)>;
+  void add_post_hook(const Hook& hook) { hooks_.push_back(hook); }
 
  protected:
   friend class GraphTask;
@@ -80,6 +84,8 @@ class FunctionNode {
 
   // The execution scope
   std::shared_ptr<Scope> scope_;
+
+  std::vector<Hook> hooks_;
 };
 
 class AutogradEngine {

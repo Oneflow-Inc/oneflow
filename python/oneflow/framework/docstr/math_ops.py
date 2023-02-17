@@ -141,7 +141,10 @@ add_docstr(
 
 add_docstr(
     oneflow.div,
-    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    r"""
+    div(x, y, *, rounding_mode=None)
+
+    Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -150,6 +153,10 @@ add_docstr(
     Args:
         input (Union[int, float, oneflow.Tensor]): input.
         other (Union[int, float, oneflow.Tensor]): other.
+
+    Keyword Arguments:
+        rounding_mode (str, optional): It can be set as ``"floor"`` (roudning the results down)
+            or ``"trunc"`` (rounding the results towards zero). None for default (no rounding).
 
     For example:
 
@@ -179,6 +186,14 @@ add_docstr(
         >>> out.shape
         (2, 3)
 
+        # rounding_mode
+        >>> x = flow.tensor([ 0.3810,  1.2774, -0.2972, -0.3719,  0.4637])
+        >>> flow.div(x, 0.5)
+        tensor([ 0.7620,  2.5548, -0.5944, -0.7438,  0.9274], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="floor")
+        tensor([ 0.,  2., -1., -1.,  0.], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="trunc")
+        tensor([0., 2., -0., -0., 0.], dtype=oneflow.float32)
     """,
 )
 
@@ -1100,9 +1115,12 @@ add_docstr(
         ...    [ 0.3180, -0.6993,  1.0436,  0.0438,  0.2270],
         ...    [-0.2751,  0.7303,  0.2192,  0.3321,  0.2488],
         ...    [ 1.0778, -1.9510,  0.7048,  0.4742, -0.7125]])
-        >>> flow.median(a, 1)
-        (tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32), tensor([1, 4, 4, 3], dtype=oneflow.int64))
-    
+        >>> result=flow.median(a, 1)
+        >>> result.values
+        tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 4, 4, 3], dtype=oneflow.int64)
+        
     ..
         Feature Stage of Operator [index_select].
         - Maintainer List [@simonJJJ]
@@ -1153,6 +1171,53 @@ add_docstr(
             - NHWC [ ]
           - Performance and Scalability(Must be evaluated.)[ ]
           - Exception Handling [ ]
+    """,
+)
+
+add_docstr(
+    oneflow.mode,
+    r"""
+    oneflow.mode(input, dim=-1, keepdim=False)
+
+    Returns a namedtuple (values, indices) where values is the mode value of each row of 
+    the input tensor in the given dimension dim, i.e. a value which appears most often in 
+    that row, and indices is the index location of each mode value found.
+    
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+    
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce. Default: `-1`
+        keepdim (bool): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): the result tuple of two output
+        tensors (values, indices) 
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor([6, 2, 5, 3, 3, 5, 4, 3])
+        >>> result = flow.mode(x)
+        >>> result.values
+        tensor(3, dtype=oneflow.int64)
+        >>> result.indices
+        tensor(7, dtype=oneflow.int64)
+        >>> x = flow.Tensor([[2, 1, 2, 3], [2, 4, 3, 3]])
+        >>> result = flow.mode(x, dim=0)
+        >>> result.values
+        tensor([2., 1., 2., 3.], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 0, 0, 1], dtype=oneflow.int64)
+        
     """,
 )
 
@@ -1560,6 +1625,7 @@ add_docstr(
 add_docstr(
     oneflow.as_strided,
     r"""
+    as_strided(input, size, stride, storage_offset=None) -> Tensor
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.as_strided.html.

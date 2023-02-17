@@ -32,6 +32,12 @@ def _test_unsqueeze(test_case, device):
     y = flow.unsqueeze(x, dim=1)
     output = np.expand_dims(np_arr, axis=1)
     test_case.assertTrue(np.allclose(output, y.numpy(), 1e-05, 1e-05))
+    x_flow = flow.randn(5)
+    x_flow = flow.unsqueeze(x_flow, 0)
+    test_case.assertTrue(np.array_equal(x_flow.stride(), (5, 1)))
+    x_flow = flow.randn(5, 2)
+    x_flow = flow.unsqueeze(x_flow, 0)
+    test_case.assertTrue(np.array_equal(x_flow.stride(), (10, 2, 1)))
 
 
 def _test_unsqueeze_tensor_function(test_case, device):
@@ -82,6 +88,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.unsqueeze(x, random(1, 3).to(int))
+        return y
+
+    @autotest(n=10, check_graph=False, auto_backward=False)
+    def test_inplace_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(requires_grad=False).to(device)
+        y = x.unsqueeze_(random(1, 3).to(int))
         return y
 
     @autotest(auto_backward=False, check_graph=True)

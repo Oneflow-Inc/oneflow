@@ -156,6 +156,8 @@ Shape InferArraySizes(PyObject* object) {
 }
 
 Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
+  // NOTE: convert data to indexing will ensure in eager mode
+  LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   const DataType dtype = InferScalarType(object);
   const auto& device = JUST(Device::New("cpu"));
 

@@ -54,13 +54,12 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
 
 }  // namespace
 
-Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_id_str) {
+Maybe<std::pair<int64_t, std::string>> ParseDeviceNameConf(const std::string& device_name) {
   size_t delimiter_pos = device_name.rfind(":");
   CHECK_NE_OR_RETURN(delimiter_pos, std::string::npos);
-  *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
-  *device_id_str = device_name.substr(delimiter_pos + 1);
-  return Maybe<void>::Ok();
+  int64_t mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
+  std::string device_id_str = device_name.substr(delimiter_pos + 1);
+  return std::make_pair(mchn_id, device_id_str);
 }
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
@@ -124,9 +123,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
 
 Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
     const std::string& device_name, size_t cols) {
-  int64_t node_id = -1;
-  std::string device_id_str;
-  JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
+  auto [node_id, device_id_str] = *JUST(ParseDeviceNameConf(device_name));
   int64_t minus_pos = device_id_str.find("-");
   if (minus_pos == std::string::npos) {
     device_id_str = device_id_str + "-" + device_id_str;
@@ -159,7 +156,7 @@ Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
+  const auto& device = JUST(Device::New(device_tag(), device_id));
   int64_t parallel_id_val = -1;
   if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
     *parallel_id = parallel_id_val;
@@ -474,7 +471,7 @@ Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
   const auto& type = parallel_desc->device_tag();
-  return JUST(Device::ThreadLocalGetOrNew(type, device_id));
+  return JUST(Device::New(type, device_id));
 }
 
 Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {
@@ -488,6 +485,14 @@ Maybe<void> RawCheckDeviceIdsIsValid(Symbol<ParallelDesc> placement) {
   return Maybe<void>::Ok();
 }
 
+Maybe<Symbol<ParallelDesc>> RawGetParallelDescOfThisRank(const std::string& device_tag) {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device_tag);
+  parallel_conf.add_device_name(std::to_string(GlobalProcessCtx::Rank()) + ":"
+                                + std::to_string(GlobalProcessCtx::LocalRank()));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -499,6 +504,8 @@ decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, 
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
 decltype(TxtStringToPlacement) TxtStringToPlacement =
     DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+decltype(GetParallelDescOfThisRank) GetParallelDescOfThisRank =
+    DECORATE(&RawGetParallelDescOfThisRank, ThreadLocalCopiable);
 decltype(CheckDeviceIdsIsValid) CheckDeviceIdsIsValid =
     DECORATE(&RawCheckDeviceIdsIsValid, ThreadLocal);
 

@@ -206,10 +206,19 @@ message JobSignatureDef {
 }
 
 enum StraightenAlgorithmTag {
-  kDisable = 1;                  
+  kDisableStraighten = 1;                  
   kOverlap4Transfer = 2;  
   kCompressMemory = 3;
-  kOverlap4CpuGpu = 4;            
+  kOverlap4CpuGpu = 4;
+  kDelayShortGpu = 5;            
+}
+
+enum AutoMemoryStrategy {
+  kDisableAutoMemory = 1;
+  kSlightAutoMemory = 2;
+  kModerateAutoMemory = 3;
+  kHeavyAutoMemory = 4;
+  kAdaptiveAutoMemory = 5;
 }
 
 message JobConfigProto {
@@ -257,6 +266,7 @@ message JobConfigProto {
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
   optional bool prune_amp_white_identity_ops = 511 [default = true];
+  optional bool prune_depend_ops = 512 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
@@ -271,8 +281,10 @@ message JobConfigProto {
   optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
   optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
   optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
+  optional AutoMemoryStrategy enable_auto_memory = 706 [default = kAdaptiveAutoMemory];
   
   optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
+  optional bool enable_compress_memory = 801 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 
