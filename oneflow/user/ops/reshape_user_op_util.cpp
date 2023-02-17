@@ -176,28 +176,26 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 
 namespace {
 
-void GenRankMeshSubset(const std::vector<int>& rank_axes,
-                       std::set<std::vector<int>>& rank_axes_subset) {
-  if (!rank_axes_subset.emplace(rank_axes).second) { return; }
-  if (rank_axes.size() <= 1) { return; }
-  for (size_t i = 0; i < rank_axes.size(); ++i) {
-    std::vector<int> sub_rank_axes(rank_axes.size() - 1);
-    for (size_t j = 0; j < rank_axes.size(); ++j) {
-      if (j < i) {
-        sub_rank_axes[j] = rank_axes[j];
-      } else if (j > i) {
-        sub_rank_axes[j - 1] = rank_axes[j];
-      }
-      // else j == i dropped
-    }
-    GenRankMeshSubset(sub_rank_axes, rank_axes_subset);
+void FowardRankMesh(size_t depth, size_t max_depth, std::deque<int>& rank_axes_queue,
+                    std::vector<std::vector<int>>& rank_axes_subset) {
+  if (depth == max_depth) {
+    if (rank_axes_queue.empty()) { return; }
+    rank_axes_subset.emplace_back();
+    auto& rank_axes = rank_axes_subset.back();
+    for (int rank_axis : rank_axes_queue) { rank_axes.push_back(rank_axis); }
+  } else {
+    // forward by skip current depth axis
+    FowardRankMesh(depth + 1, max_depth, rank_axes_queue, rank_axes_subset);
+    // fowward by keep current depth axis
+    rank_axes_queue.push_back(depth);
+    FowardRankMesh(depth + 1, max_depth, rank_axes_queue, rank_axes_subset);
+    rank_axes_queue.pop_back();
   }
 }
 
-void GenRankMeshSubset(size_t mesh_depth, std::set<std::vector<int>>& rank_axes_subset) {
-  std::vector<int> rank_axes(mesh_depth);
-  std::iota(rank_axes.begin(), rank_axes.end(), 0);
-  GenRankMeshSubset(rank_axes, rank_axes_subset);
+void GenRankMeshSubset(size_t mesh_depth, std::vector<std::vector<int>>& rank_axes_subset) {
+  std::deque<int> rank_axes_queue;
+  FowardRankMesh(0, mesh_depth, rank_axes_queue, rank_axes_subset);
 }
 
 }  // namespace
@@ -210,7 +208,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
   CHECK_EQ_OR_RETURN(in_shape.size(), origin_in_axes.size());
   CHECK_EQ_OR_RETURN(out_shape.size(), origin_out_axes.size());
 
-  std::set<std::vector<int>> rank_axes_subset;
+  std::vector<std::vector<int>> rank_axes_subset;
   GenRankMeshSubset(rank_mesh.size(), rank_axes_subset);
   for (const std::vector<int>& rank_axes : rank_axes_subset) {
     int rank_axis_idx = 0;
