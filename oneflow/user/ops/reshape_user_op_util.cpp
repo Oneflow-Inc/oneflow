@@ -179,6 +179,7 @@ namespace {
 void FowardRankMesh(size_t depth, size_t max_depth, std::deque<int>& rank_axes_queue,
                     std::vector<std::vector<int>>& rank_axes_subset) {
   if (depth == max_depth) {
+    // skip empty subset
     if (rank_axes_queue.empty()) { return; }
     rank_axes_subset.emplace_back();
     auto& rank_axes = rank_axes_subset.back();
@@ -207,18 +208,36 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   CHECK_EQ_OR_RETURN(in_shape.size(), origin_in_axes.size());
   CHECK_EQ_OR_RETURN(out_shape.size(), origin_out_axes.size());
-
+  // generate all subset of rank_mesh (keep order)
+  // for example rank_mesh=(2, 3, 5), subset include:
+  // (2, 3, 5)
+  // (2, 3)
+  // (2, 5)
+  // (2,)
+  // (3, 5)
+  // (3,)
+  // (5,)
   std::vector<std::vector<int>> rank_axes_subset;
   GenRankMeshSubset(rank_mesh.size(), rank_axes_subset);
+  // traverse all subset to detect contiguous nd-split signatures
+  // for example (4,) reshape (2, 2) with rank_mesh=(2, 2)
+  // nd-split signatures include:
+  // S(0) -> S(0) with rank_axis=0 (1d)
+  // S(0) -> S(0) with rank_axis=1 (1d)
+  // [S(0), S(0)] -> [S(0), S(1)] with rank_mesh=(2,2) (2d)
   for (const std::vector<int>& rank_axes : rank_axes_subset) {
     int rank_axis_idx = 0;
     int in_axis = in_shape.size() - 1;
     int out_axis = out_shape.size() - 1;
     int64_t in_dim_size = in_shape[in_axis];
     int64_t out_dim_size = out_shape[out_axis];
+    // rank_axis -> {in_axis, out_axis}
     std::map<int, std::pair<int, int>> rank_in2out_axis;
-
+    // go down from tail to head axis, since the dimensions
+    // in the in_shape and the out_shape passed in
+    // are reverse order
     while (in_axis >= 0 && out_axis >= 0 && rank_axis_idx < rank_axes.size()) {
+      // dim_size == 1 then move to next axis to find contiguous split axis
       if (in_dim_size == 1) {
         in_axis--;
         in_dim_size = in_shape[in_axis];
@@ -231,14 +250,18 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
       }
       int rank_axis = rank_axes[rank_axis_idx];
       int64_t rank_num = rank_mesh[rank_axis];
+      // dim_size is indivisible by rank_num indicate split can't continue
       if (in_dim_size % rank_num != 0 || out_dim_size % rank_num != 0) { break; }
+      // divide dim_size by rank_num both at in_axis and out_axis till dim_size == 1
       in_dim_size /= rank_num;
       out_dim_size /= rank_num;
       int origin_in_axis = origin_in_axes[in_axis];
       int origin_out_axis = origin_out_axes[out_axis];
+      // mark rank_axis that can be splited by in_axis and out_axis both
       rank_in2out_axis.emplace(rank_axis, std::make_pair(origin_in_axis, origin_out_axis));
       rank_axis_idx++;
     }
+    // ensure all rank axes are marked splitable with some axis (in and out)
     if (rank_in2out_axis.size() == rank_axes.size()) {
       nd_split_groups->emplace_back(std::move(rank_in2out_axis));
     }
@@ -269,8 +292,20 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(
   group_in_axes.reserve(rank_mesh.size());
   group_out_axes.reserve(rank_mesh.size());
 
+  // group reshape dimensions
+  // for example:
+  // (4, 5, 2, 3) reshape to (2, 2, 5, 6) will be divided to 3 groups:
+  // (   4,| 5, | 2, 3)
+  // (2, 2,| 5, | 6)
+  // group1: (2, 3) -> (6)
+  // group2: (5,) -> (5)
+  // group3: (4,) -> (2, 2)
   while (in_axis >= 0 && out_axis >= 0) {
+    // move in_axis when in_count < out_count
+    // move out_axis when out_count < in_count
+    // move both when in_count == out_count
     if (in_count < out_count) {
+      // skip dim_size == 1
       if (in_shape[in_axis] != 1) {
         group_in_dim_vec.push_back(in_shape[in_axis]);
         group_in_axes.push_back(in_axis);
@@ -284,6 +319,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(
       MoveOutAxis();
     } else {  // in_count == out_count
       if (in_shape[in_axis] == out_shape[out_axis]) {
+        // group2: (5, 5) in the example will go this branch
         for (int rank_axis = 0; rank_axis < rank_mesh.size(); ++rank_axis) {
           int64_t rank_num = rank_mesh[rank_axis];
           if (in_shape[in_axis] % rank_num == 0) {
@@ -293,10 +329,12 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(
           }
         }
       } else {
+        // the reshape group (group1 and group3 in the example) finish
         group_in_dim_vec.push_back(in_shape[in_axis]);
         group_in_axes.push_back(in_axis);
         group_out_dim_vec.push_back(out_shape[out_axis]);
         group_out_axes.push_back(out_axis);
+        // enumerate all nd-split signatures for one group
         EnumerateNdSplitIn2OutAxis(Shape(group_in_dim_vec), group_in_axes, Shape(group_out_dim_vec),
                                    group_out_axes, rank_mesh, nd_sbp_in2out_sig_groups);
         group_in_dim_vec.clear();
