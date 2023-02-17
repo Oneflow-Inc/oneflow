@@ -304,7 +304,8 @@ void TopoStruct::ComputeExceedTime() {
 void TopoStruct::ComputeMemoryVolume() {
   static float lifetime_order = ParseFloatFromEnv("LifetimeOrder", 1.0);
   // We might get a large tensor multiply by a long life time, we need some rescaling
-  memory_volume = int64_t((memory_increment * pow(double(min_lifetime), lifetime_order)) / 1000.0);
+  memory_volume = static_cast<int64_t>(
+      (memory_increment * pow(static_cast<double>(min_lifetime), lifetime_order)) / 1000.0);
   // We need to distinguish zero or negative memory increment from slight positive memory increment.
   // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
   if (memory_increment > 0) { memory_volume += 1; }
