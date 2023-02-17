@@ -3207,34 +3207,19 @@ class CDistFunctor {
     int64_t r2 = x2->dim(x2_ndim - 2);
     int64_t d = x1->dim(x1_ndim - 1);
 
-    Shape x1_batch_shape = Shape(DimVector({x1->shape()->begin(), x1->shape()->end() - 2}));
-    Shape x2_batch_shape = Shape(DimVector({x2->shape()->begin(), x2->shape()->end() - 2}));
-    Shape max_batch_shape =
-        Shape::Ones(std::max(x1_batch_shape.NumAxes(), x2_batch_shape.NumAxes()));
-    {
-      for (int64_t i = max_batch_shape.NumAxes() - 1; i >= 0; i--) {
-        int64_t offset = max_batch_shape.NumAxes() - 1 - i;
-        int64_t dim_x = x1_batch_shape.NumAxes() - 1 - offset;
-        int64_t dim_y = x2_batch_shape.NumAxes() - 1 - offset;
-        int64_t size_x = (dim_x >= 0) ? x1_batch_shape.At(dim_x) : 1;
-        int64_t size_y = (dim_y >= 0) ? x2_batch_shape.At(dim_y) : 1;
-        if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
-          return Error::RuntimeError()
-                 << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
-                 << size_y << ") at non-singleton dimension " << i;
-        }
-        max_batch_shape.Set(i, std::max(size_x, size_y));
-      }
-    }
-    Shape x1_expand_shape(max_batch_shape);
-    Shape x2_expand_shape(max_batch_shape);
+    std::vector<Shape> shape_vector = {
+        Shape(DimVector({x1->shape()->begin(), x1->shape()->end() - 2})),
+        Shape(DimVector({x2->shape()->begin(), x2->shape()->end() - 2})),
+    };
+    auto broadcasted_shape = JUST(BroadcastShapes(shape_vector));
+    Shape x1_expand_shape(*broadcasted_shape);
     x1_expand_shape.emplace_back(r1);
     x1_expand_shape.emplace_back(d);
-    x2_expand_shape.emplace_back(r2);
-    x2_expand_shape.emplace_back(d);
+    broadcasted_shape->emplace_back(r2);
+    broadcasted_shape->emplace_back(d);
 
     const auto x1_expand = JUST(Expand(x1, x1_expand_shape));
-    const auto x2_expand = JUST(Expand(x2, x2_expand_shape));
+    const auto x2_expand = JUST(Expand(x2, *broadcasted_shape));
 
     // mm_for_euclid_dist has accuracy issue
     // if (p == 2 && (mode == 1 || (mode == 0 && (r1 > 25 || r2 > 25)))) {
