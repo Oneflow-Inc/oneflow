@@ -316,7 +316,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.local_to_global,
     """
-    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=Ture) -> Tensor
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, copy=False) -> Tensor
 
     Creates a global tensor from a local tensor.
 
@@ -328,7 +328,11 @@ add_docstr(
         The returned global tensor takes this tensor as its local component in the current rank.
 
         There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
-    
+
+    .. warning::
+        When the sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified. If you want to keep the input local tensor unchanged,
+        please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
@@ -364,7 +368,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.global_to_global,
     """
-    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False) -> Tensor
+    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False, copy=False) -> Tensor
 
     Performs Tensor placement and/or sbp conversion.
 
@@ -431,7 +435,11 @@ add_docstr(
           At least one of placement and sbp is required.
 
           If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
-    
+
+    .. warning::
+        When the input tensor is a local tensor and sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified.
+        If you want to keep the input local tensor unchanged, please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
