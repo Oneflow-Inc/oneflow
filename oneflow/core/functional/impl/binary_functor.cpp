@@ -426,7 +426,8 @@ class BroadcastFModFunctor : public BinaryFunctor {
 class BroadcastRemainderFunctor : public BinaryFunctor {
  public:
   BroadcastRemainderFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_floor_mod").Input("x").Input("y").Output("z").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_floor_mod").Input("x").Input("y").Output("z").Build());
   }
 };
 

@@ -516,7 +516,6 @@ class TestFmod(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRemainder(flow.unittest.TestCase):
-
     @autotest(auto_backward=True)
     def test_elementwise_remainder_random_data(test_case):
         device = random_device()
@@ -540,14 +539,14 @@ class TestRemainder(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random().to(int)
         return torch.remainder(x, y)
-    
+
     @autotest(auto_backward=False)
     def test_tensor_remainder_scalar_tensor_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random().to(int)
         return torch.remainder(y, x)
-    
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
