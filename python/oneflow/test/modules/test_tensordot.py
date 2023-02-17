@@ -77,7 +77,7 @@ class TestTensordot(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_tensordot_tensor_dim(test_case):
         def _test_tensor_dim(test_case, device):
-            np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.int)
+            np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=int)
             flow_dim = flow.tensor(np_dim).to(device)
             torch_dim = torch.tensor(np_dim).to(device)
 

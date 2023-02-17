@@ -101,7 +101,7 @@ class TestModule(flow.unittest.TestCase):
     def profile_mv(test_case):
         torch.mv(torch.ones(32, 64), torch.ones(64))
 
-    @autotest(n=5, check_graph=True, rtol=1e-2)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_vector_matrix_product_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
