@@ -312,7 +312,7 @@ void GenMemChainTasksAndRegsts(
   }
 }
 
-void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
+void GenRegstAllocFreeTimeLineAndRegstLifetimes(
     const std::vector<TaskProto*>& sorted_tasks,
     const std::vector<RegstDescProto*>& mem_reused_regsts,
     const HashMap<int64_t, RegstDescProto*>& regst_desc_id2reuse_regst_desc,
@@ -556,7 +556,7 @@ void MemReusedMemSizeFirstAlgo(
                                     result);
 }
 
-void MemReusedMutualExclusionFirstAlgo(
+void MemReusedLifetimeFirstAlgo(
     const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
@@ -627,8 +627,7 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
       MemReusedMemSizeFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
       break;
     case kLifetimeFirstAlgo:
-      MemReusedMutualExclusionFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size,
-                                        result);
+      MemReusedLifetimeFirstAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
       break;
     case kTimeLineAlgo:
       MemReusedTimeLineAlgo(compact_insert, regst2lifetime, mem_reused_regst2size, result);
@@ -717,9 +716,9 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // info for straighten
   HashMap<int64_t, size_t> mem_chain2peak_memory;
 
-  // step 1: generate regst alloc/free queue AND regst mutual exclusions
+  // step 1: generate regst alloc/free queue AND regst lifetimes
   for (const auto& pair : mem_chain2mem_reused_regsts) {
-    GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
+    GenRegstAllocFreeTimeLineAndRegstLifetimes(
         mem_chain2sorted_tasks.at(pair.first), pair.second,
         mem_chain2regst_desc_id2reuse_regst_desc.at(pair.first), mem_reused_regst2size,
         &mem_chain2regst2lifetime[pair.first], &mem_chain2consumer2inplaced_regst[pair.first],
