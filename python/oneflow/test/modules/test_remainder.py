@@ -66,6 +66,15 @@ class TestRemainderModule(flow.unittest.TestCase):
         input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         other = 3
         return torch.remainder(input, other)
+    
+    @autotest(n=1, auto_backward=False)
+    def test_flow_remainder_scalar_tensor_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = 3
+        other = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        return torch.remainder(input, other)
 
     @autotest(n=1, auto_backward=True)
     def test_remainder_with_0_size_data(test_case):
@@ -76,8 +85,8 @@ class TestRemainderModule(flow.unittest.TestCase):
 
     @profile(torch.remainder)
     def profile_remainder(test_case):
-        torch.remainder(torch.ones(100, 100, 100), 1)
         torch.remainder(torch.ones(100, 100, 100), -0.5)
+        torch.remainder(torch.ones(100, 100, 100), torch.ones(100, 100))
 
 
 if __name__ == "__main__":

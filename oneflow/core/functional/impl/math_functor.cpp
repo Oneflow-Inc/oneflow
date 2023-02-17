@@ -350,6 +350,14 @@ class ScalarRemainderFunctor : public ScalarMathBaseFunctor {
   ScalarRemainderFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floor_mod") {}
 };
 
+class ScalarTensorRemainderFunctor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    auto zeros_tensor = JUST(functional::ZerosLike(x));
+    auto tensor_fill_scalar = JUST(functional::ScalarAdd(scalar, zeros_tensor, /*alpha*/ 1));
+    return JUST(functional::BroadcastRemainder(tensor_fill_scalar, x));
+  }
+};
 class ReduceMaxFunctor {
  public:
   ReduceMaxFunctor() {
@@ -4167,6 +4175,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarRemainderFunctor>("ScalarRemainder");
+  m.add_functor<ScalarTensorRemainderFunctor>("ScalarTensorRemainder");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
   m.add_functor<ScalarTruncDivFunctor>("ScalarTruncDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");

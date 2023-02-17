@@ -575,7 +575,7 @@
       "Tensor (Tensor input, Tensor other) => BroadcastRemainder",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarRemainder",
       "Tensor (Tensor input, Scalar other) => ScalarRemainder",
-      # "Tensor (Scalar input, Tensor other) => ScalarTensorRemainder",
+      "Tensor (Scalar input, Tensor other) => ScalarTensorRemainder",
     ]
   bind_python: true
 
