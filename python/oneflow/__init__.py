@@ -148,7 +148,6 @@ from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
-from oneflow._C import remainder
 from oneflow._C import flatten
 from oneflow._C import topk
 from oneflow._C import in_top_k
@@ -166,6 +165,7 @@ from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
 from oneflow._C import reduce_nansum as nansum
+from oneflow._C import remainder
 from oneflow._C import logsumexp
 from oneflow._C import rsqrt
 from oneflow._C import sqrt

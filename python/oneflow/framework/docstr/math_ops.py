@@ -906,13 +906,19 @@ add_docstr(
     r"""
     fmod(input, other, *, out=None) -> Tensor
 
-    Computes the element-wise remainder of division.
+    Applies C++'s `std::fmod <https://en.cppreference.com/w/cpp/numeric/math/fmod>`_ entrywise.
+    The result has the same sign as the dividend :attr:`input` and its absolute value
+    is less than that of :attr:`other`.
 
-    The dividend and divisor may contain both for integer and floating point
-    numbers. The remainder has the same sign as the dividend :attr:`input`.
+    This function may be defined in terms of :func:`oneflow.div` as
 
-    Supports broadcasting to a common shape, integer and float inputs.
+    .. code:: python
 
+        oneflow.fmod(a, b) == a - a.div(b, rounding_mode="trunc") * b
+
+    Supports :ref:`broadcasting to a common shape <broadcasting-semantics>`,
+    :ref:`type promotion <type-promotion-doc>`, and integer and float inputs.
+    
 
     Args:
         input (Tensor): the dividend
@@ -930,6 +936,47 @@ add_docstr(
         tensor([1.0000, 0.5000, 0.0000, 1.0000, 0.5000], dtype=oneflow.float32)
         >>> flow.fmod(flow.tensor([1, 2, 3, 4., -5]), flow.tensor([4, 2, 1, 3., 1]))
         tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.remainder,
+    r"""
+    remainder(input, other, *, out=None) -> Tensor
+
+    `Python's modulus operation <https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations>`_
+    entrywise.  The result has the same sign as the divisor :attr:`other` and its absolute value
+    is less than that of :attr:`other`.
+
+    This function may be defined in terms of :func:`oneflow.div` as
+
+    .. code:: python
+
+        oneflow.remainder(a, b) == a - a.div(b, rounding_mode="floor") * b
+
+    Supports :ref:`broadcasting to a common shape <broadcasting-semantics>`,
+    :ref:`type promotion <type-promotion-doc>`, and integer and float inputs.
+    
+
+    Args:
+        input (Tensor or Scalar): the dividend
+        other (Tensor or Scalar): the divisor
+
+    Keyword args:
+        out (Tensor, optional): the output tensor.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> flow.remainder(flow.tensor([-3., -2, -1, 1, 2, 3], dtype=flow.float32), 2.)
+        tensor([1., -0., 1., 1., 0., 1.], dtype=oneflow.float32)
+        >>> flow.remainder(flow.tensor([1, 2, 3, 4, 5.], dtype=flow.float32), 1.5)
+        tensor([1.0000, 0.5000, 0.0000, 1.0000, 0.5000], dtype=oneflow.float32)
+        >>> flow.remainder(flow.tensor([1, 2, 3, 4., -5]), flow.tensor([4, 2, 1, 3., 1]))
+        tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
+        >>> flow.remainder(1.5, flow.tensor([1, 2, 3, 4, 5.], dtype=flow.float32))
+        tensor([0.5000, 1.5000, 1.5000, 1.5000, 1.5000], dtype=oneflow.float32)
 
     """,
 )

@@ -1764,6 +1764,16 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.remainder,
+    """
+    Tensor.remainder(other) -> Tensor
+
+    See :func:`oneflow.remainder`
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.logical_and,
     """
     logical_and() -> Tensor
