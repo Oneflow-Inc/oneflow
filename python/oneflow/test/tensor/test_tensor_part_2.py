@@ -910,7 +910,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
-        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast, copy=True)
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
 
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
@@ -920,7 +920,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
-        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast, copy=True)
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
 
         x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
@@ -941,7 +941,9 @@ class TestTensorNumpy(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1]]))
 
         x = ori_x.to_global(
-            placement=placement, sbp=[flow.sbp.partial_sum, flow.sbp.broadcast]
+            placement=placement,
+            sbp=[flow.sbp.partial_sum, flow.sbp.broadcast],
+            copy=True,
         )
         test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3]]))
 
