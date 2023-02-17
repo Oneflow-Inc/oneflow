@@ -265,6 +265,7 @@ Tensor class reference
     Tensor.item
     Tensor.le
     Tensor.lerp
+    Tensor.lerp_
     Tensor.log
     Tensor.log1p
     Tensor.log2

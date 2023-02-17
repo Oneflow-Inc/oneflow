@@ -307,6 +307,7 @@ Pointwise Ops
     trunc
     floor_divide
     lerp
+    lerp_
     quantile
 
 Reduction Ops
