@@ -67,12 +67,6 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
                                "tf_avg_pool_2d_grad",
                                "tf_avg_pool_3d",
                                "tf_avg_pool_3d_grad",
-                               "avg_pool_1d",
-                               "avg_pool_1d_grad",
-                               "avg_pool_2d",
-                               "avg_pool_2d_grad",
-                               "avg_pool_3d",
-                               "avg_pool_3d_grad",
                                "bias_add",
                                "reduce_sum",
                                "reduce_sum_like",
@@ -96,12 +90,6 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
                                "rms_norm",
                                "rms_norm_grad",
                                "rms_norm_param_grad",
-                               "dropout",
-                               "dropout_grad",
-                               "softmax",
-                               "softmax_grad",
-                               "log_softmax",
-                               "log_softmax_grad",
                                "gelu",
                                "gelu_grad",
                                "fast_gelu",
@@ -147,12 +135,6 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
                                "tf_max_pool_2d_grad",
                                "tf_max_pool_3d",
                                "tf_max_pool_3d_grad",
-                               "max_pool_1d",
-                               "max_pool_1d_grad",
-                               "max_pool_2d",
-                               "max_pool_2d_grad",
-                               "max_pool_3d",
-                               "max_pool_3d_grad",
                                "reshape",
                                "reshape_like",
                                "relu",
@@ -195,13 +177,29 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
-  static AMPList gray_list = {};
+  static AMPList gray_list = { "avg_pool_1d",
+                               "avg_pool_1d_grad",
+                               "avg_pool_2d",
+                               "avg_pool_2d_grad",
+                               "avg_pool_3d",
+                               "avg_pool_3d_grad",
+                               "dropout",
+                               "dropout_grad",
+                               "softmax",
+                               "softmax_grad",
+                               "log_softmax",
+                               "log_softmax_grad"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): tuple_identity
-  static AMPList clear_list = {};
+  static AMPList clear_list = {"max_pool_1d",
+                               "max_pool_1d_grad",
+                               "max_pool_2d",
+                               "max_pool_2d_grad",
+                               "max_pool_3d",
+                               "max_pool_3d_grad"};
 
   return clear_list;
 }
