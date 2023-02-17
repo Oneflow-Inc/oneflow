@@ -107,6 +107,12 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     return tmp_buffer_offset_.at(i);
   }
 
+  size_t tmp_buffer_size(int32_t i) {
+    CHECK_GE(i, 0);
+    CHECK_LT(i, tmp_buffer_size_.size());
+    return tmp_buffer_size_.at(i);
+  }
+
  private:
   void InitComm() {
     CHECK(!is_init_);
@@ -114,6 +120,7 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     const Shape& hierarchy = *parallel_desc_.hierarchy();
 
     if (hierarchy.NumAxes() == 1) {
+      num_ranks_ = parallel_desc_.parallel_num();
       FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
         int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
         int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
@@ -148,6 +155,7 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
           const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
           device_set.emplace(std::make_pair(machine_id, device_id));
         }
+        num_ranks_ = group_size;
       } else {
         UNIMPLEMENTED();
       }
@@ -234,12 +242,15 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
       size_t out_tensor_byte_size = GetTensorByteSize(*ctx->TensorDesc4ArgNameAndIndex("out", i));
 
       tmp_buffer_offset_.push_back(total_buffer_size);
-      total_buffer_size += GetTmpBufferSizeByNcclType(nccl_type, in_tensor_byte_size,
+      size_t tmp_buffer_size = GetTmpBufferSizeByNcclType(nccl_type, in_tensor_byte_size,
                                                       out_tensor_byte_size, src_nd_sbp, dst_nd_sbp);
+      tmp_buffer_size_.push_back(tmp_buffer_size);
+      total_buffer_size += tmp_buffer_size;
     }
     // NOTE(chengcheng): last element of vector is total_buffer_size
     tmp_buffer_offset_.push_back(total_buffer_size);
     CHECK_EQ(tmp_buffer_offset_.size(), nccl_num_ + 1);
+    CHECK_EQ(tmp_buffer_size_.size(), nccl_num);
     const user_op::TensorDesc* tmp_buffer_tensor_desc =
         ctx->TensorDesc4ArgNameAndIndex("tmp_buffer", 0);
     if (tmp_buffer_tensor_desc == nullptr) {
@@ -259,6 +270,7 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
   std::vector<int64_t> src_split_axis_list_;
   std::vector<int64_t> dst_split_axis_list_;
   std::vector<size_t> tmp_buffer_offset_;
+  std::vector<size_t> tmp_buffer_size_;
   ncclComm_t comm_{};
 };
 
@@ -283,6 +295,156 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
   }
 };
 
+const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string nccl_type
+    user_op::Tensor* tmp_buffer, NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+  CHECK_NOTNULL(tmp_buffer);
+  const void* tmp_dptr = static_cast<const void*>(tmp_buffer->dptr<char>()
+      + kernel_state->tmp_buffer_offset(i));
+  if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
+    return tmp_dptr;
+  } else if (nccl_type == "_nccl_logical_s2s") {
+    if (kernel_state->dst_split_axis(i) != 0) {
+      return tmp_dptr; // need do pack;
+    }
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
+    if (kernel_state->dst_split_axis(i) != 0) {
+      return tmp_dptr; // need do pack;
+    }
+  }
+  return pack_to_ptr;
+}
+
+const void* UpdateUnpackFromPtrByNcclType(const void* unpack_from_ptr, const std::string nccl_type
+    user_op::Tensor* tmp_buffer, const user_op::Tensor* in, 
+    NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+  CHECK_NOTNULL(tmp_buffer);
+  const void* tmp_dptr = static_cast<const void*>(tmp_buffer->dptr<char>()
+      + kernel_state->tmp_buffer_offset(i));
+  int64_t data_size = GetTensorByteSize(*in);
+  int64_t tmp_buffer_size = kernel_state->tmp_buffer_size(i);
+  if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
+    return tmp_dptr;
+  } else if (nccl_type == "_nccl_logical_s2s") {
+    if (kernel_state->src_split_axis(i) != 0) {
+      CHECK(tmp_buffer_size == data_size || tmp_buffer_size = 2 * data_size);
+      return static_cast<const void*>(
+          static_cast<const char*>(tmp_dptr) + (tmp_buffer_size - data_size));
+    }
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
+    return tmp_dptr;
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
+    if (kernel_state->src_split_axis(i) != 0) {
+      CHECK(tmp_buffer_size == data_size || tmp_buffer_size = 2 * data_size);
+      return static_cast<const void*>(
+          static_cast<const char*>(tmp_dptr) + (tmp_buffer_size - data_size));
+    }
+  }
+  return unpack_from_ptr;
+}
+
+void DoPackBeforeNcclGroup(const void* pack_to_ptr, const std::string nccl_type, 
+    const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
+    NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+  if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
+    // Do unpack before reduce scatter
+    const int64_t num_ranks = kernel_state->num_ranks();
+    const int64_t out_split_axis = kernel_state->dst_split_axis(i);
+    DimVector transpose_in_dim_vec ;
+    in->shape_view().ToDimVector(&transpose_in_dim_vec);
+
+    transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
+    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+    const Shape transpose_in_shape(transpose_in_dim_vec);
+    std::vector<int32_t> perm;
+    perm.emplace_back(out_split_axis);
+    FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+      if (i != out_split_axis) { perm.emplace_back(i); }
+    }
+    auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+        ctx->stream()->device_type(), transpose_in_dim_vec.size());
+    CHECK(transpose);
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), pack_to_ptr);
+    VLOG(3) << "[NcclLogicalFusion] op: " << ctx->op_name() << " , i= " << i << ", stream: "
+      << kernel_state->stream_name() << " Do unpack before [ReduceScatter]";
+  } else if (nccl_type == "_nccl_logical_s2s") {
+    const int64_t out_split_axis = kernel_state->dst_split_axis(i);
+    if (out_split_axis != 0) {
+      // Do unpack before all2all
+      const int64_t num_ranks = kernel_state->num_ranks();
+      const int64_t in_split_axis = kernel_state->src_split_axis(i);
+
+      DimVector transpose_in_dim_vec;
+      in->shape_view().ToDimVector(&transpose_in_dim_vec);
+      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) * num_ranks;
+      CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
+      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
+      CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
+      transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
+      transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+      std::vector<int32_t> perm;
+      perm.emplace_back(out_split_axis);
+      FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+        if (i != out_split_axis) { perm.emplace_back(i); }
+      }
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
+                        pack_to_ptr);
+      VLOG(3) << "[NcclLogicalFusion] op: " << ctx->op_name() << " , i= " << i << ", stream: "
+        << kernel_state->stream_name() << " Do unpack before [All2All]";
+    }
+  } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
+    const int64_t out_split_axis = kernel_state->dst_split_axis(i);
+    if (out_split_axis != 0) {
+      const int64_t num_ranks = kernel_state->num_ranks();
+      const int64_t in_split_axis = kernel_state->src_split_axis(i);
+      DimVector transpose_in_dim_vec;
+      in->shape_view().ToDimVector(&transpose_in_dim_vec);
+      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) * num_ranks;
+
+      CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
+      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
+      CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
+      transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
+      transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+      std::vector<int32_t> perm;
+      perm.emplace_back(out_split_axis);
+      FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+        if (i != out_split_axis) { perm.emplace_back(i); }
+      }
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
+                        pack_to_ptr);
+      VLOG(3) << "[NcclLogicalFusion] op: " << ctx->op_name() << " , i= " << i << ", stream: "
+        << kernel_state->stream_name() << " Do unpack before [2DSameDim0All2All]";
+    }
+  }
+}
+
+void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_ptr, 
+    const std::string& nccl_type, const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
+    NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+  if (nccl_type == "_nccl_logical_all_reduce") {
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
+    OF_NCCL_CHECK(ncclAllReduce(pack_to_ptr, unpack_from_ptr, in->shape_view().elem_cnt(),
+                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    VLOG(3) << "[NcclLogicalFusion][AllReduce] op: " << ctx->op_name() << " , i= " 
+      << i << ", stream: " << kernel_state->stream_name();
+  } else if (nccl_type == "_nccl_logical_all_gather") {
+
+
+  }
+}
+
+
 void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
                                       user_op::OpKernelState* state,
                                       const user_op::OpKernelCache*) const {
@@ -290,10 +452,54 @@ void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
   CHECK_NOTNULL(kernel_state);
   LOG(INFO) << "ccdebuglog: kernel " << ctx->op_name() << " nccl_num: " << kernel_state->nccl_num()
             << " stream_name: " << kernel_state->stream_name();
-  for (int32_t i = 0; i < kernel_state->nccl_num(); ++i) {
+  const int32_t nccl_num = kernel_state->nccl_num();
+  const std::vector<std::string>& nccl_type_list =
+        ctx->Attr<std::vector<std::string>>("nccl_type_list");
+
+  user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+  // NOTE(chengcheng):  
+  //    pack:   in.dptr -> pack_to_ptr              // if not pack : pack_to_ptr = in.dptr
+  //    nccl:   pack_to_ptr -> unpack_from_ptr
+  //    unpack: unpack_from_ptr ->out.dptr          // if not unpack: unpack_from_ptr = out.dptr
+  std::vector<const void*> pack_to_ptr_list(nccl_num, nullptr);
+  std::vector<void*> unpack_from_ptr_list(nccl_num, nullptr);
+  std::vector<DataType> dtype_list(nccl_num, DataType::kInvalidDataType);
+  for (int32_t i = 0; i < nccl_num; ++i) {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", i);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", i);
+    pack_to_ptr_list.at(i) = in->dptr();
+    unpack_from_ptr_list.at(i) = out->mut_dptr();
+    dtype_list.at(i) = in->data_type();
+    CHECK_EQ(dtype_list.at(i), out->data_type());
+  }
+
+  // try to do pack before all nccl
+  for (int32_t i = 0; i < nccl_num; ++i) {
+    if (kernel_state->tmp_buffer_size(i) == 0) { continue; }
+    const user_op::Tensor* in = ctx->TensorDesc4ArgNameAndIndex("in", i);
+    // TODO(chengcheng): refactor code by template.
+    pack_to_ptr_list.at(i) = UpdatePackToPtrByNcclType(pack_to_ptr_list.at(i), 
+        nccl_type_list.at(i), tmp_buffer, kernel_state, i);
+    unpack_from_ptr_list.at(i) = UpdateUnpackFromPtrByNcclType(unpack_from_ptr_list.at(i), 
+        nccl_type_list.at(i), tmp_buffer, kernel_state, in, i);
+    DoPackBeforeNcclGroup(pack_to_ptr_list.at(i), nccl_type_list.at(i), in, ctx, kernel_state, i);
+  }
+
+  // do nccl compute in group
+  OF_NCCL_CHECK(ncclGroupStart());
+  for (int32_t i = 0; i < nccl_num; ++i) {
     LOG(INFO) << " === i = " << i << " , src_split_axis = " << kernel_state->src_split_axis(i)
               << " , dst_split_axis = " << kernel_state->dst_split_axis(i)
               << " , tmp_buffer_offset = " << kernel_state->tmp_buffer_offset(i);
+    DoNcclComputeByNcclTypeInGroup(pack_to_ptr_list.at(i), unpack_from_ptr_list.at(i), 
+        nccl_type_list.at(i), in, ctx, kernel_state, i);
+  }
+  OF_NCCL_CHECK(ncclGroupEnd());
+
+  // try to do unpack after all nccl
+  for (int32_t i = 0; i < nccl_num; ++i) {
+  
   }
 }
 
