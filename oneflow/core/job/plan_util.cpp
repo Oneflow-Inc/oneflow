@@ -1015,6 +1015,7 @@ void PlanUtil::GenCollectiveBoxingPlan(
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
+  /*
   if (request_set->request_size() == 6
       && request_set->request().at(0).op_desc().name()
              == "System-Boxing-NcclCollectiveBoxingP2SNoncontinuous-68") {
@@ -1045,6 +1046,7 @@ void PlanUtil::GenCollectiveBoxingPlan(
     GetReq(5)->set_order(4);
     GetReq(5)->set_dependency_depth(2);
   }
+  */
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
