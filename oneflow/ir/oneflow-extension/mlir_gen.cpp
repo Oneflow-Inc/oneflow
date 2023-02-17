@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
+#include "PyAst/AstMlirGen.h"
 
 // declare any scope variables in the front of function block to ensure the enough lifetime.
 mlir::LogicalResult BuilderWithSymbolTable::Declare(const std::string& var, mlir::Value value) {

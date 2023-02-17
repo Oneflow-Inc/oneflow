@@ -14,12 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <stdexcept>
+#include "fmt/core.h"
+#include "fmt/color.h"
+#include "fmt/ostream.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -313,19 +318,53 @@ std::string GetStackedErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
+  std::string error_str;
   if (IsInDebugMode()) {
-    return GetStackedErrorString(error);
+    error_str = GetStackedErrorString(error);
   } else {
-    return error->error_proto()->msg();
+    error_str = error->error_proto()->msg();
   }
+  if (error_str.empty()) { error_str = "<No error message>"; }
+  return error_str;
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
+  std::string error_str;
+  fmt::format_to(std::back_inserter(error_str), "{}: {}\n",
+                 fmt::styled("Error", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
+                 GetErrorString(error));
+  // Append foreign stack trace (e.g. Python stack trace) when it is available.
+  if (ForeignFrameThreadLocalGuard::Current().has_value()) {
+    auto frame = *CHECK_JUST(ForeignFrameThreadLocalGuard::Current());
+    if (!IsMainThread()) {
+      if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+        fmt::format_to(std::back_inserter(error_str),
+                       fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                       "Related Python stack trace:");
+        if (IsPythonStackGetterEnabledByDebugBuild()) {
+          fmt::format_to(
+              std::back_inserter(error_str),
+              " (You are seeing this stack trace because you compiled OneFlow with "
+              "CMAKE_BUILD_TYPE=Debug. If you want to see it even with other CMAKE_BUILD_TYPEs, "
+              "you can set ONEFLOW_DEBUG or ONEFLOW_PYTHON_STACK_GETTER to 1)");
+        }
+        fmt::format_to(std::back_inserter(error_str), "\n{}",
+                       stack_getter->GetFormattedStack(frame));
+      } else {
+        fmt::format_to(
+            std::back_inserter(error_str),
+            "You can set {} or {} to 1 to get the Python stack of the error.",
+            fmt::styled("ONEFLOW_DEBUG", fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)),
+            fmt::styled("ONEFLOW_PYTHON_STACK_GETTER",
+                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)));
+      }
+    }
+  }
   *MutThreadLocalError() = error;
-  if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
-  if ((*error)->has_type_error()) { throw TypeException(GetErrorString(error)); }
-  if ((*error)->has_index_error()) { throw IndexException(GetErrorString(error)); }
-  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
+  if ((*error)->has_runtime_error()) { throw RuntimeException(error_str); }
+  if ((*error)->has_type_error()) { throw TypeException(error_str); }
+  if ((*error)->has_index_error()) { throw IndexException(error_str); }
+  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(error_str); }
   throw Exception(GetStackedErrorString(error));
 }
 

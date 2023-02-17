@@ -213,6 +213,7 @@ class Actor : public ActorBase {
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 
   std::deque<ActorMsg> async_msg_queue_;
+  std::vector<ActorMsg> sync_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
 };

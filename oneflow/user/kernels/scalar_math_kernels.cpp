@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -68,7 +69,7 @@ auto BroadcastElementwiseAttrBinaryPrimitiveExists() {
 }  // namespace
 
 template<ep::primitive::BinaryOp op>
-class ScalarMathKernel final : public user_op::OpKernel {
+class ScalarMathKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ScalarMathKernel() = default;
   ~ScalarMathKernel() = default;

@@ -67,16 +67,26 @@ class ConvBaseFunctor {
  public:
   explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
-    enable_fused_conv_bias_ =
-        ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false);
+    enable_fused_conv_bias_ = ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "conv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "conv2d";
+    } else {
+      func_name = "conv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
@@ -94,14 +104,20 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
+                                            conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {unsqueezed_input, weight}, conv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_conv_output = conv_out;
+    if (!is_batched) {
+      squeezed_conv_output = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
-      return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
+      return functional::BiasAdd(squeezed_conv_output, JUST(bias), channel_idx);
     } else {
-      return conv_out;
+      return squeezed_conv_output;
     }
   }
 
@@ -149,13 +165,25 @@ class DeConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "deconv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "deconv2d";
+    } else {
+      func_name = "deconv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
+    int32_t channel_idx = 1;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
@@ -169,13 +197,19 @@ class DeConvBaseFunctor {
     deconv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(1) * groups), kernel_size_vec,
                              padding, output_padding, stride, dilation, groups, data_format);
     std::shared_ptr<one::Tensor> deconv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {unsqueezed_input, weight}, deconv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_deconv_output = deconv_out;
+    if (!is_batched) {
+      squeezed_deconv_output = JUST(functional::Squeeze(deconv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
-      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(channel_idx));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {squeezed_deconv_output, JUST(bias)},
+                                            bias_attrs);
     } else {
-      return deconv_out;
+      return squeezed_deconv_output;
     }
   }
 
@@ -648,6 +682,79 @@ class FusedMLPFunctor {
 #if CUDA_VERSION >= 11060
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 #endif
+};
+
+class FusedMatmulBiasFunctor {
+ public:
+  FusedMatmulBiasFunctor() {
+    _with_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                            .Input("x")
+                                            .Input("weight")
+                                            .Input("bias")
+                                            .Input("_add_to_output")
+                                            .Output("out")
+                                            .Build());
+    _without_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                               .Input("x")
+                                               .Input("weight")
+                                               .Input("bias")
+                                               .Output("out")
+                                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const Optional<one::Tensor>& _add_to_output) const {
+    /*
+    x: (m_i, ... m_0, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    const int64_t k = x_shape->At(x->shape()->NumAxes() - 1);
+
+    const auto& weight_shape = weight->shape();
+    const auto& bias_shape = bias->shape();
+
+    CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "Weight's dim size should == 2";
+    CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Bias's dim size should == 1";
+
+    const int64_t n = weight_shape->At(0);
+    CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
+        << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
+    CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+        << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
+
+#if CUDA_VERSION >= 11020
+    DeviceType device_type{};
+    if (x->is_global()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if (device_type == DeviceType::kCUDA) {
+      if (_add_to_output) {
+        return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
+                                              {x, weight, bias, JUST(_add_to_output)});
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
+    }
+#endif  // CUDA_VERSION >= 11020
+
+    auto matmul_bias = JUST(functional::BiasAdd(
+        JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
+    if (_add_to_output) {
+      return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+    }
+    return matmul_bias;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> _with_add_to_output_op;
+  std::shared_ptr<OpExpr> _without_add_to_output_op;
 };
 
 class FusedMatmulBiasAddReluDropoutFunctor {
@@ -2019,14 +2126,35 @@ class CtcLossFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
+    DeviceType log_probs_device_type;  // NOLINT
+    if (log_probs->is_local()) {
+      log_probs_device_type = JUST(log_probs->device())->enum_type();
+    } else {
+      log_probs_device_type = JUST(log_probs->parallel_desc())->device_type();
+    }
+    const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
+    std::shared_ptr<one::Tensor> target_lengths_on_log_probs_device =
+        JUST(functional::To(target_lengths, log_probs_device_str));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+          *op_,
+          {
+              log_probs,
+              JUST(functional::To(targets, log_probs_device_str)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
+          attrs));
     } else {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
-          {log_probs, JUST(functional::Cast(targets, DType::Int64(), false)), input_lengths,
-           target_lengths},
+          {
+              log_probs,
+              JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
+                                  DType::Int64(), false)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
           attrs));
     }
     if (zero_infinity) {
@@ -2071,7 +2199,7 @@ class CtcLossFunctor {
           })
           .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>({}),
                           false))
-          .call(target_lengths, Scalar(1), NullOpt);
+          .call(target_lengths_on_log_probs_device, Scalar(1), NullOpt);
     }
     return out;
   }
@@ -2213,7 +2341,7 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << Error::RuntimeError()
-        << "Both moving_mean and moving_variance should be None or Tensor.";
+        << "Both running_mean and running_variance should be None or Tensor.";
 
     const DataType dtype = x->dtype()->data_type();
 
@@ -2441,8 +2569,7 @@ class ConstantPadFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("padding", "floating_constant_value",
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
-    if (IsFloatingDataType(input->dtype()->data_type())
-        || input->dtype()->data_type() == DataType::kFloat16) {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
@@ -2740,14 +2867,13 @@ Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float
   if (p == 1) {
     std::shared_ptr<Tensor> other =
         JUST(Constant(*input->shape(), Scalar(0.0), input->dtype(), JUST(input->device())));
-    return InplaceMul(input, other);
+    return Mul(input, other);
   }
   std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
   noise =
       JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator()), false));
   noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
-  noise = JUST(InplaceMul(input, noise));
-  return noise;
+  return JUST(Mul(input, noise));
 }
 }  // namespace
 
@@ -2755,16 +2881,17 @@ class Dropout1dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, true)
-        << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
+    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, false)
+        << "dropout1d: Expected 2D or 3D input, but received a " << input_dim
+        << "D input. "
            "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
            "spatial dimension, a channel dimension, and an optional batch dimension "
            "(i.e. 2D or 3D inputs).";
     bool is_batched = (input_dim == 3);
-    std::shared_ptr<one::Tensor> result;
+    std::shared_ptr<one::Tensor> result = input;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
     result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
@@ -2776,21 +2903,26 @@ class Dropout2dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
-        << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
-           "and will result in an error in a future release. To retain the behavior "
-           "and silence this warning, please use dropout instead. Note that dropout2d "
-           "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
-           "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
-    CHECK_EQ_OR_RETURN(input_dim == 3, true)
-        << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
-           "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
-           "is the channel dim. This behavior will change in a future release to interpret the "
-           "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
-           "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    if (input_dim != 3 && input_dim != 4) {
+      LOG(WARNING)
+          << "dropout2d: Received a " << input_dim
+          << "-D input to dropout2d, which is deprecated "
+             "and will result in an error in a future release. To retain the behavior "
+             "and silence this warning, please use dropout instead. Note that dropout2d "
+             "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+             "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    }
+    if (input_dim == 3) {
+      LOG(WARNING)
+          << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+             "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+             "is the channel dim. This behavior will change in a future release to interpret the "
+             "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+             "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    }
     return JUST(DropoutImpl(input, p, training));
   }
 };
@@ -2799,17 +2931,20 @@ class Dropout3dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
-        << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
-           "and will result in an error in a future release. To retain the behavior "
-           "and silence this warning, please use dropout instead. Note that dropout3d "
-           "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
-           "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    if (input_dim != 4 && input_dim != 5) {
+      LOG(WARNING)
+          << "dropout3d: Received a " << input_dim
+          << "-D input to dropout3d, which is deprecated "
+             "and will result in an error in a future release. To retain the behavior "
+             "and silence this warning, please use dropout instead. Note that dropout3d "
+             "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+             "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    }
     bool is_batched = (input_dim == 5);
-    std::shared_ptr<one::Tensor> result;
+    std::shared_ptr<one::Tensor> result = input;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
     result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
@@ -3370,6 +3505,100 @@ class FusedBiasAddDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
+};
+
+class FusedGluFunctor {
+ public:
+  FusedGluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                         .Input("x")
+                         .Input("w")
+                         .Input("b")
+                         .Output("y")
+                         .Output("matmul_wx")
+                         .Build());
+
+    split_op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                               .Input("x")
+                               .Input("w")
+                               .Input("b")
+                               .Input("v")
+                               .Input("c")
+                               .Output("y")
+                               .Output("matmul_wx")
+                               .Output("matmul_vx")
+                               .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& w,
+                           const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
+                           const Optional<one::Tensor>& c, const std::string& activation) const {
+    // check whether the user provide splited tensors
+    bool is_split_mode = false;
+    if (v && c) {
+      is_split_mode = true;
+    } else if (!v && !c) {
+      is_split_mode = false;
+    } else {
+      return Error::RuntimeError() << "expected consistant existance of tensor v and c";
+    }
+
+    // obtain input shape
+    const auto& x_shape = *(x->shape());
+    const auto& w_shape = *(w->shape());
+    const auto& b_shape = *(b->shape());
+
+    // check number of axes of x, w and b
+    CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
+        << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
+        << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
+        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+
+    // check input shapes of w and b
+    size_t x_num_axes = x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.At(1), x_shape.At(x_num_axes - 1))
+        << "dimension 1 of \'w\'(" << w_shape.At(1)
+        << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
+        << ")";
+    CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
+        << "dimension 0 of \'b\'(" << b_shape.At(0)
+        << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    if (!is_split_mode) {
+      CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
+    }
+
+    // check both dimensions and input shapes of v and c (optional)
+    if (is_split_mode) {
+      const auto& v_shape = *(JUST(v)->shape());
+      const auto& c_shape = *(JUST(c)->shape());
+
+      CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
+          << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
+          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+
+      CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
+      CHECK_OR_RETURN(c_shape == b_shape) << "the shape of \'c\' is not consistant with \'b\'";
+    }
+
+    // set activation attribute
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
+    attrs.SetAllAttrs(activation);
+
+    // dispatch corresponding operator
+    if (is_split_mode) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> split_op_;
 };
 
 class FusedScaleTrilFunctor {
@@ -4681,13 +4910,118 @@ class FusedMultiHeadAttentionInferenceFunctor {
                          .Input("value")
                          .Output("out")
                          .Build());
+    op_with_attn_bias_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
+                                        .Input("query")
+                                        .Input("key")
+                                        .Input("value")
+                                        .Input("attn_bias")
+                                        .Output("out")
+                                        .Build());
   }
   Maybe<Tensor> operator()(
       const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
       const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
       const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
       const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
+      const Optional<one::Tensor>& attn_bias) const {
+    CHECK_EQ_OR_RETURN(query->shape()->NumAxes(), 3)
+        << "The number of dimensions of the query tensor should be 3.";
+    CHECK_EQ_OR_RETURN(key->shape()->NumAxes(), 3)
+        << "The number of dimensions of the key tensor should be 3.";
+    CHECK_EQ_OR_RETURN(value->shape()->NumAxes(), 3)
+        << "The number of dimensions of the value tensor should be 3.";
+    const int64_t batch_size = query->shape()->At(0);
+    CHECK_EQ_OR_RETURN(key->shape()->At(0), batch_size)
+        << "The size of the first dimension of the key tensor should be the same as that of the "
+           "query tensor.";
+    CHECK_EQ_OR_RETURN(value->shape()->At(0), batch_size)
+        << "The size of the first dimension of the value tensor should be the same as that of the "
+           "query tensor.";
+    const int64_t query_seq_len = query->shape()->At(1);
+    const int64_t kv_seq_len = key->shape()->At(1);
+    CHECK_EQ_OR_RETURN(value->shape()->At(1), kv_seq_len)
+        << "The size of the second dimension of the value tensor should be the same as that of the "
+           "key tensor.";
+
+    auto CheckHiddenSize = [num_heads](const std::string& tensor_name, int64_t slice_start,
+                                       int64_t slice_end, int64_t dim_size) -> Maybe<int64_t> {
+      CHECK_GE_OR_RETURN(slice_start, 0)
+          << tensor_name
+          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
+             "of the last dimension of the query tensor.";
+      CHECK_LT_OR_RETURN(slice_start, dim_size)
+          << tensor_name
+          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
+             "of the last dimension of the query tensor.";
+      if (slice_end == -1) {
+        slice_end = dim_size;
+      } else {
+        CHECK_GT_OR_RETURN(slice_end, 0)
+            << tensor_name
+            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
+               "of the last dimension of the "
+            << tensor_name << " tensor.";
+        CHECK_LE_OR_RETURN(slice_end, dim_size)
+            << tensor_name
+            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
+               "of the last dimension of the "
+            << tensor_name << " tensor.";
+        CHECK_GT_OR_RETURN(slice_end, slice_start)
+            << tensor_name << "_hidden_slice_end should be greater than " << tensor_name
+            << "_hidden_start.";
+      }
+      const int64_t hidden_size = slice_end - slice_start;
+      CHECK_EQ_OR_RETURN(hidden_size % num_heads, 0)
+          << "The hidden size of the " << tensor_name
+          << " should be a multiple of the number of heads.";
+      return hidden_size;
+    };
+    const int64_t query_hidden_size = JUST(CheckHiddenSize(
+        "query", query_hidden_slice_start, query_hidden_slice_end, query->shape()->At(2)));
+    const int64_t key_hidden_size = JUST(
+        CheckHiddenSize("key", key_hidden_slice_start, key_hidden_slice_end, key->shape()->At(2)));
+    CHECK_EQ_OR_RETURN(key_hidden_size, query_hidden_size)
+        << "The hidden size of the query and key must be the same.";
+    CHECK_EQ_OR_RETURN((query_hidden_size / num_heads) % 8, 0)
+        << "The head size of query and key should be a multiple of 8.";
+    const int64_t value_hidden_size = JUST(CheckHiddenSize(
+        "value", value_hidden_slice_start, value_hidden_slice_end, value->shape()->At(2)));
+    CHECK_EQ_OR_RETURN((value_hidden_size / num_heads) % 8, 0)
+        << "The head size of value should be a multiple of 8.";
+    if (attn_bias) {
+      const auto attn_bias_shape = JUST(attn_bias)->shape();
+      const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
+      CHECK_GT_OR_RETURN(num_attn_bias_axes, 0)
+          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
+             "equal to 4.";
+      CHECK_LE_OR_RETURN(num_attn_bias_axes, 4)
+          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
+             "equal to 4.";
+      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
+          << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
+             "second dimension of the key tensor";
+      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
+          << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
+      if (num_attn_bias_axes >= 2) {
+        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
+                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= query_seq_len)
+            << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
+               "second dimension of the query tensor or equal to 1.";
+      }
+      if (num_attn_bias_axes >= 3) {
+        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1
+                        || attn_bias_shape->At(num_attn_bias_axes - 3) == num_heads)
+            << "The size of the -3 dimension of attn_bias should be equal to num_heads or equal to "
+               "1.";
+      }
+      if (num_attn_bias_axes == 4) {
+        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == batch_size)
+            << "The size of the -4 dimension of attn_bias should be equal to the first dimension "
+               "of the query tensor or equal to 1.";
+      }
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
                                                  "query_hidden_slice_end", "key_hidden_slice_start",
                                                  "key_hidden_slice_end", "value_hidden_slice_start",
@@ -4695,11 +5029,17 @@ class FusedMultiHeadAttentionInferenceFunctor {
     attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
                       key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
                       value_hidden_slice_end);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+    if (attn_bias) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_attn_bias_,
+                                            {query, key, value, JUST(attn_bias)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_attn_bias_;
 };
 
 class FusedFastGeluMulFunctor {
@@ -4833,6 +5173,38 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
+class MultiTensorYoloV5WeightUpdateFunctor {
+ public:
+  MultiTensorYoloV5WeightUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_yolov5_weight_update")
+                              .Input("model", n + 1)
+                              .Input("model_update", n + 1)
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_update,
+                         const float& d) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("d");
+    attrs.SetAllAttrs(d);
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(size * 2);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_update.begin() + i, model_update.begin() + i + size,
+                input.begin() + 1 * size);
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4853,6 +5225,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
+  m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
@@ -4919,6 +5292,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedGluFunctor>("FusedGlu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
@@ -4962,6 +5336,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 
 }  // namespace functional

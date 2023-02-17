@@ -24,7 +24,7 @@ from oneflow import nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 from oneflow import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 
 
 @flow.unittest.skip_unless_1n4d()
@@ -466,8 +466,7 @@ def _test_cpu_p2b_with_random_parameter(test_case, device_list):
     for _ in range(10):
         seed = flow.tensor(gen_int(1, 1000, 1))
         seed = seed.to_global(
-            placement=flow.env.all_device_placement(seed.device.type),
-            sbp=flow.sbp.broadcast,
+            placement=flow.placement.all(seed.device.type), sbp=flow.sbp.broadcast,
         )
         seed = int(seed.to_local().numpy())
         kdtype, shape = choose_shape_and_dtype(seed)
@@ -513,8 +512,7 @@ def _test_cpu_s2b_with_random_parameter(test_case, device_list):
     for _ in range(10):
         seed = flow.tensor(gen_int(1, 1000, 1))
         seed = seed.to_global(
-            placement=flow.env.all_device_placement(seed.device.type),
-            sbp=flow.sbp.broadcast,
+            placement=flow.placement.all(seed.device.type), sbp=flow.sbp.broadcast,
         )
         seed = int(seed.to_local().numpy())
         kdtype, shape = choose_shape_and_dtype(seed)
@@ -562,8 +560,7 @@ def _test_cpu_p2s_with_random_parameter(test_case, device_list):
     for _ in range(10):
         seed = flow.tensor(gen_int(1, 1000, 1))
         seed = seed.to_global(
-            placement=flow.env.all_device_placement(seed.device.type),
-            sbp=flow.sbp.broadcast,
+            placement=flow.placement.all(seed.device.type), sbp=flow.sbp.broadcast,
         )
         seed = int(seed.to_local().numpy())
         kdtype, shape = choose_shape_and_dtype(seed)
