@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include <bits/stdint-intn.h>
 #include <vector>
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
@@ -412,23 +414,15 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
 
 // Judge whether a is suitable than b for a gap
 bool SuitableThan(int64_t a, int64_t b) {
-  // a is suitable than b under these cases:
-  // a >= 0, b >= 0, a < b
-  // a >= 0 > b
-  // a < 0, b < 0, a > b
-  if (a >= 0) {
-    if (b >= 0) {
-      return a < b;
-    } else {
-      return true;
-    }
-  } else {
-    if (b < 0) {
-      return a > b;
-    } else {
-      return false;
-    }
-  }
+  // The number have orders
+  // A non-negative number is always more suitable than a negative number
+  // If a number is non-negative, then the smaller the better
+  // If a number is negative, then the larger the better
+  // 0 > 1 > 2 > ... > 999999999 > -1 > -2 > ... > -99999999
+  // Now we flip the positive part to make it "the larger the better".
+  if (a >= 0) { a = GetMaxVal<int64_t>() - a; }
+  if (b >= 0) { b = GetMaxVal<int64_t>() - b; }
+  return a > b;
 }
 
 void MemReusedAlgorithmAllocateByOrder(
