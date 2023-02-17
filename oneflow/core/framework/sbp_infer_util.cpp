@@ -787,6 +787,52 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
   }
 }
 
+namespace {
+
+bool operator<(const NdSbpSignature& lhs_nd_sbp_sig, const NdSbpSignature& rhs_nd_sbp_sig) {
+  auto Convert = [](const NdSbpSignature& nd_sbp_sig,
+                    std::vector<std::vector<int>>& list_list_sbp) {
+    for (const auto& bn_nd_sbp : nd_sbp_sig.bn_in_op2nd_sbp()) {
+      list_list_sbp.emplace_back();
+      auto& list_sbp = list_list_sbp.back();
+      for (const auto& sbp : bn_nd_sbp.second.sbp_parallel()) {
+        if (sbp.has_broadcast_parallel()) {
+          list_sbp.push_back(-1);
+        } else if (sbp.has_partial_sum_parallel()) {
+          list_sbp.push_back(-2);
+        } else if (sbp.has_split_parallel()) {
+          list_sbp.push_back(sbp.split_parallel().axis());
+        }
+      }
+    }
+  };
+  std::vector<std::vector<int>> lhs;
+  std::vector<std::vector<int>> rhs;
+  Convert(lhs_nd_sbp_sig, lhs);
+  Convert(rhs_nd_sbp_sig, rhs);
+  return lhs < rhs;
+}
+
+}  // namespace
+
+void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list) {
+  std::vector<size_t> indices(nd_sbp_sig_list->size());
+  std::iota(indices.begin(), indices.end(), 0);
+  std::sort(indices.begin(), indices.end(), [nd_sbp_sig_list](size_t lhs, size_t rhs) {
+    return nd_sbp_sig_list->at(lhs) < nd_sbp_sig_list->at(rhs);
+  });
+  auto new_end =
+      std::unique(indices.begin(), indices.end(), [nd_sbp_sig_list](size_t lhs, size_t rhs) {
+        return nd_sbp_sig_list->at(lhs) == nd_sbp_sig_list->at(rhs);
+      });
+  indices.erase(new_end, indices.end());
+  std::vector<NdSbpSignature> new_nd_sbp_sig_list;
+  for (size_t index : indices) {
+    new_nd_sbp_sig_list.emplace_back(std::move(nd_sbp_sig_list->at(index)));
+  }
+  *nd_sbp_sig_list = std::move(new_nd_sbp_sig_list);
+}
+
 // Compute storage per device for given NdSbp
 double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy) {
   if (nd_sbp.sbp_parallel_size() == 1) {

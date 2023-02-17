@@ -36,11 +36,13 @@ namespace oneflow {
     user_op::GetNdSbpSignatureListContext* ctx) {
   const Shape& in_shape = ctx->BlobShape4InputArgNameAndIndex("in", 0);
   const Shape& shape_attr = ctx->Attr<Shape>("shape");
-  const Shape& out_shape = *JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_attr));
+  std::shared_ptr<Shape> out_shape_ptr =
+      JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_attr));
 
   std::vector<NdSbpSignature>* nd_sbp_sig_list = ctx->MutNdSbpSignatureList();
-  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}}, out_shape,
-                                                   ctx->parallel_hierarchy(), nd_sbp_sig_list));
+  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}},
+                                                   *out_shape_ptr, ctx->parallel_hierarchy(),
+                                                   nd_sbp_sig_list));
 
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
@@ -48,7 +50,7 @@ namespace oneflow {
     const auto& out_nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find("out_0");
     CHECK_OR_RETURN(out_nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
         << "can't get sbp for out_0";
-    Shape out_logical_shape = out_shape;
+    Shape out_logical_shape = *out_shape_ptr;
     // filter by output only be needed here
     // filter by input will be done in Operator::FilterNdSbpSignatureListByLogicalShape
     if (Storage4NdSbp(out_nd_sbp_it->second, out_logical_shape, ctx->parallel_hierarchy())
@@ -58,6 +60,8 @@ namespace oneflow {
       nd_sbp_sig_list->pop_back();
     }
   }
+
+  DeduplicateNdSbpSignatureList(nd_sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
