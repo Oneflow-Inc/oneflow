@@ -42,7 +42,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         --group_size 2 \
         --auto_cuda_visible_devices \
         --device_num $multi_launch_device_num \
-        -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS} --verbose
+        -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS}
 
     export ONEFLOW_TEST_DEVICE_NUM=4
     time python3 ${src_dir}/ci/test/multi_launch.py \
@@ -51,7 +51,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         --group_size 4 \
         --device_num $multi_launch_device_num \
         --auto_cuda_visible_devices \
-        -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS} --verbose
+        -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS}
 else
     python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
 fi
