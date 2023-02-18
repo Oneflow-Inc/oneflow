@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 
 struct ScalarFloorModGradCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = true;
 };
 
 class ScalarFloorModGrad : public OpExprGradFunction<ScalarFloorModGradCaptureState> {
