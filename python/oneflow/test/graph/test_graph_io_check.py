@@ -27,7 +27,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 from oneflow.nn.graph import GraphModule
 
 
