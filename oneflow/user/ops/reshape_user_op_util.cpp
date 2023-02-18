@@ -336,8 +336,9 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(
         group_out_dim_vec.push_back(out_shape[out_axis]);
         group_out_axes.push_back(out_axis);
         // enumerate all nd-split signatures for one group
-        EnumerateNdSplitIn2OutAxis(Shape(group_in_dim_vec), group_in_axes, Shape(group_out_dim_vec),
-                                   group_out_axes, rank_mesh, nd_sbp_in2out_sig_groups);
+        JUST(EnumerateNdSplitIn2OutAxis(Shape(group_in_dim_vec), group_in_axes,
+                                        Shape(group_out_dim_vec), group_out_axes, rank_mesh,
+                                        nd_sbp_in2out_sig_groups));
         group_in_dim_vec.clear();
         group_out_dim_vec.clear();
         group_in_axes.clear();
@@ -356,8 +357,8 @@ Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
     std::vector<std::vector<std::pair<int, int>>>* nd_sbp_sig_list) {
   std::map<int, std::pair<int, int>> nd_sbp_sig_group;
   std::set<std::vector<std::pair<int, int>>> nd_sbp_sig_set;
-  DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, nd_sbp_sig_group,
-                                 nd_sbp_sig_set);
+  JUST(DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, nd_sbp_sig_group,
+                                      nd_sbp_sig_set));
   std::copy(nd_sbp_sig_set.begin(), nd_sbp_sig_set.end(), back_inserter(*nd_sbp_sig_list));
   return Maybe<void>::Ok();
 }
