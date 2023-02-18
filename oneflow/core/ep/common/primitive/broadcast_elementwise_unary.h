@@ -154,6 +154,12 @@ class OffsetToIndexWithStrideCalculator {
     index[n - 1] = remaining;
   }
 
+  OF_DEVICE_FUNC T divides(T remaining, int64_t i) const {
+    return math_helper_[i].divides(remaining);
+  }
+
+  OF_DEVICE_FUNC T mul(T idx, int64_t i) const { return math_helper_[i].mul(idx); }
+
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
  private:
@@ -171,7 +177,7 @@ class OffsetToIndexWithStrideCalculator {
   FastIntegerMath<T> math_helper_[N];
 };
 
-#define UNARY_BROADCAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
+#define UNARY_IDENTITY_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
 #define BROADCAST_ELEMENTWISE_CAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCast)
 
 }  // namespace broadcast_elementwise_unary
