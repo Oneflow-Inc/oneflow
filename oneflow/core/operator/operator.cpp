@@ -542,7 +542,7 @@ Maybe<void> Operator::GetNdSbpSignatureList(
   CHECK_OR_RETURN(nd_sbp_sig_list->empty());
   DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, *parallel_desc.hierarchy(),
                        hierarchy_value2sbp_sig_list, nd_sbp_sig_list);
-  EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+  JUST(EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   return Maybe<void>::Ok();
 }
 
