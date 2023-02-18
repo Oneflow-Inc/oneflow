@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -367,7 +368,9 @@ Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
     std::set<std::vector<std::pair<int, int>>>& nd_sbp_sig_set) {
   if (nd_sbp_sig_group.size() == rank_num_axes) {
     std::vector<std::pair<int, int>> nd_sbp_sig;
-    for (int i = 0; i < rank_num_axes; ++i) { nd_sbp_sig.emplace_back(nd_sbp_sig_group.at(i)); }
+    for (int i = 0; i < rank_num_axes; ++i) {
+      nd_sbp_sig.emplace_back(JUST(MapAt(nd_sbp_sig_group, i)));
+    }
     nd_sbp_sig_set.emplace(nd_sbp_sig);
   } else {
     for (const auto& nd_sbp_sig_group_to_combine : nd_sbp_sig_groups) {
@@ -382,8 +385,8 @@ Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
         CHECK_OR_RETURN(new_nd_sbp_sig_group.emplace(rank_axis, rank_in2out_pair.second).second);
       }
       if (!combine_failed) {
-        DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, new_nd_sbp_sig_group,
-                                       nd_sbp_sig_set);
+        JUST(DfsCombineNdSbpSignatureGroups(nd_sbp_sig_groups, rank_num_axes, new_nd_sbp_sig_group,
+                                            nd_sbp_sig_set));
       }
     }
   }
@@ -393,12 +396,12 @@ Maybe<void> ReshapeUserOpUtil::DfsCombineNdSbpSignatureGroups(
 Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpIn2OutSignatures(
     const Shape& in_shape, const Shape& out_shape, const Shape& rank_mesh,
     std::vector<std::vector<std::pair<int, int>>>* nd_sbp_in2out_signatures) {
-  CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0)
+  CHECK_GT_OR_RETURN(in_shape.size(), 0)
       << Error::RuntimeError() << "The dimension of input tensor must be greater than zero, "
-      << "but got " << in_shape.NumAxes();
-  CHECK_GT_OR_RETURN(out_shape.NumAxes(), 0)
+      << "but got " << in_shape.size();
+  CHECK_GT_OR_RETURN(out_shape.size(), 0)
       << Error::RuntimeError() << "The dimension of output tensor must be greater than zero, "
-      << "but got " << out_shape.NumAxes();
+      << "but got " << out_shape.size();
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt())
       << Error::RuntimeError()
       << "The element number of input tensor must be equal to output tensor, "
@@ -419,8 +422,8 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpIn2OutSignatures(
     nd_sbp_in2out_group.clear();
   }
 
-  DfsCombineNdSbpSignatureGroups(nd_sbp_signature_groups, rank_mesh.size(),
-                                 nd_sbp_in2out_signatures);
+  JUST(DfsCombineNdSbpSignatureGroups(nd_sbp_signature_groups, rank_mesh.size(),
+                                      nd_sbp_in2out_signatures));
   return Maybe<void>::Ok();
 }
 
@@ -430,7 +433,7 @@ Maybe<void> ReshapeUserOpUtil::FilterNdSbpIn2OutSignatures(
   // filter the Nd SBP candidates
   // Go down from the tail to the head, since we might drop the tail.
   for (int i = nd_sbp_in2out_signatures->size() - 1; i >= 0; --i) {
-    auto& nd_sbp_sig = nd_sbp_in2out_signatures->at(i);
+    auto& nd_sbp_sig = (*nd_sbp_in2out_signatures)[i];
     CHECK_EQ_OR_RETURN(nd_sbp_sig.size(), rank_mesh.size());
     bool match_failed = false;
     DimVector in_dim_vec = in_shape.dim_vec();
@@ -471,7 +474,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
     std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   if (in_shape.elem_cnt() == 0) { return Maybe<void>::Ok(); }
-  if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
+  if (in_shape.size() == 0 || out_shape.size() == 0) { return Maybe<void>::Ok(); }
   std::vector<std::vector<std::pair<int, int>>> nd_sbp_in2out_sig_list;
   JUST(EnumerateNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh, &nd_sbp_in2out_sig_list));
   JUST(FilterNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh, &nd_sbp_in2out_sig_list));

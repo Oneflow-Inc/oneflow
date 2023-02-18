@@ -46,7 +46,7 @@ namespace oneflow {
 
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
-    auto& nd_sbp_sig = nd_sbp_sig_list->at(sbp_id);
+    auto& nd_sbp_sig = (*nd_sbp_sig_list)[sbp_id];
     const auto& out_nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find("out_0");
     CHECK_OR_RETURN(out_nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
         << "can't get sbp for out_0";
