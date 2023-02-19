@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
-#include <bits/stdint-intn.h>
 #include <vector>
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/data_type.h"
