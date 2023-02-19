@@ -1157,6 +1157,7 @@ class Graph(object):
             ):
                 self._c_nn_graph.align_states_after_logical_graph_compile()
                 self._c_nn_graph.complete_graph_for_runtime()
+                print(self._c_nn_graph.get_current_job_debug_string())
                 # Get compiled job
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
@@ -1477,12 +1478,22 @@ class Graph(object):
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
-            oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
-                convert_to_tensor_tuple(flattened_eager_args),
-                outputs_tensor_tuple,
-                self._c_nn_graph,
-            )
+            vm = True
+            if vm:
+                oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByEager(
+                    convert_to_tensor_tuple(flattened_eager_args),
+                    outputs_tensor_tuple,
+                    self._c_nn_graph,
+                )
+            else:
+                # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
+                oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
+                    convert_to_tensor_tuple(flattened_eager_args),
+                    outputs_tensor_tuple,
+                    self._c_nn_graph,
+                )
+            print(outputs_tensor_tuple[0].numpy())
+            print(eager_outputs[0].numpy())
             # Update outputs buffer reading index
             self._cur_index_of_ouputs_buffer += 1
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
