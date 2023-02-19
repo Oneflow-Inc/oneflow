@@ -919,8 +919,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
-  Singleton<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
@@ -986,6 +986,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
+    // prune depend OP and and add ctrl_in_op to op_conf accordingly
+    // to express the same semantics and avoid performance loss
+    JUST(DoPass("PruneDependOpPass"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     // run FuseAddToOutputPass before IRRoundTripBeforeAD since add_2 maybe
@@ -1031,6 +1034,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("AutoParallelPass"));
+    JUST(DoPass("DelayVariableOpExecutionPass"));
 #ifdef WITH_CUTLASS
     JUST(DoPass("CutlassConvTuningWarmupPass"));
 #endif  // WITH_CUTLASS
