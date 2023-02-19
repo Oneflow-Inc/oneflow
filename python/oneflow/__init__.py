@@ -71,6 +71,11 @@ def is_deprecated(func_or_class):
     )
 
 
+def use_deterministic_algorithms(mode, *, warn_only=False):
+    # register a empty method
+    pass
+
+
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
