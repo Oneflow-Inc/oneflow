@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/dim.h"
 
 namespace oneflow {
 
@@ -42,16 +43,16 @@ class ShapeProto;
  *    So it should be passed by value.
  *
  * When adding new functions accepting a shape as a parameter, please follow
- * the rules:
+ * these rules:
  * 1. If your function doesn't modify the shape, prefer
- *    ShapeView. Shape can be implicitly converted to ShapeView so the method
- *    with ShapeView parameter can accept both Shape and ShapeView actually.
+ *    ShapeView. Shape can be implicitly converted to ShapeView so a function
+ *    with a ShapeView argument can accept both Shape and ShapeView actually.
  * 2. If your function modify the shape but doesn't affect
  *    its rank, prefer MutShapeView. The reason is the same with rule 1.
  * 3. Use Shape otherwise.
  *
  * When adding new member methods of Shape or ShapeView, please follow
- * the rules:
+ * these rules:
  * 1. If the method is shared between Shape and ShapeView (like `NumAxes()`)
  *    please add it to ConstShapeMixIn.
  * 2. If the method is shared between Shape and MutShapeView (like `Set()`)
@@ -83,6 +84,13 @@ struct ConstShapeMixIn {
 
   bool operator==(const T& rhs) const;
 
+  const int64_t* int64_ptr() const {
+#ifndef NDEBUG
+    for (const Dim& dim : *tp()) { CHECK(dim.is_known()); }
+#endif
+    return reinterpret_cast<const int64_t*>(tp()->data());
+  }
+
  protected:
   // tp means "this pointer"
   T* tp() { return static_cast<T*>(this); }
@@ -97,6 +105,20 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
         << " Shape: " << this->tp()->DebugStr() << " visit index: " << index
         << " > num_axes: " << this->tp()->NumAxes();
     (*this->tp())[index] = val;
+  }
+
+  const int64_t* int64_ptr() const {
+#ifndef NDEBUG
+    for (const Dim& dim : *this->tp()) { CHECK(dim.is_known()); }
+#endif
+    return reinterpret_cast<const int64_t*>(this->tp()->data());
+  }
+
+  int64_t* int64_ptr() {
+#ifndef NDEBUG
+    for (const Dim& dim : *(this->tp())) { CHECK(dim.is_known()); }
+#endif
+    return reinterpret_cast<int64_t*>(this->tp()->data());
   }
 };
 

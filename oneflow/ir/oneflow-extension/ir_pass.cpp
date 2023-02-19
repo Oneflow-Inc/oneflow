@@ -118,7 +118,7 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
       const override {
     LogicalBlobId lbi = GenLogicalBlobId(lbn);
     auto& blob_desc = op_graph_.GetLogicalBlobDesc(lbi);
-    cb(blob_desc.shape().dim_vec().begin(), blob_desc.shape().dim_vec().end(),
+    cb(blob_desc.shape().int64_ptr(), blob_desc.shape().int64_ptr() + blob_desc.shape().NumAxes(),
        blob_desc.data_type());
   }
 

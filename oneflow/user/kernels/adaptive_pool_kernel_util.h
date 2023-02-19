@@ -40,9 +40,8 @@ inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
 #define END_IND_INT(a, b, c) (((a + 1) * c + b - 1) / b)
 
 inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
-  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
-                             GetInDim(shape, data_format, 1, dim),
-                             GetInDim(shape, data_format, 2, dim)};
+  DimVector shape_3d = {GetInDim(shape, data_format, 0, dim), GetInDim(shape, data_format, 1, dim),
+                        GetInDim(shape, data_format, 2, dim)};
   return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
 }
 

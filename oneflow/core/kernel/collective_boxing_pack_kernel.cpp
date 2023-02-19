@@ -34,32 +34,32 @@ void CollectiveBoxingPackKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in = ctx->BnInOp2Blob("in");
   Blob* out = ctx->BnInOp2Blob("out");
   const CollectiveBoxingPackOpConf& pack_conf = this->op_conf().collective_boxing_pack_conf();
-  const int64_t num_ranks = pack_conf.num_ranks();
-  const Shape logical_shape(pack_conf.logical_shape());
   const bool need_transpose = !((pack_conf.dst_sbp_parallel().has_split_parallel()
                                  && pack_conf.dst_sbp_parallel().split_parallel().axis() == 0)
                                 || pack_conf.dst_sbp_parallel().has_broadcast_parallel()
                                 || pack_conf.dst_sbp_parallel().has_partial_sum_parallel());
   if (need_transpose) {
+    const int64_t num_ranks = pack_conf.num_ranks();
+    const Shape logical_shape(pack_conf.logical_shape());
     const int64_t dst_split_axis = pack_conf.dst_sbp_parallel().split_parallel().axis();
-    DimVector transpose_in_dim_vec = logical_shape.dim_vec();
+    Shape transpose_in_shape = logical_shape;
     if (pack_conf.src_sbp_parallel().has_split_parallel()) {
       const int64_t src_split_axis = pack_conf.src_sbp_parallel().split_parallel().axis();
-      transpose_in_dim_vec[src_split_axis] = transpose_in_dim_vec.at(src_split_axis) / num_ranks;
+      transpose_in_shape[src_split_axis] = transpose_in_shape.at(src_split_axis) / num_ranks;
     }
-    CHECK_EQ(transpose_in_dim_vec.at(dst_split_axis) % num_ranks, 0);
-    transpose_in_dim_vec[dst_split_axis] = transpose_in_dim_vec.at(dst_split_axis) / num_ranks;
-    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + dst_split_axis, num_ranks);
+    CHECK_EQ(transpose_in_shape.at(dst_split_axis) % num_ranks, 0);
+    transpose_in_shape[dst_split_axis] = transpose_in_shape.at(dst_split_axis) / num_ranks;
+    transpose_in_shape.insert(transpose_in_shape.begin() + dst_split_axis, num_ranks);
     std::vector<int32_t> perm;
     perm.emplace_back(dst_split_axis);
-    FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+    FOR_RANGE(int64_t, i, 0, transpose_in_shape.size()) {
       if (i != dst_split_axis) { perm.emplace_back(i); }
     }
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream()->device_type(), transpose_in_dim_vec.size());
+        ctx->stream()->device_type(), transpose_in_shape.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
-                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
+                      transpose_in_shape.int64_ptr(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
     AutoMemcpy(ctx->stream(), out, in);
   }

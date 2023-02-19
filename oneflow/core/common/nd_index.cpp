@@ -18,15 +18,18 @@ limitations under the License.
 
 namespace oneflow {
 
-NdIndex::NdIndex(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) {}
+NdIndex::NdIndex(const std::initializer_list<int64_t>& vec) : vec_(vec) {}
 
-NdIndex::NdIndex(const DimVector& dim_vec) : dim_vec_(dim_vec) {}
+NdIndex::NdIndex(const DimVector& dim_vec) {
+  vec_.reserve(dim_vec.size());
+  for (int64_t dim : dim_vec) { vec_.push_back(dim); }
+}
 
 NdIndex& NdIndex::operator=(const NdIndex& shape) {
-  dim_vec_ = shape.dim_vec_;
+  vec_ = shape.vec_;
   return *this;
 }
 
-bool NdIndex::operator==(const NdIndex& rhs) const { return dim_vec_ == rhs.dim_vec_; }
+bool NdIndex::operator==(const NdIndex& rhs) const { return vec_ == rhs.vec_; }
 
 }  // namespace oneflow

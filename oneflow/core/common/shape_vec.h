@@ -17,12 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
 
 #include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/dim.h"
 
 namespace oneflow {
 
 #define SHAPE_MAX_AXIS_SIZE 20
 
-typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
+typedef small_vector<Dim, SHAPE_MAX_AXIS_SIZE> DimVector;
 typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
 
 }  // namespace oneflow

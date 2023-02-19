@@ -25,10 +25,10 @@ namespace oneflow {
 
 class Int64ListProto;
 
-class Stride final : public DimVector {
+class Stride final : public small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> {
  public:
   Stride() = default;
-  using DimVector::DimVector;
+  using small_vector<int64_t, SHAPE_MAX_AXIS_SIZE>::small_vector;
   explicit Stride(const ShapeView& shape);
   explicit Stride(const Shape& shape);
   explicit Stride(const std::shared_ptr<Shape>& shape);

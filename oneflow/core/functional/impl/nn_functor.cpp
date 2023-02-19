@@ -2851,12 +2851,12 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   const int64_t ndim = x->ndim();
   CHECK_GE_OR_RETURN(ndim, 2) << Error::RuntimeError()
                               << "Feature dropout requires at least 2 dimensions in the input";
-  std::vector<int64_t> sizes;
+  Shape sizes;
   sizes.reserve(ndim);
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+  return JUST(Empty(sizes, x->dtype(), JUST(x->device()), false));
 }
 
 Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,

@@ -25,19 +25,17 @@ namespace oneflow {
 class ShapeProto;
 class Shape;
 
-class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
+class ShapeView : public ArrayRef<Dim>, public ConstShapeMixIn<ShapeView> {
  public:
   ShapeView() = default;
   // NOLINTNEXTLINE
-  ShapeView(const ShapeProto& shape_proto)
-      : ArrayRef<int64_t>(shape_proto.dim().data(), shape_proto.dim_size()){};
-  // NOLINTNEXTLINE
-  ShapeView(const Shape& shape)
-      : ArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  ShapeView(const Shape& shape) : ArrayRef<Dim>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  ShapeView(const int64_t* start, size_t size)
+      : ArrayRef<Dim>(reinterpret_cast<const Dim*>(start), size) {}
 
-  using ArrayRef<DimType>::ArrayRef;
+  using ArrayRef<Dim>::ArrayRef;
 
-  const DimType* ptr() const { return this->data(); }
+  const Dim* ptr() const { return data(); }
 
   void ToDimVector(DimVector* dim_vec) const;
   void ToShape(Shape* shape) const;
@@ -45,14 +43,16 @@ class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
 
 std::ostream& operator<<(std::ostream& out, ShapeView shape);
 
-class MutShapeView final : public MutableArrayRef<int64_t>, public MutShapeMixIn<MutShapeView> {
+class MutShapeView final : public MutableArrayRef<Dim>, public MutShapeMixIn<MutShapeView> {
  public:
-  using MutableArrayRef<DimType>::MutableArrayRef;
+  using MutableArrayRef<Dim>::MutableArrayRef;
   // NOLINTNEXTLINE
   MutShapeView(Shape& shape)
-      : MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
+      : MutableArrayRef<Dim>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  MutShapeView(int64_t* start, size_t size)
+      : MutableArrayRef<Dim>(reinterpret_cast<Dim*>(start), size) {}
 
-  int64_t* mut_ptr() const { return this->data(); }
+  Dim* mut_ptr() const { return data(); }
 
   void set_shape(ShapeView shape);
 };

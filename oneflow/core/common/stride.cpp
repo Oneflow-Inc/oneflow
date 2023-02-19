@@ -46,7 +46,8 @@ Stride::Stride(const Shape& shape) {
 Stride::Stride(const std::shared_ptr<Shape>& shape) : Stride(*shape) {}
 
 Stride::Stride(const Int64ListProto& stride_proto)
-    : DimVector(stride_proto.dim().begin(), stride_proto.dim().end()) {}
+    : small_vector<int64_t, SHAPE_MAX_AXIS_SIZE>(stride_proto.dim().begin(),
+                                                 stride_proto.dim().end()) {}
 
 Stride& Stride::CheckNumAxesIdenticalAndAssign(const Stride& stride) {
   CHECK_EQ(size(), stride.size());

@@ -170,7 +170,7 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
     padding_after->resize(3);
   }
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = &(*out).at(i);
+    int64_t* out_ptr = reinterpret_cast<int64_t*>(&(*out)[i]);
     int32_t* padding_before_ptr = padding_before ? (&(*padding_before).at(i)) : nullptr;
     int32_t* padding_after_ptr = padding_after ? (&(*padding_after).at(i)) : nullptr;
     if (dilation_rate) {
@@ -191,7 +191,7 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = &(*out).at(i);
+    int64_t* out_ptr = reinterpret_cast<int64_t*>(&(*out)[i]);
     if (dilation_rate) {
       GetWindowedOutputSize(in.at(i), pool_size.at(i), dilation_rate->at(i), strides.at(i),
                             padding_type, ceil_mode, out_ptr, &(padding_before->at(i)),
@@ -217,7 +217,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
                           dilation_rate.Get(i), strides.Get(i), padding,
-                          out ? &(out->at(i)) : nullptr,
+                          out ? reinterpret_cast<int64_t*>(&(out->at(i))) : nullptr,
                           pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                           pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }
@@ -238,7 +238,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
                           dilation_rate.at(i), strides.at(i), padding,
-                          out ? &(out->at(i)) : nullptr,
+                          out ? reinterpret_cast<int64_t*>(&(out->at(i))) : nullptr,
                           pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                           pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }

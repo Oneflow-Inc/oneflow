@@ -399,7 +399,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
   reduce_dims.reserve(expand_shape.size());
 
   for (int i = expand_shape.size() - 1; i >= 0; --i) {
-    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    int64_t dim = i < lpad ? 1 : static_cast<int>(input_shape[i - lpad]);
     if (dim == expand_shape[i]) {
       if (i >= lpad) {
         expand_stride[i] = input_stride[i - lpad];

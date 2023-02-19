@@ -47,6 +47,31 @@ file(
   "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/extension/*.*")
 
+file(GLOB_RECURSE op_kernel_src 
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/*.*"
+  )
+list(REMOVE_ITEM oneflow_all_src ${op_kernel_src})
+list(APPEND oneflow_all_src
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/constant_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/cast_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/communicate_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/stateful_opkernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/random_seed_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/avg_pool_kernel_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/max_pool_kernel_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/max_unpool_kernel_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_where_kernel_util.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_where_kernel_util.cu"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/arg_where_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/empty_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/copy_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/add_n_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/cutlass_conv_tuner.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/to_contiguous_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/to_contiguous_kernel.cu"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/math_binary_broadcast_kernels.cpp"
+  )
+
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
