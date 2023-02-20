@@ -50,7 +50,7 @@ struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.setInsertionPointToStart(&body.front());
 
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okm::GetTensorFromArgOp>(op->getLoc(), arg.value().getType(),
+      auto tensor = rewriter.create<okm::ArgToTensorOp>(op->getLoc(), arg.value().getType(),
                                                              arg.index());
       arg.value().replaceAllUsesWith(tensor);
     }
@@ -63,7 +63,7 @@ struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     llvm::SmallVector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
-      auto new_ret = rewriter.create<okm::GetTensorAsRetOp>(op->getLoc(), ret_val.value().getType(),
+      auto new_ret = rewriter.create<okm::TensorToRetOp>(op->getLoc(), ret_val.value().getType(),
                                                             ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }
@@ -113,7 +113,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     if (auto type = res.getType().dyn_cast_or_null<TensorType>()) {
       int ret_index = -1;
       for (auto use : res.getUsers()) {
-        if (auto to_ret = llvm::dyn_cast_or_null<GetTensorAsRetOp>(use)) {
+        if (auto to_ret = llvm::dyn_cast_or_null<TensorToRetOp>(use)) {
           ret_index = to_ret.index();
           break;
         }
@@ -230,12 +230,12 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     BlockAndValueMapping mapper;
     for (auto& op : ops) {
       llvm::TypeSwitch<Operation*>(&op)
-          .Case<GetTensorFromArgOp>([&](GetTensorFromArgOp op) {
+          .Case<ArgToTensorOp>([&](ArgToTensorOp op) {
             auto mem_type = MemRefType::get(op.getType().getShape(), op.getType().getElementType());
             auto mem_op = rewriter.create<ArgToMemrefOp>(op->getLoc(), mem_type, op.index());
             mapper.map(op, mem_op);
           })
-          .Case<GetTensorAsRetOp>([&](GetTensorAsRetOp op) {
+          .Case<TensorToRetOp>([&](TensorToRetOp op) {
             auto mem_type = MemRefType::get(op.getType().getShape(), op.getType().getElementType());
             rewriter.create<MemrefToRetOp>(op->getLoc(), mem_type, mapper.lookup(op.tensor()),
                                            op.index());
@@ -468,7 +468,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (int idx = 0; idx < ins_num; ++idx) {
       auto val = llvm::TypeSwitch<Operation*, Value>(wrap_mem_op->getOperand(idx).getDefiningOp())
                      .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
-                       return rewriter.create<okl::GetTensorFromArgOp>(
+                       return rewriter.create<okl::ArgToTensorOp>(
                            rewriter.getUnknownLoc(),
                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
                            wrap_func.getArgument(0), op.index());
@@ -496,7 +496,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (int idx = ins_num; idx < outs_num; ++idx) {
       llvm::TypeSwitch<Operation*>(wrap_mem_op->getOperand(idx).getDefiningOp())
           .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
-            return rewriter.create<okl::GetTensorAsRetOp>(
+            return rewriter.create<okl::TensorToRetOp>(
                 rewriter.getUnknownLoc(),
                 memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
                 wrap_func.getArgument(0), new_op->getResult(idx - ins_num), op.index());
