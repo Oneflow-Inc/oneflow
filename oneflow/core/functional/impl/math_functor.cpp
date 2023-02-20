@@ -2670,6 +2670,10 @@ class ScalarLerpFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
                            const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+
     auto broadcast_shape = *start->shape();
     if (*start->shape() != *end->shape()) {
       broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
@@ -2710,6 +2714,10 @@ class ScalarInplaceLerpFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
                            const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+
     auto broadcast_shape = *start->shape();
     if (*start->shape() != *end->shape()) {
       broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));

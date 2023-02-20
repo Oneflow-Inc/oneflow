@@ -426,10 +426,12 @@ class LerpFunctor {
                            const std::shared_ptr<one::Tensor>& end,
                            const std::shared_ptr<one::Tensor>& weight) const {
     const int64_t weight_elem_cnt = weight->nelement();
-    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes());
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
-        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
-        << weight->dtype()->name();
+        << Error::RuntimeError() << "expected dtype " << start->dtype()->name()
+        << " for `weights` but got dtype " << weight->dtype()->name();
 
     auto broadcast_shape = *start->shape();
     if (*start->shape() != *end->shape() || *start->shape() != *weight->shape()) {
@@ -474,10 +476,12 @@ class InplaceLerpFunctor {
                            const std::shared_ptr<one::Tensor>& end,
                            const std::shared_ptr<one::Tensor>& weight) const {
     const int64_t weight_elem_cnt = weight->nelement();
-    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes());
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
-        << Error::RuntimeError() << "expected dtype float for `weights` but got dtype "
-        << weight->dtype()->name();
+        << Error::RuntimeError() << "expected dtype " << start->dtype()->name()
+        << " for `weights` but got dtype " << weight->dtype()->name();
 
     if (weight_elem_cnt == 1 && weight->is_eager() && !weight->requires_grad()) {
       std::shared_ptr<Tensor> cast_double_weight =
