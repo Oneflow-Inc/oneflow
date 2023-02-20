@@ -50,9 +50,7 @@ def permute_final_dims(tensor: flow.Tensor, inds: List[int]):
 
 @timing
 def _fused_op(x, v, scale, mask, bias, inplace=False):
-    out = flow._C.fused_scale_mask_bias_softmax(
-        x, mask, bias, scale, inplace=inplace
-    )
+    out = flow._C.fused_scale_mask_bias_softmax(x, mask, bias, scale, inplace=inplace)
     out = flow.matmul(out, v)
     return out
 

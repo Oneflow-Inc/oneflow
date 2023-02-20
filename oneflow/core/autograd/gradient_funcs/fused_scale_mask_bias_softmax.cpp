@@ -58,9 +58,9 @@ Maybe<void> FusedScaleMaskBiasSoftmax::Capture(FusedScaleMaskBiasSoftmaxCaptureS
                                                const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
-  if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
-
   if (inputs.size() == 3) ctx->bias_requires_grad = inputs.at(2)->requires_grad();
+  if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
+
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
@@ -77,7 +77,8 @@ Maybe<void> FusedScaleMaskBiasSoftmax::Apply(const FusedScaleMaskBiasSoftmaxCapt
   const std::shared_ptr<oneflow::one::Tensor>& input_grad =
       JUST(functional::FusedScaleMaskBiasSoftmaxGrad(y, out_grads.at(0), ctx->scale));
 
-  in_grads->at(0) = input_grad;
+  if (ctx->input_requires_grad) in_grads->at(0) = input_grad;
+
   if (ctx->bias_requires_grad) {
     int batch_dim = (y->shape()->NumAxes() == 5) ? 1 : 0;
     in_grads->at(2) = JUST(functional::ScalarMul(

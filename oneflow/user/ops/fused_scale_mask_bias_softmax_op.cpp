@@ -50,16 +50,16 @@ namespace oneflow {
     CHECK_OR_RETURN(mask_shape[-1] == bias_shape[-1]);
     CHECK_OR_RETURN(mask_shape[0] == bias_shape[0] || bias_shape[0] == 1);
     for (int i = 1; i < x_shape.NumAxes() - 1; i++) {
-      CHECK_OR_RETURN((mask_shape.At(i) == 1 || bias_shape.At(i) == 1)
-                      && mask_shape.at(i) * bias_shape.at(i) == x_shape.At(i));
+      CHECK_OR_RETURN((mask_shape[i] == 1 || bias_shape[i] == 1)
+                      && mask_shape[i] * bias_shape[i] == x_shape[i]);
     }
   } else {
     auto axes = x_shape.NumAxes();
-    CHECK_OR_RETURN(mask_shape.At(axes - 1) == x_shape.At(axes - 1));
+    CHECK_OR_RETURN(mask_shape[-1] == x_shape[-1]);
     bool reach1 = false;
     for (int i = 0; i < axes - 1; i++) {
-      CHECK_OR_RETURN((mask_shape.at(i) == x_shape.At(i) && !reach1) || (1 == mask_shape.At(i)));
-      reach1 = (1 == mask_shape.At(i));
+      CHECK_OR_RETURN((mask_shape[i] == x_shape[i] && !reach1) || (1 == mask_shape[i]));
+      reach1 = (1 == mask_shape[i]);
     }
   }
   ctx->SetOutputShape("out", 0, x_shape);
