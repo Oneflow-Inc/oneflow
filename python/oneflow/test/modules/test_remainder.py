@@ -34,11 +34,11 @@ from packaging import version
 class TestRemainderModule(flow.unittest.TestCase):
     @autotest(n=1, auto_backward=True)
     def test_flow_remainder_element_with_random_data(test_case):
+        ndim=3
         device = random_device()
-        dim1 = random().to(int)
-        dim2 = random().to(int)
-        input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
-        other = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        dims = [random(1, 4) * 2 for i in range(ndim)]
+        input = random_tensor(ndim, *dims).to(device)
+        other = random_tensor(ndim, *dims).to(device)
         return torch.remainder(input, other)
 
     @autotest(n=1, auto_backward=True)
