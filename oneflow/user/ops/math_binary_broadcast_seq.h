@@ -20,15 +20,18 @@ limitations under the License.
 
 namespace oneflow {
 
-#define MATH_BINARY_BROADCAST_FUNC_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", Add)            \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", Sub)            \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", Mul)            \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)            \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min)        \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max)        \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)          \
+#define MATH_BINARY_BROADCAST_FUNC_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", Add)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", Sub)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", Mul)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_and", BitwiseAnd) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_or", BitwiseOr)   \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_xor", BitwiseXor) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)              \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", Pow)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ          \
@@ -44,15 +47,18 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_isclose_eq_nan", IEN) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_isclose_neq_nan", INN)
 
-#define MATH_BINARY_BROADCAST_FUNC_SEQ_ODS            \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastAddOp, Add)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastSubOp, Sub)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMulOp, Mul)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)       \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)       \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod) \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)         \
+#define MATH_BINARY_BROADCAST_FUNC_SEQ_ODS                \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastAddOp, Add)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastSubOp, Sub)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMulOp, Mul)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseAndOp, BitwiseAnd) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseOrOp, BitwiseOr)   \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseXorOp, BitwiseXor) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod)     \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)             \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS      \

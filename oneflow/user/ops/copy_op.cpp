@@ -36,8 +36,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
     return Stream::New(in_device, StreamType::kDevice2Host);
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
-    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, GetH2DStreamType());
+    return Stream::New(out_device, GetH2DStreamType());
   } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));
@@ -80,8 +79,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<Symbol<Stream>> CopyOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  Symbol<Device> out_device =
-      JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
+  Symbol<Device> out_device = ctx->Attr<Symbol<Device>>("device");
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   const bool pin_memory = ctx->Attr<bool>("pin_memory");

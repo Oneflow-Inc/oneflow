@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -85,7 +86,7 @@ void DispatchBinaryConcat(ep::Stream* stream, const int64_t elem_size, const int
   DispatchDataType(stream, rows, in0_cols * elem_size, in1_cols * elem_size, src0, src1, dst);
 }
 
-class ConcatKernel final : public user_op::OpKernel {
+class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConcatKernel() = default;
   ~ConcatKernel() override = default;

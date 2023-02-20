@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 
+#include <glog/logging.h>
 #include "llvm/ADT/SmallVector.h"
 
 namespace oneflow {

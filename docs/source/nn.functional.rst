@@ -27,6 +27,15 @@ Convolution functions
     fold
     unfold
 
+BatchNorm functions
+--------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    batch_norm
+
 Pooling functions
 ----------------------------------
 
@@ -69,6 +78,7 @@ Non-linear activation functions
     prelu
     glu
     gelu
+    quick_gelu
     logsigmoid
     hardshrink
     softsign

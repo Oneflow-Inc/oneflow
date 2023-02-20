@@ -22,7 +22,11 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 import oneflow as flow
 import oneflow.unittest
 import oneflow.sysconfig

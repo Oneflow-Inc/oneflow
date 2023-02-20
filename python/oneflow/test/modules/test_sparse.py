@@ -70,7 +70,7 @@ def _test_embedding_padding_idx(test_case, device):
     embedding(indices).sum().backward()
     after = (embedding.weight + embedding.weight.grad)[padding_idx]
     embedding.zero_grad()
-    test_case.assertTrue(flow.equal(after, pre).all())
+    test_case.assertTrue(flow.equal(after, pre))
 
 
 def _test_embedding_scale_by_freq(test_case, device):
