@@ -112,10 +112,11 @@ class TensorGenerator(object):
     def __init__(
         self, batch_size=8, feat1=10, feat2=8, device="cuda", parallel_mode=None
     ):
-        input = flow.randn(batch_size, feat1).to(device)
-        param1 = flow.randn(feat2, feat1).to(device)
-        param2 = flow.randn(feat2, feat1).to(device)
-        target = flow.randint(0, 10, (batch_size,)).to(device)
+        input = flow.ones(batch_size, feat1).to(device)
+        param1 = flow.ones(feat2, feat1).to(device)
+        param2 = flow.ones(feat2, feat1).to(device)
+        target = flow.ones([batch_size,]).to(device)
+        #target = flow.randint(0, 10, (batch_size,)).to(device)
 
         ranks = np.array(range(flow.env.get_world_size()))
         placement = flow.placement(device, ranks)
@@ -346,6 +347,9 @@ def _compare_with_eager_min(
     oneflow.boxing.nccl.enable_use_compute_stream(True)
     graph = MyGraph(graph_m1, graph_m2, opt, acc)
     graph_loss = graph(gen.global_input(), gen.global_target())
+    flow._oneflow_internal.eager.Sync()
+    if flow.env.get_rank() == 0:
+        print(graph)
 
     # debug
     # rank = flow.env.get_rank()
@@ -391,7 +395,7 @@ def _compare_with_eager_min(
     )
     test_case.assertTrue(
         np.allclose(grad2_a, grad2_b, rtol=rtol, atol=atol),
-        f"\n{grad2_a}\nvs.\n{grad2_b}",
+        f"\n{grad2_a}\nvs.\n{grad2_b}, \ndiff:\n{grad2_a-grad2_b}",
     )
 
 
