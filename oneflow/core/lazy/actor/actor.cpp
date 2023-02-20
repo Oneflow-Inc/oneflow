@@ -426,8 +426,8 @@ void Actor::ActUntilFail() {
     AsyncSendNaiveProducedRegstMsgToConsumer();
     AsyncSendInplaceProducedRegstMsgToConsumer();
 
-    AsyncSendNaiveConsumedRegstMsgToProducer();
     AsyncSendCustomizedConsumedRegstMsgToProducer();
+    AsyncSendNaiveConsumedRegstMsgToProducer();
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
