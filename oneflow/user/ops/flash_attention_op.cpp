@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -93,14 +94,79 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(ctx->inputs(), 0)
-      // TODO:(guoran), cu_seqlens_q size now is batch_size + 1, can it be batch_size? so can set
-      // to s0
-      .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
-      .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
-      .Split(ctx->outputs(), 0)
-      .Build();
+  const bool has_mask = ctx->Attr<bool>("has_mask");
+  const bool has_bias = ctx->Attr<bool>("has_bias");
+  const bool has_indices = ctx->Attr<bool>("has_indices");
+  if (has_mask) {
+    if (has_bias)
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("bias", 0), 1)
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Build();
+    else
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("bias", 0), 1)
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Build();
+  } else {
+    if (has_bias)
+      if (has_indices)
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("query", 0), 2)
+            .Split(user_op::OpArg("key", 0), 2)
+            .Split(user_op::OpArg("value", 0), 2)
+            .Broadcast(user_op::OpArg("indices", 0))
+            .Split(user_op::OpArg("bias", 0), 1)
+            .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+            .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+            .Split(user_op::OpArg("out", 0), 2)
+            .Split(user_op::OpArg("softmax_lse", 0), 1)
+            .Build();
+      else
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("query", 0), 2)
+            .Split(user_op::OpArg("key", 0), 2)
+            .Split(user_op::OpArg("value", 0), 2)
+            .Split(user_op::OpArg("bias", 0), 1)
+            .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+            .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+            .Split(user_op::OpArg("out", 0), 2)
+            .Split(user_op::OpArg("softmax_lse", 0), 1)
+            .Build();
+    else
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Build();
+  }
+
+  // ctx->NewBuilder()
+  //     .Split(ctx->inputs(), 0)
+  //     // TODO:(guoran), cu_seqlens_q size now is batch_size + 1, can it be batch_size? so can set
+  //     // to s0
+  //     .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+  //     .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+  //     .Split(ctx->outputs(), 0)
+  //     .Build();
   return Maybe<void>::Ok();
 }
 
@@ -140,14 +206,100 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FlashAttentionGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(ctx->inputs(), 0)
-      // TODO:(guoran), cu_seqlens_q size now is batch_size + 1, can it be batch_size? so can set
-      // to s0
-      .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
-      .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
-      .Split(ctx->outputs(), 0)
-      .Build();
+  const bool has_mask = ctx->Attr<bool>("has_mask");
+  const bool has_bias = ctx->Attr<bool>("has_bias");
+  const bool has_indices = ctx->Attr<bool>("has_indices");
+  if (has_mask) {
+    if (has_bias)
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("out_grad", 0), 2)
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("bias", 0), 1)
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("query_grad", 0), 2)
+          .Split(user_op::OpArg("key_grad", 0), 2)
+          .Split(user_op::OpArg("value_grad", 0), 2)
+          .Split(user_op::OpArg("bias_grad", 0), 1)
+          .Build();
+    else
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("out_grad", 0), 2)
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("query_grad", 0), 2)
+          .Split(user_op::OpArg("key_grad", 0), 2)
+          .Split(user_op::OpArg("value_grad", 0), 2)
+          .Build();
+  } else {
+    if (has_bias)
+      if (has_indices)
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("out_grad", 0), 2)
+            .Split(user_op::OpArg("out", 0), 2)
+            .Split(user_op::OpArg("softmax_lse", 0), 1)
+            .Split(user_op::OpArg("query", 0), 2)
+            .Split(user_op::OpArg("key", 0), 2)
+            .Split(user_op::OpArg("value", 0), 2)
+            .Broadcast(user_op::OpArg("indices", 0))
+            .Split(user_op::OpArg("bias", 0), 1)
+            .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+            .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+            .Split(user_op::OpArg("query_grad", 0), 2)
+            .Split(user_op::OpArg("key_grad", 0), 2)
+            .Split(user_op::OpArg("value_grad", 0), 2)
+            .Split(user_op::OpArg("bias_grad", 0), 1)
+            .Build();
+      else
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("out_grad", 0), 2)
+            .Split(user_op::OpArg("out", 0), 2)
+            .Split(user_op::OpArg("softmax_lse", 0), 1)
+            .Split(user_op::OpArg("query", 0), 2)
+            .Split(user_op::OpArg("key", 0), 2)
+            .Split(user_op::OpArg("value", 0), 2)
+            .Split(user_op::OpArg("bias", 0), 1)
+            .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+            .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+            .Split(user_op::OpArg("query_grad", 0), 2)
+            .Split(user_op::OpArg("key_grad", 0), 2)
+            .Split(user_op::OpArg("value_grad", 0), 2)
+            .Split(user_op::OpArg("bias_grad", 0), 1)
+            .Build();
+    else
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("out_grad", 0), 2)
+          .Split(user_op::OpArg("out", 0), 2)
+          .Split(user_op::OpArg("softmax_lse", 0), 1)
+          .Split(user_op::OpArg("query", 0), 2)
+          .Split(user_op::OpArg("key", 0), 2)
+          .Split(user_op::OpArg("value", 0), 2)
+          .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+          .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+          .Split(user_op::OpArg("query_grad", 0), 2)
+          .Split(user_op::OpArg("key_grad", 0), 2)
+          .Split(user_op::OpArg("value_grad", 0), 2)
+          .Build();
+  }
+  // ctx->NewBuilder()
+  //     .Split(ctx->inputs(), 0)
+  //     // TODO:(guoran), cu_seqlens_q size now is batch_size + 1, can it be batch_size? so can set
+  //     // to s0
+  //     .Broadcast(user_op::OpArg("cu_seqlens_q", 0))
+  //     .Broadcast(user_op::OpArg("cu_seqlens_k", 0))
+  //     .Split(ctx->outputs(), 0)
+  //     .Build();
   return Maybe<void>::Ok();
 }
 

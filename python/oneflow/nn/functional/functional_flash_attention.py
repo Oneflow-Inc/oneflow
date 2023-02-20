@@ -198,6 +198,14 @@ def flash_attention(
             .to(flow.int32)
         )
 
+        if query.is_global:
+            cu_seqlens_q = cu_seqlens_q.to_global(
+                placement=query.placement, sbp=flow.sbp.broadcast
+            )
+            cu_seqlens_k = cu_seqlens_k.to_global(
+                placement=query.placement, sbp=flow.sbp.broadcast
+            )
+
         out, lse = flow._C.flash_attention(
             query,
             key,
