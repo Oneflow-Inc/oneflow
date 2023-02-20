@@ -44,13 +44,17 @@ static PyTypeObject PyTensorTypeTemplate{
 
 static std::vector<PyTensorType*> tensor_types;
 
-static std::vector<std::pair<const Symbol<DType>&, std::string>> all_data_types = {
+static const std::unordered_map<Symbol<DType>, std::string> all_data_types = {
     {DType::Float(), "FloatTensor"},  {DType::Double(), "DoubleTensor"},
     {DType::Int8(), "CharTensor"},    {DType::Int32(), "IntTensor"},
     {DType::Int64(), "LongTensor"},   {DType::UInt8(), "ByteTensor"},
     {DType::Float16(), "HalfTensor"}, {DType::BFloat16(), "BFloat16Tensor"},
     {DType::Bool(), "BoolTensor"},
 };
+
+static const std::string get_dtype_string(PyTensorType* tensortype) {
+  return all_data_types.at(tensortype->dtype);
+}
 
 static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
     {kCPU, "oneflow"},
@@ -70,14 +74,33 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
         << "Some of the keywords were incorrect: dtype";
   }
   CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value) > -1);
-  auto* tensor = functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
 
   if (!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())
     return PyErr_Format(PyExc_ValueError, "invalid device");
-  Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
-  return PyTensor_New(
-      ASSERT_PTR(functional::To(PyTensor_Unpack(tensor), device, NullOpt, /*copy=*/false)));
+
+  {
+    const char* placement_str = "placement";
+    PyObject* placement_key = PyUnicode_FromString(placement_str);
+    if (PyDict_Contains(kwargs, placement_key) == 1) {
+      // If creat global tensor, the device of TensorType will be cover by param placement
+      // Raise a warning to inform users of using oneflow.Tensortype rather than
+      // oneflow.xxx.Tensortype
+      if (PyTensorType_UnpackDevice(self) != kCPU) {
+        const std::string warning_msg =
+            "The device type `" + ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)))
+            + "` will be covered when creating a global tensor, consider use `oneflow."
+            + get_dtype_string((PyTensorType*)self) + "`";
+        PyErr_WarnEx(PyExc_UserWarning, warning_msg.data(), 1);
+      }
+    } else {
+      PyObject* device_key = PyUnicode_FromString(
+          ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).data());
+      CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_key) > -1);
+    }
+  }
+  auto* tensor = functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return tensor;
   END_HANDLE_ERRORS
 };
 
