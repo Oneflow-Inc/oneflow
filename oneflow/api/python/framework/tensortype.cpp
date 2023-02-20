@@ -31,6 +31,7 @@ namespace one {
 
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
+using functional::PyObjectPtr;
 
 static PyTypeObject PyTensorTypeMetaClass{
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.tensortype",  // tp_name
@@ -75,8 +76,8 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   }
   CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value) > -1);
 
-  if (!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())
-    return PyErr_Format(PyExc_ValueError, "invalid device");
+  Maybe<std::string> maybe_device = DeviceTag4DeviceType(PyTensorType_UnpackDevice(self));
+  if (!TRY(maybe_device).IsOk()) { return PyErr_Format(PyExc_ValueError, "invalid device"); }
 
   {
     const char* placement_str = "placement";
@@ -85,17 +86,14 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
       // If creat global tensor, the device of TensorType will be cover by param placement
       // Raise a warning to inform users of using oneflow.Tensortype rather than
       // oneflow.xxx.Tensortype
-      if (PyTensorType_UnpackDevice(self) != kCPU) {
-        const std::string warning_msg =
-            "The device type `" + ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)))
-            + "` will be covered when creating a global tensor, consider use `oneflow."
-            + get_dtype_string((PyTensorType*)self) + "`";
-        PyErr_WarnEx(PyExc_UserWarning, warning_msg.data(), 1);
-      }
+      CHECK_OR_THROW(PyTensorType_UnpackDevice(self) == kCPU)
+          << "`" << ((PyTensorType*)self)->name
+          << "` can not creat a global tensor, consider use `oneflow."
+          << get_dtype_string((PyTensorType*)self) << "`";
     } else {
-      PyObject* device_key = PyUnicode_FromString(
-          ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).data());
-      CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_key) > -1);
+      std::string device = ASSERT(maybe_device);
+      PyObjectPtr device_value(PyUnicode_FromString(device.data()));
+      CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_value.get()) > -1);
     }
   }
   auto* tensor = functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
