@@ -398,6 +398,12 @@ static LogicalResult IsNotNestedInJit(PatternRewriter& rewriter, Operation* mul)
   return success(mul->getParentOfType<oneflow::Job>());
 }
 
+static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
+  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
+    return success(tensor.getNumElements() == 1);
+  }
+  return failure();
+}
 }  // namespace
 
 namespace rewrites {
@@ -428,6 +434,7 @@ void populateConstraints(RewritePatternSet& patterns) {
 
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsNotNestedInJit);
+  PDLL_REGISTER(IsScalarTensor);
 
 #undef PDLL_REGISTER
 }
