@@ -1478,8 +1478,9 @@ class Graph(object):
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            vm = True
-            if vm:
+            if oneflow.support.env_var_util.parse_boolean_from_env(
+                "ONEFLOW_RUN_GRAPH_BY_VM", False
+            ):
                 oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByEager(
                     convert_to_tensor_tuple(flattened_eager_args),
                     outputs_tensor_tuple,
@@ -1492,8 +1493,6 @@ class Graph(object):
                     outputs_tensor_tuple,
                     self._c_nn_graph,
                 )
-            print(outputs_tensor_tuple[0].numpy())
-            print(eager_outputs[0].numpy())
             # Update outputs buffer reading index
             self._cur_index_of_ouputs_buffer += 1
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:

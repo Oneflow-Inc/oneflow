@@ -98,6 +98,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> InitRuntime();
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
+  const auto variable_op_name2tensor() const { return variable_op_name2tensor_; }
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
