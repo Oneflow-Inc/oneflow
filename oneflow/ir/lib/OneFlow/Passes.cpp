@@ -248,13 +248,6 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
   return {};
 }
 
-bool IsScalarTensor(Value value) {
-  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
-    return tensor.getNumElements() == 1;
-  }
-  return false;
-}
-
 bool HasZeroPadding(mlir::ArrayAttr padding) {
   for (auto val : padding.getValue()) {
     if (val.cast<IntegerAttr>().getValue().getSExtValue() != 0) return false;
@@ -612,10 +605,6 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     return success();
   }
 };
-
-void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
-  results.insert<BroadcastMulToScalarMulPattern>(context);
-}
 
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
