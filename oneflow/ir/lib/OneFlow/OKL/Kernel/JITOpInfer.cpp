@@ -140,15 +140,10 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       int64_t _;
       auto mem_type =
           mlir::MemRefType::get(rankedTensorType.getShape(), rankedTensorType.getElementType());
-<<<<<<< HEAD
       if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
         LOG(FATAL) << "Fail to get stride from memory type";
       }
       ctx->SetOutputStride("out", res_i, Stride(strides.begin(), strides.end()));
-=======
-      mlir::getStridesAndOffset(mem_type, strides, _);
-      ctx->SetOutputStride("out", res_i, Stride(strides));
->>>>>>> b5009c03e2f64492950c36d176d9c787b1eccda4
       res_i += 1;
     } else {
       std::string res_type_str = "";
