@@ -39,7 +39,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   return true;
 }
 
-#define BINARY_MATH_OP_SEQ                             \
+#define BINARY_MATH_OP_SEQ_0                             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)                 \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub)                 \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul)                 \
@@ -53,8 +53,12 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorMod)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarExpPowerGrad)
 
-#define BINARY_MATH_OP_SEQ1                             \
+#define BINARY_MATH_OP_SEQ_1                             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarBasePowerGrad) 
+
+#define BINARY_MATH_OP_SEQ \
+  BINARY_MATH_OP_SEQ_0     \
+  BINARY_MATH_OP_SEQ_1     
 
 #define BINARY_COMPARISION_OP_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)           \
