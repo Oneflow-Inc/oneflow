@@ -142,6 +142,7 @@ static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* t
   CHECK(transpose_op);
   return getSI64IntegerAttr(rewriter,
                             transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
+}
   NamedAttrList GetUserOpCommonAttrs(MLIRContext * ctx, const std::string& op_name) {
     NamedAttrList attrs;
     attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
