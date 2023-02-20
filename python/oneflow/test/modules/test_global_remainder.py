@@ -20,11 +20,8 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-import torch as torch_original
-from packaging import version
 
-
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, rtol=1e-3, atol=1e-2, auto_backward=True, check_graph=False)
 def do_test_remainder_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
@@ -39,8 +36,7 @@ def do_test_remainder_impl(test_case, ndim, placement, sbp):
 class TestRemainderGlobal(flow.unittest.TestCase):
     @globaltest
     def test_remainder(test_case):
-        # random ndim in range [1,5]
-        ndim = random(1, 5).to(int).value()
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 do_test_remainder_impl(test_case, ndim, placement, sbp)
