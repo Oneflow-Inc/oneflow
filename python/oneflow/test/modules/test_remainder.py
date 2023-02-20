@@ -34,7 +34,7 @@ from packaging import version
 class TestRemainderModule(flow.unittest.TestCase):
     @autotest(n=1, auto_backward=True)
     def test_flow_remainder_element_with_random_data(test_case):
-        ndim=3
+        ndim = 3
         device = random_device()
         dims = [random(1, 4) * 2 for i in range(ndim)]
         input = random_tensor(ndim, *dims).to(device)

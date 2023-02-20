@@ -23,7 +23,8 @@ from oneflow.test_utils.automated_test_util import *
 import torch as torch_original
 from packaging import version
 
-@autotest(n=1,  auto_backward=True, check_graph=False)
+
+@autotest(n=1, auto_backward=True, check_graph=False)
 def do_test_remainder_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 2 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
