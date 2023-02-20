@@ -136,12 +136,14 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
           mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
       if (mlir::failed(data_type)) { exit(1); }
       ctx->SetOutputDType("out", res_i, data_type.getValue());
-      llvm::SmallVector<int64_t> stride;
+      llvm::SmallVector<int64_t> strides;
       int64_t _;
       auto mem_type =
           mlir::MemRefType::get(rankedTensorType.getShape(), rankedTensorType.getElementType());
-      mlir::getStridesAndOffset(mem_type, stride, _);
-      ctx->SetOutputStride("out", res_i, Stride(stride));
+      if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
+        LOG(FATAL) << "Fail to get stride from memory type";
+      }
+      ctx->SetOutputStride("out", res_i, Stride(strides.begin(), strides.end()));
       res_i += 1;
     } else {
       std::string res_type_str = "";
