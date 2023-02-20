@@ -16,13 +16,14 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/UserOpReflection.h"
-#include "OneFlow/Transform/AggregateComputeOps.h"
+#include "OneFlow/Transform/AggregateOps.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -717,7 +718,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf))) {
+  if (!succeeded(user_op::ConvertUserOpAttributes(op, *op_conf, false))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }
@@ -810,6 +811,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createFuseForwardOps());
     pm.addPass(oneflow::createFuseIntoExistingOpPass());
   }
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
+    pm.addPass(oneflow::createOutlineJitFunctionPass());
+  }
   // TODO: support backward or put it in a env flag
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_GROUP_MATMUL", false)) {
@@ -828,7 +833,14 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createAggregateComputeOpsPass());
-    pm.addPass(createWrapOpsToKernelLaunchPass());
+
+    auto wrap_pass = createWrapOpsToKernelLaunchPass();
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+      (void)wrap_pass->initializeOptions("mode=cuda_graph");
+    } else {
+      (void)wrap_pass->initializeOptions("mode=simple");
+    }
+    pm.addPass(std::move(wrap_pass));
   }
   pm.addPass(createCanonicalizerPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {

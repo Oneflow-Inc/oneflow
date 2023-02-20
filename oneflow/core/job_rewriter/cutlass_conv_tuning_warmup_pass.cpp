@@ -39,10 +39,14 @@ class CutlassConvTuningWarmupPass final : public JobPass {
 };
 
 Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const {
-  if (!ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false)) {
+  // Compatible with typo `KERENL`
+  if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_CONV_ENABLE_CUTLASS_IMPL",
+                           ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false))) {
     return Maybe<void>::Ok();
   }
-  if (!ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_CUTLASS_IMPL_ENABLE_TUNING_WARMUP", false)) {
+  if (!ParseBooleanFromEnv(
+          "ONEFLOW_KERNEL_CONV_CUTLASS_IMPL_ENABLE_TUNING_WARMUP",
+          ParseBooleanFromEnv("ONEFLOW_KERENL_CONV_CUTLASS_IMPL_ENABLE_TUNING_WARMUP", false))) {
     return Maybe<void>::Ok();
   }
   const OpGraph op_graph(*job);

@@ -274,6 +274,30 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class DivFunctorMode {
+ public:
+  DivFunctorMode() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    if (rmode == "floor") {
+      return JUST(functional::FloorDiv(x, y));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::TruncDiv(x, y));
+    }
+    CHECK_OR_RETURN(rmode == "") << "div expected rounding_mode to be one of None,"
+                                    " 'trunc', or 'floor' but found "
+                                 << rmode;
+    return JUST(functional::Div(x, y));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceDivFunctor {
  public:
   InplaceDivFunctor() {
@@ -282,14 +306,29 @@ class InplaceDivFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+
+    // NOTE: div operator will cast inputs to float when dtype is integral
     TensorProcessor tensor_processor;
-    if (y->requires_grad()) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x)), y})
-               .Apply());
-    } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple tensor_processor_inputs;
+    {
+      if (tensor_y->requires_grad()) {
+        tensor_processor_inputs.assign({JUST(Identity(tensor_x)), tensor_y});
+      } else {
+        tensor_processor_inputs.assign({tensor_x, tensor_y});
+      }
     }
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
+      tensor_processor.AddInputs(tensor_processor_inputs, DType::Float());
+    } else {
+      tensor_processor.AddInputs(tensor_processor_inputs)
+          .PromoteInputsToCommonDtype(true)
+          .PromoteIntegerInputsToFloatDtype(true);
+    }
+    JUST(tensor_processor.Apply());
+
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
@@ -427,6 +466,32 @@ class BroadcastGreaterFunctor : public BinaryFunctor {
   }
 };
 
+class InplaceBroadcastGreaterFunctor {
+ public:
+  InplaceBroadcastGreaterFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_inplace_greater").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastGreaterEqualFunctor : public BinaryFunctor {
  public:
   BroadcastGreaterEqualFunctor() {
@@ -456,6 +521,30 @@ class BroadcastLogicalXorFunctor : public BinaryFunctor {
   BroadcastLogicalXorFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("broadcast_logical_xor").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseAndFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseAndFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseOrFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseOrFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_or").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseXorFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseXorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_xor").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -543,16 +632,21 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
+  m.add_functor<impl::DivFunctorMode>("DivMode");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::EqualFunctor>("Equal");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
+  m.add_functor<impl::InplaceBroadcastGreaterFunctor>("InplaceBroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
   m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
   m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
   m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
+  m.add_functor<impl::BroadcastBitwiseAndFunctor>("BroadcastBitwiseAnd");
+  m.add_functor<impl::BroadcastBitwiseOrFunctor>("BroadcastBitwiseOr");
+  m.add_functor<impl::BroadcastBitwiseXorFunctor>("BroadcastBitwiseXor");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");

@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+import oneflow.framework.session_context as session_ctx
 
 
 def get_graph_output(*args, func):

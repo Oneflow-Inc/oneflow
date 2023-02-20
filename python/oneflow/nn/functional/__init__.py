@@ -45,6 +45,7 @@ from oneflow._C import hardsigmoid
 from oneflow._C import hardshrink
 from oneflow._C import hardswish
 from oneflow._C import leaky_relu
+from oneflow._C import rrelu, rrelu_
 from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu
@@ -52,6 +53,7 @@ from oneflow._C import sigmoid
 from oneflow._C import softshrink
 from oneflow._C import prelu
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import quick_gelu
 from oneflow._C import glu
 from oneflow._C import logsigmoid
 from oneflow._C import log_softmax
@@ -87,3 +89,4 @@ from oneflow._C import fold
 from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
 from oneflow._C import gumbel_softmax
+from .functional_depend import depend

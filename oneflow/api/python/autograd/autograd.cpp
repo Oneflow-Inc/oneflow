@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/saved_tensor_hooks.h"
+#include "oneflow/extension/stack/python/stack_getter.h"
 
 namespace oneflow {
 namespace autograd {
@@ -89,6 +90,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
 
 Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
                                  bool retain_graph, bool create_graph) {
+  PythonFrameGuard pf;
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
@@ -100,6 +102,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
                              bool create_graph) {
+  PythonFrameGuard pf;
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }

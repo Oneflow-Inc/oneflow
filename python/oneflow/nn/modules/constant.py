@@ -19,27 +19,27 @@ import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
-from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
-class _ConstantBase(Module):
+class _ConstantBase:
     def __init__(
         self,
         size: Union[_size_any_t, flow.Size],
         value: Union[float, int],
         dtype: Optional[flow.dtype],
-        device: Union[flow.device, str] = None,
+        device: Union[flow.device, int, str] = None,
         placement: flow.placement = None,
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
     ) -> None:
-        super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, tuple, list, flow.Size)
         ), "shape should be int or tuple int!"
         self.device = device
+        if isinstance(self.device, int):
+            self.device = flow.device("cuda", self.device)
         if isinstance(self.device, str):
             self.device = flow.device(self.device)
         self.requires_grad = requires_grad
@@ -69,17 +69,37 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.global_constant(
-                self.shape,
-                self.value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=self.sbp,
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.global_tensor_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
+            else:
+                res = flow._C.global_constant(
+                    self.shape,
+                    self.value,
+                    dtype=self.dtype,
+                    placement=self.placement,
+                    sbp=self.sbp,
+                )
         else:
-            res = flow._C.constant(
-                self.shape, self.value, dtype=self.dtype, device=self.device
-            )
+            if isinstance(self.value, flow.Tensor):
+                assert (
+                    self.value.ndim <= 1 and self.value.numel() == 1
+                ), "Only tensor with single element or scalar tensor are supported as value!"
+                res = flow._C.tensor_constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
+            else:
+                res = flow._C.constant(
+                    self.shape, self.value, dtype=self.dtype, device=self.device
+                )
         res.requires_grad = self.requires_grad
         return res
 
@@ -214,7 +234,7 @@ def ones_op(
 
     """
     size = _handle_size_arg(size)
-    return Ones(size, dtype, device, placement, sbp, requires_grad)()
+    return Ones(size, dtype, device, placement, sbp, requires_grad).forward()
 
 
 def ones_like_op(
@@ -237,7 +257,7 @@ def ones_like_op(
     ) = _handle_meta_args(input, None, dtype, device, placement, sbp, requires_grad)
     return Ones(
         new_size, new_dtype, new_device, new_placement, new_sbp, new_requires_grad
-    )()
+    ).forward()
 
 
 class Zeros(_ConstantBase):
@@ -291,7 +311,7 @@ def zeros_op(
 
     """
     size = _handle_size_arg(size)
-    return Zeros(size, dtype, device, placement, sbp, requires_grad)()
+    return Zeros(size, dtype, device, placement, sbp, requires_grad).forward()
 
 
 def zeros_like_op(
@@ -314,7 +334,7 @@ def zeros_like_op(
     ) = _handle_meta_args(input, None, dtype, device, placement, sbp, requires_grad)
     return Zeros(
         new_size, new_dtype, new_device, new_placement, new_sbp, new_requires_grad
-    )()
+    ).forward()
 
 
 class Full(_ConstantBase):
@@ -382,8 +402,9 @@ def full_op(
         fill_value = fill_value.item()
     if dtype is None:
         dtype = flow.tensor(fill_value).dtype
-    # TODO: constant kernel originally support scalar fill_value tensor rather than by implicitly converting, cause it brings synchronization overhead
-    return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
+    return Full(
+        size, fill_value, dtype, device, placement, sbp, requires_grad
+    ).forward()
 
 
 def full_like_op(
@@ -452,7 +473,7 @@ def full_like_op(
         new_placement,
         new_sbp,
         new_requires_grad,
-    )()
+    ).forward()
 
 
 def new_ones_op(

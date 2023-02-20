@@ -51,7 +51,12 @@ enum class BinaryOp {
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
+  // Bitwise
+  kBitwiseAnd,
+  kBitwiseOr,
+  kBitwiseXor,
   // Unary Backward
+  kIdentityBackwardWithDyX,
   kEluBackwardWithDyX,
   kCeluBackwardWithDyX,
   kGeluBackwardWithDyX,
@@ -62,6 +67,7 @@ enum class BinaryOp {
   kLeakyReluBackwardWithDyX,
   kMishBackwardWithDyX,
   kReluBackwardWithDyY,
+  kReluBackwardWithDyX,
   kSeluBackwardWithDyX,
   kSiluBackwardWithDyX,
   kSoftsignBackwardWithDyX,
@@ -70,6 +76,7 @@ enum class BinaryOp {
   kTanhBackwardWithDyX,
   kThresholdBackwardWithDyX,
   kSigmoidBackwardWithDyY,
+  kSigmoidBackwardWithDyX,
   kAbsBackwardWithDyX,
   kAcosBackwardWithDyX,
   kAcoshBackwardWithDyX,
@@ -98,6 +105,7 @@ enum class BinaryOp {
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,
   kFastGeluBackwardWithDyX,
+  kQuickGeluBackwardWithDyX,
 };
 
 }

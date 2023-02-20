@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -24,20 +25,18 @@ The two modes don't interfere with each other, sys.modules and global scope are 
 """
 
 
-def _import_both():
-    with mock.enable():
-        import torch
-        import torch.nn
-        import torch.version
-    with mock.disable():
-        import torch
-        import torch.nn
-        import torch.version
+with mock.enable():
+    import torch
+    import torch.nn
+    import torch.version
+with mock.disable():
+    import torch
+    import torch.nn
+    import torch.version
 
 
 class TestMock(flow.unittest.TestCase):
     def test_with(test_case):
-        _import_both()
         with mock.enable():
             test_case.assertEqual(torch.__package__, "oneflow")
             test_case.assertEqual(torch.nn.__package__, "oneflow.nn")
@@ -48,7 +47,6 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertEqual(torch.version.__version__, torch.__version__)
 
     def test_simple(test_case):
-        _import_both()
         mock.enable()
         test_case.assertEqual(torch.__package__, "oneflow")
         test_case.assertEqual(torch.nn.__package__, "oneflow.nn")
@@ -61,7 +59,6 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertEqual(torch.version.__version__, torch.__version__)
 
     def test_import_from(test_case):
-        _import_both()
         mock.enable()
         from torch import nn
         from torch.version import __version__
@@ -78,7 +75,7 @@ class TestMock(flow.unittest.TestCase):
 
     def test_error(test_case):
         mock.enable()
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(ModuleNotFoundError) as context:
             from torch import noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)
@@ -91,7 +88,6 @@ class TestMock(flow.unittest.TestCase):
         )
 
     def test_nested_with(test_case):
-        _import_both()
         with mock.enable():
             test_case.assertEqual(torch.__package__, "oneflow")
             with mock.disable():
@@ -114,6 +110,16 @@ class TestMock(flow.unittest.TestCase):
             from test_mock_simple import f
 
             test_case.assertEqual(f(), "oneflow")
+
+    def test_env_var(test_case):
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "1"
+
+        with mock.enable():
+            import torch
+
+            test_case.assertEqual(torch.__package__, "torch")
+
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "0"
 
 
 if __name__ == "__main__":

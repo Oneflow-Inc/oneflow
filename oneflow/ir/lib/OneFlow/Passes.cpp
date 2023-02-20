@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -102,6 +103,8 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SetOperations.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OKL/Kernel/RegContext.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 #include <algorithm>
 #include <memory>
@@ -113,7 +116,13 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+
 #endif  // WITH_MLIR_CUDA_CODEGEN
+
+#ifdef WITH_CUDA
+// enable with_cuda_graphs
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif  // WITH_CUDA
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -221,124 +230,6 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
   return func;
 }
 
-// TODO: cfg/multi block support
-func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                               StringRef func_name, ValueRange operands, ValueRange results,
-                               SmallVector<Operation*, 4> ops) {
-  BlockAndValueMapping mapping;
-  SmallVector<Type, 4> argument_types;
-  argument_types.reserve(operands.size());
-  SmallVector<Type, 4> result_types;
-  argument_types.reserve(results.size());
-  for (auto argument : operands) { argument_types.push_back(argument.getType()); }
-  for (auto result : results) { result_types.push_back(result.getType()); }
-  auto func_type = rewriter.getFunctionType(argument_types, result_types);
-  auto first_op = *ops.begin();
-  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
-  if (!parent_func_op) {
-    emitError(loc) << "null parent oneflow::Job " << *first_op;
-    return nullptr;
-  }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
-  if (!parent_module_op) {
-    emitError(loc) << "null ModuleOp " << *first_op;
-    return nullptr;
-  }
-  SymbolTable symbol_table(parent_module_op);
-  OpBuilder::InsertionGuard guard(rewriter);
-  Block::iterator insertPt(parent_func_op->getNextNode());
-  rewriter.setInsertionPointToStart(parent_module_op.getBody());
-  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
-    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
-    return nullptr;
-  }
-  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  function.getBody().emplaceBlock();
-  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
-  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
-    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
-  }
-  rewriter.setInsertionPointToStart(&function.getBody().front());
-  ImplicitLocOpBuilder nb(loc, rewriter);
-  for (auto op : ops) { nb.clone(*op, mapping); }
-  SmallVector<::mlir::Value, 4> mapped_results;
-  for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<func::ReturnOp>(loc, mapped_results);
-  if (symbol_table.lookup(func_name)) {
-    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
-    return nullptr;
-  }
-  return function;
-}
-
-NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
-                                 int32_t input_size, int32_t output_size, Operation* op) {
-  NamedAttrList attributes;
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
-  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
-    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
-  }
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                 rewriter.getStringAttr(op_name));
-  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
-    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
-  }
-  return attributes;
-}
-
-::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
-                                                     mlir::OpResult mul_res,
-                                                     mlir::OpResult cast_res) {
-  auto mul_op = mul_res.getDefiningOp();
-  auto scale = mlir::Value();
-  auto output = mlir::Value();
-  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
-    scale = scalar_mul_op.scalar();
-    output = scalar_mul_op.y();
-  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
-    scale = broadcast_mul_op.y();
-    output = broadcast_mul_op.z();
-  } else {
-    mul_res.getDefiningOp()->emitError("pattern mul(cast(x), scalar) doesn't support this op");
-    exit(1);
-  }
-  if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-    mul_res.getDefiningOp()->emitError("not OpConf compatible");
-    exit(1);
-  }
-  if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-    // TODO: extract a function to generate op name for jit op from ops being fused
-    SmallString<64> op_name_storage;
-    auto op_name =
-        (cast_op.op_name() + "__FUSE__"
-         + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-               .getValue()
-               .str())
-            .toStringRef(op_name_storage);
-    SmallString<16> tempBuffer;
-    op_name = SanitizeIdentifier(op_name, tempBuffer);
-    SmallVector<::mlir::Value, 2> operands;
-    operands.push_back(cast_op.in());
-    operands.push_back(scale);
-    SmallVector<::mlir::Value, 1> results;
-    results.push_back(output);
-    NamedAttrList attributes =
-        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
-    SmallVector<Operation*, 4> ops = {cast_op, mul_op};
-    auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-    auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
-    if (failed(DumpAssembly(rewriter, created, created.op_name()))) { exit(1); }
-    cast_op->dropAllUses();
-    cast_op.erase();
-    return created->getResults();
-  }
-  return {};
-}
-
 ::llvm::SmallVector<::mlir::Value, 4> CreateGPUMemcpyOpFromMemrefCopy(
     ::mlir::PatternRewriter& rewriter, ::mlir::memref::CopyOp copyOp) {
   // NOTE: to get lowered to LLVM, it has to be async
@@ -355,13 +246,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
                 .getResults();
   rewriter.create<gpu::WaitOp>(copyOp->getLoc(), llvm::None, t2);
   return {};
-}
-
-bool IsScalarTensor(Value value) {
-  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
-    return tensor.getNumElements() == 1;
-  }
-  return false;
 }
 
 bool HasZeroPadding(mlir::ArrayAttr padding) {
@@ -381,96 +265,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
                                                                      return StringAttr::get(ctx, v);
                                                                    }))));
   return attrs;
-}
-
-::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
-                                                          OpResult conv_result,
-                                                          OpResult bn_result) {
-  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-    if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn_result.getDefiningOp())) {
-      auto ctx = rewriter.getContext();
-      SmallVector<Value, 4> final_results;
-      NamedAttrList attributes = conv_op->getAttrs();
-
-      attributes.set("operand_segment_sizes", rewriter.getI32VectorAttr({1, 1, 1, 0}));
-
-      SmallVector<Value, 4> operands;
-      operands.push_back(conv_op.in());
-
-      // deal with weight
-      auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
-      add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
-      add_op_attrs.set("float_operand", bn_op.epsilonAttr());
-      auto add_op = rewriter.create<oneflow::ScalarAddOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
-
-      auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-                                                      SmallVector<Value, 4>({add_op.out()}),
-                                                      GetUserOpCommonAttrs(ctx, "sqrt"));
-
-      auto div_op = rewriter.create<oneflow::BroadcastDivOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({bn_op.gamma(), sqrt_op.y()}), GetUserOpCommonAttrs(ctx, "div"));
-
-      auto bn_gamma_variable_op =
-          llvm::dyn_cast<oneflow::FrozenVariableOp>(bn_op.gamma().getDefiningOp());
-      if (!bn_gamma_variable_op) {
-        emitError(conv_op.getLoc()) << "Gamma of batchnorm should be a FrozenVariableOp.";
-      }
-      auto bn_gamma_shape =
-          bn_gamma_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
-
-      auto conv_weight_variable_op =
-          llvm::dyn_cast<oneflow::FrozenVariableOp>(conv_op.weight().getDefiningOp());
-      if (!conv_weight_variable_op) {
-        emitError(conv_op.getLoc()) << "Weight of conv2d should be a FrozenVariableOp.";
-      }
-      auto conv_weight_shape =
-          conv_weight_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
-
-      std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
-      for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
-      auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
-      reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
-                                                            ArrayRef<int64_t>(bn_gamma_new_shape),
-                                                            [&](int64_t v) -> Attribute {
-                                                              return rewriter.getI64IntegerAttr(v);
-                                                            }))));
-      auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
-          reshape_op_attrs);
-
-      auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
-          GetUserOpCommonAttrs(ctx, "multiply"));
-      operands.push_back(mul_op.z());
-
-      // deal with bias
-      if (!conv_op.bias()) {
-        auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
-            conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
-            GetUserOpCommonAttrs(ctx, "multiply_bias"));
-        auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
-            conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
-            GetUserOpCommonAttrs(ctx, "sub_bias"));
-        operands.push_back(sub_op_bias.z());
-      } else {
-        emitError(conv_op.getLoc())
-            << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
-      }
-
-      auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
-
-      final_results.push_back(new_conv_op.out());
-      return final_results;
-    }
-  }
-  return {};
 }
 
 struct ReplaceVariablePattern : public ::mlir::RewritePattern {
@@ -812,13 +606,9 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
   }
 };
 
-void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
-  results.insert<BroadcastMulToScalarMulPattern>(context);
-}
-
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-                                    func::FuncOp okl_func) {
+                                    func::FuncOp okl_func, int index) {
     auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
     auto raw_func = op->getParentOfType<func::FuncOp>();
     if (!op_type_name) { return failure(); }
@@ -827,10 +617,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto loc = op->getLoc();
 
-    auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-        loc, okl::RegContextType::get(rewriter.getContext()));
-    reg_ctx.body().emplaceBlock();
-    rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
+    auto wrap_kernel = rewriter.create<okl::WrapperKernelOp>(loc, index);
+    wrap_kernel.body().emplaceBlock();
+    rewriter.setInsertionPointToEnd(&wrap_kernel.body().back());
 
     BlockAndValueMapping mapping;
 
@@ -848,9 +637,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
           if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
-            auto source = rewriter.create<okl::GetTensorFromRetOp>(
-                op->getLoc(), arg.getType(), okl_func.getArgument(0), okl::TensorType::TT_Argument,
-                index);
+            auto source = rewriter.create<okl::GetTensorFromRetOp>(op->getLoc(), arg.getType(),
+                                                                   okl_func.getArgument(0), index);
             mapping.map(arg, source->getResult(0));
             break;
           }
@@ -872,14 +660,6 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     }
     rewriter.create<okl::ReturnOp>(loc);
 
-    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-    auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
-        loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
-    auto kernel = rewriter.create<okl::BuildKernelOp>(
-        loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
-    rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
-    rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
-    rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
     return success();
   }
 
@@ -887,10 +667,9 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttr("compiled")) { return success(); }
-    op->setAttr("compiled", rewriter.getStringAttr("true"));
-
-    auto func_name = "okl_func";
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    if (!module) { LOG(FATAL) << "Not found module"; }
+    if (module.lookupSymbol(okl_func::OKL_FUNC)) { return success(); }
 
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
@@ -899,22 +678,23 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto func_type = rewriter.getFunctionType(
         {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
-    auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-    okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
+    auto okl_func = rewriter.create<func::FuncOp>(loc, okl_func::OKL_FUNC, func_type);
     okl_func.getBody().emplaceBlock();
     okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
                                     loc);
 
+    auto index = 0;
     for (auto& op : block) {
       if (!op.hasAttr("op_name")) {
         if (op.getDialect()->getNamespace() == "okl") { continue; }
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(LowerToOKLOp(rewriter, &op, okl_func))) {
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index))) {
         op.emitError("Failed to lowering OneFlow op to okl dialect.");
         return failure();
       }
+      index += 1;
     }
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
@@ -972,14 +752,16 @@ std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
   return {function, proto.first};
 };
 
-KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
-                                      mlir::PatternRewriter& rewriter, int& name_index) {
-  if (!wrap_ops.size()) return nullptr;
+KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
+                                int& name_index) {
+  if (wrap_ops.size() < 2) {
+    wrap_ops.clear();
+    return nullptr;
+  }
+  auto loc = wrap_ops.front()->getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
 
-  auto wrap_res = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
-  auto wrap_func = wrap_res.first;
-  auto wrap_ins = wrap_res.second;
+  auto [wrap_func, wrap_ins] = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
 
   auto func_name = wrap_func.getSymNameAttr();
   std::vector<NamedAttribute> attrs;
@@ -1025,9 +807,8 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
 
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(
-          func->getLoc(), arg.value().getType(), launcher_ctx, okl::TensorType::TT_Argument,
-          arg.index());
+      auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
+                                                             launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
 
@@ -1048,8 +829,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     std::vector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
       auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
-          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(),
-          okl::TensorType::TT_Return, ret_val.index());
+          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }
 
@@ -1061,7 +841,12 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
+    if (op.getBody().getNumArguments()) {
+      // skip if already converted
+      if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) {
+        return success();
+      }
+    }
     op = ExtractArgTensors(op, rewriter);
     op = ExtractRetTensors(op, rewriter);
     return success();
@@ -1094,28 +879,92 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
+
+  // if the pre-packed ops is continuous with the current op, this current op will be packed with
+  // pre-packed ops together.
+  virtual bool IsConsecutive(std::vector<Operation*>&, mlir::Operation*) const { return true; };
+
+  virtual bool IsPackagable(mlir::Operation* op) const {
+    return GetModuleOpFromJobBodyOp<Job>(&(*op)) && op->getAttr("op_name")
+           && dyn_cast<UserOpCompatible>(op)
+           && op->getName().getStringRef() != KernelLaunchOp::getOperationName();
+  }
+
   mlir::LogicalResult matchAndRewrite(oneflow::Job op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto& ops = op->getRegion(0).front();
     if (ops.empty()) { return success(); }
-    std::vector<StringRef> white_list{
-        KernelLaunchOp::getOperationName(),
-        OutputOp::getOperationName(),
-        InputOp::getOperationName(),
-        VariableOp::getOperationName(),
-    };
+
     int name_index = 0;
-    std::vector<Operation*> wrap_ops;
+    std::vector<Operation*> current_wrap_ops;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
-      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
-          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
-        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+      auto current_op = &(*op_it);
+      if (!IsPackagable(current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
         continue;
       }
-      wrap_ops.push_back(&(*op_it));
+
+      if (!IsConsecutive(current_wrap_ops, current_op)) {
+        ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index);
+      }
+      current_wrap_ops.push_back(current_op);
     }
-    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
+    if (!current_wrap_ops.empty()) { ConsumeOpsToFunc(current_wrap_ops, rewriter, name_index); }
     return success();
+  }
+};
+
+struct KernelLaunchSimplePattern : public KernelLaunchPattern {
+  explicit KernelLaunchSimplePattern(mlir::MLIRContext* context) : KernelLaunchPattern(context) {}
+
+  bool IsSameDevice(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+
+    auto device_tag = op->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto device_name = op->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+    auto cmp_device_tag = ops.front()->getAttr("device_tag").dyn_cast_or_null<StringAttr>();
+    auto cmp_device_name = ops.front()->getAttr("device_name").dyn_cast_or_null<ArrayAttr>();
+
+    if (!device_tag || !device_name || !cmp_device_tag || !cmp_device_name) { return false; }
+
+    auto same_device_tag = device_tag.str() == cmp_device_tag.str();
+    auto same_device_name =
+        std::equal(device_name.begin(), device_name.end(), cmp_device_name.begin(),
+                   [](const Attribute a, const Attribute b) {
+                     auto a_str = a.dyn_cast_or_null<StringAttr>();
+                     auto b_str = b.dyn_cast_or_null<StringAttr>();
+                     if (!a_str || !b_str) { return false; }
+                     return a_str.str() == b_str.str();
+                   });
+
+    return same_device_tag && same_device_name;
+  }
+
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op);
+  }
+};
+
+struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
+  explicit KernelLaunchWithCudaGraphPattern(mlir::MLIRContext* context)
+      : KernelLaunchSimplePattern(context) {}
+
+  bool IsOpCudaGraphSupport(mlir::Operation* op) const {
+    ::oneflow::okl::RegContext reg_ctx(op);
+    auto* kernel = const_cast<::oneflow::user_op::OpKernel*>(reg_ctx.GetKernel());
+    return dynamic_cast<::oneflow::user_op::CudaGraphSupport*>(kernel);
+  }
+
+  bool IsSameCudaGraphSupport(std::vector<Operation*>& ops, mlir::Operation* op) const {
+    if (ops.empty()) { return true; }
+    auto cuda_support = IsOpCudaGraphSupport(op);
+    return cuda_support == IsOpCudaGraphSupport(ops.front());
+  }
+
+  bool IsConsecutive(std::vector<Operation*>& ops, mlir::Operation* op) const override {
+    if (ops.empty()) { return true; }
+    return IsSameDevice(ops, op) && IsSameCudaGraphSupport(ops, op);
   }
 };
 
@@ -1180,7 +1029,9 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<MulCastPattern>(patterns.getContext());
+  rewrites::populateRewrites(patterns);
+  constraints::populateConstraints(patterns);
+  populateElementwiseFusionPatterns(patterns);
 }
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
@@ -1195,9 +1046,21 @@ void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
 }
 
-void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<KernelLaunchPattern>(patterns.getContext());
+void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
+                                           const std::string& mode) {
+  if (mode == wrap_mode::SIMPLE) {
+    patterns.add<KernelLaunchSimplePattern>(patterns.getContext());
+  } else if (mode == wrap_mode::CUDA_GRAPH) {
+#ifdef WITH_CUDA_GRAPHS
+    patterns.add<KernelLaunchWithCudaGraphPattern>(patterns.getContext());
+#else
+    patterns.add<KernelLaunchPattern>(patterns.getContext());
+#endif
+  } else {
+    LOG(FATAL) << "Found an unsupported mode in wrap-ops-to-kernel-launch pass";
+  }
 }
+
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateForwardOpPatterns(patterns);
   rewrites::populateRewrites(patterns);
@@ -1224,7 +1087,7 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  populateFuseConv2DBatchNormPattern(patterns);
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {

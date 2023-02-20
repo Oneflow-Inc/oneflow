@@ -31,7 +31,7 @@ def _test_linear_graph_save_load_global_broadcast(
     B = flow.sbp.broadcast
     S0 = flow.sbp.split(0)
 
-    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_file=None, last_state_dict=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(flow.device(model_tensor_placement.type))
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -72,7 +72,7 @@ def _test_linear_graph_save_load_global_broadcast(
         cur_rank = flow.env.get_rank()
         if call_cnt == 1:
             if cur_rank in model_file_placement.ranks:
-                local_state_dict = flow.load(state_dict_dir)
+                local_state_dict = flow.load(state_dict_file)
             else:
                 local_state_dict = None
 
@@ -160,7 +160,7 @@ def _test_linear_graph_save_load_global_broadcast(
                 iter1_local_dict = flow.utils.global_view.to_local(
                     model_file_state_dict
                 )
-                flow.save(iter1_local_dict, state_dict_dir)
+                flow.save(iter1_local_dict, state_dict_file)
 
             of_graph_out = linear_t_g(x)
             of_graph_out.numpy()
@@ -168,11 +168,11 @@ def _test_linear_graph_save_load_global_broadcast(
             return iter2_state_dict
 
     rank_id = flow.env.get_rank()
-    with tempfile.TemporaryDirectory(
+    with tempfile.NamedTemporaryFile(
         prefix="graph_save_load_global_" + str(rank_id)
-    ) as state_dict_dir:
-        iter2_state_dict = train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir, iter2_state_dict)
+    ) as f:
+        iter2_state_dict = train_with_graph(0, f.name)
+        train_with_graph(1, f.name, iter2_state_dict)
 
 
 def _test_graph_save_load_global_split_2(
@@ -242,7 +242,7 @@ def _test_graph_save_load_global_split_2(
             out.backward()
             return out
 
-    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_file=None, last_state_dict=None):
         # A fixed input with shape [2, 16]
         x = flow.tensor(
             [
@@ -294,7 +294,7 @@ def _test_graph_save_load_global_split_2(
 
         if call_cnt == 1:
             if cur_rank in model_file_placement.ranks:
-                local_state_dict = flow.load(state_dict_dir)
+                local_state_dict = flow.load(state_dict_file)
             else:
                 local_state_dict = None
 
@@ -417,7 +417,7 @@ def _test_graph_save_load_global_split_2(
             if flow.env.get_rank() in model_file_placement.ranks:
                 flow.save(
                     flow.utils.global_view.to_local(model_file_state_dict),
-                    state_dict_dir,
+                    state_dict_file,
                 )
 
             graph_model(x)
@@ -425,11 +425,11 @@ def _test_graph_save_load_global_split_2(
             return iter2_state_dict
 
     rank_id = flow.env.get_rank()
-    with tempfile.TemporaryDirectory(
+    with tempfile.NamedTemporaryFile(
         prefix="graph_save_load_global_" + str(rank_id)
-    ) as state_dict_dir:
-        iter2_state_dict = train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir, iter2_state_dict)
+    ) as f:
+        iter2_state_dict = train_with_graph(0, f.name)
+        train_with_graph(1, f.name, iter2_state_dict)
 
 
 def _test_graph_save_load_global_split_4(
@@ -533,7 +533,7 @@ def _test_graph_save_load_global_split_4(
             out.backward()
             return out
 
-    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_file=None, last_state_dict=None):
         # A fixed input with shape [2, 16]
         x = flow.tensor(
             [
@@ -585,7 +585,7 @@ def _test_graph_save_load_global_split_4(
 
         if call_cnt == 1:
             if cur_rank in model_file_placement.ranks:
-                local_state_dict = flow.load(state_dict_dir)
+                local_state_dict = flow.load(state_dict_file)
             else:
                 local_state_dict = None
 
@@ -752,7 +752,7 @@ def _test_graph_save_load_global_split_4(
             if flow.env.get_rank() in model_file_placement.ranks:
                 flow.save(
                     flow.utils.global_view.to_local(model_file_state_dict),
-                    state_dict_dir,
+                    state_dict_file,
                 )
 
             graph_model(x)
@@ -760,11 +760,11 @@ def _test_graph_save_load_global_split_4(
             return iter2_state_dict
 
     rank_id = flow.env.get_rank()
-    with tempfile.TemporaryDirectory(
+    with tempfile.NamedTemporaryFile(
         prefix="graph_save_load_global_" + str(rank_id)
-    ) as state_dict_dir:
-        iter2_state_dict = train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir, iter2_state_dict)
+    ) as f:
+        iter2_state_dict = train_with_graph(0, f.name)
+        train_with_graph(1, f.name, iter2_state_dict)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

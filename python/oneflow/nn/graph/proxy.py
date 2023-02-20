@@ -33,9 +33,9 @@ from oneflow.nn.graph.graph_block import (
 )
 from oneflow.nn.graph.util import (
     add_indent,
-    ArgsTree,
     seq_to_func_return,
 )
+from oneflow.framework.args_tree import ArgsTree
 
 
 def get_proxy_cls(item):
@@ -103,7 +103,7 @@ class ProxyModule(Proxy):
         if origin is None:
             return
         assert isinstance(origin, Module)
-        for (n, m) in list(origin.named_children()):
+        for (n, m) in origin._modules.items():
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
