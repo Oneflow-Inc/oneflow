@@ -61,7 +61,14 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   const auto& dtype = PyTensorType_UnpackDType(self);
   PyObject* dtype_value = functional::CastToPyObject(dtype);
-  if (!kwargs) { kwargs = PyDict_New(); }
+  if (!kwargs) {
+    kwargs = PyDict_New();
+  } else {
+    const char* dtype_str = "dtype";
+    PyObject* dtype_key = PyUnicode_FromString(dtype_str);
+    CHECK_OR_THROW(PyDict_Contains(kwargs, dtype_key) < 1)
+        << "Some of the keywords were incorrect: dtype";
+  }
   CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value) > -1);
   auto* tensor = functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -70,7 +77,7 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
     return PyErr_Format(PyExc_ValueError, "invalid device");
   Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
   return PyTensor_New(
-      ASSERT_PTR(functional::To(PyTensor_Unpack(tensor), device, dtype, /*copy=*/false)));
+      ASSERT_PTR(functional::To(PyTensor_Unpack(tensor), device, NullOpt, /*copy=*/false)));
   END_HANDLE_ERRORS
 };
 
