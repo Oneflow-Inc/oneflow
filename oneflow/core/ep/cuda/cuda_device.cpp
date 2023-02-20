@@ -79,7 +79,7 @@ CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
 #endif  // CUDA_VERSION >= 11000
   }
 #if CUDA_VERSION >= 11020
-  if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATOR", true)) {
+  if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATOR", false)) {
     int memory_pools_supported = 0;
     cudaError_t err = cudaDeviceGetAttribute(&memory_pools_supported,
                                              cudaDevAttrMemoryPoolsSupported, device_index_);
