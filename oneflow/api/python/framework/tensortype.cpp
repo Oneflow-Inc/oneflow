@@ -65,24 +65,24 @@ static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
 static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   const auto& dtype = PyTensorType_UnpackDType(self);
-  PyObject* dtype_value = functional::CastToPyObject(dtype);
+  PyObjectPtr dtype_value(functional::CastToPyObject(dtype));
   if (!kwargs) {
     kwargs = PyDict_New();
   } else {
     const char* dtype_str = "dtype";
-    PyObject* dtype_key = PyUnicode_FromString(dtype_str);
-    CHECK_OR_THROW(PyDict_Contains(kwargs, dtype_key) < 1)
+    PyObjectPtr dtype_key(PyUnicode_FromString(dtype_str));
+    CHECK_OR_THROW(PyDict_Contains(kwargs, dtype_key.get()) < 1)
         << "Some of the keywords were incorrect: dtype";
   }
-  CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value.get()) > -1);
 
   Maybe<std::string> maybe_device = DeviceTag4DeviceType(PyTensorType_UnpackDevice(self));
   if (!TRY(maybe_device).IsOk()) { return PyErr_Format(PyExc_ValueError, "invalid device"); }
 
   {
     const char* placement_str = "placement";
-    PyObject* placement_key = PyUnicode_FromString(placement_str);
-    if (PyDict_Contains(kwargs, placement_key) == 1) {
+    PyObjectPtr placement_key(PyUnicode_FromString(placement_str));
+    if (PyDict_Contains(kwargs, placement_key.get()) == 1) {
       // If creat global tensor, the device of TensorType will be cover by param placement
       // Raise a warning to inform users of using oneflow.Tensortype rather than
       // oneflow.xxx.Tensortype
