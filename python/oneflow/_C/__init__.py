@@ -15,6 +15,7 @@ limitations under the License.
 """
 from oneflow._oneflow_internal._C import *
 import oneflow._C._nn as _nn
+import warnings
 
 
 def allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False):
@@ -22,4 +23,7 @@ def allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False):
 
 
 def _log_api_usage_once(event):
-    pass
+    warnings.warn(
+        "The _log_api_usage_once API only support training mode, \
+                  debugging mode in pytorch is temporarily not supported."
+    )
