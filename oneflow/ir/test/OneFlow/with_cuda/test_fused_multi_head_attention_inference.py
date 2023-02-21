@@ -71,9 +71,7 @@ def _ref2(query, key, value, num_heads, causal=False):
     value = value.reshape(-1, value.shape[2], value.shape[3])
 
     scale = 1 / math.sqrt(query.shape[-1])
-
-    scores = flow.matmul(query, key)
-
+    
     scores = flow.baddbmm(
         flow.empty(
             query.shape[0],
