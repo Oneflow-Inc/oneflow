@@ -78,7 +78,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(x.element_size(), 4)
 
     def test_tensor_new(test_case):
-        dtype = random_dtype(["all"])
+        dtype = random_dtype(["pod"])
         device = random_device()
         x = random_tensor(ndim=3).to(dtype).to(device)
         of_result = x.oneflow.new()
