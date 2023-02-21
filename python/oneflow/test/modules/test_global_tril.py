@@ -39,7 +39,7 @@ def _test_global_tril_without_diag(test_case, placement, sbp):
 def _test_global_tril_with_diag(test_case, placement, sbp):
     diagonal = random(-3, 3).to(int)
     x = random_tensor(
-        ndim=4, 
+        ndim=4,
         dim0=random(1, 4).to(int) * 8,
         dim1=random(1, 4).to(int) * 8,
         dim2=random(1, 4).to(int) * 8,
