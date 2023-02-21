@@ -320,7 +320,7 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxisGroups(
       MoveOutAxis();
     } else {  // in_count == out_count
       if (in_shape[in_axis] == out_shape[out_axis]) {
-        // group2: (5, 5) in the example will go this branch
+        // group2: (5, 5) in the example will reach this branch
         for (int rank_axis = 0; rank_axis < rank_mesh.size(); ++rank_axis) {
           int64_t rank_num = rank_mesh[rank_axis];
           if (in_shape[in_axis] % rank_num == 0) {
