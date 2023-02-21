@@ -110,23 +110,14 @@ def _fused_mha(query, key, value, num_heads, causal=False):
 
 
 class GraphToRun(flow.nn.Graph):
-    def __init__(self, num_heads=None, causal=False):
+    def __init__(self, ref=None, num_heads=None, causal=False):
         super().__init__()
+        self.ref = ref
         self.causal = causal
         self.num_heads = num_heads
 
     def build(self, query, key, value):
-        return _ref(query, key, value, self.num_heads, self.causal)
-
-
-class GraphToRun2(flow.nn.Graph):
-    def __init__(self, num_heads=None, causal=False):
-        super().__init__()
-        self.causal = causal
-        self.num_heads = num_heads
-
-    def build(self, query, key, value):
-        return _ref2(query, key, value, self.num_heads, self.causal)
+        return self.ref(query, key, value, self.num_heads, self.causal)
 
 
 def _test_fused_multi_head_attention_inference(
@@ -138,6 +129,8 @@ def _test_fused_multi_head_attention_inference(
     query_head_size,
     value_head_size,
     dtype,
+    GraphToRun,
+    ref,
     causal=False,
 ):
 
@@ -157,44 +150,8 @@ def _test_fused_multi_head_attention_inference(
         dtype=flow.float,
     ).to(dtype)
 
-    g = GraphToRun(num_heads=num_heads, causal=causal)
-    ref_out = _ref(query, key, value, num_heads, causal).numpy()
-    fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
-    g_out = g(query, key, value).numpy()
-    test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
-    test_case.assertTrue(np.allclose(ref_out, g_out, atol=1e-2, rtol=1e-2))
-
-
-def _test_fused_multi_head_attention_inference2(
-    test_case,
-    batch_size,
-    num_heads,
-    query_seq_len,
-    kv_seq_len,
-    query_head_size,
-    value_head_size,
-    dtype,
-    causal=False,
-):
-
-    query = flow.randn(
-        (batch_size, query_seq_len, num_heads * query_head_size),
-        device="cuda",
-        dtype=flow.float,
-    ).to(dtype)
-    key = flow.randn(
-        (batch_size, kv_seq_len, num_heads * query_head_size),
-        device="cuda",
-        dtype=flow.float,
-    ).to(dtype)
-    value = flow.randn(
-        (batch_size, kv_seq_len, num_heads * value_head_size),
-        device="cuda",
-        dtype=flow.float,
-    ).to(dtype)
-
-    g = GraphToRun2(num_heads=num_heads, causal=causal)
-    ref_out = _ref2(query, key, value, num_heads, causal).numpy()
+    g = GraphToRun(ref=ref, num_heads=num_heads, causal=causal)
+    ref_out = ref(query, key, value, num_heads, causal).numpy()
     fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
     g_out = g(query, key, value).numpy()
     test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
@@ -207,81 +164,78 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
     def test_multi_head_attention_inference(test_case):
         # test_case,batch_size, num_heads,query_seq_len, kv_seq_len,query_head_size,value_head_size,dtype
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 4096, 77, 40, 40, flow.float16
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float16, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 1024, 77, 80, 80, flow.float16
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float16, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 256, 256, 160, 160, flow.float16
+            test_case, 2, 8, 256, 256, 160, 160, flow.float16, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 256, 77, 160, 160, flow.float16
+            test_case, 2, 8, 256, 77, 160, 160, flow.float16, GraphToRun, _ref
         )
 
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 4096, 77, 40, 40, flow.float
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 1024, 1024, 80, 80, flow.float
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 1024, 77, 80, 80, flow.float
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 256, 256, 160, 160, flow.float
+            test_case, 2, 8, 256, 256, 160, 160, flow.float, GraphToRun, _ref
         )
         _test_fused_multi_head_attention_inference(
-            test_case, 2, 8, 256, 77, 160, 160, flow.float
+            test_case, 2, 8, 256, 77, 160, 160, flow.float, GraphToRun, _ref
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16, GraphToRun, _ref2
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float16, GraphToRun, _ref2
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16, GraphToRun, _ref2
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float16, GraphToRun, _ref2
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float16, GraphToRun, _ref2
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float16, GraphToRun, _ref2
         )
 
-    def test_multi_head_attention_inference2(test_case):
-        # test_case,batch_size, num_heads,query_seq_len, kv_seq_len,query_head_size,value_head_size,dtype
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float, GraphToRun, _ref2
         )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 4096, 77, 40, 40, flow.float16
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float, GraphToRun, _ref2
         )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float, GraphToRun, _ref2
         )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 1024, 77, 80, 80, flow.float16
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float, GraphToRun, _ref2
         )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 256, 256, 160, 160, flow.float16
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float, GraphToRun, _ref2
         )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 256, 77, 160, 160, flow.float16
-        )
-
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
-        )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 4096, 77, 40, 40, flow.float
-        )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 1024, 1024, 80, 80, flow.float
-        )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 1024, 77, 80, 80, flow.float
-        )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 256, 256, 160, 160, flow.float
-        )
-        _test_fused_multi_head_attention_inference2(
-            test_case, 2, 8, 256, 77, 160, 160, flow.float
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float, GraphToRun, _ref2
         )
 
 
