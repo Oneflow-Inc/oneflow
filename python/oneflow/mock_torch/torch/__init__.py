@@ -28,4 +28,6 @@ def __getattr__(name: str):
 # register importer in meta path
 oneflow_importer = OneflowImporter()
 oneflow_importer.enable = True
+oneflow_importer.use_dummy_obj_as_fallback = False
+oneflow_importer.verbose = False
 sys.meta_path.insert(0, oneflow_importer)
