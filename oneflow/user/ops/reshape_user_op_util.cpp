@@ -221,11 +221,11 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSplitIn2OutAxis(
   std::vector<std::vector<int>> rank_axes_subset;
   GenRankMeshSubset(rank_mesh.size(), rank_axes_subset);
   // traverse all subset to detect contiguous nd-split signatures
-  // for example (4,) reshape (2, 2) with rank_mesh=(2, 2)
+  // for example (6,) reshape to (2, 3) with rank_mesh=(2, 3)
   // nd-split signatures include:
   // S(0) -> S(0) with rank_axis=0 (1d)
-  // S(0) -> S(0) with rank_axis=1 (1d)
-  // [S(0), S(0)] -> [S(0), S(1)] with rank_mesh=(2,2) (2d)
+  // S(0) -> S(1) with rank_axis=1 (1d)
+  // [S(0), S(0)] -> [S(0), S(1)] with rank_mesh=(2,3) (2d)
   for (const std::vector<int>& rank_axes : rank_axes_subset) {
     int rank_axis_idx = 0;
     int in_axis = in_shape.size() - 1;
