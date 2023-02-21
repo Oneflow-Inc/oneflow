@@ -23,7 +23,4 @@ def allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False):
 
 
 def _log_api_usage_once(event):
-    warnings.warn(
-        "The _log_api_usage_once API only support training mode, \
-                  debugging mode in pytorch is temporarily not supported."
-    )
+    warnings.warn("_log_api_usage_once is not implemented in oneflow")
