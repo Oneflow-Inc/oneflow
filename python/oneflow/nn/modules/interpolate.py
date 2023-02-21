@@ -307,7 +307,7 @@ def interpolate(
         mode=mode,
         align_corners=align_corners,
         recompute_scale_factor=recompute_scale_factor,
-    )(input)
+    ).forward(input)
 
 
 if __name__ == "__main__":
