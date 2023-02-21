@@ -22,7 +22,7 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.module import Module
 
 
-class Interpolate():
+class Interpolate:
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
