@@ -116,7 +116,6 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
           .Attr<std::vector<std::string>>("src_nd_sbp_str_list", src_nd_sbp_str_list)
           .Attr<std::vector<std::string>>("dst_nd_sbp_str_list", dst_nd_sbp_str_list)
           .Attr<std::vector<std::string>>("nccl_type_list", nccl_type_list)
-          .Attr<Shape>("hierarchy", *seed_placement.hierarchy())
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   OperatorConf fusion_nccl_op_conf = fusion_nccl_op.op_conf();

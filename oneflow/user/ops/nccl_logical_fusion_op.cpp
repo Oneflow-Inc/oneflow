@@ -43,7 +43,6 @@ namespace oneflow {
       ctx->user_op_conf().attr<std::vector<std::string>>("src_nd_sbp_str_list");
   const std::vector<std::string>& dst_nd_sbp_str_list =
       ctx->user_op_conf().attr<std::vector<std::string>>("dst_nd_sbp_str_list");
-  const Shape& hierarchy = ctx->user_op_conf().attr<Shape>("hierarchy");
   CHECK_EQ_OR_RETURN(nccl_size, src_nd_sbp_str_list.size());
   CHECK_EQ_OR_RETURN(nccl_size, dst_nd_sbp_str_list.size());
   for (int32_t i = 0; i < nccl_size; ++i) {
@@ -57,7 +56,6 @@ namespace oneflow {
     CHECK_OR_RETURN(ParseNdSbpFromLongString(JUST(VectorAt(dst_nd_sbp_str_list, i)), output_nd_sbp))
         << Error::RuntimeError() << " Cannot parse str: " << JUST(VectorAt(dst_nd_sbp_str_list, i))
         << " to output nd_sbp attr of op : " << ctx->user_op_conf().op_name();
-    CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), hierarchy.NumAxes());
   }
 
   return Maybe<void>::Ok();
