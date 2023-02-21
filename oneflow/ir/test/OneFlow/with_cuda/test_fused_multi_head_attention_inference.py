@@ -71,7 +71,6 @@ class GraphToRun(flow.nn.Graph):
         self.num_heads = num_heads
 
     def build(self, query, key, value):
-        f = _fused_mha(query, key, value, self.num_heads, self.causal)
         return _ref(query, key, value, self.num_heads, self.causal)
 
 
