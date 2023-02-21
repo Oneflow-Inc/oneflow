@@ -1157,7 +1157,6 @@ class Graph(object):
             ):
                 self._c_nn_graph.align_states_after_logical_graph_compile()
                 self._c_nn_graph.complete_graph_for_runtime()
-                print(self._c_nn_graph.get_current_job_debug_string())
                 # Get compiled job
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
