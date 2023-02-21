@@ -793,10 +793,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
-  if (job_wrapper.IsLastIRPass()
-      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
-    pm.addPass(oneflow::createOutlineJitFunctionPass());
-  }
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
@@ -811,6 +807,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_FORWARD_OPS", false)) {
     pm.addPass(oneflow::createFuseForwardOps());
     pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  }
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
+    pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   // TODO: support backward or put it in a env flag
   if (job_wrapper.IsLastIRPass()

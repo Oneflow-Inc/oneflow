@@ -21,7 +21,6 @@ from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
 from contextlib import contextmanager
-import traceback
 
 import oneflow.support.env_var_util
 
@@ -43,15 +42,15 @@ class ModuleWrapper(ModuleType):
                 return None
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
+            new_name = self.module.__name__ + "." + name
             if _importer.use_dummy_obj_as_fallback:
-                new_name = self.module.__name__ + "." + name
                 if _importer.verbose:
                     print(
                         f"{new_name} is not found in oneflow, use dummy object as fallback."
                     )
                 return DummyModule(new_name)
             else:
-                raise ModuleNotFoundError(self.module.__name__ + "." + name + error_msg)
+                raise ModuleNotFoundError(new_name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
             return ModuleWrapper(attr)
@@ -194,13 +193,13 @@ class DummyModule(ModuleType):
     def __getitem__(self, name):
         new_name = f"{self.__name__}[{name}]"
         if _importer.verbose:
-            print(f'"{self.__name__}" is a dummy object, and `new_name` is called.')
+            print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
 
     def __call__(self, *args, **kwargs):
         new_name = f'{self.__name__}({", ".join(map(repr, args))}, {", ".join(["{}={}".format(k, repr(v)) for k, v in kwargs.items()])})'
         if _importer.verbose:
-            print(f'"{self.__name__}" is a dummy object, and `new_name` is called.')
+            print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
 
 
