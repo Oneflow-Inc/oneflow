@@ -32,6 +32,7 @@ limitations under the License.
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
+#define UNSIGNED_INT32_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 
 #define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
 

@@ -111,10 +111,16 @@ void CudaGraphExecutable::Update(cudaGraph_t graph) {
   if (dev != dev_) { Reset(); }
   dev_ = dev;
   if (graph_exec_ != nullptr) {
+#if CUDA_VERSION < 12000
     cudaGraphExecUpdateResult update_result{};
     cudaGraphNode_t error_node = nullptr;
     OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
     if (update_result == cudaGraphExecUpdateSuccess) { return; }
+#else
+    cudaGraphExecUpdateResultInfo update_result{};
+    OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &update_result));
+    if (update_result.result == cudaGraphExecUpdateSuccess) { return; }
+#endif  // CUDA_VERSION < 12000
   }
   Reset();
   OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
@@ -233,6 +239,34 @@ Maybe<void> CudaStream::GetAsyncError() {
   } else {
     return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
   }
+}
+
+Maybe<void> CudaStream::AllocAsync(void** ptr, size_t size) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaMallocFromPoolAsync(ptr, size, device_->mem_pool(), cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
+}
+
+Maybe<void> CudaStream::FreeAsync(void* ptr) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaFreeAsync(ptr, cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
 }
 
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }

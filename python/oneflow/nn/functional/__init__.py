@@ -45,6 +45,7 @@ from oneflow._C import hardsigmoid
 from oneflow._C import hardshrink
 from oneflow._C import hardswish
 from oneflow._C import leaky_relu
+from oneflow._C import rrelu, rrelu_
 from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu
@@ -91,3 +92,4 @@ from .functional_multi_head_attention import (
     multi_head_attention as multi_head_attention_forward,
 )
 from oneflow._C import gumbel_softmax
+from .functional_depend import depend

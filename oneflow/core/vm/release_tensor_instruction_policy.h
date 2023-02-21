@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/device.h"
@@ -97,7 +98,7 @@ class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 
   Maybe<void> Prepare(vm::Instruction* instruction) override {
     DataType data_type = eager_blob_object()->data_type();
-    CHECK_OR_RETURN(IsPODDataType(data_type));
+    CHECK_OR_RETURN(IsTriviallyCopyableDataType(data_type));
     if (eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
       Release(eager_blob_object());
     }
@@ -175,7 +176,7 @@ struct MakeReleaseTensorInstructionPolicy
       const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     DataType data_type = eager_blob_object->data_type();
-    if (!IsPODDataType(data_type)) {
+    if (!IsTriviallyCopyableDataType(data_type)) {
       return std::shared_ptr<vm::InstructionPolicy>(
           new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
     }

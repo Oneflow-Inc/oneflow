@@ -190,7 +190,7 @@ generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GE
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog)
+target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog fmt)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 if(BUILD_PYTHON)
@@ -207,7 +207,7 @@ if(BUILD_PYTHON)
     of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog)
+  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog fmt)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
@@ -313,6 +313,11 @@ elseif(UNIX)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
+  if(WITH_OMP)
+    if(OpenMP_CXX_FOUND)
+      target_link_libraries(oneflow OpenMP::OpenMP_CXX)
+    endif()
+  endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_functional_obj of_op_schema)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
@@ -331,8 +336,7 @@ if(BUILD_CUDA AND WITH_CUTLASS)
 
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-                    ${CUTLASS_INSTALL_DIR}/examples/41_fused_multi_head_attention)
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/xformers_fmha)
   set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
                PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/45_dual_gemm)
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
@@ -384,7 +388,6 @@ if(BUILD_PYTHON)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
-  target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   if(WITH_MLIR)
     add_dependencies(check-oneflow oneflow_internal)
   endif(WITH_MLIR)

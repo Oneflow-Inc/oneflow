@@ -136,4 +136,11 @@ module  {
     return %2 : tensor<1x64x112x112xf32>
   }
 
+
+  func.func @GraphToRun_broadcastmul_to_scalarmul_1(%arg0: tensor<64x3x7x7xf32>, %arg1: tensor<1xf32>) -> tensor<64x3x7x7xf32> {
+    %output = "oneflow.broadcast_mul"(%arg0, %arg1) {device_name = ["@0:0"], device_tag = "cuda", op_name = "multiply"} : (tensor<64x3x7x7xf32>, tensor<1xf32>) -> tensor<64x3x7x7xf32>  
+    // CHECK: func.func @GraphToRun_broadcastmul_to_scalarmul_1(%[[ARG_0:[a-zA-Z0-9_]+]]: tensor<64x3x7x7xf32>, %[[ARG_1:[a-zA-Z0-9_]+]]: tensor<1xf32>)
+    // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.scalar_mul_by_tensor"(%[[ARG_0]], %[[ARG_1]]
+    return %output : tensor<64x3x7x7xf32>
+    }
 }
