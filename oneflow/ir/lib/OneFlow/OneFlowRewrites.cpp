@@ -410,6 +410,9 @@ static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
   }
   return failure();
 }
+
+static float mha_scale_max_diff = 1e-5;
+
 static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_reshape,
                                         Attribute scalar_div_operand) {
   auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
@@ -417,16 +420,16 @@ static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_r
   std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
   auto index = query_reshape_new_shape.size() - 1;
   return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - scalar_div_operand_attr)
-                 < 1e-5);
+                 < mha_scale_max_diff);
 }
 static LogicalResult IsScalarEqualSqrtD2(PatternRewriter& rewriter, Value query_reshape,
-                                        Attribute scalar_div_operand) {
+                                         Attribute scalar_div_operand) {
   auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
   double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
   std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
   auto index = query_reshape_new_shape.size() - 1;
-  return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - (1/scalar_div_operand_attr))
-                 < 1e-5);
+  return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - (1 / scalar_div_operand_attr))
+                 < mha_scale_max_diff);
 }
 }  // namespace
 
