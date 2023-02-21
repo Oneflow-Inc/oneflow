@@ -112,14 +112,10 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def("build_with_new_input_from_shared_graph", &NNGraph::BuildWithNewInputFromSharedGraph)
       .def("compile_plan_for_runtime", &NNGraph::CompilePlanForRuntime)
       .def("init_runtime", &NNGraph::InitRuntime)
-      .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob)
-      .def("get_current_job_debug_string", [](const std::shared_ptr<NNGraph>& graph) {
-        return graph->job().DebugString();
-      });
-
+      .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
-  m.def("RunLazyNNGraphByEager", &one::InterpretJob);
+  m.def("RunLazyNNGraphByVM", &one::InterpretJob);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
   m.def("MarkVariableGradients", [](const std::vector<std::shared_ptr<one::Tensor>>& variables,
