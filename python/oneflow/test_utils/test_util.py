@@ -62,6 +62,7 @@ class Args:
 
 
 type_name_to_flow_type = {
+    "bool": flow.bool,
     "float16": flow.float16,
     "float32": flow.float32,
     "double": flow.double,

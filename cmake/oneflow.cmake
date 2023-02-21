@@ -313,6 +313,11 @@ elseif(UNIX)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
+  if(WITH_OMP)
+    if(OpenMP_CXX_FOUND)
+      target_link_libraries(oneflow OpenMP::OpenMP_CXX)
+    endif()
+  endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_functional_obj of_op_schema)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
@@ -331,8 +336,7 @@ if(BUILD_CUDA AND WITH_CUTLASS)
 
   set_property(
     SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-                    ${CUTLASS_INSTALL_DIR}/examples/41_fused_multi_head_attention)
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/xformers_fmha)
   set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
                PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/45_dual_gemm)
   if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
