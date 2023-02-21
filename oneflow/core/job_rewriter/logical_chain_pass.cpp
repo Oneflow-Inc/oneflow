@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -205,7 +206,7 @@ void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
 struct LogicalChain {
   int64_t logical_chain_id;
   std::vector<const OpNode*> ordered_op_nodes;
-  LogicalChain(int64_t val) : logical_chain_id(val) { CHECK_GE(val, 0); }
+  explicit LogicalChain(int64_t val) : logical_chain_id(val) { CHECK_GE(val, 0); }
 };
 
 struct PlacementLogicalChainsInfo {

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -50,11 +51,11 @@ namespace oneflow {
     NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", i);
     input_nd_sbp->clear_sbp_parallel();
     output_nd_sbp->clear_sbp_parallel();
-    CHECK_OR_RETURN(ParseNdSbpFromLongString(src_nd_sbp_str_list.at(i), input_nd_sbp))
-        << Error::RuntimeError() << " Cannot parse str: " << src_nd_sbp_str_list.at(i)
+    CHECK_OR_RETURN(ParseNdSbpFromLongString(JUST(VectorAt(src_nd_sbp_str_list, i)), input_nd_sbp))
+        << Error::RuntimeError() << " Cannot parse str: " << JUST(VectorAt(src_nd_sbp_str_list, i))
         << " to input nd_sbp attr of op : " << ctx->user_op_conf().op_name();
-    CHECK_OR_RETURN(ParseNdSbpFromLongString(dst_nd_sbp_str_list.at(i), output_nd_sbp))
-        << Error::RuntimeError() << " Cannot parse str: " << dst_nd_sbp_str_list.at(i)
+    CHECK_OR_RETURN(ParseNdSbpFromLongString(JUST(VectorAt(dst_nd_sbp_str_list, i)), output_nd_sbp))
+        << Error::RuntimeError() << " Cannot parse str: " << JUST(VectorAt(dst_nd_sbp_str_list, i))
         << " to output nd_sbp attr of op : " << ctx->user_op_conf().op_name();
     CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), hierarchy.NumAxes());
   }

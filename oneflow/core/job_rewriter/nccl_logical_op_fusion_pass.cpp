@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
 
 namespace oneflow {
@@ -131,7 +132,7 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
   for (int32_t i = 0; i < nccl_size; ++i) {
     std::string output_lbn = fusion_nccl_op.output("out", i);
     std::string input_lbn = fusion_nccl_op.input("in", i);
-    const OpNode* origin_nccl = nccl_ops.at(i);
+    const OpNode* origin_nccl = JUST(VectorAt(nccl_ops, i));
     const OpEdge* origin_edge = origin_nccl->SoleOutEdge();
     std::string origin_nccl_input_lbn =
         GenLogicalBlobName(origin_nccl->op().BnInOp2Lbi(origin_nccl->op().SoleIbn()));
@@ -150,15 +151,15 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
     CHECK_EQ_OR_RETURN(origin_nccl_output_lbn, GenLogicalBlobName(lbi));
 
     // 3. update consumer op
-    for (const std::string& ibn : origin_edge->lbi2ibns().at(lbi)) {
+    for (const std::string& ibn : JUST(MapAt(origin_edge->lbi2ibns(), lbi))) {
       std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
-          &mut_op_name2conf->at(consumer_op_name), ibn, output_lbn);
+          &JUST(MapAt(*mut_op_name2conf, consumer_op_name)), ibn, output_lbn);
       CHECK_EQ_OR_RETURN(old_lbn, origin_nccl_output_lbn);
     }
 
     VLOG(3) << " Update origin consumer op from: \n [ "
             << origin_consumer->op().op_conf().DebugString() << " ] \n to \n [ "
-            << mut_op_name2conf->at(consumer_op_name).DebugString() << " ] \n";
+            << JUST(MapAt(*mut_op_name2conf, consumer_op_name)).DebugString() << " ] \n";
   }
   return Maybe<void>::Ok();
 }
@@ -222,7 +223,8 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   for (const auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
   CHECK_EQ_OR_RETURN(nccl_fusion_ops.size(), nccl_fusion_op_parallel_confs.size());
   for (int32_t i = 0; i < nccl_fusion_ops.size(); ++i) {
-    JUST(job_builder->AddOp(nccl_fusion_op_parallel_confs.at(i), nccl_fusion_ops.at(i)););
+    JUST(job_builder->AddOp(JUST(VectorAt(nccl_fusion_op_parallel_confs, i)),
+                            JUST(VectorAt(nccl_fusion_ops, i))));
   }
   return Maybe<void>::Ok();
 }

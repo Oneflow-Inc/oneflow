@@ -76,7 +76,8 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()),
         num_ranks_(-1),
-        comm_key_("InvalidKey") {
+        comm_key_("InvalidKey"),
+        nccl_num_(-1) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
     InitSplitAxisAndTmpBufferOffset(ctx);
   }
@@ -299,7 +300,7 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
   }
 };
 
-const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string nccl_type,
+const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string& nccl_type,
                                       user_op::Tensor* tmp_buffer,
                                       NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
   CHECK_NOTNULL(tmp_buffer);
@@ -319,7 +320,7 @@ const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string
   return pack_to_ptr;
 }
 
-void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string nccl_type,
+void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string& nccl_type,
                                     user_op::Tensor* tmp_buffer, const user_op::Tensor* in,
                                     NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
   CHECK_NOTNULL(tmp_buffer);
@@ -345,7 +346,7 @@ void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string ncc
   return unpack_from_ptr;
 }
 
-void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string nccl_type,
+void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
                            const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
                            NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
   if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
@@ -432,7 +433,8 @@ void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string nccl_type,
 void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_ptr,
                                     const std::string& nccl_type, const user_op::Tensor* in,
                                     user_op::Tensor* out, user_op::KernelComputeContext* ctx,
-                                    NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+                                    NcclLogicalFusionKernelState* kernel_state, const int32_t i,
+                                    const ncclComm_t& comm) {
   const int64_t num_ranks = kernel_state->num_ranks();
   VLOG(3) << "[NcclLogicalFusion] op: " << ctx->op_name() << " , i= " << i
           << ", stream: " << kernel_state->stream_name() << " Try launch nccl_type: " << nccl_type;
@@ -442,7 +444,7 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_reduce_scatter") {
     CHECK(in->dptr() == pack_to_ptr);
@@ -450,22 +452,22 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt() * num_ranks);
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclReduceScatter(
-        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), GetNcclDataType(in->data_type()),
-        reduce_type, kernel_state->comm(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), reduce_type, comm,
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_all_gather") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() == unpack_from_ptr);
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() != unpack_from_ptr);  // do unpack from ptr -> out
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
     CHECK(in->dptr() != pack_to_ptr);  // do in -> pack to ptr
@@ -473,8 +475,7 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclReduceScatter(pack_to_ptr, out->mut_dptr(), out->shape_view().elem_cnt(),
-                                    GetNcclDataType(in->data_type()), reduce_type,
-                                    kernel_state->comm(),
+                                    GetNcclDataType(in->data_type()), reduce_type, comm,
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_s2s") {
     const int64_t elem_cnt = in->shape_view().elem_cnt();
@@ -484,12 +485,11 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     for (int64_t j = 0; j < num_ranks; ++j) {
       OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                  reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                             elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                             kernel_state->comm(),
+                             elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       OF_NCCL_CHECK(ncclRecv(
           reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-          elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
+          elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     }
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_reduce") {
@@ -498,21 +498,21 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() == unpack_from_ptr);
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() != unpack_from_ptr);  // do unpack from ptr -> out
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
     const int64_t elem_cnt = in->shape_view().elem_cnt();
@@ -522,12 +522,11 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     for (int64_t j = 0; j < num_ranks; ++j) {
       OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                  reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                             elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                             kernel_state->comm(),
+                             elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       OF_NCCL_CHECK(ncclRecv(
           reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-          elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
+          elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     }
   } else if (nccl_type == "_nccl_logical_2D_same_dim1_all_reduce") {
@@ -536,7 +535,7 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, comm,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   } else {
     UNIMPLEMENTED();
@@ -703,7 +702,7 @@ void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
             << " , dst_split_axis = " << kernel_state->dst_split_axis(i)
             << " , tmp_buffer_offset = " << kernel_state->tmp_buffer_offset(i);
     DoNcclComputeByNcclTypeInGroup(pack_to_ptr_list.at(i), unpack_from_ptr_list.at(i),
-                                   nccl_type_list.at(i), in, out, ctx, kernel_state, i);
+                                   nccl_type_list.at(i), in, out, ctx, kernel_state, i, comm);
   }
   OF_NCCL_CHECK(ncclGroupEnd());
 

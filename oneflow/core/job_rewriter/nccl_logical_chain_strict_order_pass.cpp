@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -131,7 +132,7 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
         continue;
       }
       const OpNode* last_bw_node = pair.second;
-      const OpNode* first_after_acc_node = placement2first_after_acc_node.at(pair.first);
+      const OpNode* first_after_acc_node = JUST(MapAt(placement2first_after_acc_node, pair.first));
       const std::string& last_bw_op_name = last_bw_node->op().op_name();
       const std::string& first_after_acc_op_name = first_after_acc_node->op().op_name();
 
@@ -194,7 +195,8 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       if (mut_op_name2conf.find(first_after_acc_op_name) == mut_op_name2conf.end()) {
         mut_op_name2conf.emplace(first_after_acc_op_name, first_after_acc_node->op().op_conf());
       }
-      mut_op_name2conf.at(first_after_acc_op_name).add_ctrl_in_op_name(sink_final_tick_conf.name());
+      JUST(MapAt(mut_op_name2conf, first_after_acc_op_name))
+          .add_ctrl_in_op_name(sink_final_tick_conf.name());
 
       VLOG(2) << " In: " << pair.first << " , insert ctrl edge from: [ " << last_bw_op_name
               << " ] to: [ " << first_after_acc_op_name << " ]";
