@@ -63,8 +63,8 @@ module  {
     %309 = "oneflow.batch_matmul"(%attn, %value_reshape_to_batch) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.down_blocks.0.attentions.1.transformer_blocks.0.attn1-batch_matmul-131", scope_symbol_id = 661 : i64, transpose_a = false, transpose_b = false} : (tensor<16x4096x4096xf16>, tensor<16x4096x40xf16>) -> tensor<16x4096x40xf16>
     %310 = "oneflow.reshape"(%309) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.down_blocks.0.attentions.1.transformer_blocks.0.attn1-reshape-132", scope_symbol_id = 661 : i64, shape = [2 : si64, 8 : si64, 4096 : si64, 40 : si64]} : (tensor<16x4096x40xf16>) -> tensor<2x8x4096x40xf16>
     %311 = "oneflow.transpose"(%310) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.down_blocks.0.attentions.1.transformer_blocks.0.attn1-transpose-133", perm = [0 : si32, 2 : si32, 1 : si32, 3 : si32], scope_symbol_id = 661 : i64} : (tensor<2x8x4096x40xf16>) -> tensor<2x4096x8x40xf16>
-    %out_reshape = "oneflow.reshape"(%311) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.down_blocks.0.attentions.1.transformer_blocks.0.attn1-reshape-134", scope_symbol_id = 661 : i64, shape = [2 : si64, 4096 : si64, 320 : si64]} : (tensor<2x4096x8x40xf16>) -> tensor<2x4096x320xf16>
-    return %out_reshape : tensor<2x4096x320xf16>
+    %out_reshape_to_heads = "oneflow.reshape"(%311) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.down_blocks.0.attentions.1.transformer_blocks.0.attn1-reshape-134", scope_symbol_id = 661 : i64, shape = [2 : si64, 4096 : si64, 320 : si64]} : (tensor<2x4096x8x40xf16>) -> tensor<2x4096x320xf16>
+    return %out_reshape_to_heads : tensor<2x4096x320xf16>
   }
 
   func.func @GraphToRun_pad_and_conv2d_0(%arg0: tensor<2x3x4x5xf32>) -> tensor<2x3x5x6xf32> {
