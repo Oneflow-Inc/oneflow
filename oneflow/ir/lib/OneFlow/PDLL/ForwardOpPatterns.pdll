@@ -54,9 +54,9 @@ Pattern {
   let out = op<oneflow.batch_matmul>(attn.0, value_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
   let out_transpose = op<oneflow.transpose>(out.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
-  
-  IsScalarEqualSqrtD(query_reshape.0, scalar_div_operand);  
-  
+
+  IsScalarEqualSqrtD(query_reshape.0, scalar_div_operand);
+
   rewrite out_reshape with{
     replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
@@ -90,14 +90,14 @@ Pattern {
   let key_reshape_to_batch = op<oneflow.reshape>(key_permute.0) {device_name = device_name, device_tag = device_tag};
   let query_reshape_to_batch = op<oneflow.reshape>(query_permute.0) {device_name = device_name, device_tag = device_tag};
   let key_transpose = op<oneflow.transpose>(key_reshape_to_batch.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32]">};
-  let scores_scaled = op<oneflow.batch_matmul>(query_reshape_to_batch.0, key_transpose.0) {alpha = attr<"0.15811388300841897 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let scores_scaled = op<oneflow.batch_matmul>(query_reshape_to_batch.0, key_transpose.0) {device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
   let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
   let out = op<oneflow.batch_matmul>(attn.0, value_reshape_to_batch.0) {alpha = attr<"1.000000e+00  : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
   let out_reshape_before = op<oneflow.reshape>(out.0) {device_name = device_name, device_tag = device_tag};
   let out_transpose = op<oneflow.transpose>(out_reshape_before.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
-  
-  
+
+
   rewrite out_reshape with{
     replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
