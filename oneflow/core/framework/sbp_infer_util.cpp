@@ -787,39 +787,81 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
   }
 }
 
-namespace {
-
-bool operator<(const NdSbpSignature& lhs_nd_sbp_sig, const NdSbpSignature& rhs_nd_sbp_sig) {
-  auto Convert = [](const NdSbpSignature& nd_sbp_sig,
-                    std::vector<std::vector<int>>& list_list_sbp) {
-    for (const auto& bn_nd_sbp : nd_sbp_sig.bn_in_op2nd_sbp()) {
-      list_list_sbp.emplace_back();
-      auto& list_sbp = list_list_sbp.back();
-      for (const auto& sbp : bn_nd_sbp.second.sbp_parallel()) {
-        if (sbp.has_broadcast_parallel()) {
-          list_sbp.push_back(-1);
-        } else if (sbp.has_partial_sum_parallel()) {
-          list_sbp.push_back(-2);
-        } else if (sbp.has_split_parallel()) {
-          list_sbp.push_back(sbp.split_parallel().axis());
-        }
-      }
+// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
+int CompareSbp(const SbpParallel& lhs_sbp, const SbpParallel& rhs_sbp) {
+  if (lhs_sbp.has_split_parallel() && rhs_sbp.has_split_parallel()) {
+    if (lhs_sbp.split_parallel().axis() < rhs_sbp.split_parallel().axis()) {
+      return -1;
+    } else if (lhs_sbp.split_parallel().axis() > rhs_sbp.split_parallel().axis()) {
+      return 1;
+    } else {
+      return 0;
     }
-  };
-  std::vector<std::vector<int>> lhs;
-  std::vector<std::vector<int>> rhs;
-  Convert(lhs_nd_sbp_sig, lhs);
-  Convert(rhs_nd_sbp_sig, rhs);
-  return lhs < rhs;
+  } else if (lhs_sbp.has_split_parallel() && !rhs_sbp.has_split_parallel()) {
+    return -1;
+  } else if (!lhs_sbp.has_split_parallel() && rhs_sbp.has_split_parallel()) {
+    return 1;
+  } else {
+    if (lhs_sbp.has_broadcast_parallel() && rhs_sbp.has_broadcast_parallel()) {
+      return 0;
+    } else if (lhs_sbp.has_broadcast_parallel() && !rhs_sbp.has_broadcast_parallel()) {
+      return -1;
+    } else if (!lhs_sbp.has_broadcast_parallel() && rhs_sbp.has_broadcast_parallel()) {
+      return 1;
+    } else {
+      // both P
+      return 0;
+    }
+  }
 }
 
-}  // namespace
+// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
+int CompareNdSbp(const NdSbp& lhs_nd_sbp, const NdSbp& rhs_nd_sbp) {
+  if (lhs_nd_sbp.sbp_parallel_size() < rhs_nd_sbp.sbp_parallel_size()) {
+    return -1;
+  } else if (lhs_nd_sbp.sbp_parallel_size() > rhs_nd_sbp.sbp_parallel_size()) {
+    return 1;
+  } else {
+    for (int i = 0; i < lhs_nd_sbp.sbp_parallel_size(); ++i) {
+      const auto& lhs_sbp = lhs_nd_sbp.sbp_parallel(i);
+      const auto& rhs_sbp = rhs_nd_sbp.sbp_parallel(i);
+      auto cmp_ret = CompareSbp(lhs_sbp, rhs_sbp);
+      if (cmp_ret != 0) { return cmp_ret; }
+    }
+    return 0;
+  }
+}
+
+// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
+int CompareNdSbpSignature(const NdSbpSignature& lhs_nd_sbp_sig,
+                          const NdSbpSignature& rhs_nd_sbp_sig) {
+  CHECK_EQ(lhs_nd_sbp_sig.bn_in_op2nd_sbp_size(), rhs_nd_sbp_sig.bn_in_op2nd_sbp_size());
+  for (const auto& lhs_bn_nd_sbp : lhs_nd_sbp_sig.bn_in_op2nd_sbp()) {
+    const auto& bn = lhs_bn_nd_sbp.first;
+    auto rhs_bn_nd_sbp_it = rhs_nd_sbp_sig.bn_in_op2nd_sbp().find(bn);
+    CHECK(rhs_bn_nd_sbp_it != rhs_nd_sbp_sig.bn_in_op2nd_sbp().end());
+    const auto& lhs_nd_sbp = lhs_bn_nd_sbp.second;
+    const auto& rhs_nd_sbp = rhs_bn_nd_sbp_it->second;
+    int cmp_ret = CompareNdSbp(lhs_nd_sbp, rhs_nd_sbp);
+    if (cmp_ret != 0) { return cmp_ret; }
+  }
+  return 0;
+}
 
 void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   std::vector<size_t> indices(nd_sbp_sig_list->size());
   std::iota(indices.begin(), indices.end(), 0);
   std::sort(indices.begin(), indices.end(), [nd_sbp_sig_list](size_t lhs, size_t rhs) {
-    return nd_sbp_sig_list->at(lhs) < nd_sbp_sig_list->at(rhs);
+    int cmp_ret = CompareNdSbpSignature(nd_sbp_sig_list->at(lhs), nd_sbp_sig_list->at(rhs));
+    if (cmp_ret == 0) {
+      return true;
+    } else if (cmp_ret == -1) {
+      return true;
+    } else if (cmp_ret == 1) {
+      return false;
+    } else {
+      UNIMPLEMENTED();
+    }
   });
   auto new_end =
       std::unique(indices.begin(), indices.end(), [nd_sbp_sig_list](size_t lhs, size_t rhs) {

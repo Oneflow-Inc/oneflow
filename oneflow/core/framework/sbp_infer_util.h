@@ -77,6 +77,11 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
                           const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
+// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
+int CompareSbp(const SbpParallel& lhs_sbp, const SbpParallel& rhs_sbp);
+int CompareNdSbp(const NdSbp& lhs_nd_sbp, const NdSbp& rhs_nd_sbp);
+int CompareNdSbpSignature(const NdSbpSignature& lhs_nd_sbp_sig,
+                          const NdSbpSignature& rhs_nd_sbp_sig);
 void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
 // Compute storage for given NdSbp
