@@ -163,8 +163,8 @@ void RepeatActor::Act() {
   Regst* out_regst = produced_repeat_var_rs_.Front(produced_repeat_var_regst_desc_id_);
   Regst* in_regst = consumed_var_rs_.Front(consumed_var_regst_desc_id_);
   CHECK(out_regst && in_regst);
-  CHECK(out_regst->main_mem_ptr() == in_regst->main_mem_ptr());
-  CHECK(out_regst->separated_header_mem_ptr() == in_regst->separated_header_mem_ptr());
+  CHECK(out_regst->body_mem_ptr() == in_regst->body_mem_ptr());
+  CHECK(out_regst->header_mem_ptr() == in_regst->header_mem_ptr());
   CHECK_EQ(out_regst->regst_desc()->MainByteSize4OneRegst(),
            in_regst->regst_desc()->MainByteSize4OneRegst());
   CHECK_EQ(out_regst->regst_desc()->SeparatedHeaderByteSize4OneRegst(),
