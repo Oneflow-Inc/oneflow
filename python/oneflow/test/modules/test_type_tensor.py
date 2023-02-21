@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import random
 import unittest
 import os
 
@@ -85,6 +86,58 @@ class TestTypeTensor(flow.unittest.TestCase):
             test_case.assertEqual(y.shape, (2, 3, 4, 5))
             test_case.assertFalse(y.requires_grad)
             test_case.assertTrue(y.is_leaf)
+
+    def test_doubletensor_corner_cases(test_case):
+        corner_cases = [random.randint(1 << 24, 1 << 25) for _ in range(20)]
+        test_case.assertTrue(
+            np.allclose(
+                flow.DoubleTensor(corner_cases).numpy(),
+                np.array(corner_cases, dtype=np.float64),
+                1e-6,
+                1e-6,
+            )
+        )
+
+    def test_type_tensor_ctor(test_case):
+        for tensor_type in type_tensor_all:
+            cpu_type = tensor_type["cpu_interface"]
+            cuda_type = tensor_type["cuda_interface"]
+
+            # empty ctor
+            cpu_type_tensor = cpu_type()
+            cuda_type_tensor = cuda_type()
+            test_case.assertEqual(cpu_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cpu_type_tensor.device, flow.device("cpu"))
+            test_case.assertEqual(cuda_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cuda_type_tensor.device, flow.device("cuda"))
+
+            # other ctor
+            other_tensor = flow.Tensor(flow.Size([2, 3, 4, 5]))
+            cpu_type_tensor = cpu_type(other_tensor)
+            cuda_type_tensor = cuda_type(other_tensor)
+            test_case.assertEqual(cpu_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cpu_type_tensor.device, flow.device("cpu"))
+            test_case.assertEqual(cuda_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cuda_type_tensor.device, flow.device("cuda"))
+
+            # data ctor
+            # numpy inputs have been tested above in test_type_tensor
+            data = [random.random() for i in range(20)]
+            cpu_type_tensor = cpu_type(data)
+            cuda_type_tensor = cuda_type(data)
+            test_case.assertEqual(cpu_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cpu_type_tensor.device, flow.device("cpu"))
+            test_case.assertEqual(cuda_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cuda_type_tensor.device, flow.device("cuda"))
+
+            # shape ctor
+            shape = flow.Size([2, 3, 4, 5])
+            cpu_type_tensor = cpu_type(shape)
+            cuda_type_tensor = cuda_type(shape)
+            test_case.assertEqual(cpu_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cpu_type_tensor.device, flow.device("cpu"))
+            test_case.assertEqual(cuda_type_tensor.dtype, tensor_type["dtype"])
+            test_case.assertEqual(cuda_type_tensor.device, flow.device("cuda"))
 
 
 if __name__ == "__main__":
