@@ -478,7 +478,6 @@ Maybe<void> ReshapeUserOpUtil::EnumerateNdSbpSignatures(
   if (in_shape.size() == 0 || out_shape.size() == 0) { return Maybe<void>::Ok(); }
   std::vector<std::vector<std::pair<int, int>>> nd_sbp_in2out_sig_list;
   JUST(EnumerateNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh, &nd_sbp_in2out_sig_list));
-  JUST(FilterNdSbpIn2OutSignatures(in_shape, out_shape, rank_mesh, &nd_sbp_in2out_sig_list));
   for (const auto& nd_sbp_in2out_axis : nd_sbp_in2out_sig_list) {
     nd_sbp_sig_list->emplace_back();
     auto& nd_sbp_sig = nd_sbp_sig_list->back();
