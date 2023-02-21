@@ -410,6 +410,13 @@ static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
   }
   return failure();
 }
+static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_reshape,
+                                        Attribute scalar_div_operand) {
+  auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
+  double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
+  std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
+  return success(std::abs(std::sqrt(query_reshape_new_shape[3]) - scalar_div_operand_attr) < 1e-3);
+}
 }  // namespace
 
 namespace rewrites {
@@ -443,6 +450,7 @@ void populateConstraints(RewritePatternSet& patterns) {
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsNotNestedInJit);
   PDLL_REGISTER(IsScalarTensor);
+  PDLL_REGISTER(IsScalarEqualSqrtD);
 
 #undef PDLL_REGISTER
 }
