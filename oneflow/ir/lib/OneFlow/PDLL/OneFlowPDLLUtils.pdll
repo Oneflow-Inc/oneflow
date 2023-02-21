@@ -21,3 +21,4 @@ Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_aft
 Constraint IsNotNestedInJit(mul: Op);
 Constraint IsScalarTensor(value: Value);
 Constraint IsScalarEqualSqrtD(query_reshape: Value, scalar_div_operand: Attr);
+Constraint IsScalarEqualSqrtD2(query_reshape: Value, scalar_div_operand: Attr);
