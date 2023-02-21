@@ -413,8 +413,8 @@ static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
 
 static float mha_scale_max_diff = 1e-5;
 
-static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_reshape,
-                                        Attribute scalar_div_operand) {
+static LogicalResult IsScalarEqualSqrtDim(PatternRewriter& rewriter, Value query_reshape,
+                                          Attribute scalar_div_operand) {
   auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
   double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
   std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
@@ -422,8 +422,9 @@ static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_r
   return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - scalar_div_operand_attr)
                  < mha_scale_max_diff);
 }
-static LogicalResult IsScalarEqualSqrtD2(PatternRewriter& rewriter, Value query_reshape,
-                                         Attribute scalar_div_operand) {
+
+static LogicalResult IsScalarEqualSqrtDimReciprocal(PatternRewriter& rewriter, Value query_reshape,
+                                                    Attribute scalar_div_operand) {
   auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
   double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
   std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
@@ -431,6 +432,7 @@ static LogicalResult IsScalarEqualSqrtD2(PatternRewriter& rewriter, Value query_
   return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - (1 / scalar_div_operand_attr))
                  < mha_scale_max_diff);
 }
+
 }  // namespace
 
 namespace rewrites {
@@ -464,8 +466,8 @@ void populateConstraints(RewritePatternSet& patterns) {
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsNotNestedInJit);
   PDLL_REGISTER(IsScalarTensor);
-  PDLL_REGISTER(IsScalarEqualSqrtD);
-  PDLL_REGISTER(IsScalarEqualSqrtD2);
+  PDLL_REGISTER(IsScalarEqualSqrtDim);
+  PDLL_REGISTER(IsScalarEqualSqrtDimReciprocal);
 
 #undef PDLL_REGISTER
 }
