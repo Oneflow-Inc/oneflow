@@ -58,13 +58,13 @@ Pattern {
   rewrite out_reshape with{
     replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
-      key_hidden_slice_end = attr<"-1 : si64">,
-      key_hidden_slice_start = attr<"0 : si64">,
       num_heads = GetNumHeadsFromTranpose(query_transpose),
-      query_hidden_slice_end = attr<"-1 : si64">,
+      key_hidden_slice_start = attr<"0 : si64">,
+      key_hidden_slice_end = attr<"-1 : si64">,
       query_hidden_slice_start = attr<"0 : si64">,
-      value_hidden_slice_end = attr<"-1 : si64">,
-      value_hidden_slice_start = attr<"0 : si64">
+      query_hidden_slice_end = attr<"-1 : si64">,
+      value_hidden_slice_start = attr<"0 : si64">,
+      value_hidden_slice_end = attr<"-1 : si64">
     } -> (out_t));
   };
 }
@@ -145,7 +145,7 @@ Pattern {
   let device_tag: Attr;
 
   let broadcast_mul = op<oneflow.broadcast_mul>(x: Value, y: Value){device_name = device_name, device_tag = device_tag}-> (out: Type);
-  
+
   IsScalarTensor(y);
 
   rewrite broadcast_mul with{
@@ -153,4 +153,3 @@ Pattern {
     replace broadcast_mul with CopyUserOpAttrs(broadcast_mul, scalar_mul);
   };
 }
-
