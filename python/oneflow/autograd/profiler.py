@@ -20,6 +20,6 @@ def record_function():
     raise NotImplementedError()
 
 
-class emit_nvtx(object):
+class emit_nvtx:
     def __init__(self):
         raise NotImplementedError()
