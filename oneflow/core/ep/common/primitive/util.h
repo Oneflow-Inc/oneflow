@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 
 namespace oneflow {
 
@@ -198,6 +199,52 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
   for (int64_t i = 0; i < *simplified_num_dims; ++i) {
     CHECK_EQ(broadcast_dims[i], simplified_dst_dims[i]);
   }
+}
+
+template<size_t max_num_dims>
+inline bool InferPermutable(size_t simplified_num_dims, const int64_t* simplified_src_strides,
+                            const int64_t* simplified_dst_strides,
+                            const int64_t* simplified_src_dims, const int64_t* simplified_dst_dims,
+                            int* permutation_list, int64_t* permutation_src_dims,
+                            UnaryOp unary_op) {
+  if (unary_op != UnaryOp::kIdentity) { return false; }
+
+  // all dims of src & dst should be the same
+  for (size_t i = 0; i < simplified_num_dims; i++) {
+    if (simplified_src_dims[i] != simplified_dst_dims[i]) { return false; }
+  }
+
+  // only simplified_src_strides need to be sorted, simplified_dst_strides has been sorted in
+  // SimplifyBroadcastDims
+  std::pair<int64_t, size_t> sorted_src_strides[max_num_dims];
+  for (size_t i = 0; i < simplified_num_dims; i++) {
+    sorted_src_strides[i] = {simplified_src_strides[i], i};
+  }
+  std::sort(sorted_src_strides, sorted_src_strides + simplified_num_dims,
+            [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
+
+  // src & dst has to be filled with numbers without strides
+  if (sorted_src_strides[simplified_num_dims - 1].first != 1) { return false; }
+  for (size_t i = simplified_num_dims - 1; i > 0; i--) {
+    if (sorted_src_strides[i - 1].first
+        != sorted_src_strides[i].first * simplified_src_dims[sorted_src_strides[i].second]) {
+      return false;
+    }
+  }
+
+  if (simplified_dst_strides[simplified_num_dims - 1] != 1) { return false; }
+  for (size_t i = simplified_num_dims - 1; i > 0; i--) {
+    if (simplified_dst_strides[i - 1] != simplified_dst_strides[i] * simplified_dst_dims[i]) {
+      return false;
+    }
+  }
+
+  for (size_t j = 0; j < simplified_num_dims; j++) {
+    permutation_list[j] = sorted_src_strides[j].second;
+    permutation_src_dims[j] = simplified_src_dims[sorted_src_strides[j].second];
+  }
+
+  return true;
 }
 
 template<typename T, typename D>
