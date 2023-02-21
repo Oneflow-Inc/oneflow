@@ -852,9 +852,8 @@ static PyObject* PyTensorObject_new(PyObject* self, PyObject* args, PyObject* kw
     if (PyTuple_Size(args) == 1 && PyTensor_Check(PyTuple_GET_ITEM(args, 0))) {
       // tensor.new(other)
       auto other_tensor = PyTensor_Unpack(PyTuple_GET_ITEM(args, 0));
-      CHECK_OR_THROW(!other_tensor->is_global())
-          << "Tensor.new(Tensor) only support local tensor as input. Pass `placement` and `sbp` to "
-             "create global tensor.";
+      CHECK_OR_THROW(!self_tensor->is_global() && !other_tensor->is_global())
+          << "Tensor.new(Tensor) only support local tensor.";
       CHECK_OR_THROW(self_tensor->dtype() == other_tensor->dtype())
           << "Tensor.new() expect " << self_tensor->dtype()->name() << " dtype tensor, but got "
           << other_tensor->dtype()->name() << " dtype tensor.";
