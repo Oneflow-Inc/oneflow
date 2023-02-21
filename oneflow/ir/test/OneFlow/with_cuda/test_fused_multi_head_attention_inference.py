@@ -58,6 +58,53 @@ def _ref(query, key, value, num_heads, causal=False):
     return out
 
 
+def _ref2(query, key, value, num_heads, causal=False):
+    query = query.view(query.shape[0], query.shape[1], num_heads, -1).permute(
+        0, 2, 1, 3
+    )
+    key = key.view(key.shape[0], key.shape[1], num_heads, -1).permute(0, 2, 1, 3)
+    value = value.view(value.shape[0], value.shape[1], num_heads, -1).permute(
+        0, 2, 1, 3
+    )
+    query = query.reshape(-1, query.shape[2], query.shape[3])
+    key = key.reshape(-1, key.shape[2], key.shape[3]).permute(0, 2, 1)
+    value = value.reshape(-1, value.shape[2], value.shape[3])
+
+    scale = 1 / math.sqrt(query.shape[-1])
+
+    scores = flow.matmul(query, key)
+
+    scores = flow.baddbmm(
+        flow.empty(
+            query.shape[0],
+            query.shape[1],
+            key.shape[1],
+            dtype=query.dtype,
+            device=query.device,
+        ),
+        query,
+        key,
+        beta=0,
+        alpha=scale,
+    )
+
+    if causal:
+        causal_mask = flow.triu(
+            flow.ones(
+                scores.shape[-2], scores.shape[-1], dtype=flow.bool, device="cuda"
+            ),
+            1,
+        )
+        scores = flow.masked_fill(scores, causal_mask, float("-inf"))
+    attn = flow.softmax(scores, dim=-1)
+    out = flow.matmul(attn, value)
+    out = out.reshape(-1, num_heads, out.shape[1], out.shape[2])
+    out = out.permute(0, 2, 1, 3)
+    out = out.reshape(out.shape[0], out.shape[1], -1)
+
+    return out
+
+
 def _fused_mha(query, key, value, num_heads, causal=False):
     return flow._C.fused_multi_head_attention_inference(
         query, key, value, num_heads, causal=causal
@@ -72,6 +119,16 @@ class GraphToRun(flow.nn.Graph):
 
     def build(self, query, key, value):
         return _ref(query, key, value, self.num_heads, self.causal)
+
+
+class GraphToRun2(flow.nn.Graph):
+    def __init__(self, num_heads=None, causal=False):
+        super().__init__()
+        self.causal = causal
+        self.num_heads = num_heads
+
+    def build(self, query, key, value):
+        return _ref2(query, key, value, self.num_heads, self.causal)
 
 
 def _test_fused_multi_head_attention_inference(
@@ -104,6 +161,42 @@ def _test_fused_multi_head_attention_inference(
 
     g = GraphToRun(num_heads=num_heads, causal=causal)
     ref_out = _ref(query, key, value, num_heads, causal).numpy()
+    fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
+    g_out = g(query, key, value).numpy()
+    test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
+    test_case.assertTrue(np.allclose(ref_out, g_out, atol=1e-2, rtol=1e-2))
+
+
+def _test_fused_multi_head_attention_inference2(
+    test_case,
+    batch_size,
+    num_heads,
+    query_seq_len,
+    kv_seq_len,
+    query_head_size,
+    value_head_size,
+    dtype,
+    causal=False,
+):
+
+    query = flow.randn(
+        (batch_size, query_seq_len, num_heads * query_head_size),
+        device="cuda",
+        dtype=flow.float,
+    ).to(dtype)
+    key = flow.randn(
+        (batch_size, kv_seq_len, num_heads * query_head_size),
+        device="cuda",
+        dtype=flow.float,
+    ).to(dtype)
+    value = flow.randn(
+        (batch_size, kv_seq_len, num_heads * value_head_size),
+        device="cuda",
+        dtype=flow.float,
+    ).to(dtype)
+
+    g = GraphToRun2(num_heads=num_heads, causal=causal)
+    ref_out = _ref2(query, key, value, num_heads, causal).numpy()
     fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
     g_out = g(query, key, value).numpy()
     test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
@@ -150,6 +243,46 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
             test_case, 2, 8, 256, 256, 160, 160, flow.float
         )
         _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float
+        )
+
+    def test_multi_head_attention_inference2(test_case):
+        # test_case,batch_size, num_heads,query_seq_len, kv_seq_len,query_head_size,value_head_size,dtype
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float16
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float16
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float16
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float16
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float16
+        )
+
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference2(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float
+        )
+        _test_fused_multi_head_attention_inference2(
             test_case, 2, 8, 256, 77, 160, 160, flow.float
         )
 
