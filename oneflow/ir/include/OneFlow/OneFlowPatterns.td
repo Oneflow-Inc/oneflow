@@ -7,34 +7,6 @@ include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 include "mlir/Dialect/GPU/IR/GPUOps.td"
 
-def IsScalarTensor: Constraint<CPred<"::mlir::oneflow::IsScalarTensor($0)">, "">;
-
-def BroadcastMulToScalarMulPattern : Pat<
-  (
-    OneFlow_BroadcastMulOp
-    $x,
-    $y,
-    $mul_op_name,
-    $mul_device_tag,
-    $mul_device_name,
-    $mul_scope_symbol_id,
-    $mul_hierarchy
-  ),
-  (
-    OneFlow_ScalarMulByTensorOp
-    $x,
-    $y,
-    $mul_op_name,
-    $mul_device_tag,
-    $mul_device_name,
-    $mul_scope_symbol_id,
-    $mul_hierarchy
-  ),
-  [
-    (IsScalarTensor $y)
-  ]
->;
-
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 

@@ -179,6 +179,37 @@
     ]
   bind_python: true
 
+- name: "bitwise_and"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseAnd",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseAnd",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseAnd",
+    ]
+  bind_python: true
+
+- name: "bitwise_or"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseOr",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseOr",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseOr",
+    ]
+  bind_python: true
+
+- name: "bitwise_xor"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseXor",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+    ]
+  bind_python: true
+
+- name: "bitwise_not"
+  signature: "Tensor (Tensor input) => BitwiseNot"
+  bind_python: true
+
 - name: "less"
   signature:
     [
@@ -766,6 +797,14 @@
 - name: "leaky_relu_grad"
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
+
+- name: "rrelu"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False, Bool inplace=False) => RRelu"
+  bind_python: True
+
+- name: "rrelu_"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
+  bind_python: True
 
 - name: "normal"
   signature: [
@@ -1603,7 +1642,10 @@
   bind_python: False
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
+  signature: [
+      "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy",
+      "Tensor (Tensor x, Device device, Bool pin_memory=False) => Copy"
+  ]
   bind_python: True
 
 - name: "to"
@@ -2538,7 +2580,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
-  signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None) => FusedMultiHeadAttentionInference"
   bind_python: True
 
 - name: "fused_get_center_dist"
@@ -2751,6 +2793,14 @@
 
 - name: "isfinite"
   signature: "Tensor (Tensor input) => IsFinite"
+  bind_python: True
+
+- name: "depend"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor depend) => Depend",
+      "Tensor (Tensor input, TensorTuple depends) => DependTuple",
+    ]
   bind_python: True
 
 - name: "roc_auc_score"
