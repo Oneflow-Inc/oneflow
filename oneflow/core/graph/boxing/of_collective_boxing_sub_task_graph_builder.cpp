@@ -569,8 +569,8 @@ Maybe<SubTskGphBuilderStatus> OfCollectiveBoxingSubTskGphBuilder::Build(
     const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
 
-  // 为了让occl能真正接管pp的所有coll，关闭这个环境变量
   VLOG(1) << "time_shape.elem_cnt() = " << time_shape.elem_cnt();
+  // 为了让occl能真正接管pp的所有coll，关闭这个环境变量
   if (ParseBooleanFromEnv("ONEFLOW_TIME_SHAPE", false)) {
     VLOG(1) << "Judge IsSourceTimeShape";
     if (!IsSourceTimeShape(time_shape)) { return Error::BoxingNotSupportedError(); }
