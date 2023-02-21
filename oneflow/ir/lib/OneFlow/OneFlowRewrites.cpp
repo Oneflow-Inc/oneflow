@@ -415,7 +415,8 @@ static LogicalResult IsScalarEqualSqrtD(PatternRewriter& rewriter, Value query_r
   auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
   double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
   std::vector<int64_t> query_reshape_new_shape(query_reshape_shape.getShape());
-  return success(std::abs(std::sqrt(query_reshape_new_shape[3]) - scalar_div_operand_attr) < 1e-3);
+  auto index = query_reshape_new_shape.size()-1;
+  return success(std::abs(std::sqrt(query_reshape_new_shape[index]) - scalar_div_operand_attr) < 1e-3);
 }
 }  // namespace
 
