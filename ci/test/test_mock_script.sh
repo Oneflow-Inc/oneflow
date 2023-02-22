@@ -19,7 +19,7 @@ python3 -c 'from torch.nn import *; Graph'
 python3 -c 'from torch.sbp import *; sbp'
 python3 -c 'from torch import nn; nn.Graph'
 python3 -c 'from torch.version import __version__'
-python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError'
+python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'ModuleNotFoundError'
 
 eval $(python3 -m oneflow.mock_torch disable)
 same_or_exit "False"

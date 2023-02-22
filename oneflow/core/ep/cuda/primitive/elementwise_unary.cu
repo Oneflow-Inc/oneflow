@@ -98,7 +98,12 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
             // For Logical OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
-                                             CUDA_PRIMITIVE_BOOL_TYPE_SEQ)};
+                                             CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
+
+            // For bitwise op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_BITWISE_OP_SEQ,
+                CUDA_PRIMITIVE_INT_TYPE_SEQ CUDA_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 

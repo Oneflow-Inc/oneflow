@@ -153,7 +153,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   filename = filename != "-" ? filename : "";
   json data{{"filename", filename}, {"ops", ops}};
 
-  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename; }
+  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename.getValue(); }
   if (!dumpJson.empty()) {
     std::ofstream file(dumpJson);
     file << data.dump();
