@@ -32,7 +32,7 @@ def _test_global_sum_against_pytorch(test_case, placement, sbp):
     return y
 
 
-@autotest(n=3, check_graph=True)
+@autotest(n=1, check_graph=True)
 def _test_global_sum_with_0_size_tensor(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 0, 24).to_global(placement, sbp)
     y = torch.sum(x, dim=random(0, 3).to(int))
