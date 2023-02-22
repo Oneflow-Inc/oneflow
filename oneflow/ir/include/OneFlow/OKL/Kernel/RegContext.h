@@ -27,63 +27,6 @@ namespace oneflow {
 namespace okl {
 class ComputeContext;
 
-enum Source { arguments, results, tmp_buffer };
-using ArgInfo = std::pair<Source, int64_t>;
-class TensorInfo {
- public:
-  TensorInfo(::mlir::Operation* op) {
-    ins_.reserve(op->getNumOperands());
-    outs_.reserve(op->getNumResults());
-
-    for (auto elem : op->getOperands()) {
-      llvm::TypeSwitch<::mlir::Operation*>(elem.getDefiningOp())
-          .Case<::mlir::okl::GetTensorFromArgOp>([&](::mlir::okl::GetTensorFromArgOp in) {
-            ins_.push_back({arguments, in.index()});
-          })
-          .Case<::mlir::okl::GetTensorFromRetOp>([&](::mlir::okl::GetTensorFromRetOp in) {
-            ins_.push_back({results, in.index()});
-          })
-          .Case<::mlir::okl::PoolToTensorOp>([&](::mlir::okl::PoolToTensorOp in) {
-            ins_.push_back({tmp_buffer, in.offset()});
-          })
-          .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse op is source"; });
-    }
-
-    for (auto elem : op->getResults()) {
-      auto res_use = *elem.getUsers().begin();
-      llvm::TypeSwitch<::mlir::Operation*>(res_use)
-          .Case<::mlir::okl::GetTensorAsRetOp>([&](::mlir::okl::GetTensorAsRetOp in) {
-            outs_.push_back({results, in.index()});
-          })
-          .Case<::mlir::okl::TensorToPoolOp>([&](::mlir::okl::TensorToPoolOp in) {
-            outs_.push_back({tmp_buffer, in.offset()});
-          })
-          .Default([](mlir::Operation*) { LOG(FATAL) << "Fail to analyse source of tensor"; });
-    }
-  };
-
-  void Dump() {
-    auto get_str = [](Source s) {
-      switch (s) {
-        case Source::arguments: return "arg";
-        case Source::results: return "ret";
-        default: return "tmp";
-      }
-    };
-    llvm::errs() << "\nins:";
-    for (auto [source, index] : ins_) {
-      llvm::errs() << "\n  " << get_str(source) << "(" << index << ")";
-    }
-    llvm::errs() << "\nouts:";
-    for (auto [source, index] : outs_) {
-      llvm::errs() << "\n  " << get_str(source) << "(" << index << ")";
-    }
-  }
-
- private:
-  llvm::SmallVector<ArgInfo> ins_, outs_;
-};
-
 // this context should support querying information about the kernel from representation in MLIR
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class RegContext final : public user_op::KernelRegContext {
