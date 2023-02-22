@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <utility>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -810,11 +811,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         break;
       }
       // Otherwise, select the case with the lowest cost
-      if (total_copy_cost < min_copy_cost
-          || (total_copy_cost == min_copy_cost && sum_priority_ratio < min_sum_priority_ratio)) {
+      if (total_copy_cost < min_copy_cost * kFloatDeviationMinus      // Strict less than
+          || (total_copy_cost <= min_copy_cost * kFloatDeviationPlus  // Loose equal
+              && sum_priority_ratio < min_sum_priority_ratio)) {
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
-        min_sum_priority_ratio = sum_priority_ratio;
+        min_sum_priority_ratio = sum_priority_ratio;  // NOLINT(clang-analyzer-deadcode.DeadStores)
       }
     }
     // Can't find any available sbp
