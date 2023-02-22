@@ -23,7 +23,9 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+#define UNARY_MATH_OP_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
 
 #define UNARY_FLOATING_MATH_OP_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu)             \

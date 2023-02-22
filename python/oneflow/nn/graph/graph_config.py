@@ -355,6 +355,28 @@ class GraphConfig(object):
         """
         self.proto.enable_compress_memory = mode
 
+    def enable_choose_best_memory_allocation(self, mode: bool = True):
+        """If true, then the graph will go through all the memory allocation algorithms. Including 
+        large memory first algorithm, 
+        long lifetime first algorithm, 
+        first in first allocates algorithm,
+        large memory volume first algorithm
+        with the compact insertion on and off.
+        The the graph will choose the one with the least memory.
+
+        If false, the graph will directly choose 
+        the large memory first algorithm with compact insertion off.
+        Since the large memory first algorithm is the best one among those algorithms during most of our test cases.
+        And turning compact insertion off will save half of the time of this algorithm.
+        """
+        if mode:
+            self.proto.memory_allocation_algorithm_conf.use_mem_size_first_algo = True
+            self.proto.memory_allocation_algorithm_conf.use_lifetime_first_algo = True
+            self.proto.memory_allocation_algorithm_conf.use_time_line_algo = True
+            self.proto.memory_allocation_algorithm_conf.use_mem_volume_first_algo = True
+            self.proto.memory_compact_insert_conf.use_compact_insert = True
+            self.proto.memory_compact_insert_conf.use_non_compact_insert = True
+
     def enable_auto_parallel(self, mode: bool = True):
         """If true, then graph will use the auto parallel algorithm to select a parallelism strategy.
 
