@@ -12,7 +12,7 @@ concurrency:
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-  ONEFLOW_TIMEOUT_SECONDS: 360
+  ONEFLOW_TIMEOUT_SECONDS: 90
   ONEFLOW_THRAED_LOCAL_CACHED_SIZE: 16384
   FLOW_VISION_SRC: flow_vision
   FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
@@ -444,7 +444,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed, test]
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 360
+    timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
@@ -609,13 +609,13 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONE_FX_SRC}}
       - name: Module API test (distributed)
-        timeout-minutes: 360
+        timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: false
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Module API test (distributed, without IB)
-        timeout-minutes: 360
+        timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && contains(github.event.pull_request.labels.*.name, 'need-distributed-without-ib')}}
         continue-on-error: false
         run: |
@@ -655,7 +655,7 @@ jobs:
   test:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache]
-    timeout-minutes: 360
+    timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
@@ -1008,12 +1008,12 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 360
+        timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Graph API test
-        timeout-minutes: 360
+        timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
@@ -1037,7 +1037,7 @@ jobs:
         run: |
           docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
       - name: Expensive tests (models, cases require exclusive access to GPU)
-        timeout-minutes: 360
+        timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec \

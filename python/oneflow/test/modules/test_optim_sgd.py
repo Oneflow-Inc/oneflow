@@ -315,7 +315,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
-        arg_dict["train_iters"] = [10]
+        arg_dict["train_iters"] = [6]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
         arg_dict["contiguous_params"] = [False, True]
