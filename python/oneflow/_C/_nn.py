@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import builtins
-import warnings
 from oneflow.framework.tensor import Tensor
 from typing import overload, Tuple, Any
 
@@ -54,38 +53,13 @@ def _parse_to(*args, **kwargs):
     new_args = list()
     # If device is single int, replace it with flow.device("cuda:{device}")
     if len(args) > 0 and isinstance(args[0], int):
-        new_args.append(flow.randn((3, 4)))
         new_args.append(flow.device(f"cuda:{args[0]}"))
+        for i in range(1, len(args)):
+            new_args.append(args[i])
     else:
-        new_args = list(args)
-        new_args.insert(0, flow.randn((3, 4)))
+        new_args = args
 
-    for i in range(1, len(new_args)):
-        if not isinstance(new_args[i], Tensor):
-            if new_args[i] == int or new_args[i] == float:
-                # dtype support python int or float
-                new_args = flow.int64 if new_args[i] == int else flow.float64
+    # TODO: implement _parse_to natively
+    result = flow.tensor([]).to(*args, **kwargs)
 
-    if "memory_format" in kwargs:
-        warnings.warn("oneflow temporarily support contiguous format.")
-
-    # check whether non_blocking and copy are both passed
-    flag = False
-    index = -1
-    for i, data in enumerate(new_args):
-        if isinstance(data, bool):
-            if flag:
-                index = i - 1  # the index of non_blocking
-            else:
-                flag = True
-
-    if flag and index != -1:
-        non_blocking_param = new_args.pop(index)
-        if non_blocking_param:
-            raise ValueError("oneflow temporarily supports 'non_blocking is False' ")
-        result = flow._C.to(*new_args)
-    else:
-        result = flow._C.to(*new_args)
-    # this return (device, dtype, non_blocking, memory_format)
-    # non_blocking only support False, use None to represent memory_format
     return (result.device, result.dtype, False, None)
