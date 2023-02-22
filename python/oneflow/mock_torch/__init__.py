@@ -133,7 +133,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         sys.modules[fullname] = module
         globals()[fullname] = module
 
-    def _enable(self, globals, lazy: bool, verbose: bool, *, from_cli: bool=False):
+    def _enable(self, globals, lazy: bool, verbose: bool, *, from_cli: bool = False):
         global _first_init
         if _first_init:
             _first_init = False
@@ -147,7 +147,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         if self.enable:  # already enabled
             return
         for k, v in sys.modules.copy().items():
-            if (not (from_cli and k == 'torch')) and _is_torch(k):
+            if (not (from_cli and k == "torch")) and _is_torch(k):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.disable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
@@ -211,15 +211,31 @@ class DummyModule(ModuleType):
 
 
 class enable:
-    def __init__(self, lazy: Optional[bool] = None, verbose: Optional[bool] = None, *, _from_cli: bool=False):
+    def __init__(
+        self,
+        lazy: Optional[bool] = None,
+        verbose: Optional[bool] = None,
+        *,
+        _from_cli: bool = False,
+    ):
         self.enable = _importer.enable
         forcedly_disabled_by_env_var = env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
         )
         globals = currentframe().f_back.f_globals
         self.globals = globals
-        lazy = lazy if lazy is not None else env_var_util.parse_boolean_from_env("ONEFLOW_MOCK_TORCH_LAZY", False)
-        verbose = verbose if verbose is not None else env_var_util.parse_boolean_from_env("ONEFLOW_MOCK_TORCH_VERBOSE", False)
+        lazy = (
+            lazy
+            if lazy is not None
+            else env_var_util.parse_boolean_from_env("ONEFLOW_MOCK_TORCH_LAZY", False)
+        )
+        verbose = (
+            verbose
+            if verbose is not None
+            else env_var_util.parse_boolean_from_env(
+                "ONEFLOW_MOCK_TORCH_VERBOSE", False
+            )
+        )
         if forcedly_disabled_by_env_var:
             return
         _importer._enable(globals, lazy, verbose, from_cli=_from_cli)

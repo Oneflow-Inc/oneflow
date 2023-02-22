@@ -15,10 +15,7 @@ limitations under the License.
 """
 import sys
 import oneflow
-from oneflow.mock_torch import (
-    ModuleWrapper,
-    enable
-)
+from oneflow.mock_torch import ModuleWrapper, enable
 
 
 def __getattr__(name: str):
