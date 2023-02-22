@@ -71,6 +71,7 @@ from .functional_pad import pad
 from .functional_batch_norm import batch_norm
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
+from .functional_ctc_loss import ctc_loss
 from oneflow._C import one_hot
 from oneflow._C import normalize
 from oneflow._C import mse_loss
