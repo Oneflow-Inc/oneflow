@@ -745,7 +745,7 @@ CreateWrapFuncAndReturnWithIns(mlir::Location loc, std::vector<Operation*>& wrap
   auto [ins, outs, map] = getProto();
   auto func_type = rewriter.getFunctionType(TypeRange(ValueRange(ArrayRef<Value>(ins))),
                                             TypeRange(ValueRange(ArrayRef<Value>(outs))));
-  auto func_name = "_mlir_oneflow_subgraph" + std::to_string(name_index++);
+  auto func_name = okm::func_name::GRAPH_NAME + std::to_string(name_index++);
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) { LOG(FATAL) << "Fail to find parent ModuleOp"; }
   OpBuilder::InsertionGuard guard(rewriter);
@@ -833,7 +833,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     BlockAndValueMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
       auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
-                                                        launcher_ctx, arg.index());
+                                                             launcher_ctx, arg.index());
       mapping.map(arg.value(), tensor);
     }
 
