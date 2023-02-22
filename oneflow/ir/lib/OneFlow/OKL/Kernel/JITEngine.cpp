@@ -27,8 +27,6 @@ extern "C" {
 void okl_llvm_func(void* launcher, int64_t index) {
   static_cast<typename std::tuple_element_t<0, oneflow::okl::LLVMLaunchArgs>>(launcher)->Launch(
       index);
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-  OF_CUDA_CHECK(cudaGetLastError());
 }
 }  // extern "C"
 
