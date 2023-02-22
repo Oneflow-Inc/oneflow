@@ -77,8 +77,8 @@ class Test_Copy_module(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_global_tensor_inplace_copy_with_diff_dtype_and_device(test_case):
-        x = flow.randn(4, 12).to(flow.int).to_global(flow.placement.all('cpu'))
-        y = flow.randn(4, 12).to_global(flow.placement.all('cuda'))
+        x = flow.randn(4, 12).to(flow.int).to_global(flow.placement.all("cpu"))
+        y = flow.randn(4, 12).to_global(flow.placement.all("cuda"))
         y.copy_(x)
         test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
 
