@@ -22,7 +22,7 @@ import random as random_util
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
-from oneflow.test_utils.automated_test_util import random_bool, random_device, autotest
+from oneflow.test_utils.automated_test_util import random_bool, random_device
 from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
@@ -286,7 +286,6 @@ def compare_with_numpy_sgd_clip_grad(
 
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    @autotest(n=10)
     def test_sgd(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
@@ -306,7 +305,6 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
-    @autotest(n=10)
     def test_sgd_clip_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
@@ -318,7 +316,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
-        arg_dict["clip_grad_norm_type"] = random_util.sample(["inf", "-inf", 0.0, 1.0, 2.0, 3.5], k=3)
+        arg_dict["clip_grad_norm_type"] = random_util.sample(
+            ["inf", "-inf", 0.0, 1.0, 2.0, 3.5], k=3
+        )
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [random_bool().value()]
