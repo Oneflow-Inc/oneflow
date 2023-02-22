@@ -4,9 +4,7 @@
 #include "OneFlow/OKL/Kernel/RegContext.h"
 #include "OneFlow/OKM/OKMDialect.h"
 #include "OneFlow/OKM/OKMOps.h"
-#include "OneFlow/OKM/Optimizer/PushDown.h"
 #include "OneFlow/OKM/passes.h"
-#include "OneFlow/OKM/Optimizer/Optimizer.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,8 +48,8 @@ struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.setInsertionPointToStart(&body.front());
 
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
-      auto tensor = rewriter.create<okm::ArgToTensorOp>(op->getLoc(), arg.value().getType(),
-                                                             arg.index());
+      auto tensor =
+          rewriter.create<okm::ArgToTensorOp>(op->getLoc(), arg.value().getType(), arg.index());
       arg.value().replaceAllUsesWith(tensor);
     }
   }
@@ -64,7 +62,7 @@ struct ExtractOKMTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
     llvm::SmallVector<Value> returns;
     for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
       auto new_ret = rewriter.create<okm::TensorToRetOp>(op->getLoc(), ret_val.value().getType(),
-                                                            ret_val.value(), ret_val.index());
+                                                         ret_val.value(), ret_val.index());
       returns.push_back(new_ret);
     }
 
@@ -286,79 +284,6 @@ class WrapOKMKernelPass : public WrapOKMKernelPassBase<WrapOKMKernelPass> {
 std::unique_ptr<Pass> createWrapOKMKernelPass() { return std::make_unique<WrapOKMKernelPass>(); }
 
 namespace {
-void PushDown(func::FuncOp func, mlir::PatternRewriter& rewriter) {
-  MemoryList list;
-
-  OpBuilder::InsertionGuard insertGuard(rewriter);
-  auto& ops = func.getBody().front();
-
-  rewriter.setInsertionPointToStart(&ops);
-  auto mem_type = MemRefType::get({0}, rewriter.getI8Type());
-  auto global_buffer = rewriter.create<memref::AllocOp>(rewriter.getUnknownLoc(), mem_type);
-  SmallVector<Operation*> raw_ops;
-  for (auto& op : ops) { raw_ops.push_back(&op); }
-  // def_op: (idx, cnt)
-  std::unordered_map<Operation*, std::pair<int, int>> use_count;
-  int index = 0;
-  for (auto op : raw_ops) {
-    if (auto alloc_op = llvm::dyn_cast_or_null<PlanMemrefOp>(op)) {
-      int count = 0;
-      for (auto use : op->getUsers()) {
-        if (llvm::dyn_cast_or_null<okm::WrapperOp>(use)) { count++; }
-      }
-      use_count.insert({op, {index++, count}});
-    }
-  }
-  for (auto op : raw_ops) {
-    if (auto alloc_op = llvm::dyn_cast_or_null<PlanMemrefOp>(op)) {
-      auto type = op->getResult(0).getType().dyn_cast<MemRefType>();
-      int64_t base = type.getElementTypeBitWidth() / 8;
-      for (int64_t i : type.getShape()) { base *= i; }
-      list.PushDown(base);
-    }
-    if (auto wrap_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
-      for (auto op : wrap_op->getOperands()) {
-        if (auto def_op = llvm::dyn_cast_or_null<PlanMemrefOp>(op.getDefiningOp())) {
-          auto [idx, cnt] = use_count[def_op];
-          if (!cnt) { LOG(FATAL) << "Double Free in okm"; }
-          if (cnt == 1) { list.FreeMem(idx); }
-          use_count[def_op] = {idx, cnt - 1};
-        }
-      }
-    }
-  }
-  auto ptr_vec = list.GetPtrVec();
-  for (auto op : raw_ops) {
-    if (auto alloc_op = llvm::dyn_cast_or_null<PlanMemrefOp>(op)) {
-      rewriter.setInsertionPoint(op);
-      auto [idx, _] = use_count[op];
-      auto off_set =
-          rewriter.create<arith::ConstantIndexOp>(rewriter.getUnknownLoc(), ptr_vec[idx]);
-      auto type = op->getResult(0).getType();
-      rewriter.replaceOpWithNewOp<memref::ViewOp>(op, type, global_buffer, off_set, ValueRange{});
-    }
-
-    if (auto wrap_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
-      auto& wrap_ops = wrap_op.body().front();
-      for (auto& it : wrap_ops) {
-        if (oneflow::OneFlowDialect::getDialectNamespace().equals(
-                it.getDialect()->getNamespace())) {
-          auto ins_num = it.getNumOperands();
-          auto outs_num = it.getNumResults() + ins_num;
-          SmallVector<Value> outs_map;
-          for (int idx = ins_num; idx < outs_num; ++idx) {
-            outs_map.push_back(wrap_op->getOperand(idx).getDefiningOp()->getResult(0));
-          }
-          wrap_op->replaceAllUsesWith(outs_map);
-        }
-      }
-    }
-  }
-  mem_type = MemRefType::get({list.GetMemSize()}, rewriter.getI8Type());
-  rewriter.setInsertionPoint(global_buffer);
-  rewriter.replaceOpWithNewOp<AllocMemrefOp>(global_buffer, mem_type);
-}
-
 void MemSizeFirst(func::FuncOp func, mlir::PatternRewriter& rewriter) {
   OpBuilder::InsertionGuard insertGuard(rewriter);
   auto& ops = func.getBody().front();
@@ -370,9 +295,7 @@ void MemSizeFirst(func::FuncOp func, mlir::PatternRewriter& rewriter) {
   ::oneflow::HashMap<Operation*, int32_t> op2lifetime;
   int32_t idx = 0;
   for (auto& op : ops) {
-    if (auto wrap_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
-      op2lifetime[&op] = idx++;
-    }
+    if (auto wrap_op = llvm::dyn_cast_or_null<WrapperOp>(op)) { op2lifetime[&op] = idx++; }
   }
 
   ::oneflow::HashMap<Operation*, size_t> val2size;
@@ -429,7 +352,6 @@ struct OptOKMMemrefPattern : public mlir::OpRewritePattern<func::FuncOp> {
       const auto index = sym_name.substr(func_name::WRAP_GRAPH_NAME.size()).str();
       const std::string rename = func_name::OPT_GRAPH_NAME + index;
       op.setSymNameAttr(rewriter.getStringAttr(rename));
-      // PushDown(op, rewriter);
       MemSizeFirst(op, rewriter);
     }
     return success();
