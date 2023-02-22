@@ -31,7 +31,7 @@ user_op::Tensor* ComputeContext::CreateTensor4ArgNameAndIndex(const std::string&
     if (op->getNumResults() <= index + source.offset) { return nullptr; }
     mlir::Value val = op->getResult(index + source.offset);
     auto use = *val.getUsers().begin();
-    if (auto ret_op = llvm::dyn_cast_or_null<mlir::okl::TensorToRetOp>(use)) {
+    if (auto ret_op = llvm::dyn_cast_or_null<mlir::okl::GetTensorAsRetOp>(use)) {
       return comp_ctx_->Tensor4ArgNameAndIndex("out", ret_op.index());
     }
     if (auto pool_op = llvm::dyn_cast_or_null<mlir::okl::TensorToPoolOp>(use)) {
@@ -47,7 +47,7 @@ user_op::Tensor* ComputeContext::CreateTensor4ArgNameAndIndex(const std::string&
     mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
-        .Case([&](mlir::okl::ArgToTensorOp elem) {
+        .Case([&](mlir::okl::GetTensorFromArgOp elem) {
           return comp_ctx_->Tensor4ArgNameAndIndex("in", elem.index());
         })
         .Case([&](mlir::okl::GetTensorFromRetOp elem) {

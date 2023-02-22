@@ -390,7 +390,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (int idx = 0; idx < ins_num; ++idx) {
       auto val = llvm::TypeSwitch<Operation*, Value>(wrap_mem_op->getOperand(idx).getDefiningOp())
                      .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
-                       return rewriter.create<okl::ArgToTensorOp>(
+                       return rewriter.create<okl::GetTensorFromArgOp>(
                            rewriter.getUnknownLoc(),
                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
                            wrap_func.getArgument(0), op.index());
@@ -418,7 +418,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     for (int idx = ins_num; idx < outs_num; ++idx) {
       llvm::TypeSwitch<Operation*>(wrap_mem_op->getOperand(idx).getDefiningOp())
           .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
-            return rewriter.create<okl::TensorToRetOp>(
+            return rewriter.create<okl::GetTensorAsRetOp>(
                 rewriter.getUnknownLoc(),
                 memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
                 wrap_func.getArgument(0), new_op->getResult(idx - ins_num), op.index());
