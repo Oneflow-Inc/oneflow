@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
 #include "OneFlow/OKL/Conversion/Conversion.h"
 #include "OneFlow/OKM/Conversion/Conversion.h"
 #include "OneFlow/Passes.h"
@@ -80,7 +81,7 @@ LauncherState::LauncherState(user_op::KernelInitContext* ctx)
 
 bool LauncherState::IsCudaGraphSupported(user_op::KernelInitContext* ctx) {
   const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
-  if (const auto func = module_->lookupSymbol(mlir::okm::func_name::OKL_GRAPH_NAME)) {
+  if (const auto func = module_->lookupSymbol(mlir::okm::func_name::OKL_GRAPH_NAME + std::to_string(graph_index_))) {
     if (const auto is_supported = func->getAttr(tag_name).dyn_cast_or_null<mlir::BoolAttr>()) {
       return is_supported.getValue();
     }
