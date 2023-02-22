@@ -154,7 +154,8 @@ class EagerBlobObject final : public user_op::Tensor,
 };
 
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
-using WeakEagerBlobObjectList = small_vector<std::weak_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using WeakEagerBlobObjectList =
+    small_vector<std::weak_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
 }  // namespace vm

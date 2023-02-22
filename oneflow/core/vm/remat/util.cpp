@@ -286,7 +286,8 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
   }
 
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
-  Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
+  Singleton<remat::Env>::Get()->add_time(
+      JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
   VLOG(1) << "end compute " << pack.op_call_instruction_policy.opkernel().op_type_name()
           << std::endl;
   Singleton<remat::Env>::Get()->current_op_type_name = "None";
