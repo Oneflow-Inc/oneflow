@@ -17,7 +17,7 @@ import sys
 import oneflow
 from oneflow.mock_torch import (
     ModuleWrapper,
-    OneflowImporter,
+    enable
 )
 
 
@@ -25,9 +25,4 @@ def __getattr__(name: str):
     return ModuleWrapper(oneflow).__getattr__(name)
 
 
-# register importer in meta path
-oneflow_importer = OneflowImporter()
-oneflow_importer.enable = True
-oneflow_importer.use_dummy_obj_as_fallback = False
-oneflow_importer.verbose = False
-sys.meta_path.insert(0, oneflow_importer)
+enable(_from_cli=True)

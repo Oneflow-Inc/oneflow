@@ -15,14 +15,16 @@ limitations under the License.
 """
 from inspect import ismodule, currentframe
 from types import ModuleType
-from typing import Any
+from typing import Any, Optional
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
+import os
+from pathlib import Path
 from contextlib import contextmanager
 
-import oneflow.support.env_var_util
+import oneflow.support.env_var_util as env_var_util
 
 _first_init = True
 
@@ -43,14 +45,14 @@ class ModuleWrapper(ModuleType):
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
             new_name = self.module.__name__ + "." + name
-            if _importer.use_dummy_obj_as_fallback:
+            if _importer.lazy:
                 if _importer.verbose:
                     print(
                         f"{new_name} is not found in oneflow, use dummy object as fallback."
                     )
                 return DummyModule(new_name)
             else:
-                raise ModuleNotFoundError(new_name + error_msg)
+                raise AttributeError(new_name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
             return ModuleWrapper(attr)
@@ -100,7 +102,7 @@ class OneflowImporter(MetaPathFinder, Loader):
                     real_spec = None
                 if real_spec is None:
                     self.in_create_module = False
-                    if self.use_dummy_obj_as_fallback:
+                    if self.lazy:
                         if self.verbose:
                             print(
                                 f"{oneflow_mod_fullname} is not found in oneflow, use dummy object as fallback."
@@ -131,20 +133,21 @@ class OneflowImporter(MetaPathFinder, Loader):
         sys.modules[fullname] = module
         globals()[fullname] = module
 
-    def _enable(self, globals, use_dummy_obj_as_fallback: bool, verbose: bool):
+    def _enable(self, globals, lazy: bool, verbose: bool, *, from_cli: bool=False):
         global _first_init
         if _first_init:
             _first_init = False
             self.enable = False  # deal with previously imported torch
             sys.meta_path.insert(0, self)
-            self._enable(globals, use_dummy_obj_as_fallback, verbose)
+            self._enable(globals, lazy, verbose, from_cli=from_cli)
             return
-        self.use_dummy_obj_as_fallback = use_dummy_obj_as_fallback
+        self.lazy = lazy
         self.verbose = verbose
+        self.from_cli = from_cli
         if self.enable:  # already enabled
             return
         for k, v in sys.modules.copy().items():
-            if _is_torch(k):
+            if (not (from_cli and k == 'torch')) and _is_torch(k):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.disable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
@@ -170,6 +173,10 @@ class OneflowImporter(MetaPathFinder, Loader):
             sys.modules.update({k: v})
             for alias in aliases:
                 globals.update({alias: v})
+        if self.from_cli:
+            torch_env = Path(__file__).parent
+            sys.path.remove(str(torch_env))
+
         self.enable = False
 
 
@@ -204,16 +211,18 @@ class DummyModule(ModuleType):
 
 
 class enable:
-    def __init__(self, use_dummy_obj_as_fallback: bool = False, verbose: bool = False):
+    def __init__(self, lazy: Optional[bool] = None, verbose: Optional[bool] = None, *, _from_cli: bool=False):
         self.enable = _importer.enable
-        forcedly_disabled_by_env_var = oneflow.support.env_var_util.parse_boolean_from_env(
+        forcedly_disabled_by_env_var = env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
         )
         globals = currentframe().f_back.f_globals
         self.globals = globals
-        if self.enable or forcedly_disabled_by_env_var:
+        lazy = lazy if lazy is not None else env_var_util.parse_boolean_from_env("ONEFLOW_MOCK_TORCH_LAZY", False)
+        verbose = verbose if verbose is not None else env_var_util.parse_boolean_from_env("ONEFLOW_MOCK_TORCH_VERBOSE", False)
+        if forcedly_disabled_by_env_var:
             return
-        _importer._enable(globals, use_dummy_obj_as_fallback, verbose)
+        _importer._enable(globals, lazy, verbose, from_cli=_from_cli)
 
     def __enter__(self):
         pass
@@ -230,8 +239,9 @@ class disable:
             return
         globals = currentframe().f_back.f_globals
         self.globals = globals
-        self.use_dummy_obj_as_fallback = _importer.use_dummy_obj_as_fallback
+        self.lazy = _importer.lazy
         self.verbose = _importer.verbose
+        self.from_cli = _importer.from_cli
         _importer._disable(globals)
 
     def __enter__(self):
@@ -240,7 +250,7 @@ class disable:
     def __exit__(self, exception_type, exception_value, traceback):
         if self.enable:
             _importer._enable(
-                self.globals, self.use_dummy_obj_as_fallback, self.verbose
+                self.globals, self.lazy, self.verbose, from_cli=self.from_cli
             )
 
 
