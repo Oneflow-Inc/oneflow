@@ -137,6 +137,12 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
+static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* transpose) {
+  auto transpose_op = llvm::dyn_cast<TransposeOp>(transpose);
+  CHECK(transpose_op);
+  return getSI64IntegerAttr(rewriter,
+                            transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
+}
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -241,7 +247,7 @@ func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location
   SmallVector<Type, 4> argument_types;
   argument_types.reserve(operands.size());
   SmallVector<Type, 4> result_types;
-  argument_types.reserve(results.size());
+  result_types.reserve(results.size());
   for (auto argument : operands) { argument_types.push_back(argument.getType()); }
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
@@ -323,19 +329,7 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef fu
 }
 
 static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Operation* cast) {
-  auto mul_op = mul;
-  auto scale = mlir::Value();
-  auto output = mlir::Value();
-  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
-    scale = scalar_mul_op.scalar();
-    output = scalar_mul_op.y();
-  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
-    scale = broadcast_mul_op.y();
-    output = broadcast_mul_op.z();
-  } else {
-    mul->emitError("pattern mul(cast(x), scalar) doesn't support this op");
-    exit(1);
-  }
+  auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul);
   if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
     mul->emitError("not OpConf compatible");
     exit(1);
@@ -353,9 +347,9 @@ static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Oper
   op_name = SanitizeIdentifier(op_name, tempBuffer);
   SmallVector<::mlir::Value, 2> operands;
   operands.push_back(cast_op.in());
-  operands.push_back(scale);
-  SmallVector<::mlir::Value, 1> results;
-  results.push_back(output);
+  operands.push_back(mul_op.scalar());
+  SmallVector<Value, 1> results;
+  results.push_back(mul_op.y());
   NamedAttrList attributes =
       GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
   SmallVector<Operation*, 4> ops = {cast_op, mul_op};
@@ -410,6 +404,33 @@ static LogicalResult IsNotNestedInJit(PatternRewriter& rewriter, Operation* mul)
   return success(mul->getParentOfType<oneflow::Job>());
 }
 
+static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
+  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
+    return success(tensor.getNumElements() == 1);
+  }
+  return failure();
+}
+
+static float mha_scale_max_diff = 1e-5;
+
+static LogicalResult IsScalarEqualSqrtDim(PatternRewriter& rewriter, Value query_reshape,
+                                          Attribute scalar_div_operand) {
+  auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
+  double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
+  return success(
+      std::abs(std::sqrt(query_reshape_shape.getShape().back()) - scalar_div_operand_attr)
+      < mha_scale_max_diff);
+}
+
+static LogicalResult IsScalarEqualSqrtDimReciprocal(PatternRewriter& rewriter, Value query_reshape,
+                                                    Attribute scalar_div_operand) {
+  auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
+  double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
+  return success(
+      std::abs(std::sqrt(query_reshape_shape.getShape().back()) - (1 / scalar_div_operand_attr))
+      < mha_scale_max_diff);
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -418,6 +439,8 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
+  patterns.getPDLPatterns().registerRewriteFunction("GetNumHeadsFromTranpose",
+                                                    GetNumHeadsFromTranpose);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
                                                     CreateConv2dAndErasePad);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2DBatchNorm", CreateConv2DBatchNorm);
@@ -440,6 +463,9 @@ void populateConstraints(RewritePatternSet& patterns) {
 
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsNotNestedInJit);
+  PDLL_REGISTER(IsScalarTensor);
+  PDLL_REGISTER(IsScalarEqualSqrtDim);
+  PDLL_REGISTER(IsScalarEqualSqrtDimReciprocal);
 
 #undef PDLL_REGISTER
 }

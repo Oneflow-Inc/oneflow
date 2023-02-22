@@ -93,6 +93,7 @@ if(WITH_MLIR)
   add_subdirectory(oneflow-extension)
   add_subdirectory(oneflow-opt)
   add_subdirectory(oneflow-runner)
+  add_subdirectory(oneflow-lite)
 endif(WITH_MLIR)
 
 if(BUILD_PYTHON)

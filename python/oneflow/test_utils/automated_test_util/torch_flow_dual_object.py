@@ -20,6 +20,7 @@ import copy
 import os
 import warnings
 import gc
+from typing import Union
 
 import numpy as np
 import oneflow as flow
@@ -1183,7 +1184,7 @@ def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
 
 def autotest(
     n=20,
-    auto_backward=True,
+    auto_backward: Union[bool, str] = True,
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
@@ -1241,6 +1242,11 @@ def autotest(
                             continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
+                                if auto_backward == "auto" and (
+                                    not x.pytorch.requires_grad
+                                    or not x.oneflow.requires_grad
+                                ):
+                                    continue
                                 call_tensor_id.append(id(x.pytorch))
                                 if check_grad_use_random_data:
                                     np_arr = rng.uniform(
@@ -1360,6 +1366,7 @@ def random_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
+    extra_input_tensor.append(pytorch_tensor)
     if is_global():
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),

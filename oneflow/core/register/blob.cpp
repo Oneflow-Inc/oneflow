@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr) {
-  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader(), 0);
+  Init(mem_case, blob_desc, header_ptr, nullptr, 0);
 }
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
