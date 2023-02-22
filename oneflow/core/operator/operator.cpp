@@ -766,7 +766,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       double sum_priority_ratio = 0.0;
-      // The initial ratio do not need to be a large one. 
+      // The initial ratio do not need to be a large one.
       // Since any copy cost less than infinity would reset the min_sum_priority_ratio.
       double min_sum_priority_ratio = 0.0;
       bool same_sbp_before_reduce = true;
