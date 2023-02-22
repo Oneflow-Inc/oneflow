@@ -48,5 +48,7 @@ CallContext::CallContext(const DtrCallContext& dtr_call_ctx)
   }
 }
 
+CallContext DtrCallContext::ToCallContext() const { return CallContext(*this); }
+
 }  // namespace eager
 }  // namespace oneflow

@@ -145,7 +145,8 @@ void RematableTensorStorage::Access() {
 
 Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
   CHECK_OR_RETURN(!is_eviction_disabled());
-  const double time_since_last_access = Singleton<remat::Env>::Get()->time_now() - last_access_time_;
+  const double time_since_last_access =
+      Singleton<remat::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
   if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>() || EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
     size = override_size == 0 ? blob_bytes_ : override_size;
@@ -155,31 +156,21 @@ Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
 }
 
 double RematableTensorStorage::approx_neighbor_cost() const {
-  double cost = 0;
-  auto compute_op = this->compute_op();
-  const auto& inputs = compute_op.inputs();
-  for (int i = 0; i < inputs.size(); ++i) {
-    const auto& tmp = inputs[i];
-    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
-        !storage->is_in_memory()) {
-      double p_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
-      if (p_cost < storage->compute_time()) { p_cost = storage->compute_time(); }
-      cost += p_cost;
+  const auto cal_cost = [](const auto& eager_blob_objects) {
+    double all_cost = 0;
+    for (int i = 0; i < eager_blob_objects.size(); ++i) {
+      const auto& tmp = eager_blob_objects[i];
+      if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
+          !storage->is_in_memory()) {
+        double tmp_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
+        if (tmp_cost < storage->compute_time()) { tmp_cost = storage->compute_time(); }
+        all_cost += tmp_cost;
+      }
     }
-  }
-
-  const auto& outputs = compute_op.outputs();
-  for (int i = 0; i < outputs.size(); ++i) {
-    const auto& tmp = outputs[i];
-    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
-        !storage->is_in_memory()) {
-      double c_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
-      if (c_cost < storage->compute_time()) { c_cost = storage->compute_time(); }
-      cost += c_cost;
-    }
-  }
-
-  return cost + compute_time_;
+    return all_cost;
+  };
+  const auto compute_op = this->compute_op();
+  return cal_cost(compute_op.inputs()) + cal_cost(compute_op.outputs()) + compute_time_;
 }
 
 }  // namespace vm
