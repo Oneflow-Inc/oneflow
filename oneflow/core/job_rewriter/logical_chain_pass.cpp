@@ -480,27 +480,20 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   // TODO(chengcheng) : better order for memory.
   std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
-    op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-      ordered_op_nodes.emplace_back(node);
-      op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-      std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
-      if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
-        seed_time_shape = this_time_shape;
-      }
-      mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
-    });
+    op_graph.TopoForEachNodeWithCtrlEdge(
+        [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
   } else {
     auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
-    int32_t global_order = 0;
-    for (auto& node : ordered_op_nodes) {
-      op_node2global_order.emplace(node, global_order);
-      global_order++;
-      std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
-      if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
-        seed_time_shape = this_time_shape;
-      }
-      mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
+  }
+
+  for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
+    auto& node = ordered_op_nodes[global_order];
+    op_node2global_order.emplace(node, global_order);
+    std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
+    if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
+      seed_time_shape = this_time_shape;
     }
+    mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
   }
 
   VLOG(2) << " seed time shape = " << seed_time_shape->ToString();

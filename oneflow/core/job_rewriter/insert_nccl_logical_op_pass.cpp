@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #ifdef WITH_CUDA
@@ -982,11 +983,17 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
+  if (disable_logical_straighten) {
+    op_graph.TopoForEachNodeWithCtrlEdge(
+        [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
+  } else {
+    auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+  }
+
   HashMap<const OpNode*, int64_t> op_node2global_order;
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-    ordered_op_nodes.emplace_back(node);
-    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-  });
+  for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
+    op_node2global_order.emplace(ordered_op_nodes[global_order], global_order);
+  }
 
   std::vector<HashSet<const OpNode*>> subgraph_list;
   FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
