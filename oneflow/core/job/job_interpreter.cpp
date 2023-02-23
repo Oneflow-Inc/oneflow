@@ -178,7 +178,9 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       } else {
         JUST(RunNormalOp(op, env, inputs, output_names));
       }
-      for (const auto& name : outdated_tensors_after_op[i]) { CHECK_EQ_OR_RETURN(env.erase(name), 1); }
+      for (const auto& name : outdated_tensors_after_op[i]) {
+        CHECK_EQ_OR_RETURN(env.erase(name), 1);
+      }
     } else if (op_conf.has_output_conf()) {
       const auto& output_conf = op_conf.output_conf();
       graph_outputs.emplace_back(JUST(MapAt(env, output_conf.in())));
