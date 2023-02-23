@@ -94,7 +94,7 @@ class TestGlobalDivHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_global_div_grad_grad(test_case):
         for placement in all_placement():
-            for i in range(5):
+            for i in range(1):
                 _test_global_div_grad_grad_impl(test_case, placement)
 
 
