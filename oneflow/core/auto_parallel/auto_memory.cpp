@@ -261,34 +261,37 @@ void UpdateSat(const std::vector<TopoStruct*>& topo_structs, StraightenAlgorithm
   }
 }
 
-void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs, const OpGraph& op_graph) {
+void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
   // Generate the map from operator names to topological structure
   HashMap<std::string, TopoStruct*> op_name2topo_structs;
   for (auto& topo_struct : *topo_structs) {
     op_name2topo_structs[topo_struct->op_node->op().op_name()] = topo_struct;
   }
 
-  // Traverse the operator graph
-  op_graph.ForEachNode([&](OpNode* node) {
-    auto& this_topo_struct = op_name2topo_structs.at(node->op().op_name());
+  // Traverse the topological structures
+  for (auto& this_topo_struct : *topo_structs) {
+    auto& node = this_topo_struct->op_node;
     // Initialize input nodes for edges with data
     node->ForEachNodeOnInEdge([&](OpNode* in) {
-      // We use a lot of op_name2topo_structs.at() here, to avoid error,
-      // topo_structs must contain all the operator nodes in the op_graph.
-      this_topo_struct->in_topo_structs.insert(op_name2topo_structs.at(in->op().op_name()));
-    });
-    // Initialize output nodes for edges with data
-    node->ForEachNodeOnOutEdge([&](OpNode* out) {
-      this_topo_struct->out_topo_structs.insert(op_name2topo_structs.at(out->op().op_name()));
+      // Since we might be looking at a sub-graph of the operator graph.
+      // We need to check if the op_node exists in the sub-graph.
+      auto it = op_name2topo_structs.find(in->op().op_name());
+      if (it != op_name2topo_structs.end()) {
+        this_topo_struct->in_topo_structs.insert(it->second);
+        it->second->out_topo_structs.insert(this_topo_struct);
+      }
     });
     // Initialize input nodes for control edges
     for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
-      auto& ctrl_in_topo_struct = op_name2topo_structs.at(ctrl_in_op_name);
-      this_topo_struct->in_topo_structs.insert(ctrl_in_topo_struct);
-      // Initialize output nodes for this control edge simultaneously
-      ctrl_in_topo_struct->out_topo_structs.insert(this_topo_struct);
+      auto it = op_name2topo_structs.find(ctrl_in_op_name);
+      if (it != op_name2topo_structs.end()) {
+        auto& ctrl_in_topo_struct = it->second;
+        this_topo_struct->in_topo_structs.insert(ctrl_in_topo_struct);
+        // Initialize output nodes for this control edge simultaneously
+        ctrl_in_topo_struct->out_topo_structs.insert(this_topo_struct);
+      }
     }
-  });
+  }
 }
 
 void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
@@ -304,7 +307,7 @@ void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
   for (auto& topo_struct : *topo_structs) { topo_struct->ComputeTributaryLayer(max_min_layer); }
 }
 
-void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_structs,
+void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
@@ -326,7 +329,7 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
   }
 
   // Construct all the data edges and control edges
-  InitInOutTopoStructs(topo_structs, op_graph);
+  InitInOutTopoStructs(topo_structs);
 
   // Compute the layers
   ComputeLayer(topo_structs);
@@ -343,14 +346,13 @@ void InitAllParameters(const OpGraph& op_graph, std::vector<TopoStruct*>* topo_s
   for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 }
 
-void StraightenOpNodes(const OpGraph& op_graph,
-                       HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
+void StraightenOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
                        std::vector<TopoStruct*>* topo_structs,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size,
                        std::vector<TopoStruct*>* ordered_topo_structs) {
-  InitAllParameters(op_graph, topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
+  InitAllParameters(topo_structs, lbi2id, id2consumer_topo_structs, id2blob_size);
 
   std::set<TopoStruct*, comp> waiting_list;
 
@@ -408,8 +410,8 @@ void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_comp
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  StraightenOpNodes(op_graph, op_node2topo_struct, &topo_structs, &lbi2id,
-                    &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
+  StraightenOpNodes(op_node2topo_struct, &topo_structs, &lbi2id, &id2consumer_topo_structs,
+                    &id2blob_size, &ordered_topo_structs);
 
   // Mark the memory support, which contains two part:
   // All the non-reusable memory and those blobs which is a part of the maximum reusable memory
@@ -525,8 +527,8 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  StraightenOpNodes(op_graph, op_node2topo_struct, &topo_structs, &lbi2id,
-                    &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
+  StraightenOpNodes(op_node2topo_struct, &topo_structs, &lbi2id, &id2consumer_topo_structs,
+                    &id2blob_size, &ordered_topo_structs);
 
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(ordered_topo_struct->op_node);
