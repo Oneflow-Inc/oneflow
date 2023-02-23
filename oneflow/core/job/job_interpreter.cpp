@@ -108,10 +108,10 @@ Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const T
   return Maybe<void>::Ok();
 }
 
-// tensors in dead_tensors[i] will not be accessed any more after i-th op
+// tensors in outdated_tensors_after_op[i] will not be accessed any more after i-th op
 // so they can be released once i-th op's execution finishes.
-std::vector<std::vector<std::string>> GetDeadTensorVector(const Job& job) {
-  std::vector<std::vector<std::string>> dead_tensors(job.net().op_size());
+std::vector<std::vector<std::string>> GetOutdatedTensorsAfterOp(const Job& job) {
+  std::vector<std::vector<std::string>> outdated_tensors_after_op(job.net().op_size());
   std::set<std::string> visited;
   for (int i = job.net().op_size() - 1; i >= 0; --i) {
     const auto& op_conf = job.net().op(i);
@@ -125,14 +125,14 @@ std::vector<std::vector<std::string>> GetDeadTensorVector(const Job& job) {
         if (pair.first == "UserSourceOpTickInput") { continue; }
         for (const auto& name : pair.second.s()) {
           if (visited.find(name) == visited.end()) {
-            dead_tensors[i].push_back(name);
+            outdated_tensors_after_op[i].push_back(name);
             visited.insert(name);
           }
         }
       }
     }
   }
-  return dead_tensors;
+  return outdated_tensors_after_op;
 }
 
 Maybe<void> InitOpExprs(const std::shared_ptr<NNGraph>& graph) {
@@ -158,8 +158,8 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
   const auto& job = graph->job();
   auto env = *JUST(InitEnv(graph_inputs, graph));
 
-  // See comments above GetDeadTensorVector's definition for more details
-  const auto dead_tensors = GetDeadTensorVector(job);
+  // See comments above GetOutdatedTensorsAfterOp's definition for more details
+  const auto outdated_tensors_after_op = GetOutdatedTensorsAfterOp(job);
 
   one::TensorTuple graph_outputs;
   for (int i = 0; i < job.net().op_size(); i++) {
@@ -178,7 +178,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       } else {
         JUST(RunNormalOp(op, env, inputs, output_names));
       }
-      for (const auto& name : dead_tensors[i]) { CHECK_EQ_OR_RETURN(env.erase(name), 1); }
+      for (const auto& name : outdated_tensors_after_op[i]) { CHECK_EQ_OR_RETURN(env.erase(name), 1); }
     } else if (op_conf.has_output_conf()) {
       const auto& output_conf = op_conf.output_conf();
       graph_outputs.emplace_back(JUST(MapAt(env, output_conf.in())));
