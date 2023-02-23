@@ -1608,6 +1608,11 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
+        is_input_simple_tuple = False
+        for arg in args:
+            if isinstance(arg, Tensor):
+                is_input_simple_tuple = True
+
         args_tree = ArgsTree(
             (args, kwargs), True, "_" + self.name + "_" + io_type, None
         )
@@ -1620,6 +1625,16 @@ class Graph(object):
                 self.__io_item_check(
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
+
+        # for arg in args_tree.iter_nodes():
+        #     print(arg)
+        #     print(arg.is_tuple())
+
+        if is_input_simple_tuple:
+            out = args_tree.map_tuple_leaf(leaf_arg_fn)
+            mapped_args = out[0]
+            mapped_kwargs = out[1]
+            return mapped_args, mapped_kwargs
 
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
