@@ -50,15 +50,6 @@ def _parse_to(
 
 
 def _parse_to(*args, **kwargs):
-    new_args = list()
-    # If device is single int, replace it with flow.device("cuda:{device}")
-    if len(args) > 0 and isinstance(args[0], int):
-        new_args.append(flow.device(f"cuda:{args[0]}"))
-        for i in range(1, len(args)):
-            new_args.append(args[i])
-    else:
-        new_args = args
-
     # TODO: implement _parse_to natively
     result = flow.tensor([]).to(*args, **kwargs)
 
