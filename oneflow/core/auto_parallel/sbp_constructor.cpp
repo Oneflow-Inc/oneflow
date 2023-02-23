@@ -553,8 +553,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(ibn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
       if (RequireSameSbp(op_node, ibn)) { std::cout << ", require same SBP"; }
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape();
       std::cout << std::endl;
     }
     // Sort before printing
@@ -566,8 +565,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       std::cout << "Out Op:" << obn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(obn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape();
       std::cout << std::endl;
     }
     std::cout << std::endl;
