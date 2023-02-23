@@ -424,7 +424,6 @@ class RawReaderKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("raw_reader")
-    .SetCreateFn<RawReaderKernel>()
-    .SetIsMatchedHob(user_op::HobTrue());
+    .SetCreateFn<RawReaderKernel>();
 
 }  // namespace oneflow

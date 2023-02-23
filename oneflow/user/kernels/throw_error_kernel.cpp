@@ -32,8 +32,7 @@ class ThrowErrorKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("throw_error")
-    .SetCreateFn<ThrowErrorKernel>()
-    .SetIsMatchedHob(user_op::HobTrue());
+    .SetCreateFn<ThrowErrorKernel>();
 
 }  // namespace
 
