@@ -1477,14 +1477,15 @@ class Graph(object):
                 "ONEFLOW_RUN_GRAPH_BY_VM", False
             ):
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
-                    convert_to_tensor_tuple(flattened_eager_args),
-                    self._c_nn_graph,
+                    convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )
             else:
                 outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                     self._cur_index_of_ouputs_buffer
                 ]
-                eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
+                eager_outputs = self._eager_outputs_buffer[
+                    self._cur_index_of_ouputs_buffer
+                ]
                 # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
                 oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                     convert_to_tensor_tuple(flattened_eager_args),
