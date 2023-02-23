@@ -54,6 +54,9 @@ class NamedArg(object):
     def name(self):
         return self._name
 
+    def is_tuple(self):
+        return _is_raw_type(self._value, tuple)
+
     def global_index(self):
         return self._global_index
 
@@ -202,6 +205,18 @@ class ArgsTree(object):
 
         return arg
 
+
+    # TODO
+    def map_tuple_leaf(self, map_function: Callable):
+        assert map_function != None, "map function cannot be None"
+
+        if self._gen_name:
+            args_to_map = self._named_io_args
+        else:
+            args_to_map = self._io_args
+        return map_function(args_to_map)
+        # return self._execute_mapping(args_to_map, map_function)
+
     def map_leaf(self, map_function: Callable):
         r"""
         Map the leaf of the arguments into map_function(leaf).
@@ -212,7 +227,6 @@ class ArgsTree(object):
             args_to_map = self._named_io_args
         else:
             args_to_map = self._io_args
-
         return self._execute_mapping(args_to_map, map_function)
 
     def _execute_mapping(self, value, map_function):
@@ -234,5 +248,4 @@ class ArgsTree(object):
                 mapped_value = self._execute_mapping(value.value(), map_function)
         else:
             mapped_value = map_function(value)
-
         return mapped_value
