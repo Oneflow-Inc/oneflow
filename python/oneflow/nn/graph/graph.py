@@ -1625,12 +1625,12 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        # for arg in args_tree.iter_nodes():
-        #     print(arg)
-        #     print(arg.is_tuple())
-
         if is_input_simple_tuple:
-            out = args_tree.map_tuple_leaf(leaf_arg_fn)
+            # for arg in args_tree.iter_nodes():
+            #     print(arg)
+            #     print(arg.is_tuple())
+
+            out = args_tree.map_leaf(leaf_arg_fn)
             mapped_args = out[0]
             mapped_kwargs = out[1]
             return mapped_args, mapped_kwargs

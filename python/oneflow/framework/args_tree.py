@@ -207,15 +207,15 @@ class ArgsTree(object):
 
 
     # TODO
-    def map_tuple_leaf(self, map_function: Callable):
-        assert map_function != None, "map function cannot be None"
+    # def map_tuple_leaf(self, map_function: Callable):
+    #     assert map_function != None, "map function cannot be None"
 
-        if self._gen_name:
-            args_to_map = self._named_io_args
-        else:
-            args_to_map = self._io_args
-        return map_function(args_to_map)
-        # return self._execute_mapping(args_to_map, map_function)
+    #     if self._gen_name:
+    #         args_to_map = self._named_io_args
+    #     else:
+    #         args_to_map = self._io_args
+    #     mapped_value = args_to_map.__class__(map_function(x) if x.is_leaf() else x for x in reversed(args_to_map))
+    #     return mapped_value
 
     def map_leaf(self, map_function: Callable):
         r"""
@@ -230,10 +230,14 @@ class ArgsTree(object):
         return self._execute_mapping(args_to_map, map_function)
 
     def _execute_mapping(self, value, map_function):
-        if _is_raw_type(value, tuple) or _is_raw_type(value, list):
-            mapped_value = value.__class__(
-                map(lambda x: self._execute_mapping(x, map_function), value)
-            )
+        if _is_raw_type(value, tuple):
+            mapped_value = tuple(self._execute_mapping(v, map_function) for v in value)
+        elif _is_raw_type(value, list):
+            mapped_value = [self._execute_mapping(v, map_function) for v in value]
+        # if _is_raw_type(value, tuple) or _is_raw_type(value, list):
+        #     mapped_value = value.__class__(
+        #         map(lambda x: self._execute_mapping(x, map_function), value)
+        #     )
         elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
             mapped_value = value.__class__(
                 map(
@@ -249,3 +253,5 @@ class ArgsTree(object):
         else:
             mapped_value = map_function(value)
         return mapped_value
+
+
