@@ -48,6 +48,19 @@ class NamedArg(object):
         self._is_value_set = False
         self._value = None
 
+    def __iter__(self):
+        """
+        Iterate through the values of the NamedArg object and its children.
+        """
+
+        if _is_raw_type(self._value, (dict, OrderedDict)):
+            for key in self._value.keys():
+                yield self._value[key]
+
+        elif _is_raw_type(self._value, (tuple, list)):
+            for item in self._value:
+                yield item
+
     def prefix(self):
         return self._prefix
 
@@ -205,7 +218,6 @@ class ArgsTree(object):
 
         return arg
 
-
     # TODO
     def map_tuple_leaf(self, map_function: Callable):
         # if _is_raw_type(value, tuple):
@@ -218,7 +230,12 @@ class ArgsTree(object):
             args_to_map = self._named_io_args
         else:
             args_to_map = self._io_args
-        mapped_value = args_to_map.__class__(map_function(x) if x.is_leaf() else x for x in reversed(args_to_map))
+
+
+        if not _is_raw_type(value, NamedArg):
+            mapped_value = args_to_map.__class__(
+                map_function(x) if x.is_leaf() else x for x in reversed(args_to_map)
+            )
         return mapped_value
 
     def map_leaf(self, map_function: Callable):
@@ -253,5 +270,3 @@ class ArgsTree(object):
         else:
             mapped_value = map_function(value)
         return mapped_value
-
-

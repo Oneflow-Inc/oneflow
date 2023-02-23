@@ -1470,7 +1470,9 @@ class Graph(object):
 
     def __run(self, *args, **kwargs):
         try:
-            flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(*args, **kwargs)
+            flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
+                *args, **kwargs
+            )
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                 self._cur_index_of_ouputs_buffer
             ]
