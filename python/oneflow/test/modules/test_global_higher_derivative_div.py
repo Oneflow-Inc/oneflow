@@ -56,8 +56,8 @@ def _test_global_div_grad_grad_impl(test_case, placement):
         np.allclose(
             dx_and_dy.pytorch[1].detach().cpu().numpy(),
             dx_and_dy.oneflow[1].detach().numpy(),
-            rtol=1e-4,
-            atol=1e-3,
+            rtol=1e-3,
+            atol=1e-4,
         )
     )
 
@@ -94,7 +94,7 @@ class TestGlobalDivHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_global_div_grad_grad(test_case):
         for placement in all_placement():
-            for i in range(4):
+            for i in range(5):
                 _test_global_div_grad_grad_impl(test_case, placement)
 
 
