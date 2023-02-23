@@ -510,17 +510,19 @@ void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_comp
   }
 }
 
-void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes) {
+// Straighten a subset of the op graph
+void StraightenSubGraph(const std::vector<const OpNode*>& sub_graph,
+                        std::vector<const OpNode*>* ordered_op_nodes) {
   // Generate topological data structure for each op node
   HashMap<const OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
   std::vector<TopoStruct*> ordered_topo_structs;
 
-  // Traverse all the nodes in the op graph
-  op_graph.ForEachNode([&](OpNode* node) {
+  // Traverse all the nodes in the sub graph
+  for (const auto& node : sub_graph) {
     op_node2topo_struct.insert({node, TopoStruct(node)});
     topo_structs.push_back(&op_node2topo_struct.at(node));
-  });
+  }
 
   // Construct the map from a lbi to its id, consumers, blob size
   HashMap<LogicalBlobId, int32_t> lbi2id;
@@ -533,6 +535,16 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(ordered_topo_struct->op_node);
   }
+}
+
+// Straighten the whole op graph
+void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes) {
+  std::vector<const OpNode*> sub_graph;
+
+  // Traverse and store all the nodes in the op graph
+  op_graph.ForEachNode([&](OpNode* node) { sub_graph.push_back(node); });
+
+  StraightenSubGraph(sub_graph, ordered_op_nodes);
 }
 
 }  // namespace auto_parallel

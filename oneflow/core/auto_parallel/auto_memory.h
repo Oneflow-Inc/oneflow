@@ -23,6 +23,11 @@ namespace oneflow {
 namespace auto_parallel {
 void InitMemory(const OpGraph& op_graph, SbpGraph* sbp_graph, bool nccl_use_compute_stream);
 
+// Straighten a subset of the op graph
+void StraightenSubGraph(const std::vector<const OpNode*>& sub_graph,
+                        std::vector<const OpNode*>* ordered_op_nodes);
+
+// Straighten the whole op graph
 void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes);
 
 }  // namespace auto_parallel
