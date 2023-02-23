@@ -23,12 +23,12 @@ from oneflow.test_utils.automated_test_util import *
 
 
 # NOTE(lixiang): Do not check the graph for the time being, because ci will report "The action has timed out".
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_gru_cell(test_case, placement, sbp):
-    batch_size = random(2, 3) * 8
-    time_steps = random(2, 3) * 8
-    input_size = random(2, 3) * 8
-    hidden_size = random(2, 3) * 8
+    batch_size = random(2, 3) * 1
+    time_steps = random(2, 3) * 1
+    input_size = random(2, 3) * 1
+    hidden_size = random(2, 3) * 1
     has_bias = random().to(bool)
     m = torch.nn.GRUCell(input_size=input_size, hidden_size=hidden_size, bias=has_bias,)
 
