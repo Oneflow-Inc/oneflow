@@ -122,7 +122,7 @@ class TestMock(flow.unittest.TestCase):
         os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "0"
 
     def test_dummy_obj_fallback(test_case):
-        with mock.enable(use_dummy_obj_as_fallback=True):
+        with mock.enable(lazy=True):
             from torch import not_exist
 
             test_case.assertEqual(not_exist.__name__, "oneflow.not_exist")
@@ -130,7 +130,7 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertEqual(x.__name__, "oneflow.not_exist.x")
 
     def test_mock_torchvision(test_case):
-        with mock.enable(use_dummy_obj_as_fallback=True):
+        with mock.enable(lazy=True):
             import torchvision
 
             model = torchvision.models.resnet18(pretrained=False)
@@ -139,7 +139,7 @@ class TestMock(flow.unittest.TestCase):
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
-    with mock.enable(use_dummy_obj_as_fallback=True, verbose=True):
+    with mock.enable(lazy=True, verbose=True):
         import torch.not_exist
 
         captured = capsys.readouterr()
