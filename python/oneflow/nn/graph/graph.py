@@ -1630,7 +1630,7 @@ class Graph(object):
             #     print(arg)
             #     print(arg.is_tuple())
 
-            out = args_tree.map_leaf(leaf_arg_fn)
+            out = args_tree.map_tuple_leaf(leaf_arg_fn)
             mapped_args = out[0]
             mapped_kwargs = out[1]
             return mapped_args, mapped_kwargs
