@@ -80,10 +80,6 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
 
 std::string GenParallelConfKey(const ParallelConf& conf);
 
-void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
-                           std::function<bool(const std::string&, const std::string&)>& IsReachable,
-                           HashMap<std::string, OperatorConf>* mut_op_name2conf);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_REWRITER_PASS_UTIL_H_

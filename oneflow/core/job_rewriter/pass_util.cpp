@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/pass_util.h"
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/hash_container.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -85,46 +80,5 @@ std::string GenParallelConfKey(const ParallelConf& conf) {
   for (const auto& name : conf.device_name()) { ret += ("-" + name); }
   return ret;
 }
-
-void InsertCtrlEdgeInChain(const std::vector<const OpNode*>& ordered_op_nodes,
-                           std::function<bool(const std::string&, const std::string&)>& IsReachable,
-                           HashMap<std::string, OperatorConf>* mut_op_name2conf) {
-  HashMap<std::string, const OpNode*> placement2op_node;
-
-  for (int64_t i = 0; i < ordered_op_nodes.size(); ++i) {
-    const OpNode* this_node = CHECK_JUST(VectorAt(ordered_op_nodes, i));
-    const auto& this_op_conf = this_node->op().op_conf();
-    if (this_op_conf.has_src_subset_tick_conf() || this_op_conf.has_dst_subset_tick_conf()) {
-      continue;
-    }
-    auto key = GenParallelConfKey(this_node->parallel_desc().parallel_conf());
-    auto it_placement7op_node = placement2op_node.find(key);
-    if (it_placement7op_node == placement2op_node.end()) {
-      // Update previous op
-      placement2op_node[key] = this_node;
-    } else {
-      // const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
-      auto& prev_node = it_placement7op_node->second;
-      const std::string& this_op_name = this_node->op().op_name();
-      const std::string& prev_op_name = prev_node->op().op_name();
-      // If there exist a path from the source node to the target node,
-      // then we do not need to add the control edge since the target node is already controlled.
-      // If there exist a path from the target node to the source node,
-      // then we can not add the control edge since it will cyclize them.
-      // a -> ... -> b -> c -> a
-      if (!(IsReachable(prev_op_name, this_op_name) || IsReachable(this_op_name, prev_op_name))) {
-        auto it = mut_op_name2conf->find(this_op_name);
-        // If this op have not been modified, put it in the map.
-        if (it == mut_op_name2conf->end()) {
-          it = mut_op_name2conf->emplace(this_op_name, this_op_conf).first;
-        }
-        it->second.add_ctrl_in_op_name(prev_op_name);
-      }
-
-      // Update previous op
-      prev_node = this_node;
-    }
-  }
-};
 
 }  // namespace oneflow

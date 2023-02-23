@@ -549,6 +549,18 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     }
   }
 
+  auto InsertCtrlEdgeInChain = [&](const std::vector<const OpNode*>& ordered_op_nodes) {
+    for (int64_t i = 1; i < ordered_op_nodes.size(); ++i) {
+      const OpNode* this_node = CHECK_JUST(VectorAt(ordered_op_nodes, i));
+      const OpNode* prev_node = CHECK_JUST(VectorAt(ordered_op_nodes, i - 1));
+      const std::string& this_op_name = this_node->op().op_name();
+      const std::string& prev_op_name = prev_node->op().op_name();
+      if (!IsReachable(prev_op_name, this_op_name)) {
+        CHECK_JUST(MapAt(mut_op_name2conf, this_op_name)).add_ctrl_in_op_name(prev_op_name);
+      }
+    }
+  };
+
   auto InsertLogicalChainId = [&](const std::vector<const OpNode*>& ordered_op_nodes,
                                   const int64_t logical_chain_id) {
     for (const OpNode* op_node : ordered_op_nodes) {
@@ -593,7 +605,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
       InsertLogicalChainId(logical_chain->ordered_op_nodes, logical_chain->logical_chain_id);
       // TODO(chengcheng): rm fix hint and use thrd id in logical op node.
       FixLogicalChainOpStreamHint(logical_chain->ordered_op_nodes);
-      InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes, IsReachable, &mut_op_name2conf);
+      InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
 
     for (const auto& logical_chain : info.ordered_logical_chains) {
@@ -637,7 +649,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
         }
 
         InsertLogicalChainId(acc_chain_order_ops, info.after_acc_logical_chain->logical_chain_id);
-        InsertCtrlEdgeInChain(acc_chain_order_ops, IsReachable, &mut_op_name2conf);
+        InsertCtrlEdgeInChain(acc_chain_order_ops);
       }
     }
   }
