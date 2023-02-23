@@ -25,7 +25,7 @@ int64_t ConstShapeMixIn<T>::elem_cnt() const {
 }
 
 template<class T>
-int64_t ConstShapeMixIn<T>::At(int64_t index) const {
+Dim ConstShapeMixIn<T>::At(int64_t index) const {
   CHECK_GE(index, 0);
   CHECK_LT(index, tp()->NumAxes()) << " Shape: " << tp()->DebugStr() << " visit index: " << index
                                    << " > num_axes: " << tp()->NumAxes();
@@ -83,7 +83,14 @@ std::string ConstShapeMixIn<T>::DebugStr() const {
 
 template<class T>
 void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(tp()->begin(), tp()->end());
+  ret->Clear();
+  for (Dim dim : *tp()) {
+    if (!dim.is_known()) {
+      ret->add_dim()->mutable_unknown();
+    } else {
+      ret->add_dim()->set_int64_value(dim.val());
+    }
+  }
 }
 
 template<class T>
@@ -94,6 +101,17 @@ bool ConstShapeMixIn<T>::operator==(const T& rhs) const {
   }
   return true;
 }
+
+template<class T>
+bool ConstShapeMixIn<T>::is_all_known() const {
+  for (Dim dim : *tp()) {
+    if (!dim.is_known()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 template struct ConstShapeMixIn<Shape>;
 template struct MutShapeMixIn<Shape>;

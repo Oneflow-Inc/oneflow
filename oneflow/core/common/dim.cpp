@@ -13,93 +13,102 @@ std::ostream& operator<<(std::ostream& os, const Dim& dim) {
   return os;
 }
 
+#define OVERLOAD_BINARY_OP_TYPE(op, type)                        \
+  Dim Dim::operator op(type other) const {                       \
+    if (this->is_known()) { return Dim(this->value_ op other); } \
+    return Unknown();                                            \
+  }
+
 #define OVERLOAD_BINARY_OP(op)                                                         \
   Dim Dim::operator op(const Dim& other) const {                                       \
     if (this->is_known() && other.is_known()) { return this->value_ op other.value_; } \
     return Unknown();                                                                  \
   }                                                                                    \
-  Dim Dim::operator op(int other) const {                                              \
-    if (this->is_known()) { return this->value_ op other; }                            \
-    return Unknown();                                                                  \
-  }                                                                                    \
-  Dim Dim::operator op(size_t other) const {                                           \
-    if (this->is_known()) { return this->value_ op other; }                            \
-    return Unknown();                                                                  \
-  }                                                                                    \
-  Dim Dim::operator op(int64_t other) const {                                          \
-    if (this->is_known()) { return this->value_ op other; }                            \
-    return Unknown();                                                                  \
-  }
+  OVERLOAD_BINARY_OP_TYPE(op, float)                                                   \
+  OVERLOAD_BINARY_OP_TYPE(op, double)                                                  \
+  OVERLOAD_BINARY_OP_TYPE(op, char)                                                    \
+  OVERLOAD_BINARY_OP_TYPE(op, unsigned char)                                           \
+  OVERLOAD_BINARY_OP_TYPE(op, int)                                                     \
+  OVERLOAD_BINARY_OP_TYPE(op, unsigned int)                                            \
+  OVERLOAD_BINARY_OP_TYPE(op, long)                                                    \
+  OVERLOAD_BINARY_OP_TYPE(op, unsigned long)                                           \
+  OVERLOAD_BINARY_OP_TYPE(op, long long)                                               \
+  OVERLOAD_BINARY_OP_TYPE(op, unsigned long long)
 
 OVERLOAD_BINARY_OP(+)
 OVERLOAD_BINARY_OP(-)
 OVERLOAD_BINARY_OP(*)
 OVERLOAD_BINARY_OP(/)
+
+#undef OVERLOAD_BINARY_OP_TYPE
 #undef OVERLOAD_BINARY_OP
 
-#define OVERLOAD_ASSIGN_OP(op)                       \
-  Dim& Dim::operator op(const Dim& other) {          \
-    if (this->is_known() && other.is_known()) {      \
-      this->value_ op other.value_;                  \
-    } else {                                         \
-      this->value_ = Unknown().value_;               \
-    }                                                \
-    return *this;                                    \
-  }                                                  \
-  Dim& Dim::operator op(int other) {                 \
-    if (this->is_known()) { this->value_ op other; } \
-    return *this;                                    \
-  }                                                  \
-  Dim& Dim::operator op(size_t other) {              \
-    if (this->is_known()) { this->value_ op other; } \
-    return *this;                                    \
-  }                                                  \
-  Dim& Dim::operator op(int64_t other) {             \
+#define OVERLOAD_ASSIGN_OP_TYPE(op, type)            \
+  Dim& Dim::operator op(type other) {                \
     if (this->is_known()) { this->value_ op other; } \
     return *this;                                    \
   }
+
+#define OVERLOAD_ASSIGN_OP(op)                  \
+  Dim& Dim::operator op(const Dim& other) {     \
+    if (this->is_known() && other.is_known()) { \
+      this->value_ op other.value_;             \
+    } else {                                    \
+      this->value_ = Unknown().value_;          \
+    }                                           \
+    return *this;                               \
+  }                                             \
+  OVERLOAD_ASSIGN_OP_TYPE(op, float)            \
+  OVERLOAD_ASSIGN_OP_TYPE(op, double)           \
+  OVERLOAD_ASSIGN_OP_TYPE(op, char)             \
+  OVERLOAD_ASSIGN_OP_TYPE(op, unsigned char)    \
+  OVERLOAD_ASSIGN_OP_TYPE(op, int)              \
+  OVERLOAD_ASSIGN_OP_TYPE(op, unsigned int)     \
+  OVERLOAD_ASSIGN_OP_TYPE(op, long)             \
+  OVERLOAD_ASSIGN_OP_TYPE(op, unsigned long)    \
+  OVERLOAD_ASSIGN_OP_TYPE(op, long long)        \
+  OVERLOAD_ASSIGN_OP_TYPE(op, unsigned long long)
 
 OVERLOAD_ASSIGN_OP(+=)
 OVERLOAD_ASSIGN_OP(-=)
 OVERLOAD_ASSIGN_OP(*=)
 OVERLOAD_ASSIGN_OP(/=)
 
-#define OVERLOAD_COMPARISON_OP(op)                                     \
+#undef OVERLOAD_ASSIGN_OP_TYPE
+#undef OVERLOAD_ASSIGN_OP
+
+#define OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, type) \
+  bool operator op(const Dim& a, type b) {                    \
+    if (a.is_known()) { return a.value_ op b; }               \
+    return fallback_value;                                    \
+  }   \
+  bool operator op(type a, const Dim& b) {                    \
+    if (b.is_known()) { return a op b.value_; }               \
+    return fallback_value;                                    \
+  } \
+
+#define OVERLOAD_COMPARISON_OP(op, fallback_value)                     \
   bool operator op(const Dim& a, const Dim& b) {                       \
     if (a.is_known() && b.is_known()) { return a.value_ op b.value_; } \
-    return false;                                                      \
+    return fallback_value;                                             \
   }                                                                    \
-  bool operator op(const Dim& a, int b) {                              \
-    if (a.is_known()) { return a.value_ op b; }                        \
-    return false;                                                      \
-  }                                                                    \
-  bool operator op(const Dim& a, size_t b) {                           \
-    if (a.is_known()) { return a.value_ op b; }                        \
-    return false;                                                      \
-  }                                                                    \
-  bool operator op(const Dim& a, int64_t b) {                          \
-    if (a.is_known()) { return a.value_ op b; }                        \
-    return false;                                                      \
-  }                                                                    \
-  bool operator op(int a, const Dim& b) {                              \
-    if (b.is_known()) { return a op b.value_; }                        \
-    return false;                                                      \
-  }                                                                    \
-  bool operator op(size_t a, const Dim& b) {                           \
-    if (b.is_known()) { return a op b.value_; }                        \
-    return false;                                                      \
-  }                                                                    \
-  bool operator op(int64_t a, const Dim& b) {                          \
-    if (b.is_known()) { return a op b.value_; }                        \
-    return false;                                                      \
-  }
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, float)               \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, double)              \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, char)                \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned char)       \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, int)                 \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned int)        \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, long)                \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned long)       \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, long long)           \
+  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned long long)
 
-OVERLOAD_COMPARISON_OP(==)
-OVERLOAD_COMPARISON_OP(!=)
-OVERLOAD_COMPARISON_OP(<)
-OVERLOAD_COMPARISON_OP(<=)
-OVERLOAD_COMPARISON_OP(>)
-OVERLOAD_COMPARISON_OP(>=)
+OVERLOAD_COMPARISON_OP(==, false)
+OVERLOAD_COMPARISON_OP(!=, true)
+OVERLOAD_COMPARISON_OP(<, false)
+OVERLOAD_COMPARISON_OP(<=, false)
+OVERLOAD_COMPARISON_OP(>, false)
+OVERLOAD_COMPARISON_OP(>=, false)
 #undef OVERLOAD_COMPARISON_OP
 
 }  // namespace oneflow

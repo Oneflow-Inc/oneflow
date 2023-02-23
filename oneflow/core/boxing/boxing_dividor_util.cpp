@@ -244,7 +244,7 @@ Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> place
   parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
                                 + std::to_string(device_id));
   for (int64_t i = 0; i < placement->hierarchy()->NumAxes(); ++i) {
-    parallel_conf.mutable_hierarchy()->add_dim(1);
+    parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(1);
   }
   std::shared_ptr<ParallelDesc> parallel_desc;
   JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {

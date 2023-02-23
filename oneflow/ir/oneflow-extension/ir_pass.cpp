@@ -118,8 +118,9 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
       const override {
     LogicalBlobId lbi = GenLogicalBlobId(lbn);
     auto& blob_desc = op_graph_.GetLogicalBlobDesc(lbi);
-    cb(blob_desc.shape().int64_ptr(), blob_desc.shape().int64_ptr() + blob_desc.shape().NumAxes(),
-       blob_desc.data_type());
+    llvm::SmallVector<int64_t> shape;
+    for (const auto& dim : blob_desc.shape()) { shape.push_back(dim.is_known() ? dim.val() : -1); }
+    cb(shape.begin(), shape.end(), blob_desc.data_type());
   }
 
   void TopoForEachOpConf(

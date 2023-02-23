@@ -45,7 +45,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   variable_op_conf.set_name(train_step_name);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
-  *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
+  variable_conf->mutable_shape()->add_dim()->set_int64_value(1);
   variable_conf->set_data_type(DataType::kInt64);
   variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
 

@@ -25,13 +25,13 @@ namespace oneflow {
 Stride::Stride(const ShapeView& shape) {
   const int64_t ndim = shape.NumAxes();
   resize(ndim);
-  if (ndim > 0 && shape.elem_cnt() > 0) {
-    std::exclusive_scan(shape.rbegin(), shape.rend(), rbegin(), (int64_t)1, std::multiplies<>{});
+  if (!shape.is_all_known() || (ndim > 0 && shape.elem_cnt() > 0)) {
+    std::exclusive_scan(shape.rbegin(), shape.rend(), rbegin(), Dim(1), std::multiplies<>{});
   } else if (ndim > 0 && shape.elem_cnt() == 0) {
     // 0-size shape
     small_vector<int64_t, kMaxNumDims> tmp_shape(ndim);
-    for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
-    std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), (int64_t)1,
+    for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i).val() : 1; }
+    std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), Dim(1),
                         std::multiplies<>{});
   }
 }

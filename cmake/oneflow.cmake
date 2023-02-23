@@ -70,6 +70,9 @@ list(APPEND oneflow_all_src
   "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/to_contiguous_kernel.cpp"
   "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/to_contiguous_kernel.cu"
   "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/math_binary_broadcast_kernels.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/distributions/normal_kernel.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/distributions/normal_distribution.cpp"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/kernels/distributions/normal_distribution.cu"
   )
 
 foreach(oneflow_single_file ${oneflow_all_src})

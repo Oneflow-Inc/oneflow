@@ -59,7 +59,7 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
                << y_shape.At(i) << ") at non-singleton dimension " << i;
       }
       out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
-                           ? 0
+                           ? Dim(0)
                            : std::max(x_shape.At(i), y_shape.At(i)));
     }
     tensor_z->set_shape(out_shape);

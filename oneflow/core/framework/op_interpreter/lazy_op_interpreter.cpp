@@ -59,6 +59,8 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
       << "blob_desc of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
+  std::cout << "shape: " << shape << std::endl;
+  shape->at(0) = 2;
   auto stride = std::make_shared<Stride>(shape);
   auto dtype = blob_desc_it->second.data_type();
   if (is_local) {
@@ -398,6 +400,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
+
+  // set symbolic dim
+  blob_conf->mutable_shape()->mutable_dim(0)->mutable_unknown();
+
   blob_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in global lazy job even if world size 1.
   //     this flag will be removed in the future.

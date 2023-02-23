@@ -42,7 +42,7 @@ namespace oneflow {
   // NOTE(lixiang): remove -1 for 0-dim tensor
   CHECK_LE_OR_RETURN(dimension, in_dim);
 
-  const int32_t max_size = in_dim == 0 ? 1 : in_shape.At(dimension);
+  const Dim max_size = in_dim == 0 ? Dim(1) : in_shape.At(dimension);
   CHECK_GT_OR_RETURN(size, 0);
   CHECK_LE_OR_RETURN(size, max_size);
   CHECK_GT_OR_RETURN(step, 0);

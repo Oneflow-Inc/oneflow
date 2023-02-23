@@ -75,7 +75,7 @@ OperatorConf GenerateLAMBHelperVariableOpConf(const VariableOp& op, const std::s
 
 void SetScalarShapeAndNdSbpConf(const ParallelDesc& parallel_desc, OperatorConf* op_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
-  op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
+  op_conf->mutable_variable_conf()->mutable_shape()->add_dim()->set_int64_value(1);
   op_conf->mutable_variable_conf()->clear_nd_sbp();
   FOR_RANGE(int, i, 0, parallel_desc.hierarchy()->NumAxes()) {
     *op_conf->mutable_variable_conf()->add_nd_sbp() = "B";

@@ -66,7 +66,7 @@ struct ConstShapeMixIn {
 
   int64_t NumAxes() const { return tp()->size(); }
   int64_t elem_cnt() const;
-  int64_t At(int64_t index) const;
+  Dim At(int64_t index) const;
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
   bool Containing(ShapeView small_shape) const;
@@ -91,6 +91,8 @@ struct ConstShapeMixIn {
     return reinterpret_cast<const int64_t*>(tp()->data());
   }
 
+  bool is_all_known() const;
+
  protected:
   // tp means "this pointer"
   T* tp() { return static_cast<T*>(this); }
@@ -99,7 +101,7 @@ struct ConstShapeMixIn {
 
 template<class T>
 struct MutShapeMixIn : public ConstShapeMixIn<T> {
-  void Set(int64_t index, int64_t val) {
+  void Set(int64_t index, Dim val) {
     CHECK_GE(index, 0);
     CHECK_LT(index, this->tp()->NumAxes())
         << " Shape: " << this->tp()->DebugStr() << " visit index: " << index

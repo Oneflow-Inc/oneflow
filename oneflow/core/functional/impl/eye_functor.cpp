@@ -133,7 +133,7 @@ class EyeInplaceFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
-    attrs.SetAllAttrs(x->shape()->At(0), x->shape()->At(1), x->dtype()->data_type());
+    attrs.SetAllAttrs(x->shape()->At(0).val(), x->shape()->At(1).val(), x->dtype()->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = JUST(x->device());
     JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
