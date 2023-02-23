@@ -74,7 +74,7 @@ def is_deprecated(func_or_class):
 
 def use_deterministic_algorithms(mode, *, warn_only=False):
     # register a empty method
-    warnings.warn("Oneflow temporarily not supports use_deterministic_algorithms.")
+    warnings.warn("Oneflow temporarily does not support use_deterministic_algorithms.")
 
 
 from oneflow._C import abs
