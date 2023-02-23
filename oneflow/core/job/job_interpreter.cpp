@@ -143,6 +143,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
   const auto& job = graph->job();
   auto env = *JUST(InitEnv(graph_inputs, graph));
 
+  // See comments above GetDeadTensorVector's definition for more details
   const auto dead_tensors = GetDeadTensorVector(job);
 
   one::TensorTuple graph_outputs;
