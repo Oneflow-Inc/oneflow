@@ -57,6 +57,7 @@ def _test_cat_only_one_tensor(test_case, placement, sbp):
     )
     return torch.cat((x,), 0)
 
+
 # NOTE(lixiang): CI test taking too long.
 # class TestModule(flow.unittest.TestCase):
 #     @globaltest
