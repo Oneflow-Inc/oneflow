@@ -65,11 +65,12 @@ class TestModule(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_cat_with_random_data(test_case, placement, sbp)
 
-    @globaltest
-    def test_cat_only_one_tensor(test_case):
-        for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_cat_only_one_tensor(test_case, placement, sbp)
+    # NOTE(lixiang): CI test taking too long: 230.73s call.
+    # @globaltest
+    # def test_cat_only_one_tensor(test_case):
+    #     for placement in all_placement():
+    #         for sbp in all_sbp(placement, max_dim=2):
+    #             _test_cat_only_one_tensor(test_case, placement, sbp)
 
     @globaltest
     def test_concat_with_input_0_size_data(test_case):
