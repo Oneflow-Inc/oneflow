@@ -84,8 +84,8 @@ class SplitLikeKernel final : public user_op::OpKernel {
         std::array<int64_t, 2> src_pos_vec = {0, in_col_offset};
         std::array<int64_t, 2> extent_vec = {rows, out_cols};
         primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
-                          dst_shape.int64_ptr(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.int64_ptr(),
-                          src_pos_vec.data(), extent_vec.data());
+                          dst_shape.int64_ptr(), dst_pos_vec.data(), in_tensor->dptr(),
+                          src_shape.int64_ptr(), src_pos_vec.data(), extent_vec.data());
       }
       in_col_offset += out_cols;
     }

@@ -210,7 +210,8 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
-                        unpack_from_dim_vec.int64_ptr(), unpack_from_ptr, perm.data(), out->mut_dptr());
+                        unpack_from_dim_vec.int64_ptr(), unpack_from_ptr, perm.data(),
+                        out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

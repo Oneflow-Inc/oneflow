@@ -55,9 +55,9 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), x->shape_view().NumAxes(), x->shape_view().int64_ptr(), x->dptr(),
-                        scalar->shape_view().NumAxes(), scalar->shape_view().int64_ptr(), scalar->dptr(),
-                        y->mut_dptr());
+      primitive->Launch(ctx->stream(), x->shape_view().NumAxes(), x->shape_view().int64_ptr(),
+                        x->dptr(), scalar->shape_view().NumAxes(), scalar->shape_view().int64_ptr(),
+                        scalar->dptr(), y->mut_dptr());
     } else {
       // For 0-size Tensor
       return;

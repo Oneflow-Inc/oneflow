@@ -141,9 +141,8 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
     std::unique_ptr<ep::primitive::CopyNd> primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(),
-                      nullptr, nullptr, dy->dptr(),
-                      nullptr, nullptr, nullptr);
+    primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(), nullptr, nullptr,
+                      dy->dptr(), nullptr, nullptr, nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

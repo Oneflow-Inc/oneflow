@@ -45,9 +45,10 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
         ctx->device_type(), ep::primitive::BinaryOp::kDiv, z_tensor->data_type(),
         z_tensor->data_type(), z_tensor->shape_view().NumAxes());
     CHECK(bcast_div);
-    bcast_div->Launch(ctx->stream(), z_tensor->shape_view().NumAxes(), z_tensor->shape_view().int64_ptr(),
-                      z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
-                      y_tensor->shape_view().int64_ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
+    bcast_div->Launch(ctx->stream(), z_tensor->shape_view().NumAxes(),
+                      z_tensor->shape_view().int64_ptr(), z_tensor->dptr(),
+                      y_tensor->shape_view().NumAxes(), y_tensor->shape_view().int64_ptr(),
+                      y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
     auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
         ctx->device_type(), ep::primitive::BinaryOp::kMul, dz_tensor->data_type(),

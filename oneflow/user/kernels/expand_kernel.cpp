@@ -70,8 +70,9 @@ class ExpandKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
                    in->dptr(), out_shape.size(), out_shape.int64_ptr(), out->stride().data(),
                    out->mut_dptr());
     } else {
-      prim->Launch(ctx->stream(), in_shape.size(), in_shape.int64_ptr(), in->stride().data(), in->dptr(),
-                   out_shape.size(), out_shape.int64_ptr(), out->stride().data(), out->mut_dptr());
+      prim->Launch(ctx->stream(), in_shape.size(), in_shape.int64_ptr(), in->stride().data(),
+                   in->dptr(), out_shape.size(), out_shape.int64_ptr(), out->stride().data(),
+                   out->mut_dptr());
     }
   }
 

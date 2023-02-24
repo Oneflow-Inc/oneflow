@@ -527,7 +527,6 @@ static PyObject* PyTensorObject_has_known_shape(PyObject* self, PyObject* unused
   return functional::CastToPyObject(PyTensor_Unpack(self)->shape()->is_all_known());
 }
 
-
 static PyMethodDef PyTensorObject_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/dim.h"
 
 namespace oneflow {
@@ -86,13 +101,13 @@ OVERLOAD_ASSIGN_OP(/=)
 #undef OVERLOAD_ASSIGN_OP
 
 #define OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, type) \
-  bool operator op(const Dim& a, type b) {                    \
-    if (a.is_known()) { return a.value_ op b; }               \
-    return fallback_value;                                    \
-  }                                                           \
-  bool operator op(type a, const Dim& b) {                    \
-    if (b.is_known()) { return a op b.value_; }               \
-    return fallback_value;                                    \
+  bool operator op(const Dim& a, type b) {                             \
+    if (a.is_known()) { return a.value_ op b; }                        \
+    return fallback_value;                                             \
+  }                                                                    \
+  bool operator op(type a, const Dim& b) {                             \
+    if (b.is_known()) { return a op b.value_; }                        \
+    return fallback_value;                                             \
   }
 
 #define OVERLOAD_COMPARISON_WITH_SCALAR(op, fallback_value)               \
@@ -122,15 +137,13 @@ bool operator==(const Dim& a, const Dim& b) {
   return false;
 }
 
-bool operator!=(const Dim& a, const Dim& b) {
-  return !(a == b);
-}
+bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
 
-#define OVERLOAD_COMPARISON_BETWEEN_DIMS(op)  \
-bool operator op(const Dim& a, const Dim& b) {  \
-  if (a.is_known() && b.is_known()) { return a.value_ op b.value_; }  \
-  return false; \
-}
+#define OVERLOAD_COMPARISON_BETWEEN_DIMS(op)                           \
+  bool operator op(const Dim& a, const Dim& b) {                       \
+    if (a.is_known() && b.is_known()) { return a.value_ op b.value_; } \
+    return false;                                                      \
+  }
 
 OVERLOAD_COMPARISON_BETWEEN_DIMS(>);
 OVERLOAD_COMPARISON_BETWEEN_DIMS(<);

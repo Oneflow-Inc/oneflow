@@ -67,9 +67,10 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
                                   input_stride.data(), input->dptr(), scalar_ndim,
                                   output_shape.data(), output_stride.data(), output->mut_dptr());
     } else {
-      broadcast_primitive->Launch(
-          ctx->stream(), ndim, input->shape_view().int64_ptr(), input->stride().data(), input->dptr(),
-          ndim, output->shape_view().int64_ptr(), output->stride().data(), output->mut_dptr());
+      broadcast_primitive->Launch(ctx->stream(), ndim, input->shape_view().int64_ptr(),
+                                  input->stride().data(), input->dptr(), ndim,
+                                  output->shape_view().int64_ptr(), output->stride().data(),
+                                  output->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
