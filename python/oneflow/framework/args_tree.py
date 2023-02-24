@@ -237,9 +237,24 @@ class ArgsTree(object):
         else:
             args_to_map = self._io_args
 
-        for x in args_to_map:
-            return map_function(x)
+        # stack = [args_to_map]
 
+        for i in args_to_map.value():
+            if i.is_leaf():
+                return  map_function(i)
+            else:
+            #     return  i.__class__(
+            #     map(lambda x: self._execute_mapping(x, map_function), i)
+            # )
+
+
+        # print(args_to_map.value())
+        # for x in args_to_map.value():
+        #     print(x.value())
+        #     if x.is_leaf():
+        #         return map_function(x.value())
+        #     else:
+        #         return x
 
         # mapped_value = args_to_map.__class__(
         #         map_function(x) if x.is_leaf() else x.value() for x in args_to_map
