@@ -25,47 +25,55 @@ import os
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_CSE"] = "0"
-os.environ["ONEFLOW_DEBUG"] = "1"
+# TODO: add this and put it under `job_wrapper.IsLastIRPass() == false`
+os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
 
 import oneflow as flow
+import oneflow.nn as nn
+import oneflow.nn.functional as F
 import oneflow.unittest
 import oneflow.sysconfig
 
 
-def _matmul_bias(x, weight, bias):
-    return flow._C.bias_add(
-        flow._C.matmul(x, weight, transpose_b=True), bias, axis=len(x.shape) - 1
-    )
+class GEGLU(nn.Module):
+    r"""
+    A variant of the gated linear unit activation function from https://arxiv.org/abs/2002.05202.
+
+    Parameters:
+        dim_in (`int`): The number of channels in the input.
+        dim_out (`int`): The number of channels in the output.
+    """
+
+    def __init__(
+        self, dim_in: int, dim_out: int,
+    ):
+        super().__init__()
+        self.proj = nn.Linear(dim_in, dim_out * 2)
+
+    def forward(self, hidden_states):
+        # TODO: fuse these ops in MLIR
+        # return flow._C.fused_glu(
+        #     hidden_states, self.proj.weight, self.proj.bias, activation="gelu"
+        # )
+        hidden_states, gate = self.proj(hidden_states).chunk(2, dim=-1)
+        return hidden_states * F.gelu(gate)
+
+
+class GraphToRun(flow.nn.Graph):
+    def __init__(self, gelu_mod):
+        super().__init__()
+        self.gelu_mod = gelu_mod
+
+    def build(self, hidden_states):
+        return self.gelu_mod(hidden_states)
 
 
 def do_fused_gelu_graph(test_case, dev):
-    x = np.random.uniform(low=-1, high=1, size=(8, 9))
-    w = np.random.uniform(low=-1, high=1, size=(10, 9))
-    v = np.random.uniform(low=-1, high=1, size=(10, 9))
-    b = np.random.uniform(low=-1, high=1, size=(10))
-    c = np.random.uniform(low=-1, high=1, size=(10))
-
-    x = flow.from_numpy(x).to(dev).to(flow.float32)
-    w = flow.from_numpy(w).to(dev).to(flow.float32)
-    v = flow.from_numpy(v).to(dev).to(flow.float32)
-    b = flow.from_numpy(b).to(dev).to(flow.float32)
-    c = flow.from_numpy(c).to(dev).to(flow.float32)
-
-    hide_state = _matmul_bias(x, w, b)
-    gate = _matmul_bias(x, v, c)
-
-    eager_res = hide_state * flow.gelu(gate)
-
-    class GraphToRun(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
-
-        def build(self, x, w, b, v, c):
-            return flow._C.fused_glu(x=x, w=w, b=b, v=v, c=c, activation="gelu")
-
-    graph_to_run = GraphToRun()
-    lazy_res = graph_to_run(x, w, b, v, c)
+    gelu_mod = GEGLU(640, 5120)
+    hidden_states = flow.randn(2, 2304, 640)
+    eager_res = gelu_mod(hidden_states)
+    graph_to_run = GraphToRun(gelu_mod)
+    lazy_res = graph_to_run(hidden_states)
     test_case.assertTrue(np.allclose(eager_res.numpy(), lazy_res.numpy()))
 
 
