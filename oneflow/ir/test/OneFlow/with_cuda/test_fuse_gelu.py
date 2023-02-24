@@ -69,8 +69,8 @@ class GraphToRun(flow.nn.Graph):
 
 
 def do_fused_gelu_graph(test_case, dev):
-    gelu_mod = GEGLU(640, 5120)
-    hidden_states = flow.randn(2, 2304, 640)
+    gelu_mod = GEGLU(640, 5120).to(dev)
+    hidden_states = flow.randn(2, 2304, 640).to(dev)
     eager_res = gelu_mod(hidden_states)
     graph_to_run = GraphToRun(gelu_mod)
     lazy_res = graph_to_run(hidden_states)
