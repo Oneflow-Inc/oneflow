@@ -15,10 +15,6 @@ limitations under the License.
 """
 import os
 
-os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
-
 import oneflow as flow
 import numpy as np
 
@@ -46,6 +42,11 @@ class M(flow.nn.Module):
 
 
 def test_run_graph_by_vm(capsys):
+    # TODO: with EnvVar(...):
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
     m = M().eval()
     g = Graph(m)
 
@@ -67,3 +68,8 @@ def test_run_graph_by_vm(capsys):
     assert "broadcast_sub" not in capsys.readouterr().out
     assert "cast" not in capsys.readouterr().out
     assert "broadcast_mul" not in capsys.readouterr().out
+
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
