@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SYMBOL_H_
 #define ONEFLOW_CORE_COMMON_SYMBOL_H_
 
+#include <iostream>
 #include <mutex>
 #include <memory>
 #include <unordered_map>
@@ -121,7 +122,8 @@ struct SymbolUtil final {
     std::shared_ptr<const T> ptr(new T(obj));
     HashEqTraitPtr<const T> new_obj_ptr_wraper(ptr.get(), hash_value);
     std::unique_lock<std::mutex> lock(*GlobalSymbolMapMutex());
-    return GlobalSymbolMap()->emplace(new_obj_ptr_wraper, ptr).first;
+    auto ret = GlobalSymbolMap()->emplace(new_obj_ptr_wraper, ptr).first;
+    return ret;
   }
 
   static const std::shared_ptr<const T>& GetOrCreatePtr(const T& obj) {

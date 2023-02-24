@@ -68,7 +68,7 @@ std::string ConstShapeMixIn<T>::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  for (int64_t dim : *tp()) {
+  for (Dim dim : *tp()) {
     ss << dim;
     if (++idx != tp()->size() || tp()->size() == 1) { ss << ","; }
   }

@@ -21,7 +21,6 @@ void Dim::ToProto(DimProto* proto) const {
   }
 }
 
-
 #define OVERLOAD_BINARY_OP_TYPE(op, type)                        \
   Dim Dim::operator op(type other) const {                       \
     if (this->is_known()) { return Dim(this->value_ op other); } \
@@ -86,38 +85,59 @@ OVERLOAD_ASSIGN_OP(/=)
 #undef OVERLOAD_ASSIGN_OP_TYPE
 #undef OVERLOAD_ASSIGN_OP
 
-#define OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, type) \
+#define OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, type) \
   bool operator op(const Dim& a, type b) {                    \
     if (a.is_known()) { return a.value_ op b; }               \
     return fallback_value;                                    \
-  }   \
+  }                                                           \
   bool operator op(type a, const Dim& b) {                    \
     if (b.is_known()) { return a op b.value_; }               \
     return fallback_value;                                    \
-  } \
+  }
 
-#define OVERLOAD_COMPARISON_OP(op, fallback_value)                     \
-  bool operator op(const Dim& a, const Dim& b) {                       \
-    if (a.is_known() && b.is_known()) { return a.value_ op b.value_; } \
-    return fallback_value;                                             \
-  }                                                                    \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, float)               \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, double)              \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, char)                \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned char)       \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, int)                 \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned int)        \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, long)                \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned long)       \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, long long)           \
-  OVERLOAD_COMPARISON_OP_TYPE(op, fallback_value, unsigned long long)
+#define OVERLOAD_COMPARISON_WITH_SCALAR(op, fallback_value)               \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, float)         \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, double)        \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, char)          \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, unsigned char) \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, int)           \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, unsigned int)  \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, long)          \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, unsigned long) \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, long long)     \
+  OVERLOAD_COMPARISON_WITH_SCALAR_TYPE(op, fallback_value, unsigned long long)
 
-OVERLOAD_COMPARISON_OP(==, false)
-OVERLOAD_COMPARISON_OP(!=, true)
-OVERLOAD_COMPARISON_OP(<, false)
-OVERLOAD_COMPARISON_OP(<=, false)
-OVERLOAD_COMPARISON_OP(>, false)
-OVERLOAD_COMPARISON_OP(>=, false)
-#undef OVERLOAD_COMPARISON_OP
+OVERLOAD_COMPARISON_WITH_SCALAR(==, false)
+OVERLOAD_COMPARISON_WITH_SCALAR(!=, true)
+OVERLOAD_COMPARISON_WITH_SCALAR(<, false)
+OVERLOAD_COMPARISON_WITH_SCALAR(<=, false)
+OVERLOAD_COMPARISON_WITH_SCALAR(>, false)
+OVERLOAD_COMPARISON_WITH_SCALAR(>=, false)
+#undef OVERLOAD_COMPARISON_WITH_SCALAR
+
+bool operator==(const Dim& a, const Dim& b) {
+  if (a.is_known() && b.is_known()) { return a.value_ == b.value_; }
+  // reflexivity: Dim::Unknown() == Dim::Unknown()
+  if (!a.is_known() && !b.is_known()) { return true; }
+  return false;
+}
+
+bool operator!=(const Dim& a, const Dim& b) {
+  return !(a == b);
+}
+
+#define OVERLOAD_COMPARISON_BETWEEN_DIMS(op)  \
+bool operator op(const Dim& a, const Dim& b) {  \
+  if (a.is_known() && b.is_known()) { return a.value_ op b.value_; }  \
+  return false; \
+}
+
+OVERLOAD_COMPARISON_BETWEEN_DIMS(>);
+OVERLOAD_COMPARISON_BETWEEN_DIMS(<);
+// Unfortunately we cannot hold reflexivity for >= and <=
+OVERLOAD_COMPARISON_BETWEEN_DIMS(>=);
+OVERLOAD_COMPARISON_BETWEEN_DIMS(<=);
+
+#undef OVERLOAD_COMPARISON_BETWEEN_DIMS
 
 }  // namespace oneflow

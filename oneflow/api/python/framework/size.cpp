@@ -31,7 +31,7 @@ static PyObject* TensorSize_repr(TensorSize* self) {
   int32_t size = PyTuple_Size((PyObject*)self);
   ss << "oneflow.Size([";
   for (int i = 0; i < size; ++i) {
-    int64_t dim = PyLong_AsLongLong(PyTuple_GET_ITEM(self, i));
+    Dim dim = one::functional::PyUnpackDim(PyTuple_GET_ITEM(self, i));
     ss << dim;
     if (++idx != size) { ss << ", "; }
   }
@@ -173,7 +173,7 @@ PyObject* TensorSize_NewFromShape(const Shape& size) {
   PyObjectPtr self(TensorSize_New(size.NumAxes()));
   if (self.get()) {
     for (int i = 0; i < size.NumAxes(); ++i) {
-      PyTuple_SET_ITEM(self.get(), i, PyLong_FromLongLong(size.At(i)));
+      PyTuple_SET_ITEM(self.get(), i, one::functional::CastToPyObject(size.At(i)));
     }
   }
   return self.release();
@@ -186,11 +186,11 @@ Shape TensorSize_AsShape(PyObject* self) {
     return Shape();
   }
   int size = TensorSize_length((TensorSize*)self);
-  DimVector dim_vec(size);
+  Shape shape(size);
   for (int i = 0; i < size; ++i) {
-    dim_vec[i] = PyLong_AsLongLong(PyTuple_GET_ITEM((TensorSize*)self, i));
+    shape[i] = py::handle(PyTuple_GET_ITEM((TensorSize*)self, i)).cast<Dim>();
   }
-  return Shape(std::move(dim_vec));
+  return shape;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

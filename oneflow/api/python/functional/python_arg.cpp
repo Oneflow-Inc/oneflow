@@ -229,7 +229,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
-    case kSHAPE: return PyLongSequenceCheck(object_);
+    case kSHAPE: return PyShapeCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
