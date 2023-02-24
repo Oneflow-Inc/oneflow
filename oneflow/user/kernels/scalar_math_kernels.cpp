@@ -98,7 +98,7 @@ class ScalarMathKernel final : public user_op::OpKernel, public user_op::CudaGra
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(),
+      primitive->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().int64_ptr(),
                         in->dptr(), value, out->mut_dptr());
     } else {
       // For 0-d Tensor
@@ -131,7 +131,7 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), value, in->shape_view().NumAxes(), in->shape_view().ptr(),
+      primitive->Launch(ctx->stream(), value, in->shape_view().NumAxes(), in->shape_view().int64_ptr(),
                         in->dptr(), out->mut_dptr());
     } else {
       // For 0-d Tensor
@@ -187,8 +187,8 @@ class ScalarPowGradKernel final : public user_op::OpKernel {
           NewBroadcastElementwiseAttrBinaryPrimitive(ctx, op);
       CHECK(primitive);
       primitive->Launch(ctx->stream(), x_tensor->shape_view().NumAxes(),
-                        x_tensor->shape_view().ptr(), x_tensor->dptr(),
-                        dy_tensor->shape_view().NumAxes(), dy_tensor->shape_view().ptr(),
+                        x_tensor->shape_view().int64_ptr(), x_tensor->dptr(),
+                        dy_tensor->shape_view().NumAxes(), dy_tensor->shape_view().int64_ptr(),
                         dy_tensor->dptr(), dx_tensor->mut_dptr());
     } else {
       // For 0-d Tensor

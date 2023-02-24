@@ -124,8 +124,8 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
               target_blob->data_type(), target_blob->shape_view().NumAxes());
       CHECK(bcast_mul);
       bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
-                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
-                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
+                        target_blob->shape_view().int64_ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.int64_ptr(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsOut(elem_cnt, input, target, out, weight,
                                            pos_weight_processed);
@@ -173,8 +173,8 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
               target_blob->data_type(), target_blob->shape_view().NumAxes());
       CHECK(bcast_mul);
       bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
-                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
-                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
+                        target_blob->shape_view().int64_ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.int64_ptr(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut(elem_cnt, input, target, dy, dx, weight,
                                                pos_weight_processed);

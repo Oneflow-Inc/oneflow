@@ -169,6 +169,8 @@ class Graph(object):
         # For load graph from runtime states.
         self._enable_save_runtime_state_dict = False
 
+        self._input_shape = {}
+
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
@@ -1216,6 +1218,9 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
+            def build_graph_input_arg(op_name, arg):
+                shape = self._input_shape.get(arg, None)
+                return graph_build_util.build_graph_input_arg(op_name, arg, shape)
             (
                 input_op_names,
                 lazy_args,
@@ -1223,7 +1228,7 @@ class Graph(object):
                 self._args_repr,
                 _,
             ) = self.__build_io(
-                "input", graph_build_util.build_graph_input_arg, *args, **kwargs
+                "input", build_graph_input_arg, *args, **kwargs
             )
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 

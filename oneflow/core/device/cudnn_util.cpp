@@ -74,7 +74,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
     OF_CUDNN_CHECK(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
                                               data_num, channels, kernel_h, kernel_w));
   } else {
-    std::vector<int> tensor_dim({shape.ptr(), shape.ptr() + shape.NumAxes()});
+    std::vector<int> tensor_dim({shape.int64_ptr(), shape.int64_ptr() + shape.NumAxes()});
     std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
     for (int32_t i = shape.NumAxes() - 2; i >= 0; --i) {
       stride_of_tensor[i] = stride_of_tensor[i + 1] * shape.At(i + 1);
@@ -119,7 +119,7 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
     OF_CUDNN_CHECK(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
                                               filters, c, kernel_h, kernel_w));
   } else {
-    std::vector<int> dims({shape.ptr(), shape.ptr() + shape.NumAxes()});
+    std::vector<int> dims({shape.int64_ptr(), shape.int64_ptr() + shape.NumAxes()});
     OF_CUDNN_CHECK(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
                                               dims.size(), dims.data()));
   }

@@ -63,7 +63,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel, public user_op::Cuda
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(),
+      primitive->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().int64_ptr(),
                         in->dptr(), scalar_operand, out->mut_dptr());
     } else {
       // For 0-d Tensor

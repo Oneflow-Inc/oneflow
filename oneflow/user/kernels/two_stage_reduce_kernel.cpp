@@ -52,8 +52,8 @@ class ReduceDeviceStageKernel final : public OpKernel {
         ctx->device_type(), ep::primitive::BinaryOp::kEqual, in->data_type(), DataType::kBool,
         in->shape_view().NumAxes());
     CHECK(bcast_eq);
-    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
-                     out->shape_view().NumAxes(), out->shape_view().ptr(), out->dptr(),
+    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().int64_ptr(), in->dptr(),
+                     out->shape_view().NumAxes(), out->shape_view().int64_ptr(), out->dptr(),
                      mask->mut_dptr());
 
     auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
@@ -175,8 +175,8 @@ class ReduceGlobalStageKernel final : public OpKernel {
         ctx->device_type(), ep::primitive::BinaryOp::kEqual, in->data_type(), DataType::kBool,
         in->shape_view().NumAxes());
     CHECK(bcast_eq);
-    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
-                     reduced_shape.NumAxes(), reduced_shape.dim_vec().data(), out->dptr(),
+    bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().int64_ptr(), in->dptr(),
+                     reduced_shape.NumAxes(), reduced_shape.int64_ptr(), out->dptr(),
                      mask->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

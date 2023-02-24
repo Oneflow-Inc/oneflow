@@ -93,8 +93,8 @@ class SamePaddingKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
     copy_nd_primitive->Launch(ctx->stream(), x->data_type(), num_axes, y->mut_dptr(),
-                              y->shape_view().ptr(), dst_pos_vec.data(), x->dptr(),
-                              x->shape_view().ptr(), src_pos_vec.data(), x->shape_view().ptr());
+                              y->shape_view().int64_ptr(), nullptr, x->dptr(),
+                              x->shape_view().int64_ptr(), nullptr, nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -142,8 +142,8 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::CopyNd> primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(),
-                      dx->shape_view().ptr(), dst_pos_vec.data(), dy->dptr(),
-                      dy->shape_view().ptr(), src_pos_vec.data(), dx->shape_view().ptr());
+                      nullptr, nullptr, dy->dptr(),
+                      nullptr, nullptr, nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

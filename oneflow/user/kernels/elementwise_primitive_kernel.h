@@ -101,8 +101,8 @@ class BinaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cu
     const int64_t elem_cnt = input_a_shape.elem_cnt();
 
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), input_a_shape.NumAxes(), input_a_shape.ptr(),
-                        input_a_tensor->dptr(), input_b_shape.NumAxes(), input_b_shape.ptr(),
+      primitive->Launch(ctx->stream(), input_a_shape.NumAxes(), input_a_shape.int64_ptr(),
+                        input_a_tensor->dptr(), input_b_shape.NumAxes(), input_b_shape.int64_ptr(),
                         input_b_tensor->dptr(), output_tensor->mut_dptr());
     }
   }

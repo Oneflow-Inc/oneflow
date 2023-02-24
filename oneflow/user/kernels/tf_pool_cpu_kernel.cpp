@@ -78,15 +78,15 @@ struct PoolCpuKernelUtil {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
         FOR_RANGE(int64_t, pd, 0, out.At(2)) {
           int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+          int64_t dend = std::min(dstart + pool_size.at(0), in.At(2).val());
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
             int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + pool_size.at(1), in.At(3));
+            int64_t hend = std::min(hstart + pool_size.at(1), in.At(3).val());
             hstart = std::max(hstart, static_cast<int64_t>(0));
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
               int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + pool_size.at(2), in.At(4));
+              int64_t wend = std::min(wstart + pool_size.at(2), in.At(4).val());
               wstart = std::max(wstart, static_cast<int64_t>(0));
 
               const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
@@ -128,15 +128,15 @@ struct PoolCpuKernelUtil {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
         FOR_RANGE(int64_t, pd, 0, out.At(2)) {
           int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+          int64_t dend = std::min(dstart + pool_size.at(0), in.At(2).val());
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
             int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + pool_size.at(1), in.At(3));
+            int64_t hend = std::min(hstart + pool_size.at(1), in.At(3).val());
             hstart = std::max(hstart, static_cast<int64_t>(0));
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
               int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + pool_size.at(2), in.At(4));
+              int64_t wend = std::min(wstart + pool_size.at(2), in.At(4).val());
               wstart = std::max(wstart, static_cast<int64_t>(0));
 
               const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
@@ -176,15 +176,15 @@ struct PoolCpuKernelUtil {
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
         int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-        int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+        int64_t dend = std::min(dstart + pool_size.at(0), in.At(2).val());
         dstart = std::max(dstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, ph, 0, out.At(3)) {
           int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-          int64_t hend = std::min(hstart + pool_size.at(1), in.At(3));
+          int64_t hend = std::min(hstart + pool_size.at(1), in.At(3).val());
           hstart = std::max(hstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, pw, 0, out.At(4)) {
             int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-            int64_t wend = std::min(wstart + pool_size.at(2), in.At(4));
+            int64_t wend = std::min(wstart + pool_size.at(2), in.At(4).val());
             wstart = std::max(wstart, static_cast<int64_t>(0));
             const int out_col = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
             out_mat.col(out_col).setConstant(forward_initialize());
@@ -222,15 +222,15 @@ struct PoolCpuKernelUtil {
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
         int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-        int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+        int64_t dend = std::min(dstart + pool_size.at(0), in.At(2).val());
         dstart = std::max(dstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, ph, 0, out.At(3)) {
           int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-          int64_t hend = std::min(hstart + pool_size.at(1), in.At(3));
+          int64_t hend = std::min(hstart + pool_size.at(1), in.At(3).val());
           hstart = std::max(hstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, pw, 0, out.At(4)) {
             int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-            int64_t wend = std::min(wstart + pool_size.at(2), in.At(4));
+            int64_t wend = std::min(wstart + pool_size.at(2), in.At(4).val());
             wstart = std::max(wstart, static_cast<int64_t>(0));
             const int64_t pool_index = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
             const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);

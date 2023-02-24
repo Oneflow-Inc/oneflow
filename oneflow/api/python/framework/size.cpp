@@ -44,9 +44,9 @@ static PyObject* TensorSize_new(PyTypeObject* type, PyObject* args, PyObject* kw
   if (self.get()) {
     for (int i = 0; i < PyTuple_Size(self.get()); ++i) {
       PyObject* item = PyTuple_GET_ITEM(self.get(), i);
-      if (!PyLong_Check(item)) {
+      if (!one::functional::PyShapeItemCheck(item)) {
         return PyErr_Format(PyExc_TypeError,
-                            "oneflow.Size() takes an iterable of 'int', but item '%d' is '%s'", i,
+                            "oneflow.Size() takes an iterable of 'int' or 'Dim', but item '%d' is '%s'", i,
                             Py_TYPE(item)->tp_name);
       }
     }

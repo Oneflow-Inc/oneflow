@@ -226,11 +226,11 @@ bool PyDimCheck(PyObject* obj) { return detail::isinstance_fast<Dim>(obj); }
 Dim PyUnpackDim(PyObject* obj) { return *detail::cast_fast<Dim*>(obj); }
 
 // Shape
+bool PyShapeItemCheck(PyObject* obj) {
+  return PyLong_Check(obj) || PyIntegerScalarTensorCheck(obj) || PyDimCheck(obj);
+}
 bool PyShapeCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) {
-    return PyLong_Check(item) || PyIntegerScalarTensorCheck(item)
-           || PyDimCheck(item);
-  });
+  return PySequenceCheck(obj, [](PyObject* item) { return PyShapeItemCheck(item); });
 }
 
 Shape PyUnpackShape(PyObject* obj) {

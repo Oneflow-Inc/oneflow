@@ -64,14 +64,14 @@ class ExpandKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       // NOTE: this handle will be remove when BroadcastElementwiseUnary primitive support 0-dim
       // tensor
       int64_t scalar_ndim = 1;
-      Shape scalar_shape(DimVector{scalar_ndim});
-      Shape scalar_stride(DimVector{scalar_ndim});
-      prim->Launch(ctx->stream(), scalar_ndim, scalar_shape.data(), scalar_stride.data(),
-                   in->dptr(), out_shape.size(), out_shape.data(), out->stride().data(),
+      Shape scalar_shape({scalar_ndim});
+      Stride scalar_stride({scalar_ndim});
+      prim->Launch(ctx->stream(), scalar_ndim, scalar_shape.int64_ptr(), scalar_stride.data(),
+                   in->dptr(), out_shape.size(), out_shape.int64_ptr(), out->stride().data(),
                    out->mut_dptr());
     } else {
-      prim->Launch(ctx->stream(), in_shape.size(), in_shape.data(), in->stride().data(), in->dptr(),
-                   out_shape.size(), out_shape.data(), out->stride().data(), out->mut_dptr());
+      prim->Launch(ctx->stream(), in_shape.size(), in_shape.int64_ptr(), in->stride().data(), in->dptr(),
+                   out_shape.size(), out_shape.int64_ptr(), out->stride().data(), out->mut_dptr());
     }
   }
 

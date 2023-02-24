@@ -69,8 +69,8 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     const int64_t channels = out_tensor->shape_view().At(3);
     FOR_RANGE(int, i, 0, num_images) {
       const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      max_height = std::max(max_height, image_buffer.shape_view().At(0));
-      max_width = std::max(max_width, image_buffer.shape_view().At(1));
+      max_height = std::max(max_height, image_buffer.shape_view().At(0).val());
+      max_width = std::max(max_width, image_buffer.shape_view().At(1).val());
       CHECK_EQ(image_buffer.shape_view().At(2), channels);
     }
     int32_t alignment = ctx->Attr<int32_t>("alignment");

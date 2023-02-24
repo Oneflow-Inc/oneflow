@@ -137,7 +137,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       // Do pack. Need transpose in -> pack_to
       // pack use temp buffer offset: [0, data_size]
       pack_to_ptr = tmp_buffer->dptr<char>();
-      DimVector transpose_in_dim_vec = logical_shape_dim_vec;
+      Shape transpose_in_dim_vec(logical_shape_dim_vec);
       CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
@@ -152,7 +152,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
-                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
+                        transpose_in_dim_vec.int64_ptr(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
 
@@ -197,7 +197,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     if (in_split_axis != 0) {
       // Do unpack.
       CHECK(unpack_from_ptr != out->mut_dptr<char>());
-      DimVector unpack_from_dim_vec = logical_shape_dim_vec;
+      Shape unpack_from_dim_vec(logical_shape_dim_vec);
       CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
       unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
@@ -210,7 +210,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
-                        unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
+                        unpack_from_dim_vec.int64_ptr(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
