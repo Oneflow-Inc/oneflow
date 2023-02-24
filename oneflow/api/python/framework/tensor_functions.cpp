@@ -87,6 +87,7 @@ PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
+NB_UNARY_FUNC(PyTensorObject_nb_invert, functional::bitwise_not);
 // TODO: not implemented yet
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
@@ -107,15 +108,6 @@ static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unuse
   b = ndarray_judgment_and_compatibility(a, b);
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_nb_invert(PyObject* self) {
-  HANDLE_ERRORS
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -249,6 +241,7 @@ UNARY_METHOD(PyTensorObject_acosh, functional::Acosh);
 UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
+UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
 
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
@@ -333,6 +326,9 @@ DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1022,6 +1018,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -1077,6 +1076,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+    {"bitwise_not", (PyCFunction)PyTensorObject_bitwise_not, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},

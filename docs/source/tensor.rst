@@ -390,3 +390,6 @@ Tensor class reference
     Tensor.allclose
     Tensor.broadcast_to
     Tensor.unique
+    Tensor.bitwise_and
+    Tensor.bitwise_or
+    Tensor.bitwise_xor
