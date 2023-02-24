@@ -102,6 +102,7 @@ struct InplaceFmaScalar {
   }
 };
 
+#if __CUDA_ARCH_ >= 530
 template<size_t pack_size>
 struct InplaceFmaScalar<half, pack_size> {
   __device__ void operator()(AlignedArray<half, pack_size>* array, half m, half a) {
@@ -117,6 +118,7 @@ struct InplaceFmaScalar<half, pack_size> {
     }
   }
 };
+#endif  // __CUDA_ARCH_ >= 530
 
 template<typename T, size_t pack_size>
 struct InplaceFma {
