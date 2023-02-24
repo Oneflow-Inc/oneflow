@@ -316,8 +316,6 @@ def _test_ctc_loss_with_diff_device_input(test_case, reduction):
 def _test_ctc_loss_functional_with_diff_device_input(test_case, reduction):
     device_random = random_device()
     log_probs = random_tensor(ndim=3,dim0=5,dim1=2,dim2=3).to(device_random)
-    
-    # print(device_random.to(str))
     targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device=device_random)
     input_lengths = torch.tensor([5, 5], dtype=torch.int32)
     target_lengths = torch.tensor([3, 3], dtype=torch.int32)
