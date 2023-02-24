@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -751,7 +752,12 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     if (val_->non_contiguous_supported) {
       out_blob_desc->set_stride(tensor_desc.stride());
     } else {
-      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+      if (LazyMode::is_enabled()) {
+        // set a empty stride
+        out_blob_desc->set_stride(Stride(out_blob_desc->shape().size()));
+      } else {
+        out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+      }
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "

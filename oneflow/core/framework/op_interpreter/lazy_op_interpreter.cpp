@@ -59,8 +59,8 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
       << "blob_desc of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
-  std::cout << "shape: " << *shape << std::endl;
-  auto stride = std::make_shared<Stride>(shape);
+  // set an empty stride for the compatibility with dynamic shape
+  auto stride = std::make_shared<Stride>(shape->size());
   auto dtype = blob_desc_it->second.data_type();
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
