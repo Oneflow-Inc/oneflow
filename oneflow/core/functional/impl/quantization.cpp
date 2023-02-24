@@ -140,6 +140,141 @@ class QuantizationFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupWiseDequantizeFunctor {
+ public:
+  GroupWiseDequantizeFunctor() {
+    symmetric_op_ = CHECK_JUST(
+        one::OpBuilder("group_wise_dequantize").Input("in").Input("scale").Output("out").Build());
+    asymmetric_op_ = CHECK_JUST(one::OpBuilder("group_wise_dequantize")
+                                    .Input("in")
+                                    .Input("scale")
+                                    .Input("zero")
+                                    .Output("out")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& scale,
+                           const Optional<one::Tensor>& zero, const int32_t& num_bits,
+                           const bool& symmetric, const int64_t& group_dim,
+                           const int64_t& group_size) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_bits", "symmetric", "group_dim", "group_size");
+    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8);
+    CHECK_GE_OR_RETURN(in->shape()->NumAxes(), 1);
+    const int64_t regularized_group_dim =
+        group_dim < 0 ? in->shape()->NumAxes() + group_dim : group_dim;
+    CHECK_GE(regularized_group_dim, 0);
+    CHECK_LT(regularized_group_dim, in->shape()->NumAxes());
+    const int64_t group_dim_size =
+        in->shape()->At(regularized_group_dim)
+        * (regularized_group_dim == in->shape()->NumAxes() - 1 ? 8 / num_bits : 1);
+    const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
+    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0);
+    attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
+    if (symmetric) {
+      return OpInterpUtil::Dispatch<Tensor>(*symmetric_op_, {in, scale}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*asymmetric_op_, {in, scale, JUST(zero)}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> symmetric_op_;
+  std::shared_ptr<OpExpr> asymmetric_op_;
+};
+
+class FusedLinearWithGroupWiseQuantizedWeightFunctor {
+ public:
+  FusedLinearWithGroupWiseQuantizedWeightFunctor() {
+    symmetric_with_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("b")
+                       .Output("out")
+                       .Build());
+    symmetric_without_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Output("out")
+                       .Build());
+    asymmetric_with_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("w_zero")
+                       .Input("b")
+                       .Output("out")
+                       .Build());
+    asymmetric_without_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("w_zero")
+                       .Output("out")
+                       .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& w,
+                           const std::shared_ptr<one::Tensor>& w_scale,
+                           const Optional<one::Tensor>& w_zero, const Optional<one::Tensor>& b,
+                           const int32_t& num_bits, const bool& symmetric, const int64_t& group_dim,
+                           const int64_t& group_size) const {
+    if (x->shape()->Count(0, x->shape()->NumAxes() - 1) > 8) {
+      const auto w_dequantized = JUST(functional::GroupWiseDequantize(
+          w, w_scale, w_zero, num_bits, symmetric, group_dim, group_size));
+      if (b) {
+        return JUST(
+            functional::FusedMatmulBias(x, w_dequantized, JUST(b), Optional<one::Tensor>()));
+      } else {
+        return JUST(functional::MatMul(x, w_dequantized, false, true, 1.0));
+      }
+    }
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_bits", "symmetric", "group_dim", "group_size");
+    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8);
+    CHECK_EQ_OR_RETURN(w->shape()->NumAxes(), 2);
+    const int64_t regularized_group_dim =
+        group_dim < 0 ? w->shape()->NumAxes() + group_dim : group_dim;
+    CHECK_OR_RETURN(regularized_group_dim == 0 || regularized_group_dim == 1);
+    const int64_t group_dim_size =
+        w->shape()->At(regularized_group_dim)
+        * (regularized_group_dim == w->shape()->NumAxes() - 1 ? 8 / num_bits : 1);
+    const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
+    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0);
+    attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
+
+    if (symmetric) {
+      if (b) {
+        return OpInterpUtil::Dispatch<Tensor>(*symmetric_with_bias_op_, {x, w, w_scale, JUST(b)},
+                                              attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*symmetric_without_bias_op_, {x, w, w_scale}, attrs);
+      }
+    } else {
+      if (b) {
+        return OpInterpUtil::Dispatch<Tensor>(*asymmetric_with_bias_op_,
+                                              {x, w, w_scale, JUST(w_zero), JUST(b)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*asymmetric_without_bias_op_,
+                                              {x, w, w_scale, JUST(w_zero)}, attrs);
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> symmetric_with_bias_op_;
+  std::shared_ptr<OpExpr> symmetric_without_bias_op_;
+  std::shared_ptr<OpExpr> asymmetric_with_bias_op_;
+  std::shared_ptr<OpExpr> asymmetric_without_bias_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FakeQuantizationFunctor>("FakeQuantization"); };
@@ -147,6 +282,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::QuantizationFunctor>("Quantiza
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::MinMaxObserverFunctor>("MinMaxObserver"); };
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MovingAverageMinMaxObserverFunctor>("MovingAverageMinMaxObserver");
+};
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::GroupWiseDequantizeFunctor>("GroupWiseDequantize");
+  m.add_functor<impl::FusedLinearWithGroupWiseQuantizedWeightFunctor>(
+      "FusedLinearWithGroupWiseQuantizedWeight");
 };
 
 }  // namespace functional
