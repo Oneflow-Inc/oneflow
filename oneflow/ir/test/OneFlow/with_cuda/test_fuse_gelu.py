@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.bias_add
-# CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:5 = "oneflow.grouped_matmul_bias"
+# CHECK-NOT: oneflow.broadcast_matmul
+# CHECK-NOT: oneflow.narrow
+# CHECK: "oneflow.fused_glu"
 
 import unittest
 import numpy as np
