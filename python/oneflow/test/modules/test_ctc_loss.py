@@ -311,21 +311,14 @@ def _test_ctc_loss_with_diff_device_input(test_case, reduction):
     return out
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+
 @autotest(n=3, auto_backward=True, check_graph=False)
 def _test_ctc_loss_functional_with_diff_device_input(test_case, reduction):
-    log_probs = torch.tensor(
-        [
-            [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
-            [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
-            [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
-            [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
-            [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
-        ],
-        dtype=torch.float32,
-        requires_grad=True,
-    )
-    targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device="cuda")
+    device_random = random_device()
+    log_probs = random_tensor(ndim=3,dim0=5,dim1=2,dim2=3).to(device_random)
+    
+    # print(device_random.to(str))
+    targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device=device_random)
     input_lengths = torch.tensor([5, 5], dtype=torch.int32)
     target_lengths = torch.tensor([3, 3], dtype=torch.int32)
     out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction=reduction)
