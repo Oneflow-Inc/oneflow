@@ -1622,7 +1622,6 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
@@ -1809,7 +1808,6 @@ class Graph(object):
             if isinstance(arg, Tensor):
                 is_input_simple_tuple = True
 
-
         for arg in args_tree.iter_nodes():
             if isinstance(arg, Tensor):
                 flattened_args.append(arg)
@@ -1821,14 +1819,12 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-
         if is_input_simple_tuple:
             # for arg in args_tree.iter_nodes():
             #     print(arg)
-            #     print(arg.is_tuple())
 
             args_tree.map_tuple_leaf(func)
-            
+
         args_tree.map_leaf(func)
         return flattened_args
 
