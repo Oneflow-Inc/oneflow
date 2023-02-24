@@ -753,7 +753,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
       out_blob_desc->set_stride(tensor_desc.stride());
     } else {
       if (LazyMode::is_enabled()) {
-        // set a empty stride
+        // set an empty stride
         out_blob_desc->set_stride(Stride(out_blob_desc->shape().size()));
       } else {
         out_blob_desc->set_stride(Stride(out_blob_desc->shape()));

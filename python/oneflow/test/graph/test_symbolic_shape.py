@@ -25,14 +25,17 @@ class M(flow.nn.Module):
         w1 = self.w - self.w - self.w
         x = x * w1.to(flow.float32)
         x = x.unsqueeze(0)
+        y = x.sum(dim=1)
         if lazy_mode.is_enabled():
             # Shape inference works correctly even with the presence of
             # symbolic dimensions:
             assert x.shape == (1, flow.Dim.unknown(), 4)
+            # y has a static shape even though x has a symbolic shape
+            assert y.shape == (1, 4)
         return x
 
 
-def test_run_graph_by_vm(capsys):
+def test_graph_with_symbolic_shape(capsys):
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
@@ -63,3 +66,13 @@ def test_run_graph_by_vm(capsys):
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
+
+def test_symbolic_shape_equality():
+    assert flow.Dim.unknown() == flow.Dim.unknown()
+    assert flow.Dim.unknown() != -1
+    assert flow.Dim.unknown() != 1
+    assert (1, flow.Dim.unknown(), 4) == (1, flow.Dim.unknown(), 4)
+    assert flow.Size((1, flow.Dim.unknown(), 4)) == (1, flow.Dim.unknown(), 4)
+    assert flow.Size((1, flow.Dim.unknown(), 4)) == flow.Size((1, flow.Dim.unknown(), 4))
+    assert flow.Size((1, flow.Dim.unknown(), 4)) != flow.Size((1, 1, 4))

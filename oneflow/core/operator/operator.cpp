@@ -334,7 +334,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
     // initialize stride by shape if the op does not support non-contiguous
     if (!JUST(SupportNonContiguous(this))) {
       if (LazyMode::is_enabled()) {
-        // set a empty stride
+        // set an empty stride
         out_blob_desc->set_stride(Stride(out_blob_desc->shape().size()));
       } else {
         out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
