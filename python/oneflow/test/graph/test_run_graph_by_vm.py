@@ -72,4 +72,3 @@ def test_run_graph_by_vm(capsys):
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
-
