@@ -166,8 +166,8 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis0) {
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   parallel_conf.add_device_name("1:0-3");
-  parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(4);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(2);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("P", "B");
   const auto& dst_nd_sbp = GetNdSbp("S0", "B");
@@ -195,8 +195,8 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis1) {
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   parallel_conf.add_device_name("1:0-3");
-  parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(4);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(2);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("S0", "S1");
@@ -223,8 +223,8 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
   parallel_conf.add_device_name("1:0-1");
-  parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(2);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(2);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(2);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("B", "S0");

@@ -34,5 +34,13 @@ TEST(Shape, function_test_1) {
   ASSERT_EQ(shape.elem_cnt(), 2543386624);
 }
 
+TEST(Shape, single_scalar_initializer_list) {
+  Shape shape({4});
+  ASSERT_EQ(shape.is_initialized(), true);
+  ASSERT_EQ(shape.NumAxes(), 1);
+  ASSERT_EQ(shape.elem_cnt(), 4);
+  ASSERT_EQ(shape[0], 4);
+}
+
 }  // namespace test
 }  // namespace oneflow

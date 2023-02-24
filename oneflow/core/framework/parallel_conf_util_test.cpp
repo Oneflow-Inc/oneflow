@@ -48,8 +48,8 @@ TEST(ParallelConfUtil, GetDeviceTagAndMachineDeviceIdsAndHierarchy) {
   parallel_conf.add_device_name("0:2-3");
   parallel_conf.add_device_name("1:0-1");
   parallel_conf.add_device_name("1:2-3");
-  parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(4);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(2);
+  parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(4);
   std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>
       tag_and_dev_ids_and_hierarchy =
           *CHECK_JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
@@ -62,8 +62,8 @@ TEST(ParallelConfUtil, GetDeviceTagAndMachineDeviceIdsAndHierarchy) {
   ASSERT_NE(std::count(machine_device_ids.begin(), machine_device_ids.end(), "1:0-1"), 0);
   ASSERT_NE(std::count(machine_device_ids.begin(), machine_device_ids.end(), "1:2-3"), 0);
   ASSERT_EQ(std::count(machine_device_ids.begin(), machine_device_ids.end(), "2:0-3"), 0);
-  ASSERT_EQ(hierarchy->dim(0), 2);
-  ASSERT_EQ(hierarchy->dim(1), 4);
+  ASSERT_EQ(Dim(hierarchy->dim(0)), 2);
+  ASSERT_EQ(Dim(hierarchy->dim(1)), 4);
 }
 
 }  // namespace test
