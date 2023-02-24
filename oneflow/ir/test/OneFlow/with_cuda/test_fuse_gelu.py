@@ -24,7 +24,6 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 # TODO: add this and put it under `job_wrapper.IsLastIRPass() == false`
 os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
