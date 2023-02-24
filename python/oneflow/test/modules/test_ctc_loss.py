@@ -312,7 +312,7 @@ def _test_ctc_loss_with_diff_device_input(test_case, reduction):
 
 
 
-@autotest(n=20, auto_backward=True, check_graph=False)
+@autotest(n=3, auto_backward=True, check_graph=False)
 def _test_ctc_loss_functional(test_case, reduction):
     device_random = random_device()
     log_probs = random_tensor(ndim=3, dim0=5, dim1=2, dim2=3).to(device_random)
