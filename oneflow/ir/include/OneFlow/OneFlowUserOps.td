@@ -1,4 +1,3 @@
-
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
 def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
