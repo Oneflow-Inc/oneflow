@@ -53,6 +53,9 @@ class NamedArg(object):
         Iterate through the values of the NamedArg object and its children.
         """
 
+        if not self._is_value_set:
+            raise StopIteration
+
         if _is_raw_type(self._value, (dict, OrderedDict)):
             for key in self._value.keys():
                 yield self._value[key]
@@ -60,6 +63,9 @@ class NamedArg(object):
         elif _is_raw_type(self._value, (tuple, list)):
             for item in self._value:
                 yield item
+
+        else:
+            raise StopIteration
 
     def prefix(self):
         return self._prefix
@@ -231,12 +237,14 @@ class ArgsTree(object):
         else:
             args_to_map = self._io_args
 
+        for x in args_to_map:
+            return map_function(x)
 
-        if not _is_raw_type(value, NamedArg):
-            mapped_value = args_to_map.__class__(
-                map_function(x) if x.is_leaf() else x for x in reversed(args_to_map)
-            )
-        return mapped_value
+
+        # mapped_value = args_to_map.__class__(
+        #         map_function(x) if x.is_leaf() else x.value() for x in args_to_map
+        #     )
+        # return mapped_value
 
     def map_leaf(self, map_function: Callable):
         r"""
