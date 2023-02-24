@@ -312,11 +312,11 @@ def _test_ctc_loss_with_diff_device_input(test_case, reduction):
 
 
 
-@autotest(n=3, auto_backward=True, check_graph=False)
-def _test_ctc_loss_functional_with_diff_device_input(test_case, reduction):
+@autotest(n=20, auto_backward=True, check_graph=False)
+def _test_ctc_loss_functional(test_case, reduction):
     device_random = random_device()
-    log_probs = random_tensor(ndim=3,dim0=5,dim1=2,dim2=3).to(device_random)
-    targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device=device_random)
+    log_probs = random_tensor(ndim=3, dim0=5, dim1=2, dim2=3).to(device_random)
+    targets = random_tensor(ndim=2, dim0=2, dim1=3, low=1, high=3, dtype=int).to(device_random)
     input_lengths = torch.tensor([5, 5], dtype=torch.int32)
     target_lengths = torch.tensor([3, 3], dtype=torch.int32)
     out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction=reduction)
@@ -342,7 +342,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["reduction"] = ["mean", "none"]
         for arg in GenArgList(arg_dict):
-            _test_ctc_loss_functional_with_diff_device_input(test_case, *arg)
+            _test_ctc_loss_functional(test_case, *arg)
             
         
 
