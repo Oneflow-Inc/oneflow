@@ -1162,8 +1162,12 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
 
-                self._c_nn_graph.compile_plan_for_runtime()
-                self._c_nn_graph.init_runtime()
+                
+                if not oneflow.support.env_var_util.parse_boolean_from_env(
+                    "ONEFLOW_RUN_GRAPH_BY_VM", False
+                ):
+                    self._c_nn_graph.compile_plan_for_runtime()
+                    self._c_nn_graph.init_runtime()
 
             compile_and_init_end = time.perf_counter()
             self.__print(

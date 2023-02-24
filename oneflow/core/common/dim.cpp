@@ -13,6 +13,15 @@ std::ostream& operator<<(std::ostream& os, const Dim& dim) {
   return os;
 }
 
+void Dim::ToProto(DimProto* proto) const {
+  if (is_known()) {
+    proto->set_int64_value(value_);
+  } else {
+    proto->mutable_unknown();
+  }
+}
+
+
 #define OVERLOAD_BINARY_OP_TYPE(op, type)                        \
   Dim Dim::operator op(type other) const {                       \
     if (this->is_known()) { return Dim(this->value_ op other); } \

@@ -42,6 +42,10 @@ class Dim {
     CHECK(is_known());
     return value_;
   }
+  int64_t val_or(int64_t default_value) const {
+    return is_known() ? value_ : default_value;
+  }
+  void ToProto(DimProto* proto) const;
 
 #define DECLARE_BINARY_OP(op)                      \
   Dim operator op(const Dim& other) const;         \

@@ -166,7 +166,7 @@ ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(
       llvm::map_range(shape.dim(), [this](const ::oneflow::DimProto& v) -> Attribute {
         ::oneflow::Dim dim(v);
-        return getSI64IntegerAttr(dim.is_known() ? dim.val() : -1);
+        return getSI64IntegerAttr(dim.val_or(ShapedType::kDynamicSize));
       })));
 }
 

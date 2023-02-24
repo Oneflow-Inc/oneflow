@@ -174,10 +174,10 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
       GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
                                 GetBuilder().getStrArrayAttr(device_vec)));
   if (pc.has_hierarchy()) {
-    ::oneflow::Shape shape(pc.hierarchy());
+    ::oneflow::Shape hierarchy(pc.hierarchy());
     attr_vec.push_back(GetBuilder().getNamedAttr(
         OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-        GetBuilder().getI64ArrayAttr({shape.int64_ptr(), static_cast<size_t>(shape.NumAxes())})));
+        GetBuilder().getI64ArrayAttr({hierarchy.int64_ptr(), static_cast<size_t>(hierarchy.NumAxes())})));
   }
   return success();
 }
@@ -772,12 +772,8 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
   if (!blob_conf.has_shape()) { return Type{}; };
   if (auto data_type = getTypeFromOneFlowDataType(GetMLIRContext(), blob_conf.data_type())) {
     llvm::SmallVector<int64_t, 4> shape;
-    for (const auto& dim : blob_conf.shape().dim()) { 
-      if (dim.has_int64_value()) {
-        shape.push_back(dim.int64_value());
-      } else {
-        shape.push_back(ShapedType::kDynamicSize);
-      }
+    for (const auto& dim_proto : blob_conf.shape().dim()) { 
+      shape.push_back(::oneflow::Dim(dim_proto).val_or(ShapedType::kDynamicSize));
     }
     return RankedTensorType::get(shape, data_type);
   } else {
