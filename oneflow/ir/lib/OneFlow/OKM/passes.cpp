@@ -324,7 +324,7 @@ void MemSizeFirst(func::FuncOp func, mlir::PatternRewriter& rewriter) {
   }
 
   ::oneflow::MemBlockResultInfo<Operation*> res;
-  ::oneflow::MemReusedMemSizeFirstAlgo(val2lifetime, val2size, &res);
+  ::oneflow::MemReusedMemSizeFirstAlgo(false, val2lifetime, val2size, &res);
 
   auto val2offset = res.regst_desc2offset;
   for (auto [op, offset] : val2offset) {
@@ -491,7 +491,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     const auto sym_name = op.getSymName();
     if (sym_name.startswith(func_name::OPT_GRAPH_NAME)) {
       const auto index = sym_name.substr(func_name::OPT_GRAPH_NAME.size()).str();
-      const std::string rename = func_name::OKL_GRAPH_NAME + index;
+      const std::string rename = func_name::OKL_GRAPH_NAME;
       BuildOKLGraph(op, rewriter, rename);
       rewriter.eraseOp(op);
     }

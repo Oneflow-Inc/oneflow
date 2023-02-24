@@ -54,7 +54,6 @@ class LauncherState final : public user_op::OpKernelState {
 
   // manage engine(runtime)
   JITEngine engine_;
-  int graph_index_;
 };
 
 }  // namespace okl
