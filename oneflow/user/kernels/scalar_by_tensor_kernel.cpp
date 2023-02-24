@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -55,9 +56,13 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
+      LOG(ERROR) << "scalar binary called";
+      DebugTensor<float>(ctx, x, ctx->op_name() + "/x");
+      DebugTensor<float>(ctx, scalar, ctx->op_name() + "/scalar");
       primitive->Launch(ctx->stream(), x->shape_view().NumAxes(), x->shape_view().ptr(), x->dptr(),
                         scalar->shape_view().NumAxes(), scalar->shape_view().ptr(), scalar->dptr(),
                         y->mut_dptr());
+      DebugTensor<float>(ctx, y, ctx->op_name() + "/y");
     } else {
       // For 0-size Tensor
       return;

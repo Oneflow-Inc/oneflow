@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -44,6 +45,7 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
                                                                   out->data_type());
       CHECK(fill);
       fill->Launch(ctx->stream(), out->mut_dptr(), Scalar(0), out_elem_cnt);
+      DebugTensor<float>(ctx, out, ctx->op_name() + "/out");
       return;
     }
     CHECK_EQ(out->shape_view().elem_cnt(), elem_cnt);
@@ -56,6 +58,7 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
                        << ctx->stream()->device_type();
       primitive->Launch(ctx->stream(), out->mut_dptr(), in->dptr(),
                         elem_cnt * GetSizeOfDataType(in->data_type()));
+      DebugTensor<float>(ctx, out, ctx->op_name() + "/out");
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
-
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 namespace oneflow {
 
 namespace ep {
@@ -61,6 +61,7 @@ class BatchMatmulImpl : public BatchMatmul {
     }
     c_dims[1] = m;
     c_dims[2] = n;
+    LOG(ERROR) << "batch matmul called.";
     broadcast_matmul_->Launch(stream, alpha, 3, a_dims, a, 3, b_dims, b, beta, 3, c_dims, c);
   }
 

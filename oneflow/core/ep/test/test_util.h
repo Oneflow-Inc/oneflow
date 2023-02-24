@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_TEST_TEST_UTIL_
 
 #include <gtest/gtest.h>
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
@@ -178,7 +179,9 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
+    LOG(ERROR) << " matmul called with dtype " << data_type;
     matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    DebugTensor<float>(ctx, out, ctx->op_name() + "/out");
   }
 };
 
