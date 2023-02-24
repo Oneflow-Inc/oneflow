@@ -75,16 +75,26 @@ class TestMock(flow.unittest.TestCase):
 
     def test_error(test_case):
         mock.enable()
-        with test_case.assertRaises(ModuleNotFoundError) as context:
+        with test_case.assertRaises(ImportError) as context:
             from torch import noexist
+        test_case.assertTrue(
+            "cannot import name 'noexist' from 'oneflow'" in str(context.exception)
+        )
+        with test_case.assertRaises(ModuleNotFoundError) as context:
+            import torch.noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)
         )
         mock.disable()
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(ImportError) as context:
             from torch import noexist
         test_case.assertTrue(
             "cannot import name 'noexist' from 'torch'" in str(context.exception)
+        )
+        with test_case.assertRaises(ModuleNotFoundError) as context:
+            import torch.noexist
+        test_case.assertTrue(
+            "No module named 'torch.noexist'" in str(context.exception)
         )
 
     def test_nested_with(test_case):
