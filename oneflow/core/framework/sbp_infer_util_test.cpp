@@ -71,6 +71,7 @@ bool ParseNdSbpSignatureFromString(const std::string& nd_sbp_signature_str,
       if (pos < nd_sbp_signature_str.size() && nd_sbp_signature_str[pos] == '>') {
         // in args parsing has finished, parse out args
         arg_name = "out";
+        nd_sbp_group_id = 0;
         // skip '>' in substr '->'
         pos++;
         continue;
@@ -85,51 +86,56 @@ bool ParseNdSbpSignatureFromString(const std::string& nd_sbp_signature_str,
   return true;
 }
 
-void TestCompareNdSbpSignature(const std::vector<std::string>& nd_sbp_signature_str_list) {
+void TestDeduplicateNdSbpSignature(const std::vector<std::string>& nd_sbp_signature_str_list,
+                                   const std::vector<std::string>& bns) {
   std::vector<NdSbpSignature> nd_sbp_sig_list;
+  nd_sbp_sig_list.reserve(nd_sbp_signature_str_list.size());
   for (const auto& nd_sbp_signature_str : nd_sbp_signature_str_list) {
     nd_sbp_sig_list.emplace_back();
     ASSERT_TRUE(ParseNdSbpSignatureFromString(nd_sbp_signature_str, nd_sbp_sig_list.back()));
   }
-  for (const auto& lhs_nd_sbp_sig : nd_sbp_sig_list) {
-    for (const auto& rhs_nd_sbp_sig : nd_sbp_sig_list) {
-      int cmp_ret1 = CompareNdSbpSignature(lhs_nd_sbp_sig, rhs_nd_sbp_sig);
-      int cmp_ret2 = CompareNdSbpSignature(rhs_nd_sbp_sig, lhs_nd_sbp_sig);
-      ASSERT_TRUE(cmp_ret1 + cmp_ret2 == 0);
-    }
-  }
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::shuffle(nd_sbp_sig_list.begin(), nd_sbp_sig_list.end(), gen);
+  nd_sbp_sig_list.reserve(nd_sbp_sig_list.size() + nd_sbp_sig_list.size() / 2);
+  std::copy_n(nd_sbp_sig_list.begin(), nd_sbp_sig_list.size() / 2,
+              std::back_inserter(nd_sbp_sig_list));
+  std::shuffle(nd_sbp_sig_list.begin(), nd_sbp_sig_list.end(), gen);
+  DeduplicateNdSbpSignatureList(&nd_sbp_sig_list, bns);
 }
 
 }  // namespace
 
-TEST(SbpInferUtil, CompareNdSbpSignature) {
-  TestCompareNdSbpSignature({
-      "(S(0), S(0)) -> (S(0), S(0))",
-      "(S(0), S(1)) -> (S(0), S(1))",
-      "(S(0), S(3)) -> (S(0), S(2))",
-      "(S(0), B) -> (S(0), B)",
-      "(S(0), P) -> (S(0), P)",
-      "(S(1), S(0)) -> (S(1), S(0))",
-      "(S(1), S(1)) -> (S(1), S(1))",
-      "(S(1), S(3)) -> (S(1), S(2))",
-      "(S(1), B) -> (S(1), B)",
-      "(S(1), P) -> (S(1), P)",
-      "(S(3), S(0)) -> (S(2), S(0))",
-      "(S(3), S(1)) -> (S(2), S(1))",
-      "(S(3), S(3)) -> (S(2), S(2))",
-      "(S(3), B) -> (S(2), B)",
-      "(S(3), P) -> (S(2), P)",
-      "(B, S(0)) -> (B, S(0))",
-      "(B, S(1)) -> (B, S(1))",
-      "(B, S(3)) -> (B, S(2))",
-      "(B, B) -> (B, B)",
-      "(B, P) -> (B, P)",
-      "(P, S(0)) -> (P, S(0))",
-      "(P, S(1)) -> (P, S(1))",
-      "(P, S(3)) -> (P, S(2))",
-      "(P, B) -> (P, B)",
-      "(P, P) -> (P, P)",
-  });
+TEST(SbpInferUtil, DeduplicateNdSbpSignatureList) {
+  TestDeduplicateNdSbpSignature(
+      {
+          "(S(0), S(0)) -> (S(0), S(0))",
+          "(S(0), S(1)) -> (S(0), S(1))",
+          "(S(0), S(3)) -> (S(0), S(2))",
+          "(S(0), B) -> (S(0), B)",
+          "(S(0), P) -> (S(0), P)",
+          "(S(1), S(0)) -> (S(1), S(0))",
+          "(S(1), S(1)) -> (S(1), S(1))",
+          "(S(1), S(3)) -> (S(1), S(2))",
+          "(S(1), B) -> (S(1), B)",
+          "(S(1), P) -> (S(1), P)",
+          "(S(3), S(0)) -> (S(2), S(0))",
+          "(S(3), S(1)) -> (S(2), S(1))",
+          "(S(3), S(3)) -> (S(2), S(2))",
+          "(S(3), B) -> (S(2), B)",
+          "(S(3), P) -> (S(2), P)",
+          "(B, S(0)) -> (B, S(0))",
+          "(B, S(1)) -> (B, S(1))",
+          "(B, S(3)) -> (B, S(2))",
+          "(B, B) -> (B, B)",
+          "(B, P) -> (B, P)",
+          "(P, S(0)) -> (P, S(0))",
+          "(P, S(1)) -> (P, S(1))",
+          "(P, S(3)) -> (P, S(2))",
+          "(P, B) -> (P, B)",
+          "(P, P) -> (P, P)",
+      },
+      {"in_0", "out_0"});
 }
 
 }  // namespace test

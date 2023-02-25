@@ -787,85 +787,67 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
   }
 }
 
-// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
-int CompareNdSbp(const NdSbp& lhs_nd_sbp, const NdSbp& rhs_nd_sbp) {
-  CHECK_EQ(lhs_nd_sbp.sbp_parallel_size(), rhs_nd_sbp.sbp_parallel_size());
-  // max split axis = 8, + B + P
-  const size_t kMaxSplitAxis = 8;
-  const size_t kCarryDigit = kMaxSplitAxis + 2;
-  auto Mesure = [](const NdSbp& nd_sbp) -> size_t {
-    size_t value = 0;
-    for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-      size_t cur_dim_value = 0;
-      const auto& sbp = nd_sbp.sbp_parallel(i);
-      if (sbp.has_split_parallel()) {
-        CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
-        cur_dim_value = sbp.split_parallel().axis();
-      } else if (sbp.has_broadcast_parallel()) {
-        cur_dim_value = kMaxSplitAxis;
-      } else if (sbp.has_partial_sum_parallel()) {
-        cur_dim_value = kMaxSplitAxis + 1;
-      } else {
-        UNIMPLEMENTED();
-      }
-      value += cur_dim_value * std::pow(kCarryDigit, (nd_sbp.sbp_parallel_size() - i - 1));
-    }
-    return value;
-  };
-  size_t lhs_value = Mesure(lhs_nd_sbp);
-  size_t rhs_value = Mesure(rhs_nd_sbp);
+namespace {
 
-  if (lhs_value < rhs_value) {
-    return -1;
-  } else if (lhs_value > rhs_value) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
-// return -1 indicate lhs < rhs, 1 indicate lhs > rhs, 0 indicate lhs == rhs
-int CompareNdSbpSignature(const NdSbpSignature& lhs_nd_sbp_sig,
-                          const NdSbpSignature& rhs_nd_sbp_sig) {
-  CHECK_EQ(lhs_nd_sbp_sig.bn_in_op2nd_sbp_size(), rhs_nd_sbp_sig.bn_in_op2nd_sbp_size());
-  for (const auto& lhs_bn_nd_sbp : lhs_nd_sbp_sig.bn_in_op2nd_sbp()) {
-    const auto& bn = lhs_bn_nd_sbp.first;
-    auto rhs_bn_nd_sbp_it = rhs_nd_sbp_sig.bn_in_op2nd_sbp().find(bn);
-    CHECK(rhs_bn_nd_sbp_it != rhs_nd_sbp_sig.bn_in_op2nd_sbp().end());
-    const auto& lhs_nd_sbp = lhs_bn_nd_sbp.second;
-    const auto& rhs_nd_sbp = rhs_bn_nd_sbp_it->second;
-    int cmp_ret = CompareNdSbp(lhs_nd_sbp, rhs_nd_sbp);
-    if (cmp_ret != 0) { return cmp_ret; }
-  }
-  return 0;
-}
-
-void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list) {
-  auto CompareIndices = [nd_sbp_sig_list](size_t lhs, size_t rhs) -> bool {
-    int cmp_ret = CompareNdSbpSignature(nd_sbp_sig_list->at(lhs), nd_sbp_sig_list->at(rhs));
-    if (cmp_ret == 0) {
-      return true;
-    } else if (cmp_ret == -1) {
-      return true;
-    } else if (cmp_ret == 1) {
-      return false;
+// give a mesure value for NdSbp for sorting
+size_t MesureNdSbp(const NdSbp& nd_sbp) {
+  // max split axis = 8 (start from 1), + B + P = 10
+  constexpr size_t kMaxSplitAxis = 8;
+  constexpr size_t kCarryDigit = kMaxSplitAxis + 3;
+  size_t value = 0;
+  for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    size_t cur_dim_value = 0;
+    const auto& sbp = nd_sbp.sbp_parallel(i);
+    if (sbp.has_split_parallel()) {
+      CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
+      // from 1 to 8
+      cur_dim_value = sbp.split_parallel().axis() + 1;
+    } else if (sbp.has_broadcast_parallel()) {
+      // 9
+      cur_dim_value = kMaxSplitAxis + 1;
+    } else if (sbp.has_partial_sum_parallel()) {
+      // 10
+      cur_dim_value = kMaxSplitAxis + 2;
     } else {
       UNIMPLEMENTED();
     }
-  };
-  std::vector<size_t> indices(nd_sbp_sig_list->size());
-  std::iota(indices.begin(), indices.end(), 0);
-  std::sort(indices.begin(), indices.end(), CompareIndices);
-  auto new_end =
-      std::unique(indices.begin(), indices.end(), [nd_sbp_sig_list](size_t lhs, size_t rhs) {
-        return nd_sbp_sig_list->at(lhs) == nd_sbp_sig_list->at(rhs);
-      });
-  indices.erase(new_end, indices.end());
-  std::vector<NdSbpSignature> new_nd_sbp_sig_list;
-  for (size_t index : indices) {
-    new_nd_sbp_sig_list.emplace_back(std::move(nd_sbp_sig_list->at(index)));
+    value = value * kCarryDigit + cur_dim_value;
   }
-  *nd_sbp_sig_list = std::move(new_nd_sbp_sig_list);
+  return value;
+}
+
+size_t MesureNdSbpSignature(const NdSbpSignature& nd_sbp_sig, const std::vector<std::string>& bns) {
+  // big enough for 2d-sbp signatrue set
+  // if want to extend to 3d-sbp, consider increase to 170
+  constexpr size_t kCarryDigit = 97;
+  size_t value = 0;
+  for (size_t i = 0; i < bns.size(); ++i) {
+    auto nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find(bns[i]);
+    CHECK(nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
+        << "can't find bn (" << bns[i] << ") in " << PbMessage2TxtString(nd_sbp_sig);
+    size_t cur_arg_value = MesureNdSbp(nd_sbp_it->second);
+    CHECK_LE(value + cur_arg_value / kCarryDigit, std::numeric_limits<size_t>::max() / kCarryDigit);
+    value = value * kCarryDigit + cur_arg_value;
+  }
+  return value;
+}
+
+}  // namespace
+
+void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list,
+                                   const std::vector<std::string>& bns) {
+  if (bns.size() > 8) { return; }
+  std::map<size_t, NdSbpSignature> value2nd_sbp_sig;
+  for (auto& nd_sbp_sig : *nd_sbp_sig_list) {
+    size_t order_value = MesureNdSbpSignature(nd_sbp_sig, bns);
+    if (value2nd_sbp_sig.find(order_value) == value2nd_sbp_sig.end()) {
+      value2nd_sbp_sig.emplace(order_value, std::move(nd_sbp_sig));
+    }
+  }
+  nd_sbp_sig_list->clear();
+  for (auto& nd_sbp_pair : value2nd_sbp_sig) {
+    nd_sbp_sig_list->emplace_back(std::move(nd_sbp_pair.second));
+  }
 }
 
 // Compute storage per device for given NdSbp

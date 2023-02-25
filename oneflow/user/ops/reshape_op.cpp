@@ -61,7 +61,7 @@ namespace oneflow {
     }
   }
 
-  DeduplicateNdSbpSignatureList(nd_sbp_sig_list);
+  DeduplicateNdSbpSignatureList(nd_sbp_sig_list, {"in_0", "out_0"});
   return Maybe<void>::Ok();
 }
 
