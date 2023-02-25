@@ -21,22 +21,55 @@ limitations under the License.
 
 namespace oneflow {
 
-class TaskStreamIndexManager final {
+class TaskStreamIndexManager {
  public:
   using stream_index_t = StreamId::stream_index_t;
 
   OF_DISALLOW_COPY_AND_MOVE(TaskStreamIndexManager);
   TaskStreamIndexManager() = default;
-  ~TaskStreamIndexManager() = default;
+  virtual ~TaskStreamIndexManager() = default;
 
-  StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
-  stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
-  stream_index_t GetComputeTaskStreamIndex(const DeviceId& device_id);
-  stream_index_t GetNamedTaskStreamIndex(const DeviceId& device_id, const std::string& name);
+  virtual StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
+  virtual stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
+  virtual stream_index_t GetComputeTaskStreamIndex(const DeviceId& device_id);
+  virtual stream_index_t GetNamedTaskStreamIndex(const DeviceId& device_id,
+                                                 const std::string& name);
 
  private:
   HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
   std::mutex mtx_;
+};
+
+class MasterTaskStreamIndexManager final : public TaskStreamIndexManager {
+ public:
+  using stream_index_t = StreamId::stream_index_t;
+
+  OF_DISALLOW_COPY_AND_MOVE(MasterTaskStreamIndexManager);
+  MasterTaskStreamIndexManager() = default;
+  ~MasterTaskStreamIndexManager() = default;
+};
+
+class WorkerTaskStreamIndexManager final : public TaskStreamIndexManager {
+ public:
+  using stream_index_t = StreamId::stream_index_t;
+
+  OF_DISALLOW_COPY_AND_MOVE(WorkerTaskStreamIndexManager);
+  WorkerTaskStreamIndexManager() = default;
+  ~WorkerTaskStreamIndexManager() = default;
+
+  StreamIndexGenerator* GetGenerator(const DeviceId& device_id) override {
+    UNIMPLEMENTED() << "TaskStreamIndexManager on worker process is disabled.";
+  }
+  stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id) override {
+    UNIMPLEMENTED() << "TaskStreamIndexManager on worker process is disabled.";
+  }
+  stream_index_t GetComputeTaskStreamIndex(const DeviceId& device_id) override {
+    UNIMPLEMENTED() << "TaskStreamIndexManager on worker process is disabled.";
+  }
+  stream_index_t GetNamedTaskStreamIndex(const DeviceId& device_id,
+                                         const std::string& name) override {
+    UNIMPLEMENTED() << "TaskStreamIndexManager on worker process is disabled.";
+  }
 };
 
 class TaskStreamIndexGetterRegistry final {

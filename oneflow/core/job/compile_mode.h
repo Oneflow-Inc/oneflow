@@ -21,11 +21,12 @@ limitations under the License.
 namespace oneflow {
 
 enum class CompileMode {
-  kInvalid = 0,
+  kInvalid = 0,  // make sure kInvalid is the first CompileMode
   kNaive,
   kRankPerIter,
   kRankPerThread,
-  kEnd,
+  kRankPerProcess,
+  kEnd,  // make sure kEnd is the last CompileMode
 };
 
 template<typename DerivedT>
@@ -39,6 +40,8 @@ struct CompileModeVisitor {
         return DerivedT::VisitRankPerIter(std::forward<Args>(args)...);
       case CompileMode::kRankPerThread:
         return DerivedT::VisitRankPerThread(std::forward<Args>(args)...);
+      case CompileMode::kRankPerProcess:
+        return DerivedT::VisitRankPerProcess(std::forward<Args>(args)...);
       case CompileMode::kEnd: LOG(FATAL) << "invalid compile mode";
     }
     LOG(FATAL) << "invalid compile mode";

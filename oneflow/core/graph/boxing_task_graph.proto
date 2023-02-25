@@ -13,7 +13,7 @@ import "oneflow/core/graph/task_edge.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 
-message ComputeTasks {
+message ComputeTasksProto {
   map<int64, TaskProto> parallel_id2task = 2;
 }
 
@@ -89,8 +89,13 @@ message TransportTaskProto {
   }
 }
 
+message TaskIdsProto {
+  repeated int64 task_id = 1;
+}
+
 message BoxingTaskGraphProto {
-  map<string, ComputeTasks> op_name2compute_tasks = 1;
+  map<string, ComputeTasksProto> boxing_related_op_name2compute_tasks = 1;
   repeated TransportTaskProto transport_task = 2;
   repeated TaskEdgeProto task_edge = 3;
+  map<string, TaskIdsProto> boxing_unrelated_op_name2task_ids = 4;
 }
