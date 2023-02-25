@@ -58,8 +58,8 @@ class CopyHdKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("copy_h2d").SetCreateFn<CopyHdKernel>().SetIsMatchedHob(user_op::HobTrue());
-REGISTER_USER_KERNEL("copy_d2h").SetCreateFn<CopyHdKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("copy_h2d").SetCreateFn<CopyHdKernel>();
+REGISTER_USER_KERNEL("copy_d2h").SetCreateFn<CopyHdKernel>();
 
 }  // namespace
 }  // namespace oneflow
