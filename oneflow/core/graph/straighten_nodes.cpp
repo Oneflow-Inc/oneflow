@@ -522,8 +522,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   std::vector<int32_t> remain_task_nums(num_classifier, 0);
 
-  auto SetOrderInGraph = [&](TaskNode* task_node) {
-    task_node->set_order_in_graph(order_in_graph);
+  auto SetOrderInGraph = [&](TaskNode* task_node, const std::string& debug) {
+    task_node->set_order_in_graph(order_in_graph, debug);
     ordered_task_nodes->emplace_back(task_node);
     ++order_in_graph;
   };
@@ -602,7 +602,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     remain_task_nums[list_classifier] -= execution_list.size();
     // Set the order and then remove from the execution list
     for (auto* node : execution_list) {
-      SetOrderInGraph(node);
+      SetOrderInGraph(node, "605");
       finish_execution(node);
     }
   };
@@ -634,7 +634,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
                             overlap_execution_list);
         remain_task_nums[TaskClassifier::kWaitingOverlapNode] -= overlap_execution_list.size();
-        for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node); }
+        for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node, "637"); }
         // Overlap the node with computation from the trunk
         execute(TaskClassifier::kWaitingMainComputation, computation_num);
 

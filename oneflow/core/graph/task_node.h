@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
+#include <string>
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/graph/task_edge.pb.h"
@@ -78,7 +79,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
   void set_chain_id(int64_t val);
-  void set_order_in_graph(int64_t val);
+  void set_order_in_graph(int64_t val, const std::string& debug = "none");
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -163,6 +164,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
+  bool order_has_been_set{false};
+  std::string set_debug;
+  std::thread::id set_thread_id{0};
   std::unique_ptr<TaskId> new_task_id_;
 
   ExecGraph exec_gph_;
