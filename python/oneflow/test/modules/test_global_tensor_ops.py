@@ -46,7 +46,6 @@ def _test_local_to_global_type_as(
     test_case.assertEqual(input.sbp, target.sbp)
 
 
-
 def _test_global_to_local_type_as(
     test_case, shape, src_dtype, tgt_dtype, placement, sbp
 ):
