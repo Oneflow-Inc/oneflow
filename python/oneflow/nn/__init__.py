@@ -180,3 +180,8 @@ from oneflow.nn.modules.rnn import (
 )
 
 from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d
+
+
+class DataParallel(Module):
+    def __init__(self):
+        raise NotImplementedError()
