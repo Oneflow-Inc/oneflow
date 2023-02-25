@@ -1133,8 +1133,10 @@ RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing
 Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode* op_node,
                                                                    int64_t parallel_id) {
   const auto& op_name = op_node->op().op_name();
-  auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
-  if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
+  auto iter = boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().find(op_name);
+  if (iter == boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().end()) {
+    return nullptr;
+  }
   if (iter == boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().end()) {
     return nullptr;
   }
