@@ -17,6 +17,7 @@ limitations under the License.
 import os
 import sys
 import collections
+import warnings
 
 # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
 if "CUDA_MODULE_LOADING" not in os.environ:
@@ -69,6 +70,11 @@ def is_deprecated(func_or_class):
     return (
         isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
     )
+
+
+def use_deterministic_algorithms(mode, *, warn_only=False):
+    # register a empty method
+    warnings.warn("Oneflow temporarily does not support use_deterministic_algorithms.")
 
 
 from oneflow._C import abs
