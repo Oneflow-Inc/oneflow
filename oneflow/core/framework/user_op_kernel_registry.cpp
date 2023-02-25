@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/core/framework/user_op_hob.h"
 
 namespace oneflow {
 
@@ -53,6 +54,10 @@ Maybe<OpKernelRegistry&> OpKernelRegistry::Finish() {
     result_.inplace_proposal_fn = [](const InferContext&, AddInplaceArgPair) {
       return Maybe<void>::Ok();
     };
+  }
+  if (result_.is_matched_hob == nullptr) {
+    static auto hob_true = std::make_shared<decltype(user_op::HobTrue())>(user_op::HobTrue());
+    result_.is_matched_hob = hob_true;
   }
   return *this;
 }
