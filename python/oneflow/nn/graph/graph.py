@@ -1794,10 +1794,9 @@ class Graph(object):
         args_tree = ArgsTree((args, kwargs), False)
 
         is_input_simple_tuple = False
-        for arg in args:
-            if isinstance(arg, Tensor):
-                is_input_simple_tuple = True
-
+        if isinstance(args, tuple):
+            is_input_simple_tuple = True
+        
         def func(value):
             if isinstance(value, Tensor) and not value.is_contiguous():
                 value.contiguous_()
