@@ -1804,9 +1804,6 @@ class Graph(object):
             return value
 
         if is_input_simple_tuple:
-            # for arg in args_tree.iter_nodes():
-            #     print(arg)
-
             args_tree.map_tuple_leaf(func)
 
         args_tree.map_leaf(func)
