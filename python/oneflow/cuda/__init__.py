@@ -194,3 +194,8 @@ def empty_cache() -> None:
 
 
 from .random import *  # noqa: F403
+
+
+class Event:
+    def __init__(self):
+        raise NotImplementedError()
