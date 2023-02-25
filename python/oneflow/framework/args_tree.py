@@ -242,7 +242,7 @@ class ArgsTree(object):
             args_to_map = self._named_io_args
         else:
             args_to_map = self._io_args
-   
+
         return self._execute_mapping(args_to_map, map_function)
 
     def _execute_mapping(self, value, map_function):
