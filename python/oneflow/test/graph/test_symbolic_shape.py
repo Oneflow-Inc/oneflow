@@ -89,5 +89,7 @@ def test_symbolic_shape_equality():
     assert flow.Dim.unknown() != 1
     assert (1, flow.Dim.unknown(), 4) == (1, flow.Dim.unknown(), 4)
     assert flow.Size((1, flow.Dim.unknown(), 4)) == (1, flow.Dim.unknown(), 4)
-    assert flow.Size((1, flow.Dim.unknown(), 4)) == flow.Size((1, flow.Dim.unknown(), 4))
+    assert flow.Size((1, flow.Dim.unknown(), 4)) == flow.Size(
+        (1, flow.Dim.unknown(), 4)
+    )
     assert flow.Size((1, flow.Dim.unknown(), 4)) != flow.Size((1, 1, 4))

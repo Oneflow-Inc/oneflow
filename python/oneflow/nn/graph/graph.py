@@ -1164,7 +1164,6 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
 
-                
                 if not oneflow.support.env_var_util.parse_boolean_from_env(
                     "ONEFLOW_RUN_GRAPH_BY_VM", False
                 ):
@@ -1218,18 +1217,18 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
+
             def build_graph_input_arg(op_name, arg):
                 shape = self._input_shape.get(arg, None)
                 return graph_build_util.build_graph_input_arg(op_name, arg, shape)
+
             (
                 input_op_names,
                 lazy_args,
                 lazy_kwargs,
                 self._args_repr,
                 _,
-            ) = self.__build_io(
-                "input", build_graph_input_arg, *args, **kwargs
-            )
+            ) = self.__build_io("input", build_graph_input_arg, *args, **kwargs)
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
@@ -1486,14 +1485,15 @@ class Graph(object):
                 "ONEFLOW_RUN_GRAPH_BY_VM", False
             ):
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
-                    convert_to_tensor_tuple(flattened_eager_args),
-                    self._c_nn_graph,
+                    convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )
             else:
                 outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                     self._cur_index_of_ouputs_buffer
                 ]
-                eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
+                eager_outputs = self._eager_outputs_buffer[
+                    self._cur_index_of_ouputs_buffer
+                ]
                 # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
                 oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                     convert_to_tensor_tuple(flattened_eager_args),
