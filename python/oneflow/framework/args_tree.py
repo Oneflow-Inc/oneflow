@@ -73,9 +73,6 @@ class NamedArg(object):
     def name(self):
         return self._name
 
-    def is_tuple(self):
-        return _is_raw_type(self._value, tuple)
-
     def global_index(self):
         return self._global_index
 
@@ -224,12 +221,7 @@ class ArgsTree(object):
 
         return arg
 
-    # TODO
     def map_tuple_leaf(self, map_function: Callable):
-        # if _is_raw_type(value, tuple):
-        #     mapped_value = tuple(self._execute_mapping(v, map_function) for v in value)
-        # elif _is_raw_type(value, list):
-        #     mapped_value = [self._execute_mapping(v, map_function) for v in value]
         assert map_function != None, "map function cannot be None"
 
         if self._gen_name:
@@ -237,25 +229,8 @@ class ArgsTree(object):
         else:
             args_to_map = self._io_args
 
-        # return self._execute_mapping(args_to_map, map_function)
-        # stack = [args_to_map]
-
         for i in args_to_map:
-
             return map_function(i)
-
-        # print(args_to_map.value())
-        # for x in args_to_map.value():
-        #     print(x.value())
-        #     if x.is_leaf():
-        #         return map_function(x.value())
-        #     else:
-        #         return x
-
-        # mapped_value = args_to_map.__class__(
-        #         map_function(x) if x.is_leaf() else x.value() for x in args_to_map
-        #     )
-        # return mapped_value
 
     def map_leaf(self, map_function: Callable):
         r"""

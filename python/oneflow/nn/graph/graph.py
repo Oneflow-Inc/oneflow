@@ -1470,6 +1470,7 @@ class Graph(object):
 
     def __run(self, *args, **kwargs):
         try:
+
             flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
                 *args, **kwargs
             )
@@ -1792,10 +1793,21 @@ class Graph(object):
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):
         args_tree = ArgsTree((args, kwargs), False)
 
+        is_input_simple_tuple = False
+        for arg in args:
+            if isinstance(arg, Tensor):
+                is_input_simple_tuple = True
+
         def func(value):
             if isinstance(value, Tensor) and not value.is_contiguous():
                 value.contiguous_()
             return value
+
+        if is_input_simple_tuple:
+            # for arg in args_tree.iter_nodes():
+            #     print(arg)
+
+            args_tree.map_tuple_leaf(func)
 
         args_tree.map_leaf(func)
 
@@ -1804,9 +1816,8 @@ class Graph(object):
         args_tree = ArgsTree((args, kwargs), False)
 
         is_input_simple_tuple = False
-        for arg in args:
-            if isinstance(arg, Tensor):
-                is_input_simple_tuple = True
+        if isinstance(args, tuple):
+            is_input_simple_tuple = True
 
         for arg in args_tree.iter_nodes():
             if isinstance(arg, Tensor):
@@ -1820,9 +1831,6 @@ class Graph(object):
             return value
 
         if is_input_simple_tuple:
-            # for arg in args_tree.iter_nodes():
-            #     print(arg)
-
             args_tree.map_tuple_leaf(func)
 
         args_tree.map_leaf(func)
