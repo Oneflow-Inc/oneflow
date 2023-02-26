@@ -1356,6 +1356,23 @@ class Module(object):
         """
         return ""
 
+    def make_contiguous_params_group(self):
+        r"""Get contiguous parameters group after creating the whole module.
+
+        Rearrange the parameters of the model in the same dtype and device 
+        (or placement and sbp for global tensor) to form a single tensor for
+        accelerating the element-wise operations of parameters' data or gradient.
+
+        Example::
+
+        >>> net = Network()
+        >>> net.make_contiguous_params_group()
+        
+        """
+        self.cpg = flow.nn.utils.parameters_grouping.ContiguousParamsGroup(
+            list(self.parameters()), for_module=True
+        )
+
     def __repr__(self):
         extra_lines = []
         extra_repr = self.extra_repr()

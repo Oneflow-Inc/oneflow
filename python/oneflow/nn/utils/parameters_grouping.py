@@ -40,32 +40,34 @@ def numel_in_bucket(tensor: Tensor):
 
 _tensor_or_tensors = Union[Tensor, List[Tensor], List[List[Tensor]]]
 
-# recording all grouped params in use
-_all_grouped_params = []
+
+# buffer to ordered parameters list mapping
+_buffer_params_mapping = collections.defaultdict(list)
 
 
 class ContiguousParamsGroup(object):
-    def __init__(self, params_group_list: _tensor_or_tensors):
+    def __init__(self, params_group_list: _tensor_or_tensors, for_module=False):
         """
         The ContiguousParamsGroup is created by 2D List of Tensors,
         which indicates the Tensors in the same 1D List should be 
         grouped into the same Tensor buffer.
         """
 
-        # making params_group_list 2D List of Tensors
         self.params_group_list = params_group_list.copy()
-        if all(
+
+        # making params_group_list 2D List of Tensors
+        if isinstance(self.params_group_list, Tensor):
+            warnings.warn("Single tensor is best not do grouping.")
+            self.params_group_list = [[self.params_group_list]]
+        elif all([isinstance(p, Tensor) for p in self.params_group_list]):
+            self.params_group_list = [self.params_group_list]
+        elif all(
             [
                 all([isinstance(p, Tensor) for p in params])
                 for params in self.params_group_list
             ]
         ):
             pass
-        elif all([isinstance(p, Tensor) for p in self.params_group_list]):
-            self.params_group_list = [self.params_group_list]
-        elif isinstance(self.params_group_list, Tensor):
-            warnings.warn("Single tensor is best not do grouping.")
-            self.params_group_list = [[self.params_group_list]]
         else:
             raise ValueError("The shape of params_group_list is illegal!")
 
@@ -80,160 +82,159 @@ class ContiguousParamsGroup(object):
 
         self.grouped_tensors = []
         self.grouped_grads = []
-        self.grouped_tensors_offset = {}
-        self.modified_buf = set()
-        last_extra_params = self._remapping_groups()
-        self._parameters_grouping(last_extra_params)
+        self.for_module = for_module
+        if self.for_module:
+            self._parameters_grouping_for_module()
+        else: 
+            self._parameters_grouping_for_operations()
 
-    def _remapping_groups(self):
-        global _all_grouped_params
-        all_grouped_params_set = set(_all_grouped_params)
-        last_extra_params_set = set(_all_grouped_params)
+    def _parameters_grouping_for_module(self):
+        global _buffer_params_mapping
 
-        current_buffer_tensor_mapping = collections.defaultdict(set)
-        current_buffer_tensor_mapping[None] = set()
-        params_requires_grad_group_list = []
-        new_all_grouped_params = _all_grouped_params.copy()
-        last_extra_params = []
+        assert len(self.params_group_list) == 1
 
+        # mapping (total_buffer_size, buffer_usage_index, buffer_tensor)
+        physical_params_group = {}
+
+        for p in self.params_group_list[0]:
+            if p.requires_grad:
+                if self.is_global:
+                    tensor_key = (p.dtype, p.placement, p.sbp)
+                else:
+                    tensor_key = (p.dtype, p.device)
+
+                physical_params_group[tensor_key] = physical_params_group.get(
+                    tensor_key, 0
+                ) + numel_in_bucket(p)
+
+        for tensor_key, buffer_size in physical_params_group.items():
+            dtype = tensor_key[0]
+
+            if self.is_global:
+                placement = tensor_key[1]
+                sbp = tensor_key[2]
+                physical_param_buf = flow.zeros(
+                    buffer_size, dtype=dtype, placement=placement, sbp=sbp
+                )
+                physical_param_buf.grad = flow.zeros(
+                    buffer_size, dtype=dtype, placement=placement, sbp=sbp
+                )
+            else:
+                device = tensor_key[1]
+                physical_param_buf = flow.zeros(
+                    buffer_size, dtype=dtype, device=device
+                )
+                physical_param_buf.grad = flow.zeros(
+                    buffer_size, dtype=dtype, device=device
+                )
+
+            self.grouped_tensors.append(physical_param_buf)
+            self.grouped_grads.append(physical_param_buf.grad)
+            physical_params_group[tensor_key] = (0, physical_param_buf)
+
+        for p in self.params_group_list[0]:
+            if not p.requires_grad:
+                continue 
+
+            if self.is_global:
+                tensor_key = (p.dtype, p.placement, p.sbp)
+            else:
+                tensor_key = (p.dtype, p.device)
+
+            index, param_buf = physical_params_group[tensor_key]
+            size = p.numel()
+            shape = p.data.shape
+
+            assert index + numel_in_bucket(p) <= param_buf.numel()
+
+            param_buf[index : index + size] = p.data.detach().clone().view(-1)
+            p.data = param_buf[index : index + size].view(shape)
+            p.grad = param_buf.grad[index : index + size].view(shape)
+
+            index += numel_in_bucket(p)
+            physical_params_group[tensor_key] = (index, param_buf)
+
+            _buffer_params_mapping[param_buf].append(p)
+
+    def _parameters_grouping_for_operations(self):
+        global _buffer_params_mapping
+
+        if len(_buffer_params_mapping) == 0:
+            warnings.warn(
+                "Since nn.Module didn't use make_contiguous_params_group() to create "
+                "a contiguous module, the remapping won't make any difference for parameters. "
+            )
+
+        params_group = []
         for params in self.params_group_list:
-            params_list = []
+            group = set()
             for p in params:
                 if p.requires_grad:
-                    current_buffer_tensor_mapping[p._ref_tensor].add(p)
-                    self.grouped_tensors_offset[p._ref_tensor] = 0
-                    params_list.append(p)
+                    group.add(p)
+            params_group.append(group)
 
-                    if p._ref_tensor is not None:
-                        self.modified_buf.add(p._ref_tensor)
+        # handling the parameters already on allocated buffers
+        for param_buf, params in _buffer_params_mapping.items():
+            logical_buffer_start, logical_buffer_size = 0, 0
+            pre_group_index = -1
+            params_cnt = len(params)
+            
+            for p_index, p in enumerate(params):
+                current_group_index = -1
 
-            params_requires_grad_group_list.append(params_list)
-            params_set = set(params_list)
+                for group_index, group in enumerate(params_group):
+                    if p in group:
+                        current_group_index = group_index
+                        break
 
-            # handling parameters used last time but not this time
-            last_extra_params_set -= params_set
+                if current_group_index == -1:
+                    continue
 
-            # updating all grouped parameters set
-            all_grouped_params_set |= params_set
+                params_group[current_group_index].remove(p)
 
-            # keeping the parameters' order in all_grouped_params_set and last_extra_params_set
-            for p in params:
-                if p not in all_grouped_params_set:
-                    new_all_grouped_params.append(p)
-                if p in last_extra_params_set:
-                    # clone last_extra_params data and detach data for memcpy
-                    last_extra_params.append((p, p.detach().clone()))
+                def _make_logical_buf():
+                    nonlocal logical_buffer_start, logical_buffer_size
+                    nonlocal pre_group_index, current_group_index
 
-        _all_grouped_params = new_all_grouped_params
-        self.params_group_list = params_requires_grad_group_list
+                    pre_group_index = current_group_index
 
-        new_params_group_list = []
-        for tensors_set in current_buffer_tensor_mapping.values():
-            for new_tensors in self.params_group_list:
-                # handling the new groups that satisfy both conditions
-                new_tensors_set = set(new_tensors)
-                tensors_intersection = tensors_set & new_tensors_set
+                    if logical_buffer_size == 0:
+                        return
 
-                actual_tensors_group = collections.defaultdict(list)
-                # keeping the parameters' order in group list
-                for tensor in new_tensors:
-                    if tensor in tensors_intersection:
-                        if self.is_global:
-                            tensor_key = (tensor.dtype, tensor.placement, tensor.sbp)
-                        else:
-                            tensor_key = (tensor.dtype, tensor.device)
+                    logical_param_buf = param_buf[
+                        logical_buffer_start : logical_buffer_start + logical_buffer_size
+                    ].view(logical_buffer_size)
+                    logical_param_grad_buf = param_buf.grad[
+                        logical_buffer_start : logical_buffer_start + logical_buffer_size
+                    ].view(logical_buffer_size)
+                    logical_param_buf.grad = logical_param_grad_buf
 
-                        actual_tensors_group[tensor_key].append(
-                            (tensor, tensor.detach().clone())
-                        )
+                    self.grouped_tensors.append(logical_param_buf)
+                    self.grouped_grads.append(logical_param_grad_buf)
 
-                for actual_tensors in actual_tensors_group.values():
-                    if len(actual_tensors) > 0:
-                        new_params_group_list.append(actual_tensors)
+                    logical_buffer_start += logical_buffer_size
+                    logical_buffer_size = 0
+                
+                if current_group_index != pre_group_index:
+                    _make_logical_buf()
 
-        self.params_group_list = new_params_group_list
-        return last_extra_params
+                logical_buffer_size += numel_in_bucket(p)
 
-    def _parameters_grouping(self, last_extra_params):
-        # handling the params used last time but not this time
-        for (p, p_data) in last_extra_params:
-            param_buf = p._ref_tensor
+                if p_index == params_cnt - 1:
+                    _make_logical_buf()
 
-            if param_buf in self.modified_buf:
-                param_grad_buf = param_buf.grad
-                index = self.grouped_tensors_offset[param_buf]
+        # handling params not on any buffer
+        # however, we don't make new tensors into contiguous buffer this time
+        for group in params_group:
+            for p in group:
+                self.grouped_tensors.append(p)
+                self.grouped_grads.append(p.grad)
 
-                size = p.numel()
-                shape = p.data.shape
+    def __del__(self):
+        global _buffer_params_mapping
 
-                param_buf[index : index + size] = p_data.data.view(-1)
-                p.data = param_buf[index : index + size].view(shape)
-                p.grad = param_grad_buf[index : index + size].view(shape)
-
-                index += numel_in_bucket(p)
-                self.grouped_tensors_offset[param_buf] = index
-
-        # handling the params used this time
-        for params in self.params_group_list:
-            physical_param_buf = params[0][0]._ref_tensor
-            logical_bufsize = sum([numel_in_bucket(p) for (p, _) in params])
-
-            if physical_param_buf == None:
-                dtype = params[0][0].dtype
-
-                if self.is_global:
-                    placement = params[0][0].placement
-                    sbp = params[0][0].sbp
-                    physical_param_buf = flow.zeros(
-                        logical_bufsize, dtype=dtype, placement=placement, sbp=sbp
-                    )
-                    physical_param_grad_buf = flow.zeros(
-                        logical_bufsize, dtype=dtype, placement=placement, sbp=sbp
-                    )
-                else:
-                    device = params[0][0].device
-                    physical_param_buf = flow.zeros(
-                        logical_bufsize, dtype=dtype, device=device
-                    )
-                    physical_param_grad_buf = flow.zeros(
-                        logical_bufsize, dtype=dtype, device=device
-                    )
-                physical_param_buf.grad = physical_param_grad_buf
-
-                self.grouped_tensors_offset[physical_param_buf] = 0
-            else:
-                # reuse the previous allocated param_buf
-                physical_param_grad_buf = physical_param_buf.grad
-
-            index = self.grouped_tensors_offset[physical_param_buf]
-            physical_index_start = index
-
-            for (p, p_data) in params:
-                size = p.numel()
-                shape = p.data.shape
-
-                physical_param_buf[index : index + size] = p_data.data.view(-1)
-                p.data = physical_param_buf[index : index + size].view(shape)
-                p._ref_tensor = physical_param_buf
-                p.grad = physical_param_grad_buf[index : index + size].view(shape)
-
-                index += numel_in_bucket(p)
-
-            self.grouped_tensors_offset[physical_param_buf] = index
-
-            # construct the logical param_buf for new usage
-            logical_param_buf = physical_param_buf[physical_index_start:index].view(
-                logical_bufsize
-            )
-            logical_param_grad_buf = physical_param_grad_buf[
-                physical_index_start:index
-            ].view(logical_bufsize)
-            logical_param_buf.grad = logical_param_grad_buf
-
-            self.grouped_tensors.append(logical_param_buf)
-            self.grouped_grads.append(logical_param_grad_buf)
-
-        flow.cuda.empty_cache()
+        if self.for_module:
+            _buffer_params_mapping = collections.defaultdict(list)
 
     @property
     def grouped_parameters(self):

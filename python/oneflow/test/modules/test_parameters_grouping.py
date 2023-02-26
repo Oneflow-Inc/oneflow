@@ -28,76 +28,56 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return a.shape == b.shape and np.allclose(a, b, *args, **kwargs)
 
 
-def cpg_grouping(test_case, device):
-    init_seq = []
+def module_grouping(test_case, device):
+    class Model(flow.nn.Module):
+        def __init__(self):
+            super(Model, self).__init__()
+            dtypes = [flow.float32, flow.float64]
+            for i in range(10):
+                self.register_parameter(
+                    f"w{i}", flow.nn.Parameter(flow.tensor([i % 2 + 1, i % 2 + 1], dtype=dtypes[i % 2]))
+                )
+            self.make_contiguous_params_group()
+    
+    m = Model().to(device)
+    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32)])   
 
-    for i in range(7):
-        init_seq.append(np.random.uniform(size=(i + 1,)).astype(np.float32))
+    test_case.assertTrue(len(m.cpg.grouped_parameters) == 2)
+    test_case.assertTrue(len(m.cpg.grouped_grads) == 2)
+    test_case.assertTrue(flow.max(m.cpg.grouped_parameters[0]) == 1)
+    test_case.assertTrue(flow.max(m.cpg.grouped_parameters[1]) == 2)
 
-    def _test_cpg_grad_helper():
-        a = Parameter(flow.Tensor(init_seq[0], device=flow.device(device)))
-        b = Parameter(flow.Tensor(init_seq[1], device=flow.device(device)))
-        c = Parameter(flow.Tensor(init_seq[2], device=flow.device(device)))
-        d = Parameter(flow.Tensor(init_seq[3], device=flow.device(device)))
-        e = Parameter(flow.Tensor(init_seq[4], device=flow.device(device)))
-        g = Parameter(flow.Tensor(init_seq[6], device=flow.device(device)))
+    test_case.assertTrue(len(cpg.grouped_parameters) == 3)
+    test_case.assertTrue(len(cpg.grouped_grads) == 3)
+    test_case.assertTrue(flow.max(cpg.grouped_parameters[0]) == 1)
+    test_case.assertTrue(flow.max(cpg.grouped_parameters[1]) == 2)
+    test_case.assertTrue(flow.max(cpg.grouped_parameters[2]) == 3)
 
-        loss = a.sum() + b.sum() + c.sum() + d.sum() + e.sum() + g.sum()
-        loss.backward()
-        return [
-            a.grad.numpy(),
-            b.grad.numpy(),
-            c.grad.numpy(),
-            d.grad.numpy(),
-            e.grad.numpy(),
-            g.grad.numpy(),
-        ]
 
-    def _test_cpg_regrouping():
-        # groups0 = [[a, b], [c, d, e, f]]
-        # groups1 = [[e, d, g], [a], [b, c]]
-        # -> [[d, e], [g], [a], [b], [c]]
+def direct_grouping(test_case, device):
+    x = [
+        Parameter(flow.tensor([1, 2], device=flow.device(device))),
+        Parameter(flow.tensor([3, 4], device=flow.device(device))),
+    ]
+    cpg = CPG([[x[0]], [x[1]]])
+    test_case.assertTrue(len(cpg.grouped_parameters) == 2)
+    test_case.assertTrue(len(cpg.grouped_grads) == 2)
 
-        a = Parameter(flow.Tensor(init_seq[0], device=flow.device(device)))
-        b = Parameter(flow.Tensor(init_seq[1], device=flow.device(device)))
-        c = Parameter(flow.Tensor(init_seq[2], device=flow.device(device)))
-        d = Parameter(flow.Tensor(init_seq[3], device=flow.device(device)))
-        e = Parameter(flow.Tensor(init_seq[4], device=flow.device(device)))
-        f = Parameter(flow.Tensor(init_seq[5], device=flow.device(device)))
-        g = Parameter(flow.Tensor(init_seq[6], device=flow.device(device)))
 
-        groups0 = [[a, b], [c, d, e, f]]
-        cpg = CPG(groups0)
-
-        test_case.assertTrue(len(cpg.grouped_parameters) == 2)
-        test_case.assertTrue(len(set([p._ref_tensor for p in [a, b, c, d, e, f]])) == 2)
-        test_case.assertTrue(len(set([p._ref_tensor for p in [a, b]])) == 1)
-        test_case.assertTrue(len(set([p._ref_tensor for p in [c, d, e, f]])) == 1)
-
-        groups1 = [[e, d, g], [a], [b, c]]
-        cpg = CPG(groups1)
-
-        test_case.assertTrue(len(cpg.grouped_parameters) == 5)
-        test_case.assertTrue(len(set([p._ref_tensor for p in [a, b, c, d, e, g]])) == 3)
-        test_case.assertTrue(len(set([p._ref_tensor for p in [d, e]])) == 1)
-
-        loss = a.sum() + b.sum() + c.sum() + d.sum() + e.sum() + g.sum()
-        loss.backward()
-
-        return [
-            a.grad.numpy(),
-            b.grad.numpy(),
-            c.grad.numpy(),
-            d.grad.numpy(),
-            e.grad.numpy(),
-            g.grad.numpy(),
-        ]
-
-    grouped_grad = _test_cpg_regrouping()
-    grad = _test_cpg_grad_helper()
-
-    for (x, y) in zip(grouped_grad, grad):
-        test_case.assertTrue(np_allclose_with_shape(x, y))
+def global_grouping(test_case):
+    x = flow.nn.Parameter(
+        flow.zeros((10,)).to_global(
+            sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
+        )
+    )
+    y = flow.nn.Parameter(
+        flow.zeros((10,)).to_global(
+            sbp=flow.sbp.split(0), placement=flow.placement("cuda", [0])
+        )
+    )
+    cpg = CPG([x, y], for_module=True)
+    test_case.assertTrue(len(cpg.grouped_parameters) == 2)
+    test_case.assertTrue(len(cpg.grouped_grads) == 2)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -106,7 +86,10 @@ class TestCPG(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgDict(arg_dict):
-            cpg_grouping(test_case, **arg)
+            module_grouping(test_case, **arg)
+            direct_grouping(test_case, **arg)
+            
+        global_grouping(test_case)
 
 
 if __name__ == "__main__":
