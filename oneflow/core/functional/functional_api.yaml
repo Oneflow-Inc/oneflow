@@ -1462,6 +1462,10 @@
     Int64 begin_params_axis, Double epsilon) => LayerNormAffine"
   bind_python: True
 
+- name: "add_bias_residual_layer_norm"
+  signature: "Tensor (Tensor x, Tensor bias, Tensor gamma=None, Tensor beta=None, Tensor residual_1=None, Tensor residual_2=None, Double epsilon=None) => AddBiasResidualLayerNorm"
+  bind_python: True
+
 - name: "layer_norm"
   signature: "Tensor (Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNorm"
   bind_python: True

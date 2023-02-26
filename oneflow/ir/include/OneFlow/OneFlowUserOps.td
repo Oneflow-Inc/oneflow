@@ -6675,6 +6675,32 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_AddBiasResidualLayerNormOp : OneFlow_BaseOp<"add_bias_residual_layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$bias,
+    Optional<OneFlow_Tensor>:$residual_1,
+    Optional<OneFlow_Tensor>:$residual_2,
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$gamma
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
