@@ -35,12 +35,15 @@ def module_grouping(test_case, device):
             dtypes = [flow.float32, flow.float64]
             for i in range(10):
                 self.register_parameter(
-                    f"w{i}", flow.nn.Parameter(flow.tensor([i % 2 + 1, i % 2 + 1], dtype=dtypes[i % 2]))
+                    f"w{i}",
+                    flow.nn.Parameter(
+                        flow.tensor([i % 2 + 1, i % 2 + 1], dtype=dtypes[i % 2])
+                    ),
                 )
             self.make_contiguous_params_group()
-    
+
     m = Model().to(device)
-    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32)])   
+    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32)])
 
     test_case.assertTrue(len(m.cpg.grouped_parameters) == 2)
     test_case.assertTrue(len(m.cpg.grouped_grads) == 2)
@@ -88,7 +91,7 @@ class TestCPG(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             module_grouping(test_case, **arg)
             direct_grouping(test_case, **arg)
-            
+
         global_grouping(test_case)
 
 

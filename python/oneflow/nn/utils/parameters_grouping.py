@@ -85,7 +85,7 @@ class ContiguousParamsGroup(object):
         self.for_module = for_module
         if self.for_module:
             self._parameters_grouping_for_module()
-        else: 
+        else:
             self._parameters_grouping_for_operations()
 
     def _parameters_grouping_for_module(self):
@@ -121,9 +121,7 @@ class ContiguousParamsGroup(object):
                 )
             else:
                 device = tensor_key[1]
-                physical_param_buf = flow.zeros(
-                    buffer_size, dtype=dtype, device=device
-                )
+                physical_param_buf = flow.zeros(buffer_size, dtype=dtype, device=device)
                 physical_param_buf.grad = flow.zeros(
                     buffer_size, dtype=dtype, device=device
                 )
@@ -134,7 +132,7 @@ class ContiguousParamsGroup(object):
 
         for p in self.params_group_list[0]:
             if not p.requires_grad:
-                continue 
+                continue
 
             if self.is_global:
                 tensor_key = (p.dtype, p.placement, p.sbp)
@@ -178,7 +176,7 @@ class ContiguousParamsGroup(object):
             logical_buffer_start, logical_buffer_size = 0, 0
             pre_group_index = -1
             params_cnt = len(params)
-            
+
             for p_index, p in enumerate(params):
                 current_group_index = -1
 
@@ -202,10 +200,12 @@ class ContiguousParamsGroup(object):
                         return
 
                     logical_param_buf = param_buf[
-                        logical_buffer_start : logical_buffer_start + logical_buffer_size
+                        logical_buffer_start : logical_buffer_start
+                        + logical_buffer_size
                     ].view(logical_buffer_size)
                     logical_param_grad_buf = param_buf.grad[
-                        logical_buffer_start : logical_buffer_start + logical_buffer_size
+                        logical_buffer_start : logical_buffer_start
+                        + logical_buffer_size
                     ].view(logical_buffer_size)
                     logical_param_buf.grad = logical_param_grad_buf
 
@@ -214,7 +214,7 @@ class ContiguousParamsGroup(object):
 
                     logical_buffer_start += logical_buffer_size
                     logical_buffer_size = 0
-                
+
                 if current_group_index != pre_group_index:
                     _make_logical_buf()
 
