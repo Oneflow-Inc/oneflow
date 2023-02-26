@@ -21,7 +21,6 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-## Need to confirm
 @autotest(n=2, check_graph=True, rtol=1e-3, atol=1e-1)
 def _test_einsum_tensor_contraction(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
