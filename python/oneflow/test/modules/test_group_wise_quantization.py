@@ -178,6 +178,7 @@ def _test_fused_linear(test_case, num_bits, m, k, n, group_dim, group_size):
                 test_case.assertTrue(np.allclose(ref, fused_out, atol=1e-2, rtol=1e-2))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGroupWiseQuantization(flow.unittest.TestCase):
     def test_dequantize(test_case):
