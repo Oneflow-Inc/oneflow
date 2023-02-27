@@ -137,6 +137,12 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
+static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* transpose) {
+  auto transpose_op = llvm::dyn_cast<TransposeOp>(transpose);
+  CHECK(transpose_op);
+  return getSI64IntegerAttr(rewriter,
+                            transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
+}
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
   attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
@@ -404,6 +410,27 @@ static LogicalResult IsScalarTensor(PatternRewriter& rewriter, Value value) {
   }
   return failure();
 }
+
+static float mha_scale_max_diff = 1e-5;
+
+static LogicalResult IsScalarEqualSqrtDim(PatternRewriter& rewriter, Value query_reshape,
+                                          Attribute scalar_div_operand) {
+  auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
+  double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
+  return success(
+      std::abs(std::sqrt(query_reshape_shape.getShape().back()) - scalar_div_operand_attr)
+      < mha_scale_max_diff);
+}
+
+static LogicalResult IsScalarEqualSqrtDimReciprocal(PatternRewriter& rewriter, Value query_reshape,
+                                                    Attribute scalar_div_operand) {
+  auto query_reshape_shape = query_reshape.getType().dyn_cast<ShapedType>();
+  double scalar_div_operand_attr = scalar_div_operand.cast<FloatAttr>().getValueAsDouble();
+  return success(
+      std::abs(std::sqrt(query_reshape_shape.getShape().back()) - (1 / scalar_div_operand_attr))
+      < mha_scale_max_diff);
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -412,6 +439,8 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
+  patterns.getPDLPatterns().registerRewriteFunction("GetNumHeadsFromTranpose",
+                                                    GetNumHeadsFromTranpose);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
                                                     CreateConv2dAndErasePad);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2DBatchNorm", CreateConv2DBatchNorm);
@@ -435,6 +464,8 @@ void populateConstraints(RewritePatternSet& patterns) {
   PDLL_REGISTER(IsPaddingCouldBeAssimilatedIntoConv);
   PDLL_REGISTER(IsNotNestedInJit);
   PDLL_REGISTER(IsScalarTensor);
+  PDLL_REGISTER(IsScalarEqualSqrtDim);
+  PDLL_REGISTER(IsScalarEqualSqrtDimReciprocal);
 
 #undef PDLL_REGISTER
 }
