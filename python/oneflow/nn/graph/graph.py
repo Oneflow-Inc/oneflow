@@ -57,13 +57,12 @@ from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
 
-total=0
-
+r
 class Graph(object):
     r"""Base class for training or evaluating a neural network in static graph mode.
 
     To use static graph mode for model training or evaluation in OneFlow, you should:
-
+r
     1. Define your customized graph as a subclass of ``nn.Graph``.
     2. Add ``super().__init__()`` in your subclass's ``__init__()``.
     3. Add modules to your graph as regular attributes.
@@ -1470,16 +1469,10 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
-        global total
         try:
-            start_time = time.perf_counter_ns()
             flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
                 *args, **kwargs
             )
-            end_time = time.perf_counter_ns()
-            elapsed_time = end_time - start_time
-            total+=elapsed_time
-            print(f'total time  is: {total / 1000}')
             if oneflow.support.env_var_util.parse_boolean_from_env(
                 "ONEFLOW_RUN_GRAPH_BY_VM", False
             ):
