@@ -29,6 +29,7 @@ binary_ops = [
     flow.max,
     flow.maximum,
     flow.fmod,
+    flow.remainder,
     flow.pow,
     flow.eq,
     flow.ne,

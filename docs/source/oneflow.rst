@@ -285,6 +285,7 @@ Pointwise Ops
     negative 
     pow 
     reciprocal 
+    remainder 
     round 
     rsqrt 
     selu

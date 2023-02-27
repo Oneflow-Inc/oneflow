@@ -1093,6 +1093,40 @@ class TestTensor(flow.unittest.TestCase):
         y = x.fmod(2)
         return y
 
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_remainder_element_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        other = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        return input.remainder(other)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_remainder_broadcast_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_tensor(ndim=3, dim1=constant(1), dim2=dim2).to(device)
+        other = random_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
+        return input.remainder(other)
+
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_remainder_scalar_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        other = 3
+        return input.remainder(other)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_remainder_with_0_size_data(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
+        y = x.remainder(2)
+        return y
+
     @autotest(n=5)
     def test_tensor_flip_list_with_random_data(test_case):
         device = random_device()
