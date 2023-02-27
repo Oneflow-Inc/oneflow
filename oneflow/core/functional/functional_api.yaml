@@ -1463,7 +1463,7 @@
   bind_python: True
 
 - name: "add_bias_residual_layer_norm"
-  signature: "Tensor (Tensor x, Tensor bias, Tensor gamma=None, Tensor beta=None, Tensor residual_1=None, Tensor residual_2=None, Double epsilon=None) => AddBiasResidualLayerNorm"
+  signature: "Tensor (Tensor x, Tensor bias, Tensor gamma=None, Tensor beta=None, Tensor residual_1=None, Tensor residual_2=None, Double epsilon=1.0) => AddBiasResidualLayerNorm"
   bind_python: True
 
 - name: "layer_norm"
