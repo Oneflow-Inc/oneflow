@@ -25,22 +25,20 @@ import oneflow as flow
 
 def _pack_int8_to_int4(x):
     np_x = x.numpy()
-    odd = np_x[..., 0::2]
-    even = np_x[..., 1::2]
-    odd = np.left_shift(odd, 4)
+    l = np_x[..., 0::2]
+    r = np_x[..., 1::2]
+    l = np.left_shift(l, 4)
     if x.dtype is np.int8:
-        even = np.bitwise_and(even, np.int8(0xF))
-    packed = flow.tensor(np.bitwise_or(odd, even), device=x.device)
+        even = np.bitwise_and(r, np.int8(0xF))
+    packed = flow.tensor(np.bitwise_or(l, r), device=x.device)
     return packed
 
 
 def _unpack_int4_to_int8(x):
     np_x = x.numpy()
-    odd = np.right_shift(np_x, 4).reshape(x.shape + (1,))
-    even = np.right_shift(np.left_shift(np_x, 4), 4).reshape(x.shape + (1,))
-    unpacked = np.concatenate((odd, even), -1).reshape(
-        x.shape[0:-1] + (x.shape[-1] * 2,)
-    )
+    l = np.right_shift(np_x, 4).reshape(x.shape + (1,))
+    r = np.right_shift(np.left_shift(np_x, 4), 4).reshape(x.shape + (1,))
+    unpacked = np.concatenate((l, r), -1).reshape(x.shape[0:-1] + (x.shape[-1] * 2,))
     unpacked = flow.tensor(unpacked, device=x.device)
     return unpacked
 
