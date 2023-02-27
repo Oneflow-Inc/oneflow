@@ -985,7 +985,9 @@ class DualObject:
                 for k, v in state_dict.items():
                     of_state = oneflow_state_dict[k]
                     if of_state.is_global:
-                        state_dict[k] = flow.tensor(v, sbp=of_state.sbp, placement=of_state.placement)
+                        state_dict[k] = flow.tensor(
+                            v, sbp=of_state.sbp, placement=of_state.placement
+                        )
 
             oneflow.load_state_dict(state_dict, strict=False)
 
