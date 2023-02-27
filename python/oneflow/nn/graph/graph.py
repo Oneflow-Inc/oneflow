@@ -57,12 +57,12 @@ from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
 
-r
+
 class Graph(object):
     r"""Base class for training or evaluating a neural network in static graph mode.
 
     To use static graph mode for model training or evaluation in OneFlow, you should:
-r
+
     1. Define your customized graph as a subclass of ``nn.Graph``.
     2. Add ``super().__init__()`` in your subclass's ``__init__()``.
     3. Add modules to your graph as regular attributes.
