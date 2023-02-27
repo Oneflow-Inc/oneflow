@@ -39,7 +39,7 @@ def ctc_loss(
         input_lengths: Lengths of the inputs.
         target_lengths: Lengths of the targets.
         blank: Black label, default 0.
-        reduction: Specifies the reduction to apply to the output: 'none'|'mean'|'sum'. Default 'Mean'.
+        reduction: Specifies the reduction to apply to the output:  ``'none'`` | ``'mean'`` | ``'sum'`` . Default ``'Mean'``.
         zero_infinity: Whether to zero infinite losses and the associated gradients. Default ``False``.
         
     Example:
