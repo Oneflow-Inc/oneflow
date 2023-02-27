@@ -39,6 +39,13 @@ class Stream {
   virtual void RecordEvent(Event* event) = 0;
   virtual Maybe<void> GetAsyncError() { return Maybe<void>::Ok(); }
 
+  virtual Maybe<void> AllocAsync(void** ptr, size_t size) { UNIMPLEMENTED_THEN_RETURN(); }
+  virtual Maybe<void> FreeAsync(void* ptr) { UNIMPLEMENTED_THEN_RETURN(); }
+  template<typename T>
+  Maybe<void> AllocAsync(T** ptr, size_t size) {
+    return AllocAsync(reinterpret_cast<void**>(ptr), size);
+  }
+
   virtual Maybe<void> OnExecutionContextSetup() { return Maybe<void>::Ok(); }
   virtual Maybe<void> OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 

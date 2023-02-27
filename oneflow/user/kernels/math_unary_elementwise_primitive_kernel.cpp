@@ -54,7 +54,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", ep::primitive::UnaryOp::kSqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", ep::primitive::UnaryOp::kSquare)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", ep::primitive::UnaryOp::kTan)                           \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", ep::primitive::UnaryOp::kNotEqualZero)
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", ep::primitive::UnaryOp::kNotEqualZero)       \
+  OF_PP_MAKE_TUPLE_SEQ("bitwise_not", ep::primitive::UnaryOp::kBitwiseNot)
 
 #define MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_X_PRIMITIVE_SEQ                                     \
   OF_PP_MAKE_TUPLE_SEQ("abs_grad", ep::primitive::BinaryOp::kAbsBackwardWithDyX)                \
