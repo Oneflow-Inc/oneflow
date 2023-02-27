@@ -183,7 +183,6 @@ def _test_fused_linear(test_case, num_bits, m, k, n, group_dim, group_size):
 @flow.unittest.skip_unless_1n1d()
 class TestGroupWiseQuantization(flow.unittest.TestCase):
     def test_dequantize(test_case):
-        return
         _test_dequantize(test_case, 8, (128, 256), 0, 128)
         _test_dequantize(test_case, 8, (64, 128, 256), 0, 64)
         _test_dequantize(test_case, 8, (64, 128, 256), 1, 128)
