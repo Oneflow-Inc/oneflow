@@ -108,7 +108,7 @@ def _dequantize_ref(num_bits, symmetric, quantized, scale, zero, group_dim, grou
 def _dequantize(num_bits, symmetric, x, scale, zero, group_dim, group_size):
     return flow._C.group_wise_dequantize(
         x,
-        scale,
+        scale=scale,
         zero=zero,
         group_dim=group_dim,
         group_size=group_size,
@@ -150,11 +150,11 @@ def _test_fused_linear(test_case, num_bits, m, k, n, group_dim, group_size):
                 )
 
                 fused_out = flow._C.fused_linear_with_group_wise_quantized_weight(
-                    x,
-                    w_quantized,
-                    w_scale,
-                    w_zero,
-                    b,
+                    x=x,
+                    w=w_quantized,
+                    w_scale=w_scale,
+                    w_zero=w_zero,
+                    b=b,
                     num_bits=num_bits,
                     symmetric=symmetric,
                     group_dim=group_dim,
