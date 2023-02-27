@@ -3526,8 +3526,8 @@ class FusedGluFunctor {
     }
 
     // set activation attribute
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
-    attrs.SetAllAttrs(activation);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation", "has_bias", "is_split");
+    attrs.SetAllAttrs(activation, has_bias, is_split_mode);
 
     // dispatch corresponding operator
     if (is_split_mode && has_bias) {

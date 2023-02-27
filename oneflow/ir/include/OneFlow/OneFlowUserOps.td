@@ -5351,7 +5351,9 @@ def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOpe
     Optional<OneFlow_Tensor>:$c
   );
   let attrs = (ins
-    DefaultValuedAttr<StrAttr, "\"none\"">:$activation
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bias,
+    DefaultValuedAttr<BoolAttr, "false">:$is_split
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes

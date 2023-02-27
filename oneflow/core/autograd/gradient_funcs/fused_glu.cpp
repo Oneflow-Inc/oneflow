@@ -58,26 +58,8 @@ Maybe<void> FusedGluGrad::Capture(FusedGluGradCaptureState* ctx, const TensorTup
       << "FusedGluGrad::Capture(): input tensor size must be 2 or 3 or 5";
 
   // check the input pattern:
-  // [case 1] x and w            is_split_mode: false, has_bias: false
-  // [case 2] x, w and b         is_split_mode: false, has_bias: true
-  // [case 3] x, w and v         is_split_mode: true,  has_bias: false
-  // [case 4] x, w, b, v and c   is_split_mode: true,  has_bias: true
-
-  /* case 1 */ if (in_size == 2) {
-    ctx->has_bias = false;
-    ctx->is_split_mode = false;
-  } else {
-    /* case 3 */ if (*(inputs[1]->shape()) == *(inputs[2]->shape())) {
-      ctx->has_bias = false;
-      ctx->is_split_mode = true;
-    } else {
-      ctx->has_bias = true;
-      /* case 2 */ if (in_size == 3)
-        ctx->is_split_mode = false;
-      /* case 4 */ else
-        ctx->is_split_mode = true;
-    }
-  }
+  ctx->has_bias = JUST(attrs.GetAttr<bool>("has_bias"));
+  ctx->is_split_mode = JUST(attrs.GetAttr<bool>("is_split"));
 
   // check whether input tensors need grad
   ctx->w_requires_grad = inputs[1]->requires_grad();
