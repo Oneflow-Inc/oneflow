@@ -1314,10 +1314,7 @@ def autotest(
                     if check_allclose:
                         test_case.assertTrue(
                             check_equality(
-                                x,
-                                rtol=rtol,
-                                atol=atol,
-                                check_dtype=check_dtype,
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype,
                             ),
                             x,
                         )
