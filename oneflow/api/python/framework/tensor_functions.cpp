@@ -891,7 +891,8 @@ static PyObject* PyTensorObject_new(PyObject* self, PyObject* args, PyObject* kw
     auto device = ASSERT(self_tensor->device());
 
     PyObjectPtr device_key(PyUnicode_FromString("device"));
-    CHECK_OR_THROW(PyDict_Contains(kwargs, device_key.get()) < 1) << "Some of the keywords were incorrect: device";
+    CHECK_OR_THROW(PyDict_Contains(kwargs, device_key.get()) < 1)
+        << "Some of the keywords were incorrect: device";
     PyObjectPtr device_value(functional::CastToPyObject(device));
     CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_value.get()) > -1);
   }
