@@ -1806,7 +1806,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-        if isinstance(args, tuple):
+        if isinstance(args, (tuple, list)):
             args_tree.map_tuple_leaf(func)
             return
 
@@ -1827,7 +1827,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-        if isinstance(args, tuple):
+        if isinstance(args, (tuple, list)):
             args_tree.map_tuple_leaf(func)
             return flattened_args
 
