@@ -211,7 +211,7 @@ MakePredicatorIsLbiAllConsumersReachable(
                                                              const TaskNode* dst_node) -> bool {
     if (IsValidChainId(src_node->chain_id()) && IsValidChainId(dst_node->chain_id())
         && src_node->chain_id() == dst_node->chain_id()
-        && src_node->order_in_graph() <= dst_node->order_in_graph()) {
+        && src_node->order_in_chain() <= dst_node->order_in_chain()) {
       return true;
     }
     const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
@@ -566,14 +566,10 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
   }
 }
 
-void TaskGraph::SetOrderInGraphForEachNode() {
-  int64_t order_in_graph = 0;
-  auto SetOrderInGraph = [&](TaskNode* task_node) {
-    task_node->set_order_in_graph(order_in_graph);
-    ordered_task_nodes_.emplace_back(task_node);
-    ++order_in_graph;
-  };
-  TopoForEachNode(SetOrderInGraph);
+void TaskGraph::InitOrderedTaskNodes() {
+  // NOTE(chengcheng): Warning, ordered_task_nodes_ by topo is NOT valid in process
+  //  parallel compile, because the current rank task graph in Incomplete.
+  TopoForEachNode([&](TaskNode* task_node) { ordered_task_nodes_.emplace_back(task_node); });
 }
 
 void TaskGraph::MergeChainByPhysicalTaskGraph() {
@@ -590,15 +586,31 @@ void TaskGraph::MergeChainByPhysicalTaskGraph() {
 
     ++chain_id;
   }
-  for (auto* node : ordered_task_nodes_) { CHECK(IsValidChainId(node->chain_id())); }
+
+  // set order_in_chain by ordered_task_nodes_
+  HashMap<int64_t, int64_t> chain_id2order;
+  for (auto* node : ordered_task_nodes_) {
+    CHECK(IsValidChainId(node->chain_id()));
+    int64_t this_chain_id = node->chain_id();
+    if (chain_id2order.find(this_chain_id) == chain_id2order.end()) {
+      chain_id2order.emplace(this_chain_id, 0);
+    }
+    node->set_order_in_chain(chain_id2order.at(this_chain_id)++);
+  }
 }
 
 void TaskGraph::MergeChainByLogicalChainId() {
   for (TaskNode* this_node : ordered_task_nodes_) {
     CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
     if (!comp_node) { continue; }
-    const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
-    if (IsValidChainId(logical_chain_id)) { this_node->set_chain_id(logical_chain_id); }
+    const OperatorConf& conf = comp_node->op()->op_conf();
+    if (conf.has_logical_chain_id()) {
+      const int64_t logical_chain_id = conf.logical_chain_id();
+      CHECK(IsValidChainId(logical_chain_id));
+      this_node->set_chain_id(logical_chain_id);
+      CHECK(conf.has_order_in_logical_chain());
+      this_node->set_order_in_chain(conf.order_in_logical_chain());
+    }
   }
 }
 
@@ -616,7 +628,7 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   // Note that ordered_task_nodes_'s topology order in seperation plan compile is not gerenteed,
   // So add ctrl edge with ordered_task_nodes_ in seperation plan compile may case dead lock.
   for (auto* node : ordered_task_nodes_) {
-    LOG(INFO) << " ordered task " << node->order_in_graph() << " op " << GetOpName(node)
+    LOG(INFO) << " ordered task " << node->order_in_chain() << " op " << GetOpName(node)
               << " chain id " << GenPhysicalChainId(node);
   }
   for (auto* node : ordered_task_nodes_) {
@@ -762,7 +774,7 @@ void TaskGraph::DecideExecutionOrder() {
   if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisable
       || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
           && GlobalProcessCtx::WorldSize() == 1)) {
-    SetOrderInGraphForEachNode();
+    InitOrderedTaskNodes();
     LOG(INFO) << " order 0";
   } else {
     StraightenNodes(this, &ordered_task_nodes_);
