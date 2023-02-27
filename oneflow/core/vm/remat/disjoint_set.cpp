@@ -53,24 +53,21 @@ void DisjointSet::update_after_compute(vm::RematableTensorStorage* obj) {
 Maybe<void> DisjointSet::update_after_release(vm::RematableTensorStorage* obj) {
   CHECK_NOTNULL_OR_RETURN(obj);
   if (obj->is_eviction_disabled()) { return Maybe<void>::Ok(); }
-  auto operand = obj->compute_op();
-  const auto& inputs = operand.inputs();
-  const auto& outputs = operand.outputs();
-  for (int i = 0; i < inputs.size(); ++i) {
-    if (auto storage =
-            std::dynamic_pointer_cast<vm::RematableTensorStorage>(inputs[i]->tensor_storage());
-        storage && !storage->is_in_memory()) {
-      merge(storage->node, obj->node);
-    }
-  }
 
-  for (int i = 0; i < outputs.size(); ++i) {
-    if (auto storage =
-            std::dynamic_pointer_cast<vm::RematableTensorStorage>(outputs[i]->tensor_storage());
-        storage && !storage->is_in_memory()) {
-      merge(obj->node, storage->node);
+  const auto merge_nodes = [&obj](const auto& eager_blob_objects) {
+    for (int i = 0; i < eager_blob_objects.size(); ++i) {
+      if (auto storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+              eager_blob_objects[i]->tensor_storage());
+          storage && !storage->is_in_memory()) {
+        merge(storage->node, obj->node);
+      }
     }
-  }
+  };
+
+  auto operand = obj->compute_op();
+  merge_nodes(operand.inputs());
+  merge_nodes(operand.outputs());
+
   return Maybe<void>::Ok();
 }
 

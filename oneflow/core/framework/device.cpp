@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <sstream>
+#include <fmt/core.h>
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
@@ -96,14 +96,9 @@ Maybe<void> Device::Init() {
 }
 
 std::string Device::ToRepr() const {
-  std::stringstream ss;
-  ss << "device(type='";
-  ss << type_;
-  ss << "', index=";
-  ss << device_id_;
-  if (rematable_) { ss << ", rematable=True"; }
-  ss << ")";
-  return ss.str();
+  auto rematable_suffix = "";
+  if (rematable_) { rematable_suffix = ", rematable=True"; }
+  return fmt::format("device(type='{}', index={}{})", type_, device_id_, rematable_suffix);
 }
 
 std::ostream& operator<<(std::ostream& os, Symbol<Device> device) {
@@ -112,11 +107,9 @@ std::ostream& operator<<(std::ostream& os, Symbol<Device> device) {
 }
 
 std::string Device::ToString() const {
-  std::stringstream ss;
-  ss << type_;
-  ss << ":" << device_id_;
-  if (rematable_) { ss << "+remat"; }
-  return ss.str();
+  auto rematable_suffix = "";
+  if (rematable_) { rematable_suffix = "+remat"; }
+  return fmt::format("{}:{}{}", type_, device_id_, rematable_suffix);
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
