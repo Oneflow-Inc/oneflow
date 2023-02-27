@@ -159,17 +159,56 @@ class GroupWiseDequantizeFunctor {
                            const int64_t& group_size) const {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("num_bits", "symmetric", "group_dim", "group_size");
-    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8);
-    CHECK_GE_OR_RETURN(in->shape()->NumAxes(), 1);
+    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8) << "Only supports num_bits of 4 or 8.";
+    CHECK_GE_OR_RETURN(in->shape()->NumAxes(), 1)
+        << "The number of dimensions for tensor in should be greater than or equal to 1.";
     const int64_t regularized_group_dim =
         group_dim < 0 ? in->shape()->NumAxes() + group_dim : group_dim;
-    CHECK_GE(regularized_group_dim, 0);
-    CHECK_LT(regularized_group_dim, in->shape()->NumAxes());
+    CHECK(regularized_group_dim >= 0 && regularized_group_dim < in->shape()->NumAxes())
+        << "group_dim should be in range [-" << in->shape()->NumAxes() <<  "," << in->shape()->NumAxes()
+        << ").";
     const int64_t group_dim_size =
         in->shape()->At(regularized_group_dim)
         * (regularized_group_dim == in->shape()->NumAxes() - 1 ? 8 / num_bits : 1);
     const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
-    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0);
+    CHECK(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
+        << "group_size should be in range (0," << group_dim_size << "].";
+    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
+        << "group_size should be a divisor of " << group_dim_size << ".";
+    const int64_t num_groups = group_dim_size / group_size;
+    if (symmetric) {
+      CHECK(in->dtype()->data_type() == DataType::kUInt8 || in->dtype()->data_type() == DataType::kInt8)
+          << "The dtype of tensor in should be int8 or uint8.";
+    } else {
+      CHECK(in->dtype()->data_type() == DataType::kUInt8) << "The dtype of tensor in should be uint8.";
+    }
+    CHECK_EQ_OR_RETURN(scale->shape()->NumAxes(), in->shape()->NumAxes())
+        << "The number of dimensions of tensor scale should be equal to tensor in.";
+    for (int64_t i = 0; i < in->shape()->NumAxes(); ++i) {
+      if (i == regularized_group_dim) {
+        CHECK_EQ_OR_RETURN(scale->shape()->At(i), num_groups)
+            << "The size of the " << i << "-th dimension of tensor scale should be equal to "
+            << num_groups;
+      } else if (i == in->shape()->NumAxes() - 1) {
+	       CHECK_EQ_OR_RETURN(scale->shape()->At(i), in->shape()->At(i) * (8 / num_bits))
+            << "The size of the " << i
+            << "-th dimension of tensor scale should be equal to " << in->shape()->At(i) * (8 / num_bits) << ".";
+      } else {
+        CHECK_EQ_OR_RETURN(scale->shape()->At(i), in->shape()->At(i))
+            << "The size of the " << i
+            << "-th dimension of tensor scale should be equal to tensor in.";
+      }
+    }
+    if (!symmetric) {
+      CHECK(zero) << "When symmetric is False, tensor zero should be specified.";
+      CHECK_OR_RETURN(JUST(zero)->dtype() == scale->dtype())
+          << "The dtype of the zero tensor should be the same as the scale "
+             "tensor.";
+      CHECK_OR_RETURN(*JUST(zero)->shape() == *scale->shape())
+          << "The shape of zero tensor should be equal to tensor scale.";
+    } else {
+      CHECK(!zero) << "When symmetric is True, tensor zero should be None.";
+    }
     attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
     if (symmetric) {
       return OpInterpUtil::Dispatch<Tensor>(*symmetric_op_, {in, scale}, attrs);
