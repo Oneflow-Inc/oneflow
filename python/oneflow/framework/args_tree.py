@@ -227,13 +227,21 @@ class ArgsTree(object):
         """
         assert map_function != None, "map function cannot be None"
 
+        stack = []
+
         if self._gen_name:
             args_to_map = self._named_io_args
         else:
             args_to_map = self._io_args
 
         for i in args_to_map:
-            return map_function(i)
+            mapped_value = map_function(i)
+            stack.append(mapped_value)
+
+        if isinstance(args_to_map, tuple):
+            return tuple(stack)
+        elif isinstance(args_to_map, list):
+            return stack
 
     def map_leaf(self, map_function: Callable):
         r"""
