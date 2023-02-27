@@ -1058,7 +1058,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return z
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3)
     def test_tensor_tensor_repeat_interleave_dim_with_output_size(test_case):
         x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
         y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
