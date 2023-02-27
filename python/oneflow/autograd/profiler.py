@@ -13,7 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.profiler.profiler import profile
 
 
-def load_library(path):
-    raise ImportError("load_library is not implemented")
+def record_function():
+    raise NotImplementedError()
+
+
+class emit_nvtx:
+    def __init__(self):
+        raise NotImplementedError()
