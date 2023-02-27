@@ -25,7 +25,7 @@ DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
 inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
 
-DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
+DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, true);
 inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
 
 inline bool IsPythonStackGetterEnabledByDebugBuild() {
