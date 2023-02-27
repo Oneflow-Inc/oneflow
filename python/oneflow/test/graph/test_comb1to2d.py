@@ -168,7 +168,6 @@ class _TestGraph(nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination_diff_hierarchy(test_case):
-        # Got stuck.
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
