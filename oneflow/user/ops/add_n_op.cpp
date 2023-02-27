@@ -21,8 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->MutOutputTensorDesc("out", 0);
-  CHECK_NOTNULL_OR_RETURN(out) << Error::RuntimeError()
-                               << GetDefaultCheckTrueErrorMsg("output tensor is not null.");
+  CHECK_NOTNULL_OR_RETURN(out);
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     if (in_0.shape().NumAxes() > 0 && cur_in.shape().NumAxes() > 0) {
@@ -53,8 +52,7 @@ namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferDataType(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->MutOutputTensorDesc("out", 0);
-  CHECK_NOTNULL_OR_RETURN(out) << Error::RuntimeError()
-                               << GetDefaultCheckTrueErrorMsg("output tensor is not null.");
+  CHECK_NOTNULL_OR_RETURN(out);
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type())

@@ -38,8 +38,9 @@ namespace oneflow {
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes())
       << Error::RuntimeError()
-      << GetDefaultCheckEqErrorMsg("sbp_parallel_size", "NumAxes of parallel_hierarchy",
-                                   in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+      << GetDefaultBinaryCheckErrorMsg(
+             "sbp_parallel_size of input tensor", "NumAxes of parallel_hierarchy",
+             in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes(), "=");
 
   NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -65,18 +66,14 @@ namespace oneflow {
   const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
   const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
   DimVector time_shape_dim_vec = in_time_shape.dim_vec();  // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(!time_shape_dim_vec.empty())
-      << Error::RuntimeError() << GetDefaultCheckTrueErrorMsg("time_shape_dim_vec is not empty.");
+  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
   if (time_shape_dim_vec.back() == max_acc_num) {
     time_shape_dim_vec.pop_back();
   } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
     time_shape_dim_vec.back() /= max_acc_num;
   } else {
     const int64_t elem_cnt = in_time_shape.elem_cnt();
-    CHECK_EQ_OR_RETURN(elem_cnt % max_acc_num, 0)
-        << Error::RuntimeError()
-        << GetDefaultCheckEqErrorMsg("(elem_cnt of in_time_shape) % max_acc_num", "0",
-                                     elem_cnt % max_acc_num);
+    CHECK_EQ_OR_RETURN(elem_cnt % max_acc_num, 0);
     time_shape_dim_vec.resize(1);
     time_shape_dim_vec.back() = elem_cnt / max_acc_num;
   }

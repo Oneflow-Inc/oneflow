@@ -18,24 +18,13 @@ limitations under the License.
 #include "fmt/format.h"
 
 namespace oneflow {
-// Problem: will it pollute the namespace of oneflow?
 
 template<typename T1, typename T2>
-std::string GetDefaultCheckEqErrorMsg(const std::string& left_name, const std::string& right_name,
-                                      const T1& left_value, const T2& right_value) {
-  return fmt::format("The {0} and {1} are expected to be equal, but {0} is {2} and {1} is {3}",
-                     left_name, right_name, left_value, right_value);
-}
-
-template<typename T>
-std::string GetDefaultCheckEqErrorMsg(const std::string& left_name, const std::string& right_name,
-                                      const T& left_value) {
-  return fmt::format("The {0} is expected to be equal with {1}, but got {2}", left_name, right_name,
-                     left_value);
-}
-template<typename T>
-std::string GetDefaultCheckTrueErrorMsg(const T& expected_fact) {
-  return fmt::format("The fact '{}' is expected to be true but not.", expected_fact);
+std::string GetDefaultBinaryCheckErrorMsg(const std::string& left_name,
+                                          const std::string& right_name, const T1& left_value,
+                                          const T2& right_value, const std::string& op) {
+  return fmt::format("Expect ({0} {4} {1}), but {2} and {3} respectively.", left_name, right_name,
+                     left_value, right_value, op);
 }
 
 }  // namespace oneflow
