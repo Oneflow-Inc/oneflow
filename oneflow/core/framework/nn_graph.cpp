@@ -500,10 +500,10 @@ std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& pref
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
       if (i < kWorkerStartRank) { return; }
-      T data;
+      T worker_data;
       std::string key = prefix + std::to_string(i);
-      PrepareEach(&data, i);
-      Singleton<CtrlClient>::Get()->PushKV(key, data);
+      PrepareEach(&worker_data, i);
+      Singleton<CtrlClient>::Get()->PushKV(key, worker_data);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
     });
   } else {
@@ -533,25 +533,34 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   };
   if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
   const size_t world_size = GlobalProcessCtx::WorldSize();
-  Merge(MultiThreadBroadcastFromMasterToWorkers(world_size, std::string(__FUNCTION__) + "_job",
-                                                job_, &job_));
+  Merge(MultiThreadBroadcastFromMasterToWorkers(
+      world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
   JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
     size_t rank = GlobalProcessCtx::Rank();
     auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+
     std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
-      boxing_task_graph->ToProto(boxing_task_graph_proto.get(), [](TaskNode*) { return true; });
+      boxing_task_graph->ToProto([](TaskNode*) { return true; }, boxing_task_graph_proto.get());
+      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(0))
+            ->Write(*boxing_task_graph_proto);
+      }
     }
     const auto& PrepareWorkerBoxingTaskGraphProto = [&](BoxingTaskGraphProto* proto, int64_t i) {
-      boxing_task_graph->ToProto(proto, [i](TaskNode* task_node) {
-        return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
-      });
+      boxing_task_graph->ToProto(
+          [i](TaskNode* task_node) { return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i); },
+          proto);
+      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+            ->Write(*proto);
+      }
     };
-    Merge(MultiThreadPushFromMasterToWorkers(std::string(__FUNCTION__) + "_boxing_task_graph",
-                                             boxing_task_graph_proto.get(),
-                                             PrepareWorkerBoxingTaskGraphProto));
+    Merge(MultiThreadPushFromMasterToWorkers(
+        name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
+        PrepareWorkerBoxingTaskGraphProto));
     // async deallocate `boxing_task_graph`.
     deallocate_ctx.Deallocate(std::move(boxing_task_graph));
     auto* plan = &plan_;
@@ -589,8 +598,8 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         std::unique_lock<std::mutex> lock(mutex);
         MergeIdPairs(pairs, reachable_cb_pairs.get());
       };
-      Merge(MultiThreadPullFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
-                                               id_pairs, MergePairs));
+      Merge(MultiThreadPullFromWorkersToMaster(
+          name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
     }
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): test collective boxing for multi-job.
