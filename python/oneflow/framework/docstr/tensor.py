@@ -2605,7 +2605,9 @@ add_docstr(
         oneflow.Size([3, 3])
 
     .. warning::
-        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error. Consider use ``Tensor.new(y.size())`` instead.
+        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error.
+        Consider use ``Tensor.new(y.size())`` to create a tensor that has
+        the same placement and sbp with Tensor and the same size with ``y``.
 
     """,
 )
