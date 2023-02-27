@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -98,6 +99,8 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> InitRuntime();
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
+  const auto variable_op_name2tensor() const { return variable_op_name2tensor_; }
+  std::vector<std::shared_ptr<one::UserOpExpr>> cached_op_exprs;
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();

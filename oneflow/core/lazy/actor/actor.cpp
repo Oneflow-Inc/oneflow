@@ -350,9 +350,6 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
-        int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
-        CHECK(regst->GetSoleBlob()->dptr()
-              == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -422,6 +419,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    PrepareProducedNaiveInplaceDataRegst();
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -573,12 +571,56 @@ void Actor::AsyncLaunchKernel() {
   });
 }
 
+void Actor::PrepareProducedNaiveInplaceDataRegst() {
+  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+        CHECK(regst->body_mem_ptr() == nullptr);
+        void* body_ptr = nullptr;
+        CHECK_JUST(actor_ctx_->stream_ctx()->stream()->AllocAsync(
+            &body_ptr, regst->regst_desc()->BodyByteSize4OneRegst()));
+        regst->ResetBodyMemPtr(body_ptr);
+      } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+        // do nothing
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  });
+
+  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+    const int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
+    Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
+    CHECK(in_regst != nullptr);
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      CHECK(regst->body_mem_ptr() == nullptr);
+      regst->ResetBodyMemPtr(in_regst->body_mem_ptr());
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
+  });
+}
+
 void Actor::HandleProducedNaiveDataRegstToConsumer() {
   tmp_regst_desc_id_vec_.clear();
   naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+      if (real_consumer_cnt > 0) {
+        tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
+      } else {
+        if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+          CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
+          regst->ResetBodyMemPtr(nullptr);
+        } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+          // do nothing
+        } else {
+          UNIMPLEMENTED();
+        }
+      }
     }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -589,7 +631,17 @@ void Actor::HandleProducedInplaceDataRegstToConsumer() {
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) {
+      tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
+    } else {
+      if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+        regst->ResetBodyMemPtr(nullptr);
+      } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+        // do nothing
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
   });
   inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -652,9 +704,25 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
     int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
     Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
     CHECK(in_regst);
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      regst->ResetBodyMemPtr(nullptr);
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
     AsyncSendRegstMsgToProducer(in_regst);
     CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
-  } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
+  } else if (naive_produced_rs_.TryPushBackRegst(regst) == 0) {
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
+      regst->ResetBodyMemPtr(nullptr);
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else {
     UpdtStateAsCustomizedProducedRegst(regst);
   }
   return 0;
