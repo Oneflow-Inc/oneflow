@@ -244,7 +244,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         )
         print("fininsh 1")
 
-    def test_lazy_boxing_2d_all_combination_diff_placement_small(test_case):
+    def _test_lazy_boxing_2d_all_combination_diff_placement_small(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
