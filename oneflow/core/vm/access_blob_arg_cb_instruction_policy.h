@@ -76,12 +76,12 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
     StreamPolicy* stream_policy = instruction->mut_stream_policy();
-    auto rematable_storage = std::dynamic_pointer_cast<RematableTensorStorage>(eager_blob_object()->tensor_storage());
+    auto rematable_storage =
+        std::dynamic_pointer_cast<RematableTensorStorage>(eager_blob_object()->tensor_storage());
 
     if (rematable_storage && !rematable_storage->is_in_memory()) {
       OpCallInstructionPolicy tmp_op = rematable_storage->compute_op();
-      CHECK_JUST(
-          Recompute(&tmp_op, instruction->mut_stream()));
+      CHECK_JUST(Recompute(&tmp_op, instruction->mut_stream()));
     }
     callback_(stream_policy->stream(), eager_blob_object());
     if (rematable_storage && (modifier_ == "mut" || modifier_ == "mut2")) {

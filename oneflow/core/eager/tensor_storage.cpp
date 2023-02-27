@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/common/env_var/remat.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
@@ -145,7 +160,8 @@ void RematableTensorStorage::Access() {
 
 Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
   CHECK_OR_RETURN(!is_eviction_disabled());
-  const double time_since_last_access = Singleton<remat::Env>::Get()->time_now() - last_access_time_;
+  const double time_since_last_access =
+      Singleton<remat::Env>::Get()->time_now() - last_access_time_;
   size_t size = 1;
   if (EnvBool<ONEFLOW_REMAT_HEURISTIC_DTE>() || EnvBool<ONEFLOW_REMAT_HEURISTIC_DTR>()) {
     size = override_size == 0 ? blob_bytes_ : override_size;
@@ -155,31 +171,21 @@ Maybe<double> RematableTensorStorage::cost(size_t override_size) const {
 }
 
 double RematableTensorStorage::approx_neighbor_cost() const {
-  double cost = 0;
-  auto compute_op = this->compute_op();
-  const auto& inputs = compute_op.inputs();
-  for (int i = 0; i < inputs.size(); ++i) {
-    const auto& tmp = inputs[i];
-    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
-        !storage->is_in_memory()) {
-      double p_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
-      if (p_cost < storage->compute_time()) { p_cost = storage->compute_time(); }
-      cost += p_cost;
+  const auto cal_cost = [](const auto& eager_blob_objects) {
+    double all_cost = 0;
+    for (int i = 0; i < eager_blob_objects.size(); ++i) {
+      const auto& tmp = eager_blob_objects[i];
+      if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
+          !storage->is_in_memory()) {
+        double tmp_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
+        if (tmp_cost < storage->compute_time()) { tmp_cost = storage->compute_time(); }
+        all_cost += tmp_cost;
+      }
     }
-  }
-
-  const auto& outputs = compute_op.outputs();
-  for (int i = 0; i < outputs.size(); ++i) {
-    const auto& tmp = outputs[i];
-    if (auto storage = std::dynamic_pointer_cast<RematableTensorStorage>(tmp->tensor_storage());
-        !storage->is_in_memory()) {
-      double c_cost = remat::DisjointSet::find_father(storage->node)->compute_time();
-      if (c_cost < storage->compute_time()) { c_cost = storage->compute_time(); }
-      cost += c_cost;
-    }
-  }
-
-  return cost + compute_time_;
+    return all_cost;
+  };
+  const auto compute_op = this->compute_op();
+  return cal_cost(compute_op.inputs()) + cal_cost(compute_op.outputs()) + compute_time_;
 }
 
 }  // namespace vm

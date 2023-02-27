@@ -29,7 +29,7 @@ namespace oneflow {
 namespace {
 Maybe<vm::RematableTensorStorage> rematable_storage(const std::shared_ptr<one::Tensor>& tensor) {
   auto ret = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
-            JUST(tensor->eager_blob_object())->tensor_storage());
+      JUST(tensor->eager_blob_object())->tensor_storage());
   CHECK_NOTNULL_OR_RETURN(ret);
   return ret;
 }
@@ -74,7 +74,8 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     return Maybe<void>::Ok();
   });
   m.def("clear_stats", []() { Singleton<remat::Env>::Get()->clear_stats(); });
-  m.def("forced_eviction_num", []() { return Singleton<remat::Env>::Get()->forced_eviction_num(); });
+  m.def("forced_eviction_num",
+        []() { return Singleton<remat::Env>::Get()->forced_eviction_num(); });
   m.def("eager_eviction_num", []() { return Singleton<remat::Env>::Get()->eager_eviction_num(); });
   m.def("recomputation_num", []() { return Singleton<remat::Env>::Get()->recomputation_num(); });
 }

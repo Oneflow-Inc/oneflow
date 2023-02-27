@@ -156,16 +156,16 @@ namespace vm {
 
 Pack::Pack(const OpCallInstructionPolicy& op_call_instruction_policy)
     : op_call_instruction_policy(op_call_instruction_policy) {
-  input_storages.reserve(op_call_instruction_policy.inputs().size());
-  for (const auto& x : op_call_instruction_policy.inputs()) {
-    input_storages.emplace_back(
-        std::dynamic_pointer_cast<RematableTensorStorage>(x->tensor_storage()));
-  }
-  output_storages.reserve(op_call_instruction_policy.outputs().size());
-  for (const auto& y : op_call_instruction_policy.outputs()) {
-    output_storages.emplace_back(
-        std::dynamic_pointer_cast<RematableTensorStorage>(y->tensor_storage()));
-  }
+  const auto save_eager_blob_object_storages = [](const auto& eager_blob_objects,
+                                                  auto& storage_conatiner) {
+    storage_conatiner.reserve(eager_blob_objects.size());
+    for (const auto& x : eager_blob_objects) {
+      storage_conatiner.emplace_back(
+          std::dynamic_pointer_cast<RematableTensorStorage>(x->tensor_storage()));
+    }
+  };
+  save_eager_blob_object_storages(op_call_instruction_policy.inputs(), input_storages);
+  save_eager_blob_object_storages(op_call_instruction_policy.outputs(), output_storages);
 }
 
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
@@ -286,7 +286,8 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
   }
 
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
-  Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
+  Singleton<remat::Env>::Get()->add_time(
+      JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
   VLOG(1) << "end compute " << pack.op_call_instruction_policy.opkernel().op_type_name()
           << std::endl;
   Singleton<remat::Env>::Get()->current_op_type_name = "None";

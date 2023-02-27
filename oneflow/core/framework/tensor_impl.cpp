@@ -130,9 +130,8 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
         tensor_storage, dep_object);
   } else {
     auto device = local_tensor_meta->device();
-    auto storage = device->rematable()
-                       ? std::make_shared<vm::RematableTensorStorage>(device)
-                       : std::make_shared<vm::TensorStorage>(true, device);
+    auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
+                                       : std::make_shared<vm::TensorStorage>(true, device);
     const auto& eager_blob_object =
         std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
                                               local_tensor_meta->dtype(), storage, dep_object);

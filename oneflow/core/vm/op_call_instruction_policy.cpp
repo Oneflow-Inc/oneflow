@@ -46,7 +46,7 @@ struct OpCallInstructionUtil final {
   }
 
   static inline Maybe<void> ComputeFnForRemat(OpCallInstructionPolicy* op_call_instruction_policy,
-                                     vm::Stream* vm_stream) {
+                                              vm::Stream* vm_stream) {
     return Compute(op_call_instruction_policy, vm_stream, false, true);
   }
 
