@@ -222,6 +222,9 @@ class ArgsTree(object):
         return arg
 
     def map_tuple_leaf(self, map_function: Callable):
+        r"""
+        When the type of io args is tuple, map the leaf of the arguments into map_function(leaf).
+        """
         assert map_function != None, "map function cannot be None"
 
         if self._gen_name:
