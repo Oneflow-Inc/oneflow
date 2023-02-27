@@ -41,7 +41,7 @@ class AccKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("acc").SetCreateFn<AccKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("acc").SetCreateFn<AccKernel>();
 
 }  // namespace
 
