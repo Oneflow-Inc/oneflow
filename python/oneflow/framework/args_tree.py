@@ -50,7 +50,7 @@ class NamedArg(object):
 
     def __iter__(self):
         """
-        Iterate through the values of the NamedArg object and its children.
+        Iterate through the values of the NamedArg object.
         """
 
         if not self._is_value_set:

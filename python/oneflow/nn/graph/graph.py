@@ -1631,6 +1631,9 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
+        # if isinstance(args, (tuple, list)):
+        #     TODO
+
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
