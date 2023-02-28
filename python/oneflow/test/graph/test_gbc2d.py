@@ -91,7 +91,7 @@ def gen_nd_sbp():
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
-    def _test_general_basic_communication(test_case):
+    def test_general_basic_communication(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "1"
 

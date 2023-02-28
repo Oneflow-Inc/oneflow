@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cmath>
+#include <mutex>
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
@@ -450,14 +451,13 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
   BalancedSplitter bs(world_size, split_num);
   std::set<std::string> keys;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::mutex mtx4keys;
     std::string data;
     master_data.SerializeToString(&data);
     FixedMultiThreadLoop(thread_num, split_num, [&](int i) {
-      Range range = bs.At(i);
       std::string key = prefix + std::to_string(i);
       Singleton<CtrlClient>::Get()->PushKV(key, data);
-      static std::mutex mutex;
-      std::unique_lock<std::mutex> lock(mutex);
+      std::lock_guard<std::mutex> lock(mtx4keys);
       CHECK(keys.insert(key).second);
     });
   } else {
@@ -476,12 +476,14 @@ std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& pref
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::mutex mtx4keys;
     FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
       if (i < kWorkerStartRank) { return; }
       T data;
       std::string key = prefix + std::to_string(i);
       Singleton<CtrlClient>::Get()->PullKV(key, &data);
       DoEach(data);
+      std::lock_guard<std::mutex> lock(mtx4keys);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
     });
   } else {
@@ -498,12 +500,14 @@ std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& pref
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::mutex mtx4keys;
     FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
       if (i < kWorkerStartRank) { return; }
       T worker_data;
       std::string key = prefix + std::to_string(i);
       PrepareEach(&worker_data, i);
       Singleton<CtrlClient>::Get()->PushKV(key, worker_data);
+      std::lock_guard<std::mutex> lock(mtx4keys);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
     });
   } else {
@@ -528,12 +532,12 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   // for async deallocating big objects.
   AsyncDeallocateContext deallocate_ctx{};
   std::set<std::string> push_pull_keys{};
-  const auto& Merge = [&](std::set<std::string>&& keys) {
+  const auto& MergeCommKeys = [&](std::set<std::string>&& keys) {
     push_pull_keys.insert(keys.begin(), keys.end());
   };
   if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
   const size_t world_size = GlobalProcessCtx::WorldSize();
-  Merge(MultiThreadBroadcastFromMasterToWorkers(
+  MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
       world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
   JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
@@ -558,7 +562,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
             ->Write(*proto);
       }
     };
-    Merge(MultiThreadPushFromMasterToWorkers(
+    MergeCommKeys(MultiThreadPushFromMasterToWorkers(
         name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
         PrepareWorkerBoxingTaskGraphProto));
     // async deallocate `boxing_task_graph`.
@@ -598,7 +602,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         std::unique_lock<std::mutex> lock(mutex);
         MergeIdPairs(pairs, reachable_cb_pairs.get());
       };
-      Merge(MultiThreadPullFromWorkersToMaster(
+      MergeCommKeys(MultiThreadPullFromWorkersToMaster(
           name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
     }
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -609,7 +613,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     }
     // async deallocate `boxing_task_graph_proto`.
     deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
-    Merge(MultiThreadBroadcastFromMasterToWorkers(
+    MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
         world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
         plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
     return Maybe<void>::Ok();
