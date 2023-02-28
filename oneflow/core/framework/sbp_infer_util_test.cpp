@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 #include <gtest/gtest.h>
 
@@ -86,14 +87,39 @@ bool ParseNdSbpSignatureFromString(const std::string& nd_sbp_signature_str,
   return true;
 }
 
+std::string NdSbpSignature2String(const NdSbpSignature& nd_sbp_signature,
+                                  const std::vector<std::string>& inputs,
+                                  const std::vector<std::string>& outputs) {
+  std::ostringstream ss;
+  auto BnNdSbpToString = [&](const std::string& bn) {
+    auto iter = nd_sbp_signature.bn_in_op2nd_sbp().find(bn);
+    CHECK(iter != nd_sbp_signature.bn_in_op2nd_sbp().end());
+    ss << NdSbpToString(iter->second);
+  };
+  auto ArgsNdSbpToString = [&](const std::vector<std::string>& arg_bns) {
+    for (size_t i = 0; i < arg_bns.size(); ++i) {
+      if (i > 0) { ss << ", "; }
+      BnNdSbpToString(arg_bns[i]);
+    }
+  };
+  ArgsNdSbpToString(inputs);
+  ss << " -> ";
+  ArgsNdSbpToString(outputs);
+  return ss.str();
+}
+
 void TestDeduplicateNdSbpSignature(const std::vector<std::string>& nd_sbp_signature_str_list,
-                                   const std::vector<std::string>& bns) {
+                                   const std::vector<std::string>& input_bns,
+                                   const std::vector<std::string>& output_bns) {
+  // parse
   std::vector<NdSbpSignature> nd_sbp_sig_list;
   nd_sbp_sig_list.reserve(nd_sbp_signature_str_list.size());
   for (const auto& nd_sbp_signature_str : nd_sbp_signature_str_list) {
     nd_sbp_sig_list.emplace_back();
     ASSERT_TRUE(ParseNdSbpSignatureFromString(nd_sbp_signature_str, nd_sbp_sig_list.back()));
   }
+
+  // shuffle and repeat
   std::random_device rd;
   std::mt19937 gen(rd());
   std::shuffle(nd_sbp_sig_list.begin(), nd_sbp_sig_list.end(), gen);
@@ -101,7 +127,19 @@ void TestDeduplicateNdSbpSignature(const std::vector<std::string>& nd_sbp_signat
   std::copy_n(nd_sbp_sig_list.begin(), nd_sbp_sig_list.size() / 2,
               std::back_inserter(nd_sbp_sig_list));
   std::shuffle(nd_sbp_sig_list.begin(), nd_sbp_sig_list.end(), gen);
+
+  // dedup and sort
+  std::vector<std::string> bns;
+  bns.insert(bns.end(), input_bns.begin(), input_bns.end());
+  bns.insert(bns.end(), output_bns.begin(), output_bns.end());
   DeduplicateNdSbpSignatureList(&nd_sbp_sig_list, bns);
+
+  // compare
+  ASSERT_EQ(nd_sbp_signature_str_list.size(), nd_sbp_sig_list.size());
+  for (size_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
+    auto nd_sbp_sig_result = NdSbpSignature2String(nd_sbp_sig_list[i], input_bns, output_bns);
+    ASSERT_EQ(nd_sbp_sig_result, nd_sbp_signature_str_list[i]);
+  }
 }
 
 }  // namespace
@@ -109,33 +147,33 @@ void TestDeduplicateNdSbpSignature(const std::vector<std::string>& nd_sbp_signat
 TEST(SbpInferUtil, DeduplicateNdSbpSignatureList) {
   TestDeduplicateNdSbpSignature(
       {
-          "(S(0), S(0)) -> (S(0), S(0))",
-          "(S(0), S(1)) -> (S(0), S(1))",
-          "(S(0), S(3)) -> (S(0), S(2))",
-          "(S(0), B) -> (S(0), B)",
-          "(S(0), P) -> (S(0), P)",
-          "(S(1), S(0)) -> (S(1), S(0))",
-          "(S(1), S(1)) -> (S(1), S(1))",
-          "(S(1), S(3)) -> (S(1), S(2))",
-          "(S(1), B) -> (S(1), B)",
-          "(S(1), P) -> (S(1), P)",
-          "(S(3), S(0)) -> (S(2), S(0))",
-          "(S(3), S(1)) -> (S(2), S(1))",
-          "(S(3), S(3)) -> (S(2), S(2))",
-          "(S(3), B) -> (S(2), B)",
-          "(S(3), P) -> (S(2), P)",
+          "(B, B) -> (B, B)",
+          "(B, P) -> (B, P)",
           "(B, S(0)) -> (B, S(0))",
           "(B, S(1)) -> (B, S(1))",
           "(B, S(3)) -> (B, S(2))",
-          "(B, B) -> (B, B)",
-          "(B, P) -> (B, P)",
+          "(P, B) -> (P, B)",
+          "(P, P) -> (P, P)",
           "(P, S(0)) -> (P, S(0))",
           "(P, S(1)) -> (P, S(1))",
           "(P, S(3)) -> (P, S(2))",
-          "(P, B) -> (P, B)",
-          "(P, P) -> (P, P)",
+          "(S(0), B) -> (S(0), B)",
+          "(S(0), P) -> (S(0), P)",
+          "(S(0), S(0)) -> (S(0), S(0))",
+          "(S(0), S(1)) -> (S(0), S(1))",
+          "(S(0), S(3)) -> (S(0), S(2))",
+          "(S(1), B) -> (S(1), B)",
+          "(S(1), P) -> (S(1), P)",
+          "(S(1), S(0)) -> (S(1), S(0))",
+          "(S(1), S(1)) -> (S(1), S(1))",
+          "(S(1), S(3)) -> (S(1), S(2))",
+          "(S(3), B) -> (S(2), B)",
+          "(S(3), P) -> (S(2), P)",
+          "(S(3), S(0)) -> (S(2), S(0))",
+          "(S(3), S(1)) -> (S(2), S(1))",
+          "(S(3), S(3)) -> (S(2), S(2))",
       },
-      {"in_0", "out_0"});
+      {"in_0"}, {"out_0"});
 }
 
 }  // namespace test

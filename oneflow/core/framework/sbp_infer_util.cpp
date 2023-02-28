@@ -791,23 +791,21 @@ namespace {
 
 // give a mesure value for NdSbp for sorting
 size_t MesureNdSbp(const NdSbp& nd_sbp) {
-  // max split axis = 8 (start from 1), + B + P = 10
+  // start from 1, B + P + max split axis (8)
   constexpr size_t kMaxSplitAxis = 8;
   constexpr size_t kCarryDigit = kMaxSplitAxis + 3;
   size_t value = 0;
   for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
     size_t cur_dim_value = 0;
     const auto& sbp = nd_sbp.sbp_parallel(i);
-    if (sbp.has_split_parallel()) {
-      CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
-      // from 1 to 8
-      cur_dim_value = sbp.split_parallel().axis() + 1;
-    } else if (sbp.has_broadcast_parallel()) {
-      // 9
-      cur_dim_value = kMaxSplitAxis + 1;
+    if (sbp.has_broadcast_parallel()) {
+      cur_dim_value = 1;
     } else if (sbp.has_partial_sum_parallel()) {
-      // 10
-      cur_dim_value = kMaxSplitAxis + 2;
+      cur_dim_value = 2;
+    } else if (sbp.has_split_parallel()) {
+      CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
+      // from 3 to 10
+      cur_dim_value = 3 + sbp.split_parallel().axis();
     } else {
       UNIMPLEMENTED();
     }
