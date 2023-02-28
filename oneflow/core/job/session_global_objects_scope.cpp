@@ -49,14 +49,16 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Singleton<ResourceDesc, ForSession>::New(config_proto.resource(),
                                            GlobalProcessCtx::NumOfProcessPerNode());
   Singleton<IDMgr>::New();
-  Singleton<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    Singleton<TaskStreamIndexManager>::SetAllocated(new MasterTaskStreamIndexManager());
     Singleton<JobName2JobId>::New();
     Singleton<CriticalSectionDesc>::New();
     Singleton<InterUserJobInfo>::New();
     Singleton<LazyJobBuildAndInferCtxMgr>::New();
     Singleton<JobSetCompileCtx>::New();
     Singleton<RuntimeBufferManagersScope>::New();
+  } else {
+    Singleton<TaskStreamIndexManager>::SetAllocated(new WorkerTaskStreamIndexManager());
   }
 
   {

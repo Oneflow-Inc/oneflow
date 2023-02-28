@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include <string>
+#include <thread>
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
@@ -89,9 +91,20 @@ void TaskNode::set_chain_id(int64_t val) {
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_graph(int64_t val) {
-  CHECK_EQ(order_in_graph_, -1);
-  order_in_graph_ = val;
+void TaskNode::set_order_in_graph(int64_t val, const std::string& debug) {
+  if (!order_has_been_set) {
+    CHECK_EQ(order_in_graph_, -1);
+    order_in_graph_ = val;
+    order_has_been_set = true;
+    set_debug = debug;
+    set_thread_id = std::this_thread::get_id();
+  } else {
+    LOG(ERROR) << " task " << VisualStr() << " 's order has been set by thread " << set_thread_id
+               << " debug " << set_debug << " with " << order_in_graph_
+               << " but set again by thread " << std::this_thread::get_id() << " debug " << debug
+               << " with " << val;
+    CHECK_EQ(order_in_graph_, -1);
+  }
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -387,6 +400,13 @@ void TaskNode::UpdateTaskId() {
   StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
   new_task_id_.reset(
       new TaskId(Singleton<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
+  task_id_ = EncodeTaskIdToInt64(*new_task_id_);
+}
+
+void TaskNode::update_new_task_id(const TaskId& task_id) {
+  CHECK(static_cast<bool>(new_task_id_));
+  CHECK(new_task_id_->stream_id() == task_id.stream_id());
+  *new_task_id_ = task_id;
   task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 

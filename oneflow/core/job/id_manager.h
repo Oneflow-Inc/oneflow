@@ -29,9 +29,9 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  int64_t NewRegstDescId() { return regst_desc_id_count_++; }
-  int64_t NewMemBlockId() { return mem_block_id_count_++; }
-  int64_t NewChunkId() { return chunk_id_count_++; }
+  int64_t NewRegstDescId();
+  int64_t NewMemBlockId();
+  int64_t NewChunkId();
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
