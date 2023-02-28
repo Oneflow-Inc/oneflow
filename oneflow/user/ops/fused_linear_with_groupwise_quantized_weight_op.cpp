@@ -95,17 +95,17 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> FusedLinearWithGroupWiseQuantizedWeightOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> FusedLinearWithGroupwiseQuantizedWeightOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBias(ctx);
 }
 
-/*static*/ Maybe<void> FusedLinearWithGroupWiseQuantizedWeightOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> FusedLinearWithGroupwiseQuantizedWeightOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedLinearWithGroupWiseQuantizedWeightOp::GetSbp(
+/* static */ Maybe<void> FusedLinearWithGroupwiseQuantizedWeightOp::GetSbp(
     user_op::SbpContext* ctx) {
   // (b, m, k) * (n, k)
   const auto& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
@@ -179,7 +179,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedLinearWithGroupWiseQuantizedWeightOp::InferDataType(
+/* static */ Maybe<void> FusedLinearWithGroupwiseQuantizedWeightOp::InferDataType(
     user_op::InferContext* ctx) {
   return InferDataType4MatmulBias(ctx);
 }

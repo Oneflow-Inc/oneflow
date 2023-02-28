@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ Maybe<void> GroupWiseDequantizeOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> GroupwiseDequantizeOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& scale_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("scale", 0).shape();
   std::vector<user_op::OpArg> scale_zero_args;
@@ -44,7 +44,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> GroupWiseDequantizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> GroupwiseDequantizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   const Shape& scale_shape = ctx->InputShape("scale", 0);
   const int32_t num_bits = ctx->Attr<int32_t>("num_bits");
@@ -80,11 +80,11 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> GroupWiseDequantizeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> GroupwiseDequantizeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> GroupWiseDequantizeOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> GroupwiseDequantizeOp::InferDataType(user_op::InferContext* ctx) {
   const DataType data_type = ctx->InputDType("scale", 0);
   if (ctx->has_input("zero", 0)) { CHECK_EQ_OR_RETURN(ctx->InputDType("zero", 0), data_type); }
   if (ctx->Attr<bool>("symmetric")) {

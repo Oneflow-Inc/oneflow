@@ -7850,7 +7850,7 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_GroupWiseDequantizeOp : OneFlow_BaseOp<"group_wise_dequantize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GroupwiseDequantizeOp : OneFlow_BaseOp<"groupwise_dequantize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
     OneFlow_Tensor:$scale,
@@ -7871,7 +7871,7 @@ def OneFlow_GroupWiseDequantizeOp : OneFlow_BaseOp<"group_wise_dequantize", [NoS
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedLinearWithGroupWiseQuantizedWeightOp : OneFlow_BaseOp<"fused_linear_with_group_wise_quantized_weight", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_linear_with_groupwise_quantized_weight", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$w,

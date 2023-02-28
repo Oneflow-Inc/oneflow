@@ -140,12 +140,12 @@ class QuantizationFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class GroupWiseDequantizeFunctor {
+class GroupwiseDequantizeFunctor {
  public:
-  GroupWiseDequantizeFunctor() {
+  GroupwiseDequantizeFunctor() {
     symmetric_op_ = CHECK_JUST(
-        one::OpBuilder("group_wise_dequantize").Input("in").Input("scale").Output("out").Build());
-    asymmetric_op_ = CHECK_JUST(one::OpBuilder("group_wise_dequantize")
+        one::OpBuilder("groupwise_dequantize").Input("in").Input("scale").Output("out").Build());
+    asymmetric_op_ = CHECK_JUST(one::OpBuilder("groupwise_dequantize")
                                     .Input("in")
                                     .Input("scale")
                                     .Input("zero")
@@ -224,11 +224,11 @@ class GroupWiseDequantizeFunctor {
   std::shared_ptr<OpExpr> asymmetric_op_;
 };
 
-class FusedLinearWithGroupWiseQuantizedWeightFunctor {
+class FusedLinearWithGroupwiseQuantizedWeightFunctor {
  public:
-  FusedLinearWithGroupWiseQuantizedWeightFunctor() {
+  FusedLinearWithGroupwiseQuantizedWeightFunctor() {
     symmetric_with_bias_op_ =
-        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
                        .Input("x")
                        .Input("w")
                        .Input("w_scale")
@@ -236,14 +236,14 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
                        .Output("out")
                        .Build());
     symmetric_without_bias_op_ =
-        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
                        .Input("x")
                        .Input("w")
                        .Input("w_scale")
                        .Output("out")
                        .Build());
     asymmetric_with_bias_op_ =
-        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
                        .Input("x")
                        .Input("w")
                        .Input("w_scale")
@@ -252,7 +252,7 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
                        .Output("out")
                        .Build());
     asymmetric_without_bias_op_ =
-        CHECK_JUST(one::OpBuilder("fused_linear_with_group_wise_quantized_weight")
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
                        .Input("x")
                        .Input("w")
                        .Input("w_scale")
@@ -339,7 +339,7 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
     }
 
     if (m > 8) {
-      const auto w_dequantized = JUST(functional::GroupWiseDequantize(
+      const auto w_dequantized = JUST(functional::GroupwiseDequantize(
           w, w_scale, w_zero, num_bits, symmetric, group_dim, group_size));
       if (b) {
         return JUST(
@@ -387,9 +387,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MovingAverageMinMaxObserverFunctor>("MovingAverageMinMaxObserver");
 };
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::GroupWiseDequantizeFunctor>("GroupWiseDequantize");
-  m.add_functor<impl::FusedLinearWithGroupWiseQuantizedWeightFunctor>(
-      "FusedLinearWithGroupWiseQuantizedWeight");
+  m.add_functor<impl::GroupwiseDequantizeFunctor>("GroupwiseDequantize");
+  m.add_functor<impl::FusedLinearWithGroupwiseQuantizedWeightFunctor>(
+      "FusedLinearWithGroupwiseQuantizedWeight");
 };
 
 }  // namespace functional

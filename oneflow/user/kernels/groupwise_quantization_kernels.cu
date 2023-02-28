@@ -392,10 +392,10 @@ void DispatchDequantize(ep::CudaStream* stream, int32_t num_bits, bool symmetric
 }
 
 template<typename T>
-class GroupWiseDequantizeKernel final : public user_op::OpKernel {
+class GroupwiseDequantizeKernel final : public user_op::OpKernel {
  public:
-  GroupWiseDequantizeKernel() = default;
-  ~GroupWiseDequantizeKernel() override = default;
+  GroupwiseDequantizeKernel() = default;
+  ~GroupwiseDequantizeKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -454,8 +454,8 @@ class GroupWiseDequantizeKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_VECTOR_WISE_SYMMETRIC_DEQUANTIZE_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("group_wise_dequantize")                        \
-      .SetCreateFn<GroupWiseDequantizeKernel<dtype>>()                 \
+  REGISTER_USER_KERNEL("groupwise_dequantize")                         \
+      .SetCreateFn<GroupwiseDequantizeKernel<dtype>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("scale", 0) == GetDataType<dtype>::value))
 
@@ -749,11 +749,11 @@ void DispatchMatmulBias(ep::CudaStream* stream, int num_bits, bool symmetric, in
 }
 
 template<typename T>
-class FusedLinearWithGroupWiseQuantizedWeightKernel final : public user_op::OpKernel,
+class FusedLinearWithGroupwiseQuantizedWeightKernel final : public user_op::OpKernel,
                                                             public user_op::CudaGraphSupport {
  public:
-  FusedLinearWithGroupWiseQuantizedWeightKernel() = default;
-  ~FusedLinearWithGroupWiseQuantizedWeightKernel() override = default;
+  FusedLinearWithGroupwiseQuantizedWeightKernel() = default;
+  ~FusedLinearWithGroupwiseQuantizedWeightKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -842,8 +842,8 @@ class FusedLinearWithGroupWiseQuantizedWeightKernel final : public user_op::OpKe
 };
 
 #define REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(data_type, cpp_type)            \
-  REGISTER_USER_KERNEL("fused_linear_with_group_wise_quantized_weight")       \
-      .SetCreateFn<FusedLinearWithGroupWiseQuantizedWeightKernel<cpp_type>>() \
+  REGISTER_USER_KERNEL("fused_linear_with_groupwise_quantized_weight")        \
+      .SetCreateFn<FusedLinearWithGroupwiseQuantizedWeightKernel<cpp_type>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)        \
                        && (user_op::HobDataType("out", 0) == data_type));
 
