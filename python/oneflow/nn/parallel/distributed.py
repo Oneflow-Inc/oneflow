@@ -99,7 +99,9 @@ def DistributedDataParallel(
             device = list(module.parameters())[0].device
             assert all(x.device == device for x in module.parameters())
         reversed_param_list = list(
-            reversed(list([param for param in module.parameters() if param.requires_grad]))
+            reversed(
+                list([param for param in module.parameters() if param.requires_grad])
+            )
         )
 
         module._bucket_index = {
@@ -111,7 +113,9 @@ def DistributedDataParallel(
         ]
 
         module._params_group = ContiguousParamsGroup(module._buckets)
-        module._bucket_tensors = list(reversed(module._params_group.grouped_parameters_grad))
+        module._bucket_tensors = list(
+            reversed(module._params_group.grouped_parameters_grad)
+        )
 
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
