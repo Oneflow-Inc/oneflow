@@ -59,7 +59,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   const StreamId& stream_id() const;
   int64_t chain_id() const { return chain_id_; }
-  int64_t order_in_graph() const { return order_in_graph_; }
+  int64_t order_in_chain() const { return order_in_chain_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -79,7 +79,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
   void set_chain_id(int64_t val);
-  void set_order_in_graph(int64_t val, const std::string& debug = "none");
+  // TODO(strint): rm debug after fix thread run bug
+  void set_order_in_chain(int64_t val, const std::string& debug = "None");
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -168,7 +169,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t thrd_id_;
   int64_t task_id_;
   int64_t chain_id_;
-  int64_t order_in_graph_;
+  int64_t order_in_chain_;
   bool order_has_been_set{false};
   std::string set_debug;
   std::thread::id set_thread_id{0};

@@ -413,7 +413,6 @@ void UpdateSat(const HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
-  int64_t order_in_graph = 0;
 
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
@@ -522,11 +521,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   std::vector<int32_t> remain_task_nums(num_classifier, 0);
 
-  auto SetOrderInGraph = [&](TaskNode* task_node, const std::string& debug) {
-    task_node->set_order_in_graph(order_in_graph, debug);
-    ordered_task_nodes->emplace_back(task_node);
-    ++order_in_graph;
-  };
+  auto SetOrderInGraph = [&](TaskNode* task_node) { ordered_task_nodes->emplace_back(task_node); };
 
   // wait in the list
   auto wait = [&](TaskNode* node) {
@@ -602,7 +597,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     remain_task_nums[list_classifier] -= execution_list.size();
     // Set the order and then remove from the execution list
     for (auto* node : execution_list) {
-      SetOrderInGraph(node, "605");
+      SetOrderInGraph(node);
       finish_execution(node);
     }
   };
@@ -634,7 +629,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
                             overlap_execution_list);
         remain_task_nums[TaskClassifier::kWaitingOverlapNode] -= overlap_execution_list.size();
-        for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node, "637"); }
+        for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node); }
         // Overlap the node with computation from the trunk
         execute(TaskClassifier::kWaitingMainComputation, computation_num);
 

@@ -91,7 +91,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
   void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
 
-  void SetOrderInGraphForEachNode();
+  void InitOrderedTaskNodes();
   void MergeChainByPhysicalTaskGraph();
   void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();

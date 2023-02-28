@@ -250,8 +250,8 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job, int64
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
-    int64_t logical_chain_id = task->task_set_info().chain_id();
+    if (!IsValidChainId(task->chain_id())) { continue; }
+    int64_t logical_chain_id = task->chain_id();
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -315,7 +315,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job, int64
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+    if (!IsValidChainId(task->chain_id())) { continue; }
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -1086,13 +1086,6 @@ struct RankDeviceMemoryInfo {
 }  // namespace
 
 void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
-  std::vector<const TaskProto*> ordered_tasks;
-  for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
-  auto CompTask = [](const TaskProto* a, const TaskProto* b) {
-    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
-  };
-  std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
-
   std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
                                                              RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
@@ -1131,8 +1124,8 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     }
   }
 
-  for (const auto* task : ordered_tasks) {
-    for (const auto& pair : task->produced_regst_desc()) {
+  for (const auto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
       const auto& regst = pair.second;
       if (regst.regst_desc_type().has_data_regst_desc()
           && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
@@ -1234,10 +1227,11 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
 }
 
 void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t filter_rank) {
+  // NOTE(chengcheng): ordered_tasks is NOT exec order, just task id order.
   std::vector<const TaskProto*> ordered_tasks;
   for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
   auto CompTask = [](const TaskProto* a, const TaskProto* b) {
-    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
+    return a->task_id() < b->task_id();
   };
   std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
 
@@ -1322,7 +1316,7 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t fi
           << " task_id2name cannot find" << task_id;
       int64_t thrd_id = task->thrd_id();
       StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
-      file_stream << "order : " << std::to_string(i) << " , actor id : " << std::to_string(task_id)
+      file_stream << " actor id : " << std::to_string(task_id)
                   << " name : " << task_id2name.at(task_id) << " thrd : " << std::to_string(thrd_id)
                   << " device_type : " << DeviceType_Name(stream_id.device_type())
                   << " stream_index : " << std::to_string(stream_id.stream_index()) << " {\n";
