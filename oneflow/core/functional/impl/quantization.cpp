@@ -164,24 +164,24 @@ class GroupWiseDequantizeFunctor {
         << "The number of dimensions for tensor in should be greater than or equal to 1.";
     const int64_t regularized_group_dim =
         group_dim < 0 ? in->shape()->NumAxes() + group_dim : group_dim;
-    CHECK(regularized_group_dim >= 0 && regularized_group_dim < in->shape()->NumAxes())
+    CHECK_OR_RETURN(regularized_group_dim >= 0 && regularized_group_dim < in->shape()->NumAxes())
         << "group_dim should be in range [-" << in->shape()->NumAxes() << ","
         << in->shape()->NumAxes() << ").";
     const int64_t group_dim_size =
         in->shape()->At(regularized_group_dim)
         * (regularized_group_dim == in->shape()->NumAxes() - 1 ? 8 / num_bits : 1);
     const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
-    CHECK(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
+    CHECK_OR_RETURN(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
         << "group_size should be in range (0," << group_dim_size << "].";
     CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
         << "group_size should be a divisor of " << group_dim_size << ".";
     const int64_t num_groups = group_dim_size / group_size;
     if (symmetric) {
-      CHECK(in->dtype()->data_type() == DataType::kUInt8
-            || in->dtype()->data_type() == DataType::kInt8)
+      CHECK_OR_RETURN(in->dtype()->data_type() == DataType::kUInt8
+                      || in->dtype()->data_type() == DataType::kInt8)
           << "The dtype of tensor in should be int8 or uint8.";
     } else {
-      CHECK(in->dtype()->data_type() == DataType::kUInt8)
+      CHECK_OR_RETURN(in->dtype()->data_type() == DataType::kUInt8)
           << "The dtype of tensor in should be uint8.";
     }
     CHECK_EQ_OR_RETURN(scale->shape()->NumAxes(), in->shape()->NumAxes())
@@ -202,14 +202,14 @@ class GroupWiseDequantizeFunctor {
       }
     }
     if (!symmetric) {
-      CHECK(zero) << "When symmetric is False, tensor zero should be specified.";
+      CHECK_OR_RETURN(zero) << "When symmetric is False, tensor zero should be specified.";
       CHECK_OR_RETURN(JUST(zero)->dtype() == scale->dtype())
           << "The dtype of the zero tensor should be the same as the scale "
              "tensor.";
       CHECK_OR_RETURN(*JUST(zero)->shape() == *scale->shape())
           << "The shape of zero tensor should be equal to tensor scale.";
     } else {
-      CHECK(!zero) << "When symmetric is True, tensor zero should be None.";
+      CHECK_OR_RETURN(!zero) << "When symmetric is True, tensor zero should be None.";
     }
     attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
     if (symmetric) {
@@ -281,21 +281,21 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
     const int64_t n = w->shape()->At(0);
     const int64_t regularized_group_dim =
         group_dim < 0 ? w->shape()->NumAxes() + group_dim : group_dim;
-    CHECK(regularized_group_dim == 0 || regularized_group_dim == 1)
+    CHECK_OR_RETURN(regularized_group_dim == 0 || regularized_group_dim == 1)
         << "group_dim should be in range [-2,2).";
     const int64_t group_dim_size = regularized_group_dim == 0 ? n : k;
     const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
-    CHECK(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
+    CHECK_OR_RETURN(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
         << "group_size should be in range (0," << group_dim_size << "].";
     CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
         << "group_size should be a divisor of " << group_dim_size << ".";
     const int64_t num_groups = group_dim_size / regularized_group_size;
     if (symmetric) {
-      CHECK(w->dtype()->data_type() == DataType::kUInt8
-            || w->dtype()->data_type() == DataType::kInt8)
+      CHECK_OR_RETURN(w->dtype()->data_type() == DataType::kUInt8
+                      || w->dtype()->data_type() == DataType::kInt8)
           << "The dtype of tensor w should be int8 or uint8.";
     } else {
-      CHECK(w->dtype()->data_type() == DataType::kUInt8)
+      CHECK_OR_RETURN(w->dtype()->data_type() == DataType::kUInt8)
           << "The dtype of tensor w should be uint8.";
     }
     CHECK_EQ_OR_RETURN(w_scale->shape()->NumAxes(), 2)
@@ -318,21 +318,21 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
     CHECK_OR_RETURN(w_scale->dtype() == x->dtype())
         << "The dtype of the w_scale tensor should be the same as the x tensor.";
     if (!symmetric) {
-      CHECK(w_zero) << "When symmetric is False, tensor w_zero should be specified.";
+      CHECK_OR_RETURN(w_zero) << "When symmetric is False, tensor w_zero should be specified.";
       CHECK_OR_RETURN(JUST(w_zero)->dtype() == w_scale->dtype())
           << "The dtype of the w_zero tensor should be the same as the w_scale "
              "tensor.";
       CHECK_OR_RETURN(*JUST(w_zero)->shape() == *w_scale->shape())
           << "The shape of w_zero tensor should be equal to tensor w_scale.";
     } else {
-      CHECK(!w_zero) << "When symmetric is True, tensor w_zero should be None.";
+      CHECK_OR_RETURN(!w_zero) << "When symmetric is True, tensor w_zero should be None.";
     }
 
     if (b) {
       CHECK_OR_RETURN(JUST(b)->dtype() == x->dtype())
           << "The dtype of the b tensor should be the same as the x tensor.";
       CHECK_EQ_OR_RETURN(JUST(b)->shape()->NumAxes(), 1)
-          << "The number of dimensions for tensor b should be equal to 2.";
+          << "The number of dimensions for tensor b should be equal to 1.";
       CHECK_EQ_OR_RETURN(JUST(b)->shape()->At(0), n)
           << "The size of first dimension of tensor b should be equal to the size of first "
              "dimension of tensor w";

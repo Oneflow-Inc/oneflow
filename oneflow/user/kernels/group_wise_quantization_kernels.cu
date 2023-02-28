@@ -209,7 +209,7 @@ void LaunchDequantize3D(ep::CudaStream* stream, int64_t outer_size, int64_t grou
   if constexpr (sizeof(T) * d_pack_size <= 16 && q_pack_size > 0) {
     const int64_t packed_elem_cnt = outer_size * group_size * inner_size / d_pack_size;
     const int64_t packed_inner_size = inner_size / d_pack_size;
-    if (packed_elem_cnt >= (1 << 30)) {
+    if (packed_elem_cnt <= (1 << 30)) {
       RUN_CUDA_KERNEL((Dequantize3D<T, U, int32_t, d_pack_size, q_pack_size, num_bits, symmetric,
                                     outer_size_1>),
                       stream, packed_elem_cnt, packed_elem_cnt, group_size, packed_inner_size,
