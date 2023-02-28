@@ -299,7 +299,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
     # This test case can always success out of ci container, but will get error in ci container for unknown reason: error:
     # 'oneflow.ctc_loss' op attribute 'blank' failed to satisfy constraint: 32-bit signed integer attribute
     # loc("-":0:0): error: Failed to run round-trip passes
-    @autotest(n=5, auto_backward=True, check_graph=False)
+    @autotest(n=5, check_graph=False)
     def test_ctc_loss_with_diff_device_input(test_case):
         log_probs = torch.tensor(
             [
@@ -320,7 +320,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
         return out
         
     
-    @autotest(n=5, auto_backward=True, check_graph=False)
+    @autotest(n=5, check_graph=False)
     def test_ctc_loss_functional(test_case):
         device_random = random_device()
         log_probs = random_tensor(ndim=3, dim0=5, dim1=2, dim2=3).to(device_random)
