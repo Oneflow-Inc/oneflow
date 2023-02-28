@@ -25,7 +25,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = random(2, 6) * 8
@@ -38,7 +38,7 @@ def _test_flow_split_with_random_data(test_case, placement, sbp):
     return torch.cat(res, rand_dim)
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_sizes_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16
@@ -50,7 +50,7 @@ def _test_flow_split_sizes_with_random_data(test_case, placement, sbp):
     return torch.cat(res, dim=1)
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_sizes_neg_dim_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16

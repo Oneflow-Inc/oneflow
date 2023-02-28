@@ -28,9 +28,9 @@ from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_rnn_utils_pack_padded_sequence(test_case, device):
-    input_size = random.randint(10, 200)
-    max_seq_len = random.randint(10, 500)
-    batch_size = random.randint(10, 500)
+    input_size = random.randint(10, 150)
+    max_seq_len = random.randint(10, 300)
+    batch_size = random.randint(10, 300)
     requires_grad = np.random.rand() > 0.5
     padded_inputs = np.zeros((max_seq_len, batch_size, input_size))
     lengths = []
@@ -100,9 +100,9 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
 
 
 def _test_rnn_utils_pad_sequence(test_case, device):
-    input_size = random.randint(10, 200)
-    max_seq_len = random.randint(20, 500)
-    batch_size = random.randint(20, 500)
+    input_size = random.randint(10, 150)
+    max_seq_len = random.randint(20, 300)
+    batch_size = random.randint(20, 300)
     lengths = []
     lengths.append(max_seq_len)
     for i in range(batch_size - 1):
@@ -128,9 +128,9 @@ def _test_rnn_utils_pad_sequence(test_case, device):
 
 
 def _test_rnn_utils_pack_sequence(test_case, device):
-    input_size = random.randint(10, 200)
-    max_seq_len = random.randint(20, 500)
-    batch_size = random.randint(20, 500)
+    input_size = random.randint(10, 150)
+    max_seq_len = random.randint(20, 300)
+    batch_size = random.randint(20, 300)
     lengths = []
     lengths.append(max_seq_len)
     for i in range(batch_size - 1):

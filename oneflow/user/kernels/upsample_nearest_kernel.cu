@@ -16,8 +16,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -47,7 +48,8 @@ __global__ void UpsampleNearest1DBackward(const int64_t elem_cnt, const T* dy_dp
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
     const int64_t dx_h = GetNearestInputIndex(h, scale_factor, in_height);
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h), dy_dptr[index]);
+    cuda::atomic::FastAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h), elem_cnt,
+                          static_cast<T>(dy_dptr[index]));
   }
 }
 
@@ -101,7 +103,8 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
+    cuda::atomic::FastAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), elem_cnt,
+                          static_cast<T>(dy_dptr[index]));
   }
 }
 
@@ -159,7 +162,8 @@ __global__ void UpsampleNearest3DBackward(const int64_t elem_cnt, const T* dy_dp
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
     const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
-    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w), dy_dptr[index]);
+    cuda::atomic::FastAdd(dx_dptr, dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w), elem_cnt,
+                          static_cast<T>(dy_dptr[index]));
   }
 }
 
@@ -256,7 +260,8 @@ REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(float)
 REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(double)
 
 template<typename T>
-class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
+class UpsampleNearest2DGPUKernel final : public user_op::OpKernel,
+                                         public user_op::CudaGraphSupport {
  public:
   UpsampleNearest2DGPUKernel() = default;
   ~UpsampleNearest2DGPUKernel() = default;

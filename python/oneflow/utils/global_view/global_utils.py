@@ -18,7 +18,7 @@ import pickle
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 
 
 def to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
@@ -71,7 +71,7 @@ def check_input_global(input):
 def check_placement_on_all_ranks(placement):
     # Determine whether the ranks of placement are same as all ranks
     is_placement_on_all_ranks = False
-    all_ranks = flow.env.all_device_placement("cpu").ranks
+    all_ranks = flow.placement.all("cpu").ranks
     if (
         all_ranks.shape == placement.ranks.shape
         and (all_ranks == placement.ranks).all()

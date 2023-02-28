@@ -196,7 +196,18 @@ class EagerBlobObject final : public user_op::Tensor,
   std::shared_ptr<const Shape> shape_ptr() const;
   std::shared_ptr<const Stride> stride_ptr() const;
 
-  size_t ByteSizeOfBlobBody() const { return shape().elem_cnt() * GetSizeOfDataType(data_type_); }
+  size_t ByteSizeOfBlobBody() const {
+    const size_t elem_cnt = shape().elem_cnt();
+    if (elem_cnt == 0) { return 0; }
+    size_t max_offset = 0;
+    for (size_t i = 0; i < shape().NumAxes(); ++i) {
+      max_offset += (shape().at(i) - 1) * stride().at(i);
+    }
+    size_t capacity = max_offset + 1;
+    // TODO(liujuncheng): remove this
+    capacity = std::max<size_t>(capacity, elem_cnt);
+    return capacity * GetSizeOfDataType(data_type_);
+  }
   size_t AlignedByteSizeOfBlobBody() const {
     return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
   }
@@ -216,7 +227,6 @@ class EagerBlobObject final : public user_op::Tensor,
   DataType data_type_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;

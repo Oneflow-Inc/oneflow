@@ -19,3 +19,8 @@ from oneflow.framework.config_util import (
 from oneflow.framework.config_util import (
     api_enable_cudnn_fused_normalization_add_relu as enable_fused_normalization_add_relu,
 )
+from oneflow.framework.config_util import (
+    api_enable_cudnn_conv_heuristic_search_algo as enable_conv_heuristic_search_algo,
+)
+
+benchmark = False

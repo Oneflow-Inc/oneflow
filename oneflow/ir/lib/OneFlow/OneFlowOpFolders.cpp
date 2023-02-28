@@ -152,7 +152,7 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
     if (has_int_operand()) { return functional::ScalarAdd(tensor, int_operand(), 1, false); }
     if (has_float_operand()) {
-      return functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false);
+      return functional::ScalarAdd(tensor, float_operand().convertToDouble(), 1, false);
     }
     emitError("Scalar op must has a int operand or a float operand.");
     return TensorPtr();

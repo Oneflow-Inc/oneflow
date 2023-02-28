@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
+#include "OneFlow/OKL/Kernel/JITOpInfer.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
@@ -57,7 +57,7 @@ Maybe<void> MlirJitOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> MlirJitOp::GetSbp(user_op::SbpContext* ctx) { return GetSbpFn(ctx); }
 
 Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) {
-  return ir::jit::SetTensorDateType(ctx);
+  return ir::jit::SetTensorDataType(ctx);
   ;
 }
 

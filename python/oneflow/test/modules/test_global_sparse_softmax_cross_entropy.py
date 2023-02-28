@@ -44,14 +44,14 @@ def _compare_eager_global_with_torch(
         torch_output.sum().backward()
 
     of_logits = flow.tensor(np_logits, dtype=data_type, requires_grad=True).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_logits = of_logits.to_global(placement, logits_sbp)
 
     of_logits.retain_grad()
 
     of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_labels = of_labels.to_global(placement, labels_sbp)
 
@@ -60,12 +60,10 @@ def _compare_eager_global_with_torch(
     )
     of_output.sum().backward()
     of_logits_grad = of_logits.grad.to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_logits_grad = of_logits_grad.to_local()
-    of_output = of_output.to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    )
+    of_output = of_output.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
     of_output = of_output.to_local()
 
     if flow.env.get_rank() == 0:
@@ -103,18 +101,18 @@ def _compare_lazy_global_with_torch(
             return output
 
     of_logits = flow.tensor(np_logits, dtype=data_type, requires_grad=True).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_logits = of_logits.to_global(placement, logits_sbp)
 
     of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     of_labels = of_labels.to_global(placement, labels_sbp)
     graph = MyModule()
     of_output = graph(of_logits, of_labels)
     of_output = of_output.to_global(
-        placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast]
+        placement=flow.placement.all("cpu"), sbp=[flow.sbp.broadcast]
     )
     of_output = of_output.to_local()
 

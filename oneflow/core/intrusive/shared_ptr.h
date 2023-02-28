@@ -32,10 +32,12 @@ class shared_ptr final {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
   }
-  shared_ptr(shared_ptr&& obj_ptr) {
+  shared_ptr(shared_ptr&& obj_ptr) noexcept {
     ptr_ = obj_ptr.ptr_;
     obj_ptr.ptr_ = nullptr;
   }
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  operator shared_ptr<const T>() const { return shared_ptr<const T>(ptr_); }
   ~shared_ptr() { Clear(); }
 
   template<typename... Args>
@@ -49,13 +51,11 @@ class shared_ptr final {
   explicit operator bool() const { return ptr_ != nullptr; }
   value_type* get() const { return ptr_; }
   const value_type& Get() const { return *ptr_; }
-  const value_type* operator->() const { return ptr_; }
-  const value_type& operator*() const { return *ptr_; }
+  value_type* operator->() const { return ptr_; }
+  value_type& operator*() const { return *ptr_; }
   bool operator==(const shared_ptr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
   value_type* Mutable() { return ptr_; }
-  value_type* operator->() { return ptr_; }  // NOLINT
-  value_type& operator*() { return *ptr_; }
 
   void Reset() { Reset(nullptr); }
 
@@ -68,6 +68,12 @@ class shared_ptr final {
 
   shared_ptr& operator=(const shared_ptr& rhs) {
     Reset(rhs.ptr_);
+    return *this;
+  }
+
+  shared_ptr& operator=(shared_ptr&& rhs) noexcept {
+    ptr_ = rhs.ptr_;
+    rhs.ptr_ = nullptr;
     return *this;
   }
 
