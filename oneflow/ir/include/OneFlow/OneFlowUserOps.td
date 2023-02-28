@@ -7850,6 +7850,50 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_GroupwiseDequantizeOp : OneFlow_BaseOp<"groupwise_dequantize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$scale,
+    Optional<OneFlow_Tensor>:$zero
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "8">:$num_bits,
+    DefaultValuedAttr<BoolAttr, "true">:$symmetric,
+    SI64Attr:$group_dim,
+    SI64Attr:$group_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_linear_with_groupwise_quantized_weight", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$w,
+    OneFlow_Tensor:$w_scale,
+    Optional<OneFlow_Tensor>:$w_zero,
+    Optional<OneFlow_Tensor>:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "8">:$num_bits,
+    DefaultValuedAttr<BoolAttr, "true">:$symmetric,
+    SI64Attr:$group_dim,
+    SI64Attr:$group_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
 
