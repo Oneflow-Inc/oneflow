@@ -384,7 +384,7 @@ if(BUILD_PYTHON)
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
     oneflow_internal PRIVATE ${of_libs} of_functional_tensor_obj of_api_common
-                             ${oneflow_third_party_libs} of_pyext_obj glog::glog)
+                             ${oneflow_third_party_libs} of_pyext_obj glog::glog bfd unwind)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
