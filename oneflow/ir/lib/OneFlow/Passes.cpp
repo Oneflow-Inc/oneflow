@@ -1059,18 +1059,6 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   populateElementwiseFusionPatterns(patterns);
 }
 
-void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<LowerToOKLPattern>(patterns.getContext());
-}
-
-void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<ExtractKernelLaunchTensorPattern>(patterns.getContext());
-}
-
-void populateTrimReturnAsVoidPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<TrimReturnAsVoidPattern>(patterns.getContext());
-}
-
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                            const std::string& mode) {
   if (mode == wrap_mode::SIMPLE) {
