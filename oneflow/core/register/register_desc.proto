@@ -13,7 +13,7 @@ message LbiBlobDescPair {
 
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
-  required ShapeProto time_shape = 3;
+  optional ShapeProto time_shape = 3;
 }
 
 message CtrlRegstDesc {

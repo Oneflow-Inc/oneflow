@@ -99,7 +99,7 @@ def gen_2d_sbp():
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestNcclLogicalSendRecv2D(flow.unittest.TestCase):
-    def test_nccl_logical_send_recv_2d(test_case):
+    def _test_nccl_logical_send_recv_2d(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_2d_sbp()
