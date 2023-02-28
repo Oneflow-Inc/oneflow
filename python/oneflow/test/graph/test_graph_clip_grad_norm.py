@@ -43,26 +43,6 @@ class MyModule2(flow.nn.Module):
         return loss.mean()
         # return loss
 
-class MyModule1Min(flow.nn.Module):
-    def __init__(self, param):
-        super().__init__()
-        self.param = flow.nn.Parameter(param)
-
-    def forward(self, input):
-        x = flow._C.matmul(input, self.param, transpose_b=True)
-        return x
-        #return flow._C.gelu(x)
-
-
-class MyModule2Min(flow.nn.Module):
-    def __init__(self, param):
-        super().__init__()
-        self.param = flow.nn.Parameter(param)
-
-    def forward(self, input, target):
-        x = flow._C.matmul(input, self.param)
-        return x.mean()
-
 
 def _make_optimizer(params, norm_type, max_norm):
     return flow.optim.SGD(
@@ -112,10 +92,9 @@ class TensorGenerator(object):
     def __init__(
         self, batch_size=8, feat1=10, feat2=8, device="cuda", parallel_mode=None
     ):
-        input = flow.ones(batch_size, feat1).to(device)
-        param1 = flow.ones(feat2, feat1).to(device)
-        param2 = flow.ones(feat2, feat1).to(device)
-        #target = flow.ones([batch_size,]).to(device)
+        input = flow.randn(batch_size, feat1).to(device)
+        param1 = flow.randn(feat2, feat1).to(device)
+        param2 = flow.randn(feat2, feat1).to(device)
         target = flow.randint(0, 10, (batch_size,)).to(device)
 
         ranks = np.array(range(flow.env.get_world_size()))
@@ -258,7 +237,6 @@ def _compare_with_eager(
     graph_m1 = MyModule1(gen.global_param1())
     graph_m2 = MyModule2(gen.global_param2())
     opt = _make_optimizer([graph_m1.param, graph_m2.param], norm_type, max_norm)
-    oneflow.boxing.nccl.enable_use_compute_stream(True)
     graph = MyGraph(graph_m1, graph_m2, opt, acc)
     graph_loss = graph(gen.global_input(), gen.global_target())
 
@@ -302,100 +280,11 @@ def _compare_with_eager(
     )
     test_case.assertTrue(
         np.allclose(grad1_a, grad1_b, rtol=rtol, atol=atol),
-        f"\n{grad1_a}\nvs.\n{grad1_b}, \ndiff:\n{grad1_a-grad1_b}",
+        f"\n{grad1_a}\nvs.\n{grad1_b}",
     )
     test_case.assertTrue(
         np.allclose(grad2_a, grad2_b, rtol=rtol, atol=atol),
         f"\n{grad2_a}\nvs.\n{grad2_b}",
-    )
-
-def _compare_with_eager_min(
-    test_case,
-    *,
-    batch_size=8,
-    acc=1,
-    norm_type=2.0,
-    max_norm=1.0,
-    device="cuda",
-    parallel_mode=None,
-    rtol=1e-03,
-    atol=1e-05,
-):
-    gen = TensorGenerator(
-        batch_size=batch_size, device=device, parallel_mode=parallel_mode
-    )
-
-    # eager
-    m1 = MyModule1Min(gen.local_param1())
-    m2 = MyModule2Min(gen.local_param2())
-    opt = _make_optimizer([m1.param, m2.param], norm_type, max_norm)
-    x = m1(gen.local_input())
-    loss = m2(x, gen.local_target())
-    opt.zero_grad()
-    loss.backward()
-    opt.clip_grad()
-    opt.step()
-
-    loss_a = loss.numpy()
-    grad1_a = m1.param.numpy()
-    grad2_a = m2.param.numpy()
-
-    # graph
-    graph_m1 = MyModule1Min(gen.global_param1())
-    graph_m2 = MyModule2Min(gen.global_param2())
-    opt = _make_optimizer([graph_m1.param, graph_m2.param], norm_type, max_norm)
-    oneflow.boxing.nccl.enable_use_compute_stream(True)
-    graph = MyGraph(graph_m1, graph_m2, opt, acc)
-    graph_loss = graph(gen.global_input(), gen.global_target())
-    flow._oneflow_internal.eager.Sync()
-    if flow.env.get_rank() == 0:
-        print(graph)
-
-    # debug
-    # rank = flow.env.get_rank()
-    # print("")
-    # print(f"[rank{rank}] eager local loss: {loss}")
-
-    # print(
-    #     f"[rank{rank}] graph_loss placement: {graph_loss.placement}, sbp: {graph_loss.sbp}"
-    # )
-    # print(f"[rank{rank}] graph_loss: {graph_loss}")
-
-    # local_loss = graph_loss.to_local()
-    # print(f"[rank{rank}] local_loss.numel(): {local_loss.numel()}")
-    # print(f"[rank{rank}] local_loss: {local_loss}")
-
-    if acc > 1 and graph_loss.numel() == acc:
-        graph_loss = graph_loss.mean()
-
-    if parallel_mode is None:
-        loss_b = graph_loss.numpy()
-        grad1_b = graph.m1.to(flow.nn.Module).param.numpy()
-        grad2_b = graph.m2.to(flow.nn.Module).param.numpy()
-    else:
-        ranks = np.array(range(flow.env.get_world_size()))
-        placement = flow.placement(device, ranks)
-        loss_b = graph_loss.to_global(placement, flow.sbp.broadcast).to_local().numpy()
-        grad1_b = graph.m1.to(flow.nn.Module).param.to_global(
-            placement, flow.sbp.broadcast
-        )
-        grad1_b = grad1_b.to_local().numpy()
-        grad2_b = graph.m2.to(flow.nn.Module).param.to_global(
-            placement, flow.sbp.broadcast
-        )
-        grad2_b = grad2_b.to_local().numpy()
-
-    # compare
-    test_case.assertTrue(
-        np.allclose(loss_a, loss_b, rtol=rtol, atol=atol), f"{loss_a} vs. {loss_b}"
-    )
-    test_case.assertTrue(
-        np.allclose(grad1_a, grad1_b, rtol=rtol, atol=atol),
-        f"\n{grad1_a}\nvs.\n{grad1_b}, \ndiff:\n{grad1_a-grad1_b}",
-    )
-    test_case.assertTrue(
-        np.allclose(grad2_a, grad2_b, rtol=rtol, atol=atol),
-        f"\n{grad2_a}\nvs.\n{grad2_b}, \ndiff:\n{grad2_a-grad2_b}",
     )
 
 
@@ -426,21 +315,19 @@ class TestGraphClipGradNorm(flow.unittest.TestCase):
         _compare_with_eager(test_case, batch_size=8, acc=8, parallel_mode="PP")
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_dp_mp(test_case):
+    def test_dp_mp(test_case):
         _compare_with_eager(test_case, parallel_mode=["DP", "MP"])
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_mp_pp(test_case):
-        # Can not pass value check
-        _compare_with_eager_min(test_case, parallel_mode=["MP", "PP"])
+    def test_mp_pp(test_case):
+        _compare_with_eager(test_case, parallel_mode=["MP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
     def test_dp_pp(test_case):
         _compare_with_eager(test_case, parallel_mode=["DP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_mp_pp_acc(test_case):
-        # Can not pass value check
+    def test_mp_pp_acc(test_case):
         _compare_with_eager(test_case, batch_size=8, acc=8, parallel_mode=["MP", "PP"])
 
     @flow.unittest.skip_unless_1n4d()
@@ -513,8 +400,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_mp_pp(test_case):
-        # value check error 
+    def test_mp_pp(test_case):
         _compare_with_eager(
             test_case,
             norm_type=-float("inf"),
@@ -534,8 +420,7 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
-    def _test_mp_pp_acc(test_case):
-        # Can not pass value check
+    def test_mp_pp_acc(test_case):
         _compare_with_eager(
             test_case,
             batch_size=8,
@@ -561,7 +446,4 @@ class TestGraphClipGradNormInf(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     # flow.manual_seed(0)
-    #unittest.main(defaultTest="TestGraphClipGradNorm.test_mp_pp")
-    #unittest.main()
-    # skip this test at the moment
-    ...
+    unittest.main()
