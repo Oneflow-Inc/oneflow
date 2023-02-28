@@ -188,7 +188,7 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
     the operation. For example:
 
     ```mlir
-      job @foo() -> tensor<2xf64> {
+      oneflow.job @foo() -> tensor<2xf64> {
         ...
         oneflow.return %0 : tensor<2xf64>
       }
@@ -216,4 +216,3 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 #endif // ONEFLOW_OPS
-

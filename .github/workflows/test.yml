@@ -24,7 +24,7 @@ env:
   ONEFLOW_IREE_COMMIT: 30e7dec07ca11287d1317296e08b12d815a013fe
   ONE_FX_SRC: one-fx
   ONE_FX_COMMIT: da4051c7f1ace7a20b3f54395b580cd102fc99da
-  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
+  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.13.1-cuda11.6-cudnn8-runtime:012d0248d193d71fd086485a2464e03ab8419ec9
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@torch1.13-v2
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -167,7 +167,7 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@torch1.13
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@torch1.13-v2
         if: env.is_secrets_accessible == '1'
         timeout-minutes: 90
         continue-on-error: true
@@ -191,7 +191,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@torch1.13-v2
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -240,7 +240,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13-v2
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -254,7 +254,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@torch1.13
+      - uses: Oneflow-Inc/get-oneflow@torch1.13-v2
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -274,9 +274,9 @@ jobs:
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
-            3.7
             3.8
-      - uses: Oneflow-Inc/get-oneflow@torch1.13
+            3.10
+      - uses: Oneflow-Inc/get-oneflow@torch1.13-v2
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
         if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit }}
@@ -297,7 +297,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.8
-      - uses: Oneflow-Inc/get-oneflow@torch1.13
+      - uses: Oneflow-Inc/get-oneflow@torch1.13-v2
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu116' && !matrix.cache-hit }}
@@ -316,8 +316,9 @@ jobs:
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
-            3.7
-      - uses: Oneflow-Inc/get-oneflow@torch1.13
+            3.8
+            3.10
+      - uses: Oneflow-Inc/get-oneflow@torch1.13-v2
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm15' && !matrix.cache-hit }}
         with:
@@ -356,7 +357,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13-v2
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -367,7 +368,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13-v2
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -392,7 +393,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@torch1.13-v2
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -423,7 +424,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@torch1.13-v2
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -507,7 +508,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13-v2
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -523,7 +524,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13-v2
         id: download-digest
         timeout-minutes: 10
         with:
@@ -533,7 +534,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@torch1.13
+        uses: Oneflow-Inc/get-oneflow/master-address@torch1.13-v2
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -733,7 +734,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13-v2
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -749,7 +750,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13-v2
         id: download-digest
         timeout-minutes: 10
         with:
@@ -759,7 +760,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download ASAN and UBSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13-v2
         id: asan-ubsan-download-digest
         timeout-minutes: 10
         with:
@@ -769,7 +770,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download TSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
+        uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13-v2
         id: tsan-download-digest
         timeout-minutes: 10
         with:
@@ -1071,7 +1072,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@torch1.13
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@torch1.13-v2
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1133,7 +1134,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@torch1.13-v2
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
