@@ -173,8 +173,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         input_tuple = (x, t2, t3, t4)
 
         def fn(*args):
-            inp = args
-            print("origin: ", inp)
+            print("origin: ", args)
 
             args_tree = ArgsTree(inp, False)
 
