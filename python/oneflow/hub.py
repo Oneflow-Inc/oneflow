@@ -148,6 +148,9 @@ def _get_oneflow_home():
     return oneflow_home
 
 
+_get_torch_home = _get_oneflow_home
+
+
 def _parse_repo_info(github):
     if ":" in github:
         repo_info, ref = github.split(":")
