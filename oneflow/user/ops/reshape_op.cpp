@@ -53,8 +53,8 @@ namespace oneflow {
     Shape out_logical_shape = *out_shape_ptr;
     // filter by output only be needed here
     // filter by input will be done in Operator::FilterNdSbpSignatureListByLogicalShape
-    if (Storage4NdSbp(out_nd_sbp_it->second, out_logical_shape, ctx->parallel_hierarchy())
-        > GetValidMaxCopyCost()) {
+    if (JUST(FilterNdSbpByLogicalShape(out_nd_sbp_it->second, out_logical_shape,
+                                       ctx->parallel_hierarchy()))) {
       // Remove the Nd SBP candidate
       std::swap(nd_sbp_sig, nd_sbp_sig_list->back());
       nd_sbp_sig_list->pop_back();
