@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -90,7 +91,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
   void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
 
-  void SetOrderInGraphForEachNode();
+  void InitOrderedTaskNodes();
   void MergeChainByPhysicalTaskGraph();
   void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
@@ -155,9 +156,10 @@ class BoxingTaskGraph final : public TaskGraph {
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskGraph);
   ~BoxingTaskGraph() = default;
 
-  static Maybe<BoxingTaskGraph> New() {
+  static Maybe<BoxingTaskGraph> New(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
     std::shared_ptr<BoxingTaskGraph> graph(new BoxingTaskGraph());
-    JUST(graph->Init());
+    JUST(graph->Init(Loop));
     return graph;
   }
 
@@ -166,9 +168,13 @@ class BoxingTaskGraph final : public TaskGraph {
 
  private:
   BoxingTaskGraph() = default;
-  Maybe<void> Init();
+  Maybe<void> Init(const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
 
-  HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks_;
+  void CreateOpNode2TaskIds(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+
+  HashMap<const OpNode*, std::vector<CompTaskNode*>> boxing_related_op_node2sorted_comp_tasks_;
+  HashMap<const OpNode*, std::vector<TaskId>> boxing_unrelated_op_node2sorted_task_ids_;
 };
 
 class TaskGraphRebuildCtx;
@@ -200,7 +206,7 @@ class RankTaskGraph final : public TaskGraph {
   Maybe<void> InitTransportTaskNodesFromProto();
   Maybe<void> InitRegstDescsConsumers();
   template<typename DoEachRankT>
-  Maybe<void> ForEachDutyRank(const ParallelDesc& parallel_desc, const DoEachRankT& DoEachRank);
+  Maybe<void> DoRankDuty(const ParallelDesc& parallel_desc, const DoEachRankT& DoWithRank);
 
   Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
   Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByParallelId(const OpNode* op_node,

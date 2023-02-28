@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
 namespace oneflow {
@@ -328,6 +329,15 @@ bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  const auto& op_name = actor_ctx_->task_proto()
+                            .exec_sequence()
+                            .exec_node(0)
+                            .kernel_conf()
+                            .op_attribute()
+                            .op_conf()
+                            .name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
@@ -373,6 +383,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       }
     }
+#ifdef OF_DEBUG_LAZY_RUNTIME
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
+              << " got regst message.";
+#endif  // OF_DEBUG_LAZY_RUNTIME
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
@@ -421,7 +435,20 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+  const auto& op_name = actor_ctx_->task_proto()
+                            .exec_sequence()
+                            .exec_node(0)
+                            .kernel_conf()
+                            .op_attribute()
+                            .op_conf()
+                            .name();
+#endif  // OF_DEBUG_LAZY_RUNTIME
   while (IsReadReady() && IsWriteReady()) {
+#ifdef OF_DEBUG_LAZY_RUNTIME
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
+              << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
+#endif  // OF_DEBUG_LAZY_RUNTIME
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -433,6 +460,11 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+#ifdef OF_DEBUG_LAZY_RUNTIME
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " finish to act count "
+              << act_cnt_;
+    ++act_cnt_;
+#endif  // OF_DEBUG_LAZY_RUNTIME
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();

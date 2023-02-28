@@ -16,12 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
+#include <string>
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/graph/task_edge.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace std {
 
@@ -57,7 +59,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   const StreamId& stream_id() const;
   int64_t chain_id() const { return chain_id_; }
-  int64_t order_in_graph() const { return order_in_graph_; }
+  int64_t order_in_chain() const { return order_in_chain_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -77,7 +79,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
   void set_chain_id(int64_t val);
-  void set_order_in_graph(int64_t val);
+  // TODO(strint): rm debug after fix thread run bug
+  void set_order_in_chain(int64_t val, const std::string& debug = "None");
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -122,6 +125,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskEdge* SoleOutDataEdge() const;
   size_t in_data_edges_size() const;
   size_t out_data_edges_size() const;
+  const TaskId& new_task_id() const {
+    CHECK(has_new_task_id());
+    return *new_task_id_;
+  }
+  void update_new_task_id(const TaskId& task_id);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
@@ -153,12 +161,18 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  private:
   void UpdateTaskId();
+  std::shared_ptr<RegstDesc> GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
+                                             int32_t min_register_num,
+                                             int32_t max_register_num) const;
 
   int64_t machine_id_;
   int64_t thrd_id_;
   int64_t task_id_;
   int64_t chain_id_;
-  int64_t order_in_graph_;
+  int64_t order_in_chain_;
+  bool order_has_been_set{false};
+  std::string set_debug;
+  std::thread::id set_thread_id{0};
   std::unique_ptr<TaskId> new_task_id_;
 
   ExecGraph exec_gph_;
@@ -175,6 +189,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   ~TaskEdge() override = default;
 
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
+  bool HasRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
   std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
   const HashSet<LogicalBlobId>& GetLbis() const { return lbis_; }
@@ -184,6 +199,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
 
   void CheckRegstLbiValid() const;
+  bool OutHasBindRegst() const { return !name_in_producer2regst_.empty(); }
 
   Maybe<void> InitFromProto(const TaskEdgeProto& proto,
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);

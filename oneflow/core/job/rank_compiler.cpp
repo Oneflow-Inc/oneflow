@@ -50,8 +50,9 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }  // namespace
 
-Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
-                                  Plan* plan) const {
+Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
+                                  DeallocateContext* deallocate_ctx) const {
+  LOG(INFO) << "current rank " << rank_;
   // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_));
@@ -61,7 +62,6 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
     return !task_gph->IsDutyRank(parallel_desc, comp_task_node->machine_id());
   };
-  task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (IsNotMyDuty(comp_task_node)) {
@@ -116,8 +116,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  // NOTE(levi): release task_gph here to decrise memory peak.
-  task_gph.reset();
+  deallocate_ctx->Deallocate(std::move(task_gph));
 
   // post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
@@ -125,7 +124,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   // TODO(chengcheng): set inplace hint for cpu regst
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
-  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
+  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job, rank_);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
   return Maybe<void>::Ok();

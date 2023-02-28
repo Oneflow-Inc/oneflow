@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cmath>
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
@@ -20,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/async_deallocate_context.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -40,12 +42,15 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/common/env_var/lazy.h"
 #include "oneflow/core/job/compile_mode.h"
+#include "oneflow/core/common/id_pairs.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -337,10 +342,10 @@ template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)
 Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
       Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-      auto boxing_task_graph = JUST(BoxingTaskGraph::New());
+      auto boxing_task_graph =
+          JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
           reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
@@ -356,6 +361,10 @@ Maybe<void> NNGraph::MasterRankCompile() {
           }
         }();
         boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+              ->Write(*boxing_task_graph_proto);
+        }
         Plan rank_plan;
         auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
         double start = GetCurTime();
@@ -366,11 +375,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
 
         VLOG(1) << "Graph name: " << name_ << " rank: " << i
                 << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
-        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
-              ->Write(*plan);
-          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(i) + ".dot");
-        }
         PlanUtil::GenRegisterHint(plan);
         plan->mutable_collective_boxing_plan();
         // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
@@ -411,7 +415,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   }
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    PlanUtil::GenLightPlan(&plan_, name_);
+    PlanUtil::GenLightPlan(&plan_, name_, GlobalProcessCtx::Rank());
   }
   OF_SESSION_BARRIER();
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
@@ -429,6 +433,198 @@ Maybe<void> NNGraph::MasterRankCompile() {
   OF_SESSION_BARRIER();
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  LOG(INFO) << "rank task graph compile finished.";
+  return Maybe<void>::Ok();
+}
+
+namespace {
+
+// return push/pull keys only in master process.
+template<typename X, typename Y>
+std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
+                                                              const std::string& prefix,
+                                                              const X& master_data,
+                                                              Y* worker_data) {
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
+  const size_t split_num = std::sqrt(world_size);
+  BalancedSplitter bs(world_size, split_num);
+  std::set<std::string> keys;
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::string data;
+    master_data.SerializeToString(&data);
+    FixedMultiThreadLoop(thread_num, split_num, [&](int i) {
+      Range range = bs.At(i);
+      std::string key = prefix + std::to_string(i);
+      Singleton<CtrlClient>::Get()->PushKV(key, data);
+      static std::mutex mutex;
+      std::unique_lock<std::mutex> lock(mutex);
+      CHECK(keys.insert(key).second);
+    });
+  } else {
+    const int64_t bs_index = bs.RecursiveBinarySearchIndex(GlobalProcessCtx::Rank());
+    std::string key = prefix + std::to_string(bs_index);
+    Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
+  }
+  return keys;
+}
+
+// return push/pull keys only in master process.
+template<typename T, typename DoEachT>
+std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& prefix, const T& data,
+                                                         const DoEachT& DoEach) {
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
+  constexpr int kWorkerStartRank = 1;
+  std::set<std::string> keys{};
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
+      if (i < kWorkerStartRank) { return; }
+      T data;
+      std::string key = prefix + std::to_string(i);
+      Singleton<CtrlClient>::Get()->PullKV(key, &data);
+      DoEach(data);
+      CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
+    });
+  } else {
+    Singleton<CtrlClient>::Get()->PushKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
+  }
+  return keys;
+}
+
+// return push/pull keys only in master process.
+template<typename T, typename PrepareEachT>
+std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& prefix, T* data,
+                                                         const PrepareEachT& PrepareEach) {
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
+  constexpr int kWorkerStartRank = 1;
+  std::set<std::string> keys{};
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
+      if (i < kWorkerStartRank) { return; }
+      T worker_data;
+      std::string key = prefix + std::to_string(i);
+      PrepareEach(&worker_data, i);
+      Singleton<CtrlClient>::Get()->PushKV(key, worker_data);
+      CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
+    });
+  } else {
+    Singleton<CtrlClient>::Get()->PullKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
+  }
+  return keys;
+}
+
+void DumpCalculationPassName(Job* job) {
+  for (int i = 0; i < job->net().op_size(); ++i) {
+    auto* op_conf = job->mutable_net()->mutable_op(i);
+    if (op_conf->has_scope_symbol_id()) {
+      const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf->scope_symbol_id());
+      op_conf->set_calculation_pass_name(scope.scope_proto().calculation_pass_name());
+    }
+  }
+}
+
+}  // namespace
+
+Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
+  // for async deallocating big objects.
+  AsyncDeallocateContext deallocate_ctx{};
+  std::set<std::string> push_pull_keys{};
+  const auto& Merge = [&](std::set<std::string>&& keys) {
+    push_pull_keys.insert(keys.begin(), keys.end());
+  };
+  if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
+  const size_t world_size = GlobalProcessCtx::WorldSize();
+  Merge(MultiThreadBroadcastFromMasterToWorkers(
+      world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
+  JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
+    Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
+    size_t rank = GlobalProcessCtx::Rank();
+    auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+
+    std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
+      boxing_task_graph->ToProto([](TaskNode*) { return true; }, boxing_task_graph_proto.get());
+      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(0))
+            ->Write(*boxing_task_graph_proto);
+      }
+    }
+    const auto& PrepareWorkerBoxingTaskGraphProto = [&](BoxingTaskGraphProto* proto, int64_t i) {
+      boxing_task_graph->ToProto(
+          [i](TaskNode* task_node) { return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i); },
+          proto);
+      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+            ->Write(*proto);
+      }
+    };
+    Merge(MultiThreadPushFromMasterToWorkers(
+        name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
+        PrepareWorkerBoxingTaskGraphProto));
+    // async deallocate `boxing_task_graph`.
+    deallocate_ctx.Deallocate(std::move(boxing_task_graph));
+    auto* plan = &plan_;
+    double start = GetCurTime();
+    // TODO(chengcheng): new memory reused by chunk
+    CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
+                   .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
+    // async deallocate `boxing_task_graph_proto`.
+    deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
+
+    VLOG(1) << "Graph name: " << name_ << " rank: " << rank
+            << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(rank))->Write(*plan);
+      PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
+    }
+    PlanUtil::GenRegisterHint(plan);
+    plan->mutable_collective_boxing_plan();
+    // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+    PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+    // reachable collective boxing task pairs,
+    auto reachable_cb_pairs =
+        std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
+    // generate reachable collective boxing task pairs
+    PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
+                                    reachable_cb_pairs.get());
+    {
+      // merge collective boxing task id pairs from workers.
+      IdPairs id_pairs{};
+      if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
+      const auto& MergePairs = [&](const IdPairs& pairs) {
+        CHECK(GlobalProcessCtx::IsThisProcessMaster());
+        static std::mutex mutex;
+        std::unique_lock<std::mutex> lock(mutex);
+        MergeIdPairs(pairs, reachable_cb_pairs.get());
+      };
+      Merge(MultiThreadPullFromWorkersToMaster(
+          name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
+    }
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      // TODO(chengcheng): test collective boxing for multi-job.
+      PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
+        return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
+      });
+    }
+    // async deallocate `boxing_task_graph_proto`.
+    deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
+    Merge(MultiThreadBroadcastFromMasterToWorkers(
+        world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
+        plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
+    return Maybe<void>::Ok();
+  }));
+  PlanUtil::PlanMemoryLog(&plan_, name_);
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    PlanUtil::GenLightPlan(&plan_, name_);
+  }
+  OF_SESSION_BARRIER();
+  // NOTE(zwx): After barrier plan is synchronized between all ranks,
+  // then it can be cleared for saving mem.
+  for (const auto& k : push_pull_keys) { Singleton<CtrlClient>::Get()->ClearKV(k); }
+  OF_SESSION_BARRIER();
+  // NOTE(chengcheng): recovery op_attr
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   LOG(ERROR) << "compile finished.";
   return Maybe<void>::Ok();
 }
@@ -442,11 +638,6 @@ Maybe<void> NNGraph::NaiveCompile() {
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenerateBasePlan", 1);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenMemBlockAndChunk", 1);
-    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
-    }
-    sub_compile_tc->Count("[PlanCompile]" + name_ + " LogPlan", 1);
     PlanUtil::GenRegisterHint(&plan_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
@@ -517,6 +708,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     static CompileMethodT VisitRankPerThread() {
       return &NNGraph::MasterRankCompile<&MultiThreadLoop<std::function<void(size_t)>>>;
     }
+    static CompileMethodT VisitRankPerProcess() { return &NNGraph::MasterAndWorkerRanksCompile; }
   };
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
   compile_tc->Count("[GraphCompile]" + name_ + " CompileAndSyncPlan", 0);
@@ -530,6 +722,17 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
 
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    auto cur_rank = GlobalProcessCtx::Rank();
+    auto plan_name = "job_" + name_ + "_plan";
+    if (JUST(CurrentCompileMode()) != CompileMode::kNaive) {
+      plan_name += std::to_string(cur_rank);
+    }
+    if (cur_rank == 0 || JUST(CurrentCompileMode()) != CompileMode::kNaive) {
+      TeePersistentLogStream::Create(plan_name)->Write(plan_);
+      PlanUtil::ToDotFile(plan_, plan_name + ".dot");
+    }
+  }
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
   runtime_inited_ = true;

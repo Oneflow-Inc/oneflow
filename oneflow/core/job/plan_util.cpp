@@ -239,7 +239,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
-void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
+void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job, int64_t limited_rank) {
   if (job.logical_chain_groups_size() == 0) { return; }
   HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
 
@@ -250,8 +250,8 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
-    int64_t logical_chain_id = task->task_set_info().chain_id();
+    if (!IsValidChainId(task->chain_id())) { continue; }
+    int64_t logical_chain_id = task->chain_id();
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -273,8 +273,16 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   for (const auto& logical_chain_group : job.logical_chain_groups()) {
     CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
     int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
-    CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
-          != logical_chain_id2machine_id2mem_block_id.end());
+    if (limited_rank == -1) {
+      CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+            != logical_chain_id2machine_id2mem_block_id.end());
+    } else {
+      if (logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+          == logical_chain_id2machine_id2mem_block_id.end()) {
+        // Skip when do rank compile and this logical chain group is not related with this rank.
+        continue;
+      }
+    }
     const auto& merged_rank2block =
         logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
     for (int64_t i = 1; i < logical_chain_group.logical_chain_id_list_size(); ++i) {
@@ -287,7 +295,12 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
       for (const auto& pair : this_rank2block) {
         int64_t this_machine_id = pair.first;
         int64_t this_mem_block_id = pair.second;
-        CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        if (limited_rank == -1) {
+          CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        } else {
+          if (merged_rank2block.find(this_machine_id) == merged_rank2block.end()) { continue; }
+        }
+
         int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
         CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
                   .second);
@@ -302,7 +315,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+    if (!IsValidChainId(task->chain_id())) { continue; }
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -315,12 +328,14 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
           // merge mem_block_id
           int64_t merged_mem_block_id = mem_block_id2merged_mem_block_id.at(mem_block_id);
           regst_desc->set_mem_block_id(merged_mem_block_id);
-          const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
-          CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
-          const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
-          std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
-          VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
-                  << merged_mem_block_id;
+          if (VLOG_IS_ON(3)) {
+            const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
+            CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
+            const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+            std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+            VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
+                    << merged_mem_block_id;
+          }
         }
       }
     }
@@ -896,7 +911,8 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 }  // namespace
 
 void PlanUtil::GenCollectiveBoxingPlan(
-    Job* job, Plan* plan, const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
+    DeallocateContext* deallocate_ctx, Job* job, Plan* plan,
+    const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -1000,6 +1016,7 @@ void PlanUtil::GenCollectiveBoxingPlan(
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
+  deallocate_ctx->Deallocate(std::shared_ptr<PlanTaskGraph>(std::move(plan_task_graph_ptr)));
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
@@ -1069,13 +1086,6 @@ struct RankDeviceMemoryInfo {
 }  // namespace
 
 void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
-  std::vector<const TaskProto*> ordered_tasks;
-  for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
-  auto CompTask = [](const TaskProto* a, const TaskProto* b) {
-    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
-  };
-  std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
-
   std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
                                                              RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
@@ -1114,8 +1124,8 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     }
   }
 
-  for (const auto* task : ordered_tasks) {
-    for (const auto& pair : task->produced_regst_desc()) {
+  for (const auto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
       const auto& regst = pair.second;
       if (regst.regst_desc_type().has_data_regst_desc()
           && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
@@ -1216,11 +1226,12 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   }
 }
 
-void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t filter_rank) {
+  // NOTE(chengcheng): ordered_tasks is NOT exec order, just task id order.
   std::vector<const TaskProto*> ordered_tasks;
   for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
   auto CompTask = [](const TaskProto* a, const TaskProto* b) {
-    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
+    return a->task_id() < b->task_id();
   };
   std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
 
@@ -1290,6 +1301,8 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     rank2ordered_task.at(task->machine_id()).push_back(task);
   }
   for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    // Filter rank to generate log.
+    if (filter_rank >= 0 && rank != filter_rank) { continue; }
     auto file_stream =
         TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
     file_stream << "rank : " << std::to_string(rank) << "\n";
@@ -1303,7 +1316,7 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
           << " task_id2name cannot find" << task_id;
       int64_t thrd_id = task->thrd_id();
       StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
-      file_stream << "order : " << std::to_string(i) << " , actor id : " << std::to_string(task_id)
+      file_stream << " actor id : " << std::to_string(task_id)
                   << " name : " << task_id2name.at(task_id) << " thrd : " << std::to_string(thrd_id)
                   << " device_type : " << DeviceType_Name(stream_id.device_type())
                   << " stream_index : " << std::to_string(stream_id.stream_index()) << " {\n";

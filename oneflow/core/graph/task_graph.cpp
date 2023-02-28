@@ -15,11 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -77,8 +79,9 @@ bool IsTickOpConf(const OperatorConf& conf) {
   return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
 }
 
-std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
+const std::string& GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   CHECK(op_conf.has_scope_symbol_id());
+  if (op_conf.has_calculation_pass_name()) { return op_conf.calculation_pass_name(); }
   int64_t scope_symbol_id = op_conf.scope_symbol_id();
   CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
       << " Error! op : \n " << op_conf.DebugString()
@@ -210,7 +213,7 @@ MakePredicatorIsLbiAllConsumersReachable(
                                                              const TaskNode* dst_node) -> bool {
     if (IsValidChainId(src_node->chain_id()) && IsValidChainId(dst_node->chain_id())
         && src_node->chain_id() == dst_node->chain_id()
-        && src_node->order_in_graph() <= dst_node->order_in_graph()) {
+        && src_node->order_in_chain() <= dst_node->order_in_chain()) {
       return true;
     }
     const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
@@ -287,15 +290,13 @@ Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
   return Maybe<void>::Ok();
 }
 
-CompTaskNode* GenCompTaskNode(const OpNode* op_node, int64_t parallel_id) {
+namespace {
+
+StreamId GetStreamId(const OpNode* op_node, int64_t parallel_id, TaskType task_type) {
   const ParallelDesc& parallel_desc = op_node->parallel_desc();
   int64_t parallel_num = parallel_desc.parallel_num();
-  CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
   int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   int64_t dev_phy_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-  comp_task_node->set_machine_id(machine_id);
-  comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_id);
-  comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
   DeviceId::device_index_t device_index = parallel_desc.device_type() == DeviceType::kCPU
                                               ? 0
@@ -309,10 +310,33 @@ CompTaskNode* GenCompTaskNode(const OpNode* op_node, int64_t parallel_id) {
     stream_index = Singleton<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
         device_id, stream_name_hint);
   } else {
-    stream_index = Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
-        comp_task_node->GetTaskType(), device_id);
+    stream_index =
+        Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(task_type, device_id);
   }
-  comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
+  return StreamId{device_id, stream_index};
+}
+
+TaskType TaskType4OpNode(const OpNode* op_node) {
+  std::unique_ptr<CompTaskNode> comp_task_node(NewCompTaskNode4OpNode(op_node));
+  return comp_task_node->GetTaskType();
+}
+
+}  // namespace
+
+CompTaskNode* GenCompTaskNode(
+    const OpNode* op_node, int64_t parallel_id,
+    const std::function<StreamId(const OpNode* op_node, int64_t parallel_id, TaskType task_type)>&
+        GetOrCreateStreamId) {
+  const ParallelDesc& parallel_desc = op_node->parallel_desc();
+  int64_t parallel_num = parallel_desc.parallel_num();
+  CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
+  int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+  int64_t dev_phy_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+  comp_task_node->set_machine_id(machine_id);
+  comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_id);
+  comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+  StreamId stream_id = GetOrCreateStreamId(op_node, parallel_id, comp_task_node->GetTaskType());
+  comp_task_node->set_thrd_id(EncodeStreamIdToInt64(stream_id));
   comp_task_node->set_op_node(op_node);
   return comp_task_node;
 }
@@ -322,7 +346,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
   const ParallelDesc& parallel_desc = op_node->parallel_desc();
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
-      sorted_comp_tasks->emplace_back(GenCompTaskNode(op_node, parallel_idx++));
+      sorted_comp_tasks->emplace_back(GenCompTaskNode(op_node, parallel_idx++, &GetStreamId));
       (void)dev_phy_id;
     }
     (void)machine_id;
@@ -555,22 +579,20 @@ void TaskGraph::RemoveEmptyRegsts() {
 
 void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
   if (EnableLogicalChain()) {
+    // Ctrl edges in chain has already been added in logical chain pass, so
+    // there is no need to call BuildCtrlRegstDescInSameChain here.
     MergeChainByLogicalChainId();
   } else {
     // TODO(chengcheng): erase old chain version in the future.
     MergeChainByPhysicalTaskGraph();
+    BuildCtrlRegstDescInSameChain();
   }
-  BuildCtrlRegstDescInSameChain();
 }
 
-void TaskGraph::SetOrderInGraphForEachNode() {
-  int64_t order_in_graph = 0;
-  auto SetOrderInGraph = [&](TaskNode* task_node) {
-    task_node->set_order_in_graph(order_in_graph);
-    ordered_task_nodes_.emplace_back(task_node);
-    ++order_in_graph;
-  };
-  TopoForEachNode(SetOrderInGraph);
+void TaskGraph::InitOrderedTaskNodes() {
+  // NOTE(chengcheng): Warning, ordered_task_nodes_ by topo is NOT valid in process
+  //  parallel compile, because the current rank task graph in Incomplete.
+  TopoForEachNode([&](TaskNode* task_node) { ordered_task_nodes_.emplace_back(task_node); });
 }
 
 void TaskGraph::MergeChainByPhysicalTaskGraph() {
@@ -587,15 +609,31 @@ void TaskGraph::MergeChainByPhysicalTaskGraph() {
 
     ++chain_id;
   }
-  for (auto* node : ordered_task_nodes_) { CHECK(IsValidChainId(node->chain_id())); }
+
+  // set order_in_chain by ordered_task_nodes_
+  HashMap<int64_t, int64_t> chain_id2order;
+  for (auto* node : ordered_task_nodes_) {
+    CHECK(IsValidChainId(node->chain_id()));
+    int64_t this_chain_id = node->chain_id();
+    if (chain_id2order.find(this_chain_id) == chain_id2order.end()) {
+      chain_id2order.emplace(this_chain_id, 0);
+    }
+    node->set_order_in_chain(chain_id2order.at(this_chain_id)++);
+  }
 }
 
 void TaskGraph::MergeChainByLogicalChainId() {
   for (TaskNode* this_node : ordered_task_nodes_) {
     CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
     if (!comp_node) { continue; }
-    const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
-    if (IsValidChainId(logical_chain_id)) { this_node->set_chain_id(logical_chain_id); }
+    const OperatorConf& conf = comp_node->op()->op_conf();
+    if (conf.has_logical_chain_id()) {
+      const int64_t logical_chain_id = conf.logical_chain_id();
+      CHECK(IsValidChainId(logical_chain_id));
+      this_node->set_chain_id(logical_chain_id);
+      CHECK(conf.has_order_in_logical_chain());
+      this_node->set_order_in_chain(conf.order_in_logical_chain());
+    }
   }
 }
 
@@ -605,6 +643,17 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
     return (node->chain_id() << 31) | (node->machine_id());
   };
   HashMap<int64_t, TaskNode*> physical_chain_id2node;
+  LOG(INFO) << "start to build ctrl.";
+  const auto& GetOpName = [](TaskNode* task) -> std::string {
+    if (task->exec_gph().node_num() != 1) { return ""; }
+    return task->exec_gph().SoleNode()->op()->op_name();
+  };
+  // Note that ordered_task_nodes_'s topology order in seperation plan compile is not gerenteed,
+  // So add ctrl edge with ordered_task_nodes_ in seperation plan compile may case dead lock.
+  for (auto* node : ordered_task_nodes_) {
+    LOG(INFO) << " ordered task " << node->order_in_chain() << " op " << GetOpName(node)
+              << " chain id " << GenPhysicalChainId(node);
+  }
   for (auto* node : ordered_task_nodes_) {
     if (IsConnectToTickOp(node)) { continue; }
     // NOTE(chengcheng): skip invalid chain id
@@ -619,6 +668,8 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
       std::string ctrl_regst_name;
       bool build_ctrl_edge = src_node->BuildCtrlRegstDescIfNeed(dst_node, &ctrl_regst_name);
       if (build_ctrl_edge) {
+        LOG(INFO) << "Add ctrl edge from " << GetOpName(src_node) << " to " << GetOpName(dst_node)
+                  << " ctrl regst name " << ctrl_regst_name;
         CHECK(!ctrl_regst_name.empty());
         TaskEdge* edge = NewEdge();
         Connect<TaskNode>(src_node, edge, dst_node);
@@ -627,6 +678,7 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
       iter->second = dst_node;
     }
   }
+  LOG(INFO) << "end to build ctrl.";
 }
 
 void TaskGraph::GetInplaceOpBlobArgList(
@@ -745,9 +797,11 @@ void TaskGraph::DecideExecutionOrder() {
   if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisable
       || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
           && GlobalProcessCtx::WorldSize() == 1)) {
-    SetOrderInGraphForEachNode();
+    InitOrderedTaskNodes();
+    LOG(INFO) << " order 0";
   } else {
     StraightenNodes(this, &ordered_task_nodes_);
+    LOG(INFO) << " order 1";
   }
 }
 
@@ -935,15 +989,17 @@ Maybe<void> GlobalTaskGraph::Init() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BoxingTaskGraph::Init() {
+Maybe<void> BoxingTaskGraph::Init(
+    const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
 
   const auto& TryCreateSortedCompTaskNodes = [&](const OpNode* op_node) {
-    if (op_node2sorted_comp_tasks_.count(op_node) > 0) { return; }
-    std::vector<CompTaskNode*>* sorted_comp_tasks = &(op_node2sorted_comp_tasks_[op_node]);
+    if (boxing_related_op_node2sorted_comp_tasks_.count(op_node) > 0) { return; }
+    std::vector<CompTaskNode*>* sorted_comp_tasks =
+        &(boxing_related_op_node2sorted_comp_tasks_[op_node]);
     GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
     for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
   };
@@ -952,10 +1008,36 @@ Maybe<void> BoxingTaskGraph::Init() {
     TryCreateSortedCompTaskNodes(op_edge->src_node());
     TryCreateSortedCompTaskNodes(op_edge->dst_node());
     BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
-    (this->*method)(op_edge, op_node2sorted_comp_tasks_.at(op_edge->src_node()),
-                    op_node2sorted_comp_tasks_.at(op_edge->dst_node()));
+    (this->*method)(op_edge, boxing_related_op_node2sorted_comp_tasks_.at(op_edge->src_node()),
+                    boxing_related_op_node2sorted_comp_tasks_.at(op_edge->dst_node()));
   });
+  ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, std::placeholders::_1));
+  CreateOpNode2TaskIds(Loop);
   return Maybe<void>::Ok();
+}
+
+void BoxingTaskGraph::CreateOpNode2TaskIds(
+    const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
+  const OpGraph* op_graph = Singleton<OpGraph>::Get();
+  std::vector<const OpNode*> op_nodes;
+  op_nodes.reserve(op_graph->node_num());
+  op_graph->ForEachNode([&](OpNode* op_node) {
+    if (boxing_related_op_node2sorted_comp_tasks_.count(op_node) == 0) {
+      op_nodes.push_back(op_node);
+      boxing_unrelated_op_node2sorted_task_ids_[op_node].reserve(
+          op_node->parallel_desc().parallel_num());
+    }
+  });
+  Loop(op_nodes.size(), [&](size_t i) {
+    const OpNode* op_node = op_nodes.at(i);
+    TaskType task_type = TaskType4OpNode(op_node);
+    const auto& parallel_desc = op_node->parallel_desc();
+    auto* task_ids = &boxing_unrelated_op_node2sorted_task_ids_[op_node];
+    for (int parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
+      const auto& stream_id = GetStreamId(op_node, parallel_id, task_type);
+      task_ids->push_back(Singleton<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id));
+    }
+  });
 }
 
 namespace {
@@ -1007,17 +1089,21 @@ void BoxingTaskGraph::ToProto(const std::function<bool(TaskNode*)>& Pick,
     ForEachNode([&](TaskNode* task_node) {
       if (Pick(task_node)) { sources.insert(task_node); }
     });
+    HashSet<TaskNode*> sources_out;
     for (auto* source : sources) {
       // The consumed task_ids must be generated from out_nodes.
-      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) { sources.insert(out_node); });
+      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) {
+        if (!sources.count(out_node)) { sources_out.insert(out_node); }
+      });
     }
+    sources.insert(sources_out.begin(), sources_out.end());
     return std::list<TaskNode*>{sources.begin(), sources.end()};
   }();
   const auto& TransportTaskNodeToProto = [&](TransportTaskNode* task_node) {
     task_node->ToTransportTaskProtoIf(proto->mutable_transport_task()->Add());
   };
   const auto& ComputeTaskNodeToProto = [&](CompTaskNode* task_node) {
-    auto* map = proto->mutable_op_name2compute_tasks();
+    auto* map = proto->mutable_boxing_related_op_name2compute_tasks();
     const auto& op_name = task_node->op_node()->op().op_name();
     auto* parallel_id2task_proto = (*map)[op_name].mutable_parallel_id2task();
     int64_t parallel_id = task_node->parallel_id();
@@ -1043,6 +1129,11 @@ void BoxingTaskGraph::ToProto(const std::function<bool(TaskNode*)>& Pick,
     return rank_task_edges;
   }();
   for (auto* edge : rank_task_edges) { edge->ToProto(proto->mutable_task_edge()->Add()); }
+  for (const auto& pair : boxing_unrelated_op_node2sorted_task_ids_) {
+    const auto& op_name = pair.first->op().op_name();
+    auto* vec = &(*proto->mutable_boxing_unrelated_op_name2task_ids())[op_name];
+    for (const auto& task_id : pair.second) { vec->add_task_id(EncodeTaskIdToInt64(task_id)); }
+  }
 }
 
 RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
@@ -1054,9 +1145,16 @@ RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing
 Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode* op_node,
                                                                    int64_t parallel_id) {
   const auto& op_name = op_node->op().op_name();
-  auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
-  if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
-  int64_t task_id = JUST(MapAt(iter->second.parallel_id2task(), parallel_id)).task_id();
+  auto iter = boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().find(op_name);
+  if (iter == boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().end()) {
+    return nullptr;
+  }
+  if (iter == boxing_task_graph_proto_->boxing_related_op_name2compute_tasks().end()) {
+    return nullptr;
+  }
+  auto task_iter = iter->second.parallel_id2task().find(parallel_id);
+  if (task_iter == iter->second.parallel_id2task().end()) { return nullptr; }
+  int64_t task_id = task_iter->second.task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
   CHECK_NOTNULL_OR_RETURN(comp_task_node) << "invalid task_type. task_id: " << task_id;
@@ -1069,7 +1167,18 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(con
   if (comp_task_node != nullptr) { return comp_task_node; }
   auto** comp_task_node_ptr = &op_node2comp_task_node_[op_node];
   if (*comp_task_node_ptr != nullptr) { return *comp_task_node_ptr; }
-  *comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id);
+  const TaskId task_id = [&] {
+    const auto& map = boxing_task_graph_proto_->boxing_unrelated_op_name2task_ids();
+    const auto& iter = map.find(op_node->op().op_name());
+    CHECK(iter != map.end());
+    CHECK_LT(parallel_id, iter->second.task_id_size());
+    return DecodeTaskIdFromInt64(iter->second.task_id().Get(parallel_id));
+  }();
+  const auto& GetStreamIdFromMaster = [&](const OpNode* op_node, int64_t parallel_id, TaskType) {
+    return task_id.stream_id();
+  };
+  *comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id, GetStreamIdFromMaster);
+  (*comp_task_node_ptr)->update_new_task_id(task_id);
   AddAllocatedNode(*comp_task_node_ptr);
   return *comp_task_node_ptr;
 }
@@ -1096,7 +1205,7 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node
 
 Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
-  for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
+  for (const auto& pair : boxing_task_graph_proto_->boxing_related_op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& pair : pair.second.parallel_id2task()) {
       const auto& task_proto = pair.second;
@@ -1105,6 +1214,8 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
       comp_task_node->set_op_node(op_node);
       AddAllocatedNode(comp_task_node);
+      // Note here has no consume regst
+      // Init task node and produce regst
       comp_task_node->InitFromProtoExceptConsumedRegsts(task_proto);
       JUST(task_graph_rebuild_ctx_->AddTaskNode(comp_task_node));
     }
@@ -1119,6 +1230,7 @@ Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
         << "redundant task_id.";
     auto* task_node = JUST(CreateTransportTask::Visit(task_proto.task_type()));
     AddAllocatedNode(task_node);
+    // Init task node and produce regst
     task_node->InitFromProtoExceptConsumedRegsts(transport_task_proto.task_proto());
     JUST(task_graph_rebuild_ctx_->AddTaskNode(task_node));
   }
@@ -1193,14 +1305,14 @@ bool RankTaskGraph::IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) 
 }
 
 template<typename DoEachRankT>
-Maybe<void> RankTaskGraph::ForEachDutyRank(const ParallelDesc& parallel_desc,
-                                           const DoEachRankT& DoEachRank) {
+Maybe<void> RankTaskGraph::DoRankDuty(const ParallelDesc& parallel_desc,
+                                      const DoEachRankT& DoWithRank) {
   if (current_rank_ == 0) {
     // make sure master knows at least one op_node.
-    DoEachRank(JUST(parallel_desc.MachineId4ParallelId(0)));
+    DoWithRank(JUST(parallel_desc.MachineId4ParallelId(0)));
   } else if (parallel_desc.HasMachineId(current_rank_)) {
     // workers only care their own rank.
-    DoEachRank(current_rank_);
+    DoWithRank(current_rank_);
   } else {
     // Do nothing.
   }
@@ -1219,36 +1331,71 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
+bool RawSafeToAddCtrlEdgesBetween(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
+  if (lhs->parallel_num() != rhs->parallel_num()) { return false; }
+  if (lhs->sorted_machine_ids() != rhs->sorted_machine_ids()) { return false; }
+  for (int64_t machine_id : lhs->sorted_machine_ids()) {
+    if (lhs->sorted_dev_phy_ids(machine_id) != rhs->sorted_dev_phy_ids(machine_id)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static constexpr auto* SafeToAddCtrlEdgesBetween =
+    DECORATE(&RawSafeToAddCtrlEdgesBetween, ThreadLocal);
+
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
+  // Note that tasks currently added in above code are from BoxingTaskGraph, so they are all boxing
+  // related.
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
-    JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
+    JUST(DoRankDuty(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
       JUST(CreateOrFindRankCompTaskNodeByRank(op_node, rank));
       return Maybe<void>::Ok();
     }));
-    if (var_op_names.count(op_node->op().op_name()) > 0) {
-      // To makes sure all ranks know all var_op_names, at least one task is needed.
+    if (var_op_names.count(op_node->op().op_name()) > 0
+        && !IsDutyRank(op_node->parallel_desc(), current_rank_)) {
+      // To makes sure all ranks know all var_op_names, at least one task for variable op is needed
+      // in the plan.
       JUST(CreateOrFindRankCompTaskNodeByParallelId(op_node, /*parallel_id=*/0));
     }
     return Maybe<void>::Ok();
   }));
+
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
-    return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
-                           [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
+    return DoRankDuty(op_edge->src_node()->parallel_desc(),
+                      [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
+
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
-        CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
-        CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
-                                   [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
+        CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
+            << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+            << dst->parallel_desc_sym()->data().DebugString();
+        CHECK_JUST(DoRankDuty(src->parallel_desc(),
+                              [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
+        // CHECK(SafeToAddCtrlEdgesBetween(src->parallel_desc(), dst->parallel_desc()))
+        //     << "\n========[src]========\n"
+        //     << src->parallel_desc().parallel_conf().DebugString() << "\n========[dst]========\n"
+        //     << dst->parallel_desc().parallel_conf().DebugString();
+        // CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
+        //                            [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank);
+        //                            }));
       });
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+
+  ForEachNode([&](TaskNode* task_node) { task_node->ProduceAllRegstsAndBindEdges(); });
+  ForEachEdge([&](TaskEdge* edge) {
+    CHECK(edge->OutHasBindRegst())
+        << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
+  });
   return Maybe<void>::Ok();
 }
 

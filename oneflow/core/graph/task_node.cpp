@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include <string>
+#include <thread>
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
@@ -41,7 +43,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_chain_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -89,9 +91,20 @@ void TaskNode::set_chain_id(int64_t val) {
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_graph(int64_t val) {
-  CHECK_EQ(order_in_graph_, -1);
-  order_in_graph_ = val;
+void TaskNode::set_order_in_chain(int64_t val, const std::string& debug) {
+  if (!order_has_been_set) {
+    CHECK_EQ(order_in_chain_, -1);
+    order_in_chain_ = val;
+    order_has_been_set = true;
+    set_debug = debug;
+    set_thread_id = std::this_thread::get_id();
+  } else {
+    LOG(ERROR) << " task " << VisualStr() << " 's order has been set by thread " << set_thread_id
+               << " debug " << set_debug << " with " << order_in_chain_
+               << " but set again by thread " << std::this_thread::get_id() << " debug " << debug
+               << " with " << val;
+    CHECK_EQ(order_in_chain_, -1);
+  }
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -211,8 +224,8 @@ void TaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto) {
   task_id_ = task_proto.task_id();
   new_task_id_.reset(new TaskId(DecodeTaskIdFromInt64(task_id_)));
   CHECK(task_proto.job_id() == GlobalJobDesc().job_id());
-  chain_id_ = task_proto.task_set_info().chain_id();
-  order_in_graph_ = task_proto.task_set_info().order_in_graph();
+  chain_id_ = task_proto.chain_id();
+  order_in_chain_ = task_proto.order_in_chain();
   // Step2: check exec_gph empty.
   CHECK(task_proto.exec_sequence().exec_node().empty());
   // Step3: init produced_regst.
@@ -243,8 +256,8 @@ void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
-  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+  task_proto->set_chain_id(chain_id_);
+  task_proto->set_order_in_chain(order_in_chain_);
 
   // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
@@ -253,7 +266,7 @@ void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
-    pair.second->ToProto(&regst_desc_proto);
+    pair.second->ToProto(&regst_desc_proto, check);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
 
@@ -298,7 +311,20 @@ RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
+  if (edge->HasRegst(name)) { return; }
   edge->AddRegst(name, GetProducedRegst(name));
+}
+
+std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
+                                                     int32_t min_register_num,
+                                                     int32_t max_register_num) const {
+  auto iter = produced_regsts_.find(name);
+  if (iter == produced_regsts_.end()) { return nullptr; }
+  const auto& regst = (iter->second);
+  CHECK_EQ(regst->min_register_num(), min_register_num);
+  CHECK_EQ(regst->max_register_num(), max_register_num);
+  CHECK_EQ(regst->enable_reuse_mem(), enable_reuse_mem);
+  return regst;
 }
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem) {
@@ -308,6 +334,8 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
+  const auto& regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
+  if (regst) { return regst; }
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_data_regst_desc();
   return ProduceRegst(name, enable_reuse_mem, min_register_num, max_register_num, regst_desc_type);
@@ -375,6 +403,13 @@ void TaskNode::UpdateTaskId() {
   task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 
+void TaskNode::update_new_task_id(const TaskId& task_id) {
+  CHECK(static_cast<bool>(new_task_id_));
+  CHECK(new_task_id_->stream_id() == task_id.stream_id());
+  *new_task_id_ = task_id;
+  task_id_ = EncodeTaskIdToInt64(*new_task_id_);
+}
+
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
   if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
     for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }
@@ -386,8 +421,13 @@ std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_produce
   return name_in_producer2regst_.at(name_in_producer);
 }
 
+bool TaskEdge::HasRegst(const std::string& name_in_producer) const {
+  return (name_in_producer2regst_.find(name_in_producer) != name_in_producer2regst_.end());
+}
+
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
-  CHECK_EQ(name_in_producer2regst_.size(), 1);
+  CHECK_EQ(name_in_producer2regst_.size(), 1)
+      << "edge: " << this << ", src: " << src_node()->task_id();
   return name_in_producer2regst_.begin()->second;
 }
 
@@ -400,6 +440,7 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
+  if (HasRegst(name_in_producer)) { return; }
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 
@@ -499,6 +540,7 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
   CHECK_NE_OR_RETURN(proto.src_task_id(), proto.dst_task_id()) << "self-loop are not supported";
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.src_task_id()));
   JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.dst_task_id()));
+  // Note that edge id from proto is ignored.
   lbis_.insert(proto.lbi().begin(), proto.lbi().end());
   for (const auto& pair : proto.name_in_producer2regst_desc_id()) {
     AddRegst(pair.first, JUST(task_graph_rebuild_ctx.RegstDesc4Id(pair.second)));
@@ -507,6 +549,7 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
 }
 
 void TaskEdge::ToProto(TaskEdgeProto* proto) const {
+  // proto->set_task_edge_uid(edge_id());
   proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
   proto->set_src_task_id(src_node()->task_id());
   proto->set_dst_task_id(dst_node()->task_id());
