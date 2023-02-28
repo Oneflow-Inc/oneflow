@@ -286,9 +286,6 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestCTCLoss1n1d(flow.unittest.TestCase):
     def test_ctc_loss(test_case):
@@ -315,22 +312,28 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
         targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device="cuda")
         input_lengths = torch.tensor([5, 5], dtype=torch.int32)
         target_lengths = torch.tensor([3, 3], dtype=torch.int32)
-        loss_mean = torch.nn.CTCLoss(reduction=oneof('mean', 'none','sum',nothing()))
+        loss_mean = torch.nn.CTCLoss(reduction=oneof("mean", "none", "sum", nothing()))
         out = loss_mean(log_probs, targets, input_lengths, target_lengths)
         return out
-        
-    
+
     @autotest(n=5, check_graph=False)
     def test_ctc_loss_functional(test_case):
         device_random = random_device()
         log_probs = random_tensor(ndim=3, dim0=5, dim1=2, dim2=3).to(device_random)
-        targets = random_tensor(ndim=2, dim0=2, dim1=3, low=1, high=3, dtype=int).to(device_random)
+        targets = random_tensor(ndim=2, dim0=2, dim1=3, low=1, high=3, dtype=int).to(
+            device_random
+        )
         input_lengths = torch.tensor([5, 5], dtype=torch.int32)
         target_lengths = torch.tensor([3, 3], dtype=torch.int32)
-        out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction=oneof('mean', 'none','sum',nothing()))
+        out = torch.nn.functional.ctc_loss(
+            log_probs,
+            targets,
+            input_lengths,
+            target_lengths,
+            reduction=oneof("mean", "none", "sum", nothing()),
+        )
         return out
-                    
-        
+
 
 if __name__ == "__main__":
     unittest.main()

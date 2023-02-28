@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.framework.tensor import Tensor
-import oneflow as flow 
- 
+import oneflow as flow
+
+
 def ctc_loss(
     log_probs: Tensor,
     targets: Tensor,
     input_lengths: Tensor,
     target_lengths: Tensor,
-    blank=0, 
-    reduction='mean', 
-    zero_infinity=False
+    blank=0,
+    reduction="mean",
+    zero_infinity=False,
 ) -> Tensor:
     r"""
     The Connectionist Temporal Classification loss.
