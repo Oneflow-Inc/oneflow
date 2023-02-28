@@ -13,19 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/scope.h"
-#include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/core/vm/symbol_storage.h"
+#ifndef ONEFLOW_CORE_COMMON_ASYNC_DEALLOCATE_CONTEXT_H_
+#define ONEFLOW_CORE_COMMON_ASYNC_DEALLOCATE_CONTEXT_H_
+
+#include "oneflow/core/common/deallocate_context.h"
 
 namespace oneflow {
 
-COMMAND(
-    Singleton<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
-COMMAND(Singleton<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
-COMMAND(Singleton<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
+class ThreadPool;
+
+class AsyncDeallocateContext final : public DeallocateContext {
+ public:
+  AsyncDeallocateContext();
+  ~AsyncDeallocateContext() override;
+
+  void LazyDeallocate(std::function<void()> LazyDeallocator) override;
+
+ private:
+  std::shared_ptr<ThreadPool> thread_pool_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_ASYNC_DEALLOCATE_CONTEXT_H_
