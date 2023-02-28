@@ -187,7 +187,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
             m_v = args_tree.map_tuple_leaf(leaf_fn)
             print("mapped:", m_v)
-            return m_v[0], m_v[1], m_v[2], m_v[3]
+            return m_v
 
         ret = fn(*input_tuple)
         print(ret)
