@@ -282,14 +282,14 @@ class FusedLinearWithGroupWiseQuantizedWeightFunctor {
     const int64_t regularized_group_dim =
         group_dim < 0 ? w->shape()->NumAxes() + group_dim : group_dim;
     CHECK(regularized_group_dim == 0 || regularized_group_dim == 1)
-        << "group_dim should be in range [-2,1).";
+        << "group_dim should be in range [-2,2).";
     const int64_t group_dim_size = regularized_group_dim == 0 ? n : k;
     const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
     CHECK(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
         << "group_size should be in range (0," << group_dim_size << "].";
     CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
         << "group_size should be a divisor of " << group_dim_size << ".";
-    const int64_t num_groups = group_dim_size / group_size;
+    const int64_t num_groups = group_dim_size / regularized_group_size;
     if (symmetric) {
       CHECK(w->dtype()->data_type() == DataType::kUInt8
             || w->dtype()->data_type() == DataType::kInt8)
