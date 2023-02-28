@@ -305,7 +305,7 @@ void LaunchDequantizeInnerSize1(ep::CudaStream* stream, int64_t outer_size, int6
   if constexpr (sizeof(T) * d_pack_size <= 16 && q_pack_size > 0) {
     const int64_t packed_elem_cnt = outer_size * group_size / d_pack_size;
     const int64_t packed_group_size = group_size / d_pack_size;
-    if (packed_elem_cnt >= (1 << 30)) {
+    if (packed_elem_cnt <= (1 << 30)) {
       RUN_CUDA_KERNEL(
           (DequantizeInnerSize1<T, U, int32_t, d_pack_size, q_pack_size, num_bits, symmetric>),
           stream, packed_elem_cnt, packed_elem_cnt, packed_group_size,
