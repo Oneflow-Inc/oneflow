@@ -299,7 +299,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
     # This test case can always success out of ci container, but will get error in ci container for unknown reason: error:
     # 'oneflow.ctc_loss' op attribute 'blank' failed to satisfy constraint: 32-bit signed integer attribute
     # loc("-":0:0): error: Failed to run round-trip passes
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=5, auto_backward=True, check_graph=False)
     def test_ctc_loss_with_diff_device_input(test_case):
         log_probs = torch.tensor(
             [
@@ -315,20 +315,19 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
         targets = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.int32, device="cuda")
         input_lengths = torch.tensor([5, 5], dtype=torch.int32)
         target_lengths = torch.tensor([3, 3], dtype=torch.int32)
-        loss_mean = torch.nn.CTCLoss(reduction=oneof('mean', 'none'))
+        loss_mean = torch.nn.CTCLoss(reduction=oneof('mean', 'none','sum',nothing()))
         out = loss_mean(log_probs, targets, input_lengths, target_lengths)
         return out
         
-
     
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=5, auto_backward=True, check_graph=False)
     def test_ctc_loss_functional(test_case):
         device_random = random_device()
         log_probs = random_tensor(ndim=3, dim0=5, dim1=2, dim2=3).to(device_random)
         targets = random_tensor(ndim=2, dim0=2, dim1=3, low=1, high=3, dtype=int).to(device_random)
         input_lengths = torch.tensor([5, 5], dtype=torch.int32)
         target_lengths = torch.tensor([3, 3], dtype=torch.int32)
-        out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction=oneof('mean', 'none'))
+        out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction=oneof('mean', 'none','sum',nothing()))
         return out
                     
         
