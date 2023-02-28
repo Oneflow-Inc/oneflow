@@ -175,7 +175,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         def fn(*args):
             print("origin: ", args)
 
-            args_tree = ArgsTree(inp, False)
+            args_tree = ArgsTree(args, False)
 
             for arg in args_tree.iter_nodes():
                 print(repr(arg))
@@ -191,6 +191,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         ret = fn(*input_tuple)
         print(ret)
+        self.assertTrue(isinstance(ret, tuple))
         self.assertEqual(id(ret[0]), id(x))
         self.assertEqual(id(ret[1]), id(t2))
         self.assertEqual(id(ret[2]), id(t3))
