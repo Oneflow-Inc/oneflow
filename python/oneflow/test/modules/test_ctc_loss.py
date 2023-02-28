@@ -338,12 +338,11 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
             _test_ctc_loss_with_diff_device_input(test_case, *arg)
 
     
+
     def test_ctc_loss_functional(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["reduction"] = ["mean", "none"]
-        for arg in GenArgList(arg_dict):
-            _test_ctc_loss_functional(test_case, *arg)
-            
+        for reduction in ['mean', 'none']:
+            _test_ctc_loss_functional(test_case, reduction)
+                    
         
 
 if __name__ == "__main__":
