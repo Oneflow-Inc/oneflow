@@ -77,6 +77,44 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.ones(2, 1, dtype=flow.float)
         test_case.assertEqual(x.element_size(), 4)
 
+    def test_tensor_new(test_case):
+        dtype = random_dtype(["pod"])
+        device = random_device()
+        x = random_tensor(ndim=3).to(dtype).to(device)
+        of_result = x.oneflow.new()
+        th_result = x.pytorch.new()
+        test_case.assertTrue(list(of_result.shape) == list(th_result.shape))
+        test_case.assertTrue(
+            of_result.numpy().dtype == th_result.detach().cpu().numpy().dtype
+        )
+        test_case.assertTrue(of_result.device.type == th_result.device.type)
+
+        y = random_tensor(ndim=3).to(dtype).to(device)
+        of_result = x.oneflow.new(y.oneflow)
+        th_result = x.pytorch.new(y.pytorch)
+        test_case.assertTrue(list(of_result.shape) == list(th_result.shape))
+        test_case.assertTrue(
+            of_result.numpy().dtype == th_result.detach().cpu().numpy().dtype
+        )
+        test_case.assertTrue(of_result.device.type == th_result.device.type)
+
+        np_data = np.random.randn(3, 3)
+        of_result = x.oneflow.new(np_data)
+        th_result = x.pytorch.new(np_data)
+        test_case.assertTrue(list(of_result.shape) == list(th_result.shape))
+        test_case.assertTrue(
+            of_result.numpy().dtype == th_result.detach().cpu().numpy().dtype
+        )
+        test_case.assertTrue(of_result.device.type == th_result.device.type)
+
+        of_result = x.oneflow.new([1, 2, 3])
+        th_result = x.pytorch.new([1, 2, 3])
+        test_case.assertTrue(list(of_result.shape) == list(th_result.shape))
+        test_case.assertTrue(
+            of_result.numpy().dtype == th_result.detach().cpu().numpy().dtype
+        )
+        test_case.assertTrue(of_result.device.type == th_result.device.type)
+
 
 if __name__ == "__main__":
     unittest.main()
