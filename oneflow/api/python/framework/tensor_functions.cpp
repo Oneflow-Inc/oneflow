@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -843,6 +844,62 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_new(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto self_tensor = PyTensor_Unpack(self);
+
+  if (!kwargs) {
+    if (PyTuple_Size(args) == 1 && PyTensor_Check(PyTuple_GET_ITEM(args, 0))) {
+      // tensor.new(other)
+      auto other_tensor = PyTensor_Unpack(PyTuple_GET_ITEM(args, 0));
+      CHECK_OR_THROW(!self_tensor->is_global() && !other_tensor->is_global())
+          << "Tensor.new(Tensor) only support local tensor.";
+      CHECK_OR_THROW(self_tensor->dtype() == other_tensor->dtype())
+          << "Tensor.new() expect " << self_tensor->dtype()->name() << " dtype tensor, but got "
+          << other_tensor->dtype()->name() << " dtype tensor.";
+      CHECK_OR_THROW(ASSERT(self_tensor->device())->enum_type()
+                     == ASSERT(other_tensor->device())->enum_type())
+          << "Tensor.new() expect tensor on " << ASSERT(self_tensor->device())->type()
+          << ", but got tensor on " << ASSERT(other_tensor->device())->type() << ".";
+      return PyTensor_New(ASSERT_PTR(functional::TensorWithOtherCtor(other_tensor)));
+    }
+    kwargs = PyDict_New();
+  }
+  PyObjectPtr dtype_key(PyUnicode_FromString("dtype"));
+  PyObjectPtr dtype_value(functional::CastToPyObject(self_tensor->dtype()));
+  CHECK_OR_THROW(PyDict_Contains(kwargs, dtype_key.get()) < 1);
+  CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value.get()) > -1);
+
+  if (self_tensor->is_global()) {
+    PyObjectPtr placement_key(PyUnicode_FromString("placement"));
+    PyObjectPtr sbp_key(PyUnicode_FromString("sbp"));
+    CHECK_OR_THROW(PyDict_Contains(kwargs, placement_key.get()) < 1);
+    CHECK_OR_THROW(PyDict_Contains(kwargs, sbp_key.get()) < 1);
+
+    Symbol<ParallelDesc> placement = ASSERT(self_tensor->parallel_desc());
+    std::vector<Symbol<SbpParallel>> sbp;
+    auto ndsbp = ASSERT(self_tensor->nd_sbp());
+    for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
+      sbp.emplace_back(ndsbp->sbp_parallel(i));
+    }
+
+    PyObjectPtr placement_value(functional::CastToPyObject(placement));
+    PyObjectPtr sbp_value(functional::CastToPyObject(sbp));
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "placement", placement_value.get()) > -1);
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "sbp", sbp_value.get()) > -1);
+  } else {
+    auto device = ASSERT(self_tensor->device());
+
+    PyObjectPtr device_key(PyUnicode_FromString("device"));
+    CHECK_OR_THROW(PyDict_Contains(kwargs, device_key.get()) < 1)
+        << "Some of the keywords were incorrect: device";
+    PyObjectPtr device_value(functional::CastToPyObject(device));
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_value.get()) > -1);
+  }
+  return functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
+  END_HANDLE_ERRORS
+}
+
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
@@ -952,6 +1009,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"new", (PyCFunction)PyTensorObject_new, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},

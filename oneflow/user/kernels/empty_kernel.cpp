@@ -40,7 +40,7 @@ class EmptyKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel>();
 
 }  // namespace user_op
 }  // namespace oneflow
