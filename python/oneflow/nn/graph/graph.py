@@ -1820,7 +1820,6 @@ class Graph(object):
 
     def __ensure_input_tensors_contiguous_and_flatten(self, *args, **kwargs):
         flattened_args = []
-        args_tree = ArgsTree((args, kwargs), False)
 
         def func(value):
             if isinstance(value, Tensor) and not value.is_contiguous():
@@ -1828,16 +1827,18 @@ class Graph(object):
             return value
 
         if isinstance(args, (tuple, list)) and len(kwargs)==0:
+            args_tree = ArgsTree(args, False)
             # contiguous
             args_tree.map_tuple_leaf(func)
             # flatten
-            for arg in args_tree.iter_nodes():
+            for arg in args_tree.iter_tuple_nodes():
                 if isinstance(arg, Tensor):
                     flattened_args.append(arg)
                 else:
                     continue
             return flattened_args
 
+        args_tree = ArgsTree((args, kwargs), False)
         # contiguous
         args_tree.map_leaf(func)  
         # flatten
