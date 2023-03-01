@@ -1812,7 +1812,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-        if isinstance(args, (tuple, list)):
+        if isinstance(args, (tuple, list)) and len(kwargs)==0:
             args_tree.map_tuple_leaf(func)
             return
 
@@ -1822,22 +1822,30 @@ class Graph(object):
         flattened_args = []
         args_tree = ArgsTree((args, kwargs), False)
 
-        for arg in args_tree.iter_nodes():
-            if isinstance(arg, Tensor):
-                flattened_args.append(arg)
-            else:
-                continue
-
         def func(value):
             if isinstance(value, Tensor) and not value.is_contiguous():
                 value.contiguous_()
             return value
 
-        if isinstance(args, (tuple, list)):
+        if isinstance(args, (tuple, list)) and len(kwargs)==0:
+            # contiguous
             args_tree.map_tuple_leaf(func)
+            # flatten
+            for arg in args_tree.iter_nodes():
+                if isinstance(arg, Tensor):
+                    flattened_args.append(arg)
+                else:
+                    continue
             return flattened_args
 
-        args_tree.map_leaf(func)
+        # contiguous
+        args_tree.map_leaf(func)  
+        # flatten
+        for arg in args_tree.iter_nodes():
+            if isinstance(arg, Tensor):
+                flattened_args.append(arg)
+            else:
+                continue
         return flattened_args
 
 
