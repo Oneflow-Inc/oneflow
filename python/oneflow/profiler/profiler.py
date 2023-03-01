@@ -24,6 +24,21 @@ class ProfilerActivity(Enum):
     CUDA = 2
 
 
+class ProfilerAction(Enum):
+    """
+    Profiler actions that can be taken at the specified intervals
+    """
+
+    NONE = 0
+    WARMUP = 1
+    RECORD = 2
+    RECORD_AND_SAVE = 3
+
+
+def tensorboard_trace_handler():
+    raise NotImplementedError()
+
+
 def supported_activities() -> Set[ProfilerActivity]:
     activities = set([ProfilerActivity.CPU])
     if oneflow.cuda.is_available():
@@ -36,6 +51,7 @@ class profile:
         self,
         activities: Optional[Iterable[ProfilerActivity]] = None,
         record_shapes: bool = False,
+        record_attrs: bool = False,
         record_bandwidth_for_cuda: bool = False,
     ) -> None:
         self.activities = set(activities) if activities else supported_activities()
@@ -47,6 +63,7 @@ class profile:
                 item in supported_activities()
             ), f"Unsupported ProfilerActivity {item}"
         self.record_shapes = record_shapes
+        self.record_attrs = record_attrs
         if not (ProfilerActivity.CUDA in self.activities):
             assert (
                 record_bandwidth_for_cuda == False
@@ -59,6 +76,7 @@ class profile:
             ProfilerActivity.CPU in self.activities,
             ProfilerActivity.CUDA in self.activities,
             self.record_shapes,
+            self.record_attrs,
             self.record_bandwidth_for_cuda,
         )
         return self
@@ -72,10 +90,11 @@ class profile:
         if self.profile_events is None:
             raise RuntimeError("Profiler didn't finish running")
 
-    def key_averages(self, group_by_input_shape=False):
+    def key_averages(self, group_by_input_shape=False, group_by_attributes=False):
         self.__check_finish()
         return self.profile_events.key_averages(
-            group_by_input_shape=group_by_input_shape
+            group_by_input_shape=group_by_input_shape,
+            group_by_attributes=group_by_attributes,
         )
 
     def events(self):

@@ -84,6 +84,16 @@ void FixedMultiThreadLoop(size_t fixed_thread_num, size_t total_num, const DoEac
   });
 }
 
+inline bool* MutIsMainThread() {
+  thread_local bool is_main_thread = false;
+  return &is_main_thread;
+}
+
+inline bool IsMainThread() { return *MutIsMainThread(); }
+inline void SetIsMainThread(bool is_main_thread) { *MutIsMainThread() = is_main_thread; }
+
+COMMAND(SetIsMainThread(true));
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

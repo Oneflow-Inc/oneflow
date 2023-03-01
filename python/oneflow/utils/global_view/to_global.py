@@ -19,7 +19,7 @@ import types
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 from oneflow.utils.global_view.global_utils import (
     to_global_tensor,
     check_input_global,
@@ -28,7 +28,7 @@ from oneflow.utils.global_view.global_utils import (
 )
 
 
-def to_global(input, placement=None, sbp=None, **kwargs):
+def to_global(input, placement=None, sbp=None, warn_on_non_tensor_leaf=True, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
     Note:
@@ -38,6 +38,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         input (oneflow.Tensor/None/list/tuple/dict): the input that needs to be converted.
         placement (oneflow.placement, optional): the desired placement of the input. Default: None
         sbp (oneflow.sbp.sbp, list/tuple of oneflow.sbp.sbp or Callable[[Tensor], oneflow.sbp.sbp], optional): the desired sbp of the input or self-defined functions in order to specify SBP. Default: None
+        warn_on_non_tensor_leaf (bool, optional): whether to warn when the leaf is not a tensor. Default: True
     
     Returns:
         The converted input.
@@ -121,11 +122,12 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                         # Ensure that each rank has a tensor instance, which can avoid the situation of none is none in the user-defined get_sbp function.
                         return flow.empty(0, 1)
                     else:
-                        warnings.warn(
-                            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                                type(node)
+                        if warn_on_non_tensor_leaf:
+                            warnings.warn(
+                                "Non-Tensor type: {} encountered, it will remain the same.".format(
+                                    type(node)
+                                )
                             )
-                        )
                         return node
 
                 mapped_input_none = input_tree_none.map_leaf(leaf_fn_to_none)
@@ -142,15 +144,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                     flow._oneflow_internal.cpu_broadcast(None, src_rank)
                 )
 
-    is_tensor_transform_list = False
-    if isinstance(input, Tensor):
-        input = [input]
-        is_tensor_transform_list = True
-
-    if input is None:
-        input = [None]
-
-    if isinstance(input, (dict, tuple, list)):
+    if isinstance(input, (Tensor, dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
@@ -163,22 +157,22 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                     return to_global_tensor(node, placement, sbp, **kwargs)
 
             else:
-                warnings.warn(
-                    "Non-Tensor type: {} encountered, it will remain the same.".format(
-                        type(node)
+                if warn_on_non_tensor_leaf:
+                    warnings.warn(
+                        "Non-Tensor type: {} encountered, it will remain the same.".format(
+                            type(node)
+                        )
                     )
-                )
                 return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
-        if is_tensor_transform_list:
-            return mapped_input[0]
         return mapped_input
 
     else:
-        warnings.warn(
-            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                type(input)
+        if warn_on_non_tensor_leaf:
+            warnings.warn(
+                "Non-Tensor type: {} encountered, it will remain the same.".format(
+                    type(input)
+                )
             )
-        )
         return input
