@@ -118,7 +118,7 @@ class Linear(Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        if os.getenv("ONEFLOW_LINEAR_SKIP_INIT", "0") == "1":
+        if os.getenv("ONEFLOW_LINEAR_EMBEDDING_SKIP_INIT", "0") == "1":
             return
         flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
