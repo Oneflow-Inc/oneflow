@@ -2572,3 +2572,20 @@ add_docstr(
         tensor([3, 3, 3], dtype=oneflow.int64)
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.baddbmm,
+    """
+    See :func:`oneflow.baddbmm`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3, 4)
+        >>> batch1 = flow.randn(2, 3, 5)
+        >>> batch2 = flow.randn(2, 5, 4)
+        >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
+    """,
+)
