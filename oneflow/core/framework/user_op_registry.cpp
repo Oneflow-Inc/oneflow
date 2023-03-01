@@ -218,6 +218,11 @@ OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_n
   return *this;
 }
 
+OpRegistry& OpRegistry::SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn) {
+  result_.enumerate_nd_sbp_signatures_fn = std::move(fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetDumpNdSbpSignatureForOpConfFn(
     Operator::DumpNdSbpSignatureForOpConfFn fn) {
   result_.dump_nd_sbp_signature_for_op_conf_fn = std::move(fn);
