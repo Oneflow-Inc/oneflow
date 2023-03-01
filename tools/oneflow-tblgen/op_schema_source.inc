@@ -79,6 +79,9 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.has_get_nd_sbp_fn -%}
     .SetGetNdSbpSignatureListFn(&{{opname}}::GetNdSbpSignatureList)
 {%- endif -%}
+{%- if op.has_enumerate_nd_sbp_signatures_fn -%}
+    .SetEnumerateNdSbpSignaturesFn(&{{opname}}::EnumerateNdSbpSignatures)
+{%- endif -%}
 {%- if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
     .SetDumpNdSbpSignatureForOpConfFn(&{{opname}}::DumpNdSbpSignatureForOpConfFn)
 {%- endif -%}
