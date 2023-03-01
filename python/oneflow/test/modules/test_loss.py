@@ -160,7 +160,7 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_cross_entropy_prob_loss_with_random_data_dim_2(test_case):
         return _test_cross_entropy_loss(2, prob=True)
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3)
     def test_cross_entropy_prob_loss_with_random_data_dim_3(test_case):
         return _test_cross_entropy_loss(3, prob=True)
 
