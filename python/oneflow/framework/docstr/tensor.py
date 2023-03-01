@@ -2626,5 +2626,6 @@ add_docstr(
         >>> batch1 = flow.randn(2, 3, 5)
         >>> batch2 = flow.randn(2, 5, 4)
         >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
+    """
 )
 
