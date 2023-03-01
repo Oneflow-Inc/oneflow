@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <utility>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -506,6 +507,12 @@ Maybe<void> Operator::GetSbpSignaturesIf(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::EnumerateNdSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
@@ -536,6 +543,7 @@ Maybe<void> Operator::GetNdSbpSignatureList(
   CHECK_OR_RETURN(nd_sbp_sig_list->empty());
   DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, *parallel_desc.hierarchy(),
                        hierarchy_value2sbp_sig_list, nd_sbp_sig_list);
+  JUST(EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   return Maybe<void>::Ok();
 }
 
@@ -766,6 +774,9 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       double sum_priority_ratio = 0.0;
+      // The initial ratio do not need to be a large one.
+      // Since any copy cost less than infinity would reset the min_sum_priority_ratio.
+      double min_sum_priority_ratio = 0.0;
       bool same_sbp_before_reduce = true;
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
@@ -807,9 +818,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         break;
       }
       // Otherwise, select the case with the lowest cost
-      if (total_copy_cost <= min_copy_cost) {
+      if (total_copy_cost < min_copy_cost * kFloatDeviationMinus      // Strict less than
+          || (total_copy_cost <= min_copy_cost * kFloatDeviationPlus  // Loose equal
+              && sum_priority_ratio < min_sum_priority_ratio)) {
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
+        min_sum_priority_ratio = sum_priority_ratio;  // NOLINT(clang-analyzer-deadcode.DeadStores)
       }
     }
     // Can't find any available sbp
