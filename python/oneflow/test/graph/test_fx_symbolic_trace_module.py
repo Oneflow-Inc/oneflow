@@ -57,6 +57,7 @@ class AlexNet(nn.Module):
         return x
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAlexNet(flow.unittest.TestCase):
     def test_alexnet(test_case):
         m = AlexNet()
