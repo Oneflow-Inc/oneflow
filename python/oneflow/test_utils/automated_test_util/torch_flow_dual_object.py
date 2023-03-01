@@ -422,7 +422,8 @@ def get_functional_graph_res(
             test_g_res = oneflow_res
         # For some ops whose input parameters is int, 'int' object has no attribute 'placement'.
         elif is_global() and (
-            isinstance(oneflow_arg, int) for oneflow_arg in oneflow_args
+            # isinstance(oneflow_arg, int) for oneflow_arg in oneflow_args
+            isinstance(oneflow_arg[0], int)
         ):
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
