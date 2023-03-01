@@ -3464,20 +3464,22 @@ class FusedGluFunctor {
 
     // check whether the user provide bias tensors
     bool has_bias = false;
-    if (b && (is_split_mode && c)) {
+    if(b){
       has_bias = true;
-    } else if (b && (is_split_mode && !c)) {
-      return Error::RuntimeError() << "expected existance of c, when provide tensors w, v and b";
-    } else if (b && (!is_split_mode)) {
-      has_bias = true;
+      if(is_split_mode){
+        CHECK_OR_RETURN(c)
+        << "expected existance of c, when provide tensors w, v and b";
+      }
     } else {
+      CHECK_OR_RETURN(!c)
+        << "expected existance of b while providing c";
       has_bias = false;
     }
 
     // obtain input shape
     const auto& x_shape = *(x->shape());
     const auto& w_shape = *(w->shape());
-    std::shared_ptr<const oneflow::Shape> b_shape = NULL;
+    std::shared_ptr<const oneflow::Shape> b_shape = nullptr;
     if (has_bias) { b_shape = (JUST(b)->shape()); }
 
     // check number of axes of x, w and b
