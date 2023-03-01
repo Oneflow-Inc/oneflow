@@ -82,6 +82,7 @@ class _TestModuleDiffPlacement(nn.Module):
 
         return x
 
+
 class _TestModuleDiffPlacementMiddle(nn.Module):
     def forward(self, x):
         sbp_1ds = [
@@ -114,6 +115,7 @@ class _TestModuleDiffPlacementMiddle(nn.Module):
                     )
 
         return x
+
 
 class _TestModuleDiffPlacementSmall(nn.Module):
     def __init__(self, from3to4, sbp1, sbp2, sbp3) -> None:
@@ -206,14 +208,12 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         # use nccl logical can pass test
         flow.boxing.nccl.enable_use_compute_stream(True)
         # Got stuck.
-        #flow.boxing.nccl.enable_use_compute_stream(False)
+        # flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
-        test_case.assertTrue(
-            np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05)
-        )
+        test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
 
     def test_lazy_boxing_2d_all_combination_diff_placement_middle(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
@@ -232,16 +232,14 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         # use nccl logical can pass test
         flow.boxing.nccl.enable_use_compute_stream(True)
         # Got stuck.
-        #flow.boxing.nccl.enable_use_compute_stream(False)
+        # flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_placement = _TestModuleDiffPlacementMiddle()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
         print("fininsh 0")
         flow._oneflow_internal.eager.Sync()
-        test_case.assertTrue(
-            np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05)
-        )
+        test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
         print("fininsh 1")
 
     def test_lazy_boxing_2d_all_combination_diff_placement_small(test_case):
@@ -273,19 +271,20 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             for sbp1 in sbp_1ds:
                 for sbp2 in sbp_1ds:
                     for sbp3 in sbp_1ds:
-                        #if flow.env.get_rank() == 0:
+                        # if flow.env.get_rank() == 0:
                         #    print("try to run ", diff_p_3to4, test_cnt, sbp1, sbp2, sbp3)
-                        model_diff_placement = _TestModuleDiffPlacementSmall(diff_p_3to4,sbp1, sbp2, sbp3)
+                        model_diff_placement = _TestModuleDiffPlacementSmall(
+                            diff_p_3to4, sbp1, sbp2, sbp3
+                        )
                         graph_diff_placement = _TestGraph(model_diff_placement)
                         z = graph_diff_placement(x)
                         test_case.assertTrue(
                             np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05)
                         )
-                        #if flow.env.get_rank() == 0:
+                        # if flow.env.get_rank() == 0:
                         #    print("finish to run ", diff_p_3to4, test_cnt, sbp1, sbp2, sbp3)
                         #    print("")
                         test_cnt += 1
-
 
 
 if __name__ == "__main__":

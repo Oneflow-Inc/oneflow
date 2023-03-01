@@ -43,6 +43,7 @@ def _fuse_conv_bn_eval(conv, bn):
 
     return fused_conv
 
+
 def _fuse_conv_bn_weights(conv_w, conv_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b):
     if conv_b is None:
         conv_b = flow.zeros_like(bn_rm)
@@ -59,6 +60,7 @@ def _fuse_conv_bn_weights(conv_w, conv_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b):
 
     return flow.nn.Parameter(conv_w), flow.nn.Parameter(conv_b)
 
+
 def _parent_name(target: str) -> Tuple[str, str]:
     """
     Splits a qualname into parent path and last atom.
@@ -67,12 +69,14 @@ def _parent_name(target: str) -> Tuple[str, str]:
     *parent, name = target.rsplit(".", 1)
     return parent[0] if parent else "", name
 
+
 def _replace_node_module(
     node: flow.fx.Node, modules: Dict[str, Any], new_module: flow.nn.Module
 ):
     assert isinstance(node.target, str)
     parent_name, name = _parent_name(node.target)
     setattr(modules[parent_name], name, new_module)
+
 
 def _fx_fuse(model: flow.nn.Module) -> flow.nn.Module:
     model = copy.deepcopy(model)
@@ -122,6 +126,7 @@ def _fx_fuse(model: flow.nn.Module) -> flow.nn.Module:
     # to keep the generated code in sync.
     fx_model.recompile()
     return fx_model
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestConvBnFuse(flow.unittest.TestCase):
