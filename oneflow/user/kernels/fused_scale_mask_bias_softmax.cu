@@ -43,9 +43,25 @@ struct LoadWithBias {
     mask.storage =
         *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(mask_ptr_) + m_offset);
     cuda::softmax::Pack<SRC, N> bias;
+    /*
+    1). bias_stride_ = 0 for bias: [1, num_heads, seqlen_q, seqlen_kv]
+                             x:    [batch_size, num_heads, seqlen_q, seqlen_kv]
+    2). bias_stride_ > 0 for bias: [ensemble_batch, 1, num_heads, seqlen_q, seqlen_kv]
+                             x:    [ensemble_batch, batch_size, num_heads, seqlen_q, seqlen_kv]
+        here, bias_stride_ = batch_size, row_stride_ = num_heads * seqlen_q
+        x could be viewed as [B1, B2, B3] and bias could be viewed as [B1, 1, B3] where
+        B1 = ensemble_batch, B2 = batch_size = bias_stride_, B3 = num_heads * seqlen_q = row_stride_
+        For row in range [0, B1 * B2 * B3) {[0, ensemble_batch * batch_size * num_heads * seqlen_q]}
+        b1 = row/(B2*B3), b2=(row%(B2*B3)/B3), b3 = row%B3, after broadcast b2 will be 0 for bias.
+        And finally the correspoding (broadcast) row of bias will be:
+        `b1 * B3 + b3 = row/(B2*B3) * B3 + row%B3
+        = row / (bias_stride_ * row_stride_) * row_stride_ + row % row_stride_`
+    */
     int64_t bias_offset =
         (bias_stride_ > 0)
-            ? ((row % row_stride_ + row / bias_stride_ * row_stride_) * row_size_ + col) / N
+            ? ((row / (bias_stride_ * row_stride_) * row_stride_ + row % row_stride_) * row_size_
+               + col)
+                  / N
             : (row % row_stride_ * row_size_ + col) / N;
     bias.storage =
         *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(bias_ptr_) + bias_offset);
@@ -158,6 +174,22 @@ class FusedScaleMaskBiasSoftmaxKernel final : public user_op::OpKernel {
 
     auto x_shape = x->shape_view();
     auto axes = x_shape.NumAxes();
+    /*
+     * axes=3 for x: [batch_size, num_heads, seq], mask: [batch_size, 1, seq], no bias here
+     * axes=4 for x: [batch_size, num_heads, seq_len_q, seq_len_kv]
+     *            mask: [batch_size, 1, 1, seq_len_kv]
+     *            bias: [1, num_heads, seq_len_q, seq_len_kv]
+     * axes=5 for x: [ensemble_batch, batch_size, num_heads, seq_len_q, seq_len_kv]
+     *            mask: [ensemble_batch, batch_size, 1, 1, seq_len_kv]
+     *            bias: [ensemble_batch, 1, num_heads, seq_len_q, seq_len_kv]
+     * `axes=5` is equivalent to `axes=4` when ensemble_batch = 1 .
+     *
+     * row_stride is used for computing `mask` stride and
+     * bias_stride for computing `bias` stride
+     * row_stride is num_heads (for `axes=3`) or num_heads * seq_len_q (for `axes=4` & `axes=5`)
+     * bias_stride is 0 (for `axes=4`) or batch_size (for `axes=5`)
+     * row_size = seq_len_k (the last dimension of `x`)
+     */
     CHECK(axes == 3 || axes == 4 || axes == 5);
     auto mask_shape = mask->shape_view();
     CHECK(mask_shape.NumAxes() == axes);
@@ -172,10 +204,10 @@ class FusedScaleMaskBiasSoftmaxKernel final : public user_op::OpKernel {
     }
 
     user_op::Tensor* bias = nullptr;
-    int64_t bias_stride = 0;  // ensemble batch for axes==5
+    int64_t bias_stride = 0;
     if (ctx->has_input("bias", 0)) {
       bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-      if (axes == 5 && x_shape.At(0) != 1) bias_stride = x_shape.At(0);
+      if (axes == 5 && x_shape.At(0) != 1) bias_stride = x_shape.At(1);
     }
     LaunchFusedSoftmaxForwardKernel<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
                                        out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(),

@@ -64,7 +64,15 @@ def _ref_op(x, v, scale, mask, bias=None, inplace=False):
 
 
 def _test_fused_scale_mask_bias_softmax(
-    test_case, N=512, S=128, D=128, h=8, d=32, mode="row", inplace=False
+    test_case,
+    N=512,
+    S=128,
+    D=128,
+    h=8,
+    d=32,
+    mode="row",
+    ensemble_batch=8,
+    inplace=False,
 ):
     x = flow.randn(N, S, D, requires_grad=True).cuda()  # N, S, D
     w3 = [flow.randn(D, h * d, requires_grad=True).cuda() for _ in range(3)]  # D, h*d*3
@@ -75,6 +83,13 @@ def _test_fused_scale_mask_bias_softmax(
         bias = flow.randn(1, h, S, S, requires_grad=True).cuda()  # 1, h, S, S
         bias.retain_grad()
         mask = mask[:, None, None, :]
+    if mode == "ensemble":
+        x = flow.randn(ensemble_batch, N, S, D, requires_grad=True).cuda()  # N, S, D
+        bias = flow.randn(
+            ensemble_batch, 1, h, S, S, requires_grad=True
+        ).cuda()  # E, 1, h, S, S
+        bias.retain_grad()
+        mask = flow.randn(ensemble_batch, N, 1, 1, S, requires_grad=False).cuda()
     if mode == "col" or mode == "global_col":
         N, S = S, N
         x = x.transpose(-2, -3)  # S, N, D
@@ -123,7 +138,7 @@ def _test_fused_scale_mask_bias_softmax(
         test_case.assertTrue(np.allclose(grad_bias1, grad_bias2, atol=5e-4, rtol=1e-5))
 
 
-@unittest.skipIf(True, "skip test for fused_scale_mask_bias_xsoftmax.")
+@unittest.skipIf(True, "skip test for fused_scale_mask_bias_softmax.")
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMsaSoftmax(flow.unittest.TestCase):
@@ -140,19 +155,28 @@ class TestFusedMsaSoftmax(flow.unittest.TestCase):
         _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "template")
         _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "global_col")
 
-        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "row", True)
-        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "col", True)
+        _test_fused_scale_mask_bias_softmax(test_case, 16, 128, 64, 8, 32, "ensemble")
+
         _test_fused_scale_mask_bias_softmax(
-            test_case, 128, 128, 64, 8, 32, "triangular_start", True
+            test_case, 16, 128, 64, 8, 32, "row", inplace=True
         )
         _test_fused_scale_mask_bias_softmax(
-            test_case, 16, 128, 64, 8, 32, "triangular_end", True
+            test_case, 16, 128, 64, 8, 32, "col", inplace=True
         )
         _test_fused_scale_mask_bias_softmax(
-            test_case, 16, 128, 64, 8, 32, "template", True
+            test_case, 128, 128, 64, 8, 32, "triangular_start", inplace=True
         )
         _test_fused_scale_mask_bias_softmax(
-            test_case, 16, 128, 64, 8, 32, "global_col", True
+            test_case, 16, 128, 64, 8, 32, "triangular_end", inplace=True
+        )
+        _test_fused_scale_mask_bias_softmax(
+            test_case, 16, 128, 64, 8, 32, "template", inplace=True
+        )
+        _test_fused_scale_mask_bias_softmax(
+            test_case, 16, 128, 64, 8, 32, "global_col", inplace=True
+        )
+        _test_fused_scale_mask_bias_softmax(
+            test_case, 16, 128, 64, 8, 32, "ensemble", inplace=True
         )
 
 
