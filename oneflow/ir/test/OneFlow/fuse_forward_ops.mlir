@@ -183,4 +183,19 @@ module  {
     // CHECK: %[[OUT:[a-zA-Z0-9_]+]] = "oneflow.scalar_mul_by_tensor"(%[[ARG_0]], %[[ARG_1]]
     return %output : tensor<64x3x7x7xf32>
     }
+
+  func.func @GraphToRun_fused_gelu_1(%arg0: tensor<2x2304x640xf32>) -> tensor<2x2304x5120xf32> {
+    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod.proj.weight", output_lbns = ["gelu_mod.proj.weight/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 18 : i64, shape = [10240 : si64, 640 : si64]} : () -> tensor<10240x640xf32>
+    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod.proj.bias", output_lbns = ["gelu_mod.proj.bias/out"], parallel = #sbp.parallel<[] -> [[#sbp.B]]>, scope_symbol_id = 25 : i64, shape = [10240 : si64]} : () -> tensor<10240xf32>
+    %output_1 = "oneflow.input"(%arg0) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_0_input.0.0_2", output_lbns = ["_GraphToRun_0_input.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [2 : si64, 2304 : si64, 640 : si64]} : (tensor<2x2304x640xf32>) -> tensor<2x2304x640xf32>
+    %0 = "oneflow.broadcast_matmul"(%output_1, %output) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod.proj-broadcast_matmul-0", scope_symbol_id = 21 : i64, transpose_a = false, transpose_b = true} : (tensor<2x2304x640xf32>, tensor<10240x640xf32>) -> tensor<2x2304x10240xf32>
+    %1 = "oneflow.broadcast_add"(%0, %output_0) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod.proj-broadcast_add-1", scope_symbol_id = 21 : i64} : (tensor<2x2304x10240xf32>, tensor<10240xf32>) -> tensor<2x2304x10240xf32>
+    %2 = "oneflow.narrow"(%1) {device_name = ["@0:0"], device_tag = "cuda", dim = 2 : si64, hierarchy = [1], length = 5120 : si64, op_name = "gelu_mod-narrow-2", scope_symbol_id = 31 : i64, start = 0 : si64} : (tensor<2x2304x10240xf32>) -> tensor<2x2304x5120xf32>
+    %3 = "oneflow.narrow"(%1) {device_name = ["@0:0"], device_tag = "cuda", dim = 2 : si64, hierarchy = [1], length = 5120 : si64, op_name = "gelu_mod-narrow-3", scope_symbol_id = 31 : i64, start = 5120 : si64} : (tensor<2x2304x10240xf32>) -> tensor<2x2304x5120xf32>
+    %4 = "oneflow.gelu"(%3) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod-gelu-4", scope_symbol_id = 31 : i64} : (tensor<2x2304x5120xf32>) -> tensor<2x2304x5120xf32>
+    %5 = "oneflow.broadcast_mul"(%2, %4) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "gelu_mod-broadcast_mul-5", scope_symbol_id = 31 : i64} : (tensor<2x2304x5120xf32>, tensor<2x2304x5120xf32>) -> tensor<2x2304x5120xf32>
+    %output_2 = "oneflow.output"(%5) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_0_output.0.0_2", output_lbns = ["_GraphToRun_0_output.0.0_2/out"], scope_symbol_id = 12 : i64, shape = [2 : si64, 2304 : si64, 5120 : si64]} : (tensor<2x2304x5120xf32>) -> tensor<2x2304x5120xf32>
+    //CHECK: "oneflow.fused_glu"
+    return %output_2 : tensor<2x2304x5120xf32>
+    }
 }
