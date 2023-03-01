@@ -25,7 +25,6 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-# TODO: add this and put it under `job_wrapper.IsLastIRPass() == false`
 os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
 
 import oneflow as flow
@@ -51,10 +50,6 @@ class GEGLU(nn.Module):
         self.proj = nn.Linear(dim_in, dim_out * 2)
 
     def forward(self, hidden_states):
-        # TODO: fuse these ops in MLIR
-        # return flow._C.fused_glu(
-        #     hidden_states, self.proj.weight, self.proj.bias, activation="gelu"
-        # )
         hidden_states, gate = self.proj(hidden_states).chunk(2, dim=-1)
         return hidden_states * F.gelu(gate)
 
