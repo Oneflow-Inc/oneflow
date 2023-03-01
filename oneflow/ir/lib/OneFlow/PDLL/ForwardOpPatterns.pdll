@@ -212,8 +212,8 @@ Pattern {
   let gelu = op<oneflow.broadcast_mul>(hidden_states.0,gate_activate.0){device_name = device_name, device_tag = device_tag}-> (out: Type);
 
   rewrite gelu with{
-    let fused_gelu_out = op<oneflow.fused_glu>(x, w, b){operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0]> : vector<5xi32>">,device_name = device_name, device_tag = device_tag}-> (out, matmul_wx_out);
-    CopyUserOpAttrs(gelu,fused_gelu_out);
+    let fused_gelu_out = op<oneflow.fused_glu>(x, w, b){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0]> : vector<5xi32>">, device_name = device_name, device_tag = device_tag}-> (out, matmul_wx_out);
+    CopyUserOpAttrs(gelu, fused_gelu_out);
     replace gelu with fused_gelu_out.0;
     replace matmul_wx_add with fused_gelu_out.1;
   };
