@@ -898,87 +898,87 @@ class AddBiasResidualLayerNormFunctor {
       for (bool has_gamma : bool_list) {
         /* has_beta */
         for (bool has_beta : bool_list) {
-          one::OpBuilder new_op = one::OpBuilder("layer_norm").Input("x").Input("bias");
+          /* has_pre_bias */
+          for (bool has_pre_bias : bool_list) {
+            one::OpBuilder new_op = one::OpBuilder("layer_norm").Input("x");
+            if (has_gamma) { new_op = new_op.Input("gamma"); }
+            if (has_beta) { new_op = new_op.Input("beta"); }
+            if (has_pre_bias) { new_op = new_op.Input("pre_bias"); }
+            if (nb_residual >= 1) { new_op = new_op.Input("pre_residual_1"); }
+            if (nb_residual == 2) { new_op = new_op.Input("pre_residual_2"); }
+            new_op = new_op.Output("y").Output("mean").Output("inv_variance");
 
-          if (has_gamma) { new_op = new_op.Input("gamma"); }
-          if (has_beta) { new_op = new_op.Input("beta"); }
-          if (nb_residual >= 1) { new_op = new_op.Input("residual_1"); }
-          if (nb_residual == 2) { new_op = new_op.Input("residual_2"); }
-          new_op = new_op.Output("y").Output("mean").Output("inv_variance");
-
-          std::shared_ptr<OpExpr> op_pointer = CHECK_JUST(new_op.Build());
-          ops_.insert(std::pair<std::tuple<int, bool, bool>, std::shared_ptr<OpExpr>>(
-              std::tuple<int, bool, bool>(nb_residual, has_gamma, has_beta), op_pointer));
-        }  // has_beta
-      }    // has_bias
-    }      // number of residual
+            std::shared_ptr<OpExpr> op_pointer = CHECK_JUST(new_op.Build());
+            ops_.insert(std::pair<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>>(
+                std::tuple<int, bool, bool, bool>(nb_residual, has_gamma, has_beta, has_pre_bias), op_pointer));
+          } // has_pre_bias
+        } // has_beta
+      } // has_gamma
+    } // number of residual
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& bias,
-                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
-                           const Optional<one::Tensor>& residual_1,
-                           const Optional<one::Tensor>& residual_2, const double& epsilon) const {
-    size_t nb_residual = 0;
-
+                           const Optional<one::Tensor>& gamma,
+                           const Optional<one::Tensor>& beta,
+                           const Optional<one::Tensor>& pre_bias,
+                           const Optional<one::Tensor>& pre_residual_1,
+                           const Optional<one::Tensor>& pre_residual_2,
+                           const double& epsilon,
+                           const double& pre_alpha_1,
+                           const double& pre_alpha_2) const {
     // check shape of x
     const auto& x_shape = *(x->shape());
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
 
-    // check shape of bias
-    const auto& bias_shape = *(bias->shape());
-    CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
-        << "number of axes of \'bias\' should have be greater than 1, yet get "
-        << bias_shape.NumAxes();
-    CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
-        << "dimension 1 of \'bias\'(" << bias_shape.At(0)
-        << ") is not consistant with the last dimension of \'x\'("
-        << x_shape.At(x_shape.NumAxes() - 1) << ")";
+#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor) \
+  const auto& tensor##_shape = *(JUST(tensor)->shape()); \
+  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1) \
+        << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+        << tensor##_shape.NumAxes(); \
+  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
+        << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
+        << ") is not consistant with the last dimension of \'x\'(" \
+        << x_shape.At(x_shape.NumAxes() - 1) << ")"; \
 
-    // check shape of gamma
-    if (gamma) {
-      const auto& gamma_shape = *(JUST(gamma)->shape());
-      CHECK_EQ_OR_RETURN(gamma_shape, bias_shape)
-          << "shape of \'gamma\' is not the same as \'bias\'";
-    }
+    // check shape of gamma, bias and pre_bias
+    if (gamma) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
+    if (beta) { GAMMA_BETA_BIAS_SHAPE_CHECK(beta); }
+    if (pre_bias) { GAMMA_BETA_BIAS_SHAPE_CHECK(pre_bias); }
 
-    // check shape of beta
-    if (beta) {
-      const auto& beta_shape = *(JUST(beta)->shape());
-      CHECK_EQ_OR_RETURN(beta_shape, bias_shape) << "shape of \'beta\' is not the same as \'bias\'";
-    }
+#undef GAMMA_BETA_BIAS_SHAPE_CHECK
 
     // check shape of residual
-    if (residual_1) {
-      const auto& residual_1_shape = *(JUST(residual_1)->shape());
-      CHECK_EQ_OR_RETURN(residual_1_shape, x_shape)
-          << "shape of \'residual_1\' is not the same as \'x\'";
+    size_t nb_residual = 0;
+    if (pre_residual_1) {
+      const auto& pre_residual_1_shape = *(JUST(pre_residual_1)->shape());
+      CHECK_EQ_OR_RETURN(pre_residual_1_shape, x_shape)
+          << "shape of \'pre_residual_1\' is not the same as \'x\'";
       nb_residual = 1;
     }
-    if (residual_2) {
-      CHECK(residual_1) << "must provide residual_1 while residual_2 is provided";
-      const auto& residual_2_shape = *(JUST(residual_2)->shape());
-      CHECK_EQ_OR_RETURN(residual_2_shape, x_shape)
-          << "shape of \'residual_2\' is not the same as \'x\'";
+    if (pre_residual_2) {
+      CHECK(pre_residual_1) << "must provide pre_residual_1 while pre_residual_2 is provided";
+      const auto& pre_residual_2_shape = *(JUST(pre_residual_2)->shape());
+      CHECK_EQ_OR_RETURN(pre_residual_2_shape, x_shape)
+          << "shape of \'pre_residual_2\' is not the same as \'x\'";
       nb_residual = 2;
     }
 
-    // set epsilon attribute
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon");
-    attrs.SetAllAttrs(epsilon);
+    // set attributes
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "pre_alpha_1", "pre_alpha_2");
+    attrs.SetAllAttrs(epsilon, pre_alpha_1, pre_alpha_2);
 
     // count number of all input tensors
-    size_t nb_inputs = 2;       // count x and bias
-    nb_inputs += nb_residual;   // count residual
-    if (gamma) nb_inputs += 1;  // count gamma
-    if (beta) nb_inputs += 1;   // count beta
-
+    size_t nb_inputs = 1;           // count x
+    nb_inputs += nb_residual;       // count residual
+    if (gamma) nb_inputs += 1;      // count gamma
+    if (beta) nb_inputs += 1;       // count beta
+    if (pre_bias) nb_inputs += 1;   // count pre_bias
+  
     // construct input tensor tuple
-    size_t tensor_index = 2;
+    size_t tensor_index = 1;
     TensorTuple input(nb_inputs);
     input[0] = x;
-    input[1] = bias;
 #define ADD_TENSOR_TO_INPUT_LIST(t) \
   if (t) {                          \
     input[tensor_index] = JUST(t);  \
@@ -986,20 +986,21 @@ class AddBiasResidualLayerNormFunctor {
   }
     ADD_TENSOR_TO_INPUT_LIST(gamma);
     ADD_TENSOR_TO_INPUT_LIST(beta);
-    ADD_TENSOR_TO_INPUT_LIST(residual_1);
-    ADD_TENSOR_TO_INPUT_LIST(residual_2);
+    ADD_TENSOR_TO_INPUT_LIST(pre_bias);
+    ADD_TENSOR_TO_INPUT_LIST(pre_residual_1);
+    ADD_TENSOR_TO_INPUT_LIST(pre_residual_2);
 #undef ADD_TENSOR_TO_INPUT_LIST
 
     return OpInterpUtil::Dispatch<Tensor>(
         *(ops_.find(
-                  std::tuple<int, bool, bool>(nb_residual, JUST(gamma) != NULL, JUST(beta) != NULL))
+                  std::tuple<int, bool, bool, bool>(nb_residual, JUST(gamma) != NULL, JUST(beta) != NULL, JUST(pre_bias) != NULL))
               ->second),
         input, attrs);
   }
 
  private:
-  /* (nb_residual, has_gamma, has_beta) -> op */
-  std::map<std::tuple<int, bool, bool>, std::shared_ptr<OpExpr>> ops_;
+  /* (nb_residual, has_gamma, has_beta, has_pre_bias) -> op */
+  std::map<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
 };
 
 class LayerNormAffineFunctor {

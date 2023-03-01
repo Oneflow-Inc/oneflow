@@ -29,38 +29,35 @@ namespace oneflow {
   CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
       << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
 
-  // check shape of bias
-  const Shape& bias_shape = ctx->InputShape("bias", 0);
-  CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
-      << "number of axes of \'bias\' should have be greater than 1, yet get "
-      << bias_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
-      << "dimension 1 of \'bias\'(" << bias_shape.At(0)
-      << ") is not consistant with the last dimension of \'x\'("
-      << x_shape.At(x_shape.NumAxes() - 1) << ")";
+#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor) \
+  const Shape& tensor##_shape = ctx->InputShape(#tensor, 0); \
+  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1) \
+        << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+        << tensor##_shape.NumAxes(); \
+  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
+        << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
+        << ") is not consistant with the last dimension of \'x\'(" \
+        << x_shape.At(x_shape.NumAxes() - 1) << ")"; \
 
-  // check shape of gamma
-  if (ctx->has_input("gamma", 0)) {
-    const Shape& gamma_shape = ctx->InputShape("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma_shape, bias_shape);
-  }
+  // check shape of gamma, beta and pre_bias
+  if (ctx->has_input("gamma", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
+  if (ctx->has_input("beta", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(beta); }
+  if (ctx->has_input("pre_bias", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(pre_bias); }
+
+#undef GAMMA_BETA_BIAS_SHAPE_CHECK
 
   // check shape of residual
-  if (ctx->has_input("residual_1", 0)) {
-    const Shape& residual_1_shape = ctx->InputShape("residual_1", 0);
-    CHECK_EQ_OR_RETURN(residual_1_shape, x_shape);
+  if (ctx->has_input("pre_residual_1", 0)) {
+    const Shape& pre_residual_1_shape = ctx->InputShape("pre_residual_1", 0);
+    CHECK_EQ_OR_RETURN(pre_residual_1_shape, x_shape)
+      << "shape of \'pre_residual_1\' is not the same as \'x\'";
   }
-  if (ctx->has_input("residual_2", 0)) {
-    CHECK_OR_RETURN(ctx->has_input("residual_1", 0))
-        << "must provide residual_1 while residual_2 is provided";
-    const Shape& residual_2_shape = ctx->InputShape("residual_2", 0);
-    CHECK_EQ_OR_RETURN(residual_2_shape, x_shape);
-  }
-
-  // check shape of beta
-  if (ctx->has_input("beta", 0)) {
-    const Shape& beta_shape = ctx->InputShape("bias", 0);
-    CHECK_EQ_OR_RETURN(beta_shape, bias_shape);
+  if (ctx->has_input("pre_residual_2", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("pre_residual_2", 0))
+        << "must provide pre_residual_1 while pre_residual_2 is provided";
+    const Shape& pre_residual_2_shape = ctx->InputShape("pre_residual_2", 0);
+    CHECK_EQ_OR_RETURN(pre_residual_2_shape, x_shape)
+      << "shape of \'pre_residual_2\' is not the same as \'x\'";
   }
 
   // set output shape of y
@@ -90,30 +87,32 @@ namespace oneflow {
   // obtain input data types
   DataType x_dtype = ctx->InputDType("x", 0);
 
-  // check data type of bias
-  CHECK_EQ_OR_RETURN(ctx->InputDType("bias", 0), x_dtype)
-      << "data type of \'bias\' is not consitant with \'x\'";
-
   // check data type of gamma
   if (ctx->has_input("gamma", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("gamma", 0), x_dtype)
         << "data type of \'gamma\' is not consitant with \'x\'";
   }
 
-  // check data types of residual_1 and residual_2
-  if (ctx->has_input("residual_1", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("residual_1", 0), x_dtype)
-        << "data type of \'residual_1\' is not consitant with \'x\'";
-  }
-  if (ctx->has_input("residual_2", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("residual_2", 0), x_dtype)
-        << "data type of \'residual_2\' is not consitant with \'x\'";
+  // check data type of pre_bias
+  if (ctx->has_input("pre_bias", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("pre_bias", 0), x_dtype)
+        << "data type of \'pre_bias\' is not consitant with \'x\'";
   }
 
   // check data types of beta
   if (ctx->has_input("beta", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("beta", 0), x_dtype)
         << "data type of \'beta\' is not consitant with \'x\'";
+  }
+
+  // check data types of pre_residual_1 and pre_residual_2
+  if (ctx->has_input("pre_residual_1", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("pre_residual_1", 0), x_dtype)
+        << "data type of \'pre_residual_1\' is not consitant with \'x\'";
+  }
+  if (ctx->has_input("pre_residual_2", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("pre_residual_2", 0), x_dtype)
+        << "data type of \'pre_residual_2\' is not consitant with \'x\'";
   }
 
   // set output data type

@@ -16,7 +16,60 @@ namespace oneflow {
 
 namespace {
 
-} // namespace
+template<typename T, bool do_scale, bool do_center, bool do_bias, size_t nb_residual>
+void AddBiasResidualLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
+                        const int64_t norm_size, const double epsilon, const T* x_ptr,
+                        const T* gamma_ptr, const T* beta_ptr, const T* pre_bias_ptr, 
+                        const T* pre_residual_1_ptr, const T* pre_residual_2_ptr, 
+                        const double pre_alpha_1, const double pre_alpha_2, T* y_ptr,
+                        user_op::Tensor* mean, user_op::Tensor* inv_variance){
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;   
+    // TODO: 
+}
+
+template<typename T>
+void DispatchAddBiasResidualLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
+                        const int64_t norm_size, const double epsilon, const T* x_ptr,
+                        const T* gamma_ptr, const T* beta_ptr, const T* pre_bias_ptr, 
+                        const T* pre_residual_1_ptr, const T* pre_residual_2_ptr, 
+                        const double pre_alpha_1, const double pre_alpha_2, T* y_ptr,
+                        user_op::Tensor* mean, user_op::Tensor* inv_variance){
+
+#define DISPATCH_BY_GAMMA_BETA_BIAS(has_gamma, has_beta, has_pre_bias) \
+    if(pre_residual_1_ptr != nullptr && pre_residual_2_ptr != nullptr){ \
+        AddBiasResidualLayerNormForwardGpu<has_gamma, has_beta, has_pre_bias, 2>(stream, num_instances, norm_size, \
+            epsilon, x_ptr, gamma_ptr, beta_ptr, pre_bias_ptr, pre_residual_1_ptr, \
+            pre_residual_2_ptr, pre_alpha_1, pre_alpha_2, y_ptr, mean, inv_variance); \
+    } else if (pre_residual_1_ptr == nullptr && pre_residual_2_ptr != nullptr){ \
+        AddBiasResidualLayerNormForwardGpu<has_gamma, has_beta, has_pre_bias, 1>(stream, num_instances, norm_size, \
+            epsilon, x_ptr, gamma_ptr, beta_ptr, pre_bias_ptr, pre_residual_1_ptr, \
+            pre_residual_2_ptr, pre_alpha_1, pre_alpha_2, y_ptr, mean, inv_variance); \
+    } else if (pre_residual_1_ptr != nullptr && pre_residual_2_ptr == nullptr){ \
+        AddBiasResidualLayerNormForwardGpu<has_gamma, has_beta, has_pre_bias, 1>(stream, num_instances, norm_size, \
+            epsilon, x_ptr, gamma_ptr, beta_ptr, pre_bias_ptr, pre_residual_1_ptr, \
+            pre_residual_2_ptr, pre_alpha_1, pre_alpha_2, y_ptr, mean, inv_variance); \
+    } else { \
+        AddBiasResidualLayerNormForwardGpu<has_gamma, has_beta, has_pre_bias, 0>(stream, num_instances, norm_size, \
+            epsilon, x_ptr, gamma_ptr, beta_ptr, pre_bias_ptr, pre_residual_1_ptr, \
+            pre_residual_2_ptr, pre_alpha_1, pre_alpha_2, y_ptr, mean, inv_variance); \
+    }
+
+    if(gamma_ptr != nullptr && beta_ptr != nullptr){
+        if(pre_bias_ptr != nullptr){ DISPATCH_BY_GAMMA_BETA_BIAS(true, true, true); } 
+        else { DISPATCH_BY_GAMMA_BETA_BIAS(true, true, false); }
+    } else if (gamma_ptr != nullptr && beta_ptr == nullptr) {
+        if(pre_bias_ptr != nullptr){ DISPATCH_BY_GAMMA_BETA_BIAS(false, true, true); } 
+        else { DISPATCH_BY_GAMMA_BETA_BIAS(false, true, false); }
+    } else if (gamma_ptr == nullptr && beta_ptr != nullptr) {
+        if(pre_bias_ptr != nullptr){ DISPATCH_BY_GAMMA_BETA_BIAS(true, false, true); } 
+        else { DISPATCH_BY_GAMMA_BETA_BIAS(true, false, false); }
+    } else {
+        if(pre_bias_ptr != nullptr){ DISPATCH_BY_GAMMA_BETA_BIAS(false, false, true); } 
+        else { DISPATCH_BY_GAMMA_BETA_BIAS(false, false, false); }
+    }
+
+#undef DISPATCH_BY_GAMMA_BETA_BIAS
+}
 
 template<typename T>
 class AddBiasResidualLayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -34,56 +87,60 @@ class AddBiasResidualLayerNormGpuKernel final : public user_op::OpKernel, public
     CHECK_GT(x_shape.NumAxes(), 1)
       << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
 
-    // obtain bias and check its shape
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    const ShapeView &bias_shape = bias->shape_view();
-    CHECK_EQ(bias_shape.NumAxes(), 1)
-        << "number of axes of \'bias\' should have be greater than 1, yet get "
-        << bias_shape.NumAxes();
-    CHECK_EQ(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
-        << "dimension 1 of \'bias\'(" << bias_shape.At(0)
-        << ") is not consistant with the last dimension of \'x\'("
-        << x_shape.At(x_shape.NumAxes() - 1) << ")";
-    
+#define GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(tensor) \
+    if (ctx->has_input(#tensor, 0)) { \
+        const user_op::Tensor* tensor = ctx->Tensor4ArgNameAndIndex(#tensor, 0); \
+        tensor##_shape = tensor->shape_view(); \
+        tensor##_ptr = tensor->dptr<T>(); \
+        CHECK_EQ(tensor##_shape.NumAxes(), 1) \
+            << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+            << tensor##_shape.NumAxes(); \
+        CHECK_EQ(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
+            << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
+            << ") is not consistant with the last dimension of \'x\'(" \
+            << x_shape.At(x_shape.NumAxes() - 1) << ")"; \
+    }
+
     // obtain gamma and check its shape
     const T* gamma_ptr = nullptr;
     ShapeView gamma_shape;
-    if (ctx->has_input("gamma", 0)) {
-        const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-        gamma_shape = gamma->shape_view();
-        gamma_ptr = gamma->dptr<T>();
-        CHECK_EQ(gamma_shape, bias_shape);
-    }
-
-    // obtain residual and check their shape
-    const T* residual_1_ptr = nullptr;
-    const T* residual_2_ptr = nullptr;
-    ShapeView residual_1_shape;
-    ShapeView residual_2_shape;
-    if (ctx->has_input("residual_1", 0)) {
-        const user_op::Tensor* residual_1 = ctx->Tensor4ArgNameAndIndex("residual_1", 0);
-        residual_1_shape = residual_1->shape_view();
-        residual_1_ptr = residual_1->dptr<T>();
-        CHECK_EQ(residual_1_shape, x_shape);
-    }
-    if (ctx->has_input("residual_2", 0)) {
-        CHECK(ctx->has_input("residual_1"))
-            << "must provide residual_1 while residual_2 is provided";
-        const user_op::Tensor* residual_2 = ctx->Tensor4ArgNameAndIndex("residual_2", 0);
-        residual_2_shape = residual_2->shape_view();
-        residual_2_ptr = residual_2->dptr<T>();
-        CHECK_EQ(residual_2_shape, x_shape);
-    }
-
+    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(gamma);
+    
     // obtain beta and check its shape
     const T* beta_ptr = nullptr;
     ShapeView beta_shape;
-    if (ctx->has_input("beta", 0)) {
-        const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-        beta_shape = beta->shape_view();
-        beta_ptr = beta->dptr<T>();
-        CHECK_EQ(beta_shape, bias_shape);
+    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(beta);
+
+    // obtain pre_bias and check its shape
+    const T* pre_bias_ptr = nullptr;
+    ShapeView pre_bias_shape;
+    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(pre_bias);
+
+#undef GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK
+
+    // obtain residual and check their shape
+    const T* pre_residual_1_ptr = nullptr;
+    const T* pre_residual_2_ptr = nullptr;
+    ShapeView pre_residual_1_shape;
+    ShapeView pre_residual_2_shape;
+    if (ctx->has_input("pre_residual_1", 0)) {
+        const user_op::Tensor* pre_residual_1 = ctx->Tensor4ArgNameAndIndex("pre_residual_1", 0);
+        pre_residual_1_shape = pre_residual_1->shape_view();
+        pre_residual_1_ptr = pre_residual_1->dptr<T>();
+        CHECK_EQ(pre_residual_1_shape, x_shape);
     }
+    if (ctx->has_input("pre_residual_2", 0)) {
+        CHECK(ctx->has_input("pre_residual_1", 0))
+            << "must provide pre_residual_1 while pre_residual_2 is provided";
+        const user_op::Tensor* pre_residual_2 = ctx->Tensor4ArgNameAndIndex("pre_residual_2", 0);
+        pre_residual_2_shape = pre_residual_2->shape_view();
+        pre_residual_2_ptr = pre_residual_2->dptr<T>();
+        CHECK_EQ(pre_residual_2_shape, x_shape);
+    }
+
+    // obtain epsilon and check its value
+    const double epsilon = ctx->Attr<double>("epsilon");
+    CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
 
     // obtain output tensors
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -92,16 +149,23 @@ class AddBiasResidualLayerNormGpuKernel final : public user_op::OpKernel, public
     const ShapeView &y_shape = y->shape_view();
     const ShapeView &mean_shape = mean->shape_view();
     const ShapeView &inv_variance_shape = inv_variance->shape_view();
-    // TODO
 
-    // obtain epsilon and check its value
-    const double epsilon = ctx->Attr<double>("epsilon");
-    CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-
-
-    
-    // check shape
   }
-}
+};
+
+} // namespace
+
+#define REGISTER_ADD_BIAS_RESIDUAL_LAYER_NORM_CUDA_KERNEL(dtype) \
+    REGISTER_USER_KERNEL("add_bias_residual_layer_norm") \
+        .SetCreateFn<AddBiasResidualLayerNormGpuKernel<dtype>>() \
+        .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_ADD_BIAS_RESIDUAL_LAYER_NORM_CUDA_KERNEL(float)
+REGISTER_ADD_BIAS_RESIDUAL_LAYER_NORM_CUDA_KERNEL(double)
+REGISTER_ADD_BIAS_RESIDUAL_LAYER_NORM_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_ADD_BIAS_RESIDUAL_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 } // namespace oneflow

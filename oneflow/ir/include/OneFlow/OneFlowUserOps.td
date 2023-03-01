@@ -6678,11 +6678,11 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
 def OneFlow_AddBiasResidualLayerNormOp : OneFlow_BaseOp<"add_bias_residual_layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    OneFlow_Tensor:$bias,
-    Optional<OneFlow_Tensor>:$residual_1,
-    Optional<OneFlow_Tensor>:$residual_2,
+    Optional<OneFlow_Tensor>:$gamma,
     Optional<OneFlow_Tensor>:$beta,
-    Optional<OneFlow_Tensor>:$gamma
+    Optional<OneFlow_Tensor>:$pre_bias,
+    Optional<OneFlow_Tensor>:$pre_residual_1,
+    Optional<OneFlow_Tensor>:$pre_residual_2
   );
   let output = (outs
     OneFlow_Tensor:$y,
@@ -6690,7 +6690,9 @@ def OneFlow_AddBiasResidualLayerNormOp : OneFlow_BaseOp<"add_bias_residual_layer
     OneFlow_Tensor:$inv_variance
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.">:$epsilon
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F64Attr, "0.">:$pre_alpha_1,
+    DefaultValuedAttr<F64Attr, "0.">:$pre_alpha_2
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
