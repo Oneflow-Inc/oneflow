@@ -45,6 +45,12 @@ OpKernelRegistry& OpKernelRegistry::SetPriority(int32_t priority) {
   return *this;
 }
 
+OpKernelRegistry& OpKernelRegistry::SetHostInput(const std::string& arg_name, int32_t index) {
+  result_.has_host_memory_input = true;
+  result_.host_memory_inputs.emplace_back(std::make_pair(arg_name, index));
+  return *this;
+}
+
 Maybe<OpKernelRegistry&> OpKernelRegistry::Finish() {
   CHECK_OR_RETURN(result_.create_fn != nullptr)
       << "No Create function for " << result_.op_type_name;
