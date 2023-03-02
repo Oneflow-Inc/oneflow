@@ -68,7 +68,7 @@ def do_fused_gelu_graph(test_case, dev, fuse_linear=False):
     if fuse_linear:
         os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
     else:
-        os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
+        os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "0"
     gelu_mod = GEGLU(640, 5120).to(dev)
     hidden_states = flow.randn(2, 2304, 640).to(dev)
     eager_res = gelu_mod(hidden_states)
