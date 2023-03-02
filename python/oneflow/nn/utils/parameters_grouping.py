@@ -93,8 +93,9 @@ class ContiguousParamsGroup(object):
 
         assert len(self.params_group_list) == 1
 
-        # mapping (total_buffer_size, buffer_usage_index, buffer_tensor)
-        physical_params_group = {}
+        params_buffer_size = {}
+        physical_params_buffer = {}
+        params_buffer_index = {}
 
         for p in self.params_group_list[0]:
             if p.requires_grad:
@@ -103,11 +104,11 @@ class ContiguousParamsGroup(object):
                 else:
                     tensor_key = (p.dtype, p.device)
 
-                physical_params_group[tensor_key] = physical_params_group.get(
+                params_buffer_size[tensor_key] = params_buffer_size.get(
                     tensor_key, 0
                 ) + numel_in_bucket(p)
 
-        for tensor_key, buffer_size in physical_params_group.items():
+        for tensor_key, buffer_size in params_buffer_size.items():
             dtype = tensor_key[0]
 
             if self.is_global:
@@ -128,7 +129,8 @@ class ContiguousParamsGroup(object):
 
             self.grouped_tensors.append(physical_param_buf)
             self.grouped_grads.append(physical_param_buf.grad)
-            physical_params_group[tensor_key] = (0, physical_param_buf)
+            physical_params_buffer[tensor_key] = physical_param_buf
+            params_buffer_index[tensor_key] = 0
 
         for p in self.params_group_list[0]:
             if not p.requires_grad:
@@ -139,7 +141,8 @@ class ContiguousParamsGroup(object):
             else:
                 tensor_key = (p.dtype, p.device)
 
-            index, param_buf = physical_params_group[tensor_key]
+            param_buf = physical_params_buffer[tensor_key]
+            index = params_buffer_index[tensor_key]
             size = p.numel()
             shape = p.data.shape
 
@@ -150,7 +153,7 @@ class ContiguousParamsGroup(object):
             p.grad = param_buf.grad[index : index + size].view(shape)
 
             index += numel_in_bucket(p)
-            physical_params_group[tensor_key] = (index, param_buf)
+            params_buffer_index[tensor_key] = index
 
             _buffer_params_mapping[param_buf].append(p)
 
