@@ -149,6 +149,7 @@ class TestMock(flow.unittest.TestCase):
     def test_mock_lazy_for_loop(test_case):
         with mock.enable(lazy=True):
             import torch
+
             # Test no infinite loop
             for _ in torch.not_exist:
                 pass
