@@ -49,7 +49,11 @@ class CudaDevice : public Device {
   void Free(const AllocationOptions& options, void* ptr) override;
   Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
   void FreePinned(const AllocationOptions& options, void* ptr) override;
+  bool IsStreamOrderedMemoryAllocationSupported() const override;
 
+#if CUDA_VERSION >= 11020
+  cudaMemPool_t mem_pool();
+#endif  // CUDA_VERSION >= 11020
   const cudaDeviceProp& properties() const;
 
   const void* GetConstZeros(DataType data_type, size_t n) const;
@@ -67,6 +71,9 @@ class CudaDevice : public Device {
   void* const_ones_buffer_fp32_;
   void* const_ones_buffer_fp16_;
   void* const_ones_buffer_bf16_;
+#if CUDA_VERSION >= 11020
+  cudaMemPool_t mem_pool_{};
+#endif  // CUDA_VERSION >= 11020
 };
 
 }  // namespace ep

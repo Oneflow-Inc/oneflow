@@ -316,7 +316,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.local_to_global,
     """
-    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=Ture) -> Tensor
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, copy=False) -> Tensor
 
     Creates a global tensor from a local tensor.
 
@@ -328,7 +328,11 @@ add_docstr(
         The returned global tensor takes this tensor as its local component in the current rank.
 
         There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
-    
+
+    .. warning::
+        When the sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified. If you want to keep the input local tensor unchanged,
+        please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
@@ -364,7 +368,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.global_to_global,
     """
-    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False) -> Tensor
+    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False, copy=False) -> Tensor
 
     Performs Tensor placement and/or sbp conversion.
 
@@ -431,7 +435,11 @@ add_docstr(
           At least one of placement and sbp is required.
 
           If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
-    
+
+    .. warning::
+        When the input tensor is a local tensor and sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified.
+        If you want to keep the input local tensor unchanged, please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
@@ -2512,5 +2520,111 @@ add_docstr(
         >>> x = flow.tensor([1, 2, 3])
         >>> x.clone()
         tensor([1, 2, 3], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_and,
+    """
+    See :func:`oneflow.bitwise_and`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_and(4)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_and(y)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_or,
+    """
+    See :func:`oneflow.bitwise_or`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_or(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_or(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_xor,
+    """
+    See :func:`oneflow.bitwise_xor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_xor(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_xor(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new,
+    """
+    Constructs a new tensor of the same data type and device (or placemant and sbp) as self tensor.
+
+    Any valid argument combination to the tensor constructor is accepted by this method,
+    including sizes, NumPy ndarray, Python Sequence, etc. See :func:`oneflow.Tensor` for more details.
+
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3, 2)
+        >>> x.new()
+        tensor([], dtype=oneflow.float32)
+        >>> x.new(1, 2).shape
+        oneflow.Size([1, 2])
+        >>> x.new([1, 2])
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> y = flow.randn(3, 3)
+        >>> x.new(y).shape
+        oneflow.Size([3, 3])
+
+    .. warning::
+        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error.
+        Consider use ``Tensor.new(y.size())`` to create a tensor that has
+        the same placement and sbp with Tensor and the same size with ``y``.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.baddbmm,
+    """
+    See :func:`oneflow.baddbmm`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3, 4)
+        >>> batch1 = flow.randn(2, 3, 5)
+        >>> batch2 = flow.randn(2, 5, 4)
+        >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
     """,
 )

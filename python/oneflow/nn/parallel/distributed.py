@@ -19,6 +19,7 @@ from collections import OrderedDict
 import oneflow as flow
 from oneflow.support.env_var_util import parse_boolean_from_env
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+from oneflow.framework.args_tree import ArgsTree
 
 
 def grad_setting_fn(module, param):
@@ -179,55 +180,12 @@ def DistributedDataParallel(
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        if isinstance(output, (tuple, list)):
-            if isinstance(output[0], dict):
-                # For List[Dict[Tensor]] return type.
-                out_key_list = []
-                out_val_list = []
-                for out in output:
-                    out_keys = list(out.keys())
-                    out_values = list(out.values())
-                    out_key_list.append(out_keys)
-                    out_val_list.extend(out_values)
-                out_values = flow._C.select_top_n(
-                    convert_to_tensor_tuple(
-                        [*out_val_list, *ddp_state_for_reversed_params.keys()]
-                    ),
-                    n=len(out_val_list),
-                )
-                output = []
-                for i, keys in enumerate(out_key_list):
-                    output.append(
-                        dict(zip(keys, out_values[i * len(keys) : (i + 1) * len(keys)]))
-                    )
-                return output
-            else:
-                # For List[Tensor] return type.
-                output = flow._C.select_top_n(
-                    convert_to_tensor_tuple(
-                        [*output, *ddp_state_for_reversed_params.keys()]
-                    ),
-                    n=len(output),
-                )
-        elif isinstance(output, dict):
-            # For Dict[Tensor] return type.
-            out_keys = list(output.keys())
-            out_values = list(output.values())
-            out_values = flow._C.select_top_n(
-                convert_to_tensor_tuple(
-                    [*out_values, *ddp_state_for_reversed_params.keys()]
-                ),
-                n=len(out_values),
-            )
-            return dict(zip(out_keys, out_values))
-        else:
-            # For Tensor return type.
-            output = flow._C.select_top_n(
-                convert_to_tensor_tuple(
-                    [output, *ddp_state_for_reversed_params.keys()]
-                ),
+        output = ArgsTree(output).map_leaf(
+            lambda x: flow._C.select_top_n(
+                convert_to_tensor_tuple([x, *ddp_state_for_reversed_params.keys()]),
                 n=1,
             )[0]
+        )
         buffers = list(module.buffers())
         if len(buffers) > 0:
             flow._C.stream_touch(buffers)
