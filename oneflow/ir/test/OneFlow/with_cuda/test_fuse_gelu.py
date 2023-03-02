@@ -26,7 +26,7 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
+# os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -66,6 +66,8 @@ class GraphToRun(flow.nn.Graph):
 
 def do_fused_gelu_graph(test_case, dev, fuse_linear=False):
     if fuse_linear:
+        os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
+    else:
         os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
     gelu_mod = GEGLU(640, 5120).to(dev)
     hidden_states = flow.randn(2, 2304, 640).to(dev)
