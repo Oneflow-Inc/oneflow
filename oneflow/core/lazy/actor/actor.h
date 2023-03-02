@@ -92,6 +92,7 @@ class Actor : public ActorBase {
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
   void HandleProducedNaiveDataRegstToConsumer();
+  void PrepareProducedNaiveInplaceDataRegst();
   void HandleProducedInplaceDataRegstToConsumer();
 
   void HandleConsumedNaiveDataRegstToProducer();
