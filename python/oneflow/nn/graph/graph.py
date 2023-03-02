@@ -131,6 +131,8 @@ class Graph(object):
         self._is_compiled = False
         # Default is local view
         self._is_global_view = False
+        # Optimize the time overhead of graph run
+        self._is_simple_tuple_inp = False
 
         self._debug = False
         self._debug_min_s_level = 2
@@ -804,6 +806,13 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if (
+            isinstance(args, (tuple, list))
+            and len(kwargs) == 0
+            and (isinstance(arg, Tensor) for arg in args)
+        ):
+            self._is_simple_tuple_inp = True
+
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
         self.finish_compile_and_init_runtime()
@@ -1630,7 +1639,7 @@ class Graph(object):
                 self.__io_item_check(
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
-        
+
         # TODO
         # if isinstance(args, (tuple, list)) and len(kwargs)==0:
         #     out = args_tree.map_tuple_leaf(leaf_arg_fn)
@@ -1813,7 +1822,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-        if isinstance(args, (tuple, list)) and len(kwargs)==0:
+        if self._is_simple_tuple_inp:
             args_tree.map_tuple_leaf(func)
             return
 
@@ -1827,7 +1836,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
-        if isinstance(args, (tuple, list)) and len(kwargs)==0:
+        if self._is_simple_tuple_inp:
             args_tree = ArgsTree(args, False)
             # contiguous
             args_tree.map_tuple_leaf(func)
@@ -1841,7 +1850,7 @@ class Graph(object):
 
         args_tree = ArgsTree((args, kwargs), False)
         # contiguous
-        args_tree.map_leaf(func)  
+        args_tree.map_leaf(func)
         # flatten
         for arg in args_tree.iter_nodes():
             if isinstance(arg, Tensor):
