@@ -2580,3 +2580,34 @@ add_docstr(
         tensor([3, 3, 3], dtype=oneflow.int64)
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.new,
+    """
+    Constructs a new tensor of the same data type and device (or placemant and sbp) as self tensor.
+
+    Any valid argument combination to the tensor constructor is accepted by this method,
+    including sizes, NumPy ndarray, Python Sequence, etc. See :func:`oneflow.Tensor` for more details.
+
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3, 2)
+        >>> x.new()
+        tensor([], dtype=oneflow.float32)
+        >>> x.new(1, 2).shape
+        oneflow.Size([1, 2])
+        >>> x.new([1, 2])
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> y = flow.randn(3, 3)
+        >>> x.new(y).shape
+        oneflow.Size([3, 3])
+
+    .. warning::
+        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error.
+        Consider use ``Tensor.new(y.size())`` to create a tensor that has
+        the same placement and sbp with Tensor and the same size with ``y``.
+
+    """,
+)

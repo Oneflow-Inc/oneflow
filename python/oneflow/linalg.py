@@ -65,3 +65,7 @@ def det(A):
 
     """
     return flow._C.det(A)
+
+
+def solve():
+    raise NotImplementedError()
