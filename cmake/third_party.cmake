@@ -26,7 +26,6 @@ if(RPC_BACKEND MATCHES "GRPC")
 endif()
 include(flatbuffers)
 include(lz4)
-include(string_view)
 
 include(hwloc)
 include(liburing)
