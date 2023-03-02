@@ -15,6 +15,7 @@ limitations under the License.
 """
 # RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.broadcast_matmul
+# CHECK-NOT: oneflow.fused_matmul_bias
 # CHECK-NOT: oneflow.narrow
 # CHECK: "oneflow.fused_glu"
 
@@ -63,7 +64,9 @@ class GraphToRun(flow.nn.Graph):
         return self.gelu_mod(hidden_states)
 
 
-def do_fused_gelu_graph(test_case, dev):
+def do_fused_gelu_graph(test_case, dev, fuse_linear=False):
+    if fuse_linear:
+        os.environ["ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR"] = "1"
     gelu_mod = GEGLU(640, 5120).to(dev)
     hidden_states = flow.randn(2, 2304, 640).to(dev)
     eager_res = gelu_mod(hidden_states)
@@ -76,7 +79,8 @@ def do_fused_gelu_graph(test_case, dev):
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
 class TestFusedGelu(oneflow.unittest.TestCase):
     def test_fused_gelu_graph(test_case):
-        do_fused_gelu_graph(test_case, "cuda")
+        do_fused_gelu_graph(test_case, "cuda", fuse_linear=True)
+        do_fused_gelu_graph(test_case, "cuda", fuse_linear=False)
 
 
 if __name__ == "__main__":
