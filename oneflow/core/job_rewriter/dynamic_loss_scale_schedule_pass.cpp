@@ -93,7 +93,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Attr<int64_t>("integer_value", 0)
           .Attr<bool>("is_floating_value", false)
           .Attr<DataType>("dtype", DataType::kInt64)
-          .Attr<Shape>("shape", Shape({Dim(1)}))
+          .Attr<Shape>("shape", Shape{1})
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   const std::string loss_scale_val_lbn = GenLogicalBlobName(

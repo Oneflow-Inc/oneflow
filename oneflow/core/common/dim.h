@@ -24,8 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class SymbolicScalar {};
-
 class Dim {
  private:
   int64_t value_;

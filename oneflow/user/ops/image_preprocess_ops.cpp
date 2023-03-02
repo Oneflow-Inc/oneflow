@@ -157,7 +157,7 @@ namespace oneflow {
 /* static */ Maybe<void> CoinFlipOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  out_tensor->set_shape(Shape({Dim(batch_size)}));
+  out_tensor->set_shape(Shape{batch_size});
   return Maybe<void>::Ok();
 }
 
@@ -165,7 +165,7 @@ namespace oneflow {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  const Shape logical_shape = Shape({Dim(batch_size)});
+  const Shape logical_shape = Shape{batch_size};
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
   const auto tensor_slice_view =

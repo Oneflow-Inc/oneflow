@@ -399,7 +399,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
   reduce_dims.reserve(expand_shape.size());
 
   for (int i = expand_shape.size() - 1; i >= 0; --i) {
-    int64_t dim = i < lpad ? 1 : static_cast<int>(input_shape[i - lpad]);
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad].val();
     if (dim == expand_shape[i]) {
       if (i >= lpad) {
         expand_stride[i] = input_stride[i - lpad];
@@ -565,7 +565,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
   auto base_size = std::max(MinStorageSize(inp_sizes_, inp_strides_, inp_effective_offset),
                             MinStorageSize(out_sizes_, out_strides_, out_effective_offset));
   auto storage =
-      JUST(functional::Constant(Shape({Dim(base_size)}), 0, grad->dtype(), JUST(grad->device())));
+      JUST(functional::Constant(Shape{base_size}, 0, grad->dtype(), JUST(grad->device())));
 
   std::shared_ptr<Tensor> flatten_full_indices;
   if (inp_maybe_overlap || out_maybe_overlap) {
@@ -579,8 +579,8 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
                                                   out_effective_offset));
     storage = JUST(functional::IndexAddInplace(
         storage, 0,
-        JUST(functional::Reshape(out_indices, Shape({Dim(out_indices->shape()->elem_cnt())}))),
-        JUST(functional::Reshape(grad, Shape({Dim(grad->shape()->elem_cnt())}))), Scalar(1.0)));
+        JUST(functional::Reshape(out_indices, Shape{out_indices->shape()->elem_cnt()})),
+        JUST(functional::Reshape(grad, Shape{grad->shape()->elem_cnt()})), Scalar(1.0)));
   } else {
     // assume that new tensors have 0 storage offset
     // torch impl: storage.as_strided(out_sizes_, out_strides_, out_effective_offset)
@@ -600,9 +600,9 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
     flatten_full_indices = JUST(functional::AsStrided(flatten_full_indices, inp_sizes_,
                                                       inp_strides_, inp_effective_offset));
     auto inp_indices = JUST(functional::Reshape(
-        flatten_full_indices, Shape({Dim(flatten_full_indices->shape()->elem_cnt())})));
+        flatten_full_indices, Shape{flatten_full_indices->shape()->elem_cnt()}));
 
-    auto ones = JUST(functional::Constant(Shape({Dim(1)}), 0, grad->dtype(), JUST(grad->device())));
+    auto ones = JUST(functional::Constant(Shape{1}, 0, grad->dtype(), JUST(grad->device())));
     count = JUST(functional::IndexAddInplace(count, 0, inp_indices, ones, Scalar(1.0)));
     count = JUST(functional::Expand(count, *inp_indices->shape()));
     storage = JUST(functional::Div(storage, count));  // this will give nan outside visible range

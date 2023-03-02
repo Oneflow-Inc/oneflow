@@ -37,7 +37,7 @@ bool CheckBroadcastAndSimplifyDims(const Shape& shape, const Shape& broadcast_sh
   simplified_ndim = 0;
   bool prev_broadcast = false;
   for (int i = 0; i < broadcast_shape.size(); ++i) {
-    int64_t dim = (i < lpad) ? Dim(1) : shape[i - lpad];
+    Dim dim = (i < lpad) ? Dim(1) : shape[i - lpad];
     int64_t broadcast_dim = broadcast_shape[i];
     if (dim != 1 && dim != broadcast_dim) { return false; }
     bool broadcast = (dim == 1 && broadcast_dim != 1);
