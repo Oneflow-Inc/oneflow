@@ -203,7 +203,7 @@ class Module(object):
         if self._backward_hooks:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
 
-        for hook in itertools.chain(self._forward_pre_hooks.values()):
+        for hook in list(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
@@ -216,7 +216,7 @@ class Module(object):
             args = bw_hook.setup_input_hook(args)
 
         res = self.forward(*args, **kwargs)
-        for hook in itertools.chain(self._forward_hooks.values()):
+        for hook in list(self._forward_hooks.values()):
             result = hook(self, args, res)
             if result is not None:
                 res = result

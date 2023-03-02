@@ -102,10 +102,72 @@ def _test_hooks(test_case, backward_register_fn):
 
     module(input).backward(flow.ones(5, 5) * 2)
     test_case.assertEqual(counter["forwards"], 13)
-    test_case.assertEqual(counter["backwards"], 7)  # 7
+    test_case.assertEqual(counter["backwards"], 7)
 
     test_fwd.remove()
     test_bwd.remove()
+
+
+def _test_module_forward_preforward_hook_removable(test_case):
+    module = nn.Sigmoid()
+
+    def removable_hook(m, input):
+        nonlocal handle
+        handle.remove()
+        return input
+
+    def removable_hook_2(m, input):
+        nonlocal handle_2
+        handle_2.remove()
+        return input
+
+    handle = module.register_forward_pre_hook(removable_hook)
+    handle_2 = module.register_forward_pre_hook(removable_hook_2)
+
+    # make sure hook register is successful
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 2)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 2)
+
+    input = flow.randn(2, 2)
+    output = module(input)
+    test_case.assertTrue(flow.equal(flow.sigmoid(input), output))
+
+    # make sure hook removal is successful
+    test_case.assertFalse(handle.id in handle.hooks_dict_ref())
+    test_case.assertFalse(handle_2.id in handle.hooks_dict_ref())
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 0)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 0)
+
+
+def _test_module_forward_forward_hook_removable(test_case):
+    module = nn.Sigmoid()
+
+    def removable_hook(m, input, output):
+        nonlocal handle
+        handle.remove()
+        return output
+
+    def removable_hook_2(m, input, output):
+        nonlocal handle_2
+        handle_2.remove()
+        return output
+
+    handle = module.register_forward_hook(removable_hook)
+    handle_2 = module.register_forward_hook(removable_hook_2)
+
+    # make sure hook register is successful
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 2)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 2)
+
+    input = flow.randn(2, 2)
+    output = module(input)
+    test_case.assertTrue(flow.equal(flow.sigmoid(input), output))
+
+    # make sure hook removal is successful
+    test_case.assertFalse(handle.id in handle.hooks_dict_ref())
+    test_case.assertFalse(handle_2.id in handle.hooks_dict_ref())
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 0)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 0)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -331,15 +393,11 @@ class TestModule(flow.unittest.TestCase):
         delattr(m, "bn")
 
     @flow.unittest.skip_unless_1n1d()
-    def test_all_hooks(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_hooks]
-        arg_dict["backward_register_fn"] = [
-            "register_backward_hook",
-            "register_full_backward_hook",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    def test_hooks_register(test_case):
+        for hook in ["register_backward_hook", "register_full_backward_hook"]:
+            _test_hooks(test_case, hook)
+        _test_module_forward_preforward_hook_removable(test_case)
+        _test_module_forward_forward_hook_removable(test_case)
 
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook(test_case):
