@@ -3914,10 +3914,10 @@ class CloneFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input) const { return input->clone(); }
 };
 
-class FusedCodegeexQkvTransposeFunctor {
+class FusedCodegeexQkvReshapeFunctor {
  public:
-  FusedCodegeexQkvTransposeFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_codegeex_qkv_transpose")
+  FusedCodegeexQkvReshapeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_codegeex_qkv_reshpe")
                          .Input("query")
                          .Input("key")
                          .Input("value")
@@ -4096,7 +4096,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
   m.add_functor<impl::SortFunctor>("Sort");
   m.add_functor<impl::CloneFunctor>("Clone");
-  m.add_functor<impl::FusedCodegeexQkvTransposeFunctor>("FusedCodegeexQkvTranspose");
+  m.add_functor<impl::FusedCodegeexQkvReshapeFunctor>("FusedCodegeexQkvTranspose");
 };
 
 }  // namespace functional

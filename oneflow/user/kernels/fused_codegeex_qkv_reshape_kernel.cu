@@ -19,7 +19,7 @@ namespace {
 
 // [seq_length, batch_size, hidden_size] -> [seq_length, batch_size, head_num, size_per_head]
 template<typename T>
-__global__ void batch_transpose(const int n, const T* query, const T* key, const T* value, T* new_query, T* new_key, T* new_value, const int seq_length, const int batch_size, const int hidden_size){
+__global__ void batch_reshape_for_qkv(const int n, const T* query, const T* key, const T* value, T* new_query, T* new_key, T* new_value, const int seq_length, const int batch_size, const int hidden_size){
    CUDA_1D_KERNEL_LOOP(i, n) {
     const int i_div_hidden_size = i / hidden_size;
     const int seq_id = i_div_hidden_size / batch_size;
@@ -35,10 +35,10 @@ __global__ void batch_transpose(const int n, const T* query, const T* key, const
 };  // namespace
 
 template<typename T>
-class FusedCodegeexQkvTransposeGpuKernel final : public user_op::OpKernel {
+class FusedCodegeexQkvReshapeGpuKernel final : public user_op::OpKernel {
  public:
-  FusedCodegeexQkvTransposeGpuKernel() = default;
-  ~FusedCodegeexQkvTransposeGpuKernel() = default;
+  FusedCodegeexQkvReshapeGpuKernel() = default;
+  ~FusedCodegeexQkvReshapeGpuKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -56,7 +56,7 @@ class FusedCodegeexQkvTransposeGpuKernel final : public user_op::OpKernel {
     const int hidden_size = query->shape_view().At(2);
 
     const int32_t n = query->shape_view().elem_cnt();
-    RUN_CUDA_KERNEL((batch_transpose<T>), ctx->stream(), n, n,
+    RUN_CUDA_KERNEL((batch_reshape_for_qkv<T>), ctx->stream(), n, n,
                     query->dptr<T>(), key->dptr<T>(), value->dptr<T>(), new_query->mut_dptr<T>(),
                     new_key->mut_dptr<T>(), new_value->mut_dptr<T>(), seq_length, batch_size,
                     hidden_size);
@@ -65,14 +65,14 @@ class FusedCodegeexQkvTransposeGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_CODEGEEX_QKV_TRANSPOSE_CUDA_KERNEL(dtype)                      \
-  REGISTER_USER_KERNEL("fused_codegeex_qkv_transpose")                                \
-      .SetCreateFn<FusedCodegeexQkvTransposeGpuKernel<dtype>>()                      \
+#define REGISTER_FUSED_CODEGEEX_QKV_RESHAPE_CUDA_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("fused_codegeex_qkv_reshape")                                \
+      .SetCreateFn<FusedCodegeexQkvReshapeGpuKernel<dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("query", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_CODEGEEX_QKV_TRANSPOSE_CUDA_KERNEL(float)
-REGISTER_FUSED_CODEGEEX_QKV_TRANSPOSE_CUDA_KERNEL(half)
-REGISTER_FUSED_CODEGEEX_QKV_TRANSPOSE_CUDA_KERNEL(double)
+REGISTER_FUSED_CODEGEEX_QKV_RESHAPE_CUDA_KERNEL(float)
+REGISTER_FUSED_CODEGEEX_QKV_RESHAPE_CUDA_KERNEL(half)
+REGISTER_FUSED_CODEGEEX_QKV_RESHAPE_CUDA_KERNEL(double)
 
 }

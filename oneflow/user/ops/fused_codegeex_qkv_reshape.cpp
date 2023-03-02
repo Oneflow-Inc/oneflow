@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> FusedCodegeexQkvTransposeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FusedCodegeexQkvReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& query = ctx->InputTensorDesc("query", 0);
   const user_op::TensorDesc& key = ctx->InputTensorDesc("key", 0);
   const user_op::TensorDesc& value = ctx->InputTensorDesc("value", 0);
@@ -45,11 +45,11 @@ Maybe<void> FusedCodegeexQkvTransposeOp::InferLogicalTensorDesc(user_op::InferCo
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedCodegeexQkvTransposeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedCodegeexQkvTransposeOp::InferLogicalTensorDesc(ctx);
+Maybe<void> FusedCodegeexQkvReshapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedCodegeexQkvReshapeOp::InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> FusedCodegeexQkvTransposeOp::InferDataType(user_op::InferContext* ctx) {
+Maybe<void> FusedCodegeexQkvReshapeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& query = ctx->InputTensorDesc("query", 0);
   const user_op::TensorDesc& key = ctx->InputTensorDesc("key", 0);
   const user_op::TensorDesc& value = ctx->InputTensorDesc("value", 0);
@@ -63,7 +63,7 @@ Maybe<void> FusedCodegeexQkvTransposeOp::InferDataType(user_op::InferContext* ct
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedCodegeexQkvTransposeOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> FusedCodegeexQkvReshapeOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& query = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0);
   FOR_RANGE(int64_t, i, 0, query.shape().NumAxes() - 1) {
     ctx->NewBuilder()

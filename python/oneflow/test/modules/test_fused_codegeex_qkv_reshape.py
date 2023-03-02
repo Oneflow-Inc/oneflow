@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_codegeex_qkv_transpose_impl(test_case, device, shape, num_attention_heads):
+def _test_codegeex_qkv_reshape_impl(test_case, device, shape, num_attention_heads):
     query = flow.randn(shape).to("cuda")
     key = flow.randn(shape).to("cuda")
     value = flow.randn(shape).to("cuda")
@@ -32,7 +32,7 @@ def _test_codegeex_qkv_transpose_impl(test_case, device, shape, num_attention_he
     new_key = new_key.contiguous()
     new_value = value.view(new_shape)
     new_value = new_value.contiguous()
-    (fused_new_query, fused_new_key, fused_new_value) = flow._C.fused_codegeex_qkv_transpose(query, key, value, num_attention_heads)
+    (fused_new_query, fused_new_key, fused_new_value) = flow._C.fused_codegeex_qkv_reshape(query, key, value, num_attention_heads)
 
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
@@ -48,10 +48,10 @@ def _test_codegeex_qkv_transpose_impl(test_case, device, shape, num_attention_he
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFusedCodegeexQkvTransposeModule(flow.unittest.TestCase):
-    def test_codegeex_qkv_transpose(test_case):
+class TestFusedCodegeexQkvReshapeModule(flow.unittest.TestCase):
+    def test_codegeex_qkv_reshape(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_codegeex_qkv_transpose_impl]
+        arg_dict["test_fun"] = [_test_codegeex_qkv_reshape_impl]
         arg_dict["device"] = ["cuda"]
         arg_dict["shape"] = [(32, 8, 16), (32, 8, 32)]
         arg_dict["num_attention_heads"] = [(4), (8)]
