@@ -43,7 +43,7 @@ def module_grouping(test_case, device):
             self.make_contiguous_params_group()
 
     m = Model().to(device)
-    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32)])
+    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32, requires_grad=True)])
 
     test_case.assertTrue(len(m.cpg.grouped_parameters) == 2)
     test_case.assertTrue(len(m.cpg.grouped_grads) == 2)
@@ -59,8 +59,12 @@ def module_grouping(test_case, device):
 
 def direct_grouping(test_case, device):
     x = [
-        Parameter(flow.tensor([1, 2], device=flow.device(device))),
-        Parameter(flow.tensor([3, 4], device=flow.device(device))),
+        Parameter(
+            flow.tensor([1, 2], device=flow.device(device), dtype=flow.float32, requires_grad=True)
+        ),
+        Parameter(
+            flow.tensor([3, 4], device=flow.device(device), dtype=flow.float32, requires_grad=True)
+        ),
     ]
     cpg = CPG([[x[0]], [x[1]]])
     test_case.assertTrue(len(cpg.grouped_parameters) == 2)
@@ -69,18 +73,86 @@ def direct_grouping(test_case, device):
 
 def global_grouping(test_case):
     x = flow.nn.Parameter(
-        flow.zeros((10,)).to_global(
+        flow.zeros((10,), dtype=flow.float32, requires_grad=True).to_global(
             sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
         )
     )
     y = flow.nn.Parameter(
-        flow.zeros((10,)).to_global(
+        flow.zeros((10,), dtype=flow.float32, requires_grad=True).to_global(
             sbp=flow.sbp.split(0), placement=flow.placement("cuda", [0])
         )
     )
     cpg = CPG([x, y], for_module=True)
     test_case.assertTrue(len(cpg.grouped_parameters) == 2)
     test_case.assertTrue(len(cpg.grouped_grads) == 2)
+
+
+def multi_module_grad(test_case):
+    class Module1(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w1 = flow.nn.Parameter(flow.Tensor([1, 1]))
+            self.w2 = flow.nn.Parameter(flow.Tensor([1, 1]))
+            self.make_contiguous_params_group()
+
+        def forward(self, x):
+            return x * self.w1 * self.w2
+
+    class Module2(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w1 = flow.nn.Parameter(flow.Tensor([2, 2]))
+            self.w2 = flow.nn.Parameter(flow.Tensor([2, 2]))
+            self.make_contiguous_params_group()
+
+        def forward(self, x):
+            return x * self.w1 * self.w2
+
+    m1 = Module1()
+    m2 = Module2()
+    optim1 = flow.optim.SGD(m1.parameters(), lr=1e-2, contiguous_params=True)
+    optim2 = flow.optim.SGD(m2.parameters(), lr=1e-2, contiguous_params=True)
+    x1 = flow.ones([1, 1])
+    x2 = flow.ones([2, 2])
+    flow.sum(m1(x1)).backward()
+    flow.sum(m2(x2)).backward()
+
+    for p in m1.parameters():
+        test_case.assertTrue(
+            np_allclose_with_shape(p.grad.numpy(), np.array([1., 1.]))
+        )
+
+    for p in m2.parameters():
+        test_case.assertTrue(
+            np_allclose_with_shape(p.grad.numpy(), np.array([4., 4.]))
+        )
+
+def multi_module_lifecycle(test_case):
+    class Module1(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w1 = flow.nn.Parameter(flow.Tensor([1, 1]))
+            self.w2 = flow.nn.Parameter(flow.Tensor([1, 1]))
+            self.make_contiguous_params_group()
+
+        def forward(self, x):
+            return x * self.w1 * self.w2
+
+    class Module2(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w1 = flow.nn.Parameter(flow.Tensor([2, 2]))
+            self.w2 = flow.nn.Parameter(flow.Tensor([2, 2]))
+            self.make_contiguous_params_group()
+
+        def forward(self, x):
+            return x * self.w1 * self.w2
+
+    m1 = Module1()
+    m2 = Module2()
+    del m1
+    cpg = CPG(list(m2.parameters()))
+    test_case.assertTrue(len(cpg.grouped_parameters) == 1)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -93,6 +165,8 @@ class TestCPG(flow.unittest.TestCase):
             direct_grouping(test_case, **arg)
 
         global_grouping(test_case)
+        multi_module_grad(test_case)
+        multi_module_lifecycle(test_case)
 
 
 if __name__ == "__main__":

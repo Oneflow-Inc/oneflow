@@ -230,12 +230,6 @@ class ContiguousParamsGroup(object):
                 self.grouped_tensors.append(p)
                 self.grouped_grads.append(p.grad)
 
-    def __del__(self):
-        global _buffer_params_mapping
-
-        if self.for_module:
-            _buffer_params_mapping = collections.defaultdict(list)
-
     @property
     def grouped_parameters(self):
         return self.grouped_tensors
