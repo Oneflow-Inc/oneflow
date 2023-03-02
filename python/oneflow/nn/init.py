@@ -49,6 +49,7 @@ def uniform_(tensor, a=0.0, b=1.0):
     """
     assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}" % (b, a)
     with flow.no_grad():
+        return tensor
         return flow._C.uniform_(tensor, a, b)
 
 
@@ -72,6 +73,7 @@ def normal_(tensor, mean=0.0, std=1.0):
     """
     with flow.no_grad():
         if tensor.is_local:
+            return tensor
             return flow.normal(mean=mean, std=std, size=tensor.shape, out=tensor)
         else:
             return flow.normal(
