@@ -1,7 +1,3 @@
-// Group: ASSIGN
-// assign, assign_if, assign_if_not
-// Total: 3
-
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
 def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -44,9 +40,6 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoGrad, DeclareOpIn
 
 #endif // GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
-// Group: BASE
-// normalization_add_relu
-// Total: 1
 
 #ifdef GET_ONEFLOW_BASE_OP_DEFINITIONS
 
@@ -85,9 +78,6 @@ class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : On
 
 #endif // GET_ONEFLOW_BASE_OP_DEFINITIONS
 
-// Group: BINARY
-// bias_add, cast_like, celu_grad, diag_grad, diagonal_grad, dot, dropout_grad, elementwise_maximum, elementwise_minimum, elu_grad, floordiv, truncdiv, gelu_grad, fast_gelu_grad, grid_sample, hardsigmoid_grad, hardshrink_grad, hardswish_grad, l1_l2_regularize_gradient, leaky_relu_grad, masked_fill, mish_grad, narrow_grad, pow, prelu, relu_grad, selu_grad, silu_grad, softshrink_grad, threshold_grad, tf_prelu, unfold_tensor_grad, xdivy, xlogy
-// Total: 34
 
 #ifdef GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
@@ -645,9 +635,6 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceM
 
 #endif // GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
-// Group: BROADCAST
-// broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_inplace_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_sub, broadcast_isclose_eq_nan, broadcast_isclose_neq_nan, broadcast_bitwise_and, broadcast_bitwise_or, broadcast_bitwise_xor
-// Total: 26
 
 #ifdef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
@@ -1046,9 +1033,6 @@ def OneFlow_BroadcastBitwiseXorOp : OneFlow_BaseOp<"broadcast_bitwise_xor", [NoS
 
 #endif // GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
-// Group: CONV
-// conv1d, conv2d, conv3d, conv_bias_grad, conv_data_grad, conv_filter_grad, deconv1d, deconv2d, deconv3d,deform_conv2d, deform_conv2d_input_grad,deform_conv2d_param_grad
-// Total: 12
 
 #ifdef GET_ONEFLOW_CONV_OP_DEFINITIONS
 
@@ -1300,9 +1284,6 @@ DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
 
 #endif // GET_ONEFLOW_CONV_OP_DEFINITIONS
 
-// Group: CROSS_ENTROPY
-// binary_cross_entropy, binary_cross_entropy_grad, binary_cross_entropy_with_logits, binary_cross_entropy_with_logits_grad, sigmoid_cross_entropy, sigmoid_cross_entropy_grad, sparse_cross_entropy, sparse_cross_entropy_grad, sparse_cross_entropy_ms, sparse_cross_entropy_ms_grad
-// Total: 10
 
 #ifdef GET_ONEFLOW_CROSS_ENTROPY_OP_DEFINITIONS
 
@@ -1538,9 +1519,6 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
 
 #endif // GET_ONEFLOW_CROSS_ENTROPY_OP_DEFINITIONS
 
-// Group: CUDA
-// nvtx_end, nvtx_start
-// Total: 2
 
 #ifdef GET_ONEFLOW_CUDA_OP_DEFINITIONS
 
@@ -1578,9 +1556,6 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpI
 
 #endif // GET_ONEFLOW_CUDA_OP_DEFINITIONS
 
-// Group: DATASET
-// COCOReader, OFRecordReader, OneRecReader, ctc_greedy_decoder, megatron_gpt_mmap_data_loader, ofrecord_bytes_decoder, ofrecord_image_classification_reader, ofrecord_image_decoder, ofrecord_image_decoder_random_crop, ofrecord_raw_decoder, onerec_decoder, raw_reader
-// Total: 11
 
 #ifdef GET_ONEFLOW_DATASET_OP_DEFINITIONS
 
@@ -1861,9 +1836,6 @@ def OneFlow_RawReaderOp : OneFlow_BaseOp<"raw_reader", [NoSideEffect, NoGrad, De
 
 #endif // GET_ONEFLOW_DATASET_OP_DEFINITIONS
 
-// Group: DETECTION
-// in_top_k, nms, object_bbox_flip, object_bbox_scale, object_segmentation_polygon_flip, object_segmentation_polygon_scale, object_segmentation_polygon_to_mask, roi_align, roi_align_grad, top_k
-// Total: 10
 
 #ifdef GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
@@ -2037,9 +2009,6 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, NoGrad, DeclareOpInt
 
 #endif // GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
-// Group: EAGER
-// eager_b_to_s, eager_naive_s_to_s, eager_ccl_all_gather, eager_ccl_all_reduce, eager_ccl_broadcast, eager_ccl_reduce, eager_ccl_reduce_scatter, eager_nccl_s2s, eager_p_to_b, eager_p_to_s, eager_s_to_b, eager_symmetric_s_to_p
-// Total: 12
 
 #ifdef GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
@@ -2319,9 +2288,6 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
-// Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2, fused_lstm_cell, fused_lstm_cell_grad, fused_gru_cell, fused_gru_cell_grad, fused_multi_head_attention_inference, fused_fast_gelu_mul, fused_fast_gelu_mul_grad, fused_get_boundding_boxes_coord, fused_get_boundding_boxes_coord_grad, fused_get_center_dist, fused_get_center_dist_grad, fused_get_ciou_result, fused_get_ciou_result_grad, fused_get_ciou_diagonal_angle, fused_get_ciou_diagonal_angle_grad, fused_get_intersection_area, fused_get_intersection_area_grad
-// Total: 42
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
@@ -3270,9 +3236,6 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
 
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
-// Group: IDEMPOTENT
-// abs, ceil, floor, ones_like, relu, rint, round, sign
-// Total: 8
 
 #ifdef GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
@@ -3299,9 +3262,6 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpIn
 
 #endif // GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
-// Group: IDENTITY
-// amp_white_identity, amp_black_identity, identity, identity_buffer, tuple_identity, pinned_identity
-// Total: 5
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
@@ -3390,9 +3350,6 @@ def OneFlow_PinnedIdentityOp : OneFlow_BaseOp<"pinned_identity", [DeclareOpInter
 
 #endif // GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
-// Group: IMAGE
-// image_batch_align, image_decode, image_flip, image_random_crop, image_resize_keep_aspect_ratio, image_resize_to_fixed
-// Total: 6
 
 #ifdef GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
@@ -3517,9 +3474,6 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
 
 #endif // GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
-// Group: INDICES
-// arg_sort, argmax, argwhere, batch_gather, dim_gather, dim_scatter_add, dim_scatter_add_like, dim_scatter_add_scalar, dim_scatter_mul, dim_scatter_mul_scalar, dim_scatter_update, dim_scatter_update_scalar, embedding_renorm, embedding, embedding_grad, gather, gather_nd, generate_random_batch_permutation_indices, image_target_resize, scatter_nd, scatter_nd_like, slice, slice_update, slice_grad, tensor_scatter_nd_add, tensor_scatter_nd_update, unsorted_batch_segment_sum, unsorted_segment_sum, unsorted_segment_sum_like, where, median, searchsorted, searchsorted_scalar, mode
-// Total: 34
 
 #ifdef GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
@@ -4137,9 +4091,6 @@ def OneFlow_ModeOp: OneFlow_BaseOp<"mode", [NoSideEffect, DeclareOpInterfaceMeth
 
 #endif // GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
-// Group: INVOLUTION
-// negative, reciprocal
-// Total: 2
 
 #ifdef GET_ONEFLOW_INVOLUTION_OP_DEFINITIONS
 
@@ -4149,9 +4100,6 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect,
 
 #endif // GET_ONEFLOW_INVOLUTION_OP_DEFINITIONS
 
-// Group: LOSS
-// combined_margin_loss, combined_margin_loss_grad, ctc_loss, ctc_loss_grad, dynamic_loss_scale_schedule, kl_div_loss, kl_div_loss_grad, smooth_l1_loss, smooth_l1_loss_grad
-// Total: 9
 
 #ifdef GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
@@ -4335,9 +4283,6 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 
 #endif // GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
-// Group: MATH
-// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expm1, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, truncdiv_x_grad, truncdiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log10_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, erfinv
-// Total: 48
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
@@ -4975,9 +4920,6 @@ def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, 
 }
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
-// Group: MATMUL
-// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad, matrix_vector_product, matrix_vector_product_grad_a, matrix_vector_product_grad_b, vector_matrix_product, vector_matrix_product_grad_a, vector_matrix_product_grad_b, grouped_matmul_bias, fused_glu, fused_glu_without_linear_grad
-// Total: 23
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
@@ -5402,9 +5344,6 @@ def OneFlow_GroupedMatmulBiasOp : OneFlow_BaseOp<"grouped_matmul_bias", [NoSideE
 
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
-// Group: MISC
-// CategoricalOrdinalEncode, add_n, arange, bincount, coin_flip, concat, tensor_constant, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique, unique_with_counts, xdivy_x_grad, xdivy_y_grad, stack, stack_grad, fill_, fill_tensor_, exponential, multinomial_with_replacement, fused_weighted_sum, depend
-// Total: 41
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
@@ -6171,9 +6110,6 @@ def OneFlow_DependOp : OneFlow_BaseOp<"depend", [NoSideEffect, DeclareOpInterfac
 
 #endif // GET_ONEFLOW_MISC_OP_DEFINITIONS
 
-// Group: NCCL
-// _nccl_logical_2D_same_dim0_all2all, _nccl_logical_2D_same_dim0_all_gather, _nccl_logical_2D_same_dim0_all_gather_noncontinuous, _nccl_logical_2D_same_dim0_all_reduce, _nccl_logical_2D_same_dim1_all_reduce, _nccl_logical_all_gather, _nccl_logical_all_gather_noncontinuous, _nccl_logical_all_reduce, _nccl_logical_reduce_scatter, _nccl_logical_s2s, _nccl_logical_send_recv
-// Total: 11
 
 #ifdef GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
@@ -6395,9 +6331,6 @@ def OneFlow__ncclLogicalSendRecvOp : OneFlow_BaseOp<"_nccl_logical_send_recv", [
 
 #endif // GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
-// Group: NORMALIZATION
-// crop_mirror_normalize_from_tensorbuffer, crop_mirror_normalize_from_uint8, image_normalize, l2_normalize, l2_normalize_grad, layer_norm, layer_norm_grad, layer_norm_param_grad, normal, normalization, normalization_grad, group_norm, group_norm_grad, group_norm_param_grad, batch_norm_stats, batch_norm_gather_stats_with_counts, batch_norm_elemt, batch_norm_backward_reduce, batch_norm_backward_elemt, rms_norm, rms_norm_param_grad, rms_norm_grad
-// Total: 22
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
@@ -6890,9 +6823,6 @@ def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoSideEffect, Decla
 
 #endif // GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
-// Group: OPTIMIZER
-// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update, multi_tensor_sgd_update, multi_tensor_momentum_update, multi_tensor_adam_update, multi_tensor_sgd_update_with_cast, multi_tensor_momentum_update_with_cast, multi_tensor_adam_update_with_cast
-// Total: 19
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
@@ -7481,9 +7411,6 @@ def OneFlow_MultiTensorYoloV5WeightUpdateOp : OneFlow_BaseOp<"multi_tensor_yolov
 
 #endif // GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
-// Group: PADDING
-// pad, reflection_pad1d, reflection_pad1d_grad, reflection_pad2d, reflection_pad2d_grad, replication_pad1d, replication_pad1d_grad, replication_pad2d, replication_pad2d_grad, same_padding, same_padding_grad
-// Total: 11
 
 #ifdef GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
@@ -7683,9 +7610,6 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffec
 
 #endif // GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
-// Group: PARALLEL_CAST
-// hierarchical_parallel_cast, hierarchical_parallel_cast_like, parallel_cast
-// Total: 3
 
 #ifdef GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
@@ -7744,9 +7668,6 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
 
 #endif // GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
-// Group: POOL
-// adaptive_avg_pool1d, adaptive_avg_pool1d_grad, adaptive_avg_pool2d, adaptive_avg_pool2d_grad, adaptive_avg_pool3d, adaptive_avg_pool3d_grad, avg_pool_1d, avg_pool_1d_grad, avg_pool_2d, avg_pool_2d_grad, avg_pool_3d, avg_pool_3d_grad, max_pool_1d, max_pool_1d_grad, max_pool_2d, max_pool_2d_grad, max_pool_3d, max_pool_3d_grad, max_unpool_1d, max_unpool_2d, max_unpool_3d, max_unpool_1d_grad, max_unpool_2d_grad, max_unpool_3d_grad, tf_avg_pool_1d, tf_avg_pool_1d_grad, tf_avg_pool_2d, tf_avg_pool_2d_grad, tf_avg_pool_3d, tf_avg_pool_3d_grad, tf_max_pool_1d, tf_max_pool_1d_grad, tf_max_pool_2d, tf_max_pool_2d_grad, tf_max_pool_3d, tf_max_pool_3d_grad
-// Total: 36
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
 
@@ -7833,9 +7754,6 @@ def OneFlow_TfMaxPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_3d_grad", 
 
 #endif // GET_ONEFLOW_POOL_OP_DEFINITIONS
 
-// Group: QUANTIZATION
-// fake_quantization, min_max_observer, moving_average_min_max_observer, quantization
-// Total: 4
 
 #ifdef GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
@@ -7932,11 +7850,52 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_GroupwiseDequantizeOp : OneFlow_BaseOp<"groupwise_dequantize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$scale,
+    Optional<OneFlow_Tensor>:$zero
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "8">:$num_bits,
+    DefaultValuedAttr<BoolAttr, "true">:$symmetric,
+    SI64Attr:$group_dim,
+    SI64Attr:$group_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_linear_with_groupwise_quantized_weight", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$w,
+    OneFlow_Tensor:$w_scale,
+    Optional<OneFlow_Tensor>:$w_zero,
+    Optional<OneFlow_Tensor>:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "8">:$num_bits,
+    DefaultValuedAttr<BoolAttr, "true">:$symmetric,
+    SI64Attr:$group_dim,
+    SI64Attr:$group_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
-// Group: REDUCE
-// indexed_slices_reduce_sum, reduce_all, reduce_any, reduce_max, reduce_max_device_stage, reduce_max_device_stage_grad, reduce_max_global_stage, reduce_max_global_stage_grad, reduce_min, reduce_min_device_stage, reduce_min_device_stage_grad, reduce_min_global_stage, reduce_min_global_stage_grad, reduce_prod, reduce_sum, reduce_sum_like, reduce_nansum
-// Total: 17
 
 #ifdef GET_ONEFLOW_REDUCE_OP_DEFINITIONS
 
@@ -8245,9 +8204,6 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, D
 
 #endif // GET_ONEFLOW_REDUCE_OP_DEFINITIONS
 
-// Group: RESHAPE
-// reshape, reshape_like
-// Total: 2
 
 #ifdef GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
@@ -8264,6 +8220,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
+  let has_enumerate_nd_sbp_signatures_fn = 1;
   let has_data_type_infer_fn = 1;
   let hasFolder = 1;
 }
@@ -8285,9 +8242,6 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
 
 #endif // GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
-// Group: SCALAR
-// clip_by_scalar, clip_by_scalar_grad, clip_by_scalar_max, clip_by_scalar_max_grad, clip_by_scalar_min, clip_by_scalar_min_grad, scalar_add, scalar_add_by_tensor, scalar_div_by_tensor, scalar_floordiv, scalar_truncdiv, scalar_fmod, scalar_logical_and, scalar_logical_equal, scalar_logical_greater, scalar_logical_greater_equal, scalar_logical_inplace_greater, scalar_logical_less, scalar_logical_less_equal, scalar_logical_not_equal, scalar_logical_or, scalar_logical_xor, scalar_mul, scalar_mul_by_tensor, scalar_pow, scalar_pow_grad, scalar_reverse_pow, scalar_reverse_pow_grad, scalar_sub_by_tensor, scalar_bitwise_and, scalar_bitwise_or, scalar_bitwise_xor
-// Total: 32
 
 #ifdef GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
@@ -8888,9 +8842,6 @@ def OneFlow_ScalarBitwiseXorOp : OneFlow_BaseOp<"scalar_bitwise_xor", [NoSideEff
 }
 #endif // GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
-// Group: SOFTMAX
-// log_softmax, log_softmax_grad, softmax, softmax_cross_entropy, softmax_cross_entropy_grad, softmax_grad, sparse_softmax_cross_entropy, sparse_softmax_cross_entropy_grad, sparse_softmax_cross_entropy_ms, sparse_softmax_cross_entropy_ms_grad
-// Total: 10
 
 #ifdef GET_ONEFLOW_SOFTMAX_OP_DEFINITIONS
 
@@ -9056,9 +9007,6 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
 
 #endif // GET_ONEFLOW_SOFTMAX_OP_DEFINITIONS
 
-// Group: SUMMARY
-// create_summary_writer, flush_summary_writer, summary_write_histogram, summary_write_image, summary_write_pb, summary_write_scalar
-// Total: 6
 
 #ifdef GET_ONEFLOW_SUMMARY_OP_DEFINITIONS
 
@@ -9128,9 +9076,6 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSid
 
 #endif // GET_ONEFLOW_SUMMARY_OP_DEFINITIONS
 
-// Group: TENSOR_BUFFER
-// gen_tensor_buffer, tensor_buffer_to_list_of_tensors, tensor_buffer_to_list_of_tensors_v2, tensor_buffer_to_tensor, tensor_to_tensor_buffer
-// Total: 5
 
 #ifdef GET_ONEFLOW_TENSOR_BUFFER_OP_DEFINITIONS
 
@@ -9226,9 +9171,6 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
 
 #endif // GET_ONEFLOW_TENSOR_BUFFER_OP_DEFINITIONS
 
-// Group: TEST
-// throw_error
-// Total: 1
 
 #ifdef GET_ONEFLOW_TEST_OP_DEFINITIONS
 
@@ -9245,9 +9187,6 @@ def OneFlow_ThrowErrorOp : OneFlow_BaseOp<"throw_error", [NoSideEffect, NoGrad, 
 }
 
 #endif // GET_ONEFLOW_TEST_OP_DEFINITIONS
-// Group: TRIGONOMETRIC
-// acos, acos_grad, acosh, acosh_grad, asin, asin_grad, asinh, asinh_grad, atan, atan2, atan2_x_grad, atan2_y_grad, atan_grad, atanh, atanh_grad, cos, cos_grad, cosh, cosh_grad, hardtanh, hardtanh_grad, sin, sin_grad, sinh, sinh_grad, tan, tan_grad, tanh, tanh_grad, not_equal_zero, not_equal_zero_grad
-// Total: 31
 
 #ifdef GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
@@ -9669,9 +9608,6 @@ def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, Dec
 
 #endif // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
-// Group: UNARY
-// acc, acc_ctrl_tick, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flip, fold, gelu, fast_gelu, quick_gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc, index_add, rrelu
-// Total: 59
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
@@ -10676,9 +10612,6 @@ def OneFlow_IsFiniteOp : OneFlow_BaseOp<"isfinite", [NoSideEffect, NoGrad, Decla
 
 #endif // GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
-// Group: UPSAMPLE
-// upsample_bicubic_2d, upsample_bicubic_2d_grad, upsample_bilinear_2d, upsample_bilinear_2d_grad, upsample_linear_1d, upsample_linear_1d_grad, upsample_nearest_1d, upsample_nearest_1d_grad, upsample_nearest_2d, upsample_nearest_2d_grad, upsample_nearest_3d, upsample_nearest_3d_grad, upsample_trilinear_3d, upsample_trilinear_3d_grad
-// Total: 14
 
 #ifdef GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
@@ -10964,9 +10897,6 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 }
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
-// Group: OneEmbedding
-// one_embedding_fused_lookup, one_embedding_fused_lookup_grad, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, one_embedding_sgd_update, embedding_put, one_embedding_adagrad_update, one_embedding_ftrl_update
-// Total: 11
 
 #ifdef GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
@@ -11497,9 +11427,6 @@ def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, Support
 
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
-// Group: linear algebra.
-// inv, linalg_cross, det
-// Total: 3
 
 #ifdef GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS
 
@@ -11562,9 +11489,6 @@ def OneFlow_LUDecompositionOp : OneFlow_BaseOp<"lu_decomposition", [NoSideEffect
 
 #endif // GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS
 
-// Group: System
-// copy_h2d, copy_d2h
-// Total: 2
 
 #ifdef GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
@@ -11637,9 +11561,6 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
   let has_data_type_infer_fn = 1;
 }
 
-// Group: MLIR_JIT
-// mlir_jit, kernel_launch
-// Total: 2
 
 #ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
 

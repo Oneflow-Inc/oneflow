@@ -25,6 +25,8 @@ parser.add_argument(
     nargs="?",
     default="enable",
 )
+parser.add_argument("--lazy", action="store_true")
+parser.add_argument("--verbose", action="store_true")
 args = parser.parse_args()
 
 torch_env = Path(__file__).parent
@@ -32,7 +34,9 @@ torch_env = Path(__file__).parent
 
 def main():
     if args.mock == "enable":
-        print("export PYTHONPATH=" + str(torch_env) + ":$PYTHONPATH")
+        print(
+            f"export ONEFLOW_MOCK_TORCH_LAZY={args.lazy}; export ONEFLOW_MOCK_TORCH_VERBOSE={args.verbose}; export PYTHONPATH={str(torch_env)}:$PYTHONPATH"
+        )
     elif args.mock == "disable":
         paths = os.environ["PYTHONPATH"].rstrip(":").split(":")
         paths = [x for x in paths if x != str(torch_env)]
