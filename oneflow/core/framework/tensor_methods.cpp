@@ -578,8 +578,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
     auto out_indices = JUST(functional::AsStrided(flatten_full_indices, out_sizes_, out_strides_,
                                                   out_effective_offset));
     storage = JUST(functional::IndexAddInplace(
-        storage, 0,
-        JUST(functional::Reshape(out_indices, Shape{out_indices->shape()->elem_cnt()})),
+        storage, 0, JUST(functional::Reshape(out_indices, Shape{out_indices->shape()->elem_cnt()})),
         JUST(functional::Reshape(grad, Shape{grad->shape()->elem_cnt()})), Scalar(1.0)));
   } else {
     // assume that new tensors have 0 storage offset
@@ -599,8 +598,8 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
         JUST(functional::Constant(*storage->shape(), 0, storage->dtype(), JUST(storage->device())));
     flatten_full_indices = JUST(functional::AsStrided(flatten_full_indices, inp_sizes_,
                                                       inp_strides_, inp_effective_offset));
-    auto inp_indices = JUST(functional::Reshape(
-        flatten_full_indices, Shape{flatten_full_indices->shape()->elem_cnt()}));
+    auto inp_indices = JUST(functional::Reshape(flatten_full_indices,
+                                                Shape{flatten_full_indices->shape()->elem_cnt()}));
 
     auto ones = JUST(functional::Constant(Shape{1}, 0, grad->dtype(), JUST(grad->device())));
     count = JUST(functional::IndexAddInplace(count, 0, inp_indices, ones, Scalar(1.0)));
