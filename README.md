@@ -185,7 +185,11 @@ docker pull oneflowinc/oneflow:nightly-cuda11.7
     ```
     make -j$(nproc)
     ```
-
+    or run:
+    ```
+    ninja -j$(nproc)
+    ```
+  
   - Add oneflow to your PYTHONPATH, inside `build` directory, run:
 
     ```
