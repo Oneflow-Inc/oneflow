@@ -24,6 +24,21 @@ class ProfilerActivity(Enum):
     CUDA = 2
 
 
+class ProfilerAction(Enum):
+    """
+    Profiler actions that can be taken at the specified intervals
+    """
+
+    NONE = 0
+    WARMUP = 1
+    RECORD = 2
+    RECORD_AND_SAVE = 3
+
+
+def tensorboard_trace_handler():
+    raise NotImplementedError()
+
+
 def supported_activities() -> Set[ProfilerActivity]:
     activities = set([ProfilerActivity.CPU])
     if oneflow.cuda.is_available():

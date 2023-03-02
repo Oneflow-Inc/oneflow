@@ -64,6 +64,7 @@ using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
 // TODO: set up another context
 using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
+using EnumerateNdSbpSignaturesFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult()
@@ -94,6 +95,7 @@ struct OpRegistryResult {
   NdSbpInferFn nd_sbp_infer_fn;
   ComputeComplexityFn compute_complexity_fn;
   GetNdSbpSignatureListFn get_nd_sbp_list_fn;
+  EnumerateNdSbpSignaturesFn enumerate_nd_sbp_signatures_fn;
   Operator::DumpNdSbpSignatureForOpConfFn dump_nd_sbp_signature_for_op_conf_fn;
 };
 
@@ -143,6 +145,7 @@ class OpRegistry final {
   OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
   OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
+  OpRegistry& SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn);
   OpRegistry& SetDumpNdSbpSignatureForOpConfFn(Operator::DumpNdSbpSignatureForOpConfFn fn);
 
   Maybe<OpRegistry&> Finish();
