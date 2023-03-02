@@ -50,7 +50,7 @@ __global__ void batch_reshape_for_qkv(const int n, const T* query, const T* key,
    auto* new_key_pack_ptr = reinterpret_cast<Packed<T, pack_size>*>(new_key);
    auto* new_value_pack_ptr = reinterpret_cast<Packed<T, pack_size>*>(new_value);
    assert(n % pack_size == 0);
-   CUDA_1D_KERNEL_LOOP(i, n / pack_size) {
+   CUDA_1D_KERNEL_LOOP(i, n) {
     Packed<T, pack_size> query_pack = query_pack_ptr[i];
     Packed<T, pack_size> key_pack = key_pack_ptr[i];
     Packed<T, pack_size> value_pack = value_pack_ptr[i];
@@ -82,12 +82,12 @@ class FusedCodegeexQkvReshapeGpuKernel final : public user_op::OpKernel {
 
     const int32_t n = query->shape_view().elem_cnt();
     if(n % 4 == 0){
-      RUN_CUDA_KERNEL((batch_reshape_for_qkv<T, 4>), ctx->stream(), n, n,
+      RUN_CUDA_KERNEL((batch_reshape_for_qkv<T, 4>), ctx->stream(), n / 4, n / 4,
                     query->dptr<T>(), key->dptr<T>(), value->dptr<T>(), new_query->mut_dptr<T>(),
                     new_key->mut_dptr<T>(), new_value->mut_dptr<T>());
     }
     else if(n % 2 == 0){
-      RUN_CUDA_KERNEL((batch_reshape_for_qkv<T, 2>), ctx->stream(), n, n,
+      RUN_CUDA_KERNEL((batch_reshape_for_qkv<T, 2>), ctx->stream(), n / 2, n / 2,
                     query->dptr<T>(), key->dptr<T>(), value->dptr<T>(), new_query->mut_dptr<T>(),
                     new_key->mut_dptr<T>(), new_value->mut_dptr<T>());
     }
