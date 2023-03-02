@@ -3504,6 +3504,9 @@ class StftFunctor {
                            const Optional<one::Tensor>& window, const bool center,
                            const std::string& mode, const bool normalized, const bool onesided,
                            const bool return_complex) const {
+#if CUDA_VERSION < 11000
+    return Error::RuntimeError() << "Your CUDA version is too old to implement operator stft.";
+#endif
     int64_t new_hop_length = hop_length.has_value() == true ? JUST(hop_length) : n_fft / 4;
     int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
     auto input_tensor = input;
