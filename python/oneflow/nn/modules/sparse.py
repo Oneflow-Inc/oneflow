@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 from typing import List, Optional, Tuple
 
 import oneflow as flow
@@ -146,6 +147,8 @@ class Embedding(Module):
         self.sparse = sparse
 
     def reset_parameters(self) -> None:
+        if os.getenv("ONEFLOW_LINEAR_EMBEDDING_SKIP_INIT", "0") == "1":
+            return
         flow.nn.init.normal_(self.weight)
         self._fill_padding_idx_with_zero()
 
