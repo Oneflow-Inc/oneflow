@@ -183,7 +183,8 @@ struct ErrorStackEntry {
   Message message;
 
   template<typename... Args>
-  ErrorStackEntry(std::string_view filename, std::size_t lineno, std::string_view function, Args&&... args)
+  ErrorStackEntry(std::string_view filename, std::size_t lineno, std::string_view function,
+                  Args&&... args)
       : filename(filename),
         lineno(lineno),
         function(function),
