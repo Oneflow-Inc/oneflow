@@ -30,6 +30,7 @@
     ]
   bind_python: true
 
+# this api just for test host memory input
 - name: "host_scalar_add_by_tensor"
   signature: "Tensor (Tensor x, Tensor scalar) => HostScalarAddByTensor"
   bind_python: true

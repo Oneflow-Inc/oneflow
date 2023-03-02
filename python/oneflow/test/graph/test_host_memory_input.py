@@ -40,7 +40,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
                 a = flow._C.host_scalar_add_by_tensor(x, scalar)
                 b = flow._C.host_scalar_add_by_tensor(a, scalar)
                 return a + b
-        
+
         graph = HostMemoryInputGraph()
         w = graph(x, scalar)
 

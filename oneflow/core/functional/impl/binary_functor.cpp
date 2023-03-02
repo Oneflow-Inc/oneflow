@@ -596,6 +596,7 @@ class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
   }
 };
 
+// this functor just for test host memory input
 class HostScalarAddByTensorFunctor {
  public:
   HostScalarAddByTensorFunctor() {
