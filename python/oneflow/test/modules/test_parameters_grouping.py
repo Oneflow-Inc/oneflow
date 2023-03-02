@@ -43,7 +43,10 @@ def module_grouping(test_case, device):
             self.make_contiguous_params_group()
 
     m = Model().to(device)
-    cpg = CPG(list(m.parameters()) + [flow.tensor([3, 3], dtype=flow.float32, requires_grad=True)])
+    cpg = CPG(
+        list(m.parameters())
+        + [flow.tensor([3, 3], dtype=flow.float32, requires_grad=True)]
+    )
 
     test_case.assertTrue(len(m.cpg.grouped_parameters) == 2)
     test_case.assertTrue(len(m.cpg.grouped_grads) == 2)
@@ -60,10 +63,20 @@ def module_grouping(test_case, device):
 def direct_grouping(test_case, device):
     x = [
         Parameter(
-            flow.tensor([1, 2], device=flow.device(device), dtype=flow.float32, requires_grad=True)
+            flow.tensor(
+                [1, 2],
+                device=flow.device(device),
+                dtype=flow.float32,
+                requires_grad=True,
+            )
         ),
         Parameter(
-            flow.tensor([3, 4], device=flow.device(device), dtype=flow.float32, requires_grad=True)
+            flow.tensor(
+                [3, 4],
+                device=flow.device(device),
+                dtype=flow.float32,
+                requires_grad=True,
+            )
         ),
     ]
     cpg = CPG([[x[0]], [x[1]]])
@@ -119,13 +132,14 @@ def multi_module_grad(test_case):
 
     for p in m1.parameters():
         test_case.assertTrue(
-            np_allclose_with_shape(p.grad.numpy(), np.array([1., 1.]))
+            np_allclose_with_shape(p.grad.numpy(), np.array([1.0, 1.0]))
         )
 
     for p in m2.parameters():
         test_case.assertTrue(
-            np_allclose_with_shape(p.grad.numpy(), np.array([4., 4.]))
+            np_allclose_with_shape(p.grad.numpy(), np.array([4.0, 4.0]))
         )
+
 
 def multi_module_lifecycle(test_case):
     class Module1(flow.nn.Module):
