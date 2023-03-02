@@ -1184,7 +1184,6 @@ def _test_conv2d_backward(
     if bias is not None:
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
     conv.to(to_device)
-    print(x.shape)
     of_out = conv(x)
     of_out.sum().backward()
     test_case.assertTrue(

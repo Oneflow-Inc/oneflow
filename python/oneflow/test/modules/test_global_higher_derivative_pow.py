@@ -29,9 +29,6 @@ def _check_equal(test_case, lhs, rhs, rtol=1e-3, atol=1e-3):
         atol=atol,
         equal_nan=True,
     )
-    if not is_equal:
-        print(lhs)
-        print(rhs)
     test_case.assertTrue(is_equal)
 
 

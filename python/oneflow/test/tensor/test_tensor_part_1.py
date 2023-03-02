@@ -146,7 +146,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_flow_tensor_gather_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        dim = random(0, 4).to(int)._calc_value()
+        dim = random(0, 4).to(int).value()
         index = random_tensor(
             ndim=4,
             dim1=random(1, 3).to(int),

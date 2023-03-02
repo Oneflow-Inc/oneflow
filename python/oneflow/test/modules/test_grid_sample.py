@@ -50,7 +50,6 @@ class TestGridSample(flow.unittest.TestCase):
             np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-    # The test is ok under pytorch 1.13. It should be uncomment after updating to pytorch 1.13.
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(rtol=1e-03, atol=1e-04, check_graph=True)
     def test_flow_grid_sample_cudnn_with_random_data(test_case):
@@ -113,7 +112,6 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
-    # The test is ok under pytorch 1.13. It should be uncomment after updating to pytorch 1.13.
     @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=True)
     def test_flow_grid_sample_5d_with_random_data(test_case):
         N = randint(1, 8)

@@ -43,7 +43,7 @@ class TestRNN(flow.unittest.TestCase):
             hx = m(input[i], hx)
         return hx
 
-    @autotest(n=5, check_graph=True, rtol=1e-1, atol=1e-3)
+    @autotest(n=5, check_graph=True)
     def test_rnn_relu_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)
