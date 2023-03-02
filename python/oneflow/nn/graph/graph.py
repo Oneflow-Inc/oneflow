@@ -1632,7 +1632,7 @@ class Graph(object):
                 )
         
         # TODO
-        # if isinstance(args, (tuple, list)):
+        # if isinstance(args, (tuple, list)) and len(kwargs)==0:
         #     out = args_tree.map_tuple_leaf(leaf_arg_fn)
         #     mapped_args = out[0]
         #     mapped_kwargs = out[1]

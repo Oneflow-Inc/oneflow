@@ -48,24 +48,28 @@ class NamedArg(object):
         self._is_value_set = False
         self._value = None
 
+
+    # TODO
     def __iter__(self):
         if not self._is_value_set:
             raise StopIteration
 
+        yield from iter_nodes([self.value])
+
         stack = [self]
-        while stack:
-            node = stack.pop()
-            if isinstance(node._value, (dict, OrderedDict)):
-                for key in node._value.keys():
-                    stack.append(node._value[key])
-            elif isinstance(node._value, (tuple, list)):
-                for item in node._value:
-                    if isinstance(item, NamedArg):
-                        stack.append(item)
-                    else:
-                        yield item
-            else:
-                raise StopIteration
+        # while stack:
+        #     node = stack.pop()
+        #     if isinstance(node._value, (dict, OrderedDict)):
+        #         for key in node._value.keys():
+        #             stack.append(node._value[key])
+        #     elif isinstance(node._value, (tuple, list)):
+        #         for item in node._value:
+        #             if isinstance(item, NamedArg):
+        #                 stack.append(item)
+        #             else:
+        #                 yield item
+        #     else:
+        #         raise StopIteration
 
     def prefix(self):
         return self._prefix
