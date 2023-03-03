@@ -298,50 +298,28 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    # Possibility 1: self and other are tensors on the same device/placement and have the same sbp.
-    if isinstance(other, Tensor):
-        if self.is_global:
-            assert (
-                other.is_global
-            ), "Only global tensor can be assigned to global tensor."
-            if self.placement == other.placement and self.sbp == other.sbp:
-                flow._C.assign_local_tensor(self.to_local(), other.to_local())
-                return
-        else:
-            assert (
-                not other.is_global
-            ), "Only local tensor can be assigned to local tensor."
-            if self.device == other.device:
-                other = flow._C.broadcast_like(other, self)
-                if not self.is_contiguous():
-                    # NOTE: slice_update support non-contiguous input tensor
-                    with flow.no_grad():
-                        self[...] = other
-                else:
-                    flow._C.assign_local_tensor(self, other)
-                return
-
-    # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
-    # In this case, we run boxing through cpu to avoid extra gpu memory usage.
+    if isinstance(other, np.ndarray):
+        other = flow.from_numpy(other)
+    elif not isinstance(other, Tensor):
+        other = flow.tensor(other)
+    other = other.to(self.dtype)
     if self.is_global:
-        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
-        if isinstance(other, Tensor):
+        assert other.is_global, "Only global tensor can be assigned to global tensor."
+        if not (self.sbp == other.sbp and self.placement == other.placement):
             other_cpu_placement = flow.placement("cpu", other.placement.ranks)
-            other = other.to_global(placement=other_cpu_placement).to_global(
-                placement=self_cpu_placement, sbp=self.sbp
-            )
-        else:
-            other = flow.tensor(
-                other, dtype=self.dtype, placement=self_cpu_placement, sbp=self.sbp
-            )
-        _copy_from_numpy_to_eager_local_tensor(
-            self.to_local(), other.to_local().numpy()
-        )
+            other = other.to_global(placement=other_cpu_placement)
+            self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+            other = other.to_global(placement=self_cpu_placement, sbp=self.sbp)
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, Tensor):
-            other = other.numpy()
-
-        _copy_from_numpy_to_eager_local_tensor(self, other)
+        assert other.is_local, "Only local tensor can be assigned to local tensor."
+        other = flow._C.broadcast_like(other, self)
+        if not self.is_contiguous():
+            # NOTE: slice_update support non-contiguous input tensor
+            with flow.no_grad():
+                self[...] = other
+        else:
+            flow._C.assign_local_tensor(self, other)
 
 
 def _format(self, format_spec):
