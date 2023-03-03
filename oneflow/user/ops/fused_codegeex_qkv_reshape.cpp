@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,11 +40,15 @@ Maybe<void> FusedCodegeexQkvReshapeOp::InferLogicalTensorDesc(user_op::InferCont
   CHECK_EQ_OR_RETURN(query.shape().size(), 3) << "query shape size should be equal 3";
   CHECK_EQ_OR_RETURN(key.shape().size(), 3) << "key shape size should be equal 3";
   CHECK_EQ_OR_RETURN(value.shape().size(), 3) << "value shape size should be equal 3";
-  CHECK_EQ_OR_RETURN(query.shape(), key.shape()) << "query, key, value should has same shape in codegeex attention block";
-  CHECK_EQ_OR_RETURN(query.shape(), value.shape()) << "query, key, value should has same shape in codegeex attention block";
-  CHECK_EQ_OR_RETURN(query.shape()[2] % num_attention_heads, 0) << "hidden_size must be divisible by num_attention_heads";
+  CHECK_EQ_OR_RETURN(query.shape(), key.shape())
+      << "query, key, value should has same shape in codegeex attention block";
+  CHECK_EQ_OR_RETURN(query.shape(), value.shape())
+      << "query, key, value should has same shape in codegeex attention block";
+  CHECK_EQ_OR_RETURN(query.shape()[2] % num_attention_heads, 0)
+      << "hidden_size must be divisible by num_attention_heads";
 
-  Shape new_shape(DimVector{query.shape()[0], query.shape()[1], num_attention_heads, query.shape()[2] / num_attention_heads});
+  Shape new_shape(DimVector{query.shape()[0], query.shape()[1], num_attention_heads,
+                            query.shape()[2] / num_attention_heads});
   user_op::TensorDesc* new_query = ctx->MutOutputTensorDesc("new_query", 0);
   new_query->set_is_dynamic(query.is_dynamic());
   new_query->set_shape(new_shape);
