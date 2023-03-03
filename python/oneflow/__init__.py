@@ -35,23 +35,33 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 
-locals()["dtype"] = oneflow._oneflow_internal.dtype
-locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["float16"] = oneflow._oneflow_internal.float16
-locals()["half"] = oneflow._oneflow_internal.float16
-locals()["float32"] = oneflow._oneflow_internal.float32
-locals()["float"] = oneflow._oneflow_internal.float
-locals()["double"] = oneflow._oneflow_internal.double
-locals()["float64"] = oneflow._oneflow_internal.float64
-locals()["int8"] = oneflow._oneflow_internal.int8
-locals()["int"] = oneflow._oneflow_internal.int32
-locals()["int32"] = oneflow._oneflow_internal.int32
-locals()["int64"] = oneflow._oneflow_internal.int64
-locals()["long"] = oneflow._oneflow_internal.int64
-locals()["uint8"] = oneflow._oneflow_internal.uint8
-locals()["record"] = oneflow._oneflow_internal.record
-locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+dtype = oneflow._oneflow_internal.dtype
+record = oneflow._oneflow_internal.record
+tensor_buffer = oneflow._oneflow_internal.tensor_buffer
+
+bool = oneflow._oneflow_internal.bool
+
+int8 = char = oneflow._oneflow_internal.int8
+int16 = short = oneflow._oneflow_internal.int16
+int32 = int = oneflow._oneflow_internal.int32
+int64 = long = oneflow._oneflow_internal.int64
+int128 = oneflow._oneflow_internal.int128
+
+uint8 = oneflow._oneflow_internal.uint8
+uint16 = oneflow._oneflow_internal.uint16
+uint32 = oneflow._oneflow_internal.uint32
+uint64 = oneflow._oneflow_internal.uint64
+uint128 = oneflow._oneflow_internal.uint128
+
+bfloat16 = oneflow._oneflow_internal.bfloat16
+float16 = half = oneflow._oneflow_internal.float16
+float32 = float = oneflow._oneflow_internal.float32
+float64 = double = oneflow._oneflow_internal.float64
+
+complex32 = chalf = oneflow._oneflow_internal.complex32
+complex64 = cfloat = oneflow._oneflow_internal.complex64
+complex128 = cdouble = oneflow._oneflow_internal.complex128
+
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 
