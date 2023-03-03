@@ -753,7 +753,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(
     OpArgsVector<int64_t>* input_tuple_indexes4mut_ibns,
     OpArgsVector<int64_t>* output_tuple_indexes4mut_obns,
     OpArgsVector<int64_t>* output_tuple_indexes4mut2_obns,
-    small_vector<bool, kOpArgsReservedSize>* output_tuple_indexes2is_mut2_type) {
+    small_vector<bool>* output_tuple_indexes2is_mut2_type) {
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);

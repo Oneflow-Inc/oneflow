@@ -27,7 +27,7 @@ namespace oneflow {
 namespace vm {
 
 StreamWaitInstructionPolicy::StreamWaitInstructionPolicy(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
     vm::Stream* from_vm_stream, vm::Stream* to_vm_stream)
     : dependences_(std::move(dependences)),
       input_dependences_(),
