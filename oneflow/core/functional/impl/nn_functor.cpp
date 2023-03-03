@@ -1313,8 +1313,7 @@ class SmoothL1LossFunctor : LossFunctorBase {
                            const std::string& reduction) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("beta");
     attrs.SetAllAttrs(beta);
-    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs),
-    reduction);
+    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
  private:
@@ -1385,8 +1384,7 @@ class BinaryCrossEntropyLossFunctor : public LossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    auto out = weight ? OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target,
-    JUST(weight)})
+    auto out = weight ? OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)})
                       : OpInterpUtil::Dispatch<Tensor>(*op_, {input, target});
     return apply_reduction(out, reduction);
   }
@@ -1456,8 +1454,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
             *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight)}, attrs));
       } else {
         out =
-            JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)},
-            attrs));
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs));
       }
     } else {
       if (pos_weight) {
@@ -1537,8 +1534,8 @@ class NLLLossFunctor {
       for (size_t i = 1; i < perm.size() - 1; ++i) { perm[i] = i + 1; }
 
       input_ = JUST(sequence_function(functional::Transpose)
-                        .then(std::bind(functional::Reshape, std::placeholders::_1, Shape({-1,
-                        C}))) .call(input, perm));
+                        .then(std::bind(functional::Reshape, std::placeholders::_1, Shape({-1, C})))
+                        .call(input, perm));
       target_ = JUST(functional::Flatten(target, 0, K - 2));
     } else {
       input_ = input;
@@ -1551,8 +1548,7 @@ class NLLLossFunctor {
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
       nll_result = JUST(
-          OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)},
-          attrs));
+          OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
@@ -1578,8 +1574,7 @@ class NLLLossFunctor {
 class CrossEntropyFunctor {
  public:
   CrossEntropyFunctor() {
-    op_log_softmax_ =
-    CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
 
     op_nll_ = CHECK_JUST(one::OpBuilder("nll")
                              .Input("input")
@@ -1661,8 +1656,7 @@ class CrossEntropyFunctor {
 class CrossEntropyLabelSmoothingFunctor {
  public:
   CrossEntropyLabelSmoothingFunctor() {
-    op_log_softmax_ =
-    CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
 
     op_nll_ = CHECK_JUST(one::OpBuilder("nll")
                              .Input("input")
@@ -1714,8 +1708,7 @@ class CrossEntropyLabelSmoothingFunctor {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
 
-    const auto& ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)),
-    {-1}));
+    const auto& ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)), {-1}));
 
     // smooth_loss = (-(input_ * weight.reshape(1, -1)).sum(1) * ~ignore_mask).reshape_as(target)
     std::shared_ptr<Tensor> smooth_loss = input_;
@@ -1734,16 +1727,14 @@ class CrossEntropyLabelSmoothingFunctor {
     // loss = nll_loss * (1 - label_smoothing) + smooth_loss * label_smoothing / num_classes
     if (reduction == "none") {
       return JUST(Add(JUST(ScalarMul(nll_loss, 1 - label_smoothing, false)),
-                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1,
-                      false));
+                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
     }
 
     const auto& nll_loss_sum = JUST(ReduceSum(nll_loss, {}, false));
     const auto& smooth_loss_sum = JUST(ReduceSum(smooth_loss, {}, false));
     const auto& cross_entropy_loss_sum =
         JUST(Add(JUST(ScalarMul(nll_loss_sum, 1 - label_smoothing, false)),
-                 JUST(ScalarMul(smooth_loss_sum, label_smoothing / n_classes, false)), 1,
-                 false));
+                 JUST(ScalarMul(smooth_loss_sum, label_smoothing / n_classes, false)), 1, false));
     if (reduction == "sum") { return cross_entropy_loss_sum; }
 
     const auto& total_weight = JUST(ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
@@ -1759,8 +1750,7 @@ class CrossEntropyLabelSmoothingFunctor {
 class CrossEntropyProbFunctor : public LossFunctorBase {
  public:
   CrossEntropyProbFunctor() {
-    op_log_softmax_ =
-    CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
@@ -1788,8 +1778,7 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
     if (label_smoothing > 0) {
       int32_t num_classes = input_->shape()->At(1);
       target_ =
-          JUST(ScalarAdd(JUST(ScalarMul(target_, static_cast<double>(1) - label_smoothing,
-          false)),
+          JUST(ScalarAdd(JUST(ScalarMul(target_, static_cast<double>(1) - label_smoothing, false)),
                          label_smoothing / static_cast<double>(num_classes), 1, false));
     }
 
@@ -2367,9 +2356,8 @@ class NormalizationFunctor {
       beta_val = JUST(beta);
     } else {
       const Shape gamma_beta_shape = Shape({x->shape()->At(1)});
-      gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(),
-      JUST(x->device()))); beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0,
-      x->dtype(), JUST(x->device())));
+      gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(), JUST(x->device())));
+      beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }
 
     const DataType gamma_dtype = gamma_val->dtype()->data_type();
@@ -2406,12 +2394,11 @@ class NormalizationFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
       res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val},
-          attrs));
+          *norm_eval_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val}, attrs));
     } else if (moving_mean) {
       res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_, {x, moving_mean_val, moving_variance_val, gamma_val,
-          beta_val}, attrs));
+          *norm_training_stats_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val},
+          attrs));
     } else {
       res = JUST(OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
                                                      {x, gamma_val, beta_val}, attrs));
@@ -2523,8 +2510,7 @@ class NormalizationAddReluFunctor {
           *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
       if (addend) {
         const auto& add_result =
-            JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result,
-            JUST(addend)}));
+            JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result, JUST(addend)}));
         return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result});
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result});
