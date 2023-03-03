@@ -43,8 +43,7 @@ namespace oneflow {
 
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  CHECK_OR_RETURN(x_shape[-1] == mask_shape[-1]
-                  && (x_shape[0] == mask_shape[0] || mask_shape[0] == 1));
+  CHECK_OR_RETURN(x_shape[-1] == mask_shape[-1] && x_shape[0] == mask_shape[0]);
   if (ctx->has_input("bias", 0)) {
     const Shape& bias_shape = ctx->InputShape("bias", 0);
     CHECK_OR_RETURN(mask_shape[-1] == bias_shape[-1]);
@@ -55,7 +54,6 @@ namespace oneflow {
     }
   } else {
     auto axes = x_shape.NumAxes();
-    CHECK_OR_RETURN(mask_shape[-1] == x_shape[-1]);
     bool reach1 = false;
     for (int i = 0; i < axes - 1; i++) {
       CHECK_OR_RETURN((mask_shape[i] == x_shape[i] && !reach1) || (1 == mask_shape[i]));
