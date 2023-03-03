@@ -190,18 +190,20 @@ void InitCudaContextOnce(int device_id);
 
 cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
-enum struct StatType : uint64_t {
-  AGGREGATE = 0,
-  SMALL_POOL = 1,
-  LARGE_POOL = 2,
-  NUM_TYPES = 3  // remember to update this whenever a new stat type is added
-};
+namespace CUDACachingAllocator {
 
 struct Stat {
   int64_t current = 0;
   int64_t peak = 0;
   int64_t allocated = 0;
   int64_t freed = 0;
+};
+
+enum struct StatType : uint64_t {
+  AGGREGATE = 0,
+  SMALL_POOL = 1,
+  LARGE_POOL = 2,
+  NUM_TYPES = 3  // remember to update this whenever a new stat type is added
 };
 
 typedef std::array<Stat, static_cast<size_t>(StatType::NUM_TYPES)> StatArray;
@@ -227,7 +229,8 @@ struct DeviceStats {
   // SUM: bytes within inactive, split memory blocks
   StatArray inactive_split_bytes;
 
-  // COUNT: total number of failed calls to CUDA malloc necessitating cache flushes.
+  // COUNT: total number of failed calls to CUDA malloc necessitating cache
+  // flushes.
   int64_t num_alloc_retries = 0;
 
   // COUNT: total number of OOMs (i.e. failed calls to CUDA after cache flush)
@@ -243,7 +246,9 @@ struct DeviceStats {
   int64_t max_split_size = 0;
 };
 
-DeviceStats GetCUDADeviceStatus(int device_id);
+DeviceStats GetCUDADeviceStatus(int device);
+
+}  // namespace CUDACachingAllocator
 
 }  // namespace oneflow
 

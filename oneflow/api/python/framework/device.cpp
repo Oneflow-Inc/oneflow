@@ -15,10 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
-#include "oneflow/api/python/exception/exception.h"
-#include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
-#include "oneflow/core/common/range.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -33,18 +30,15 @@ namespace oneflow {
 
 namespace one {
 
-using functional::PyObjectPtr;
-
-static PyObject* Device_memoryStats(PyObject* arg) {
-  HANDLE_ERRORS
+static py::object Device_memoryStats(int device) {
   // THPUtils_assert(
   //     THPUtils_checkLong(arg), "invalid argument to memory_allocated");
-  const int device = utils_unpackLong(arg);
+  // const int device = (int) utils_unpackLong(device_id);
 
-  using oneflow::DeviceStats;
-  using oneflow::Stat;
-  using oneflow::StatArray;
-  using oneflow::StatType;
+  using oneflow::CUDACachingAllocator::DeviceStats;
+  using oneflow::CUDACachingAllocator::Stat;
+  using oneflow::CUDACachingAllocator::StatArray;
+  using oneflow::CUDACachingAllocator::StatType;
 
   const auto statToDict = [](const Stat& stat) {
     py::dict dict;
@@ -66,7 +60,7 @@ static PyObject* Device_memoryStats(PyObject* arg) {
     return dict;
   };
 
-  const DeviceStats stats = oneflow::GetCUDADeviceStatus(device);
+  const DeviceStats stats = oneflow::CUDACachingAllocator::GetCUDADeviceStatus(device);
 
   py::dict result;
   result["num_alloc_retries"] = stats.num_alloc_retries;
@@ -82,9 +76,7 @@ static PyObject* Device_memoryStats(PyObject* arg) {
   result["inactive_split_bytes"] = statArrayToDict(stats.inactive_split_bytes);
   result["oversize_allocations"] = statToDict(stats.oversize_allocations);
   result["oversize_segments"] = statToDict(stats.oversize_segments);
-
-  return result.release().ptr();
-  END_HANDLE_ERRORS
+  return result;
 }
 
 }  // namespace one
@@ -108,7 +100,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def(
       "max_alignment_size", []() { return ep::kMaxAlignmentRequirement; },
       py::return_value_policy::copy);
-  // TODO(hujiakui): TypeError: _cuda_memoryStat(): incompatible function arguments.
   m.def("_cuda_memoryStat", &one::Device_memoryStats);
 }
 
