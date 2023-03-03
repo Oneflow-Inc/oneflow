@@ -58,6 +58,12 @@ from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
 
 
+def run_graph_by_vm():
+    return oneflow.support.env_var_util.parse_boolean_from_env(
+        "ONEFLOW_RUN_GRAPH_BY_VM", False
+    )
+
+
 class Graph(object):
     r"""Base class for training or evaluating a neural network in static graph mode.
 
@@ -1164,9 +1170,7 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
 
-                if not oneflow.support.env_var_util.parse_boolean_from_env(
-                    "ONEFLOW_RUN_GRAPH_BY_VM", False
-                ):
+                if not run_graph_by_vm():
                     self._c_nn_graph.compile_plan_for_runtime()
                     self._c_nn_graph.init_runtime()
 
@@ -1363,7 +1367,7 @@ class Graph(object):
         # Always pack outputs to remain type of outputs
         return (
             self._full_job_proto,
-            seq_to_func_return(self._eager_outputs_buffer[0], True),
+            self._eager_outputs[0],
         )
 
     def __prepare_for_share_or_runtime_save(
@@ -1434,25 +1438,26 @@ class Graph(object):
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self.__flatten_io("output", *self._eager_outputs)
         )
-        self._eager_outputs_buffer = [
-            self._eager_outputs,
-        ]
-        self._outputs_tensor_tuple_buffer = [
-            self._outputs_tensor_tuple,
-        ]
+        if not run_graph_by_vm():
+            self._eager_outputs_buffer = [
+                self._eager_outputs,
+            ]
+            self._outputs_tensor_tuple_buffer = [
+                self._outputs_tensor_tuple,
+            ]
 
-        # Make outputs buffer
-        for i in range(self._outputs_buffer_size - 1):
-            outputs_buffer_item, _ = self.__empty_like_io(
-                "output", *self._eager_outputs
-            )
-            self._eager_outputs_buffer.append(outputs_buffer_item)
-            outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
-                self.__flatten_io("output", *outputs_buffer_item)
-            )
-            self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
+            # Make outputs buffer
+            for i in range(self._outputs_buffer_size - 1):
+                outputs_buffer_item, _ = self.__empty_like_io(
+                    "output", *self._eager_outputs
+                )
+                self._eager_outputs_buffer.append(outputs_buffer_item)
+                outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
+                    self.__flatten_io("output", *outputs_buffer_item)
+                )
+                self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
 
-        self.__check_outputs_buffer()
+            self.__check_outputs_buffer()
 
     def __check_outputs_buffer(self):
         has_len = len(self._outputs_tensor_tuple_buffer)
@@ -1481,9 +1486,7 @@ class Graph(object):
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
 
-            if oneflow.support.env_var_util.parse_boolean_from_env(
-                "ONEFLOW_RUN_GRAPH_BY_VM", False
-            ):
+            if run_graph_by_vm():
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
                     convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )

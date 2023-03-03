@@ -184,7 +184,10 @@ PyObject* TensorSize_NewFromShape(const Shape& size) {
   PyObjectPtr self(TensorSize_New(size.NumAxes()));
   if (self.get()) {
     for (int i = 0; i < size.NumAxes(); ++i) {
-      PyTuple_SET_ITEM(self.get(), i, one::functional::CastToPyObject(size.At(i)));
+      Dim dim = size[i];
+      PyTuple_SET_ITEM(self.get(), i,
+                       dim.is_known() ? one::functional::CastToPyObject(dim.val())
+                                      : one::functional::CastToPyObject(dim));
     }
   }
   return self.release();

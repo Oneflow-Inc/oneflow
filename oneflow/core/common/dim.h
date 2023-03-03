@@ -58,109 +58,92 @@ class Dim {
   int64_t val_or(int64_t default_value) const { return is_known() ? value_ : default_value; }
   void ToProto(DimProto* proto) const;
 
-#define DECLARE_BINARY_OP(op)                      \
-  Dim operator op(const Dim& other) const;         \
-  Dim operator op(char other) const;               \
-  Dim operator op(unsigned char other) const;      \
-  Dim operator op(int other) const;                \
-  Dim operator op(unsigned int other) const;       \
-  Dim operator op(long other) const;               \
-  Dim operator op(unsigned long other) const;      \
-  Dim operator op(long long other) const;          \
-  Dim operator op(unsigned long long other) const; \
-  Dim operator op(float other) const;              \
-  Dim operator op(double other) const;
+#define DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES(op)    \
+  friend Dim operator op(Dim a, Dim b);                \
+  friend Dim operator op(Dim a, char b);               \
+  friend Dim operator op(Dim a, unsigned char b);      \
+  friend Dim operator op(Dim a, int b);                \
+  friend Dim operator op(Dim a, unsigned int b);       \
+  friend Dim operator op(Dim a, long b);               \
+  friend Dim operator op(Dim a, unsigned long b);      \
+  friend Dim operator op(Dim a, long long b);          \
+  friend Dim operator op(Dim a, unsigned long long b); \
+  friend Dim operator op(char a, Dim b);               \
+  friend Dim operator op(unsigned char a, Dim b);      \
+  friend Dim operator op(int a, Dim b);                \
+  friend Dim operator op(unsigned int a, Dim b);       \
+  friend Dim operator op(long a, Dim b);               \
+  friend Dim operator op(unsigned long a, Dim b);      \
+  friend Dim operator op(long long a, Dim b);          \
+  friend Dim operator op(unsigned long long a, Dim b); \
+  Dim& operator op##=(Dim other);                      \
+  Dim& operator op##=(char other);                     \
+  Dim& operator op##=(unsigned char other);            \
+  Dim& operator op##=(int other);                      \
+  Dim& operator op##=(unsigned int other);             \
+  Dim& operator op##=(long other);                     \
+  Dim& operator op##=(unsigned long other);            \
+  Dim& operator op##=(long long other);                \
+  Dim& operator op##=(unsigned long long other);
+
+#define DECLARE_BINARY_OP_FLOATING_TYPES(op) \
+  friend Dim operator op(Dim a, float b);    \
+  friend Dim operator op(Dim a, double b);   \
+  friend Dim operator op(float a, Dim b);    \
+  friend Dim operator op(double a, Dim b);   \
+  Dim& operator op##=(float other);          \
+  Dim& operator op##=(double other);
+
+#define DECLARE_BINARY_OP(op)                 \
+  DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES(op) \
+  DECLARE_BINARY_OP_FLOATING_TYPES(op)
 
   DECLARE_BINARY_OP(+)
   DECLARE_BINARY_OP(-)
   DECLARE_BINARY_OP(*)
   DECLARE_BINARY_OP(/)
+  DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES(%)
+  DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES(|)
+  DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES(&)
+
 #undef DECLARE_BINARY_OP
+#undef DECLARE_BINARY_OP_FLOATING_TYPES
+#undef DECLARE_BINARY_OP_EXCEPT_FLOATING_TYPES
 
-#define DECLARE_ASSIGN_OP(op)                 \
-  Dim& operator op(const Dim& other);         \
-  Dim& operator op(char other);               \
-  Dim& operator op(unsigned char other);      \
-  Dim& operator op(int other);                \
-  Dim& operator op(unsigned int other);       \
-  Dim& operator op(long other);               \
-  Dim& operator op(unsigned long other);      \
-  Dim& operator op(long long other);          \
-  Dim& operator op(unsigned long long other); \
-  Dim& operator op(float other);              \
-  Dim& operator op(double other);
+#define DECLARE_COMPARISON_OP(op)                       \
+  friend bool operator op(Dim a, Dim b);                \
+  friend bool operator op(Dim a, char b);               \
+  friend bool operator op(Dim a, unsigned char b);      \
+  friend bool operator op(Dim a, int b);                \
+  friend bool operator op(Dim a, unsigned int b);       \
+  friend bool operator op(Dim a, long b);               \
+  friend bool operator op(Dim a, unsigned long b);      \
+  friend bool operator op(Dim a, long long b);          \
+  friend bool operator op(Dim a, unsigned long long b); \
+  friend bool operator op(Dim a, float b);              \
+  friend bool operator op(Dim a, double b);             \
+  friend bool operator op(char a, Dim b);               \
+  friend bool operator op(unsigned char a, Dim b);      \
+  friend bool operator op(int a, Dim b);                \
+  friend bool operator op(unsigned int a, Dim b);       \
+  friend bool operator op(long a, Dim b);               \
+  friend bool operator op(unsigned long a, Dim b);      \
+  friend bool operator op(long long a, Dim b);          \
+  friend bool operator op(unsigned long long a, Dim b); \
+  friend bool operator op(float a, Dim b);              \
+  friend bool operator op(double a, Dim b);
 
-  DECLARE_ASSIGN_OP(+=)
-  DECLARE_ASSIGN_OP(-=)
-  DECLARE_ASSIGN_OP(*=)
-  DECLARE_ASSIGN_OP(/=)
-
-#define DECLARE_COMPARISON_OP_FRIREND(op)                      \
-  friend bool operator op(const Dim& a, const Dim& b);         \
-  friend bool operator op(const Dim& a, char b);               \
-  friend bool operator op(const Dim& a, unsigned char b);      \
-  friend bool operator op(const Dim& a, int b);                \
-  friend bool operator op(const Dim& a, unsigned int b);       \
-  friend bool operator op(const Dim& a, long b);               \
-  friend bool operator op(const Dim& a, unsigned long b);      \
-  friend bool operator op(const Dim& a, long long b);          \
-  friend bool operator op(const Dim& a, unsigned long long b); \
-  friend bool operator op(const Dim& a, float b);              \
-  friend bool operator op(const Dim& a, double b);             \
-  friend bool operator op(char a, const Dim& b);               \
-  friend bool operator op(unsigned char a, const Dim& b);      \
-  friend bool operator op(int a, const Dim& b);                \
-  friend bool operator op(unsigned int a, const Dim& b);       \
-  friend bool operator op(long a, const Dim& b);               \
-  friend bool operator op(unsigned long a, const Dim& b);      \
-  friend bool operator op(long long a, const Dim& b);          \
-  friend bool operator op(unsigned long long a, const Dim& b); \
-  friend bool operator op(float a, const Dim& b);              \
-  friend bool operator op(double a, const Dim& b);
-
-  DECLARE_COMPARISON_OP_FRIREND(==)
-  DECLARE_COMPARISON_OP_FRIREND(!=)
-  DECLARE_COMPARISON_OP_FRIREND(<)
-  DECLARE_COMPARISON_OP_FRIREND(<=)
-  DECLARE_COMPARISON_OP_FRIREND(>)
-  DECLARE_COMPARISON_OP_FRIREND(>=)
+  DECLARE_COMPARISON_OP(==)
+  DECLARE_COMPARISON_OP(!=)
+  DECLARE_COMPARISON_OP(<)
+  DECLARE_COMPARISON_OP(<=)
+  DECLARE_COMPARISON_OP(>)
+  DECLARE_COMPARISON_OP(>=)
 };
 
 static_assert(sizeof(Dim) == sizeof(int64_t), "");
 
-std::ostream& operator<<(std::ostream& os, const Dim& dim);
-
-#define DECLARE_COMPARISON_OP(op)                       \
-  bool operator op(const Dim& a, const Dim& b);         \
-  bool operator op(const Dim& a, char b);               \
-  bool operator op(const Dim& a, unsigned char b);      \
-  bool operator op(const Dim& a, int b);                \
-  bool operator op(const Dim& a, unsigned int b);       \
-  bool operator op(const Dim& a, long b);               \
-  bool operator op(const Dim& a, unsigned long b);      \
-  bool operator op(const Dim& a, long long b);          \
-  bool operator op(const Dim& a, unsigned long long b); \
-  bool operator op(const Dim& a, float b);              \
-  bool operator op(const Dim& a, double b);             \
-  bool operator op(char a, const Dim& b);               \
-  bool operator op(unsigned char a, const Dim& b);      \
-  bool operator op(int a, const Dim& b);                \
-  bool operator op(unsigned int a, const Dim& b);       \
-  bool operator op(long a, const Dim& b);               \
-  bool operator op(unsigned long a, const Dim& b);      \
-  bool operator op(long long a, const Dim& b);          \
-  bool operator op(unsigned long long a, const Dim& b); \
-  bool operator op(float a, const Dim& b);              \
-  bool operator op(double a, const Dim& b);
-
-DECLARE_COMPARISON_OP(==)
-DECLARE_COMPARISON_OP(!=)
-DECLARE_COMPARISON_OP(<)
-DECLARE_COMPARISON_OP(<=)
-DECLARE_COMPARISON_OP(>)
-DECLARE_COMPARISON_OP(>=)
-
-#undef DECLARE_COMPARISON_OP
+std::ostream& operator<<(std::ostream& os, Dim dim);
 
 }  // namespace oneflow
 

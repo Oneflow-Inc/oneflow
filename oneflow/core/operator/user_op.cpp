@@ -751,20 +751,17 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc.data_type());
     out_blob_desc->set_shape(tensor_desc.shape());
-    if (val_->non_contiguous_supported) {
-      out_blob_desc->set_stride(tensor_desc.stride());
-    } else {
-      if (LazyMode::is_enabled()) {
-        // set an empty stride
-        out_blob_desc->set_stride(Stride(out_blob_desc->shape().size()));
+    if (!LazyMode::is_enabled()) {
+      if (val_->non_contiguous_supported) {
+        out_blob_desc->set_stride(tensor_desc.stride());
       } else {
         out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
       }
+      CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+          << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+          << out_blob_desc->stride().ToString() << " but shape is "
+          << out_blob_desc->shape().ToString();
     }
-    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
-        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
-        << out_blob_desc->stride().ToString() << " but shape is "
-        << out_blob_desc->shape().ToString();
     out_blob_desc->set_is_dynamic(tensor_desc.is_dynamic());
   }
   return Maybe<void>::Ok();

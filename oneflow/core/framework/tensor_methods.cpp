@@ -219,25 +219,25 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t expa
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
 
-  DimVector target_dim_vec(ndim + 1);
+  Shape target_shape(ndim + 1);
   Stride target_stride_vec(ndim + 1);
 
   {
     int cnt = 0;
     for (int i = 0; i < ndim; i++) {
       if (i == expand_dim) { cnt++; }
-      target_dim_vec[cnt] = shape->at(i);
+      target_shape[cnt] = shape->at(i);
       target_stride_vec[cnt] = strides->at(i);
       cnt++;
     }
-    target_dim_vec[expand_dim] = 1;
+    target_shape[expand_dim] = 1;
     target_stride_vec[expand_dim] =
-        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
+        expand_dim < ndim ? strides->at(expand_dim) * target_shape.at(expand_dim + 1).val() : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
-      JUST(BasicView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
+      JUST(BasicView(input, target_shape, target_stride_vec, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn = std::make_shared<BackwardFunction>();
@@ -263,24 +263,24 @@ Maybe<void> InplaceUnsqueeze(const std::shared_ptr<Tensor>& input, const int32_t
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
 
-  DimVector target_dim_vec(ndim + 1);
+  Shape target_shape(ndim + 1);
   Stride target_stride_vec(ndim + 1);
 
   {
     int cnt = 0;
     for (int i = 0; i < ndim; i++) {
       if (i == expand_dim) { cnt++; }
-      target_dim_vec[cnt] = shape->at(i);
+      target_shape[cnt] = shape->at(i);
       target_stride_vec[cnt] = strides->at(i);
       cnt++;
     }
-    target_dim_vec[expand_dim] = 1;
+    target_shape[expand_dim] = 1;
     target_stride_vec[expand_dim] =
-        expand_dim < ndim ? strides->at(expand_dim) * target_dim_vec.at(expand_dim + 1) : 1;
+        expand_dim < ndim ? strides->at(expand_dim) * target_shape.at(expand_dim + 1).val() : 1;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
-  JUST(view::InplaceView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
+  JUST(view::InplaceView(input, target_shape, target_stride_vec, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn = std::make_shared<BackwardFunction>();
@@ -578,8 +578,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
     auto out_indices = JUST(functional::AsStrided(flatten_full_indices, out_sizes_, out_strides_,
                                                   out_effective_offset));
     storage = JUST(functional::IndexAddInplace(
-        storage, 0,
-        JUST(functional::Reshape(out_indices, Shape{out_indices->shape()->elem_cnt()})),
+        storage, 0, JUST(functional::Reshape(out_indices, Shape{out_indices->shape()->elem_cnt()})),
         JUST(functional::Reshape(grad, Shape{grad->shape()->elem_cnt()})), Scalar(1.0)));
   } else {
     // assume that new tensors have 0 storage offset
@@ -599,8 +598,8 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
         JUST(functional::Constant(*storage->shape(), 0, storage->dtype(), JUST(storage->device())));
     flatten_full_indices = JUST(functional::AsStrided(flatten_full_indices, inp_sizes_,
                                                       inp_strides_, inp_effective_offset));
-    auto inp_indices = JUST(functional::Reshape(
-        flatten_full_indices, Shape{flatten_full_indices->shape()->elem_cnt()}));
+    auto inp_indices = JUST(functional::Reshape(flatten_full_indices,
+                                                Shape{flatten_full_indices->shape()->elem_cnt()}));
 
     auto ones = JUST(functional::Constant(Shape{1}, 0, grad->dtype(), JUST(grad->device())));
     count = JUST(functional::IndexAddInplace(count, 0, inp_indices, ones, Scalar(1.0)));

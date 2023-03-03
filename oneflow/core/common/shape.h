@@ -85,7 +85,7 @@ struct ConstShapeMixIn {
   bool operator==(const T& rhs) const;
 
   const int64_t* int64_ptr() const {
-    for (const Dim& dim : *tp()) { CHECK(dim.is_known()); }
+    for (Dim dim : *tp()) { CHECK(dim.is_known()); }
     return reinterpret_cast<const int64_t*>(tp()->data());
   }
 
@@ -108,12 +108,12 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
   }
 
   const int64_t* int64_ptr() const {
-    for (const Dim& dim : *this->tp()) { CHECK(dim.is_known()); }
+    for (Dim dim : *this->tp()) { CHECK(dim.is_known()); }
     return reinterpret_cast<const int64_t*>(this->tp()->data());
   }
 
   int64_t* int64_ptr() {
-    for (const Dim& dim : *(this->tp())) { CHECK(dim.is_known()); }
+    for (Dim dim : *(this->tp())) { CHECK(dim.is_known()); }
     return reinterpret_cast<int64_t*>(this->tp()->data());
   }
 };

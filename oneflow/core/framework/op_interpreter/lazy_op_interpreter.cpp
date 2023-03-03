@@ -60,6 +60,7 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
   // set an empty stride for the compatibility with dynamic shape
+  // stride is not used in lazy mode
   auto stride = std::make_shared<Stride>(shape->size());
   auto dtype = blob_desc_it->second.data_type();
   if (is_local) {

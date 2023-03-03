@@ -45,6 +45,8 @@ class M(flow.nn.Module):
             # Shape inference works correctly even with the presence of
             # symbolic dimensions:
             assert x.shape == (1, flow.Dim.unknown(), 4)
+            assert isinstance(x.shape[0], int)
+            assert isinstance(x.shape[2], int)
             # y has a static shape even though x has a symbolic shape
             assert y.shape == (1, 4)
         return x

@@ -170,7 +170,7 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
     padding_after->resize(3);
   }
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = reinterpret_cast<int64_t*>(&(*out)[i]);
+    Dim* out_ptr = &(*out)[i];
     int32_t* padding_before_ptr = padding_before ? (&(*padding_before).at(i)) : nullptr;
     int32_t* padding_after_ptr = padding_after ? (&(*padding_after).at(i)) : nullptr;
     if (dilation_rate) {
@@ -238,7 +238,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
                           dilation_rate.at(i), strides.at(i), padding,
-                          out ? reinterpret_cast<int64_t*>(&(out->at(i))) : nullptr,
+                          out ? &(out->at(i)) : nullptr,
                           pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                           pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }

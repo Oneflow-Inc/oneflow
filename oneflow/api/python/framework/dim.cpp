@@ -59,9 +59,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       DEFINE_OPERATOR(>)
       DEFINE_OPERATOR(>=)
       // clang-format on
-      .def(py::hash(py::self))
-      .def("__int__", [](Dim dim) { return dim.val(); })
-      .def("__float__", [](Dim dim) { return static_cast<float>(dim.val()); });
+      .def(py::hash(py::self));
 }
 
 }  // namespace oneflow
