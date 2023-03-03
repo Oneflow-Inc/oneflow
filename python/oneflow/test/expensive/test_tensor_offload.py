@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import time
 import unittest
 
 import numpy as np
@@ -235,10 +234,10 @@ class TestTensorOffload(flow.unittest.TestCase):
         def offload_eager_model(model):
             for param in model.parameters():
                 if not param.is_offloaded():
-                    print("need offload id ", id(param.data))
-                    print("need offload id ", id(param.data))
+                    # print("need offload id ", id(param.data))
+                    # print("need offload id ", id(param.data))
                     param.offload()
-                    print("offload id ", id(param.data))
+                    # print("offload id ", id(param.data))
                     test_case.assertTrue(param.is_offloaded())
 
         class Model(nn.Module):
