@@ -52,6 +52,8 @@ def _to_layout(t, layout):
         return t
     elif layout == "BM(HK)":
         return t.view(t.shape[0], t.shape[1], -1)
+    elif layout == "MB(HK)":
+        return t.view(t.shape[0], t.shape[1], -1).transpose(0, 1)
     elif layout == "BHMK":
         return t.transpose(1, 2)
     else:
@@ -295,7 +297,7 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
         )
 
     def test_multi_head_attention_inference_with_layout(test_case):
-        layouts = ["BM(HK)", "BMHK", "BHMK"]
+        layouts = ["BM(HK)", "BMHK", "BHMK", "MB(HK)"]
         for query_layout, key_layout, value_layout in itertools.product(
             layouts, layouts, layouts
         ):

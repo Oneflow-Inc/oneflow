@@ -280,6 +280,26 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           *h_stride = *k;
           *m_stride = *h_stride * *h;
           *b_stride = *m_stride * *m;
+        } else if (layout == "MB(HK)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = CHECK_JUST(num_heads);
+            CHECK_EQ(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = CHECK_JUST(head_size);
+            CHECK_EQ(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED();
+          }
+          *h_stride = *k;
+          *b_stride = *h_stride * *h;
+          *m_stride = *b_stride * *b;
         } else {
           UNIMPLEMENTED();
         }

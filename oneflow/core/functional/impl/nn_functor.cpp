@@ -4834,10 +4834,6 @@ class FusedMultiHeadAttentionInferenceFunctor {
                                                           "BM(HK)", value, "BM(HK)", attn_bias,
                                                           causal, causal_diagonal_offset);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_with_attn_bias_;
 };
 
 class FusedMultiHeadAttentionInferenceV2Functor {
@@ -4889,10 +4885,27 @@ class FusedMultiHeadAttentionInferenceV2Functor {
           } else {
             UNIMPLEMENTED_THEN_RETURN();
           }
+        } else if (layout == "MB(HK)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = JUST(num_heads);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = JUST(head_size);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED_THEN_RETURN();
+          }
         } else {
           UNIMPLEMENTED_THEN_RETURN()
-              << name << "_layout should be 'BM(HK)' when the number of dimensions of " << name
-              << " tensor is 3.";
+              << name << "_layout should be 'BM(HK)' or 'MB(HK)' when the number of dimensions of "
+              << name << " tensor is 3.";
         }
       } else if (shape.NumAxes() == 4) {
         if (layout == "BMHK") {

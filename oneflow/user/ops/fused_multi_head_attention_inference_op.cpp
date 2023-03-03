@@ -58,6 +58,23 @@ namespace oneflow {
         } else {
           UNIMPLEMENTED_THEN_RETURN();
         }
+      } else if (layout == "MB(HK)") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        const int64_t hidden_size = shape.At(2);
+        if (num_heads) {
+          const int64_t expected_h = JUST(num_heads);
+          CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
+          *h = expected_h;
+          *k = hidden_size / expected_h;
+        } else if (head_size) {
+          const int64_t expected_k = JUST(head_size);
+          CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
+          *h = hidden_size / expected_k;
+          *k = expected_k;
+        } else {
+          UNIMPLEMENTED_THEN_RETURN();
+        }
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -150,7 +167,7 @@ namespace oneflow {
   int64_t num_heads = 0;
   const user_op::TensorDesc& query = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0);
   if (query.shape().NumAxes() == 3) {
-    if (query_layout == "BM(HK)") {
+    if (query_layout == "BM(HK)" || query_layout == "MB(HK)") {
       CHECK_EQ_OR_RETURN(query.shape().At(2) % query_head_size, 0);
       num_heads = query.shape().At(2) / query_head_size;
     } else {
@@ -166,25 +183,31 @@ namespace oneflow {
     }
   }
   const bool can_hk_split = num_heads % ctx->parallel_num() == 0;
-  const auto ParseSplitAxis = [ctx, can_hk_split](const std::string& layout,
-                                                  int64_t* b_split_axis,
+  const auto ParseSplitAxis = [ctx, can_hk_split](const std::string& layout, int64_t* b_split_axis,
                                                   int64_t* h_split_axis) -> Maybe<void> {
-      if (layout == "BM(HK)") {
-        *b_split_axis = 0;
-        if (can_hk_split) {
-          *h_split_axis = 2;
-        } else {
-          *h_split_axis = -1;
-        }
-      } else if (layout == "BMHK") {
-        *b_split_axis = 0;
+    if (layout == "BM(HK)") {
+      *b_split_axis = 0;
+      if (can_hk_split) {
         *h_split_axis = 2;
-      } else if (layout == "BHMK") {
-        *b_split_axis = 0;
-        *h_split_axis = 1;
       } else {
-        UNIMPLEMENTED_THEN_RETURN();
+        *h_split_axis = -1;
       }
+    } else if (layout == "MB(HK)") {
+      *b_split_axis = 1;
+      if (can_hk_split) {
+        *h_split_axis = 2;
+      } else {
+        *h_split_axis = -1;
+      }
+    } else if (layout == "BMHK") {
+      *b_split_axis = 0;
+      *h_split_axis = 2;
+    } else if (layout == "BHMK") {
+      *b_split_axis = 0;
+      *h_split_axis = 1;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
     return Maybe<void>::Ok();
   };
 
