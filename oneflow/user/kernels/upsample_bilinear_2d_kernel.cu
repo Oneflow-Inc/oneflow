@@ -186,11 +186,11 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     double width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> in_helper(
-        x_tensor->shape_view().At(0).val(), x_tensor->shape_view().At(1).val(), x_tensor->shape_view().At(2).val(),
-        x_tensor->shape_view().At(3).val());
+        x_tensor->shape_view().At(0).val(), x_tensor->shape_view().At(1).val(),
+        x_tensor->shape_view().At(2).val(), x_tensor->shape_view().At(3).val());
     NdIndexOffsetHelper<int64_t, 4> out_helper(
-        y_tensor->shape_view().At(0).val(), y_tensor->shape_view().At(1).val(), y_tensor->shape_view().At(2).val(),
-        y_tensor->shape_view().At(3).val());
+        y_tensor->shape_view().At(0).val(), y_tensor->shape_view().At(1).val(),
+        y_tensor->shape_view().At(2).val(), y_tensor->shape_view().At(3).val());
 
     const int64_t in_height = x_tensor->shape_view().At(2);
     const int64_t in_width = x_tensor->shape_view().At(3);
@@ -234,11 +234,11 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
     double width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> dy_helper(
-        dy_tensor->shape_view().At(0).val(), dy_tensor->shape_view().At(1).val(), dy_tensor->shape_view().At(2).val(),
-        dy_tensor->shape_view().At(3).val());
+        dy_tensor->shape_view().At(0).val(), dy_tensor->shape_view().At(1).val(),
+        dy_tensor->shape_view().At(2).val(), dy_tensor->shape_view().At(3).val());
     NdIndexOffsetHelper<int64_t, 4> dx_helper(
-        dx_tensor->shape_view().At(0).val(), dx_tensor->shape_view().At(1).val(), dx_tensor->shape_view().At(2).val(),
-        dx_tensor->shape_view().At(3).val());
+        dx_tensor->shape_view().At(0).val(), dx_tensor->shape_view().At(1).val(),
+        dx_tensor->shape_view().At(2).val(), dx_tensor->shape_view().At(3).val());
 
     const int64_t in_height = dx_tensor->shape_view().At(2);
     const int64_t in_width = dx_tensor->shape_view().At(3);

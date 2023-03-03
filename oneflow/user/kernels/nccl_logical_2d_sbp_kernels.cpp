@@ -372,7 +372,8 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
           ctx->stream()->device_type(), unpack_from_shape.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), unpack_from_shape.size(),
-                        unpack_from_shape.int64_ptr(), unpack_from_ptr, perm.data(), out->mut_dptr());
+                        unpack_from_shape.int64_ptr(), unpack_from_ptr, perm.data(),
+                        out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
