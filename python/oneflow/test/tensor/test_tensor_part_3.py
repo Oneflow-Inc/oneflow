@@ -115,6 +115,22 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertTrue(of_result.device.type == th_result.device.type)
 
+    @autotest(n=3)
+    def test_baddbmm(test_case):
+        device = random_device()
+        batch_dim = random().to(int)
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        dim3 = random().to(int)
+        x = random_tensor(
+            ndim=3, dim0=oneof(batch_dim, 1).value(), dim1=dim1, dim2=dim3
+        ).to(device)
+        batch1 = random_tensor(ndim=3, dim0=batch_dim, dim1=dim1, dim2=dim2).to(device)
+        batch2 = random_tensor(ndim=3, dim0=batch_dim, dim1=dim2, dim2=dim3).to(device)
+        alpha = random_or_nothing(-1, 1).to(float)
+        beta = random_or_nothing(-1, 1).to(float)
+        return x.baddbmm(batch1, batch2, alpha=alpha, beta=beta)
+
 
 if __name__ == "__main__":
     unittest.main()

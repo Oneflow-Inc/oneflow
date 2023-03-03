@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef ONEFLOW_USER_KERNELS_CUFFT_PLAN_CACHE_H_
+#define ONEFLOW_USER_KERNELS_CUFFT_PLAN_CACHE_H_
+
 #include <cufft.h>
 #include <cufftXt.h>
 #include "oneflow/core/framework/framework.h"
@@ -22,9 +25,12 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
 namespace {
 
 constexpr int max_rank = 3;
+
+}
 
 struct CuFFtParams {
   int32_t ndim;
@@ -34,8 +40,8 @@ struct CuFFtParams {
   int32_t output_strides[max_rank + 1];
   int32_t* rank;
   int32_t batch;
-  CuFFtParams(int32_t dims, int32_t* r, const Stride& in_strides, const Stride& out_strides,
-              const Shape& in_shape, const Shape& out_shape, int32_t b)
+  CuFFtParams(int32_t dims, int32_t* r, const Stride& in_strides,  // NOLINT
+              const Stride& out_strides, const Shape& in_shape, const Shape& out_shape, int32_t b)
       : ndim(dims), rank(r), batch(b) {
     std::copy(in_strides.begin(), in_strides.end(), input_strides);
     std::copy(out_strides.begin(), out_strides.end(), output_strides);
@@ -49,8 +55,9 @@ class CuFFtConfig {
  public:
   CuFFtConfig(const CuFFtConfig&) = delete;
   CuFFtConfig& operator=(CuFFtConfig const&) = delete;
+  ~CuFFtConfig() = default;
 
-  explicit CuFFtConfig(CuFFtParams& params) {
+  explicit CuFFtConfig(CuFFtParams& params) {  // NOLINT
     infer_cufft_type_();
     cufftPlanMany(&plan_handle_, params.ndim, params.rank, params.input_shape,
                   params.input_strides[0], params.input_strides[1], params.output_shape,
@@ -83,6 +90,6 @@ class CuFFtConfig {
   cufftType exectype_;
 };
 
-}  // namespace
-
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_CUFFT_PLAN_CACHE_H_
