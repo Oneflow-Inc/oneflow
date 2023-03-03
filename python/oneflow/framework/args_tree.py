@@ -249,7 +249,9 @@ class ArgsTree(object):
         When the type of io args is tuple or list, map the leaf of the arguments into map_function(leaf).
         """
         assert map_function != None, "map function cannot be None"
-        assert isinstance(self._io_args, (tuple, list)), "only used when io args is a tuple or list of tensors"
+        assert isinstance(
+            self._io_args, (tuple, list)
+        ), "only used when io args is a tuple or list of tensors"
 
         stack = []
 
