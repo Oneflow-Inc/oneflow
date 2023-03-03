@@ -690,7 +690,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index++))) {
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func, index))) {
+        index += 1;
         op.emitError("Failed to lowering OneFlow op to okl dialect.");
         return failure();
       }
@@ -809,7 +810,21 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
     }
     std::vector<Value> vals;
     for (auto idx : list) { vals.push_back(func->getResult(idx)); }
-    rewriter.replaceOp(op, vals);
+    if (op->getNumResults() == vals.size()) {
+      rewriter.replaceOp(op, vals);
+    } else { // if op has multi results but only some of them used outside, we need tackle with mapper manually.
+      int idx = 0;
+      auto results = op->getResults();
+      for (auto it = results.begin(); it != results.end(); ++it) {
+        for (auto user : (*it).getUsers()) {
+          if (std::find(wrap_ops.begin(), wrap_ops.end(), user) == wrap_ops.end()) {
+            (*it).replaceAllUsesWith(func->getResult(list[idx]));
+            idx += 1;
+            break;
+          }
+        }
+      }
+    }
   }
   wrap_ops.clear();
   return func;
