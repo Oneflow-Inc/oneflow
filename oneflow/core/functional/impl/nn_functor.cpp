@@ -3464,15 +3464,13 @@ class FusedGluFunctor {
 
     // check whether the user provide bias tensors
     bool has_bias = false;
-    if(b){
+    if (b) {
       has_bias = true;
-      if(is_split_mode){
-        CHECK_OR_RETURN(c)
-        << "expected existance of c, when provide tensors w, v and b";
+      if (is_split_mode) {
+        CHECK_OR_RETURN(c) << "expected existance of c, when provide tensors w, v and b";
       }
     } else {
-      CHECK_OR_RETURN(!c)
-        << "expected existance of b while providing c";
+      CHECK_OR_RETURN(!c) << "expected existance of b while providing c";
       has_bias = false;
     }
 
