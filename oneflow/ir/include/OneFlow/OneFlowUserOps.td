@@ -3234,6 +3234,26 @@ def OneFlow_FusedGetConvexDiagonalSquaredGradOp : OneFlow_BaseOp<"fused_get_conv
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedCodegeexQkvReshapeOp : OneFlow_BaseOp<"fused_codegeex_qkv_reshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$query,
+    OneFlow_Tensor:$key,
+    OneFlow_Tensor:$value
+  );
+  let output = (outs
+    OneFlow_Tensor:$new_query,
+    OneFlow_Tensor:$new_key,
+    OneFlow_Tensor:$new_value
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$num_attention_heads
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 
