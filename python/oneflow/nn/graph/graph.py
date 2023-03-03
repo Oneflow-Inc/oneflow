@@ -1641,11 +1641,18 @@ class Graph(object):
                 )
 
         # TODO
+        # def tuple_leaf_arg_fn(arg):
+        #     if isinstance(arg, Tensor) or arg is None:
+        #         return mapping_tensor_or_none(arg)
+        # else:
+        #     self.__io_item_check(
+        #         arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
+        #     )
         # if isinstance(args, (tuple, list)) and len(kwargs)==0:
-        #     out = args_tree.map_tuple_leaf(leaf_arg_fn)
-        #     mapped_args = out[0]
-        #     mapped_kwargs = out[1]
-        #     return mapped_args, mapped_kwargs
+        #     # args_tree = ArgsTree(args, False)
+        #     # out = args_tree.map_tuple_leaf(tuple_leaf_arg_fn)
+        #     # mapped_args = out[0]
+        #     # return mapped_args
 
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]

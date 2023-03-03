@@ -186,13 +186,28 @@ class ArgsTree(object):
             if children:
                 for child in reversed(children):
                     stack.append(child)
-
             yield curr
 
     def iter_tuple_nodes(self):
+        r"""
+        return a generator of the args tree nodes in the DFS manner. 
+        Only iterate through nodes of type tuple or list.
+        """
         assert not self._gen_name, "Only use this if gen_name is not set!"
-        for node in self._io_args:
-            yield node
+        args_to_iter = self._io_args
+
+        stack = []
+        stack.append(iter(args_to_iter))
+        while len(stack) > 0:
+            curr = next(stack[-1], None)
+            if curr is None:
+                stack.pop()
+                continue
+
+            if _is_raw_type(curr, list) or _is_raw_type(curr, tuple):
+                stack.append(iter(curr))
+            else:
+                yield curr
 
     def iter_named_nodes(self):
         assert self._gen_name, "Only use this if gen_name is set!"
@@ -234,21 +249,17 @@ class ArgsTree(object):
         When the type of io args is tuple or list, map the leaf of the arguments into map_function(leaf).
         """
         assert map_function != None, "map function cannot be None"
+        assert isinstance(self._io_args, (tuple, list)), "only used when io args is a tuple or list of tensors"
 
         stack = []
 
-        if self._gen_name:
-            args_to_map = self._named_io_args
-        else:
-            args_to_map = self._io_args
-
-        for i in args_to_map:
+        for i in self._io_args:
             mapped_value = map_function(i)
             stack.append(mapped_value)
 
-        if isinstance(args_to_map, tuple):
+        if isinstance(self._io_args, tuple):
             return tuple(stack)
-        elif isinstance(args_to_map, list):
+        elif isinstance(self._io_args, list):
             return stack
 
     def map_leaf(self, map_function: Callable):
