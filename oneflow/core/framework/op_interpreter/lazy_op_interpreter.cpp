@@ -764,9 +764,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     return LazyInterpreterApplyImplForSourceUserOpExpr(op_expr, outputs, ctx);
   }
   if (op_expr.op_type_name() == "copy"
-      && !ParseBooleanFromEnv("ONEFLOW_DISABLE_COPY_HD_STREAM", false)) {
+      && !ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
     // NOTE(chengcheng): handle for copy UserOp which will NOT add op to job.
-    // Unless ONEFLOW_DISABLE_COPY_HD_STREAM is True
+    // Unless ONEFLOW_DISABLE_HD_COPY_STREAM is True
     return LazyInterpreterApplyImplForCopyUserOpExpr(op_expr, inputs, outputs, ctx);
   }
 
@@ -858,7 +858,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           << op_attr.DebugString() << std::endl;
 
   if (op_expr.op_type_name() == "copy") {
-    CHECK_OR_RETURN(ParseBooleanFromEnv("ONEFLOW_DISABLE_COPY_HD_STREAM", false));
+    CHECK_OR_RETURN(ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false));
     CHECK_EQ_OR_RETURN(inputs.size(), 1);          // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)

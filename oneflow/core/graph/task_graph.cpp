@@ -503,7 +503,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
       if (src_mem_zone_id.rank() == dst_mem_zone_id.rank()) {
-        if (ParseBooleanFromEnv("ONEFLOW_DISABLE_COPY_HD_STREAM", false)) {
+        if (ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
           // D2H Copy nodes have been added at running lazy_op_interpreter
           proxy2node[key] = src_node;
           return src_node;
@@ -528,7 +528,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         return copy_comm_net_task;
       }
     } else {
-      if (ParseBooleanFromEnv("ONEFLOW_DISABLE_COPY_HD_STREAM", false)) {
+      if (ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
         // H2D Copy nodes have been added at running lazy_op_interpreter
         proxy2node[key] = src_node;
         return src_node;
