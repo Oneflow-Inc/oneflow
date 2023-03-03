@@ -346,29 +346,29 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
 
 #define CHECK_OR_RETURN(expr) CHECK_OR_RETURN_INTERNAL(expr, OF_PP_STRINGIZE(CHECK_OR_RETURN(expr)))
 
-#define CHECK_EQ_OR_RETURN(lhs, rhs)                                                        \
-  CHECK_OR_RETURN_INTERNAL((lhs) == (rhs), OF_PP_STRINGIZE(CHECK_EQ_OR_RETURN(lhs == rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_EQ_OR_RETURN(lhs, rhs)                                                      \
+  CHECK_OR_RETURN_INTERNAL((lhs) == (rhs), OF_PP_STRINGIZE(CHECK_EQ_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " == " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
-#define CHECK_GE_OR_RETURN(lhs, rhs)                                                        \
-  CHECK_OR_RETURN_INTERNAL((lhs) >= (rhs), OF_PP_STRINGIZE(CHECK_GE_OR_RETURN(lhs >= rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_GE_OR_RETURN(lhs, rhs)                                                      \
+  CHECK_OR_RETURN_INTERNAL((lhs) >= (rhs), OF_PP_STRINGIZE(CHECK_GE_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " >= " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
-#define CHECK_GT_OR_RETURN(lhs, rhs)                                                      \
-  CHECK_OR_RETURN_INTERNAL((lhs) > (rhs), OF_PP_STRINGIZE(CHECK_GT_OR_RETURN(lhs > rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_GT_OR_RETURN(lhs, rhs)                                                     \
+  CHECK_OR_RETURN_INTERNAL((lhs) > (rhs), OF_PP_STRINGIZE(CHECK_GT_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " > " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
-#define CHECK_LE_OR_RETURN(lhs, rhs)                                                        \
-  CHECK_OR_RETURN_INTERNAL((lhs) <= (rhs), OF_PP_STRINGIZE(CHECK_LE_OR_RETURN(lhs <= rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_LE_OR_RETURN(lhs, rhs)                                                      \
+  CHECK_OR_RETURN_INTERNAL((lhs) <= (rhs), OF_PP_STRINGIZE(CHECK_LE_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " <= " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
-#define CHECK_LT_OR_RETURN(lhs, rhs)                                                      \
-  CHECK_OR_RETURN_INTERNAL((lhs) < (rhs), OF_PP_STRINGIZE(CHECK_LT_OR_RETURN(lhs < rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_LT_OR_RETURN(lhs, rhs)                                                     \
+  CHECK_OR_RETURN_INTERNAL((lhs) < (rhs), OF_PP_STRINGIZE(CHECK_LT_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " < " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
-#define CHECK_NE_OR_RETURN(lhs, rhs)                                                        \
-  CHECK_OR_RETURN_INTERNAL((lhs) != (rhs), OF_PP_STRINGIZE(CHECK_NE_OR_RETURN(lhs != rhs))) \
-      << "(" << (lhs) << " vs " << (rhs) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_NE_OR_RETURN(lhs, rhs)                                                      \
+  CHECK_OR_RETURN_INTERNAL((lhs) != (rhs), OF_PP_STRINGIZE(CHECK_NE_OR_RETURN(lhs, rhs))) \
+      << "(" << (lhs) << " != " << (rhs) << ") " << Error::kOverrideThenMergeMessage
 
 #define CHECK_STREQ_OR_RETURN(lhs, rhs) CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs))
 
