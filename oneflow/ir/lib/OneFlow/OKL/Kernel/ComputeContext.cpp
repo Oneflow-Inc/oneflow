@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-user_op::Tensor* ComputeContext::CreateTensor4ArgNameAndIndex(const std::string& arg_name,
+user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::string& arg_name,
                                                               int32_t index) {
   auto op = reg_ctx_->GetOp();
   auto source = mlir::oneflow::user_op::GetOpSourceByName(op, arg_name);
@@ -81,7 +81,7 @@ user_op::Tensor* ComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_n
                                                         int32_t index) {
   auto it = tensor_.find({arg_name, index});
   if (it != tensor_.end()) return it->second;
-  user_op::Tensor* res = CreateTensor4ArgNameAndIndex(arg_name, index);
+  user_op::Tensor* res = CreateTensorWithArgNameAndIndex(arg_name, index);
   tensor_[{arg_name, index}] = res;
   return res;
 }
