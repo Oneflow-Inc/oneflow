@@ -360,6 +360,15 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
     return test_g_res
 
 
+def check_oneflow_args_first_element_is_int(t):
+    if isinstance(t, (tuple, list)) and len(t) > 0:
+        if isinstance(t[0], (int, float)):
+            return True
+        elif isinstance(t[0], (tuple, list)):
+            return check_oneflow_args_first_element_is_int(t[0])
+    return False
+
+
 # NOTE(lixiang): When oneflow is of functional type, build the following Graph for testing, and return the test results in Graph mode.
 #   graph_functional_oneflow: is a deepcopy of oneflow.
 def get_functional_graph_res(
@@ -428,10 +437,7 @@ def get_functional_graph_res(
         elif (
             is_global()
             and len(oneflow_args) != 0
-            and (
-                isinstance(oneflow_args[0], (int, float))
-                or isinstance(oneflow_args[0][0], (int, float))
-            )
+            and (check_oneflow_args_first_element_is_int(oneflow_args))
         ):
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
