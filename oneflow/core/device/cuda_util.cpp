@@ -224,7 +224,9 @@ namespace CUDACachingAllocator {
 
 DeviceStats GetCUDADeviceStatus(int device) {
   cudaError_t error_id = cudaGetDeviceCount(&device);
-  CHECK_OR_THROW(error_id == cudaSuccess) << Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :" << cudaGetErrorString(error_id);
+  CHECK_OR_THROW(error_id == cudaSuccess)
+      << Error::RuntimeError()
+      << "Error: GetCUDAMemoryUsed fails :" << cudaGetErrorString(error_id);
   CHECK_OR_THROW(device > 0) << "GPU device does not exist";
 
   // Memory currently reserved by the mempool
