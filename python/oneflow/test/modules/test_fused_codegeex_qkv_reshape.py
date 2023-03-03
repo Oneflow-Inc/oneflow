@@ -27,14 +27,23 @@ def _test_codegeex_qkv_reshape_impl(test_case, device, shape, num_attention_head
     query = flow.randn(shape).to("cuda")
     key = flow.randn(shape).to("cuda")
     value = flow.randn(shape).to("cuda")
-    new_shape = (shape[0], shape[1], num_attention_heads, shape[2] / num_attention_heads)
+    new_shape = (
+        shape[0],
+        shape[1],
+        num_attention_heads,
+        shape[2] / num_attention_heads,
+    )
     new_query = query.view(new_shape)
     new_query = new_query.contiguous()
     new_key = key.view(new_shape)
     new_key = new_key.contiguous()
     new_value = value.view(new_shape)
     new_value = new_value.contiguous()
-    (fused_new_query, fused_new_key, fused_new_value) = flow._C.fused_codegeex_qkv_reshape(query, key, value, num_attention_heads)
+    (
+        fused_new_query,
+        fused_new_key,
+        fused_new_value,
+    ) = flow._C.fused_codegeex_qkv_reshape(query, key, value, num_attention_heads)
 
     def compare(a, b, rtol=1e-5, atol=1e-5):
         test_case.assertTrue(
