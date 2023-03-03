@@ -14,14 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_MAYBE_STRING_VIEW_H_
-#define ONEFLOW_MAYBE_STRING_VIEW_H_
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
 
-#include "nonstd/string_view.hpp"
+using namespace mlir;
 
-template<typename T>
-using BasicStringView = nonstd::basic_string_view<T>;
+#include "oneflow/ir/lib/OneFlow/PDLL/FuseOpsWithBackwardImplPattern.h.inc"
 
-using StringView = BasicStringView<char>;
+namespace mlir {
 
-#endif  // ONEFLOW_MAYBE_STRING_VIEW_H_
+namespace oneflow {
+
+void populateFuseOpsWithBackwardImplPattern(RewritePatternSet& patterns) {
+  populateGeneratedPDLLPatterns(patterns);
+}
+
+}  // namespace oneflow
+
+}  // namespace mlir
