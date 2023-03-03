@@ -85,13 +85,11 @@ struct ConstShapeMixIn {
   bool operator==(const T& rhs) const;
 
   const int64_t* int64_ptr() const {
-#ifndef NDEBUG
     for (const Dim& dim : *tp()) { CHECK(dim.is_known()); }
-#endif
     return reinterpret_cast<const int64_t*>(tp()->data());
   }
 
-  bool is_all_known() const;
+  bool all_dims_known() const;
 
  protected:
   // tp means "this pointer"
@@ -110,16 +108,12 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
   }
 
   const int64_t* int64_ptr() const {
-#ifndef NDEBUG
     for (const Dim& dim : *this->tp()) { CHECK(dim.is_known()); }
-#endif
     return reinterpret_cast<const int64_t*>(this->tp()->data());
   }
 
   int64_t* int64_ptr() {
-#ifndef NDEBUG
     for (const Dim& dim : *(this->tp())) { CHECK(dim.is_known()); }
-#endif
     return reinterpret_cast<int64_t*>(this->tp()->data());
   }
 };

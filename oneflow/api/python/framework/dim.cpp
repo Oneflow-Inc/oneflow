@@ -22,13 +22,17 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-#define DEFINE_OPERATOR(op)     \
-  .def(py::self op py::self)    \
-      .def(py::self op char())  \
-      .def(py::self op int())   \
-      .def(py::self op long())  \
-      .def(py::self op 0LL)     \
-      .def(py::self op float()) \
+#define DEFINE_OPERATOR(op)                           \
+  .def(py::self op py::self)                          \
+      .def(py::self op char())                        \
+      .def(py::self op static_cast<unsigned char>(0)) \
+      .def(py::self op int())                         \
+      .def(py::self op static_cast<unsigned int>(0))  \
+      .def(py::self op long())                        \
+      .def(py::self op 0UL)                           \
+      .def(py::self op 0LL)                           \
+      .def(py::self op 0ULL)                          \
+      .def(py::self op float())                       \
       .def(py::self op double())
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -55,7 +59,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       DEFINE_OPERATOR(>)
       DEFINE_OPERATOR(>=)
       // clang-format on
-      .def(py::hash(py::self));
+      .def(py::hash(py::self))
+      .def("__int__", [](Dim dim) { return dim.val(); })
+      .def("__float__", [](Dim dim) { return static_cast<float>(dim.val()); });
 }
 
 }  // namespace oneflow

@@ -25,7 +25,7 @@ namespace oneflow {
 Stride::Stride(const ShapeView& shape) {
   const int64_t ndim = shape.NumAxes();
   resize(ndim);
-  if (!shape.is_all_known() || (ndim > 0 && shape.elem_cnt() > 0)) {
+  if (ndim > 0 && shape.elem_cnt() > 0) {
     std::exclusive_scan(shape.rbegin(), shape.rend(), rbegin(), Dim(1), std::multiplies<>{});
   } else if (ndim > 0 && shape.elem_cnt() == 0) {
     // 0-size shape

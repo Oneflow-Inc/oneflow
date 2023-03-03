@@ -62,7 +62,7 @@ int64_t GetInDim(const ShapeView& shape, const std::string& data_format, int32_t
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                            int32_t stride, const std::string& padding_type, bool ceil_mode,
-                           int64_t* output_size, int32_t* padding_before, int32_t* padding_after) {
+                           Dim* output_size, int32_t* padding_before, int32_t* padding_after) {
   CHECK_GT(stride, 0);
   CHECK_GE(dilation_rate, 1);
 
@@ -100,7 +100,7 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                           int32_t stride, const std::string& padding_type, int64_t* output_size,
+                           int32_t stride, const std::string& padding_type, Dim* output_size,
                            int32_t* padding_before, int32_t* padding_after) {
   CHECK_GT(stride, 0);
   CHECK_GE(dilation_rate, 1);
@@ -127,14 +127,14 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
-                           const std::string& padding_type, int64_t* output_size,
+                           const std::string& padding_type, Dim* output_size,
                            int32_t* padding_before, int32_t* padding_after) {
   GetWindowedOutputSize(input_size, filter_size, 1, stride, padding_type, output_size,
                         padding_before, padding_after);
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
-                           const std::string& padding_type, int64_t* output_size,
+                           const std::string& padding_type, Dim* output_size,
                            int32_t* padding_size) {
   GetWindowedOutputSize(input_size, filter_size, stride, padding_type, output_size, padding_size,
                         nullptr);
@@ -191,7 +191,7 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = reinterpret_cast<int64_t*>(&(*out)[i]);
+    Dim* out_ptr = &(*out)[i];
     if (dilation_rate) {
       GetWindowedOutputSize(in.at(i), pool_size.at(i), dilation_rate->at(i), strides.at(i),
                             padding_type, ceil_mode, out_ptr, &(padding_before->at(i)),
@@ -217,7 +217,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
                           dilation_rate.Get(i), strides.Get(i), padding,
-                          out ? reinterpret_cast<int64_t*>(&(out->at(i))) : nullptr,
+                          out ? &(out->at(i)) : nullptr,
                           pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                           pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }

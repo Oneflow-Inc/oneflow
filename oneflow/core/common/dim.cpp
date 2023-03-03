@@ -133,6 +133,13 @@ OVERLOAD_COMPARISON_WITH_SCALAR(>=, false)
 bool operator==(const Dim& a, const Dim& b) {
   if (a.is_known() && b.is_known()) { return a.value_ == b.value_; }
   // reflexivity: Dim::Unknown() == Dim::Unknown()
+  // TODO(daquexian): identify different unknown Dims in the future
+  // Example:
+  // (1, 3, N, N) --- Conv(h=3, w=2) ---> (1, 3, M, P)
+  // (1, 3, N, N) --- Conv(h=3, w=3) ---> (1, 3, M, M)
+  // (1, 3, N, N) --- Conv(h=3, w=3, padding=1) ---> (1, 3, N, N)
+  // (1, 3, N, N) --- Pooling ---> (1, 3, M, M)
+  // (1, 3, N, N) --- ReLU ---> (1, 3, N, N)
   if (!a.is_known() && !b.is_known()) { return true; }
   return false;
 }

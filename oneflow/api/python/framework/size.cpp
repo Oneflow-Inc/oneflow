@@ -122,8 +122,18 @@ static PyObject* TensorSize_numel(PyObject* self, PyObject* args) {
   return PyLong_FromLongLong(numel);
 }
 
+static PyObject* TensorSize_all_dims_known(PyObject* self, PyObject* args) {
+  for (int i = 0; i < PyTuple_Size(self); ++i) {
+    Dim dim = one::functional::PyUnpackDim(PyTuple_GET_ITEM((TensorSize*)self, i));
+    if (!dim.is_known()) { Py_RETURN_FALSE; }
+  }
+  Py_RETURN_TRUE;
+}
+
 static PyMethodDef TensorSize_methods[] = {
-    {"numel", (PyCFunction)TensorSize_numel, METH_NOARGS, NULL}, {NULL}};
+    {"numel", (PyCFunction)TensorSize_numel, METH_NOARGS, NULL},
+    {"all_dims_known", (PyCFunction)TensorSize_all_dims_known, METH_NOARGS, NULL},
+    {NULL}};
 
 PyTypeObject TensorSize_Type = {
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.Size", /* tp_name */

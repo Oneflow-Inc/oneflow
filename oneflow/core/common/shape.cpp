@@ -103,7 +103,7 @@ bool ConstShapeMixIn<T>::operator==(const T& rhs) const {
 }
 
 template<class T>
-bool ConstShapeMixIn<T>::is_all_known() const {
+bool ConstShapeMixIn<T>::all_dims_known() const {
   for (Dim dim : *tp()) {
     if (!dim.is_known()) { return false; }
   }
