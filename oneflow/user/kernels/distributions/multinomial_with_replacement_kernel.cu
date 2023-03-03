@@ -124,7 +124,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     int64_t* result_ptr = out->mut_dptr<int64_t>();
 
     int64_t numCategories = norm_dist->shape_view().At(norm_dist->shape_view().NumAxes() - 1);
-    int64_t numDist = norm_dist->shape_view().NumAxes() > 1 ? norm_dist->shape_view().At(0) : 1;
+    int64_t numDist = norm_dist->shape_view().NumAxes() > 1 ? norm_dist->shape_view().At(0).val() : 1;
     const int32_t n_sample = ctx->Attr<int32_t>("num_samples");
 
     // Binary search is warp divergent (so effectively we're running

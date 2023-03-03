@@ -429,7 +429,7 @@ class GroupwiseDequantizeKernel final : public user_op::OpKernel {
     CHECK_EQ(group_dim_size % group_size, 0);
     const int64_t num_groups = group_dim_size / group_size;
     for (int i = 0; i < num_in_axes; ++i) {
-      const int64_t expected_dim_size = i == group_dim ? num_groups : out->shape_view().At(i);
+      const int64_t expected_dim_size = i == group_dim ? num_groups : out->shape_view().At(i).val();
       CHECK_EQ(scale->shape_view().At(i), expected_dim_size);
       if (zero != nullptr) { CHECK_EQ(zero->shape_view().At(i), expected_dim_size); }
     }

@@ -411,7 +411,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape_view().elem_cnt();
     const int32_t batch = x->shape_view().At(0);
-    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
+    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1).val();
     const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
 
@@ -462,7 +462,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const Shape& left_extended_shape = CreatePreluLeftExtendedShape(ShapeView(x->shape_view()));
 
     const int32_t batch = x->shape_view().At(0);
-    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
+    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1).val();
     const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
     if (alpha_size == 1) {

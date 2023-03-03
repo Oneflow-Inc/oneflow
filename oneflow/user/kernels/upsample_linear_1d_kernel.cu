@@ -79,10 +79,12 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 3> in_helper(
-        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2));
-    NdIndexOffsetHelper<int64_t, 3> out_helper(
-        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2));
+    NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape_view().At(0).val(),
+                                              x_tensor->shape_view().At(1).val(),
+                                              x_tensor->shape_view().At(2).val());
+    NdIndexOffsetHelper<int64_t, 3> out_helper(y_tensor->shape_view().At(0).val(),
+                                               y_tensor->shape_view().At(1).val(),
+                                               y_tensor->shape_view().At(2).val());
     const int64_t in_height = x_tensor->shape_view().At(2);
     const int64_t out_height = y_tensor->shape_view().At(2);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
@@ -119,12 +121,12 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0),
-                                              dy_tensor->shape_view().At(1),
-                                              dy_tensor->shape_view().At(2));
-    NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape_view().At(0),
-                                              dx_tensor->shape_view().At(1),
-                                              dx_tensor->shape_view().At(2));
+    NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0).val(),
+                                              dy_tensor->shape_view().At(1).val(),
+                                              dy_tensor->shape_view().At(2).val());
+    NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape_view().At(0).val(),
+                                              dx_tensor->shape_view().At(1).val(),
+                                              dx_tensor->shape_view().At(2).val());
     const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
     const int64_t in_height = dx_tensor->shape_view().At(2);
     const int64_t out_height = dy_tensor->shape_view().At(2);

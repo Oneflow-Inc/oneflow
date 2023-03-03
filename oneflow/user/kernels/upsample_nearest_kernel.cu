@@ -194,9 +194,9 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
           x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 3> in_helper(
-          x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2));
+          x_tensor->shape_view().At(0).val(), x_tensor->shape_view().At(1).val(), x_tensor->shape_view().At(2).val());
       NdIndexOffsetHelper<int64_t, 3> out_helper(
-          y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2));
+          y_tensor->shape_view().At(0).val(), y_tensor->shape_view().At(1).val(), y_tensor->shape_view().At(2).val());
       RUN_CUDA_KERNEL((UpsampleNearest1DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
                       1.f / height_scale, y_tensor->mut_dptr<T>());
@@ -232,12 +232,12 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
     } else {
       Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                                 dx_tensor->shape_view().elem_cnt() * sizeof(T));
-      NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0),
-                                                dy_tensor->shape_view().At(1),
-                                                dy_tensor->shape_view().At(2));
-      NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape_view().At(0),
-                                                dx_tensor->shape_view().At(1),
-                                                dx_tensor->shape_view().At(2));
+      NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0).val(),
+                                                dy_tensor->shape_view().At(1).val(),
+                                                dy_tensor->shape_view().At(2).val());
+      NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape_view().At(0).val(),
+                                                dx_tensor->shape_view().At(1).val(),
+                                                dx_tensor->shape_view().At(2).val());
       RUN_CUDA_KERNEL((UpsampleNearest1DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
                       1.f / height_scale, dx_tensor->mut_dptr<T>());
@@ -345,11 +345,11 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
         Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                                   dx_tensor->shape_view().elem_cnt() * sizeof(T));
         NdIndexOffsetHelper<int64_t, 4> dy_helper(
-            dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1),
-            dy_tensor->shape_view().At(2), dy_tensor->shape_view().At(3));
+            dy_tensor->shape_view().At(0).val(), dy_tensor->shape_view().At(1).val(),
+            dy_tensor->shape_view().At(2).val(), dy_tensor->shape_view().At(3).val());
         NdIndexOffsetHelper<int64_t, 4> dx_helper(
-            dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1),
-            dx_tensor->shape_view().At(2), dx_tensor->shape_view().At(3));
+            dx_tensor->shape_view().At(0).val(), dx_tensor->shape_view().At(1).val(),
+            dx_tensor->shape_view().At(2).val(), dx_tensor->shape_view().At(3).val());
         RUN_CUDA_KERNEL((UpsampleNearest2DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                         dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
                         dx_tensor->shape_view().At(3), 1.f / height_scale, 1.f / width_scale,
@@ -402,11 +402,11 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     NdIndexOffsetHelper<int64_t, 5> in_helper(
-        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
-        x_tensor->shape_view().At(3), x_tensor->shape_view().At(4));
+        x_tensor->shape_view().At(0).val(), x_tensor->shape_view().At(1).val(), x_tensor->shape_view().At(2).val(),
+        x_tensor->shape_view().At(3).val(), x_tensor->shape_view().At(4).val());
     NdIndexOffsetHelper<int64_t, 5> out_helper(
-        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
-        y_tensor->shape_view().At(3), y_tensor->shape_view().At(4));
+        y_tensor->shape_view().At(0).val(), y_tensor->shape_view().At(1).val(), y_tensor->shape_view().At(2).val(),
+        y_tensor->shape_view().At(3).val(), y_tensor->shape_view().At(4).val());
     RUN_CUDA_KERNEL((UpsampleNearest3DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
                     x_tensor->shape_view().At(3), x_tensor->shape_view().At(4), 1.f / depth_scale,
@@ -446,11 +446,11 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     NdIndexOffsetHelper<int64_t, 5> dy_helper(
-        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1), dy_tensor->shape_view().At(2),
-        dy_tensor->shape_view().At(3), dy_tensor->shape_view().At(4));
+        dy_tensor->shape_view().At(0).val(), dy_tensor->shape_view().At(1).val(), dy_tensor->shape_view().At(2).val(),
+        dy_tensor->shape_view().At(3).val(), dy_tensor->shape_view().At(4).val());
     NdIndexOffsetHelper<int64_t, 5> dx_helper(
-        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1), dx_tensor->shape_view().At(2),
-        dx_tensor->shape_view().At(3), dx_tensor->shape_view().At(4));
+        dx_tensor->shape_view().At(0).val(), dx_tensor->shape_view().At(1).val(), dx_tensor->shape_view().At(2).val(),
+        dx_tensor->shape_view().At(3).val(), dx_tensor->shape_view().At(4).val());
     RUN_CUDA_KERNEL((UpsampleNearest3DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
                     dx_tensor->shape_view().At(3), dx_tensor->shape_view().At(4), 1.f / depth_scale,

@@ -385,8 +385,8 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
               target_blob->data_type(), target_blob->shape_view().NumAxes());
       CHECK(bcast_mul);
       bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
-                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
-                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
+                        target_blob->shape_view().int64_ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.int64_ptr(), pos_weight, pos_weight_processed);
       if (ctx->has_input("weight", 0)) {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
         using FunctorT = BinaryCrossEntropyWithLogitsFunctor<INPUT_T, TARGET_T, WeightType::kBoth>;
@@ -453,8 +453,8 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
               target_blob->data_type(), target_blob->shape_view().NumAxes());
       CHECK(bcast_mul);
       bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
-                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
-                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
+                        target_blob->shape_view().int64_ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.int64_ptr(), pos_weight, pos_weight_processed);
       if (ctx->has_input("weight", 0)) {
         const TARGET_T* weight = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<TARGET_T>();
         using FunctorT =

@@ -132,7 +132,7 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
     const int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     size_t dest_num_dims = output->shape_view().NumAxes();
-    const int64_t* dest_dims = output->shape_view().ptr();
+    const int64_t* dest_dims = output->shape_view().int64_ptr();
     const size_t input_num = input->shape_view().Count(0);
     const size_t output_num = output->shape_view().Count(0);
     if (input_num == 0) {
@@ -162,7 +162,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
     const int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     size_t dy_num_dims = dy->shape_view().NumAxes();
-    const int64_t* dy_dims = dy->shape_view().ptr();
+    const int64_t* dy_dims = dy->shape_view().int64_ptr();
     const size_t dx_num = dx->shape_view().Count(0);
     const size_t dy_num = dy->shape_view().Count(0);
 
