@@ -809,7 +809,7 @@ class Graph(object):
         if (
             isinstance(args, (tuple, list))
             and len(kwargs) == 0
-            and (isinstance(arg, Tensor) for arg in args)
+            and all(isinstance(arg, Tensor) for arg in args)
         ):
             self._is_simple_tuple_inp = True
 
@@ -1627,10 +1627,6 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        args_tree = ArgsTree(
-            (args, kwargs), True, "_" + self.name + "_" + io_type, None
-        )
-
         def leaf_arg_fn(arg):
             arg_value = arg.value()
             if isinstance(arg_value, Tensor) or arg_value is None:
@@ -1640,19 +1636,17 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        # TODO
-        # def tuple_leaf_arg_fn(arg):
-        #     if isinstance(arg, Tensor) or arg is None:
-        #         return mapping_tensor_or_none(arg)
-        # else:
-        #     self.__io_item_check(
-        #         arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
-        #     )
-        # if isinstance(args, (tuple, list)) and len(kwargs)==0:
-        #     # args_tree = ArgsTree(args, False)
-        #     # out = args_tree.map_tuple_leaf(tuple_leaf_arg_fn)
-        #     # mapped_args = out[0]
-        #     # return mapped_args
+        # if len(args) == 1 and isinstance(args[0], (tuple, list)) and all(isinstance(arg, Tensor) for arg in args[0]):
+        if isinstance(args, (tuple, list)) and all(
+            isinstance(arg, Tensor) for arg in args
+        ):
+            args_tree = ArgsTree(args, False)
+            out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
+            return out, kwargs
+
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
