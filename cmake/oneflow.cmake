@@ -289,7 +289,7 @@ check_variable_defined(LLVM_INCLUDE_DIRS)
 set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                                                    ${LLVM_INCLUDE_DIRS})
 
-list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
+list(APPEND oneflow_third_party_libs LLVMSupportWithHeader bfd unwind)
 
 include(op_schema)
 
