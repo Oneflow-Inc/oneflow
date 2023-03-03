@@ -49,8 +49,6 @@ class ComputeContext final : public user_op::KernelComputeContext {
   }
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override;
 
-  TmpBufferManager& GetTmpBufferManager() { return tmp_buffer_; }
-
  private:
   RegContext const* reg_ctx_;
   KernelComputeContext* comp_ctx_;
