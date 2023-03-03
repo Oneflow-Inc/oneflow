@@ -150,7 +150,7 @@ std::ostream& operator<<(std::ostream& os, Dim dim);
 namespace std {
 template<>
 struct hash<oneflow::Dim> {
-  size_t operator()(const oneflow::Dim& dim) const {
+  size_t operator()(oneflow::Dim dim) const {
     return std::hash<int64_t>()(*reinterpret_cast<const int64_t*>(&dim));
   }
 };

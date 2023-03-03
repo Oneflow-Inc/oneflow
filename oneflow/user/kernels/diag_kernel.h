@@ -56,12 +56,12 @@ class DiagKernel final : public user_op::OpKernel {
 
     if (in_dim == 1) {
       int32_t size = in_shape.elem_cnt();
-      out_buf += (diagonal >= 0 ? diagonal : -diagonal * out_shape.At(1));
+      out_buf += (diagonal >= 0 ? diagonal : -diagonal * out_shape.At(1).val());
       DiagFunctor<device_type, T>()(ctx->stream(), out_buf, in_buf, size, out_shape.At(1) + 1,
                                     in_dim);
     } else {
       int32_t size = 0;
-      in_buf += (diagonal >= 0 ? diagonal : -diagonal * in_shape.At(1));
+      in_buf += (diagonal >= 0 ? diagonal : -diagonal * in_shape.At(1).val());
       if (diagonal >= 0) {
         size = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
       } else {
@@ -97,11 +97,11 @@ class DiagBackwardKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
 
     if (in_dim == 1) {
-      dy_buf += (diagonal >= 0 ? diagonal : -diagonal * dy_shape.At(1));
+      dy_buf += (diagonal >= 0 ? diagonal : -diagonal * dy_shape.At(1).val());
       DiagGradFunctor<device_type, T>()(ctx->stream(), dx_buf, dy_buf, dx_cnt, dy_cnt,
                                         dy_shape.At(1) + 1, in_dim);
     } else {
-      dx_buf += (diagonal >= 0 ? diagonal : -diagonal * dx_shape.At(1));
+      dx_buf += (diagonal >= 0 ? diagonal : -diagonal * dx_shape.At(1).val());
       DiagGradFunctor<device_type, T>()(ctx->stream(), dx_buf, dy_buf, dx_cnt, dy_cnt,
                                         dx_shape.At(1) + 1, in_dim);
     }
