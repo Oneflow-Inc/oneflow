@@ -3539,6 +3539,8 @@ class FusedGluFunctor {
       return OpInterpUtil::Dispatch<one::Tensor>(*split_op_without_bias_, {x, w, JUST(v)}, attrs);
     } else if (!is_split_mode && !has_bias) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_without_bias_, {x, w}, attrs);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 
