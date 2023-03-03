@@ -2858,14 +2858,12 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$num_heads,
+    SI64Attr:$query_head_size,
     DefaultValuedAttr<BoolAttr, "false">:$causal,
-    DefaultValuedAttr<SI64Attr, "0">:$query_hidden_slice_start,
-    DefaultValuedAttr<SI64Attr, "-1">:$query_hidden_slice_end,
-    DefaultValuedAttr<SI64Attr, "0">:$key_hidden_slice_start,
-    DefaultValuedAttr<SI64Attr, "-1">:$key_hidden_slice_end,
-    DefaultValuedAttr<SI64Attr, "0">:$value_hidden_slice_start,
-    DefaultValuedAttr<SI64Attr, "-1">:$value_hidden_slice_end
+    DefaultValuedAttr<SI64Attr, "0">:$causal_diagonal_offset,
+    StrAttr:$query_layout,
+    StrAttr:$key_layout,
+    StrAttr:$value_layout
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
