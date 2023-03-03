@@ -35,8 +35,6 @@ namespace oneflow {
 
 namespace {
 
-bool disable_logical_straighten = ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false);
-
 class InsertNcclLogicalOpPass final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InsertNcclLogicalOpPass);
@@ -977,7 +975,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
-  if (disable_logical_straighten) {
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
     op_graph.TopoForEachNodeWithCtrlEdge(
         [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
   } else {
