@@ -1455,7 +1455,9 @@ class Graph(object):
                 outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
                     self.__flatten_io("output", *outputs_buffer_item)
                 )
-                self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
+                self._outputs_tensor_tuple_buffer.append(
+                    outputs_tensor_tuple_buffer_item
+                )
 
             self.__check_outputs_buffer()
 
