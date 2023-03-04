@@ -27,7 +27,7 @@ namespace okm {
 
 void registerAllPasses();
 
-}  // namespace OKM
+}  // namespace okm
 }  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_OKMDIALECT_H_

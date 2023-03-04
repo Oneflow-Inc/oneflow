@@ -50,13 +50,11 @@ inline bool SuitableThan(int64_t a, int64_t b) {
   return a > b;
 }
 
-
 template<class T>
 void MemReusedAlgorithmAllocateByOrder(
     const bool compact_insert, const std::vector<T>& order,
     const HashMap<T, size_t>& regst_desc2size,
-    const HashMap<T, std::pair<int32_t, int32_t>>& regst2lifetime,
-    MemBlockResultInfo<T>* result) {
+    const HashMap<T, std::pair<int32_t, int32_t>>& regst2lifetime, MemBlockResultInfo<T>* result) {
   HashMap<T, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   // NOTE: It is important to make the variables local.
   // It took me several days to find out that using passed-in vector for size, order, and lifetime
@@ -167,10 +165,10 @@ void MemReusedAlgorithmAllocateByOrder(
 }
 
 template<class T>
-void MemReusedMemSizeFirstAlgo(
-    const bool compact_insert,
-    const HashMap<T, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<T, size_t>& mem_reused_regst2size, MemBlockResultInfo<T>* result) {
+void MemReusedMemSizeFirstAlgo(const bool compact_insert,
+                               const HashMap<T, std::pair<int32_t, int32_t>>& regst2lifetime,
+                               const HashMap<T, size_t>& mem_reused_regst2size,
+                               MemBlockResultInfo<T>* result) {
   std::vector<T> order;
   order.reserve(regst2lifetime.size());
   for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }

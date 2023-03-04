@@ -812,7 +812,8 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
     for (auto idx : list) { vals.push_back(func->getResult(idx)); }
     if (op->getNumResults() == vals.size()) {
       rewriter.replaceOp(op, vals);
-    } else { // if op has multi results but only some of them used outside, we need tackle with mapper manually.
+    } else {  // if op has multi results but only some of them used outside, we need tackle with
+              // mapper manually.
       int idx = 0;
       auto results = op->getResults();
       for (auto it = results.begin(); it != results.end(); ++it) {

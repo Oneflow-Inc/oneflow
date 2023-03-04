@@ -56,7 +56,6 @@ namespace oneflow {
 
 namespace {
 
-
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
 }
@@ -407,11 +406,11 @@ void GenRegstAllocFreeTimeLineAndRegstLifetimes(
   CHECK(remain_regsts.empty());
 }
 
-
 void MemReusedLifetimeFirstAlgo(
     const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    MemBlockResultInfo<RegstDescProto*>* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2lifetime.size());
   for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
@@ -428,7 +427,8 @@ void MemReusedLifetimeFirstAlgo(
 void MemReusedTimeLineAlgo(
     const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    MemBlockResultInfo<RegstDescProto*>* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2lifetime.size());
   for (const auto& pair : regst2lifetime) { order.emplace_back(pair.first); }
@@ -447,7 +447,8 @@ void MemReusedTimeLineAlgo(
 void MemReusedMemVolumeFirstAlgo(
     const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    MemBlockResultInfo<RegstDescProto*>* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2lifetime.size());
   auto ComputeMemoryVolume = [&](RegstDescProto* key) {
@@ -470,7 +471,8 @@ void MemReusedMemVolumeFirstAlgo(
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id, const bool compact_insert,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
-    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo<RegstDescProto*>* result) {
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    MemBlockResultInfo<RegstDescProto*>* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
 
@@ -514,7 +516,8 @@ int64_t CountMemAllocAlgoNum() {
   return alloc_algo_num * compact_insert_num;
 }
 
-void InitAlgo2Result(HashMap<std::pair<MemAllocAlgoType, bool>, MemBlockResultInfo<RegstDescProto*>>* algo2result) {
+void InitAlgo2Result(
+    HashMap<std::pair<MemAllocAlgoType, bool>, MemBlockResultInfo<RegstDescProto*>>* algo2result) {
   CHECK(algo2result->empty());
   std::vector<bool> compact_insert_algorithms;
   const MemoryCompactInsertConf& mem_compact_insert_conf =

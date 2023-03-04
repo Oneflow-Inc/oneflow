@@ -23,7 +23,7 @@ namespace oneflow {
 namespace okl {
 
 user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::string& arg_name,
-                                                              int32_t index) {
+                                                                 int32_t index) {
   auto op = reg_ctx_->GetOp();
   auto source = mlir::oneflow::user_op::GetOpSourceByName(op, arg_name);
 

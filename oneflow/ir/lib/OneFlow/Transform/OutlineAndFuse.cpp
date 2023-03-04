@@ -47,7 +47,6 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
  public:
   WrapOpsToKernelLaunchPass() = default;
@@ -70,7 +69,6 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
                                      llvm::cl::desc("the mode of this pass to wrap ops"),
                                      llvm::cl::init(wrap_mode::SIMPLE)};
 };
-
 
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
   void runOnOperation() override {
