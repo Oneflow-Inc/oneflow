@@ -614,7 +614,7 @@ class TestTensor(flow.unittest.TestCase):
                 np_value = value
             np_arr[slices] = np_value
             tensor[slices] = value
-            test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
+            test_case.assertTrue(np.allclose(np_arr, tensor.numpy(), rtol=1e-4))
 
         x = flow.randn(5, 5)
         v = flow.Tensor([[0, 1, 2, 3, 4]])

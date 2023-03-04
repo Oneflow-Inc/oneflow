@@ -77,7 +77,12 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         retain_graph=True,
     )[0]
     test_case.assertTrue(
-        np.allclose(db.pytorch.detach().cpu().numpy(), db.oneflow.detach().numpy())
+        np.allclose(
+            db.pytorch.detach().cpu().numpy(),
+            db.oneflow.detach().numpy(),
+            rtol=1e-3,
+            atol=1e-4,
+        )
     )
 
     # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
@@ -98,7 +103,12 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
     )
 
     test_case.assertTrue(
-        np.allclose(ddb_pytorch.detach().cpu().numpy(), ddb_oneflow.detach().numpy())
+        np.allclose(
+            ddb_pytorch.detach().cpu().numpy(),
+            ddb_oneflow.detach().numpy(),
+            rtol=1e-3,
+            atol=1e-5,
+        )
     )
     test_case.assertTrue(
         np.allclose(

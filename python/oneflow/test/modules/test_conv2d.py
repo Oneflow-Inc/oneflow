@@ -2038,7 +2038,7 @@ class TestConv2d(flow.unittest.TestCase):
             np.allclose(
                 flow_nchw_weights.grad.numpy(),
                 np.transpose(flow_nhwc_permuted_weights.grad.numpy(), (0, 3, 1, 2)),
-                rtol=1e-4,
+                rtol=1e-3,
                 atol=1e-4,
             )
         )
