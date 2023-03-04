@@ -4971,7 +4971,7 @@ class FusedMultiHeadAttentionInferenceV2Functor {
                                     "same as that of the query tensor.";
     CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
                                     "same as that of the key tensor.";
-    CHECK_EQ_OR_RETURN(q_k % 8, 0)
+    CHECK_EQ_OR_RETURN(v_k % 8, 0)
         << "The size of dimension 'K' of the value tensor should be a multiple of 8.";
 
     if (attn_bias) {
