@@ -189,6 +189,14 @@ def _new_zeros(
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
+def _squeeze_inplace(self, dim=None):
+    return flow._C.squeeze_(self, dim=dim)
+
+
+def _unsqueeze_inplace(self, dim=None):
+    return flow._C.unsqueeze_(self, dim=dim)
+
+
 def _new_full(
     self,
     size,
@@ -290,50 +298,28 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    # Possibility 1: self and other are tensors on the same device/placement and have the same sbp.
-    if isinstance(other, Tensor):
-        if self.is_global:
-            assert (
-                other.is_global
-            ), "Only global tensor can be assigned to global tensor."
-            if self.placement == other.placement and self.sbp == other.sbp:
-                flow._C.assign_local_tensor(self.to_local(), other.to_local())
-                return
-        else:
-            assert (
-                not other.is_global
-            ), "Only local tensor can be assigned to local tensor."
-            if self.device == other.device:
-                other = flow._C.broadcast_like(other, self)
-                if not self.is_contiguous():
-                    # NOTE: slice_update support non-contiguous input tensor
-                    with flow.no_grad():
-                        self[...] = other
-                else:
-                    flow._C.assign_local_tensor(self, other)
-                return
-
-    # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
-    # In this case, we run boxing through cpu to avoid extra gpu memory usage.
+    if isinstance(other, np.ndarray):
+        other = flow.from_numpy(other)
+    elif not isinstance(other, Tensor):
+        other = flow.tensor(other)
+    other = other.to(self.dtype)
     if self.is_global:
-        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
-        if isinstance(other, Tensor):
+        assert other.is_global, "Only global tensor can be assigned to global tensor."
+        if not (self.sbp == other.sbp and self.placement == other.placement):
             other_cpu_placement = flow.placement("cpu", other.placement.ranks)
-            other = other.to_global(placement=other_cpu_placement).to_global(
-                placement=self_cpu_placement, sbp=self.sbp
-            )
-        else:
-            other = flow.tensor(
-                other, dtype=self.dtype, placement=self_cpu_placement, sbp=self.sbp
-            )
-        _copy_from_numpy_to_eager_local_tensor(
-            self.to_local(), other.to_local().numpy()
-        )
+            other = other.to_global(placement=other_cpu_placement)
+            self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+            other = other.to_global(placement=self_cpu_placement, sbp=self.sbp)
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, Tensor):
-            other = other.numpy()
-
-        _copy_from_numpy_to_eager_local_tensor(self, other)
+        assert other.is_local, "Only local tensor can be assigned to local tensor."
+        other = flow._C.broadcast_like(other, self)
+        if not self.is_contiguous():
+            # NOTE: slice_update support non-contiguous input tensor
+            with flow.no_grad():
+                self[...] = other
+        else:
+            flow._C.assign_local_tensor(self, other)
 
 
 def _format(self, format_spec):
@@ -394,10 +380,6 @@ def _T(self):
     return flow._C.T(self)
 
 
-def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    return flow.topk(self, k, dim, largest, sorted)
-
-
 def _nms(boxes, scores, iou_threshold: float):
     return flow.nms(boxes, scores, iou_threshold)
 
@@ -416,10 +398,6 @@ def _masked_select(self, mask):
 
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
-
-
-def _type_as(self, target):
-    return self.to(dtype=target.dtype)
 
 
 def _where(self, x=None, y=None):
@@ -561,6 +539,10 @@ def _as_strided(self, size, stride, storage_offset=0):
     return flow._C.as_strided(self, size, stride, storage_offset)
 
 
+def _as_strided_inplace(self, size, stride, storage_offset=0):
+    return flow._C.as_strided_(self, size, stride, storage_offset)
+
+
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
@@ -604,6 +586,8 @@ def RegisterMethods():
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.new_full = _new_full
+    Tensor.squeeze_ = _squeeze_inplace
+    Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
@@ -616,9 +600,7 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.sort = _sort
-    Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
     Tensor.prod = _prod
@@ -639,6 +621,7 @@ def RegisterMethods():
     Tensor.index_add = _index_add
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
+    Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
 
 

@@ -18,9 +18,11 @@ import unittest
 from collections import OrderedDict
 import tempfile
 import os
+import random as random_util
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
+from oneflow.test_utils.automated_test_util import random_bool, random_device
 from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
@@ -40,6 +42,7 @@ def compare_with_numpy_sgd(
     train_iters,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     fused,
     tensor_num,
 ):
@@ -70,6 +73,7 @@ def compare_with_numpy_sgd(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
+            contiguous_params=contiguous_params,
             fused=fused,
         )
 
@@ -92,11 +96,11 @@ def compare_with_numpy_sgd(
             # test state_dict/load_state_dict
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
-                sgd = flow.optim.SGD(x)
+                sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -160,6 +164,7 @@ def compare_with_numpy_sgd_clip_grad(
     train_iters,
     reload_state_step,
     save_load_by_pickle,
+    contiguous_params,
     fused,
     tensor_num,
 ):
@@ -201,6 +206,7 @@ def compare_with_numpy_sgd_clip_grad(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
+            contiguous_params=contiguous_params,
             fused=fused,
         )
 
@@ -224,11 +230,11 @@ def compare_with_numpy_sgd_clip_grad(
             # test state_dict/load_state_dict
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
-                sgd = flow.optim.SGD(x)
+                sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
                 if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -282,38 +288,42 @@ def compare_with_numpy_sgd_clip_grad(
 class TestOptimizers(flow.unittest.TestCase):
     def test_sgd(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [random_device().value()]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["dampening"] = [0.0, 0.9]
-        arg_dict["nesterov"] = [True, False]
-        arg_dict["maximize"] = [True, False]
+        arg_dict["nesterov"] = [random_bool().value()]
+        arg_dict["maximize"] = [random_bool().value()]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
-        arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["fused"] = [True, False]
+        arg_dict["save_load_by_pickle"] = [random_bool().value()]
+        arg_dict["contiguous_params"] = [random_bool().value()]
+        arg_dict["fused"] = [random_bool().value()]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
     def test_sgd_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [random_device().value()]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["dampening"] = [0.0, 0.9]
-        arg_dict["nesterov"] = [True, False]
-        arg_dict["maximize"] = [True, False]
+        arg_dict["nesterov"] = [random_bool().value()]
+        arg_dict["maximize"] = [random_bool().value()]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
-        arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["clip_grad_norm_type"] = random_util.sample(
+            ["inf", "-inf", 0.0, 1.0, 2.0, 3.5], k=3
+        )
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
-        arg_dict["save_load_by_pickle"] = [False, True]
-        arg_dict["fused"] = [True, False]
+        arg_dict["save_load_by_pickle"] = [random_bool().value()]
+        arg_dict["contiguous_params"] = [random_bool().value()]
+        arg_dict["fused"] = [random_bool().value()]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)

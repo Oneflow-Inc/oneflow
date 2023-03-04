@@ -13,8 +13,8 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ## Latest News
 
-- Version 0.8.0 is out!
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
+- Version 0.9.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.9.0)
 
 ## Publication
 
@@ -68,7 +68,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu117
     ```
   - Nightly
     ```
@@ -90,8 +90,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 ### Use docker image
 
 ```
-docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.2
+docker pull oneflowinc/oneflow:nightly-cuda11.7
 ```
 
 ### Build from Source

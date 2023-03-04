@@ -28,6 +28,7 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
@@ -74,6 +75,7 @@ def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
 def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
   let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
   let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
@@ -125,6 +127,15 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   }];
   let constructor = "mlir::oneflow::createFuseForwardOps()";
   let dependentDialects = [];
+}
+
+def FuseOpsWithBackwardImpl : Pass<"fuse-ops-with-backward-impl", "ModuleOp"> {
+  let summary = "fuse ops with backward impl";
+  let description = [{
+    fuse ops with backward impl.
+  }];
+  let constructor = "mlir::oneflow::createFuseOpsWithBackwardImpl()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {

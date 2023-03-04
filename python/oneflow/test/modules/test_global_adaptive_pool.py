@@ -31,7 +31,7 @@ _size_3_opt_t_not_none = Union[
 ]
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_adaptive_avgpoolnd(test_case, ndim, pool_size, placement, sbp):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
@@ -48,7 +48,7 @@ def _test_adaptive_avgpoolnd(test_case, ndim, pool_size, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_adaptive_avgpoolnd_functional(test_case, ndim, pool_size, placement, sbp):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)

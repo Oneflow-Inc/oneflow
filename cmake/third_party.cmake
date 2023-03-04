@@ -26,7 +26,6 @@ if(RPC_BACKEND MATCHES "GRPC")
 endif()
 include(flatbuffers)
 include(lz4)
-include(string_view)
 
 include(hwloc)
 include(liburing)
@@ -69,8 +68,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
-    nlohmann_json::nlohmann_json
-    string-view-lite)
+    nlohmann_json::nlohmann_json)
 if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
@@ -152,6 +150,7 @@ if(BUILD_CUDA)
   endif()
   include(nccl)
   include(cutlass)
+  include(trt_flash_attention)
 
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
@@ -168,6 +167,9 @@ if(BUILD_CUDA)
     list(APPEND oneflow_third_party_libs ${CUTLASS_LIBRARIES})
     list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUTLASS_INCLUDE_DIR})
   endif()
+  list(APPEND oneflow_third_party_dependencies trt_flash_attention)
+  list(APPEND oneflow_third_party_libs ${TRT_FLASH_ATTENTION_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${TRT_FLASH_ATTENTION_INCLUDE_DIR})
 endif()
 
 if(BUILD_RDMA)

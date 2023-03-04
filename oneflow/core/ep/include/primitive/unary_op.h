@@ -83,11 +83,17 @@ enum class UnaryOp {
   // logical op
   kLogicalNot,
 
+  // cast op
+  kCast,
+
   // utils op
   kIsInf,
   kIsNan,
   kIsFinite,
   kNanAssign,
+
+  // bitwise op
+  kBitwiseNot,
 };
 
 }

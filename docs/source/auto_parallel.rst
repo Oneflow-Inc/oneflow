@@ -67,4 +67,5 @@ Configuration API for auto parallelism
     set_auto_parallel_wait_time
     enable_auto_parallel_trunk_algo
     enable_auto_parallel_sbp_collector
+    enable_auto_memory
 

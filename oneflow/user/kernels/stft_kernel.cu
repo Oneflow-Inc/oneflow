@@ -14,21 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if __CUDACC_VER_MAJOR__ >= 11
-#define CUDA_SUPPORT_CUFFT
-#endif
+#include <cuda.h>
 
-#ifdef CUDA_SUPPORT_CUFFT
+#if CUDA_VERSION >= 11000
 
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include <cufft.h>
-#include <cufftXt.h>
-#include "oneflow/core/kernel/kernel.h"
-#include "cufftplancache.h"
+#include "cufft_plan_cache.h"
+
 namespace oneflow {
-namespace {}  // namespace
+
+namespace {
 
 template<typename IN, typename OUT>
 __global__ void convert_complex_to_real(IN* dst, const OUT* src, size_t n) {
@@ -72,6 +66,8 @@ __global__ void convert_doublesided(const FFTTYPE* src, FFTTYPE* dst, size_t len
     }
   }
 }
+
+}  // namespace
 
 template<typename IN, typename OUT>
 class StftGpuKernel final : public user_op::OpKernel {
@@ -158,8 +154,10 @@ class StftGpuKernel final : public user_op::OpKernel {
         const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(outtype)); \
         return onesided ? output_bytes : 2 * output_bytes;                                  \
       });
+
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
+
 }  // namespace oneflow
 
 #endif

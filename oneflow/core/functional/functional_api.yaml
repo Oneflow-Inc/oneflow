@@ -82,6 +82,9 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+      "Tensor (Tensor input, Tensor other, *, String rounding_mode=None) => DivMode",
+      "Tensor (Tensor input, Scalar other, *, String rounding_mode=None) => ScalarDivMode",
+      "Tensor (Scalar input, Tensor other, *, String rounding_mode=None) => ScalarDivMode",
     ]
   bind_python: true
 
@@ -128,6 +131,14 @@
     ]
   bind_python: true
 
+- name: "greater_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceBroadcastGreater",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarLogicalGreater",
+    ]
+  bind_python: true
+
 - name: "greater_equal"
   signature:
     [
@@ -166,6 +177,37 @@
       "Tensor (Tensor input, Scalar other) => ScalarLogicalXor",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalXor",
     ]
+  bind_python: true
+
+- name: "bitwise_and"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseAnd",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseAnd",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseAnd",
+    ]
+  bind_python: true
+
+- name: "bitwise_or"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseOr",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseOr",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseOr",
+    ]
+  bind_python: true
+
+- name: "bitwise_xor"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseXor",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseXor",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseXor",
+    ]
+  bind_python: true
+
+- name: "bitwise_not"
+  signature: "Tensor (Tensor input) => BitwiseNot"
   bind_python: true
 
 - name: "less"
@@ -421,6 +463,10 @@
 - name: "as_strided_grad"
   signature: "Tensor (Tensor dy, Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStridedGrad"
   bind_python: False
+
+- name: "as_strided_"
+  signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => InplaceAsStrided"
+  bind_python: True
 
 - name: "select"
   signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
@@ -688,6 +734,10 @@
   signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
+- name: "fused_glu_without_linear_grad"
+  signature: "TensorTuple (Tensor dy, Tensor matmul_wx, Tensor matmul_vx=None, String activation=\"none\") => FusedGluWithoutLinearGrad"
+  bind_python: False
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -747,6 +797,14 @@
 - name: "leaky_relu_grad"
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
+
+- name: "rrelu"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False, Bool inplace=False) => RRelu"
+  bind_python: True
+
+- name: "rrelu_"
+  signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
+  bind_python: True
 
 - name: "normal"
   signature: [
@@ -966,6 +1024,15 @@
     Int32 quantization_bit, String quantization_scheme, Float momentum) => MovingAverageMinMaxObserver"
   bind_python: True
 
+- name: "groupwise_dequantize"
+  signature:
+    'Tensor (Tensor in, Tensor scale, *, Tensor zero=None, Int32 num_bits=8, Bool symmetric=True, Int64 group_dim=-1, Int64 group_size=-1) => GroupwiseDequantize'
+  bind_python: True
+
+- name: "fused_linear_with_groupwise_quantized_weight"
+  signature: 'Tensor (Tensor x, Tensor w, Tensor w_scale, *, Tensor w_zero=None, Tensor b=None, Int32 num_bits=8, Bool symmetric=True, Int64 group_dim=-1, Int64 group_size=-1) => FusedLinearWithGroupwiseQuantizedWeight'
+  bind_python: True
+
 - name: "conv_data_grad"
   signature:
     'Tensor (Tensor dy, Tensor weight, Tensor x, Int32 num_spatial_dims,
@@ -1047,8 +1114,16 @@
   signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
   bind_python: False
 
+- name: "unsqueeze_"
+  signature: "Tensor (Tensor input, Int32 dim) => InplaceUnsqueeze"
+  bind_python: True
+
 - name: "squeeze"
-  signature: ["Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"]
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze"
+  bind_python: True
+
+- name: "squeeze_"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None) => InplaceSqueeze"
   bind_python: True
 
 - name: "exp"
@@ -1576,7 +1651,10 @@
   bind_python: False
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
+  signature: [
+      "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy",
+      "Tensor (Tensor x, Device device, Bool pin_memory=False) => Copy"
+  ]
   bind_python: True
 
 - name: "to"
@@ -1705,6 +1783,10 @@
 - name: "fused_get_ciou_result_grad"
   signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
   bind_python: False
+
+- name: "fused_codegeex_qkv_reshape"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Int32 num_attention_heads) => FusedCodegeexQkvReshape"
+  bind_python: True
 
 - name: "fused_get_iou"
   signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIou"
@@ -1995,6 +2077,9 @@
 
 - name: "multi_dot"
   signature: "Tensor (TensorTuple tensors) => MultiDot"
+
+- name: "det"
+  signature: "Tensor (Tensor x) => Det"
   bind_python: True
 
 - name: "dropout"
@@ -2511,7 +2596,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
-  signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None) => FusedMultiHeadAttentionInference"
   bind_python: True
 
 - name: "fused_get_center_dist"
@@ -2639,7 +2724,7 @@
   bind_python: True
 
 - name: "topk"
-  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=-1, Bool largest=True, Bool sorted=True) => TopK"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 k, Int32 dim=None, Bool largest=True, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"
@@ -2724,6 +2809,14 @@
 
 - name: "isfinite"
   signature: "Tensor (Tensor input) => IsFinite"
+  bind_python: True
+
+- name: "depend"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor depend) => Depend",
+      "Tensor (Tensor input, TensorTuple depends) => DependTuple",
+    ]
   bind_python: True
 
 - name: "roc_auc_score"
@@ -3117,4 +3210,12 @@
   
 - name: "throw_error"
   signature: "Tensor (Tensor input) => ThrowError"
+  bind_python: True
+
+- name: "mode"
+  signature: "TensorTuple[values, indices] (Tensor input, Int32 dim=-1, Bool keepdim=False) => Mode"
+  bind_python: True
+
+- name: "clone"
+  signature: "Tensor (Tensor input) => Clone"
   bind_python: True

@@ -31,7 +31,7 @@ class CpuSendImpl final : public Send {
   ~CpuSendImpl() = default;
 
   void Init(DataType datatype) override {
-    CHECK(IsPODDataType(datatype));
+    CHECK(IsTriviallyCopyableDataType(datatype));
     this->size_of_dtype_ = GetSizeOfDataType(datatype);
   }
 

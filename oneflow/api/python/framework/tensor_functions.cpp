@@ -19,11 +19,15 @@ limitations under the License.
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.h"
+#include "oneflow/extension/python/numpy.h"
+#include "oneflow/api/python/utils/tensor_utils.h"
 
 namespace oneflow {
 namespace one {
@@ -32,13 +36,34 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
 using functional::PyObjectPtr;
-
-static PyObject* concat_self(PyObject* self, PyObject* args) {
+namespace {
+PyObject* concat_self(PyObject* self, PyObject* args) {
   PyObjectPtr self_tuple(PyTuple_Pack(1, self));
   PyObject* tuple = PySequence_Concat(self_tuple.get(), args);
   CHECK_OR_THROW(tuple != NULL);
   return tuple;
 }
+
+PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
+  if (PyArray_Check(other)) {
+    const auto& tensor = PyTensor_Unpack(self);
+    CHECK_OR_THROW(!tensor->is_cuda())
+        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
+      auto ndsbp = ASSERT(tensor->nd_sbp());
+      std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
+                                           ASSERT(MakeBroadcastSbpParallel()));
+      other = functional::CastToPyObject(MakeGlobalTensorFromData(other, tensor->dtype(), placement,
+                                                                  sbp, /*requires_grad=*/false));
+    } else {
+      other = functional::CastToPyObject(functional::LocalTensorSharedNumpyData(other));
+    }
+  }
+  return other;
+}
+
+}  // namespace
 
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
@@ -53,15 +78,17 @@ static PyObject* concat_self(PyObject* self, PyObject* args) {
 #define NB_BINARY_FUNC(func_name, bind_func)                 \
   static PyObject* func_name(PyObject* a, PyObject* b) {     \
     HANDLE_ERRORS                                            \
+    b = ndarray_judgment_and_compatibility(a, b);            \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                \
     auto* result = bind_func(NULL, tuple.get(), NULL);       \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
     END_HANDLE_ERRORS                                        \
-  }
+  }  // namespace one
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
+NB_UNARY_FUNC(PyTensorObject_nb_invert, functional::bitwise_not);
 // TODO: not implemented yet
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
@@ -77,21 +104,11 @@ NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
-static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
+  b = ndarray_judgment_and_compatibility(a, b);
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObject* result = functional::pow(NULL, tuple.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_nb_invert(PyObject* self) {
-  HANDLE_ERRORS
-  CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
-      << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -100,6 +117,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
 #define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                           \
   static PyObject* func_name(PyObject* a, PyObject* b) {                       \
     HANDLE_ERRORS                                                              \
+    b = ndarray_judgment_and_compatibility(a, b);                              \
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
@@ -116,7 +134,7 @@ NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul_);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div_);
 
-PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unused) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObjectPtr dict(PyDict_New());
@@ -224,6 +242,7 @@ UNARY_METHOD(PyTensorObject_acosh, functional::Acosh);
 UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
+UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
 
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
@@ -239,6 +258,7 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
 DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
 DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
+DIRECT_PASS_FUNC(PyTensorObject_gt_, functional::greater_)
 DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
 DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
@@ -291,6 +311,7 @@ DIRECT_PASS_FUNC(PyTensorObject_unsqueeze, functional::unsqueeze)
 DIRECT_PASS_FUNC(PyTensorObject_max, functional::max)
 DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
+DIRECT_PASS_FUNC(PyTensorObject_mode, functional::mode)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
@@ -305,6 +326,11 @@ DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
 DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
+DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
+DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -784,6 +810,97 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto self_tensor = PyTensor_Unpack(self);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:type_as", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+
+  // target is local
+  auto other_tensor = PyTensor_Unpack(other);
+  if (other_tensor->is_local()) {
+    Optional<Symbol<Device>> device = ASSERT(other_tensor->device());
+    if (self_tensor->is_global()) {
+      self_tensor = ASSERT_PTR(functional::GlobalToLocal(self_tensor, /*copy=*/false));
+    }
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(self_tensor, device, other_tensor->dtype(), /*copy=*/false)));
+  }
+
+  // target is global
+  std::shared_ptr<Tensor> value_tensor;
+  value_tensor = ASSERT_PTR(functional::To(self_tensor, other_tensor->dtype(), /*copy=*/false));
+  Symbol<ParallelDesc> placement = ASSERT(other_tensor->parallel_desc());
+  std::vector<Symbol<SbpParallel>> sbp;
+  auto ndsbp = ASSERT(other_tensor->nd_sbp());
+  for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
+    sbp.emplace_back(ndsbp->sbp_parallel(i));
+  }
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_new(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto self_tensor = PyTensor_Unpack(self);
+
+  if (!kwargs) {
+    if (PyTuple_Size(args) == 1 && PyTensor_Check(PyTuple_GET_ITEM(args, 0))) {
+      // tensor.new(other)
+      auto other_tensor = PyTensor_Unpack(PyTuple_GET_ITEM(args, 0));
+      CHECK_OR_THROW(!self_tensor->is_global() && !other_tensor->is_global())
+          << "Tensor.new(Tensor) only support local tensor.";
+      CHECK_OR_THROW(self_tensor->dtype() == other_tensor->dtype())
+          << "Tensor.new() expect " << self_tensor->dtype()->name() << " dtype tensor, but got "
+          << other_tensor->dtype()->name() << " dtype tensor.";
+      CHECK_OR_THROW(ASSERT(self_tensor->device())->enum_type()
+                     == ASSERT(other_tensor->device())->enum_type())
+          << "Tensor.new() expect tensor on " << ASSERT(self_tensor->device())->type()
+          << ", but got tensor on " << ASSERT(other_tensor->device())->type() << ".";
+      return PyTensor_New(ASSERT_PTR(functional::TensorWithOtherCtor(other_tensor)));
+    }
+    kwargs = PyDict_New();
+  }
+  PyObjectPtr dtype_key(PyUnicode_FromString("dtype"));
+  PyObjectPtr dtype_value(functional::CastToPyObject(self_tensor->dtype()));
+  CHECK_OR_THROW(PyDict_Contains(kwargs, dtype_key.get()) < 1);
+  CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value.get()) > -1);
+
+  if (self_tensor->is_global()) {
+    PyObjectPtr placement_key(PyUnicode_FromString("placement"));
+    PyObjectPtr sbp_key(PyUnicode_FromString("sbp"));
+    CHECK_OR_THROW(PyDict_Contains(kwargs, placement_key.get()) < 1);
+    CHECK_OR_THROW(PyDict_Contains(kwargs, sbp_key.get()) < 1);
+
+    Symbol<ParallelDesc> placement = ASSERT(self_tensor->parallel_desc());
+    std::vector<Symbol<SbpParallel>> sbp;
+    auto ndsbp = ASSERT(self_tensor->nd_sbp());
+    for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
+      sbp.emplace_back(ndsbp->sbp_parallel(i));
+    }
+
+    PyObjectPtr placement_value(functional::CastToPyObject(placement));
+    PyObjectPtr sbp_value(functional::CastToPyObject(sbp));
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "placement", placement_value.get()) > -1);
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "sbp", sbp_value.get()) > -1);
+  } else {
+    auto device = ASSERT(self_tensor->device());
+
+    PyObjectPtr device_key(PyUnicode_FromString("device"));
+    CHECK_OR_THROW(PyDict_Contains(kwargs, device_key.get()) < 1)
+        << "Some of the keywords were incorrect: device";
+    PyObjectPtr device_value(functional::CastToPyObject(device));
+    CHECK_OR_THROW(PyDict_SetItemString(kwargs, "device", device_value.get()) > -1);
+  }
+  return functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
+  END_HANDLE_ERRORS
+}
+
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
@@ -881,6 +998,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
      NULL},
     {"to_local", (PyCFunction)PyTensorObject_to_local, METH_VARARGS | METH_KEYWORDS, NULL},
     {"to_global", (PyCFunction)PyTensorObject_to_global, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"type_as", (PyCFunction)PyTensorObject_type_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
     {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -892,12 +1010,14 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"new", (PyCFunction)PyTensorObject_new, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
     {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"gt_", (PyCFunction)PyTensorObject_gt_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -941,6 +1061,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"max", (PyCFunction)PyTensorObject_max, METH_VARARGS | METH_KEYWORDS, NULL},
     {"min", (PyCFunction)PyTensorObject_min, METH_VARARGS | METH_KEYWORDS, NULL},
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mode", (PyCFunction)PyTensorObject_mode, METH_VARARGS | METH_KEYWORDS, NULL},
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -955,6 +1076,11 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -1010,6 +1136,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+    {"bitwise_not", (PyCFunction)PyTensorObject_bitwise_not, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1028,10 +1155,13 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LT: return functional::less(NULL, tuple.get(), NULL);
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
-      if (self == Py_None || other == Py_None) return Py_False;
+      if (self == Py_None || other == Py_None) Py_RETURN_FALSE;
       return functional::broadcast_equal(NULL, tuple.get(), NULL);
     }
-    case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
+    case Py_NE: {
+      if (self == Py_None || other == Py_None) Py_RETURN_TRUE;
+      return functional::not_equal(NULL, tuple.get(), NULL);
+    }
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
     case Py_GE: return functional::greater_equal(NULL, tuple.get(), NULL);
   }
