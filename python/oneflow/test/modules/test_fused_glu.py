@@ -339,7 +339,7 @@ def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(False, "skip test")  # skip test for passing CI under cuda 10
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFusedGlu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
