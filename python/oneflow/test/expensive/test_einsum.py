@@ -487,7 +487,7 @@ class TestEinsum(flow.unittest.TestCase):
         z = torch.einsum("ijk,ijk...->ij...", x, y)
         return z
 
-    @autotest(n=5, rtol=1e-1, atol=1e-3)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_einsum_other_usecase1(test_case):
         device = random_device()
         dim0 = random(1, 6)
