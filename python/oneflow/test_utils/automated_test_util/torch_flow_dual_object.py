@@ -400,7 +400,7 @@ def get_functional_graph_res(
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
-
+        print("wefjhuikhwejihwghwuiknh", oneflow.__name__)
         # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
@@ -441,8 +441,10 @@ def get_functional_graph_res(
         ):
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
-        elif is_global() and (
-            get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu"
+        elif (
+            is_global()
+            and oneflow.__name__ != "weight_norm"
+            and (get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu")
         ):
             test_g_res = oneflow_res
         else:
