@@ -1636,7 +1636,6 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        # if len(args) == 1 and isinstance(args[0], (tuple, list)) and all(isinstance(arg, Tensor) for arg in args[0]):
         if isinstance(args, (tuple, list)) and all(
             isinstance(arg, Tensor) for arg in args
         ):
