@@ -981,6 +981,16 @@ class DualObject:
                 k: v.detach() for (k, v) in oneflow_state_dict.items()
             }
             already_global = any([v.is_global for v in oneflow_state_dict.values()])
+            if is_global() and already_global:
+                for k, v in state_dict.items():
+                    if k not in oneflow_state_dict:
+                        continue
+                    of_state = oneflow_state_dict[k]
+                    if of_state.is_global:
+                        state_dict[k] = flow.tensor(
+                            v, sbp=of_state.sbp, placement=of_state.placement
+                        )
+
             oneflow.load_state_dict(state_dict, strict=False)
 
             if is_global():

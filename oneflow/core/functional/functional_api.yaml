@@ -731,7 +731,7 @@
   bind_python: True
 
 - name: "fused_glu"
-  signature: "Tensor (Tensor x, Tensor w, Tensor b, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b=None, Tensor v=None, Tensor c=None, String activation=\"none\") => FusedGlu"
   bind_python: True
 
 - name: "fused_glu_without_linear_grad"
@@ -1022,6 +1022,15 @@
     "TensorTuple (Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,
     Bool training, Int64 stop_update_after_iters, String quantization_formula,
     Int32 quantization_bit, String quantization_scheme, Float momentum) => MovingAverageMinMaxObserver"
+  bind_python: True
+
+- name: "groupwise_dequantize"
+  signature:
+    'Tensor (Tensor in, Tensor scale, *, Tensor zero=None, Int32 num_bits=8, Bool symmetric=True, Int64 group_dim=-1, Int64 group_size=-1) => GroupwiseDequantize'
+  bind_python: True
+
+- name: "fused_linear_with_groupwise_quantized_weight"
+  signature: 'Tensor (Tensor x, Tensor w, Tensor w_scale, *, Tensor w_zero=None, Tensor b=None, Int32 num_bits=8, Bool symmetric=True, Int64 group_dim=-1, Int64 group_size=-1) => FusedLinearWithGroupwiseQuantizedWeight'
   bind_python: True
 
 - name: "conv_data_grad"
@@ -1774,6 +1783,10 @@
 - name: "fused_get_ciou_result_grad"
   signature: "TensorTuple (Tensor dy ,Tensor alpha, Tensor rho2, Tensor c2) => FusedGetCiouResultGrad"
   bind_python: False
+
+- name: "fused_codegeex_qkv_reshape"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Int32 num_attention_heads) => FusedCodegeexQkvReshape"
+  bind_python: True
 
 - name: "fused_get_iou"
   signature: "Tensor (Tensor w1, Tensor h1, Tensor w2, Tensor h2, Tensor inter, Float eps) => FusedGetIou"
@@ -2580,8 +2593,20 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
-  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None) => FusedMultiHeadAttentionInference"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInference"
   bind_python: True
+
+- name: "fused_multi_head_attention_inference_v2"
+  signature: "Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key, String key_layout, Tensor value, String value_layout, Tensor attn_bias=None, Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2"
+  bind_python: True
+
+- name: "fused_scale_mask_bias_softmax"
+  signature: 'Tensor (Tensor x, Tensor mask, Tensor bias=None, Float scale=0.35355, Bool inplace=False) => FusedScaleMaskBiasSoftmax'
+  bind_python: True
+
+- name: "fused_scale_mask_bias_softmax_grad"
+  signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355) => FusedScaleMaskBiasSoftmaxGrad'
+  bind_python: False
 
 - name: "fused_get_center_dist"
   signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"

@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/ops/reshape_user_op_util.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/reshape_user_op_util.h"
 
 namespace oneflow {
 
@@ -28,6 +30,39 @@ namespace oneflow {
   user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
   return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->hierarchy_value(), &builder);
+}
+
+/*static*/ Maybe<void> ReshapeOp::EnumerateNdSbpSignatures(
+    user_op::GetNdSbpSignatureListContext* ctx) {
+  const Shape& in_shape = ctx->BlobShape4InputArgNameAndIndex("in", 0);
+  const Shape& shape_attr = ctx->Attr<Shape>("shape");
+  std::shared_ptr<Shape> out_shape_ptr =
+      JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_attr));
+
+  std::vector<NdSbpSignature>* nd_sbp_sig_list = ctx->MutNdSbpSignatureList();
+  JUST(ReshapeUserOpUtil::EnumerateNdSbpSignatures({{"in", 0}}, in_shape, {{"out", 0}},
+                                                   *out_shape_ptr, ctx->parallel_hierarchy(),
+                                                   nd_sbp_sig_list));
+
+  // Go down from the tail to the head, since we might drop the tail.
+  for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
+    auto& nd_sbp_sig = (*nd_sbp_sig_list)[sbp_id];
+    const auto& out_nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find("out_0");
+    CHECK_OR_RETURN(out_nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
+        << "can't get sbp for out_0";
+    Shape out_logical_shape = *out_shape_ptr;
+    // filter by output only be needed here
+    // filter by input will be done in Operator::FilterNdSbpSignatureListByLogicalShape
+    if (JUST(FilterNdSbpByLogicalShape(out_nd_sbp_it->second, out_logical_shape,
+                                       ctx->parallel_hierarchy()))) {
+      // Remove the Nd SBP candidate
+      std::swap(nd_sbp_sig, nd_sbp_sig_list->back());
+      nd_sbp_sig_list->pop_back();
+    }
+  }
+
+  DeduplicateNdSbpSignatureList(nd_sbp_sig_list, {"in_0", "out_0"});
+  return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {

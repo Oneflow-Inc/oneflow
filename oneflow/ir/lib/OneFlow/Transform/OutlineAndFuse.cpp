@@ -249,6 +249,17 @@ class FuseForwardOpsPass : public FuseForwardOpsBase<FuseForwardOpsPass> {
   }
 };
 
+class FuseOpsWithBackwardImplPass
+    : public FuseOpsWithBackwardImplBase<FuseOpsWithBackwardImplPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateFuseOpsWithBackwardImplPattern(patterns);
+    rewrites::populateRewrites(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizationOpsPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -286,6 +297,10 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
+std::unique_ptr<Pass> createFuseOpsWithBackwardImpl() {
+  return std::make_unique<FuseOpsWithBackwardImplPass>();
+}
+
 std::unique_ptr<Pass> createFuseNormalizationOps() {
   return std::make_unique<FuseNormalizationOpsPass>();
 }
