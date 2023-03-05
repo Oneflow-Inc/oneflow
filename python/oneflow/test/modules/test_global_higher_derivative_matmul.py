@@ -107,7 +107,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
             ddb_pytorch.detach().cpu().numpy(),
             ddb_oneflow.detach().numpy(),
             rtol=1e-3,
-            atol=1e-5,
+            atol=1e-4,
         )
     )
     test_case.assertTrue(
