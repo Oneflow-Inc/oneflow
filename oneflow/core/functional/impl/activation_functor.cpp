@@ -435,9 +435,6 @@ class GumbelSoftmaxFunctor {
     const int64_t num_axes = in_shape->NumAxes();
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
-    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
-
     auto random_tensor =
         JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
     auto gumbel_noise_tensor = JUST(functional::ScalarSub(
