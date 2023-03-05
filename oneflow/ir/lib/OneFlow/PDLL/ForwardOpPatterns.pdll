@@ -60,13 +60,11 @@ Pattern {
   rewrite out_reshape with{
     replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
-      num_heads = GetNumHeadsFromTranpose(query_transpose),
-      key_hidden_slice_start = attr<"0 : si64">,
-      key_hidden_slice_end = attr<"-1 : si64">,
-      query_hidden_slice_start = attr<"0 : si64">,
-      query_hidden_slice_end = attr<"-1 : si64">,
-      value_hidden_slice_start = attr<"0 : si64">,
-      value_hidden_slice_end = attr<"-1 : si64">
+      causal_diagonal_offset = attr<"0 : si64">,
+      query_head_size = GetHeadSizeFromTranpose(query_transpose),
+      query_layout = attr<"\"BM(HK)\"">,
+      key_layout = attr<"\"BM(HK)\"">,
+      value_layout = attr<"\"BM(HK)\"">
     } -> (out_t));
   };
 }
@@ -103,13 +101,11 @@ Pattern {
   rewrite out_reshape with{
     replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
       causal = attr<"false : bool">,
-      num_heads = GetNumHeadsFromTranpose(query_permute),
-      key_hidden_slice_start = attr<"0 : si64">,
-      key_hidden_slice_end = attr<"-1 : si64">,
-      query_hidden_slice_start = attr<"0 : si64">,
-      query_hidden_slice_end = attr<"-1 : si64">,
-      value_hidden_slice_start = attr<"0 : si64">,
-      value_hidden_slice_end = attr<"-1 : si64">
+      causal_diagonal_offset = attr<"0 : si64">,
+      query_head_size = GetHeadSizeFromTranpose(query_permute),
+      query_layout = attr<"\"BM(HK)\"">,
+      key_layout = attr<"\"BM(HK)\"">,
+      value_layout = attr<"\"BM(HK)\"">
     } -> (out_t));
   };
 }
