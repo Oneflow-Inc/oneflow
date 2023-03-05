@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -70,6 +72,27 @@ Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitCont
   }
   return GetRandomSeedForRank(ctx->parallel_desc(), ctx->NdSbp4ArgNameAndIndex("out", 0), init_seed,
                               ctx->parallel_ctx().parallel_id());
+}
+
+Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& generator,
+                                             bool is_lazy,
+                                             const Optional<Symbol<ParallelDesc>>& placement,
+                                             const Optional<Symbol<NdSbp>>& nd_sbp) {
+  bool is_global = placement.has_value() && nd_sbp.has_value();
+  if (!is_lazy && !is_global) { return generator->current_seed(); }
+
+  auto gen_impl = JUST(generator->Get<one::CPUGeneratorImpl>(0));
+  CHECK_OR_RETURN(gen_impl) << "expect GeneratorImpl to be CPUGeneratorImpl or AutoGeneratorImpl";
+  uint64_t init_seed = gen_impl->engine()();
+  if (is_lazy) { return init_seed; }
+
+  uint64_t rank_seed = 0;
+  JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+  rank_seed = JUST(
+      GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
+  // generator = JUST(one::MakeGenerator(JUST(placement)->device_type()));
+  generator->set_current_seed(rank_seed);
+  return rank_seed;
 }
 
 }  // namespace oneflow

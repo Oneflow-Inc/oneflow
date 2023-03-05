@@ -5506,7 +5506,8 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
     OneFlow_Tensor:$mask
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$rate
+    DefaultValuedAttr<F32Attr, "0.">:$rate,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -25,8 +24,11 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
+#include "oneflow/core/common/container_util.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace one {
@@ -2816,10 +2818,17 @@ class DropoutFunctor {
       JUST(CheckInplaceValid(x));
       (*outputs)[0] = x;
     }
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    uint64_t init_seed = 0;
+    if (x->is_global()) {
+      init_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
+                                                    JUST(x->parallel_desc()), JUST(x->nd_sbp())));
+    } else {
+      init_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    }
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate");
-    dropout_attrs.SetAllAttrs(p);
+    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(init_seed));
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
