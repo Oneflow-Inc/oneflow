@@ -28,7 +28,7 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 
 #ifdef WITH_CUDA
-
+#include <thrust/pair.h>
 #include <cub/cub.cuh>
 namespace oneflow {
 
@@ -488,9 +488,8 @@ REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
 
 #ifdef WITH_ROCM
 
-#include "hip/hip_runtime.h"
+#include <hipcub/hipcub.hpp>
 #include <thrust/pair.h>
-#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 template <typename T, bool is_cuda>
 struct AccumulateType { };
@@ -600,17 +599,8 @@ struct WelfordOps {
   }
 };
 
-template <typename T, class ReduceOp>
-__inline__ __device__ T WarpReduce(T val, const ReduceOp& op) {
-#pragma unroll
-  for (int offset = (C10_WARP_SIZE >> 1); offset > 0; offset >>= 1) {
-    val = op.combine(val, op.warp_shfl_down(val, offset));
-  }
-  return val;
-}
-
-template <typename T, class ReduceOp>
-__inline__ __device__ T WarpReduce(T val,int max,const ReduceOp& op) {
+template <int max=32,typename T, class ReduceOp>
+__inline__ __device__ T WarpReduce(T val,const ReduceOp& op) {
 #pragma unroll
   for (int offset = max; offset > 0; offset >>= 1) {
     val = op.combine(val, op.warp_shfl_down(val, offset));
@@ -631,22 +621,13 @@ BlockReduce(T val, const ReduceOp& op, T* shared) {
   __syncthreads();
   if (wid == 0) {
     val= shared[lid];
-    val = WarpReduce(val,blockDim.x / C10_WARP_SIZE / 2,op);
+    val = WarpReduce<4>(val,op);
   }
   return val;
 }
 
-template <typename T>
+template <int max=32,typename T>
 __inline__ __device__ T WarpReduceSum(T val) {
-#pragma unroll
-  for (int offset = (C10_WARP_SIZE >> 1); offset > 0; offset >>= 1) {
-    val += __shfl_down(val, offset);
-  }
-  return val;
-}
-
-template <typename T>
-__inline__ __device__ T WarpReduceSum(T val,int max) {
 #pragma unroll
   for (int offset = max; offset > 0; offset >>= 1) {
     val += __shfl_down(val, offset);
@@ -667,7 +648,7 @@ __inline__ __device__ T BlockReduceSum(T val, T* shared) {
   __syncthreads();
   if (wid == 0) {
     val= shared[lid];
-    val = WarpReduceSum(val,blockDim.x / C10_WARP_SIZE / 2);
+    val = WarpReduceSum<4>(val);
   }
   return val;
 }
@@ -707,8 +688,8 @@ __global__ void layernorm_forward_kernel(const scalar_t* input,scalar_t* ret,acc
   #pragma unroll
   for (IndexType j = threadIdx.x; j < cols; j += blockDim.x) {
     IndexType index = i * cols + j;
-    ret[index] = (static_cast<T_ACC>(input[index]) - s_mean)*s_rstd * (gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j])) 
-    + (beta == nullptr ? T_ACC(0) : static_cast<T_ACC>(beta[j]));
+    ret[index] = static_cast<scalar_t>((static_cast<T_ACC>(input[index]) - s_mean)*s_rstd * (gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j])) 
+    + (beta == nullptr ? T_ACC(0) : static_cast<T_ACC>(beta[j])));
   }
 }
 
@@ -754,10 +735,10 @@ __global__ void GammaBetaBackwardSimple(IndexType M,IndexType N,const scalar_t* 
       sum2 += db == nullptr ? T_ACC(0) : static_cast<T_ACC>(dY[index]);
     }
     if (dg != nullptr) {
-      dg[j] = sum1;
+      dg[j] = static_cast<scalar_t>(sum1);
     }
     if (db != nullptr) {
-      db[j] = sum2;
+      db[j] = static_cast<scalar_t>(sum2);
     }
   }
 }
@@ -801,31 +782,31 @@ __global__ void GammaBetaBackward(IndexType M,IndexType N,const scalar_t* dY,con
   __syncthreads();
   T_ACC sum1 = g_shared[threadIdx.x][threadIdx.y];
   T_ACC sum2 = b_shared[threadIdx.x][threadIdx.y];
-  sum1 = WarpReduceSum(sum1);
-  sum2 = WarpReduceSum(sum2);
+  sum1 = WarpReduceSum<16>(sum1);
+  sum2 = WarpReduceSum<16>(sum2);
   if (threadIdx.x == 0) {
     const int64_t j = blockIdx.x * blockDim.x + threadIdx.y;
     if (j < N) {
       if (dg != nullptr) {
-        dg[j] = sum1;
+        dg[j] = static_cast<scalar_t>(sum1);
       }
       if (db != nullptr) {
-        db[j] = sum2;
+        db[j] = static_cast<scalar_t>(sum2);
       }
     }
   }
   sum1 = g_shared[threadIdx.x][threadIdx.y + blockDim.y];
   sum2 = b_shared[threadIdx.x][threadIdx.y + blockDim.y];
-  sum1 = WarpReduceSum(sum1);
-  sum2 = WarpReduceSum(sum2);
+  sum1 = WarpReduceSum<16>(sum1);
+  sum2 = WarpReduceSum<16>(sum2);
   if (threadIdx.x == 0) {
     const int64_t j = blockIdx.x * blockDim.x + threadIdx.y + blockDim.y;
     if (j < N) {
       if (dg != nullptr) {
-        dg[j] = sum1;
+        dg[j] = static_cast<scalar_t>(sum1);
       }
       if (db != nullptr) {
-        db[j] = sum2;
+        db[j] = static_cast<scalar_t>(sum2);
       }
     }
   }
@@ -862,8 +843,8 @@ __global__ void LayerNormBackward_kernel(IndexType N,const scalar_t* dY,const sc
   for (IndexType j = threadIdx.x; j < N; j += blockDim.x) {
     const IndexType index = i * N + j;
     const T_ACC gamma_v = gamma == nullptr ? T_ACC(1) : static_cast<T_ACC>(gamma[j]);
-    dX[index] = static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(dY[index]) * gamma_v + b * static_cast<T_ACC>(X[index]) + c 
-    + (add_to_output == nullptr ? T_ACC(0) : static_cast<T_ACC>(add_to_output[index]));
+    dX[index] = static_cast<scalar_t>(static_cast<T_ACC>(rstd[i]) * static_cast<T_ACC>(dY[index]) * gamma_v + b * static_cast<T_ACC>(X[index]) + c 
+    + (add_to_output == nullptr ? T_ACC(0) : static_cast<T_ACC>(add_to_output[index])));
   }
 }
 
