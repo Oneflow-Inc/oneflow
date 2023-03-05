@@ -164,7 +164,7 @@ class ArgsTree(object):
             if children:
                 for child in reversed(children):
                     stack.append(child)
- 
+
             yield curr
 
     def iter_tuple_nodes(self):
