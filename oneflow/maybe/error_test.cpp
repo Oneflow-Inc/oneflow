@@ -34,7 +34,7 @@ template struct StackedErrorTraits<NoStackError<std::error_code>>;
 }  // namespace oneflow
 
 TEST(StackedError, SimpleStackedError) {
-  StackedError<std::error_code, StringView> a(std::make_error_code(std::errc::timed_out));
+  StackedError<std::error_code, std::string_view> a(std::make_error_code(std::errc::timed_out));
 
   ASSERT_EQ(a.Error(), std::errc::timed_out);
   ASSERT_EQ(a.StackSize(), 0);

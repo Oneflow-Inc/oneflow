@@ -129,6 +129,15 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   let dependentDialects = [];
 }
 
+def FuseOpsWithBackwardImpl : Pass<"fuse-ops-with-backward-impl", "ModuleOp"> {
+  let summary = "fuse ops with backward impl";
+  let description = [{
+    fuse ops with backward impl.
+  }];
+  let constructor = "mlir::oneflow::createFuseOpsWithBackwardImpl()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+}
+
 def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {
   let summary = "fuse forward ops";
   let description = [{
