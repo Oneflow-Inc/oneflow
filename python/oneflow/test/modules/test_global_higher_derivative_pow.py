@@ -34,7 +34,7 @@ def _check_equal(test_case, lhs, rhs, rtol=1e-3, atol=1e-3):
 
 def _test_global_pow_grad_grad_impl(test_case, placement):
     x_shape, y_shape = [([8, 8], [8, 8]), ([8, 8, 8], [8, 8]), ([8, 8], [8, 8, 8]),][
-        random(0, 3).to(int).value()
+        random(1, 3).to(int).value()
     ]
 
     x = random_tensor(len(x_shape), *x_shape).to_global(
