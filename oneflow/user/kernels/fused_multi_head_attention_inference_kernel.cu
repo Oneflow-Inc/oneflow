@@ -67,10 +67,17 @@ struct Params {
   int64_t kv_seq_len;
   int64_t head_size;
   int64_t value_head_size;
-  int64_t query_hidden_stride;
-  int64_t key_hidden_stride;
-  int64_t value_hidden_stride;
+  int64_t q_stride_b;
+  int64_t q_stride_m;
+  int64_t q_stride_h;
+  int64_t k_stride_b;
+  int64_t k_stride_m;
+  int64_t k_stride_h;
+  int64_t v_stride_b;
+  int64_t v_stride_m;
+  int64_t v_stride_h;
   bool causal;
+  int64_t causal_diagonal_offset;
   const void* query_ptr;
   const void* key_ptr;
   const void* value_ptr;
@@ -112,25 +119,26 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.head_dim_value = params.value_head_size;
   p.num_queries = params.query_seq_len;
   p.num_keys = params.kv_seq_len;
-  p.q_strideM = params.query_hidden_stride;
-  p.k_strideM = params.key_hidden_stride;
-  p.v_strideM = params.value_hidden_stride;
+  p.q_strideM = params.q_stride_m;
+  p.k_strideM = params.k_stride_m;
+  p.v_strideM = params.v_stride_m;
   p.o_strideM = p.head_dim_value * p.num_heads;
   p.bias_strideM = params.attn_bias_stride_m;
 
-  p.q_strideH = params.head_size;
-  p.k_strideH = params.head_size;
-  p.v_strideH = params.value_head_size;
+  p.q_strideH = params.q_stride_h;
+  p.k_strideH = params.k_stride_h;
+  p.v_strideH = params.v_stride_h;
   p.bias_strideH = params.attn_bias_stride_h;
 
-  p.q_strideB = params.query_seq_len * p.q_strideM;
-  p.k_strideB = params.kv_seq_len * p.k_strideM;
-  p.v_strideB = params.kv_seq_len * p.v_strideM;
+  p.q_strideB = params.q_stride_b;
+  p.k_strideB = params.k_stride_b;
+  p.v_strideB = params.v_stride_b;
   p.bias_strideB = params.attn_bias_stride_b;
 
   p.scale = 1.0 / std::sqrt(float(p.head_dim));
 
   p.causal = params.causal;
+  p.causal_diagonal_offset = params.causal_diagonal_offset;
   p.use_dropout = false;
 
   constexpr auto kernel_fn = attention_kernel_batched_impl<Attention>;
@@ -182,9 +190,6 @@ void DispatchIsAligned(const Params& params, ep::CudaStream* stream) {
   if (reinterpret_cast<uintptr_t>(params.query_ptr) % 16 == 0
       && reinterpret_cast<uintptr_t>(params.key_ptr) % 16 == 0
       && reinterpret_cast<uintptr_t>(params.value_ptr) % 16 == 0
-      && params.query_hidden_stride % (16 / sizeof(T)) == 0
-      && params.key_hidden_stride % (16 / sizeof(T)) == 0
-      && params.value_hidden_stride % (16 / sizeof(T)) == 0
       && params.attn_bias_stride_m % (16 / sizeof(T)) == 0
       && params.head_size % (16 / sizeof(T)) == 0
       && params.value_head_size % (16 / sizeof(T)) == 0) {
@@ -242,48 +247,132 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     CHECK_EQ(key->data_type(), data_type);
     CHECK_EQ(value->data_type(), data_type);
     CHECK_EQ(out->data_type(), data_type);
-    CHECK_EQ(query->shape_view().NumAxes(), 3);
-    CHECK_EQ(key->shape_view().NumAxes(), 3);
-    CHECK_EQ(value->shape_view().NumAxes(), 3);
-    CHECK_EQ(out->shape_view().NumAxes(), 3);
-    const int64_t batch_size = query->shape_view().At(0);
-    CHECK_EQ(key->shape_view().At(0), batch_size);
-    CHECK_EQ(value->shape_view().At(0), batch_size);
-    CHECK_EQ(out->shape_view().At(0), batch_size);
-    const int64_t query_seq_len = query->shape_view().At(1);
-    CHECK_EQ(out->shape_view().At(1), query_seq_len);
-    const int64_t kv_seq_len = key->shape_view().At(1);
-    CHECK_EQ(value->shape_view().At(1), kv_seq_len);
-    const int64_t num_heads = ctx->Attr<int64_t>("num_heads");
+    const int64_t query_head_size = ctx->Attr<int64_t>("query_head_size");
     const bool causal = ctx->Attr<bool>("causal");
+    const int64_t causal_diagonal_offset = ctx->Attr<int64_t>("causal_diagonal_offset");
+    CHECK_GE(causal_diagonal_offset, 0);
+    const std::string& query_layout = ctx->Attr<std::string>("query_layout");
+    const std::string& key_layout = ctx->Attr<std::string>("key_layout");
+    const std::string& value_layout = ctx->Attr<std::string>("value_layout");
 
-    const auto ParseHiddenDim = [&](const std::string& tag, const ShapeView& shape,
-                                    int64_t* hidden_slice_start, int64_t* hidden_size) {
-      *hidden_slice_start = ctx->Attr<int64_t>(tag + "_hidden_slice_start");
-      CHECK_GE(*hidden_slice_start, 0);
-      int64_t hidden_slice_end = ctx->Attr<int64_t>(tag + "_hidden_slice_end");
-      if (hidden_slice_end < 0) { hidden_slice_end = hidden_slice_end + shape.At(2) + 1; }
-      CHECK_GT(hidden_slice_end, 0);
-      CHECK_LE(hidden_slice_end, shape.At(2));
-      CHECK_GT(hidden_slice_end, *hidden_slice_start);
-      *hidden_size = hidden_slice_end - *hidden_slice_start;
-      CHECK_EQ(*hidden_size % num_heads, 0);
+    const auto ParseDims =
+        [](const ShapeView& shape, const std::string& layout, const Optional<int64_t>& num_heads,
+           const Optional<int64_t>& head_size, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
+           int64_t* b_stride, int64_t* m_stride, int64_t* h_stride) -> void {
+      if (shape.NumAxes() == 3) {
+        if (layout == "BM(HK)") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = CHECK_JUST(num_heads);
+            CHECK_EQ(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = CHECK_JUST(head_size);
+            CHECK_EQ(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED();
+          }
+          *h_stride = *k;
+          *m_stride = *h_stride * *h;
+          *b_stride = *m_stride * *m;
+        } else if (layout == "MB(HK)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = CHECK_JUST(num_heads);
+            CHECK_EQ(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = CHECK_JUST(head_size);
+            CHECK_EQ(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED();
+          }
+          *h_stride = *k;
+          *b_stride = *h_stride * *h;
+          *m_stride = *b_stride * *b;
+        } else {
+          UNIMPLEMENTED();
+        }
+      } else if (shape.NumAxes() == 4) {
+        if (layout == "BMHK") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          *h = shape.At(2);
+          *k = shape.At(3);
+          *h_stride = *k;
+          *m_stride = *h_stride * *h;
+          *b_stride = *m_stride * *m;
+        } else if (layout == "BHMK") {
+          *b = shape.At(0);
+          *m = shape.At(2);
+          *h = shape.At(1);
+          *k = shape.At(3);
+          *m_stride = *k;
+          *h_stride = *m_stride * *m;
+          *b_stride = *h_stride * *h;
+        } else {
+          UNIMPLEMENTED();
+        }
+        if (num_heads) {
+          const int64_t expected_h = CHECK_JUST(num_heads);
+          CHECK_EQ(*h, expected_h);
+        }
+        if (head_size) {
+          const int64_t expected_k = CHECK_JUST(head_size);
+          CHECK_EQ(*k, expected_k);
+        }
+      } else {
+        UNIMPLEMENTED();
+      };
     };
 
-    int64_t query_hidden_offset = 0;
-    int64_t query_hidden_size = 0;
-    ParseHiddenDim("query", query->shape_view(), &query_hidden_offset, &query_hidden_size);
+    int64_t q_b = 0;
+    int64_t q_m = 0;
+    int64_t q_h = 0;
+    int64_t q_k = 0;
+    int64_t q_b_stride = 0;
+    int64_t q_m_stride = 0;
+    int64_t q_h_stride = 0;
+    ParseDims(query->shape_view(), query_layout, Optional<int64_t>(), query_head_size, &q_b, &q_m,
+              &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride);
 
-    int64_t key_hidden_offset = 0;
-    int64_t key_hidden_size = 0;
-    ParseHiddenDim("key", key->shape_view(), &key_hidden_offset, &key_hidden_size);
-    CHECK_EQ(key_hidden_size, query_hidden_size);
+    int64_t k_b = 0;
+    int64_t k_m = 0;
+    int64_t k_h = 0;
+    int64_t k_k = 0;
+    int64_t k_b_stride = 0;
+    int64_t k_m_stride = 0;
+    int64_t k_h_stride = 0;
+    ParseDims(key->shape_view(), key_layout, Optional<int64_t>(), query_head_size, &k_b, &k_m, &k_h,
+              &k_k, &k_b_stride, &k_m_stride, &k_h_stride);
+    CHECK_EQ(k_b, q_b);
+    CHECK_EQ(k_h, q_h);
 
-    int64_t value_hidden_offset = 0;
-    int64_t value_hidden_size = 0;
-    ParseHiddenDim("value", value->shape_view(), &value_hidden_offset, &value_hidden_size);
-
-    CHECK_EQ(out->shape_view().At(2), value_hidden_size);
+    int64_t v_b = 0;
+    int64_t v_m = 0;
+    int64_t v_h = 0;
+    int64_t v_k = 0;
+    int64_t v_b_stride = 0;
+    int64_t v_m_stride = 0;
+    int64_t v_h_stride = 0;
+    ParseDims(value->shape_view(), value_layout, q_h, Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k,
+              &v_b_stride, &v_m_stride, &v_h_stride);
+    CHECK_EQ(v_b, q_b);
+    CHECK_EQ(v_m, k_m);
+    CHECK_EQ(out->shape_view().NumAxes(), 3);
+    CHECK_EQ(out->shape_view().At(0), q_b);
+    CHECK_EQ(out->shape_view().At(1), q_m);
+    CHECK_EQ(out->shape_view().At(2), q_h * v_k);
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
@@ -294,32 +383,28 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
             ParseBooleanFromEnv("ONEFLOW_KERENL_FMHA_ENABLE_TRT_FLASH_ATTN_IMPL", true))
         && ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
     const int arch = cuda_stream->cuda_arch() / 10;
-    const bool inputs_contiguous =
-        query_hidden_offset == 0 && query_hidden_size == query->shape_view().At(2)
-        && key_hidden_offset == 0 && key_hidden_size == key->shape_view().At(2)
-        && value_hidden_offset == 0 && value_hidden_size == value->shape_view().At(2);
     const bool is_trt_supported_arch = (arch == 75 || arch == 80 || arch == 86 || arch == 89);
-    const int64_t query_head_size = query_hidden_size / num_heads;
-    const bool is_trt_supported_head_size = ((query_head_size == 40) || (query_head_size == 64));
+    const bool is_trt_supported_head_size = ((q_k == 40) || (q_k == 64));
     // Avoid PackQKV overhead when seq_len is small.
-    const bool is_long_seq_len = query_seq_len >= 512;
-    if (enable_trt_flash_attn && inputs_contiguous && data_type == DataType::kFloat16
-        && query_seq_len == kv_seq_len && query_hidden_size == value_hidden_size
+    const bool is_long_seq_len = q_m >= 512;
+    const bool is_trt_supported_layout = (query_layout == "BMHK" || query_layout == "BM(HK)")
+                                         && (key_layout == "BMHK" || key_layout == "BM(HK)")
+                                         && (value_layout == "BMHK" || value_layout == "BM(HK)");
+    if (enable_trt_flash_attn && data_type == DataType::kFloat16 && q_m == k_m && q_k == v_k
         && is_trt_supported_head_size && is_long_seq_len && is_trt_supported_arch && (!causal)
-        && attn_bias == nullptr) {
+        && attn_bias == nullptr && is_trt_supported_layout) {
       // The fmha implementation below is based on TensorRT's multiHeadFlashAttentionPlugin
       // implementation at:
       // https://github.com/NVIDIA/TensorRT/tree/main/plugin/multiHeadFlashAttentionPlugin
-      int32_t cu_seqlens_d_size = (batch_size + 1) * sizeof(int32_t);
+      int32_t cu_seqlens_d_size = (q_b + 1) * sizeof(int32_t);
       int32_t* cu_seqlens_d = reinterpret_cast<int32_t*>(tmp->mut_dptr());
       half* packed_qkv =
           reinterpret_cast<half*>(tmp->mut_dptr<char>() + GetCudaAlignedSize(cu_seqlens_d_size));
       constexpr int pack_size = 4;
       using PackType = Pack<half, pack_size>;
-      int count = batch_size * query_seq_len * query_hidden_size * 3 / pack_size;
+      const int64_t count = q_b * q_m * q_h * q_k * 3 / pack_size;
       PackQkv<PackType><<<(count - 1 + 256) / 256, 256, 0, cuda_stream->cuda_stream()>>>(
-          batch_size, query_seq_len, num_heads, query_head_size / pack_size,
-          reinterpret_cast<const PackType*>(query->dptr()),
+          q_b, q_m, q_h, q_k / pack_size, reinterpret_cast<const PackType*>(query->dptr()),
           reinterpret_cast<const PackType*>(key->dptr()),
           reinterpret_cast<const PackType*>(value->dptr()), reinterpret_cast<PackType*>(packed_qkv),
           cu_seqlens_d);
@@ -337,31 +422,37 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
         OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));
       }
 #endif  // WITH_CUDA_GRAPHS
-      nvinfer1::plugin::runFMHFAKernel(
-          packed_qkv, cu_seqlens_d, out->mut_dptr(), batch_size * query_seq_len, arch, kernels,
-          batch_size, num_heads, query_head_size, query_seq_len, cuda_stream->cuda_stream());
+      nvinfer1::plugin::runFMHFAKernel(packed_qkv, cu_seqlens_d, out->mut_dptr(), q_b * q_m, arch,
+                                       kernels, q_b, q_h, q_k, q_m, cuda_stream->cuda_stream());
       return;
     }
 
     Params params{};
     params.data_type = data_type;
-    params.num_batches = batch_size;
-    params.num_heads = num_heads;
-    params.query_seq_len = query_seq_len;
-    params.kv_seq_len = kv_seq_len;
-    params.head_size = query_hidden_size / num_heads;
-    params.value_head_size = value_hidden_size / num_heads;
-    params.query_hidden_stride = query->shape_view().At(2);
-    params.key_hidden_stride = key->shape_view().At(2);
-    params.value_hidden_stride = value->shape_view().At(2);
-    params.query_ptr = query->dptr<char>() + query_hidden_offset * GetSizeOfDataType(data_type);
-    params.key_ptr = key->dptr<char>() + key_hidden_offset * GetSizeOfDataType(data_type);
-    params.value_ptr = value->dptr<char>() + value_hidden_offset * GetSizeOfDataType(data_type);
+    params.num_batches = q_b;
+    params.num_heads = q_h;
+    params.query_seq_len = q_m;
+    params.kv_seq_len = k_m;
+    params.head_size = q_k;
+    params.value_head_size = v_k;
+    params.q_stride_b = q_b_stride;
+    params.q_stride_m = q_m_stride;
+    params.q_stride_h = q_h_stride;
+    params.k_stride_b = k_b_stride;
+    params.k_stride_m = k_m_stride;
+    params.k_stride_h = k_h_stride;
+    params.v_stride_b = v_b_stride;
+    params.v_stride_m = v_m_stride;
+    params.v_stride_h = v_h_stride;
+    params.query_ptr = query->dptr<char>();
+    params.key_ptr = key->dptr<char>();
+    params.value_ptr = value->dptr<char>();
     params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
     params.workspace = tmp->mut_dptr();
     params.workspace_size = tmp_buffer_size;
     params.causal = causal;
+    params.causal_diagonal_offset = causal_diagonal_offset;
     if (attn_bias != nullptr) {
       const int64_t num_attn_bias_axes = attn_bias->shape_view().NumAxes();
       CHECK_GE(num_attn_bias_axes, 1);
@@ -371,26 +462,26 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
       for (int i = 0; i < num_attn_bias_axes; ++i) {
         padded_attn_bias_shape.push_back(attn_bias->shape_view().At(i));
       }
-      CHECK_GE(padded_attn_bias_shape.at(3), kv_seq_len);
+      CHECK_GE(padded_attn_bias_shape.at(3), k_m);
       int64_t bias_stride = padded_attn_bias_shape.at(3);
       if (padded_attn_bias_shape.at(2) == 1) {
         params.attn_bias_stride_m = 0;
       } else {
-        CHECK_GE(padded_attn_bias_shape.at(2), query_seq_len);
+        CHECK_GE(padded_attn_bias_shape.at(2), q_m);
         params.attn_bias_stride_m = bias_stride;
         bias_stride *= padded_attn_bias_shape.at(2);
       }
       if (padded_attn_bias_shape.at(1) == 1) {
         params.attn_bias_stride_h = 0;
       } else {
-        CHECK_EQ(padded_attn_bias_shape.at(1), num_heads);
+        CHECK_EQ(padded_attn_bias_shape.at(1), q_h);
         params.attn_bias_stride_h = bias_stride;
-        bias_stride *= num_heads;
+        bias_stride *= q_h;
       }
       if (padded_attn_bias_shape.at(0) == 1) {
         params.attn_bias_stride_b = 0;
       } else {
-        CHECK_EQ(padded_attn_bias_shape.at(0), batch_size);
+        CHECK_EQ(padded_attn_bias_shape.at(0), q_b);
         params.attn_bias_stride_b = bias_stride;
       }
       params.attn_bias_ptr = attn_bias->dptr();

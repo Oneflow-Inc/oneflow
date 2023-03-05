@@ -2593,7 +2593,11 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
-  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None) => FusedMultiHeadAttentionInference"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInference"
+  bind_python: True
+
+- name: "fused_multi_head_attention_inference_v2"
+  signature: "Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key, String key_layout, Tensor value, String value_layout, Tensor attn_bias=None, Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2"
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax"
