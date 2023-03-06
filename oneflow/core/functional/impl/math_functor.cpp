@@ -2383,7 +2383,8 @@ class ScalarBitwiseBaseFunctor {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
   }
   virtual ~ScalarBitwiseBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           bool inplace = 0) const {
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
 
@@ -2400,8 +2401,17 @@ class ScalarBitwiseBaseFunctor {
     }
     JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+    if (inplace) {
+      JUST(CheckInplaceCastValid(x, casted_vec[0]));
+      JUST(CheckInplaceValid(x));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), OpExprInterpContext(attrs)));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+    }
   }
 
  private:
@@ -2411,6 +2421,14 @@ class ScalarBitwiseBaseFunctor {
 class ScalarBitwiseAndFunctor : public ScalarBitwiseBaseFunctor {
  public:
   ScalarBitwiseAndFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
+};
+
+class ScalarBitwiseAndInplaceFunctor : public ScalarBitwiseBaseFunctor {
+ public:
+  ScalarBitwiseAndInplaceFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarBitwiseBaseFunctor::operator()(x, scalar, true);
+  }
 };
 
 class ScalarBitwiseAnd2Functor {
@@ -4216,6 +4234,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedGetConvexDiagonalSquaredGradFunctor>(
       "FusedGetConvexDiagonalSquaredGrad");
   m.add_functor<impl::ScalarBitwiseAndFunctor, impl::ScalarBitwiseAnd2Functor>("ScalarBitwiseAnd");
+  m.add_functor<impl::ScalarBitwiseAndInplaceFunctor, impl::ScalarBitwiseAnd2Functor>(
+      "ScalarBitwiseAndInplace");
   m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
 };

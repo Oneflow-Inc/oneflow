@@ -532,6 +532,14 @@ class BroadcastBitwiseAndFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastBitwiseAndInplaceFunctor : public InplaceableBinaryFunctor {
+ public:
+  BroadcastBitwiseAndInplaceFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastBitwiseOrFunctor : public BinaryFunctor {
  public:
   BroadcastBitwiseOrFunctor() {
@@ -645,6 +653,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
   m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
   m.add_functor<impl::BroadcastBitwiseAndFunctor>("BroadcastBitwiseAnd");
+  m.add_functor<impl::BroadcastBitwiseAndInplaceFunctor>("BroadcastBitwiseAndInplace");
   m.add_functor<impl::BroadcastBitwiseOrFunctor>("BroadcastBitwiseOr");
   m.add_functor<impl::BroadcastBitwiseXorFunctor>("BroadcastBitwiseXor");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");

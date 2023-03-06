@@ -77,6 +77,17 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestBitwiseAndInplaceModule(flow.unittest.TestCase):
+    @autotest(n=10, auto_backward=False)
+    def test_bitwise_and(test_case):
+        return _test_bitwise_op(test_case, torch.bitwise_and_)
+
+    @autotest(n=10, auto_backward=False)
+    def test_scalar_bitwise_and(test_case):
+        return _test_scalar_bitwise(test_case, torch.bitwise_and_,)
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestBitwiseOrModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_bitwise_or(test_case):
