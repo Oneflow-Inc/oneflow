@@ -27,6 +27,13 @@ Optimizations on OneFlow MLIR dialect. A CLI to optimize .mlir file. [read more]
 - ### OneFlow dialect
 In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
 
+- ### OneFlow Kenerl Memory (OKM) Dialect
+In the `include` and `lib` directories, there are definitions of MLIR OKM dialect and its operators.
+OKM is a dialect which support oneflow using mlir memref style and use-def flow  to optimize memory usage.
+
+- ### OneFlow Kernel Launch (OKL) dialect
+In the `include` and `lib` directories, there are definitions of MLIR OKL dialect and its operators.
+OKL is a dialect which support oneflow kernel ops launched as a a llvm dialect callee.
 ## Parallel Signature
 
 - There is parallel signature as 0 for OneFlow Ops in MLIR. It is implemented as MLIR dialect attribute. Some examples:
