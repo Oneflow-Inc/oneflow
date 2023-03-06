@@ -5140,9 +5140,7 @@ class FusedMultiHeadAttentionInferenceV2Functor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_packed_qkv_;
   std::shared_ptr<OpExpr> op_with_attn_bias_;
-  std::shared_ptr<OpExpr> op_packed_qkv_with_attn_bias_;
 };
 
 class FusedFastGeluMulFunctor {
