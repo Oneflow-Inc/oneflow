@@ -57,7 +57,7 @@ namespace oneflow {
 namespace {
 
 struct MemBlockResultInfo {
-  size_t mem_block_size;
+  size_t mem_block_size {};
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
