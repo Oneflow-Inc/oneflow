@@ -5,5 +5,5 @@
 If:
   CommandMatch: ^[^ ]*/nvcc
 CompileFlags:
-  Remove: [--diag_suppress=*, --generate-code=*, -forward-unknown-to-host-compiler, -Xcompiler, -Xcudafe]
+  Remove: [--diag_suppress=*, --generate-code=*, -forward-unknown-to-host-compiler, -Xcompiler, -Xcudafe, --use_fast_math]
   Replace: ['^([^ ]*)/bin/nvcc', 'clang++ --cuda-path=\1', '-isystem=', '-isystem ', '-Xcompiler=', '']
