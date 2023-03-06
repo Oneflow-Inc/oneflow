@@ -27,7 +27,7 @@ class AsyncDeallocateContext final : public DeallocateContext {
   AsyncDeallocateContext();
   ~AsyncDeallocateContext() override;
 
-  void LazyDeallocate(std::function<void()> LazyDeallocator) override;
+  void Dispatch(std::function<void()> Handle) override;
 
  private:
   std::shared_ptr<ThreadPool> thread_pool_;

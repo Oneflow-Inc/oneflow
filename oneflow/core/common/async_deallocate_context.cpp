@@ -22,8 +22,8 @@ AsyncDeallocateContext::AsyncDeallocateContext() : thread_pool_(std::make_unique
 
 AsyncDeallocateContext::~AsyncDeallocateContext() {}
 
-void AsyncDeallocateContext::LazyDeallocate(std::function<void()> LazyDeallocator) {
-  thread_pool_->AddWork(LazyDeallocator);
+void AsyncDeallocateContext::Dispatch(std::function<void()> Handle) {
+  thread_pool_->AddWork(Handle);
 }
 
 }  // namespace oneflow

@@ -30,11 +30,13 @@ class DeallocateContext {
   void Deallocate(std::shared_ptr<T>&& ptr) {
     std::shared_ptr<T> data = ptr;
     ptr.reset();
-    LazyDeallocate([data] { const_cast<std::shared_ptr<T>*>(&data)->reset(); });
+    // reset shared_ptr inside data by customized Dispatch
+    Dispatch([data] { const_cast<std::shared_ptr<T>*>(&data)->reset(); });
+    // reset data
     data.reset();
   }
 
-  virtual void LazyDeallocate(std::function<void()> LazyDeallocator) = 0;
+  virtual void Dispatch(std::function<void()> Handle) = 0;
 };
 
 class NaiveDeallocateContext final : public DeallocateContext {
@@ -42,7 +44,7 @@ class NaiveDeallocateContext final : public DeallocateContext {
   NaiveDeallocateContext() = default;
   ~NaiveDeallocateContext() = default;
 
-  void LazyDeallocate(std::function<void()> LazyDeallocator) { LazyDeallocator(); }
+  void Dispatch(std::function<void()> Handle) { Handle(); }
 };
 
 }  // namespace oneflow

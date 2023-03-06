@@ -399,8 +399,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
             RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
-        VLOG(1) << "Graph name: " << name_ << " rank: " << i
-                << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
         PlanUtil::GenRegisterHint(plan);
         plan->mutable_collective_boxing_plan();
         // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
@@ -444,8 +442,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
     PlanUtil::GenLightPlan(&plan_, name_, GlobalProcessCtx::Rank());
   }
   OF_SESSION_BARRIER();
-  // NOTE(zwx): After barrier plan is synchronized between all ranks,
-  //     then it can be cleared for saving mem.
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
       std::string name = "plan:" + job_name() + ":" + std::to_string(i);
@@ -598,8 +594,6 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
-    VLOG(1) << "Graph name: " << name_ << " rank: " << rank
-            << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(rank))->Write(*plan);
       PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
@@ -645,8 +639,6 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     PlanUtil::GenLightPlan(&plan_, name_);
   }
   OF_SESSION_BARRIER();
-  // NOTE(zwx): After barrier plan is synchronized between all ranks,
-  // then it can be cleared for saving mem.
   for (const auto& k : push_pull_keys) { Singleton<CtrlClient>::Get()->ClearKV(k); }
   OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
@@ -686,8 +678,6 @@ Maybe<void> NNGraph::NaiveCompile() {
       Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
     OF_SESSION_BARRIER();
-    // NOTE(zwx): After barrier plan is synchronized between all ranks,
-    //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
@@ -805,10 +795,8 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
   CHECK_EQ_OR_RETURN(new_build_original_job.net().op_size(),
                      shared_op_names_from_ordered_original_graph.size())
       << "nn.Graph " << name_
-      << " new_build_original_job op size and shared_op_names_from_ordered_original_graph size "
-         "are "
-         "not "
-         "equal.";
+      << " new_build_original_job op size and shared_op_names_from_ordered_original_graph "
+      << "size are not equal.";
   HashMap<std::string, const OperatorConf*> shared_op_name2_new_op;
   for (int64_t op_idx = 0; op_idx < shared_op_names_from_ordered_original_graph.size(); ++op_idx) {
     // Assume that the new graph and the shared graph from nn.Graph.build have the same op order.
