@@ -590,7 +590,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           return decide_parameter_a < decide_parameter_b;
         }
       }
-      return a->node->node_id() < b->node->node_id();
+      return a->node < b->node;
     }
   };
 
