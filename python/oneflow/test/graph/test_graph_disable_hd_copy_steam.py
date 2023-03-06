@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+
 # Enable feature to test
 os.environ["ONEFLOW_DISABLE_HD_COPY_STREAM"] = "true"
 import unittest
