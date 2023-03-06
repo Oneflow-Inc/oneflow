@@ -792,7 +792,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
-  std::string graphviz;
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
+    pm.addPass(oneflow::createOutlineJitFunctionPass());
+  }
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
@@ -811,6 +814,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
+  }
+  if (!job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL", false)) {
+    pm.addPass(oneflow::createFuseOpsWithBackwardImpl());
   }
   // TODO: support backward or put it in a env flag
   if (job_wrapper.IsLastIRPass()
@@ -832,23 +839,24 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(createAggregateComputeOpsPass());
 
     auto wrap_pass = createWrapOpsToKernelLaunchPass();
-    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-      (void)wrap_pass->initializeOptions("mode=cuda_graph");
-    } else {
-      (void)wrap_pass->initializeOptions("mode=simple");
-    }
+    std::string options =
+        "mode="
+        + (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)
+               ? wrap_mode::CUDA_GRAPH
+               : wrap_mode::SIMPLE);
+
+    (void)wrap_pass->initializeOptions(options);
     pm.addPass(std::move(wrap_pass));
   }
   pm.addPass(createCanonicalizerPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {
     pm.addPass(createPrintOpStatsPass());
   }
+  std::string graphviz;
+  llvm::raw_string_ostream os_graphviz(graphviz);
   const bool shouldPrintGraphviz =
       ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_OP_GRAPH", false);
-  if (shouldPrintGraphviz) {
-    llvm::raw_string_ostream os_graphviz(graphviz);
-    pm.addPass(createPrintOpGraphPass(os_graphviz));
-  }
+  if (shouldPrintGraphviz) { pm.addPass(createPrintOpGraphPass(os_graphviz)); }
   if (mlir::failed(pm.run(*module))) {
     module->emitError("Failed to run round-trip passes");
     return failure();

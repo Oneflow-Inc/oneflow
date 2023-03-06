@@ -3914,6 +3914,32 @@ class CloneFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input) const { return input->clone(); }
 };
 
+class FusedCodegeexQkvReshapeFunctor {
+ public:
+  FusedCodegeexQkvReshapeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_codegeex_qkv_reshape")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Output("new_query")
+                         .Output("new_key")
+                         .Output("new_value")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& query,
+                                const std::shared_ptr<one::Tensor>& key,
+                                const std::shared_ptr<one::Tensor>& value,
+                                const int32_t num_attention_heads) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_attention_heads");
+    attrs.SetAllAttrs(num_attention_heads);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {query, key, value}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4070,6 +4096,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BaddBmmFunctor>("BaddBmm");
   m.add_functor<impl::SortFunctor>("Sort");
   m.add_functor<impl::CloneFunctor>("Clone");
+  m.add_functor<impl::FusedCodegeexQkvReshapeFunctor>("FusedCodegeexQkvReshape");
 };
 
 }  // namespace functional
