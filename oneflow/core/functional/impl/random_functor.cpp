@@ -37,20 +37,13 @@ class BernoulliFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator, const bool& inplace) const {
-    Optional<Symbol<Device>> device;
-    Optional<Symbol<ParallelDesc>> placement;
-    Optional<Symbol<NdSbp>> nd_sbp;
-
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     uint64_t random_seed = 0;
     if (x->is_global()) {
       JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      placement = JUST(x->parallel_desc());
-      nd_sbp = JUST(x->nd_sbp());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
+                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
     } else {
-      device = JUST(x->device());
       random_seed =
           JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
@@ -62,10 +55,6 @@ class BernoulliFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(bernoulli_attrs, distribution_state);
-    ctx.device = device;
-    ctx.parallel_desc = placement;
-    ctx.nd_sbp = nd_sbp;
-
     if (inplace) {
       auto outputs = std::make_shared<TensorTuple>(1);
       JUST(CheckInplaceValid(x));
@@ -99,20 +88,13 @@ class BernoulliProbFunctor {
                            const bool& inplace) const {
     CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
 
-    Optional<Symbol<Device>> device;
-    Optional<Symbol<ParallelDesc>> placement;
-    Optional<Symbol<NdSbp>> nd_sbp;
-
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     uint64_t random_seed = 0;
     if (x->is_global()) {
       JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      placement = JUST(x->parallel_desc());
-      nd_sbp = JUST(x->nd_sbp());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
+                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
     } else {
-      device = JUST(x->device());
       random_seed =
           JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
@@ -122,10 +104,6 @@ class BernoulliProbFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(bernoulli_attrs, distribution_state);
-    ctx.device = device;
-    ctx.parallel_desc = placement;
-    ctx.nd_sbp = nd_sbp;
-
     if (inplace) {
       auto outputs = std::make_shared<TensorTuple>(1);
       JUST(CheckInplaceValid(x));
@@ -250,7 +228,6 @@ class RandFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
-
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -289,7 +266,6 @@ class GlobalRandFunctor {
                       static_cast<int64_t>(random_seed), attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
     JUST(result->set_requires_grad(requires_grad));
@@ -383,7 +359,6 @@ class NormalFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, device, distribution_state);
-
     if (out.has_value()) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = JUST(out);
@@ -456,7 +431,6 @@ class GlobalNormalFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, placement, nd_sbp, distribution_state);
-
     if (out.has_value()) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = JUST(out);
@@ -539,7 +513,6 @@ class RandIntFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
-
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -679,7 +652,6 @@ class RandPermFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
-
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return functional::Cast(result, dtype, /*pin_memory=*/false);
@@ -708,8 +680,8 @@ class GlobalRandPermFunctor {
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed", "nd_sbp");
     attrs.SetAllAttrs(n, static_cast<int64_t>(random_seed), attr_nd_sbp);
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
     JUST(result->set_requires_grad(requires_grad));
@@ -723,6 +695,7 @@ class GlobalRandPermFunctor {
 class ExponentialFunctor {
  public:
   ExponentialFunctor() { op_ = CHECK_JUST(one::OpBuilder("exponential").Output("out").Build()); }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lambd,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = x->dtype()->data_type();
@@ -780,6 +753,7 @@ class MultinomialFunctor {
                              .Output("out")
                              .Build());
   }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int& num_samples,
                            const bool& replacement,
                            const Optional<one::Generator>& generator) const {
@@ -832,20 +806,13 @@ class MultinomialFunctor {
       return result;
     }
 
-    Optional<Symbol<Device>> device;
-    Optional<Symbol<ParallelDesc>> placement;
-    Optional<Symbol<NdSbp>> nd_sbp;
-
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     uint64_t random_seed = 0;
     if (x->is_global()) {
       JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      placement = JUST(x->parallel_desc());
-      nd_sbp = JUST(x->nd_sbp());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
+                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
     } else {
-      device = JUST(x->device());
       random_seed =
           JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
@@ -855,9 +822,6 @@ class MultinomialFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = JUST(x->device());
-    ctx.parallel_desc = placement;
-    ctx.nd_sbp = nd_sbp;
 
     DeviceType input_device = JUST(x->device())->enum_type();
     if (input_device == DeviceType::kCPU) {

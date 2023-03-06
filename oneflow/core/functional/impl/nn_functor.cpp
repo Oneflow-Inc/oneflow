@@ -2829,6 +2829,7 @@ class DropoutFunctor {
       JUST(CheckInplaceValid(x));
       (*outputs)[0] = x;
     }
+
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     uint64_t random_seed = 0;
     if (x->is_global()) {
@@ -2838,24 +2839,25 @@ class DropoutFunctor {
       random_seed =
           JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
-    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
+
     auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(random_seed));
+
+    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
+    OpExprInterpContext ctx(dropout_attrs, dropout_state);
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(), ctx));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(), ctx));
       }
     }
     return (*outputs)[0];

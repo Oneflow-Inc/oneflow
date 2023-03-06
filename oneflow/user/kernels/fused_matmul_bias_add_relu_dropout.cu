@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
