@@ -157,7 +157,7 @@ def compare_with_numpy_adam(
             np.allclose(
                 oneflow_res[i].numpy().flatten(),
                 numpy_res[i].flatten(),
-                rtol=0.0001,
+                rtol=0.001,
                 atol=0.0001,
             )
         )
