@@ -58,20 +58,43 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> GroupedMatmulBiasOp::GetSbp(user_op::SbpContext* ctx) {
-  auto builder = ctx->NewBuilder();
-  for (int64_t i = 0; i < ctx->user_op_conf().input_size("xs"); ++i) {
-    builder.Split(user_op::OpArg("xs", i), 0);
+  {
+    // s0 x b
+    auto builder = ctx->NewBuilder();
+    for (int64_t i = 0; i < ctx->user_op_conf().input_size("xs"); ++i) {
+      builder.Split(user_op::OpArg("xs", i), 0);
+    }
+    for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {
+      builder.Broadcast(user_op::OpArg("weights", i));
+    }
+    for (int i = 0; i < ctx->user_op_conf().input_size("biases"); ++i) {
+      builder.Broadcast(user_op::OpArg("biases", i));
+    }
+    for (int i = 0; i < ctx->user_op_conf().output_size("ys"); ++i) {
+      builder.Split(user_op::OpArg("ys", i), 0);
+    }
+    builder.Build();
   }
-  for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {
-    builder.Broadcast(user_op::OpArg("weights", i));
+
+  {
+    // b x s0
+    auto builder = ctx->NewBuilder();
+    for (int64_t i = 0; i < ctx->user_op_conf().input_size("xs"); ++i) {
+      builder.Broadcast(user_op::OpArg("xs", i));
+    }
+    for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {
+      builder.Split(user_op::OpArg("weights", i), 0);
+    }
+    for (int i = 0; i < ctx->user_op_conf().input_size("biases"); ++i) {
+      builder.Split(user_op::OpArg("biases", i), 0);
+    }
+    for (int i = 0; i < ctx->user_op_conf().output_size("ys"); ++i) {
+      builder.Split(user_op::OpArg("ys", i),
+                    ctx->LogicalTensorDesc4InputArgNameAndIndex("xs", i).shape().NumAxes() - 1);
+    }
+    builder.Build();
   }
-  for (int i = 0; i < ctx->user_op_conf().input_size("biases"); ++i) {
-    builder.Broadcast(user_op::OpArg("biases", i));
-  }
-  for (int i = 0; i < ctx->user_op_conf().output_size("ys"); ++i) {
-    builder.Split(user_op::OpArg("ys", i), 0);
-  }
-  builder.Build();
+
   return Maybe<void>::Ok();
 }
 
