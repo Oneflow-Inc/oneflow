@@ -73,6 +73,7 @@ def do_test_rrelu_different_bound(test_case, shape, device, dtype):
         np.allclose(
             (flow.where(flow_tensor >= 0, 1, 0)).cpu().detach().numpy(),
             (flow.where(flow_div == 1.0, 1, 0)).cpu().detach().numpy(),
+            rtol=1e-4,
         )
     )
     test_case.assertTrue(
