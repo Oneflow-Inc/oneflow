@@ -88,7 +88,7 @@ class TestEmptyOp(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
             _test_new_empty(test_case, **arg)
-    
+
     def test_local_empty_strided(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 6), (2, 3, 12, 4)]
