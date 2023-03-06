@@ -1,5 +1,4 @@
-# okl dialect
-
+# 初版OKL设计文档
 oneflow kernel launch dialect
 
 将oneflow kernel引入mlir执行。
@@ -38,7 +37,6 @@ module {
     return %3, %4 : tensor<2xf32>, tensor<2xf32>
   }
 }
-
 ```
 -trim-return-to-void
 
@@ -122,7 +120,6 @@ module {
     return
   }
 }
-
 ```
 -reconcile-unrealized-casts
 -convert-func-to-llvm 
@@ -159,11 +156,9 @@ LauncherContext含有若干有序的CompileTimeWrapperContext一一对应其子O
 class CompileTimeWrapperContext {
   std::shared_ptr<const RegContext> reg_ctx_;
 };
-
 class RunTimeWrapperContext : public CompileTimeWrapperContext {
   std::shared_ptr<ComputeContext> compute_ctx_;
   std::shared_ptr<InitContext> init_ctx_;
-
   std::shared_ptr<user_op::OpKernelState> kernel_state_;
   std::shared_ptr<user_op::OpKernelCache> kernel_cache_;
 };
