@@ -35,6 +35,9 @@ namespace oneflow {
 
 namespace {
 
+// We pre-store this boolean value and update it at the beginning of straighten algorithm.
+bool nccl_use_compute_stream = false;
+
 enum TaskClassifier : int {
   kWaitingOverlapNode = 0,
   kWaitingMainComputation = 1,
@@ -187,8 +190,7 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
     }
   }
   if (IsTransferNode(task_type)) {
-    if (sat == StraightenAlgorithmTag::kCompressMemory
-        && Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    if (sat == StraightenAlgorithmTag::kCompressMemory && nccl_use_compute_stream) {
       // Overlap is not the first consideration, memory is
       return TaskClassifier::kWaitingMainComputation;
     } else {
@@ -506,7 +508,7 @@ int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
   }
   // This condition should be following the sat == StraightenAlgorithmTag::kOverlap4CpuGpu
   // Since the kOverlap4CpuGpu would not be affected by transfer.
-  if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+  if (nccl_use_compute_stream) {
     // Using nccl compute stream would disable the overlap for transfer
     // We need to reduce it to 1
     return 1;
@@ -522,6 +524,7 @@ int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
 }
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
+  nccl_use_compute_stream = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
 
