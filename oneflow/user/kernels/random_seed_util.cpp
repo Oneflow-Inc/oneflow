@@ -70,35 +70,38 @@ Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitCont
                               ctx->parallel_ctx().parallel_id());
 }
 
-Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& generator,
-                                             bool is_lazy,
-                                             const Optional<Symbol<ParallelDesc>>& placement,
-                                             const Optional<Symbol<NdSbp>>& nd_sbp) {
+Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Generator>& generator,
+                                                  bool is_lazy,
+                                                  const Optional<Symbol<ParallelDesc>>& placement,
+                                                  const Optional<Symbol<NdSbp>>& nd_sbp) {
   bool is_global = placement.has_value() && nd_sbp.has_value();
-  if (!is_lazy && !is_global) { return generator->current_seed(); }
+  if (!is_lazy && !is_global) { return generator; }
 
-  auto cpu_gen = JUST(one::DefaultCPUGenerator());
-  auto cpu_gen_impl = JUST(cpu_gen->Get<one::CPUGeneratorImpl>(0));
+  auto cpu_gen_impl = JUST(generator->Get<one::CPUGeneratorImpl>(0));
   CHECK_OR_RETURN(cpu_gen_impl) << "expect a CPUGeneratorImpl";
   uint64_t init_seed = cpu_gen_impl->engine()();
-  if (is_lazy) { return init_seed; }
+  auto new_gen = JUST(one::MakeGenerator(JUST(generator->device())->type()));
+  if (is_lazy) {
+    new_gen->set_current_seed(init_seed);
+    return new_gen;
+  }
 
   uint64_t rank_seed = 0;
   JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
   rank_seed = JUST(
       GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
-  generator->set_current_seed(rank_seed);
-  return rank_seed;
+  new_gen->set_current_seed(rank_seed);
+  return new_gen;
 }
 
-Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& generator,
-                                             bool is_lazy,
-                                             const std::shared_ptr<one::Tensor>& input) {
+Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Generator>& generator,
+                                                  bool is_lazy,
+                                                  const std::shared_ptr<one::Tensor>& input) {
   if (input->is_global()) {
-    return GetRandomSeedForLazyOrGlobal(generator, is_lazy, JUST(input->parallel_desc()),
-                                        JUST(input->nd_sbp()));
+    return GetGeneratorForLazyOrGlobal(generator, is_lazy, JUST(input->parallel_desc()),
+                                       JUST(input->nd_sbp()));
   } else {
-    return GetRandomSeedForLazyOrGlobal(generator, is_lazy, NullOpt, NullOpt);
+    return GetGeneratorForLazyOrGlobal(generator, is_lazy, NullOpt, NullOpt);
   }
 }
 

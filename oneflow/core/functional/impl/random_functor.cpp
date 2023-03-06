@@ -39,10 +39,10 @@ class BernoulliFunctor {
                            const Optional<one::Generator>& generator, const bool& inplace) const {
     if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     // p == -1 means bernoulli op doesn't use p to generate random number
-    bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(random_seed),
+    bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
                                 static_cast<double>(-1));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
@@ -82,9 +82,9 @@ class BernoulliProbFunctor {
     if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
-    bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(random_seed), p);
+    bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()), p);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(bernoulli_attrs, distribution_state);
@@ -141,17 +141,14 @@ class InplaceUniformFunctor {
     Optional<Symbol<NdSbp>> nd_sbp;
 
     auto gen = JUST(one::DefaultAutoGenerator());
-    uint64_t random_seed = 0;
     if (x->is_global()) {
       JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
       placement = JUST(x->parallel_desc());
       nd_sbp = JUST(x->nd_sbp());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
     } else {
       device = JUST(x->device());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nb_sbp");
@@ -159,10 +156,10 @@ class InplaceUniformFunctor {
     if (nd_sbp) { attr_nd_sbp = *JUST(GetNdSbpStrList(JUST(nd_sbp))); }
     if (IsInteger) {
       attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
-                        static_cast<int64_t>(random_seed), attr_nd_sbp);
+                        static_cast<int64_t>(gen->current_seed()), attr_nd_sbp);
     } else {
       attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
-                        static_cast<int64_t>(random_seed), attr_nd_sbp);
+                        static_cast<int64_t>(gen->current_seed()), attr_nd_sbp);
     }
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
@@ -203,12 +200,11 @@ class RandFunctor {
     }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed");
     attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                      static_cast<int64_t>(random_seed));
+                      static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
@@ -242,12 +238,11 @@ class GlobalRandFunctor {
     auto attr_nd_sbp = *JUST(GetNdSbpStrList(nd_sbp));
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nd_sbp");
     attrs.SetAllAttrs(static_cast<double>(0), static_cast<double>(1), shape, dtype_val,
-                      static_cast<int64_t>(random_seed), attr_nd_sbp);
+                      static_cast<int64_t>(gen->current_seed()), attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -334,12 +329,11 @@ class NormalFunctor {
     }
 
     auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
     attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                      dtype->data_type(), static_cast<int64_t>(random_seed));
+                      dtype->data_type(), static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, device, distribution_state);
@@ -406,12 +400,11 @@ class GlobalNormalFunctor {
     auto attr_nd_sbp = *JUST(GetNdSbpStrList(nd_sbp));
 
     std::shared_ptr<Generator> gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed", "nd_sbp");
     attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                      dtype->data_type(), static_cast<int64_t>(random_seed), attr_nd_sbp);
+                      dtype->data_type(), static_cast<int64_t>(gen->current_seed()), attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, placement, nd_sbp, distribution_state);
@@ -489,11 +482,10 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed");
-    attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(random_seed));
+    attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
@@ -559,11 +551,11 @@ class GlobalRandIntFunctor {
     auto attr_nd_sbp = *JUST(GetNdSbpStrList(nd_sbp));
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed", "nd_sbp");
-    attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(random_seed), attr_nd_sbp);
+    attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(gen->current_seed()),
+                      attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -628,11 +620,10 @@ class RandPermFunctor {
     }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed");
-    attrs.SetAllAttrs(n, static_cast<int64_t>(random_seed));
+    attrs.SetAllAttrs(n, static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
@@ -659,11 +650,10 @@ class GlobalRandPermFunctor {
     auto attr_nd_sbp = *JUST(GetNdSbpStrList(nd_sbp));
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed =
-        JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed", "nd_sbp");
-    attrs.SetAllAttrs(n, static_cast<int64_t>(random_seed), attr_nd_sbp);
+    attrs.SetAllAttrs(n, static_cast<int64_t>(gen->current_seed()), attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -689,24 +679,22 @@ class ExponentialFunctor {
     Optional<Symbol<NdSbp>> nd_sbp;
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = 0;
     if (x->is_global()) {
       JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
       placement = JUST(x->parallel_desc());
       nd_sbp = JUST(x->nd_sbp());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), placement, nd_sbp));
     } else {
       device = JUST(x->device());
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "lambd", "dtype", "out_shape", "nd_sbp");
     const Shape& out_shape = *(x->shape());
     Optional<std::vector<std::string>> attr_nd_sbp{NullOpt};
     if (nd_sbp) { attr_nd_sbp = *JUST(GetNdSbpStrList(JUST(nd_sbp))); }
-    attrs.SetAllAttrs(static_cast<int64_t>(random_seed), lambd, dtype_val, out_shape, attr_nd_sbp);
+    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lambd, dtype_val, out_shape,
+                      attr_nd_sbp);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
@@ -792,9 +780,9 @@ class MultinomialFunctor {
 
     if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "num_samples");
-    attrs.SetAllAttrs(static_cast<int64_t>(random_seed), num_samples);
+    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), num_samples);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);

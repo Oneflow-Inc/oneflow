@@ -831,10 +831,10 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
 
-      uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
       auto& attrs =
           THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "seed", "dropout_rate_list");
-      attrs.SetAllAttrs(skip_final_activation, static_cast<int64_t>(random_seed),
+      attrs.SetAllAttrs(skip_final_activation, static_cast<int64_t>(gen->current_seed()),
                         dropout_rate_list);
       const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
@@ -2824,9 +2824,9 @@ class DropoutFunctor {
     }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
-    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(random_seed));
+    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
 
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     OpExprInterpContext ctx(dropout_attrs, dropout_state);
@@ -3289,9 +3289,9 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                 const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
-    random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(random_seed));
+    random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
@@ -3394,9 +3394,9 @@ class FusedBiasAddDropoutFunctor {
     }
     if (p > 0.0) {
       auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-      uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), a));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), a));
       auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
-      random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(random_seed));
+      random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
       const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
       float scale = 0.0;
@@ -3636,9 +3636,9 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     float rate = p;
     if (!training) rate = 0.0;
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
-    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(random_seed));
+    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
@@ -3687,9 +3687,9 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
     float rate = p;
     if (!training) rate = 0.0;
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
-    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(random_seed));
+    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_op_, {x},
