@@ -25,16 +25,6 @@ limitations under the License.
 namespace mlir {
 namespace okl {
 
-LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
-  PassManager pm(module->getContext());
-  pm.addPass(oneflow::createExtractKernelLaunchTensorPass());  // extract-kernel-launch-tensor
-  pm.addPass(oneflow::createTrimReturnAsVoidPass());           // trim-return-to-void
-  pm.addPass(oneflow::createLowerToOKLPass());                 // lower-to-okl
-  pm.addPass(createTagCudaGraphSupportPass());                 // tag-cuda-graph-support
-  oneflow::CheckEnableIRPrinting(pm);
-  return pm.run(module);
-}
-
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
   pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr

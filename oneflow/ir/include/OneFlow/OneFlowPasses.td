@@ -41,21 +41,6 @@ def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
 }
 
-def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
-  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
-  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
-}
-
-def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
-  let summary = "trim return types to void type";
-  let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
-}
-
-def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
-  let summary = "lower oneflow dialect ops to okl dialect";
-  let constructor = "mlir::oneflow::createLowerToOKLPass()";
-}
-
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
@@ -127,6 +112,15 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   }];
   let constructor = "mlir::oneflow::createFuseForwardOps()";
   let dependentDialects = [];
+}
+
+def FuseOpsWithBackwardImpl : Pass<"fuse-ops-with-backward-impl", "ModuleOp"> {
+  let summary = "fuse ops with backward impl";
+  let description = [{
+    fuse ops with backward impl.
+  }];
+  let constructor = "mlir::oneflow::createFuseOpsWithBackwardImpl()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {
