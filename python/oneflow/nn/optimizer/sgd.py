@@ -25,7 +25,7 @@ from ...optim.optimizer import Optimizer, ParamGroup
 class SGD(Optimizer):
     """Implements SGD algorithm.
 
-    This algorithm takes a random sample’s gradient as an approximate estimate of
+    This algorithm takes a random sample's gradient as an approximate estimate of
     the overall gradient in small batch gradient descent.
 
     When the momentum = 0, the equation of parameters updating is:
