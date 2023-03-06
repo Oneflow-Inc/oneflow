@@ -13,19 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
 
-#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
-#include "mlir/IR/BuiltinOps.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_OKMOPS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_OKMOPS_H_
+
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Builders.h"
+#include "OneFlow/OKM/OKMAttributes.h"
 
 namespace mlir {
-namespace okl {
-
-// convert okl dialect to llvm dialect
-LogicalResult LowerOKLComputeToLLVM(ModuleOp module);
-
-}  // namespace okl
+namespace func {
+class FuncOp;
+}  // namespace func
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
+#define GET_OP_CLASSES
+#include "OneFlow/OKMOps.h.inc"
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_OKMOPS_H_

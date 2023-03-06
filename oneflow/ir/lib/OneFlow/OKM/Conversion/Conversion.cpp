@@ -14,26 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OKL/Conversion/Conversion.h"
-#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
-#include "OneFlow/Passes.h"
-#include "OneFlow/Transform/OutlineAndFuse.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Pass/PassManager.h"
-#include "oneflow/ir/include/OneFlow/OneFlowUtils.h"
+#include "OneFlow/OKM/passes.h"
+#include "OneFlow/OneFlowUtils.h"
 
 namespace mlir {
-namespace okl {
+namespace okm {
 
-LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
+LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
   PassManager pm(module->getContext());
-  pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr
-  pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
-  pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
+  pm.addPass(createExtractOKMTensorPass());
+  pm.addPass(createWrapOKMKernelPass());
+  pm.addPass(createOptOKMMemrefPass());
+  pm.addPass(createConvertOKMToOKLPass());
+  pm.addPass(okl::createTagCudaGraphSupportPass());
   oneflow::CheckEnableIRPrinting(pm);
   return pm.run(module);
 }
 
-}  // namespace okl
+}  // namespace okm
 }  // namespace mlir

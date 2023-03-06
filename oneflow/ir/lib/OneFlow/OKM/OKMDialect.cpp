@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OKL/OKLDialect.h"
-#include "OneFlow/OKL/OKLOps.h"
-#include "OneFlow/OKL/OKLTypes.h"
-#include "OneFlow/OKL/OKLAttributes.h"
+#include "OneFlow/OKM/OKMDialect.h"
+#include "OneFlow/OKM/OKMOps.h"
+#include "OneFlow/OKM/OKMAttributes.h"
+
+#include "OneFlow/OKM/passes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "OneFlow/OKLDialect.cpp.inc"
+#include "OneFlow/OKMDialect.cpp.inc"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Dialect.h"
@@ -31,31 +32,33 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 
 #define GET_ATTRDEF_CLASSES
-#include "OneFlow/OKLAttributes.cpp.inc"
+#include "OneFlow/OKMAttributes.cpp.inc"
+
+#define GET_OP_CLASSES
+#include "OneFlow/OKMOps.cpp.inc"
+
 namespace mlir {
 
-namespace okl {
+namespace okm {
 
-void OKLDialect::initialize() {
+void OKMDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "OneFlow/OKLOps.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "OneFlow/OKLTypes.cpp.inc"
+#include "OneFlow/OKMOps.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "OneFlow/OKLAttributes.cpp.inc"
+#include "OneFlow/OKMAttributes.cpp.inc"
       >();
 }
 
-void registerOneFlowPasses() {
-  mlir::registerAggregateComputeOpsPassPass();
-  mlir::registerWrapOpsToKernelLaunchPassPass();
+void registerAllPasses() {
+  registerExtractOKMTensorPassPass();
+  registerWrapOKMKernelPassPass();
+  registerOptOKMMemrefPassPass();
+  registerConvertOKMToOKLPassPass();
 }
 
-}  // namespace okl
+}  // namespace okm
 
 }  // namespace mlir
