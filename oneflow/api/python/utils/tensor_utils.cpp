@@ -173,8 +173,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else {
     device_ = JUST(Device::New("cpu"));
   }
-  std::shared_ptr<Tensor> tensor = JUST(
-      functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*requires_grad=*/requires_grad, /*pin_memory=*/pin_memory));
+  std::shared_ptr<Tensor> tensor =
+      JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
+                             /*requires_grad=*/requires_grad, /*pin_memory=*/pin_memory));
   JUST(CopyLocalTensorFromUntypedArray(tensor, array));
 
   Py_DECREF(array);
@@ -234,8 +235,8 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   std::shared_ptr<Tensor> local_tensor;
   {
     GlobalMode::Guard guard(/* disable global mode */ false);
-    local_tensor =
-        JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, requires_grad, /*pin_memory=*/false));
+    local_tensor = JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, requires_grad,
+                                          /*pin_memory=*/false));
   }
   JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
 
