@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/placement_utils.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -271,9 +272,10 @@ class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+                           const Optional<Symbol<Device>>& device, const bool requires_grad, const bool pin_memory) const {
+    std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
+      empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                           *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
@@ -283,14 +285,28 @@ class EmptyFunctor {
                       device_symbol->device_id());
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+      empty = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol)));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+      empty = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs));
     }
+    JUST(empty->set_requires_grad(requires_grad));
+    return empty;
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class EmptyStridedFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::vector<int64_t>& shape, const std::vector<int64_t>& stride, const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device, const bool requires_grad, const bool pin_memory) const {
+    std::shared_ptr<Tensor> empty = JUST(functional::Empty(Shape(shape), dtype, device, requires_grad, pin_memory));
+    CHECK_OR_RETURN(view::IsViewApplicable(empty))
+        << "oneflow.empty_strided() only support in eager local mode!";
+    empty = JUST(view::AsStrided(empty, shape, stride, 1));
+    return empty;
+  }
 };
 
 class GlobalEmptyFunctor {
@@ -3497,9 +3513,7 @@ class PinMemoryFunctor {
         << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString()
         << ", only dense CPU tensors can be pinned.";
 
-    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
-    // TODO: remove this requires_grad
-    JUST(empty->set_requires_grad(requires_grad));
+    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, requires_grad, /*pin_memory=*/true));
     const int32_t ndim = input->ndim();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     if (ndim == 0) {
@@ -3951,6 +3965,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
+  m.add_functor<impl::EmptyStridedFunctor>("EmptyStrided");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");

@@ -2856,7 +2856,7 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false, false));
 }
 
 Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
